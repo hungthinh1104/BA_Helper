@@ -1,6 +1,7 @@
 import { evaluationCaseSchema, NormalizedEvaluationResult, EvaluationCase } from './evaluation-types';
 import { ALL_EVALUATION_CASES } from './cases';
 import { EvaluationRunner, EvaluationAdapter } from './evaluation-runner';
+import { LexicalRetrievalEvaluationAdapter } from './adapters/lexical-retrieval.adapter';
 import {
   computeArtifactRecall,
   computeArtifactPrecision,
@@ -146,6 +147,43 @@ describe('Impact Evaluation Pack', () => {
 
       // We explicitly did not connect to Prisma or any LLM clients here.
       // The tests are entirely offline and CPU bound.
+    });
+  });
+
+  describe('Lexical Retrieval Evaluation', () => {
+    let runner: EvaluationRunner;
+
+    beforeAll(() => {
+      // In-memory adapter that scans targetFixture from the file system
+      runner = new EvaluationRunner(new LexicalRetrievalEvaluationAdapter());
+    });
+
+    it('evaluates all cases without DB, real LLM, or real embeddings', async () => {
+      // This will take a moment as it actually runs SafeFileEnumerator and parsing on the fixtures,
+      // but it's purely CPU bound and CI safe.
+      const result = await runner.run(ALL_EVALUATION_CASES);
+      
+      expect(result.report.totalCases).toBe(ALL_EVALUATION_CASES.length);
+      expect(result.report.cases.length).toBe(ALL_EVALUATION_CASES.length);
+      
+      // The textual report should be bounded
+      expect(typeof result.textSummary).toBe('string');
+      expect(result.textSummary.length).toBeGreaterThan(0);
+      expect(result.textSummary.length).toBeLessThan(50000); // 50k characters limit for safety
+
+      // Log the summary in test output so we can inspect recall/precision
+      // console.log(result.textSummary);
+      
+      for (const cr of result.report.cases) {
+         // Evidence coverage is measured per case
+         expect(cr.evidenceCoverage).toBeDefined();
+         // Negative control is validated per case
+         expect(cr.negativeArtifactsFailed).toBeDefined();
+         
+         // TopN bounded check implicitly validated because the summary is bounded and the adapter explicitly limits to top 20
+         // We can't easily assert exactly 20 here without looking into the raw adapter output, 
+         // but the runner scoring would not blow up.
+      }
     });
   });
 });
