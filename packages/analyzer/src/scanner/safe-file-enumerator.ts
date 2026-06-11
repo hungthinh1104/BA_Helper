@@ -18,6 +18,7 @@ export interface FileDiagnostic {
 
 export interface EnumeratorResult {
   tsFiles: string[];
+  javaFiles: string[];
   allFiles: string[];
   diagnostics: FileDiagnostic[];
   isPartial: boolean;
@@ -65,6 +66,7 @@ export class SafeFileEnumerator {
 
   async enumerate(): Promise<EnumeratorResult> {
     const tsFiles: string[] = [];
+    const javaFiles: string[] = [];
     const allFiles: string[] = [];
     const diagnostics: FileDiagnostic[] = [];
     
@@ -198,6 +200,8 @@ export class SafeFileEnumerator {
               break;
             }
             tsFiles.push(fullPath);
+          } else if (ext === '.java') {
+            javaFiles.push(fullPath);
           }
         }
       }
@@ -207,6 +211,7 @@ export class SafeFileEnumerator {
 
     return {
       tsFiles,
+      javaFiles,
       allFiles,
       diagnostics,
       isPartial

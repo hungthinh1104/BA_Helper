@@ -3,8 +3,8 @@ import * as path from 'node:path';
 
 export interface FrameworkDetectionResult {
   isSupported: boolean;
-  language?: 'TYPESCRIPT' | 'UNKNOWN';
-  framework?: 'NESTJS' | 'GENERIC_TYPESCRIPT' | 'UNKNOWN';
+  language?: 'TYPESCRIPT' | 'JAVA' | 'UNKNOWN';
+  framework?: 'NESTJS' | 'SPRING_BOOT' | 'GENERIC_TYPESCRIPT' | 'UNKNOWN';
   reason?: string;
 }
 
@@ -76,6 +76,29 @@ const hasNestMarkers = async (rootDir: string): Promise<boolean> => {
   return false;
 };
 
+const hasJavaMarkers = async (rootDir: string): Promise<boolean> => {
+  const queue: string[] = [path.join(rootDir, 'src', 'main', 'java')];
+  
+  while (queue.length > 0) {
+    const currentDir = queue.shift()!;
+    let entries: Array<import('node:fs').Dirent>;
+    try {
+      entries = await fs.readdir(currentDir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        queue.push(path.join(currentDir, entry.name));
+      } else if (entry.isFile() && entry.name.endsWith('.java')) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
 export class FrameworkDetector {
   /**
    * Statically checks if the repository is a supported framework (NestJS).
@@ -83,7 +106,34 @@ export class FrameworkDetector {
    */
   static async detect(rootDir: string): Promise<FrameworkDetectionResult> {
     try {
-      // 1. Check package.json
+      // 1. Check for Java Spring Boot
+      const pomPath = path.join(rootDir, 'pom.xml');
+      const gradlePath = path.join(rootDir, 'build.gradle');
+      const gradleKtsPath = path.join(rootDir, 'build.gradle.kts');
+      
+      let buildFileContent = '';
+      try {
+        buildFileContent = await fs.readFile(pomPath, 'utf8');
+      } catch {
+        try {
+          buildFileContent = await fs.readFile(gradlePath, 'utf8');
+        } catch {
+          try {
+            buildFileContent = await fs.readFile(gradleKtsPath, 'utf8');
+          } catch {
+            // Not a recognized Java build file
+          }
+        }
+      }
+
+      if (buildFileContent && buildFileContent.includes('org.springframework.boot')) {
+        const hasJavaSrc = await hasJavaMarkers(rootDir);
+        if (hasJavaSrc) {
+          return { isSupported: true, language: 'JAVA', framework: 'SPRING_BOOT' };
+        }
+      }
+
+      // 2. Check package.json for Node.js/TypeScript
       const pkgPath = path.join(rootDir, 'package.json');
       let pkgContent: string;
       try {
@@ -129,7 +179,7 @@ export class FrameworkDetector {
         };
       }
 
-      // 2. Check for tsconfig.json
+      // 3. Check for tsconfig.json
       if (!hasTsConfig) {
         return {
           isSupported: false,

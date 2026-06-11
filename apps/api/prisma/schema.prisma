@@ -51,11 +51,13 @@ enum RepositoryProfileDomain {
 
 enum RepositoryProfileLanguage {
   TYPESCRIPT
+  JAVA
   UNKNOWN
 }
 
 enum RepositoryProfileFramework {
   NESTJS
+  SPRING_BOOT
   GENERIC_TYPESCRIPT
   UNKNOWN
 }
@@ -189,37 +191,37 @@ enum ProjectRole {
 }
 
 model User {
-  id        String   @id @default(uuid()) @db.Uuid
-  email     String   @unique
-  name      String?
-  role      UserRole @default(REVIEWER)
-  selectedProjectId String? @map("selected_project_id")
+  id                String   @id @default(uuid()) @db.Uuid
+  email             String   @unique
+  name              String?
+  role              UserRole @default(REVIEWER)
+  selectedProjectId String?  @map("selected_project_id")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  reviewDecisions                  AnalysisReviewDecision[]
-  mergedReportReviewDecisions      MergedMultiRepoReportReviewDecision[]
-  createdClarifications            ReviewClarificationRequest[] @relation("ClarificationCreatedBy")
-  answeredClarifications           ReviewClarificationRequest[] @relation("ClarificationAnsweredBy")
-  projectMemberships               ProjectMember[]
-  selectedProject                  Project? @relation("SelectedProject", fields: [selectedProjectId], references: [id], onDelete: SetNull)
-  createdMultiRepoRuns             MultiRepoAnalysisRun[] @relation("CreatedMultiRepoRuns")
+  reviewDecisions             AnalysisReviewDecision[]
+  mergedReportReviewDecisions MergedMultiRepoReportReviewDecision[]
+  createdClarifications       ReviewClarificationRequest[]          @relation("ClarificationCreatedBy")
+  answeredClarifications      ReviewClarificationRequest[]          @relation("ClarificationAnsweredBy")
+  projectMemberships          ProjectMember[]
+  selectedProject             Project?                              @relation("SelectedProject", fields: [selectedProjectId], references: [id], onDelete: SetNull)
+  createdMultiRepoRuns        MultiRepoAnalysisRun[]                @relation("CreatedMultiRepoRuns")
 
   @@index([selectedProjectId])
   @@map("user")
 }
 
 model Project {
-  id           String        @id @default(uuid())
-  name         String
-  repositories Repository[]
-  requirements Requirement[]
-  members      ProjectMember[]
-  selectedByUsers User[]     @relation("SelectedProject")
-  multiRepoRuns MultiRepoAnalysisRun[]
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id              String                 @id @default(uuid())
+  name            String
+  repositories    Repository[]
+  requirements    Requirement[]
+  members         ProjectMember[]
+  selectedByUsers User[]                 @relation("SelectedProject")
+  multiRepoRuns   MultiRepoAnalysisRun[]
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
 }
 
 model ProjectMember {
@@ -230,8 +232,8 @@ model ProjectMember {
   createdAt DateTime    @default(now()) @map("created_at")
   updatedAt DateTime    @updatedAt @map("updated_at")
 
-  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, userId])
   @@index([userId])
@@ -403,14 +405,14 @@ model Requirement {
 }
 
 model RequirementRevision {
-  id               String                     @id @default(uuid())
-  requirementId    String
-  title            String
-  rawText          String
-  normalizedText   String
-  readinessStatus  RequirementReadinessStatus
-  validationIssues Json?
-  requirement      Requirement                @relation(fields: [requirementId], references: [id])
+  id                      String                     @id @default(uuid())
+  requirementId           String
+  title                   String
+  rawText                 String
+  normalizedText          String
+  readinessStatus         RequirementReadinessStatus
+  validationIssues        Json?
+  requirement             Requirement                @relation(fields: [requirementId], references: [id])
   evidences               Evidence[]
   analyses                ImpactAnalysis[]
   multiRepoRuns           MultiRepoAnalysisRun[]
@@ -419,18 +421,18 @@ model RequirementRevision {
 }
 
 model MultiRepoAnalysisRun {
-  id                  String              @id @default(uuid())
-  projectId           String
+  id                    String                 @id @default(uuid())
+  projectId             String
   requirementRevisionId String
-  createdByUserId     String              @db.Uuid
-  requestKey          String
-  project             Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  requirementRevision RequirementRevision @relation(fields: [requirementRevisionId], references: [id], onDelete: Cascade)
-  createdByUser       User                @relation("CreatedMultiRepoRuns", fields: [createdByUserId], references: [id], onDelete: Cascade)
-  analyses            ImpactAnalysis[]
-  approvedMergedReport MergedMultiRepoReport?
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
+  createdByUserId       String                 @db.Uuid
+  requestKey            String
+  project               Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  requirementRevision   RequirementRevision    @relation(fields: [requirementRevisionId], references: [id], onDelete: Cascade)
+  createdByUser         User                   @relation("CreatedMultiRepoRuns", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  analyses              ImpactAnalysis[]
+  approvedMergedReport  MergedMultiRepoReport?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
 
   @@unique([projectId, requestKey])
   @@index([projectId])
@@ -439,14 +441,14 @@ model MultiRepoAnalysisRun {
 }
 
 model MergedMultiRepoReport {
-  id              String                              @id @default(uuid())
-  runId           String                              @unique
+  id              String                                @id @default(uuid())
+  runId           String                                @unique
   content         String
   provenance      Json
-  run             MultiRepoAnalysisRun                @relation(fields: [runId], references: [id], onDelete: Cascade)
+  run             MultiRepoAnalysisRun                  @relation(fields: [runId], references: [id], onDelete: Cascade)
   reviewDecisions MergedMultiRepoReportReviewDecision[]
-  createdAt       DateTime                            @default(now())
-  updatedAt       DateTime                            @updatedAt
+  createdAt       DateTime                              @default(now())
+  updatedAt       DateTime                              @updatedAt
 
   @@index([runId])
 }
@@ -466,7 +468,7 @@ model MergedMultiRepoReportReviewDecision {
 }
 
 model ImpactAnalysis {
-  id                      String               @id @default(uuid())
+  id                      String                   @id @default(uuid())
   requirementRevisionId   String
   snapshotId              String
   sourceTargetId          String
@@ -474,34 +476,34 @@ model ImpactAnalysis {
   requestKey              String
   status                  ImpactAnalysisStatus
   stage                   ImpactAnalysisStage
-  progress                Int                  @default(0)
-  acceptedPartialCoverage Boolean              @default(false)
+  progress                Int                      @default(0)
+  acceptedPartialCoverage Boolean                  @default(false)
   coverageWarning         String?
-  requirementRevision     RequirementRevision  @relation(fields: [requirementRevisionId], references: [id])
-  snapshot                RepositorySnapshot   @relation(fields: [snapshotId], references: [id])
-  sourceTarget            RepositoryTarget     @relation(fields: [sourceTargetId], references: [id])
-  multiRepoRun            MultiRepoAnalysisRun? @relation(fields: [multiRepoRunId], references: [id], onDelete: SetNull)
+  requirementRevision     RequirementRevision      @relation(fields: [requirementRevisionId], references: [id])
+  snapshot                RepositorySnapshot       @relation(fields: [snapshotId], references: [id])
+  sourceTarget            RepositoryTarget         @relation(fields: [sourceTargetId], references: [id])
+  multiRepoRun            MultiRepoAnalysisRun?    @relation(fields: [multiRepoRunId], references: [id], onDelete: SetNull)
   insights                BaInsight[]
   traceabilityLinks       TraceabilityLink[]
   documents               GeneratedDocument[]
   metadata                Json?
   error                   Json?
-  createdAt               DateTime             @default(now())
-  updatedAt               DateTime             @updatedAt
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
   reviewNotes             ReviewNote[]
   clarificationItems      ClarificationItem[]
   reviewDecisions         AnalysisReviewDecision[]
 
   // Traceability & Lineage
-  derivedFromAnalysisId        String?                     @map("derived_from_analysis_id")
-  sourceClarificationId        String?                     @map("source_clarification_id")
-  reviewClarificationRequestId String?                     @map("review_clarification_request_id")
-  
-  derivedFromAnalysis          ImpactAnalysis?             @relation("ImpactAnalysisDerivation", fields: [derivedFromAnalysisId], references: [id])
-  derivedAnalyses              ImpactAnalysis[]            @relation("ImpactAnalysisDerivation")
-  sourceClarification          ClarificationItem?          @relation("ImpactAnalysisSourceClarification", fields: [sourceClarificationId], references: [id])
-  reviewClarificationRequest   ReviewClarificationRequest? @relation("ImpactAnalysisReviewClarification", fields: [reviewClarificationRequestId], references: [id])
-  clarificationRequests        ReviewClarificationRequest[] @relation("AnalysisToClarificationRequest")
+  derivedFromAnalysisId        String? @map("derived_from_analysis_id")
+  sourceClarificationId        String? @map("source_clarification_id")
+  reviewClarificationRequestId String? @map("review_clarification_request_id")
+
+  derivedFromAnalysis        ImpactAnalysis?              @relation("ImpactAnalysisDerivation", fields: [derivedFromAnalysisId], references: [id])
+  derivedAnalyses            ImpactAnalysis[]             @relation("ImpactAnalysisDerivation")
+  sourceClarification        ClarificationItem?           @relation("ImpactAnalysisSourceClarification", fields: [sourceClarificationId], references: [id])
+  reviewClarificationRequest ReviewClarificationRequest?  @relation("ImpactAnalysisReviewClarification", fields: [reviewClarificationRequestId], references: [id])
+  clarificationRequests      ReviewClarificationRequest[] @relation("AnalysisToClarificationRequest")
 
   @@unique([requirementRevisionId, snapshotId, sourceTargetId, requestKey])
   @@index([multiRepoRunId])
@@ -615,9 +617,9 @@ model ReviewNote {
 }
 
 model ClarificationItem {
-  id               String              @id @default(uuid())
-  impactAnalysisId String              @map("impact_analysis_id")
-  sourceInsightId  String              @unique @map("source_insight_id")
+  id                             String              @id @default(uuid())
+  impactAnalysisId               String              @map("impact_analysis_id")
+  sourceInsightId                String              @unique @map("source_insight_id")
   question                       String
   reason                         String?
   status                         ClarificationStatus @default(OPEN)
@@ -637,15 +639,15 @@ model ClarificationItem {
 }
 
 model AnalysisReviewDecision {
-  id         String                      @id @default(uuid())
-  analysisId String                      @map("analysis_id")
-  decision   AnalysisReviewDecisionValue
-  note       String?
-  reviewedByUserId String                @db.Uuid @map("reviewed_by_user_id")
-  createdAt        DateTime              @default(now()) @map("created_at")
+  id               String                      @id @default(uuid())
+  analysisId       String                      @map("analysis_id")
+  decision         AnalysisReviewDecisionValue
+  note             String?
+  reviewedByUserId String                      @map("reviewed_by_user_id") @db.Uuid
+  createdAt        DateTime                    @default(now()) @map("created_at")
 
-  analysis         ImpactAnalysis        @relation(fields: [analysisId], references: [id], onDelete: Cascade)
-  reviewedByUser   User                  @relation(fields: [reviewedByUserId], references: [id])
+  analysis              ImpactAnalysis               @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  reviewedByUser        User                         @relation(fields: [reviewedByUserId], references: [id])
   clarificationRequests ReviewClarificationRequest[]
 
   @@index([analysisId, createdAt])
@@ -662,18 +664,18 @@ model ReviewClarificationRequest {
 
   status ReviewClarificationStatus @default(OPEN)
 
-  createdByUserId String   @db.Uuid @map("created_by_user_id")
-  answeredByUserId String? @db.Uuid @map("answered_by_user_id")
-  createdAt       DateTime @default(now()) @map("created_at")
-  answeredAt      DateTime? @map("answered_at")
-  cancelledAt     DateTime? @map("cancelled_at")
+  createdByUserId  String    @map("created_by_user_id") @db.Uuid
+  answeredByUserId String?   @map("answered_by_user_id") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at")
+  answeredAt       DateTime? @map("answered_at")
+  cancelledAt      DateTime? @map("cancelled_at")
 
-  analysis       ImpactAnalysis          @relation("AnalysisToClarificationRequest", fields: [analysisId], references: [id], onDelete: Cascade)
-  reviewDecision AnalysisReviewDecision  @relation(fields: [reviewDecisionId], references: [id], onDelete: Cascade)
-  createdByUser  User                    @relation("ClarificationCreatedBy", fields: [createdByUserId], references: [id])
-  answeredByUser User?                   @relation("ClarificationAnsweredBy", fields: [answeredByUserId], references: [id])
+  analysis       ImpactAnalysis         @relation("AnalysisToClarificationRequest", fields: [analysisId], references: [id], onDelete: Cascade)
+  reviewDecision AnalysisReviewDecision @relation(fields: [reviewDecisionId], references: [id], onDelete: Cascade)
+  createdByUser  User                   @relation("ClarificationCreatedBy", fields: [createdByUserId], references: [id])
+  answeredByUser User?                  @relation("ClarificationAnsweredBy", fields: [answeredByUserId], references: [id])
 
-  derivedAnalyses ImpactAnalysis[]       @relation("ImpactAnalysisReviewClarification")
+  derivedAnalyses ImpactAnalysis[] @relation("ImpactAnalysisReviewClarification")
 
   @@index([analysisId, createdAt])
   @@index([reviewDecisionId])

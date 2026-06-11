@@ -8,13 +8,14 @@ import { normalizeArtifactKind } from '../../artifact/domain/universal-artifact-
 import { 
   scanFixture, 
   scanProject, 
-  GitHubUrlValidator, 
-  GitRepositoryFetcher, 
   FrameworkDetector, 
   RepositoryProfileDetector,
   SafeFileEnumerator, 
   SecretRedactor,
-  DiagnosticCollector
+  DiagnosticCollector,
+  scanJavaSpringProject,
+  GitHubUrlValidator,
+  GitRepositoryFetcher
 } from '@ba-helper/analyzer';
 import { PrismaService } from '../../prisma/prisma.service';
 import { QueueService } from '../../queue/queue.service';
@@ -146,11 +147,27 @@ export class RunScanJobUseCase {
         }
 
         currentStage = ScanJobStage.EXTRACTING_ARTIFACTS;
-        scanResult = scanProject({
-          fixturePath: tempDir,
-          analyzerVersion: '0.1.0',
-          tsFiles: enumResult.tsFiles,
-        });
+        
+        if (repositoryProfile?.framework === 'SPRING_BOOT') {
+          scanResult = await scanJavaSpringProject({
+            fixturePath: tempDir,
+            analyzerVersion: '0.1.0',
+            javaFiles: enumResult.javaFiles,
+          });
+          coverageStatus = 'PARTIAL';
+          collector.add({
+            code: 'SPRING_BOOT_PILOT_ADAPTER',
+            severity: 'WARN',
+            message: 'Spring Boot pilot adapter uses lightweight annotation extraction only.',
+            category: 'FRAMEWORK',
+          });
+        } else {
+          scanResult = scanProject({
+            fixturePath: tempDir,
+            analyzerVersion: '0.1.0',
+            tsFiles: enumResult.tsFiles,
+          });
+        }
       } else {
         commitSha = 'mock-commit-sha';
         scanResult = scanFixture({

@@ -1,5 +1,6 @@
 export * from './fixture/fixture-analyzer';
 export * from './scanner/scanner';
+export * from './scanner/java-spring-scanner';
 export * from './scanner/scanner.types';
 export * from './graph/graph';
 export * from './graph/graph.types';
