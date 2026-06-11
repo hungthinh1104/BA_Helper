@@ -3,6 +3,8 @@ node_modules
 build
 coverage
 package-lock.json
+dist
+.next
 .env
 .env.*
 .DS_Store
