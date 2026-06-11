@@ -36,7 +36,7 @@ interface VectorGapReport {
 
 describe('Vector Gap Diagnostic Benchmark', () => {
   const fixturePath = resolve(__dirname, '../fixtures/nestjs-order-inventory');
-  const reportDir = resolve(__dirname, 'reports');
+  const reportDir = resolve(__dirname, 'reports/generated');
 
   let prisma: PrismaService;
   let hybridRetrievalService: HybridRetrievalService;

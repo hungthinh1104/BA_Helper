@@ -5,7 +5,7 @@ the narrow route that matches the task.
 
 ## Mandatory reading
 
-Read these first for any BA_helper_test task:
+Read these first for any BA_Helper task:
 
 1. [current-state.md](current-state.md)
 2. [auth-permissions.md](auth-permissions.md)
@@ -68,6 +68,13 @@ Read:
 - `done-checklist.md`
 - this index
 
+### Demo / release
+
+Read:
+- `../demo/walkthrough.md`
+- `../deployment/smoke-checklist.md`
+- `current-state.md`
+
 ### Tests
 
 Read:
@@ -81,5 +88,5 @@ Read:
 - Keep scope narrow.
 - Do not add new product scope from this index.
 - Out of scope: private repos, OAuth/GitHub App,
-  organizations/teams/invites, merged cross-repo reports, DOCX, Jira, and
-  Confluence.
+  organizations/teams/invites, merged clarification-loop regeneration, DOCX,
+  Jira, and Confluence.

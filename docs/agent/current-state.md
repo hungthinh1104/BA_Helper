@@ -8,7 +8,18 @@ lineage timeline -> approved report -> Markdown/PDF export.
 
 Multi-repo fan-out foundation exists for backend batch creation: one ready
 requirement revision can spawn multiple normal per-repository analyses inside
-the same project. Merged cross-repo review/report output does not exist yet.
+the same project. Multi-repo batches now persist a parent run, expose run
+detail, expose derived child review/readiness state, and are discoverable
+through a project-scoped run list. Merged cross-repo report workflow now
+exists as a narrow approved-artifact + decision surface:
+- an on-demand merged Markdown draft exists for runs where every child analysis
+  has latest review decision `ACCEPTED`
+- an approved merged Markdown snapshot can now be finalized and read later
+- approved merged reports now have append-only merged review decisions
+  (`ACCEPTED`, `REJECTED`, `NEEDS_MORE_CLARIFICATION`)
+- approved merged reports can be exported as Markdown/PDF only when non-stale
+- approved merged reports become stale when child review decisions or child
+  analysis provenance changes after approval
 
 ## Auth and RBAC
 
@@ -37,6 +48,8 @@ the same project. Merged cross-repo review/report output does not exist yet.
 - Approved Markdown snapshot is the persisted source of truth.
 - PDF is rendered on demand from the approved Markdown snapshot.
 - Stale approved reports are readable but not exportable.
+- The same stale-read / export-block policy now applies to approved merged
+  multi-repo reports.
 
 ## Public backend endpoints
 
@@ -48,7 +61,7 @@ the same project. Merged cross-repo review/report output does not exist yet.
 
 - private repos
 - OAuth / GitHub App
-- merged cross-repo analysis/report
+- merged cross-repo clarification loop / run regeneration workflow
 - organizations / teams / invites
 - DOCX
 - Jira
@@ -62,3 +75,8 @@ pnpm lint
 pnpm test
 pnpm test:e2e
 ```
+
+Demo/handoff runbooks:
+
+- `docs/demo/walkthrough.md`
+- `docs/deployment/smoke-checklist.md`

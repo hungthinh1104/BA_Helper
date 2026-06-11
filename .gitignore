@@ -19,3 +19,4 @@ tmp/
 temp/
 apps/web/.env.local
 tests/fixtures/huge-repo/
+tests/benchmark/reports/generated/
