@@ -174,6 +174,10 @@ normalized kind:
 `artifactType` remains adapter-specific in 20B. `universalKind` is additive
 and is the bridge toward later multi-framework adapters.
 
+Impact diff artifact rows also include `universalKind` beside `artifactType`
+so derived-analysis comparisons can display normalized artifact categories
+without dropping raw extractor provenance.
+
 Production-like API deploys must configure an explicit comma-separated
 `CORS_ALLOWED_ORIGINS` allowlist. The web client requires an explicit
 `NEXT_PUBLIC_API_URL` in production and must not rely on localhost fallback.

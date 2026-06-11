@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { snapshotIndexStatusSchema } from './repository.contract';
 import { diagnosticItemSchema, DiagnosticItem } from './diagnostic.contract';
+import { universalArtifactKindSchema } from './artifact.contract';
 
 export const impactAnalysisCreateRequestSchema = z.object({
 	snapshotId: z.string().uuid(),
@@ -276,6 +277,7 @@ export const diffArtifactSchema = z.object({
 	artifactKey: z.string(),
 	name: z.string(),
 	artifactType: z.string(),
+	universalKind: universalArtifactKindSchema,
 	filePath: z.string(),
 	reviewStatus: z.enum(['NEEDS_REVIEW', 'CONFIRMED', 'REJECTED']),
 });

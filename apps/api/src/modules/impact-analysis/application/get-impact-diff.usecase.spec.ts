@@ -71,14 +71,14 @@ describe('GetImpactDiffUseCase', () => {
     (prisma.traceabilityLink.findMany as jest.Mock).mockImplementation(async (args) => {
       if (args.where.impactAnalysisId === 'base-analysis') {
         return [
-          { artifact: { artifactKey: 'art-1', name: 'File1', artifactType: 'FILE' }, reviewStatus: 'CONFIRMED' },
-          { artifact: { artifactKey: 'art-2', name: 'File2', artifactType: 'FILE' }, reviewStatus: 'CONFIRMED' }, // removed
+          { artifact: { artifactKey: 'art-1', name: 'File1', artifactType: 'FILE', universalKind: 'UNKNOWN' }, reviewStatus: 'CONFIRMED' },
+          { artifact: { artifactKey: 'art-2', name: 'File2', artifactType: 'FILE', universalKind: 'UNKNOWN' }, reviewStatus: 'CONFIRMED' }, // removed
         ];
       }
       if (args.where.impactAnalysisId === 'current-analysis') {
         return [
-          { artifact: { artifactKey: 'art-1', name: 'File1', artifactType: 'FILE' }, reviewStatus: 'CONFIRMED' },
-          { artifact: { artifactKey: 'art-3', name: 'File3', artifactType: 'FILE' }, reviewStatus: 'NEEDS_REVIEW' }, // added
+          { artifact: { artifactKey: 'art-1', name: 'File1', artifactType: 'FILE', universalKind: 'UNKNOWN' }, reviewStatus: 'CONFIRMED' },
+          { artifact: { artifactKey: 'art-3', name: 'File3', artifactType: 'FILE', universalKind: 'UNKNOWN' }, reviewStatus: 'NEEDS_REVIEW' }, // added
         ];
       }
       return [];
@@ -123,6 +123,7 @@ describe('GetImpactDiffUseCase', () => {
     expect(result.summary.addedQaScenarios).toBe(1);
 
     expect(result.addedArtifacts[0].artifactKey).toBe('art-3');
+    expect(result.addedArtifacts[0].universalKind).toBe('UNKNOWN');
     expect(result.removedArtifacts[0].artifactKey).toBe('art-2');
     expect(result.unchangedArtifacts[0].artifactKey).toBe('art-1');
 

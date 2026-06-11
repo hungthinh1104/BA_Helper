@@ -118,6 +118,7 @@ export class GetImpactDiffUseCase {
         artifactKey: key,
         name: currentLink.artifact.name,
         artifactType: currentLink.artifact.artifactType,
+        universalKind: currentLink.artifact.universalKind as DiffArtifact['universalKind'],
         filePath: currentLink.artifact.filePath,
         reviewStatus: currentLink.reviewStatus,
       };
@@ -135,6 +136,7 @@ export class GetImpactDiffUseCase {
           artifactKey: key,
           name: baseLink.artifact.name,
           artifactType: baseLink.artifact.artifactType,
+          universalKind: baseLink.artifact.universalKind as DiffArtifact['universalKind'],
           filePath: baseLink.artifact.filePath,
           reviewStatus: baseLink.reviewStatus, // using the old status
         });

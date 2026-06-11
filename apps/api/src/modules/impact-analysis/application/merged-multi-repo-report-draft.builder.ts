@@ -28,6 +28,7 @@ type TraceabilityItem = {
     name: string;
     filePath: string;
     artifactType: string;
+    universalKind?: string | null;
   } | null;
   evidenceLinks: Array<{
     evidence: EvidenceItem;
@@ -48,6 +49,11 @@ type ChildDraftInput = {
 
 @Injectable()
 export class MergedMultiRepoReportDraftBuilder {
+  private formatArtifactKind(artifact: TraceabilityItem['artifact']): string {
+    if (!artifact) return 'Unknown';
+    return artifact.universalKind ?? artifact.artifactType;
+  }
+
   build(params: {
     runId: string;
     projectId: string;
@@ -166,7 +172,7 @@ export class MergedMultiRepoReportDraftBuilder {
         for (const link of links) {
           const artifact = link.artifact;
           lines.push(
-            `- ${artifact?.artifactType ?? 'Unknown'} ${artifact?.name ? `\`${artifact.name}\`` : link.id} (${artifact?.filePath ?? 'unknown path'})`,
+            `- ${this.formatArtifactKind(artifact)} ${artifact?.name ? `\`${artifact.name}\`` : link.id} (${artifact?.filePath ?? 'unknown path'})`,
           );
         }
       }
