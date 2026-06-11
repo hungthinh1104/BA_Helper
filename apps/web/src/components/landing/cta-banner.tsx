@@ -18,7 +18,7 @@ export function CtaBanner() {
         </p>
         <div className="flex items-center justify-center gap-4">
           <Link 
-            href="/analyses/mock-analysis-123" 
+            href="/login?next=/analyses" 
             className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-foreground text-background font-semibold rounded-full hover:bg-foreground/90 transition-all hover:scale-105 active:scale-95"
           >
             Try the Interactive Demo

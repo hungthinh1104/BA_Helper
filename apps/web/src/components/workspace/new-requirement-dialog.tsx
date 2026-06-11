@@ -17,7 +17,7 @@ interface NewRequirementDialogProps {
 type DialogState = "form" | "result"
 
 export function NewRequirementDialog({ children, existingRequirement }: NewRequirementDialogProps) {
-  // TODO: Use existingRequirement when detail page is migrated
+  // existingRequirement pre-fills the dialog when editing from the detail page.
   const latestRev = existingRequirement 
     ? [...existingRequirement.revisions].sort((a, b) => b.versionNumber - a.versionNumber)[0] 
     : null

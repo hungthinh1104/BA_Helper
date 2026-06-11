@@ -12,7 +12,7 @@ export default function AppError({
   reset: () => void
 }) {
   useEffect(() => {
-    // TODO: forward to error monitoring (e.g. Sentry) when infra is ready
+    // Forward to error monitoring when infra is ready.
     console.error("[AppError]", error)
   }, [error])
 

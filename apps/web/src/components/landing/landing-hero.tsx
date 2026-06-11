@@ -30,7 +30,7 @@ export function LandingHero() {
           Not just another AI Copilot. We map business requirements to exact codebase artifacts with verifiable evidence—no hallucinations.
         </p>
         <div className="hero-actions">
-          <Link href="/analyses/mock-analysis-123">
+          <Link href="/login?next=/analyses">
             <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 text-md px-8 h-12">
               Try the Demo
             </Button>
