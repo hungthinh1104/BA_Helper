@@ -12,3 +12,4 @@ export * from './scanner/safe-file-enumerator';
 export * from './scanner/secret-redactor';
 export * from './scanner/framework-detector';
 export * from './scanner/diagnostic-collector';
+export * from './scanner/repository-profile-detector';

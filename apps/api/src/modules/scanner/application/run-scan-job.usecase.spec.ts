@@ -18,6 +18,9 @@ jest.mock('@ba-helper/analyzer', () => ({
   FrameworkDetector: {
     detect: jest.fn(),
   },
+  RepositoryProfileDetector: {
+    detect: jest.fn(),
+  },
   SafeFileEnumerator: jest.fn(),
   SecretRedactor: {
     redact: jest.fn((content: string) => ({
@@ -52,6 +55,7 @@ const analyzer = jest.requireMock('@ba-helper/analyzer') as {
   GitHubUrlValidator: { validate: jest.Mock };
   GitRepositoryFetcher: { fetch: jest.Mock };
   FrameworkDetector: { detect: jest.Mock };
+  RepositoryProfileDetector: { detect: jest.Mock };
   SafeFileEnumerator: jest.Mock;
   scanProject: jest.Mock;
 };
@@ -98,6 +102,9 @@ describe('RunScanJobUseCase', () => {
         upsert: jest.fn().mockResolvedValue({ id: 'snapshot-1' }),
         update: jest.fn().mockResolvedValue(undefined),
       },
+      repositoryProfile: {
+        upsert: jest.fn().mockResolvedValue({ id: 'profile-1' }),
+      },
       scanJob: { update: jest.fn().mockResolvedValue(undefined) },
     };
 
@@ -123,6 +130,16 @@ describe('RunScanJobUseCase', () => {
       commitSha: '0123456789abcdef0123456789abcdef01234567',
     });
     analyzer.FrameworkDetector.detect.mockResolvedValue({ isSupported: true });
+    analyzer.RepositoryProfileDetector.detect.mockResolvedValue({
+      domain: 'BOOKING',
+      language: 'TYPESCRIPT',
+      framework: 'NESTJS',
+      architectureStyle: 'MODULAR_MONOLITH',
+      sourceRoots: ['src'],
+      testRoots: ['test'],
+      diagnostics: { detectedMarkers: ['NESTJS'], confidence: 0.9 },
+      profileVersion: 'repo-profile@0.1.0',
+    });
     analyzer.SafeFileEnumerator.mockImplementation(() => ({
       enumerate: jest.fn().mockResolvedValue({
         tsFiles: [],
@@ -139,6 +156,17 @@ describe('RunScanJobUseCase', () => {
     });
 
     await useCase.execute({ jobId: 'job-1' });
+
+    expect(prisma.repositoryProfile.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { snapshotId: 'snapshot-1' },
+        create: expect.objectContaining({
+          domain: 'BOOKING',
+          framework: 'NESTJS',
+          profileVersion: 'repo-profile@0.1.0',
+        }),
+      }),
+    );
 
     expect(fs.rm).toHaveBeenCalledWith('/tmp/ba-scan-success', {
       recursive: true,
@@ -171,6 +199,16 @@ describe('RunScanJobUseCase', () => {
     (fs.rm as jest.Mock).mockRejectedValue(new Error('cleanup failed'));
     analyzer.GitHubUrlValidator.validate.mockReturnValue({ isValid: true });
     analyzer.GitRepositoryFetcher.fetch.mockRejectedValue(new Error('network down'));
+    analyzer.RepositoryProfileDetector.detect.mockResolvedValue({
+      domain: 'UNKNOWN',
+      language: 'UNKNOWN',
+      framework: 'UNKNOWN',
+      architectureStyle: 'UNKNOWN',
+      sourceRoots: [],
+      testRoots: [],
+      diagnostics: { confidence: 0.2 },
+      profileVersion: 'repo-profile@0.1.0',
+    });
 
     await expect(useCase.execute({ jobId: 'job-1' })).rejects.toMatchObject({
       code: 'CLONE_FAILED',
@@ -200,5 +238,6 @@ describe('RunScanJobUseCase', () => {
         }),
       }),
     );
+    expect(prisma.repositoryProfile.upsert).not.toHaveBeenCalled();
   });
 });

@@ -23,6 +23,23 @@ export class RepositoryController {
     private readonly permissions: ProjectPermissionService,
   ) {}
 
+  private mapRepositoryProfile(profile: any) {
+    if (!profile) {
+      return undefined;
+    }
+
+    return {
+      domain: profile.domain,
+      language: profile.language,
+      framework: profile.framework,
+      architectureStyle: profile.architectureStyle,
+      sourceRoots: Array.isArray(profile.sourceRoots) ? profile.sourceRoots : [],
+      testRoots: Array.isArray(profile.testRoots) ? profile.testRoots : [],
+      diagnostics: profile.diagnostics ?? undefined,
+      profileVersion: profile.profileVersion,
+    };
+  }
+
   private mapRepository(r: any) {
     const latestScanJob = r.scanJobs?.[0];
     const latestSnapshot = r.snapshots?.[0];
@@ -31,6 +48,7 @@ export class RepositoryController {
       id: r.id,
       canonicalUrl: r.canonicalUrl,
       displayName: r.canonicalUrl.split('/').pop() || r.canonicalUrl,
+      framework: latestSnapshot?.profile?.framework ?? undefined,
       lastObservedAt: latestTarget?.lastObservedAt?.toISOString(),
       isConnected: true,
       latestTarget: latestTarget ? {
@@ -59,6 +77,7 @@ export class RepositoryController {
         coverageStatus: latestSnapshot.coverageStatus,
         indexStatus: latestSnapshot.indexStatus,
         diagnostics: latestSnapshot.diagnostics ?? undefined,
+        profile: this.mapRepositoryProfile(latestSnapshot.profile),
       } : undefined,
       createdAt: r.createdAt.toISOString(),
     };

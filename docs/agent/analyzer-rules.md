@@ -162,5 +162,34 @@ unsupported frameworks fail rather than silently producing incomplete evidence
 failed extraction does not publish an immutable snapshot identity
 ```
 
+## Repository Profiling Foundation
+
+Phase 20A adds deterministic repository profiling before persisted extraction is
+consumed elsewhere.
+
+Profile detection support is intentionally broader than extraction support:
+
+```text
+profile detection:
+- TypeScript + NestJS
+- Generic TypeScript fallback
+
+extraction support:
+- NestJS only
+```
+
+Rules:
+
+```text
+profile detection may classify a repository as GENERIC_TYPESCRIPT
+unsupported extraction still fails the scan with UNSUPPORTED_FRAMEWORK
+only published READY/PARTIAL snapshots persist RepositoryProfile
+failed unsupported scans persist no RepositoryProfile row
+```
+
+`RepositoryProfile` is snapshot-scoped metadata, not an editable repository
+setting. Its domain classification is conservative: weak evidence resolves to
+`UNKNOWN`, not an invented bounded context.
+
 Use [testing-strategy.md](testing-strategy.md) for the complete expected claim
 matrix and integration completion gate.

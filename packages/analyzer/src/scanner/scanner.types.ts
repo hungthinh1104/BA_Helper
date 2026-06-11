@@ -18,6 +18,44 @@ export type ScanCoverage = {
   skippedFiles: string[];
 };
 
+export type RepositoryProfileDomain =
+  | 'BOOKING'
+  | 'PAYMENT'
+  | 'REFUND'
+  | 'NOTIFICATION'
+  | 'INVENTORY'
+  | 'CUSTOM'
+  | 'UNKNOWN';
+
+export type RepositoryProfileLanguage = 'TYPESCRIPT' | 'UNKNOWN';
+
+export type RepositoryProfileFramework =
+  | 'NESTJS'
+  | 'GENERIC_TYPESCRIPT'
+  | 'UNKNOWN';
+
+export type RepositoryProfileArchitectureStyle =
+  | 'MODULAR_MONOLITH'
+  | 'LAYERED'
+  | 'UNKNOWN';
+
+export type RepositoryProfileDiagnostics = {
+  detectedMarkers?: string[];
+  confidence?: number;
+  unsupportedReason?: string;
+};
+
+export type DetectedRepositoryProfile = {
+  domain: RepositoryProfileDomain;
+  language: RepositoryProfileLanguage;
+  framework: RepositoryProfileFramework;
+  architectureStyle: RepositoryProfileArchitectureStyle;
+  sourceRoots: string[];
+  testRoots: string[];
+  diagnostics?: RepositoryProfileDiagnostics;
+  profileVersion: string;
+};
+
 export type ScanResult = {
   analyzerVersion: string;
   artifacts: ScanArtifact[];

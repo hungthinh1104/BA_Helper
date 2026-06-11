@@ -20,6 +20,7 @@ API/worker      NestJS + TypeScript
 Database        PostgreSQL + Prisma
 Queue           Redis + BullMQ
 Analyzer        simple-git + ts-morph, NestJS TypeScript MVP adapter
+Profiling       deterministic snapshot-scoped repository classification
 Contracts       Zod (packages/contracts — shared API wire types and enums)
 Shared utils    packages/shared — small cross-package utilities only
 AI              provider adapter with structured output
@@ -34,6 +35,7 @@ Local infra     Docker Compose
 Repository
   -> RepositoryTarget for selected branch/tag/commit observation
   -> RepositorySnapshot at commitSha + analyzerVersion
+     -> RepositoryProfile (domain/language/framework/roots for that snapshot)
      -> CodeArtifact + DependencyEdge + Evidence
 
 Requirement
@@ -127,3 +129,8 @@ Rules:
 Do not build the workspace UI as a substitute for engine correctness.
 Backend proof comes from fixture-driven tests and JSON/Markdown output.
 The frontend is added once persisted behavior and DTO contracts are stable.
+
+Repository profiling is backend/analyzer-only in Phase 20A. It is persisted on
+published snapshots to make later universal artifact normalization and
+profile-aware retrieval explicit, but it does not change supported extraction
+targets. NestJS remains the only extraction-capable framework in the MVP.

@@ -8,6 +8,9 @@ jest.mock('@ba-helper/analyzer', () => ({
   FrameworkDetector: {
     detect: jest.fn(),
   },
+  RepositoryProfileDetector: {
+    detect: jest.fn(),
+  },
   SafeFileEnumerator: jest.fn(),
   SecretRedactor: {
     redact: jest.fn((content: string) => ({
@@ -58,6 +61,7 @@ const analyzer = jest.requireMock('@ba-helper/analyzer') as {
   GitHubUrlValidator: { validate: jest.Mock };
   GitRepositoryFetcher: { fetch: jest.Mock };
   FrameworkDetector: { detect: jest.Mock };
+  RepositoryProfileDetector: { detect: jest.Mock };
   SafeFileEnumerator: jest.Mock;
   scanProject: jest.Mock;
 };
@@ -150,7 +154,17 @@ describe('Secure Ingestion Diagnostics (E2E)', () => {
     analyzer.GitRepositoryFetcher.fetch.mockResolvedValue({
       commitSha: '0123456789abcdef0123456789abcdef01234567',
     });
-    analyzer.FrameworkDetector.detect.mockResolvedValue({ isSupported: true });
+    analyzer.FrameworkDetector.detect.mockResolvedValue({ isSupported: true, framework: 'NESTJS' });
+    analyzer.RepositoryProfileDetector.detect.mockResolvedValue({
+      domain: 'BOOKING',
+      language: 'TYPESCRIPT',
+      framework: 'NESTJS',
+      architectureStyle: 'MODULAR_MONOLITH',
+      sourceRoots: ['src'],
+      testRoots: ['src'],
+      diagnostics: { detectedMarkers: ['NESTJS', 'booking'], confidence: 0.9 },
+      profileVersion: 'repo-profile@0.1.0',
+    });
     analyzer.SafeFileEnumerator.mockImplementation(() => ({
       enumerate: jest.fn().mockResolvedValue({
         tsFiles: [],
@@ -217,6 +231,15 @@ describe('Secure Ingestion Diagnostics (E2E)', () => {
     });
     expect(detail.latestSnapshot).toMatchObject({
       coverageStatus: 'PARTIAL',
+      profile: {
+        domain: 'BOOKING',
+        language: 'TYPESCRIPT',
+        framework: 'NESTJS',
+        architectureStyle: 'MODULAR_MONOLITH',
+        sourceRoots: ['src'],
+        testRoots: ['src'],
+        profileVersion: 'repo-profile@0.1.0',
+      },
     });
     expect(detail.latestSnapshot?.diagnostics).toEqual(
       expect.arrayContaining([
@@ -251,7 +274,22 @@ describe('Secure Ingestion Diagnostics (E2E)', () => {
     });
     analyzer.FrameworkDetector.detect.mockResolvedValue({
       isSupported: false,
+      framework: 'GENERIC_TYPESCRIPT',
       reason: 'Express repositories are not supported in the MVP.',
+    });
+    analyzer.RepositoryProfileDetector.detect.mockResolvedValue({
+      domain: 'UNKNOWN',
+      language: 'TYPESCRIPT',
+      framework: 'GENERIC_TYPESCRIPT',
+      architectureStyle: 'LAYERED',
+      sourceRoots: ['src'],
+      testRoots: ['tests'],
+      diagnostics: {
+        detectedMarkers: ['GENERIC_TYPESCRIPT'],
+        confidence: 0.5,
+        unsupportedReason: 'Express repositories are not supported in the MVP.',
+      },
+      profileVersion: 'repo-profile@0.1.0',
     });
 
     const project = await prisma.project.create({ data: { name: 'Blocked Scan Project' } });
@@ -329,6 +367,7 @@ describe('Secure Ingestion Diagnostics (E2E)', () => {
       },
     });
     expect(detail.latestSnapshot).toBeUndefined();
+    expect(await prisma.repositoryProfile.count()).toBe(0);
 
     const failedEvent = await prisma.domainEvent.findUniqueOrThrow({
       where: {

@@ -39,6 +39,33 @@ enum SnapshotIndexStatus {
   VECTOR_FAILED
 }
 
+enum RepositoryProfileDomain {
+  BOOKING
+  PAYMENT
+  REFUND
+  NOTIFICATION
+  INVENTORY
+  CUSTOM
+  UNKNOWN
+}
+
+enum RepositoryProfileLanguage {
+  TYPESCRIPT
+  UNKNOWN
+}
+
+enum RepositoryProfileFramework {
+  NESTJS
+  GENERIC_TYPESCRIPT
+  UNKNOWN
+}
+
+enum RepositoryProfileArchitectureStyle {
+  MODULAR_MONOLITH
+  LAYERED
+  UNKNOWN
+}
+
 enum ResolvedRefType {
   BRANCH
   TAG
@@ -251,6 +278,7 @@ model RepositorySnapshot {
   coverageStatus  SnapshotCoverageStatus
   indexStatus     SnapshotIndexStatus    @default(NOT_INDEXED)
   diagnostics     Json                   @default("[]")
+  profile         RepositoryProfile?
   artifacts       CodeArtifact[]
   edges           DependencyEdge[]
   evidences       Evidence[]
@@ -262,6 +290,24 @@ model RepositorySnapshot {
   updatedAt       DateTime               @updatedAt
 
   @@unique([repositoryId, commitSha, analyzerVersion])
+}
+
+model RepositoryProfile {
+  id                String                             @id @default(uuid())
+  snapshotId        String                             @unique
+  domain            RepositoryProfileDomain
+  language          RepositoryProfileLanguage
+  framework         RepositoryProfileFramework
+  architectureStyle RepositoryProfileArchitectureStyle @map("architecture_style")
+  sourceRoots       Json                               @map("source_roots")
+  testRoots         Json                               @map("test_roots")
+  diagnostics       Json?
+  profileVersion    String                             @map("profile_version")
+  createdAt         DateTime                           @default(now()) @map("created_at")
+  updatedAt         DateTime                           @updatedAt @map("updated_at")
+  snapshot          RepositorySnapshot                 @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@map("repository_profile")
 }
 
 model ScanJob {

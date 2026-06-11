@@ -188,6 +188,46 @@ Successful safe source resolution creates or updates a `RepositoryTarget`
 observation for this ref even if subsequent extraction fails. Usable
 extraction publishes/reuses the commit-specific snapshot.
 
+Repository list/detail responses expose latest published snapshot profile when
+available:
+
+```json
+{
+  "id": "uuid",
+  "canonicalUrl": "https://github.com/example/booking-api",
+  "displayName": "booking-api",
+  "framework": "NESTJS",
+  "latestSnapshot": {
+    "id": "uuid",
+    "commitSha": "abc123",
+    "analyzerVersion": "0.1.0",
+    "coverageStatus": "READY",
+    "indexStatus": "LEXICAL_READY",
+    "profile": {
+      "domain": "BOOKING",
+      "language": "TYPESCRIPT",
+      "framework": "NESTJS",
+      "architectureStyle": "MODULAR_MONOLITH",
+      "sourceRoots": ["src"],
+      "testRoots": ["src"],
+      "diagnostics": {
+        "detectedMarkers": ["NESTJS", "booking"],
+        "confidence": 0.9
+      },
+      "profileVersion": "repo-profile@0.1.0"
+    }
+  }
+}
+```
+
+Rules:
+
+```text
+latestSnapshot.profile is present only when a READY/PARTIAL snapshot exists
+unsupported scan failures expose latestScanJob diagnostics but no snapshot/profile
+profile detection does not broaden analyzer extraction support
+```
+
 Requirement intake keeps title and raw input in an immutable qualified
 revision:
 

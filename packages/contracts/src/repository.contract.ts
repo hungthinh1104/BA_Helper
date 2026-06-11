@@ -23,6 +23,50 @@ export const repositoryCreateResponseSchema = z.object({
 	createdAt: z.string(),
 });
 
+export const repositoryProfileDomainSchema = z.enum([
+	'BOOKING',
+	'PAYMENT',
+	'REFUND',
+	'NOTIFICATION',
+	'INVENTORY',
+	'CUSTOM',
+	'UNKNOWN',
+]);
+
+export const repositoryProfileLanguageSchema = z.enum([
+	'TYPESCRIPT',
+	'UNKNOWN',
+]);
+
+export const repositoryProfileFrameworkSchema = z.enum([
+	'NESTJS',
+	'GENERIC_TYPESCRIPT',
+	'UNKNOWN',
+]);
+
+export const repositoryProfileArchitectureStyleSchema = z.enum([
+	'MODULAR_MONOLITH',
+	'LAYERED',
+	'UNKNOWN',
+]);
+
+export const repositoryProfileDiagnosticSchema = z.object({
+	detectedMarkers: z.array(z.string()).max(20).optional(),
+	confidence: z.number().min(0).max(1).optional(),
+	unsupportedReason: z.string().optional(),
+});
+
+export const repositoryProfileResponseSchema = z.object({
+	domain: repositoryProfileDomainSchema,
+	language: repositoryProfileLanguageSchema,
+	framework: repositoryProfileFrameworkSchema,
+	architectureStyle: repositoryProfileArchitectureStyleSchema,
+	sourceRoots: z.array(z.string()).max(20),
+	testRoots: z.array(z.string()).max(20),
+	diagnostics: repositoryProfileDiagnosticSchema.optional(),
+	profileVersion: z.string(),
+});
+
 export const repositoryListItemResponseSchema = z.object({
 	id: z.string().uuid(),
 	canonicalUrl: z.string().url(),
@@ -53,7 +97,8 @@ export const repositoryListItemResponseSchema = z.object({
 		analyzerVersion: z.string(),
 		coverageStatus: z.enum(['READY', 'PARTIAL']),
 		indexStatus: snapshotIndexStatusSchema,
-        diagnostics: z.array(diagnosticItemSchema).optional(),
+		diagnostics: z.array(diagnosticItemSchema).optional(),
+		profile: repositoryProfileResponseSchema.optional(),
 	}).optional(),
 	createdAt: z.string(),
 });
@@ -76,3 +121,4 @@ export type RepositoryCreateResponse = z.infer<typeof repositoryCreateResponseSc
 export type RepositoryListItemResponse = z.infer<typeof repositoryListItemResponseSchema>;
 export type RepositoryListResponse = z.infer<typeof repositoryListResponseSchema>;
 export type RepositoryDetailResponse = z.infer<typeof repositoryDetailResponseSchema>;
+export type RepositoryProfileResponse = z.infer<typeof repositoryProfileResponseSchema>;

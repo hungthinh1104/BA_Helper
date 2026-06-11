@@ -10,6 +10,7 @@ import {
   GitHubUrlValidator, 
   GitRepositoryFetcher, 
   FrameworkDetector, 
+  RepositoryProfileDetector,
   SafeFileEnumerator, 
   SecretRedactor,
   DiagnosticCollector
@@ -21,7 +22,7 @@ import { createHash } from 'node:crypto';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import type { ScanArtifact, ScanResult } from '@ba-helper/analyzer';
+import type { DetectedRepositoryProfile, ScanArtifact, ScanResult } from '@ba-helper/analyzer';
 import type { DiagnosticItem } from '@ba-helper/contracts';
 import { summarizeDiagnostics } from './scan-diagnostic-summary';
 
@@ -74,6 +75,7 @@ export class RunScanJobUseCase {
 
     try {
       let scanResult: ScanResult;
+      let repositoryProfile: DetectedRepositoryProfile | null = null;
       let coverageStatus: 'READY' | 'PARTIAL' = 'READY';
       
       const sourceRoot = job.repository.canonicalUrl;
@@ -109,6 +111,11 @@ export class RunScanJobUseCase {
           progress: 25,
         });
         const frameworkResult = await FrameworkDetector.detect(tempDir);
+        repositoryProfile = await RepositoryProfileDetector.detect({
+          rootDir: tempDir,
+          frameworkHint: frameworkResult.framework,
+          unsupportedReason: frameworkResult.isSupported ? undefined : frameworkResult.reason,
+        });
         if (!frameworkResult.isSupported) {
           collector.add({
             code: 'UNSUPPORTED_FRAMEWORK',
@@ -196,6 +203,41 @@ export class RunScanJobUseCase {
           diagnostics: collector.getItems() as unknown as import('@prisma/client').Prisma.InputJsonValue,
         },
       });
+
+      if (repositoryProfile) {
+        await this.prisma.repositoryProfile.upsert({
+          where: { snapshotId: snapshot.id },
+          create: {
+            snapshotId: snapshot.id,
+            domain: repositoryProfile.domain,
+            language: repositoryProfile.language,
+            framework: repositoryProfile.framework,
+            architectureStyle: repositoryProfile.architectureStyle,
+            sourceRoots:
+              repositoryProfile.sourceRoots as unknown as import('@prisma/client').Prisma.InputJsonValue,
+            testRoots:
+              repositoryProfile.testRoots as unknown as import('@prisma/client').Prisma.InputJsonValue,
+            diagnostics: repositoryProfile.diagnostics
+              ? (repositoryProfile.diagnostics as unknown as import('@prisma/client').Prisma.InputJsonValue)
+              : undefined,
+            profileVersion: repositoryProfile.profileVersion,
+          },
+          update: {
+            domain: repositoryProfile.domain,
+            language: repositoryProfile.language,
+            framework: repositoryProfile.framework,
+            architectureStyle: repositoryProfile.architectureStyle,
+            sourceRoots:
+              repositoryProfile.sourceRoots as unknown as import('@prisma/client').Prisma.InputJsonValue,
+            testRoots:
+              repositoryProfile.testRoots as unknown as import('@prisma/client').Prisma.InputJsonValue,
+            diagnostics: repositoryProfile.diagnostics
+              ? (repositoryProfile.diagnostics as unknown as import('@prisma/client').Prisma.InputJsonValue)
+              : undefined,
+            profileVersion: repositoryProfile.profileVersion,
+          },
+        });
+      }
 
       await this.scanJobRepository.updateState({
         jobId: job.id,

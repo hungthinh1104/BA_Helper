@@ -9,6 +9,7 @@ Project (recommended grouping, even before full auth)
 Repository
 RepositoryTarget
 RepositorySnapshot
+RepositoryProfile
 ScanJob
 CodeArtifact
 DependencyEdge
@@ -33,6 +34,7 @@ vertical slice, while preserving `Project` ownership boundaries.
 Repository        owns repo identity and snapshot references
 RepositoryTarget  owns selected ref identity and latest successful source-resolution observation
 RepositorySnapshot owns commit-and-analyzer-version-specific extracted artifacts
+RepositoryProfile owns snapshot-scoped repository classification metadata
 ScanJob           owns async processing state
 CodeArtifact      owns extracted symbol/API/test identity
 DependencyEdge    owns relationships between artifacts in one snapshot
@@ -51,6 +53,7 @@ DomainEvent       owns audit/debug history
 ```text
 RepositoryTarget   -> Repository, targetKey/ref type, latest observed commit
 RepositorySnapshot -> Repository, commitSha, analyzerVersion, published coverage status
+RepositoryProfile  -> RepositorySnapshot, domain/language/framework/architecture and bounded roots
 ScanJob            -> Repository + requested ref, optional resolved RepositoryTarget, and eventual published snapshot
 CodeArtifact       -> RepositorySnapshot
 DependencyEdge     -> RepositorySnapshot + fromArtifact + toArtifact
@@ -141,6 +144,17 @@ changed analyzer behavior or extraction/coverage policy affecting persisted
 This prevents a transient failed attempt from occupying the immutable
 `(repositoryId, commitSha, analyzerVersion)` identity and blocking a successful
 retry.
+
+Repository profiling follows the same publication rule:
+
+```text
+published READY or PARTIAL snapshot -> may persist one RepositoryProfile
+failed/unsupported scan             -> persists no RepositoryProfile
+```
+
+`RepositoryProfile` is attached to the immutable snapshot because framework,
+roots, and coarse domain hints are commit-specific analyzer facts, not mutable
+repository settings.
 
 `analyzerVersion` is the versioned extraction contract, not only a parser
 package version. It must cover adapter logic and configured limits/policies
@@ -235,6 +249,7 @@ Required uniqueness constraints:
 ```text
 RepositoryTarget    (repositoryId, targetKey)
 RepositorySnapshot  (repositoryId, commitSha, analyzerVersion)
+RepositoryProfile   (snapshotId)
 ScanJob             (repositoryId, requestKey) for retry-safe command creation
 CodeArtifact        (snapshotId, artifactKey)
 DependencyEdge      (snapshotId, fromArtifactId, toArtifactId, type)

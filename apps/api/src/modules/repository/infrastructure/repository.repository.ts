@@ -36,6 +36,7 @@ export class RepositoryRepository {
           take: 1,
           include: {
             artifacts: true,
+            profile: true,
           }
         },
         scanJobs: {
@@ -59,6 +60,9 @@ export class RepositoryRepository {
         snapshots: {
           orderBy: { createdAt: 'desc' },
           take: 1,
+          include: {
+            profile: true,
+          },
         },
         scanJobs: {
           orderBy: { createdAt: 'desc' },
