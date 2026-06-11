@@ -17,6 +17,7 @@ import { toast } from "sonner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ImpactMatrixTable } from "@/components/workspace/matrix/impact-matrix-table"
 import { MatrixRowDetailDrawer } from "@/components/workspace/matrix/matrix-row-detail-drawer"
+import { ReviewCoveragePanel } from "@/components/workspace/review/review-coverage-panel"
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   QUEUED:             { label: "Queued",       className: "bg-border text-muted-foreground border-border/50" },
@@ -200,6 +201,8 @@ export default function MultiRepoAnalysisRunDetailPage({
             </div>
           </div>
         )}
+
+        <ReviewCoveragePanel runId={runId} />
 
         <Tabs defaultValue="matrix" className="mt-6">
           <TabsList>

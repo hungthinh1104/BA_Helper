@@ -28,6 +28,7 @@ export const queryKeys = {
       approvedReport: (runId: string) => ["impact-analyses", "runs", "approved-report", runId] as const,
       reviewDecisions: (runId: string) => ["impact-analyses", "runs", "review-decisions", runId] as const,
       latestReviewDecision: (runId: string) => ["impact-analyses", "runs", "latest-review-decision", runId] as const,
+      reviewCoverage: (runId: string) => ["impact-analyses", "runs", "review-coverage", runId] as const,
     },
     report: (analysisId: string) => ["impact-analyses", "approved-report", analysisId] as const,
     graph: (analysisId: string) => ["impact-analyses", "graph", analysisId] as const,
