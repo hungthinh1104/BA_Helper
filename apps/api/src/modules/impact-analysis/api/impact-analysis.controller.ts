@@ -24,6 +24,7 @@ import {
   reviewDecisionListResponseSchema,
   reviewDecisionResponseSchema,
   lineageTimelineResponseSchema,
+  driftFreshnessRecommendationSchema,
   RequestUser,
 } from '@ba-helper/contracts';
 import { CurrentUser } from '../../auth/api/current-user.decorator';
@@ -52,6 +53,7 @@ import { ListReviewDecisionsUseCase } from '../application/list-review-decisions
 import { GetLatestReviewDecisionUseCase } from '../application/get-latest-review-decision.usecase';
 import { GetImpactAnalysisLineageUseCase } from '../application/get-impact-analysis-lineage.usecase';
 import { GetReviewCoverageUseCase } from '../application/get-review-coverage.usecase';
+import { GetAnalysisDriftFreshnessUseCase } from '../application/get-analysis-drift-freshness.usecase';
 import {
   mapImpactAnalysisListItem,
   mapImpactAnalysisResponse,
@@ -92,6 +94,7 @@ export class ImpactAnalysisController {
     private readonly getLatestReviewDecision: GetLatestReviewDecisionUseCase,
     private readonly getLineage: GetImpactAnalysisLineageUseCase,
     private readonly getReviewCoverage: GetReviewCoverageUseCase,
+    private readonly getAnalysisDriftFreshness: GetAnalysisDriftFreshnessUseCase,
     private readonly permissions: ProjectPermissionService,
   ) {}
 
@@ -442,6 +445,17 @@ export class ImpactAnalysisController {
     await this.permissions.assertCanReadAnalysis(actor, analysisId);
     const result = await this.getImpactDiff.execute(analysisId);
     return impactAnalysisDiffResponseSchema.parse(result);
+  }
+
+  @Get('/projects/:projectId/analyses/:analysisId/drift-freshness')
+  async driftFreshness(
+    @Param('projectId') projectId: string,
+    @Param('analysisId') analysisId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadAnalysis(actor, analysisId);
+    const result = await this.getAnalysisDriftFreshness.execute(projectId, analysisId);
+    return driftFreshnessRecommendationSchema.parse(result);
   }
 
   @Post('/impact-analyses/:analysisId/review-decisions')

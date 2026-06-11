@@ -90,3 +90,17 @@ export function useAnalysisLineage(analysisId: string) {
     enabled: !!analysisId,
   })
 }
+
+export function useAnalysisDriftFreshness(projectId: string | undefined, analysisId: string) {
+  return useQuery({
+    queryKey: queryKeys.analyses.driftFreshness(analysisId),
+    queryFn: async () => {
+      const { driftFreshnessRecommendationSchema } = await import("@ba-helper/contracts")
+      return apiGet(
+        `/api/v1/projects/${projectId}/analyses/${analysisId}/drift-freshness`,
+        driftFreshnessRecommendationSchema
+      )
+    },
+    enabled: Boolean(projectId && analysisId),
+  })
+}

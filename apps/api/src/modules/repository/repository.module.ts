@@ -59,5 +59,6 @@ import { ProjectModule } from '../project/project.module';
       inject: [PrismaService],
     },
   ],
+  exports: [GetRepositorySnapshotDriftUseCase],
 })
 export class RepositoryModule {}

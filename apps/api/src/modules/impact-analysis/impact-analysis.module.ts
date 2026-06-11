@@ -66,9 +66,11 @@ import { GraphModule } from '../graph/graph.module';
 import { ClarificationModule } from '../clarification/clarification.module';
 import { CreateRequirementRevisionUseCase } from '../requirement/application/create-revision.usecase';
 import { ProjectModule } from '../project/project.module';
+import { RepositoryModule } from '../repository/repository.module';
+import { GetAnalysisDriftFreshnessUseCase } from './application/get-analysis-drift-freshness.usecase';
 
 @Module({
-  imports: [PrismaModule, EventLogModule, DocumentModule, QueueModule, AiModule, RetrievalModule, GraphModule, ClarificationModule, ProjectModule],
+  imports: [PrismaModule, EventLogModule, DocumentModule, QueueModule, AiModule, RetrievalModule, GraphModule, ClarificationModule, ProjectModule, RepositoryModule],
   controllers: [ImpactAnalysisController, ReviewNoteController, ReviewClarificationController],
   providers: [
     ImpactAnalysisRepository,
@@ -118,6 +120,7 @@ import { ProjectModule } from '../project/project.module';
     CreateDerivedAnalysisFromClarificationUseCase,
     GetImpactAnalysisLineageUseCase,
     GetReviewCoverageUseCase,
+    GetAnalysisDriftFreshnessUseCase,
     {
       provide: ProjectRepository,
       useFactory: (prisma: PrismaService) => new ProjectRepository(prisma),

@@ -18,6 +18,7 @@ import { useAnalysisDetail, useAnalysisInsights, useAnalysisTraceability, useRev
 import { useImpactGraph } from "@/hooks/api/use-impact-graph"
 import { useQaCoverage } from "@/hooks/api/use-qa-coverage"
 import { useReviewQueue } from "@/hooks/api/use-review-queue"
+import { useOptionalProjectId } from "@/lib/project-context"
 import { useAnalysisStatusWatcher } from "@/hooks/ui/use-status-watcher"
 import { InsightListResponse, TraceabilityLinkListResponse, ImpactGraphNode } from "@ba-helper/contracts"
 import { type InsightFilterValue } from "@/components/workspace/shared/insight/insight-filter-bar"
@@ -28,6 +29,7 @@ import { AnalysisEvidenceInspector } from "./_components/analysis-evidence-inspe
 import { Network } from "lucide-react"
 
 import { AnalysisLineageTab } from "./_components/analysis-lineage-tab"
+import { AnalysisDriftWarning } from "./_components/analysis-drift-warning"
 
 // Dynamic import so React Flow CSS loads correctly in Next.js app router
 const ImpactGraphView = dynamic(
@@ -48,7 +50,8 @@ type WorkspaceSelection =
 
 export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{ analysisId: string }> }) {
   const { analysisId } = use(params)
-  const { data: analysis, isLoading: analysisLoading, error: analysisError } = useAnalysisDetail(undefined, analysisId)
+  const activeProjectId = useOptionalProjectId()
+  const { data: analysis, isLoading: analysisLoading, error: analysisError } = useAnalysisDetail(activeProjectId, analysisId)
   const { data: insightsData, isLoading: insightsLoading } = useAnalysisInsights(undefined, analysisId)
   const { data: linksData, isLoading: linksLoading } = useAnalysisTraceability(undefined, analysisId)
   const { data: graphData, isLoading: graphLoading } = useImpactGraph(analysisId)
@@ -310,7 +313,8 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
       inspectorFooter={activeTab === "review-queue" ? undefined : inspectorFooter}
     >
       {/* app-page-scroll owns 18px padding — matches .analysis-sticky-header bleed math */}
-      <div className={`app-page-scroll flex flex-col ${isFullHeightTab ? "overflow-hidden" : ""}`}>
+      <div className={`app-page-scroll flex flex-col gap-3 ${isFullHeightTab ? "overflow-hidden" : ""}`}>
+          <AnalysisDriftWarning projectId={activeProjectId} analysisId={analysisId} />
 
           <AnalysisTabBar
             analysis={analysis}

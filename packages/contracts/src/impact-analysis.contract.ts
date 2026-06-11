@@ -373,6 +373,21 @@ export const impactAnalysisDiffResponseSchema = z.object({
 	diagnostics: z.array(diagnosticItemSchema).optional(),
 });
 
+export const driftFreshnessRecommendationSchema = z.object({
+	status: z.enum(['CURRENT', 'DRIFTED', 'UNKNOWN', 'INCOMPATIBLE']),
+	severity: z.enum(['INFO', 'WARN', 'HIGH']),
+	shouldReviewBeforeUse: z.boolean(),
+	shouldRerunAnalysis: z.boolean(),
+	reason: z.string(),
+	driftSummary: z.object({
+		addedArtifactCount: z.number().int().nonnegative(),
+		removedArtifactCount: z.number().int().nonnegative(),
+		changedArtifactCount: z.number().int().nonnegative(),
+		unknownChangedArtifactCount: z.number().int().nonnegative(),
+		hashUnavailableArtifactCount: z.number().int().nonnegative(),
+	}).optional(),
+});
+
 export type ImpactAnalysisCreateRequest = z.infer<typeof impactAnalysisCreateRequestSchema>;
 export type MultiRepoImpactAnalysisCreateRequest = z.infer<typeof multiRepoImpactAnalysisCreateRequestSchema>;
 export type ImpactAnalysisResponse = z.infer<typeof impactAnalysisResponseSchema>;
@@ -393,6 +408,7 @@ export type MergedMultiRepoReportReviewDecisionCreateResponse = z.infer<typeof m
 export type ImpactAnalysisDiffResponse = z.infer<typeof impactAnalysisDiffResponseSchema>;
 export type DiffArtifact = z.infer<typeof diffArtifactSchema>;
 export type DiffInsight = z.infer<typeof diffInsightSchema>;
+export type DriftFreshnessRecommendation = z.infer<typeof driftFreshnessRecommendationSchema>;
 
 export const reviewDecisionRequestSchema = z.object({
 	decision: z.enum(['ACCEPTED', 'REJECTED', 'NEEDS_MORE_CLARIFICATION']),
