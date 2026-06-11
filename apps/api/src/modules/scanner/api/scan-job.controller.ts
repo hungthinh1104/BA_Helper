@@ -8,16 +8,24 @@ import { ScanJobRepository } from '../infrastructure/scan-job.repository';
 import { AppError } from '../../../shared/app-error';
 
 import { Roles } from '../../auth/api/roles.decorator';
+import { CurrentUser } from '../../auth/api/current-user.decorator';
+import { RequestUser } from '@ba-helper/contracts';
+import { ProjectPermissionService } from '../../project/application/project-permission.service';
 
 @Controller('/api/v1/repositories/:repositoryId/scan-jobs')
 export class ScanJobController {
   constructor(
     private readonly createScanJob: CreateScanJobUseCase,
     private readonly scanJobRepository: ScanJobRepository,
+    private readonly permissions: ProjectPermissionService,
   ) {}
 
   @Get('/:scanJobId')
-  async get(@Param('scanJobId') scanJobId: string) {
+  async get(
+    @Param('scanJobId') scanJobId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadScanJob(actor, scanJobId);
     const job = await this.scanJobRepository.findById(scanJobId);
     if (!job) {
       throw new AppError('SCAN_JOB_NOT_FOUND', 'Scan job not found.');
@@ -51,7 +59,16 @@ export class ScanJobController {
 
   @Post()
   @Roles('ADMIN')
-  async create(@Param('repositoryId') repositoryId: string, @Body() body: unknown) {
+  async create(
+    @Param('repositoryId') repositoryId: string,
+    @Body() body: unknown,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertPermissionForRepository(
+      actor,
+      repositoryId,
+      'scan:run',
+    );
     const input = scanJobCreateRequestSchema.parse(body);
     const job = await this.createScanJob.execute({
       repositoryId,

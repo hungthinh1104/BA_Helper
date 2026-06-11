@@ -7,6 +7,7 @@ import {
   requirementRevisionQualifyResponseSchema,
   requirementListResponseSchema,
   requirementDetailResponseSchema,
+  RequestUser,
 } from '@ba-helper/contracts';
 import { CreateRequirementUseCase } from '../application/create-requirement.usecase';
 import { CreateRequirementRevisionUseCase } from '../application/create-revision.usecase';
@@ -15,6 +16,8 @@ import { ListRequirementsUseCase } from '../application/list-requirements.usecas
 import { GetRequirementUseCase } from '../application/get-requirement.usecase';
 
 import { Roles } from '../../auth/api/roles.decorator';
+import { CurrentUser } from '../../auth/api/current-user.decorator';
+import { ProjectPermissionService } from '../../project/application/project-permission.service';
 
 @Controller('/api/v1')
 export class RequirementController {
@@ -24,6 +27,7 @@ export class RequirementController {
     private readonly qualifyRevision: QualifyRequirementRevisionUseCase,
     private readonly listRequirements: ListRequirementsUseCase,
     private readonly getRequirement: GetRequirementUseCase,
+    private readonly permissions: ProjectPermissionService,
   ) {}
 
   @Post('/projects/:projectId/requirements')
@@ -31,7 +35,14 @@ export class RequirementController {
   async createRequirementEndpoint(
     @Param('projectId') projectId: string,
     @Body() body: unknown,
+    @CurrentUser() actor: RequestUser,
   ) {
+    await this.permissions.assertPermission(
+      actor,
+      projectId,
+      'requirement:create',
+      'Project',
+    );
     const input = requirementCreateRequestSchema.parse(body);
     const result = await this.createRequirement.execute({
       projectId,
@@ -54,7 +65,13 @@ export class RequirementController {
   async createRevisionEndpoint(
     @Param('requirementId') requirementId: string,
     @Body() body: unknown,
+    @CurrentUser() actor: RequestUser,
   ) {
+    await this.permissions.assertPermissionForRequirement(
+      actor,
+      requirementId,
+      'requirement:create',
+    );
     const input = requirementRevisionCreateRequestSchema.parse(body);
     const result = await this.createRevision.execute({
       requirementId,
@@ -74,7 +91,15 @@ export class RequirementController {
 
   @Post('/requirement-revisions/:revisionId/qualify')
   @Roles('ADMIN')
-  async qualifyRevisionEndpoint(@Param('revisionId') revisionId: string) {
+  async qualifyRevisionEndpoint(
+    @Param('revisionId') revisionId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertPermissionForRequirementRevision(
+      actor,
+      revisionId,
+      'requirement:create',
+    );
     const result = await this.qualifyRevision.execute({ revisionId });
 
     return requirementRevisionQualifyResponseSchema.parse({
@@ -85,7 +110,11 @@ export class RequirementController {
   }
 
   @Get('/projects/:projectId/requirements')
-  async listRequirementsEndpoint(@Param('projectId') projectId: string) {
+  async listRequirementsEndpoint(
+    @Param('projectId') projectId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadProject(actor, projectId);
     const requirements = await this.listRequirements.execute({ projectId });
     return requirementListResponseSchema.parse({
       items: requirements.map((r) => {
@@ -111,7 +140,13 @@ export class RequirementController {
   async getRequirementEndpoint(
     @Param('projectId') projectId: string,
     @Param('requirementId') requirementId: string,
+    @CurrentUser() actor: RequestUser,
   ) {
+    await this.permissions.assertCanReadRequirement(
+      actor,
+      requirementId,
+      projectId,
+    );
     const r = await this.getRequirement.execute({ requirementId });
     return requirementDetailResponseSchema.parse({
       id: r.id,

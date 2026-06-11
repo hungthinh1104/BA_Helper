@@ -14,9 +14,10 @@ import { ArtifactRepository } from '../artifact/infrastructure/artifact.reposito
 import { QueueModule } from '../queue/queue.module';
 import { QueueService } from '../queue/queue.service';
 import { EvidenceModule } from '../evidence/evidence.module';
+import { ProjectModule } from '../project/project.module';
 
 @Module({
-  imports: [PrismaModule, EventLogModule, RepositoryModule, ArtifactModule, QueueModule, EvidenceModule],
+  imports: [PrismaModule, EventLogModule, RepositoryModule, ArtifactModule, QueueModule, EvidenceModule, ProjectModule],
   controllers: [ScanJobController],
   providers: [
     {

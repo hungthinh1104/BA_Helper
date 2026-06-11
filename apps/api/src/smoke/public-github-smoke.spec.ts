@@ -22,6 +22,7 @@ import {
 describe('public GitHub smoke helpers', () => {
   const workspace: CurrentWorkspaceResponse = {
     createdAt: new Date().toISOString(),
+    membershipRole: null,
     mode: 'dev-single-user',
     name: 'Default Project',
     projectId: '11111111-1111-4111-8111-111111111111',

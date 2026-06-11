@@ -11,9 +11,10 @@ import { ConvertClarificationToRevisionUseCase } from './application/convert-cla
 import { ImpactAnalysisRepository } from '../impact-analysis/infrastructure/impact-analysis.repository';
 import { InsightRepository } from '../insight/infrastructure/insight.repository';
 import { RequirementRepository } from '../requirement/infrastructure/requirement.repository';
+import { ProjectModule } from '../project/project.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, ProjectModule],
   controllers: [ClarificationController],
   providers: [
     ClarificationRepository,

@@ -1,3 +1,4 @@
+import type { RequestUser } from '@ba-helper/contracts';
 import { AppError } from '../../../shared/app-error';
 import {
   CurrentWorkspaceResolver,
@@ -9,7 +10,7 @@ export class GetCurrentWorkspaceUseCase {
     private readonly resolvers: CurrentWorkspaceResolver[],
   ) {}
 
-  async execute() {
+  async execute(actor?: RequestUser) {
     const { workspaceMode } = getRuntimeConfig(process.env);
     const resolver = this.resolvers.find(
       (candidate) => candidate.mode === workspaceMode,
@@ -22,6 +23,6 @@ export class GetCurrentWorkspaceUseCase {
       );
     }
 
-    return resolver.resolveCurrentWorkspace();
+    return resolver.resolveCurrentWorkspace(actor);
   }
 }

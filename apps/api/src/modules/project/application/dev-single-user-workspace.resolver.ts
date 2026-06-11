@@ -1,4 +1,6 @@
+import type { RequestUser } from '@ba-helper/contracts';
 import { EventLogService } from '../../event-log/application/event-log.service';
+import { mapGlobalRoleToProjectRole } from '../domain/project-membership.policy';
 import { ProjectRepository } from '../infrastructure/project.repository';
 import {
   CurrentWorkspaceResolver,
@@ -17,11 +19,13 @@ export class DevSingleUserWorkspaceResolver
     private readonly eventLog: EventLogService,
   ) {}
 
-  async resolveCurrentWorkspace(): Promise<ResolvedWorkspace> {
+  async resolveCurrentWorkspace(actor?: RequestUser): Promise<ResolvedWorkspace> {
     const existing = await this.repository.findByName(DEFAULT_PROJECT_NAME);
     if (existing) {
+      const membershipRole = await this.ensureMembership(existing.id, actor);
       return {
         project: existing,
+        membershipRole,
         mode: this.mode,
       };
     }
@@ -36,10 +40,30 @@ export class DevSingleUserWorkspaceResolver
       },
     });
 
+    const membershipRole = await this.ensureMembership(project.id, actor);
+
     return {
       project,
+      membershipRole,
       mode: this.mode,
     };
   }
-}
 
+  private async ensureMembership(
+    projectId: string,
+    actor?: RequestUser,
+  ): Promise<ResolvedWorkspace['membershipRole']> {
+    if (!actor) {
+      return null;
+    }
+
+    const projectRole = mapGlobalRoleToProjectRole(actor.role);
+    const member = await this.repository.ensureProjectMember(
+      projectId,
+      actor.id,
+      projectRole,
+    );
+
+    return member.role;
+  }
+}

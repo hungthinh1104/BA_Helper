@@ -12,9 +12,10 @@ import { PdfExportRenderer } from './application/pdf-export.renderer';
 import { PrismaModule } from '../prisma/prisma.module';
 import { EventLogModule } from '../event-log/event-log.module';
 import { EventLogService } from '../event-log/application/event-log.service';
+import { ProjectModule } from '../project/project.module';
 
 @Module({
-  imports: [PrismaModule, EventLogModule],
+  imports: [PrismaModule, EventLogModule, ProjectModule],
   controllers: [DocumentController],
   providers: [
     DocumentRepository,

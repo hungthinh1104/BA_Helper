@@ -10,16 +10,21 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EventLogModule } from '../event-log/event-log.module';
 import { EventLogService } from '../event-log/application/event-log.service';
 import { WorkspaceController } from './api/workspace.controller';
+import { AuthModule } from '../auth/auth.module';
+import { ProjectScopeRepository } from './infrastructure/project-scope.repository';
+import { ProjectPermissionService } from './application/project-permission.service';
 
 @Module({
-  imports: [PrismaModule, EventLogModule],
+  imports: [PrismaModule, EventLogModule, AuthModule],
   controllers: [ProjectController, WorkspaceController],
   providers: [
+    ProjectScopeRepository,
     {
       provide: ProjectRepository,
       useFactory: (prisma: PrismaService) => new ProjectRepository(prisma),
       inject: [PrismaService],
     },
+    ProjectPermissionService,
     {
       provide: CreateProjectUseCase,
       useFactory: (repo: ProjectRepository, eventLog: EventLogService) =>
@@ -46,5 +51,6 @@ import { WorkspaceController } from './api/workspace.controller';
       inject: [CURRENT_WORKSPACE_RESOLVERS],
     },
   ],
+  exports: [ProjectPermissionService, ProjectRepository, ProjectScopeRepository],
 })
 export class ProjectModule {}

@@ -5,6 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../src/modules/prisma/prisma.service';
 import { createTestApp } from './helpers/test-app';
 import { resetDatabase } from './helpers/reset-db';
+import { grantProjectMembership } from './helpers/grant-project-membership';
 
 describe('Auth and RBAC (e2e)', () => {
   let app: INestApplication;
@@ -14,6 +15,9 @@ describe('Auth and RBAC (e2e)', () => {
   let adminToken: string;
   let reviewerToken: string;
   let viewerToken: string;
+  let adminUserId: string;
+  let reviewerUserId: string;
+  let viewerUserId: string;
   let originalEnableDevLogin: string | undefined;
   let originalWorkspaceMode: string | undefined;
 
@@ -60,6 +64,10 @@ describe('Auth and RBAC (e2e)', () => {
       }),
     ]);
 
+    adminUserId = admin.id;
+    reviewerUserId = reviewer.id;
+    viewerUserId = viewer.id;
+
     adminToken = jwtService.sign({ sub: admin.id, email: admin.email, role: admin.role, name: admin.name });
     reviewerToken = jwtService.sign({ sub: reviewer.id, email: reviewer.email, role: reviewer.role, name: reviewer.name });
     viewerToken = jwtService.sign({ sub: viewer.id, email: viewer.email, role: viewer.role, name: viewer.name });
@@ -92,6 +100,23 @@ describe('Auth and RBAC (e2e)', () => {
     const linkId = crypto.randomUUID();
 
     await prisma.project.create({ data: { id: projectId, name: 'Auth RBAC Project' } });
+    await Promise.all([
+      grantProjectMembership(prisma, {
+        projectId,
+        userId: adminUserId,
+        role: 'OWNER',
+      }),
+      grantProjectMembership(prisma, {
+        projectId,
+        userId: reviewerUserId,
+        role: 'REVIEWER',
+      }),
+      grantProjectMembership(prisma, {
+        projectId,
+        userId: viewerUserId,
+        role: 'VIEWER',
+      }),
+    ]);
     await prisma.repository.create({
       data: {
         id: repositoryId,
@@ -222,6 +247,26 @@ describe('Auth and RBAC (e2e)', () => {
 
     expect(res.body.projectId).toEqual(expect.any(String));
     expect(res.body.mode).toBe('dev-single-user');
+    expect(res.body.membershipRole).toBeNull();
+  });
+
+  it('returns project membership role when workspace bootstrap is called with an authenticated actor', async () => {
+    process.env.WORKSPACE_MODE = 'dev-single-user';
+
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/workspace/current')
+      .set('Authorization', `Bearer ${reviewerToken}`)
+      .expect(200);
+
+    expect(res.body.membershipRole).toBe('REVIEWER');
+    const member = await prisma.projectMember.findFirst({
+      where: {
+        projectId: res.body.projectId,
+      },
+    });
+    expect(member).toMatchObject({
+      role: 'REVIEWER',
+    });
   });
 
   it('enforces admin-only project creation', async () => {
@@ -238,12 +283,38 @@ describe('Auth and RBAC (e2e)', () => {
       .expect(201);
 
     expect(res.body.name).toBe('Admin Project');
+    const member = await prisma.projectMember.findFirst({
+      where: {
+        projectId: res.body.projectId,
+      },
+    });
+    expect(member).toMatchObject({
+      userId: expect.any(String),
+      role: 'OWNER',
+    });
   });
 
   it('blocks reviewer from admin-only setup, scan, requirement, base-analysis, and finalize operations', async () => {
     const project = await prisma.project.create({
       data: { id: crypto.randomUUID(), name: 'RBAC Project' },
     });
+    await Promise.all([
+      grantProjectMembership(prisma, {
+        projectId: project.id,
+        userId: adminUserId,
+        role: 'OWNER',
+      }),
+      grantProjectMembership(prisma, {
+        projectId: project.id,
+        userId: reviewerUserId,
+        role: 'REVIEWER',
+      }),
+      grantProjectMembership(prisma, {
+        projectId: project.id,
+        userId: viewerUserId,
+        role: 'VIEWER',
+      }),
+    ]);
     const repository = await prisma.repository.create({
       data: {
         id: crypto.randomUUID(),
@@ -498,5 +569,192 @@ describe('Auth and RBAC (e2e)', () => {
 
     expect(pdfExport.headers['content-type']).toContain('application/pdf');
     expect(pdfExport.headers['content-disposition']).toContain('.pdf');
+  });
+
+  it('returns 404 for cross-project analysis reads and exports outside membership scope', async () => {
+    const projectId = crypto.randomUUID();
+    const repositoryId = crypto.randomUUID();
+    const targetId = crypto.randomUUID();
+    const snapshotId = crypto.randomUUID();
+    const requirementId = crypto.randomUUID();
+    const revisionId = crypto.randomUUID();
+    const analysisId = crypto.randomUUID();
+
+    await prisma.project.create({ data: { id: projectId, name: 'Hidden Project' } });
+    await grantProjectMembership(prisma, {
+      projectId,
+      userId: adminUserId,
+      role: 'OWNER',
+    });
+    await prisma.repository.create({
+      data: {
+        id: repositoryId,
+        projectId,
+        canonicalUrl: 'https://github.com/example/hidden',
+      },
+    });
+    await prisma.repositoryTarget.create({
+      data: {
+        id: targetId,
+        repositoryId,
+        targetKey: 'main',
+        requestedRef: 'main',
+        resolvedRefType: 'BRANCH',
+        latestObservedCommitSha: 'abc1234',
+        lastObservedAt: new Date(),
+      },
+    });
+    await prisma.repositorySnapshot.create({
+      data: {
+        id: snapshotId,
+        repositoryId,
+        commitSha: 'abc1234',
+        analyzerVersion: '1.0.0',
+        coverageStatus: 'READY',
+      },
+    });
+    await prisma.requirement.create({
+      data: {
+        id: requirementId,
+        projectId,
+      },
+    });
+    await prisma.requirementRevision.create({
+      data: {
+        id: revisionId,
+        requirementId,
+        title: 'Restricted report',
+        rawText: 'restricted',
+        normalizedText: 'restricted',
+        readinessStatus: 'READY_FOR_ANALYSIS',
+      },
+    });
+    await prisma.impactAnalysis.create({
+      data: {
+        id: analysisId,
+        requirementRevisionId: revisionId,
+        snapshotId,
+        sourceTargetId: targetId,
+        requestKey: crypto.randomUUID(),
+        status: 'COMPLETED',
+        stage: 'DONE',
+      },
+    });
+    await prisma.generatedDocument.create({
+      data: {
+        id: crypto.randomUUID(),
+        impactAnalysisId: analysisId,
+        type: 'IMPACT_REPORT',
+        status: 'APPROVED',
+        content: '# Restricted report',
+      },
+    });
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}`)
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/approved-report/export.md`)
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .expect(404);
+  });
+
+  it('returns 404 for cross-project review mutation even when global reviewer role matches', async () => {
+    const { analysisId } = await seedAnalysisGraph('COMPLETED');
+    const outsiderProjectId = crypto.randomUUID();
+
+    await prisma.project.create({
+      data: { id: outsiderProjectId, name: 'Reviewer Own Project' },
+    });
+    await grantProjectMembership(prisma, {
+      projectId: outsiderProjectId,
+      userId: reviewerUserId,
+      role: 'REVIEWER',
+    });
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${analysisId}/review-decisions`)
+      .set('Authorization', `Bearer ${reviewerToken}`)
+      .send({ decision: 'ACCEPTED' })
+      .expect(201);
+
+    const hiddenProjectId = crypto.randomUUID();
+    const hiddenRepositoryId = crypto.randomUUID();
+    const hiddenTargetId = crypto.randomUUID();
+    const hiddenSnapshotId = crypto.randomUUID();
+    const hiddenRequirementId = crypto.randomUUID();
+    const hiddenRevisionId = crypto.randomUUID();
+    const hiddenAnalysisId = crypto.randomUUID();
+
+    await prisma.project.create({
+      data: { id: hiddenProjectId, name: 'Hidden Review Project' },
+    });
+    await grantProjectMembership(prisma, {
+      projectId: hiddenProjectId,
+      userId: adminUserId,
+      role: 'OWNER',
+    });
+    await prisma.repository.create({
+      data: {
+        id: hiddenRepositoryId,
+        projectId: hiddenProjectId,
+        canonicalUrl: 'https://github.com/example/hidden-review',
+      },
+    });
+    await prisma.repositoryTarget.create({
+      data: {
+        id: hiddenTargetId,
+        repositoryId: hiddenRepositoryId,
+        targetKey: 'main',
+        requestedRef: 'main',
+        resolvedRefType: 'BRANCH',
+        latestObservedCommitSha: 'hidden123',
+        lastObservedAt: new Date(),
+      },
+    });
+    await prisma.repositorySnapshot.create({
+      data: {
+        id: hiddenSnapshotId,
+        repositoryId: hiddenRepositoryId,
+        commitSha: 'hidden123',
+        analyzerVersion: '1.0.0',
+        coverageStatus: 'READY',
+      },
+    });
+    await prisma.requirement.create({
+      data: {
+        id: hiddenRequirementId,
+        projectId: hiddenProjectId,
+      },
+    });
+    await prisma.requirementRevision.create({
+      data: {
+        id: hiddenRevisionId,
+        requirementId: hiddenRequirementId,
+        title: 'Hidden review',
+        rawText: 'Hidden review',
+        normalizedText: 'Hidden review',
+        readinessStatus: 'READY_FOR_ANALYSIS',
+      },
+    });
+    await prisma.impactAnalysis.create({
+      data: {
+        id: hiddenAnalysisId,
+        requirementRevisionId: hiddenRevisionId,
+        snapshotId: hiddenSnapshotId,
+        sourceTargetId: hiddenTargetId,
+        requestKey: crypto.randomUUID(),
+        status: 'COMPLETED',
+        stage: 'DONE',
+      },
+    });
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${hiddenAnalysisId}/review-decisions`)
+      .set('Authorization', `Bearer ${reviewerToken}`)
+      .send({ decision: 'REJECTED' })
+      .expect(404);
   });
 });

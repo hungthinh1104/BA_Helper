@@ -63,6 +63,11 @@ export function AppTopbar() {
         <Badge variant="outline" className="h-6 rounded-md px-2 text-[10px] uppercase tracking-wider">
           {workspace.mode}
         </Badge>
+        {workspace.membershipRole && (
+          <Badge variant="outline" className="h-6 rounded-md px-2 text-[10px] uppercase tracking-wider">
+            {workspace.membershipRole}
+          </Badge>
+        )}
         {user && (
           <>
             <Badge variant="outline" className="h-6 rounded-md px-2 text-[10px] uppercase tracking-wider">

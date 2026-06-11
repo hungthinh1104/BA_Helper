@@ -52,6 +52,7 @@ import {
   repositoryDetailResponseSchema,
   scanJobResponseSchema,
 } from '@ba-helper/contracts';
+import { grantProjectMembership } from './helpers/grant-project-membership';
 
 const analyzer = jest.requireMock('@ba-helper/analyzer') as {
   GitHubUrlValidator: { validate: jest.Mock };
@@ -66,6 +67,7 @@ describe('Secure Ingestion Diagnostics (E2E)', () => {
   let prisma: PrismaService;
   let jwtService: JwtService;
   let adminToken: string;
+  let adminUserId: string;
   let runScanJob: RunScanJobUseCase;
 
   beforeAll(async () => {
@@ -91,6 +93,7 @@ describe('Secure Ingestion Diagnostics (E2E)', () => {
         role: 'ADMIN',
       },
     });
+    adminUserId = user.id;
     adminToken = jwtService.sign({ sub: user.id, email: user.email, role: user.role });
   });
 
@@ -116,6 +119,11 @@ describe('Secure Ingestion Diagnostics (E2E)', () => {
 
   it('rejects an unsafe ref before scan queueing', async () => {
     const project = await prisma.project.create({ data: { name: 'Unsafe Ref Project' } });
+    await grantProjectMembership(prisma, {
+      projectId: project.id,
+      userId: adminUserId,
+      role: 'OWNER',
+    });
     const repository = await prisma.repository.create({
       data: {
         projectId: project.id,
@@ -167,6 +175,11 @@ describe('Secure Ingestion Diagnostics (E2E)', () => {
     });
 
     const project = await prisma.project.create({ data: { name: 'Partial Scan Project' } });
+    await grantProjectMembership(prisma, {
+      projectId: project.id,
+      userId: adminUserId,
+      role: 'OWNER',
+    });
     const repository = await prisma.repository.create({
       data: {
         projectId: project.id,
@@ -242,6 +255,11 @@ describe('Secure Ingestion Diagnostics (E2E)', () => {
     });
 
     const project = await prisma.project.create({ data: { name: 'Blocked Scan Project' } });
+    await grantProjectMembership(prisma, {
+      projectId: project.id,
+      userId: adminUserId,
+      role: 'OWNER',
+    });
     const repository = await prisma.repository.create({
       data: {
         projectId: project.id,

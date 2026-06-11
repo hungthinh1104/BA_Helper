@@ -7,6 +7,7 @@ import { approvedImpactReportResponseSchema, RequestUser } from '@ba-helper/cont
 import { DocumentMapper } from './document.mapper';
 import { Res } from '@nestjs/common';
 import { CurrentUser } from '../../auth/api/current-user.decorator';
+import { ProjectPermissionService } from '../../project/application/project-permission.service';
 
 @Controller('/api/v1')
 export class DocumentController {
@@ -14,10 +15,15 @@ export class DocumentController {
     private readonly listDocuments: ListDocumentsUseCase,
     private readonly getApprovedReport: GetApprovedReportUseCase,
     private readonly exportApprovedReport: ExportApprovedReportUseCase,
+    private readonly permissions: ProjectPermissionService,
   ) {}
 
   @Get('/impact-analyses/:analysisId/documents')
-  async list(@Param('analysisId') analysisId: string) {
+  async list(
+    @Param('analysisId') analysisId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadAnalysis(actor, analysisId);
     const docs = await this.listDocuments.execute(analysisId);
     const mapped = docs.map((doc: {
       id: string;
@@ -45,7 +51,11 @@ export class DocumentController {
   }
 
   @Get('/impact-analyses/:analysisId/approved-report')
-  async getApprovedReportEndpoint(@Param('analysisId') analysisId: string) {
+  async getApprovedReportEndpoint(
+    @Param('analysisId') analysisId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadAnalysis(actor, analysisId);
     const result = await this.getApprovedReport.execute(analysisId);
 
     const mapped = DocumentMapper.toApprovedReportResponse(result.report, result.metadata);
@@ -59,6 +69,11 @@ export class DocumentController {
     @CurrentUser() actor: RequestUser,
     @Res() res: any,
   ) {
+    await this.permissions.assertPermissionForAnalysis(
+      actor,
+      analysisId,
+      'report:export',
+    );
     const result = await this.exportApprovedReport.execute({
       analysisId,
       actor,
@@ -76,6 +91,11 @@ export class DocumentController {
     @CurrentUser() actor: RequestUser,
     @Res() res: any,
   ) {
+    await this.permissions.assertPermissionForAnalysis(
+      actor,
+      analysisId,
+      'report:export',
+    );
     const result = await this.exportApprovedReport.execute({
       analysisId,
       actor,

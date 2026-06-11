@@ -9,9 +9,10 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventLogModule } from '../event-log/event-log.module';
 import { EventLogService } from '../event-log/application/event-log.service';
+import { ProjectModule } from '../project/project.module';
 
 @Module({
-  imports: [PrismaModule, EventLogModule],
+  imports: [PrismaModule, EventLogModule, ProjectModule],
   controllers: [RepositoryController],
   providers: [
     {

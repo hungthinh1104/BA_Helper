@@ -54,6 +54,17 @@ function ProfileSettingsContent() {
             </WorkspaceProperty>
 
             <WorkspaceProperty
+              label="Project Role"
+              description="Current actor role resolved from project membership for this workspace."
+            >
+              <Input
+                value={workspace.membershipRole ?? "No membership resolved"}
+                readOnly
+                className="max-w-sm h-8 text-[13px] bg-surface-muted/50 border-border/50 shadow-none focus-visible:ring-0"
+              />
+            </WorkspaceProperty>
+
+            <WorkspaceProperty
               label="Project ID"
               description="Project UUID used by repository, requirement, scan, and analysis requests."
             >

@@ -1,14 +1,12 @@
 import { Controller, Get, Post, Patch, Param, Body } from '@nestjs/common';
 import {
   CreateClarificationRequestSchema,
-  CreateClarificationRequest,
   AnswerClarificationRequestSchema,
-  AnswerClarificationRequest,
   DismissClarificationRequestSchema,
-  DismissClarificationRequest,
   ClarificationListResponseSchema,
   ClarificationItemDtoSchema,
   ConvertClarificationResponseSchema,
+  RequestUser,
 } from '@ba-helper/contracts';
 import { EnsureClarificationUseCase } from '../application/ensure-clarification.usecase';
 import { AnswerClarificationUseCase } from '../application/answer-clarification.usecase';
@@ -17,6 +15,8 @@ import { ListClarificationsUseCase } from '../application/list-clarifications.us
 import { ConvertClarificationToRevisionUseCase } from '../application/convert-clarification-to-revision.usecase';
 import { ClarificationMapper } from './clarification.mapper';
 import { Roles } from '../../auth/api/roles.decorator';
+import { CurrentUser } from '../../auth/api/current-user.decorator';
+import { ProjectPermissionService } from '../../project/application/project-permission.service';
 
 @Controller('/api/v1')
 export class ClarificationController {
@@ -26,10 +26,15 @@ export class ClarificationController {
     private readonly dismissUseCase: DismissClarificationUseCase,
     private readonly listUseCase: ListClarificationsUseCase,
     private readonly convertUseCase: ConvertClarificationToRevisionUseCase,
+    private readonly permissions: ProjectPermissionService,
   ) {}
 
   @Get('/impact-analyses/:analysisId/clarifications')
-  async list(@Param('analysisId') analysisId: string) {
+  async list(
+    @Param('analysisId') analysisId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadAnalysis(actor, analysisId);
     const items = await this.listUseCase.execute(analysisId);
     return ClarificationListResponseSchema.parse({
       items: ClarificationMapper.toDtoList(items),
@@ -41,7 +46,13 @@ export class ClarificationController {
   async create(
     @Param('analysisId') analysisId: string,
     @Body() body: unknown,
+    @CurrentUser() actor: RequestUser,
   ) {
+    await this.permissions.assertPermissionForAnalysis(
+      actor,
+      analysisId,
+      'clarification:write',
+    );
     const input = CreateClarificationRequestSchema.parse(body);
     const item = await this.ensureUseCase.execute(analysisId, input.sourceInsightId);
     return ClarificationItemDtoSchema.parse(ClarificationMapper.toDto(item));
@@ -52,7 +63,13 @@ export class ClarificationController {
   async answer(
     @Param('id') id: string,
     @Body() body: unknown,
+    @CurrentUser() actor: RequestUser,
   ) {
+    await this.permissions.assertPermissionForClarification(
+      actor,
+      id,
+      'clarification:write',
+    );
     const input = AnswerClarificationRequestSchema.parse(body);
     const item = await this.answerUseCase.execute(id, input.answer);
     return ClarificationItemDtoSchema.parse(ClarificationMapper.toDto(item));
@@ -63,7 +80,13 @@ export class ClarificationController {
   async dismiss(
     @Param('id') id: string,
     @Body() body: unknown,
+    @CurrentUser() actor: RequestUser,
   ) {
+    await this.permissions.assertPermissionForClarification(
+      actor,
+      id,
+      'clarification:write',
+    );
     const input = DismissClarificationRequestSchema.parse(body);
     const item = await this.dismissUseCase.execute(id, input.reason);
     return ClarificationItemDtoSchema.parse(ClarificationMapper.toDto(item));
@@ -71,7 +94,15 @@ export class ClarificationController {
 
   @Post('/clarifications/:id/convert-to-revision')
   @Roles('ADMIN')
-  async convertToRevision(@Param('id') id: string) {
+  async convertToRevision(
+    @Param('id') id: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertPermissionForClarification(
+      actor,
+      id,
+      'requirement:create',
+    );
     const result = await this.convertUseCase.execute(id);
     return ConvertClarificationResponseSchema.parse(result);
   }

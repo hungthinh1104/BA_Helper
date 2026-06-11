@@ -48,9 +48,10 @@ import { ProjectRepository } from '../project/infrastructure/project.repository'
 import { GraphModule } from '../graph/graph.module';
 import { ClarificationModule } from '../clarification/clarification.module';
 import { CreateRequirementRevisionUseCase } from '../requirement/application/create-revision.usecase';
+import { ProjectModule } from '../project/project.module';
 
 @Module({
-  imports: [PrismaModule, EventLogModule, DocumentModule, QueueModule, AiModule, RetrievalModule, GraphModule, ClarificationModule],
+  imports: [PrismaModule, EventLogModule, DocumentModule, QueueModule, AiModule, RetrievalModule, GraphModule, ClarificationModule, ProjectModule],
   controllers: [ImpactAnalysisController, ReviewNoteController, ReviewClarificationController],
   providers: [
     ImpactAnalysisRepository,

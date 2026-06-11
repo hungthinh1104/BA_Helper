@@ -5,6 +5,7 @@ import { resetDatabase } from './helpers/reset-db';
 import { PrismaService } from '../../src/modules/prisma/prisma.service';
 import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';
+import { grantProjectMembership } from './helpers/grant-project-membership';
 
 describe('Review Decision Endpoints (e2e)', () => {
   let app: INestApplication;
@@ -42,6 +43,11 @@ describe('Review Decision Endpoints (e2e)', () => {
     const repositoryId = crypto.randomUUID();
 
     await prisma.project.create({ data: { id: projectId, name: 'Proj' } });
+    await grantProjectMembership(prisma, {
+      projectId,
+      userId: adminUserId,
+      role: 'OWNER',
+    });
     await prisma.repository.create({
       data: { id: repositoryId, projectId, canonicalUrl: 'https://github.com/a/b' },
     });

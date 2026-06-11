@@ -37,6 +37,7 @@ import {
 } from '../infrastructure/impact-analysis.mapper';
 
 import { Roles } from '../../auth/api/roles.decorator';
+import { ProjectPermissionService } from '../../project/application/project-permission.service';
 
 @Controller('/api/v1')
 export class ImpactAnalysisController {
@@ -53,6 +54,7 @@ export class ImpactAnalysisController {
     private readonly listReviewDecisions: ListReviewDecisionsUseCase,
     private readonly getLatestReviewDecision: GetLatestReviewDecisionUseCase,
     private readonly getLineage: GetImpactAnalysisLineageUseCase,
+    private readonly permissions: ProjectPermissionService,
   ) {}
 
   @Post('/requirement-revisions/:revisionId/impact-analyses')
@@ -60,7 +62,13 @@ export class ImpactAnalysisController {
   async create(
     @Param('revisionId') revisionId: string,
     @Body() body: unknown,
+    @CurrentUser() actor: RequestUser,
   ) {
+    await this.permissions.assertPermissionForRequirementRevision(
+      actor,
+      revisionId,
+      'analysis:create',
+    );
     const input = impactAnalysisCreateRequestSchema.parse(body);
     const analysis = await this.createAnalysis.execute({
       requirementRevisionId: revisionId,
@@ -78,7 +86,11 @@ export class ImpactAnalysisController {
   }
 
   @Get('/impact-analyses/:analysisId')
-  async get(@Param('analysisId') analysisId: string) {
+  async get(
+    @Param('analysisId') analysisId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadAnalysis(actor, analysisId);
     const analysis = await this.getAnalysis.execute(analysisId);
     return impactAnalysisResponseSchema.parse(
       mapImpactAnalysisResponse({ analysis }),
@@ -86,13 +98,22 @@ export class ImpactAnalysisController {
   }
 
   @Get('/impact-analyses/:analysisId/lineage')
-  async getLineageTimeline(@Param('analysisId') analysisId: string) {
+  async getLineageTimeline(
+    @Param('analysisId') analysisId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadAnalysis(actor, analysisId);
     const lineage = await this.getLineage.execute(analysisId);
     return lineageTimelineResponseSchema.parse(lineage);
   }
 
   @Get('/projects/:projectId/analyses')
-  async list(@Param('projectId') projectId: string, @Query() query: unknown) {
+  async list(
+    @Param('projectId') projectId: string,
+    @Query() query: unknown,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadProject(actor, projectId);
     const parsedQuery = paginationQuerySchema.safeParse(query);
     if (!parsedQuery.success) {
       throw new BadRequestException(parsedQuery.error.errors);
@@ -111,7 +132,13 @@ export class ImpactAnalysisController {
   async finalize(
     @Param('analysisId') analysisId: string,
     @Body() body: unknown,
+    @CurrentUser() actor: RequestUser,
   ) {
+    await this.permissions.assertPermissionForAnalysis(
+      actor,
+      analysisId,
+      'analysis:finalize',
+    );
     const input = finalizeImpactAnalysisRequestSchema.parse(body);
     const analysis = await this.finalizeAnalysis.execute({
       analysisId,
@@ -123,25 +150,41 @@ export class ImpactAnalysisController {
   }
 
   @Get('/impact-analyses/:analysisId/graph')
-  async graph(@Param('analysisId') analysisId: string) {
+  async graph(
+    @Param('analysisId') analysisId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadAnalysis(actor, analysisId);
     const result = await this.getImpactGraph.execute(analysisId);
     return impactGraphResponseSchema.parse(result);
   }
 
   @Get('/impact-analyses/:analysisId/qa-coverage')
-  async qaCoverage(@Param('analysisId') analysisId: string) {
+  async qaCoverage(
+    @Param('analysisId') analysisId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadAnalysis(actor, analysisId);
     const result = await this.getQaCoverage.execute(analysisId);
     return qaCoverageResponseSchema.parse(result);
   }
 
   @Get('/impact-analyses/:analysisId/review-queue')
-  async reviewQueue(@Param('analysisId') analysisId: string) {
+  async reviewQueue(
+    @Param('analysisId') analysisId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadAnalysis(actor, analysisId);
     const result = await this.getReviewQueue.execute(analysisId);
     return reviewQueueResponseSchema.parse(result);
   }
 
   @Get('/impact-analyses/:analysisId/diff')
-  async diff(@Param('analysisId') analysisId: string) {
+  async diff(
+    @Param('analysisId') analysisId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadAnalysis(actor, analysisId);
     const result = await this.getImpactDiff.execute(analysisId);
     return impactAnalysisDiffResponseSchema.parse(result);
   }
@@ -153,6 +196,11 @@ export class ImpactAnalysisController {
     @Body() body: unknown,
     @CurrentUser() actor: RequestUser,
   ) {
+    await this.permissions.assertPermissionForAnalysis(
+      actor,
+      analysisId,
+      'review:write',
+    );
     const input = reviewDecisionRequestSchema.parse(body);
 
     const result = await this.createReviewDecision.execute({
@@ -172,7 +220,9 @@ export class ImpactAnalysisController {
   @Get('/impact-analyses/:analysisId/review-decisions')
   async listReviewDecisionsEndpoint(
     @Param('analysisId') analysisId: string,
+    @CurrentUser() actor: RequestUser,
   ) {
+    await this.permissions.assertCanReadAnalysis(actor, analysisId);
     const result = await this.listReviewDecisions.execute(analysisId);
     return reviewDecisionListResponseSchema.parse({
       items: result.items.map(mapReviewDecision),
@@ -182,7 +232,9 @@ export class ImpactAnalysisController {
   @Get('/impact-analyses/:analysisId/review-decisions/latest')
   async getLatestReviewDecisionEndpoint(
     @Param('analysisId') analysisId: string,
+    @CurrentUser() actor: RequestUser,
   ) {
+    await this.permissions.assertCanReadAnalysis(actor, analysisId);
     const result = await this.getLatestReviewDecision.execute(analysisId);
     if (!result) {
       throw new NotFoundException('No review decisions found for this analysis.');

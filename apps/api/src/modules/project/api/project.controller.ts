@@ -2,7 +2,9 @@ import { Body, Controller, Post } from '@nestjs/common';
 import {
   projectCreateRequestSchema,
   projectCreateResponseSchema,
+  type RequestUser,
 } from '@ba-helper/contracts';
+import { CurrentUser } from '../../auth/api/current-user.decorator';
 import { Roles } from '../../auth/api/roles.decorator';
 import { CreateProjectUseCase } from '../application/create-project.usecase';
 
@@ -12,9 +14,12 @@ export class ProjectController {
 
   @Post()
   @Roles('ADMIN')
-  async create(@Body() body: unknown) {
+  async create(@Body() body: unknown, @CurrentUser() actor: RequestUser) {
     const input = projectCreateRequestSchema.parse(body);
-    const project = await this.createProject.execute({ name: input.name });
+    const project = await this.createProject.execute({
+      name: input.name,
+      actor,
+    });
 
     const response = projectCreateResponseSchema.parse({
       projectId: project.id,

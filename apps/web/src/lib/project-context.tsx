@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react"
+import { useSession } from "next-auth/react"
 import { ApiError } from "@/lib/api-error"
 import { apiGet, getApiBaseUrl } from "@/lib/api-client"
 import {
@@ -19,17 +20,27 @@ const ProjectContext = createContext<ProjectContextValue>({ status: "loading" })
 
 export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<ProjectContextValue>({ status: "loading" })
+  const { data: session, status } = useSession()
 
   useEffect(() => {
+    if (status === "loading") {
+      return
+    }
+
     let cancelled = false
 
     const run = async () => {
       let apiBaseUrl: string | undefined
       try {
         apiBaseUrl = getApiBaseUrl()
+        const authHeaders =
+          typeof session?.accessToken === "string" && session.accessToken
+            ? { Authorization: `Bearer ${session.accessToken}` }
+            : undefined
         const currentWorkspace = await apiGet(
           "/api/v1/workspace/current",
           currentWorkspaceResponseSchema,
+          authHeaders,
         )
         if (cancelled) return
         window.localStorage.setItem(STORAGE_KEY, currentWorkspace.projectId)
@@ -47,7 +58,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [session?.accessToken, status])
 
   const value = useMemo(() => state, [state])
   return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>
@@ -78,6 +89,7 @@ export function useCurrentWorkspace(): CurrentWorkspaceResponse {
       projectId: value.projectId,
       name: value.name,
       mode: value.mode,
+      membershipRole: value.membershipRole,
       createdAt: value.createdAt,
     }
   }
@@ -90,6 +102,7 @@ export function useWorkspaceRuntime() {
     return {
       apiBaseUrl: value.apiBaseUrl,
       createdAt: value.createdAt,
+      membershipRole: value.membershipRole,
       mode: value.mode,
       name: value.name,
       projectId: value.projectId,

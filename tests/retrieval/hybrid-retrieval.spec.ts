@@ -24,7 +24,7 @@ describe('HybridRetrievalService', () => {
     artifactRepoMock = { findById: jest.fn() };
     graphRepoMock = { expandFromSeeds: jest.fn() };
     prismaMock = {
-      $queryRawUnsafe: jest.fn(),
+      $queryRaw: jest.fn(),
       codeArtifact: { findMany: jest.fn() },
       repositorySnapshot: { findUnique: jest.fn() },
     };
@@ -43,7 +43,7 @@ describe('HybridRetrievalService', () => {
 
   describe('tenant isolation', () => {
     it('should pass tenantId=projectId to searchSimilar when tenantId not specified', async () => {
-      prismaMock.$queryRawUnsafe.mockResolvedValue([]);
+      prismaMock.$queryRaw.mockResolvedValue([]);
       chunkRepoMock.searchSimilar.mockResolvedValue([]);
       graphRepoMock.expandFromSeeds.mockResolvedValue([]);
 
@@ -62,7 +62,7 @@ describe('HybridRetrievalService', () => {
 
   describe('hybrid merging and score fusion', () => {
     it('should merge lexical and vector hits and calculate hybrid score', async () => {
-      prismaMock.$queryRawUnsafe.mockResolvedValue([
+      prismaMock.$queryRaw.mockResolvedValue([
         { id: 'art-1', artifactKey: 'file1.ts', filePath: 'src/file1.ts', symbolName: 'func1', artifactType: 'FILE' },
       ]);
       chunkRepoMock.searchSimilar.mockResolvedValue([
@@ -94,7 +94,7 @@ describe('HybridRetrievalService', () => {
     });
 
     it('should assign GRAPH_EXPANSION method and correct depth score', async () => {
-      prismaMock.$queryRawUnsafe.mockResolvedValue([]);
+      prismaMock.$queryRaw.mockResolvedValue([]);
       chunkRepoMock.searchSimilar.mockResolvedValue([
         { artifactId: 'art-1', similarity: 0.9 },
       ]);
@@ -115,7 +115,7 @@ describe('HybridRetrievalService', () => {
     });
 
     it('should drop vector-only low similarity candidates', async () => {
-      prismaMock.$queryRawUnsafe.mockResolvedValue([]);
+      prismaMock.$queryRaw.mockResolvedValue([]);
       chunkRepoMock.searchSimilar.mockResolvedValue([
         { artifactId: 'art-low', similarity: 0.60 }, // < 0.72 MIN_VECTOR_SIMILARITY
       ]);
@@ -129,7 +129,7 @@ describe('HybridRetrievalService', () => {
     });
 
     it('should apply noise penalty for weak vector only test candidates', async () => {
-      prismaMock.$queryRawUnsafe.mockResolvedValue([]);
+      prismaMock.$queryRaw.mockResolvedValue([]);
       chunkRepoMock.searchSimilar.mockResolvedValue([
         { artifactId: 'art-test', similarity: 0.73 }, // > 0.72 but < 0.75 (weak)
       ]);
@@ -146,7 +146,7 @@ describe('HybridRetrievalService', () => {
     });
 
     it('should not penalize test artifact if reached via graph edge', async () => {
-      prismaMock.$queryRawUnsafe.mockResolvedValue([]);
+      prismaMock.$queryRaw.mockResolvedValue([]);
       chunkRepoMock.searchSimilar.mockResolvedValue([
         { artifactId: 'art-1', similarity: 0.9 }, // seed
       ]);
@@ -169,7 +169,7 @@ describe('HybridRetrievalService', () => {
   describe('snapshot status fallback', () => {
     it('should skip vector if VECTOR_INDEXING', async () => {
       prismaMock.repositorySnapshot.findUnique.mockResolvedValue({ indexStatus: 'VECTOR_INDEXING' });
-      prismaMock.$queryRawUnsafe.mockResolvedValue([
+      prismaMock.$queryRaw.mockResolvedValue([
         { id: 'art-1', artifactKey: 'file1.ts', filePath: 'src/file1.ts', symbolName: 'func1', artifactType: 'FILE' },
       ]);
       graphRepoMock.expandFromSeeds.mockResolvedValue([]);
@@ -183,7 +183,7 @@ describe('HybridRetrievalService', () => {
 
     it('should skip vector if LEXICAL_READY', async () => {
       prismaMock.repositorySnapshot.findUnique.mockResolvedValue({ indexStatus: 'LEXICAL_READY' });
-      prismaMock.$queryRawUnsafe.mockResolvedValue([
+      prismaMock.$queryRaw.mockResolvedValue([
         { id: 'art-1', artifactKey: 'file1.ts', filePath: 'src/file1.ts', symbolName: 'func1', artifactType: 'FILE' },
       ]);
       graphRepoMock.expandFromSeeds.mockResolvedValue([]);
@@ -196,7 +196,7 @@ describe('HybridRetrievalService', () => {
 
     it('should fall back gracefully to lexical when vector search throws', async () => {
       prismaMock.repositorySnapshot.findUnique.mockResolvedValue({ indexStatus: 'VECTOR_READY' });
-      prismaMock.$queryRawUnsafe.mockResolvedValue([
+      prismaMock.$queryRaw.mockResolvedValue([
         { id: 'art-1', artifactKey: 'file1.ts', filePath: 'src/file1.ts', symbolName: 'func1', artifactType: 'FILE' },
       ]);
       chunkRepoMock.searchSimilar.mockRejectedValue(new Error('DB connection lost'));

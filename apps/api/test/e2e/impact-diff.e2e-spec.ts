@@ -7,12 +7,14 @@ import { PrismaService } from '../../src/modules/prisma/prisma.service';
 import * as crypto from 'crypto';
 import { seedImpactAnalysisCompletion } from './helpers/seed-fixture';
 import { impactAnalysisDiffResponseSchema } from '@ba-helper/contracts';
+import { grantProjectMembership } from './helpers/grant-project-membership';
 
 describe('Impact Diff Endpoint (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let jwtService: JwtService;
   let adminToken: string;
+  let adminUserId: string;
 
   beforeAll(async () => {
     app = await createTestApp();
@@ -34,6 +36,7 @@ describe('Impact Diff Endpoint (e2e)', () => {
         role: 'ADMIN',
       },
     });
+    adminUserId = user.id;
     adminToken = jwtService.sign({ sub: user.id, email: user.email, role: user.role });
   });
 
@@ -43,6 +46,11 @@ describe('Impact Diff Endpoint (e2e)', () => {
     const repositoryId = crypto.randomUUID();
 
     await prisma.project.create({ data: { id: projectId, name: 'Proj' } });
+    await grantProjectMembership(prisma, {
+      projectId,
+      userId: adminUserId,
+      role: 'OWNER',
+    });
     await prisma.repository.create({
       data: { id: repositoryId, projectId, canonicalUrl: 'https://github.com/a/b' },
     });

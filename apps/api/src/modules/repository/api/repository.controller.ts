@@ -5,11 +5,14 @@ import {
   repositoryListResponseSchema,
   repositoryDetailResponseSchema,
   paginationQuerySchema,
+  RequestUser,
 } from '@ba-helper/contracts';
 import { CreateRepositoryUseCase } from '../application/create-repository.usecase';
 import { ListRepositoriesUseCase } from '../application/list-repositories.usecase';
 import { GetRepositoryUseCase } from '../application/get-repository.usecase';
 import { Roles } from '../../auth/api/roles.decorator';
+import { CurrentUser } from '../../auth/api/current-user.decorator';
+import { ProjectPermissionService } from '../../project/application/project-permission.service';
 
 @Controller('/api/v1/projects/:projectId/repositories')
 export class RepositoryController {
@@ -17,6 +20,7 @@ export class RepositoryController {
     private readonly createRepository: CreateRepositoryUseCase,
     private readonly listRepositories: ListRepositoriesUseCase,
     private readonly getRepository: GetRepositoryUseCase,
+    private readonly permissions: ProjectPermissionService,
   ) {}
 
   private mapRepository(r: any) {
@@ -62,7 +66,17 @@ export class RepositoryController {
 
   @Post()
   @Roles('ADMIN')
-  async create(@Param('projectId') projectId: string, @Body() body: unknown) {
+  async create(
+    @Param('projectId') projectId: string,
+    @Body() body: unknown,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertPermission(
+      actor,
+      projectId,
+      'repository:manage',
+      'Project',
+    );
     const input = repositoryCreateRequestSchema.parse(body);
     const repository = await this.createRepository.execute({
       projectId,
@@ -80,7 +94,12 @@ export class RepositoryController {
   }
 
   @Get()
-  async list(@Param('projectId') projectId: string, @Query() query: unknown) {
+  async list(
+    @Param('projectId') projectId: string,
+    @Query() query: unknown,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadProject(actor, projectId);
     const parsedQuery = paginationQuerySchema.safeParse(query);
     if (!parsedQuery.success) {
       throw new BadRequestException(parsedQuery.error.errors);
@@ -97,7 +116,13 @@ export class RepositoryController {
   async getDetail(
     @Param('projectId') projectId: string,
     @Param('repositoryId') repositoryId: string,
+    @CurrentUser() actor: RequestUser,
   ) {
+    await this.permissions.assertCanReadRepository(
+      actor,
+      repositoryId,
+      projectId,
+    );
     const r = await this.getRepository.execute({ repositoryId });
     const artifacts = (r as any).snapshots?.[0]?.artifacts || [];
     const controllers = artifacts.filter((a: any) => a.artifactType === 'CONTROLLER').length;

@@ -59,10 +59,18 @@ describe('Workspace Resolution (E2E)', () => {
       projectId: firstWorkspace.projectId,
       name: 'Default Project',
       mode: 'dev-single-user',
+      membershipRole: 'OWNER',
     });
 
     const projects = await prisma.project.findMany();
     expect(projects).toHaveLength(1);
+    const members = await prisma.projectMember.findMany();
+    expect(members).toHaveLength(1);
+    expect(members[0]).toMatchObject({
+      projectId: firstWorkspace.projectId,
+      userId: expect.any(String),
+      role: 'OWNER',
+    });
   });
 
   it('returns a typed error when workspace mode is unsupported', async () => {

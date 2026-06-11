@@ -5,12 +5,14 @@ import * as crypto from 'crypto';
 import { createTestApp } from './helpers/test-app';
 import { resetDatabase } from './helpers/reset-db';
 import { PrismaService } from '../../src/modules/prisma/prisma.service';
+import { grantProjectMembership } from './helpers/grant-project-membership';
 
 describe('Error Mapping (E2E)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let jwtService: JwtService;
   let adminToken: string;
+  let adminUserId: string;
 
   beforeAll(async () => {
     app = await createTestApp();
@@ -33,12 +35,63 @@ describe('Error Mapping (E2E)', () => {
         role: 'ADMIN',
       },
     });
+    adminUserId = user.id;
     adminToken = jwtService.sign({ sub: user.id, email: user.email, role: user.role });
   });
 
   it('APPROVED_REPORT_NOT_FOUND maps to 404', async () => {
+    const project = await prisma.project.create({ data: { name: 'P1' } });
+    await grantProjectMembership(prisma, {
+      projectId: project.id,
+      userId: adminUserId,
+      role: 'OWNER',
+    });
+    const requirement = await prisma.requirement.create({
+      data: { projectId: project.id },
+    });
+    const revision = await prisma.requirementRevision.create({
+      data: {
+        requirementId: requirement.id,
+        title: 'Title',
+        rawText: 'Raw',
+        normalizedText: 'Norm',
+        readinessStatus: 'READY_FOR_ANALYSIS',
+      },
+    });
+    const repository = await prisma.repository.create({
+      data: { projectId: project.id, canonicalUrl: 'https://github.com/a/b' },
+    });
+    const snapshot = await prisma.repositorySnapshot.create({
+      data: {
+        repositoryId: repository.id,
+        commitSha: 'abc',
+        analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
+        coverageStatus: 'READY',
+      },
+    });
+    const target = await prisma.repositoryTarget.create({
+      data: {
+        repositoryId: repository.id,
+        targetKey: 'main',
+        requestedRef: 'main',
+        resolvedRefType: 'BRANCH',
+        latestObservedCommitSha: 'abc',
+        lastObservedAt: new Date(),
+      },
+    });
+    const analysis = await prisma.impactAnalysis.create({
+      data: {
+        requirementRevisionId: revision.id,
+        snapshotId: snapshot.id,
+        sourceTargetId: target.id,
+        requestKey: crypto.randomUUID(),
+        status: 'COMPLETED',
+        stage: 'DONE',
+      },
+    });
+
     const response = await request(app.getHttpServer())
-      .get('/api/v1/impact-analyses/dummy-id/approved-report')
+      .get(`/api/v1/impact-analyses/${analysis.id}/approved-report`)
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(404);
 
@@ -51,6 +104,11 @@ describe('Error Mapping (E2E)', () => {
     // We need a RequirementRevision in one project, and a Snapshot in another project
     const project1 = await prisma.project.create({ data: { name: 'P1' } });
     const project2 = await prisma.project.create({ data: { name: 'P2' } });
+    await grantProjectMembership(prisma, {
+      projectId: project1.id,
+      userId: adminUserId,
+      role: 'OWNER',
+    });
 
     const requirement = await prisma.requirement.create({
       data: { projectId: project1.id },
@@ -105,6 +163,11 @@ describe('Error Mapping (E2E)', () => {
 
   it('INVALID_STATE_TRANSITION maps to 409', async () => {
     const project = await prisma.project.create({ data: { name: 'P1' } });
+    await grantProjectMembership(prisma, {
+      projectId: project.id,
+      userId: adminUserId,
+      role: 'OWNER',
+    });
     const requirement = await prisma.requirement.create({
       data: { projectId: project.id },
     });

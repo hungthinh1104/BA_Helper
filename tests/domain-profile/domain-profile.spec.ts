@@ -67,7 +67,7 @@ describe('HybridRetrievalService — domain-aware keyword extraction', () => {
     const artifactRepoMock = { findById: jest.fn<any>() };
     const graphRepoMock = { expandFromSeeds: jest.fn<any>().mockResolvedValue([]) };
     prismaMock = {
-      $queryRawUnsafe: jest.fn<any>().mockResolvedValue([]),
+      $queryRaw: jest.fn<any>().mockResolvedValue([]),
       codeArtifact: { findMany: jest.fn<any>().mockResolvedValue([]) },
       repositorySnapshot: { findUnique: jest.fn<any>().mockResolvedValue({ indexStatus: 'LEXICAL_READY' }) },
     };
@@ -90,10 +90,10 @@ describe('HybridRetrievalService — domain-aware keyword extraction', () => {
       domain: 'BOOKING',
     });
 
-    expect(prismaMock.$queryRawUnsafe as jest.Mock).toHaveBeenCalledTimes(1);
-    const allArgs = (prismaMock.$queryRawUnsafe as jest.Mock).mock.calls[0];
-    const keywords = allArgs.flat(Infinity) as string[];
-    const keywordFlat = keywords.join(' ');
+    expect(prismaMock.$queryRaw as jest.Mock).toHaveBeenCalledTimes(1);
+    const sqlArgs = (prismaMock.$queryRaw as jest.Mock).mock.calls[0];
+    const sql = sqlArgs[0] as { values?: unknown[] };
+    const keywordFlat = (sql.values ?? []).join(' ');
     // These terms come from the BOOKING glossary, not a hardcoded list
     expect(keywordFlat).toContain('refund');
     expect(keywordFlat).toContain('booking');
@@ -121,12 +121,13 @@ describe('HybridRetrievalService — domain-aware keyword extraction', () => {
       domain: 'BOOKING',
     });
 
-    const sqlArgs = (prismaMock.$queryRawUnsafe as jest.Mock).mock.calls[0];
-    const sql = sqlArgs[0] as string;
+    const sqlArgs = (prismaMock.$queryRaw as jest.Mock).mock.calls[0];
+    const sql = sqlArgs[0] as { strings?: string[] };
+    const text = Array.isArray(sql?.strings) ? sql.strings.join(' ') : String(sql);
     // SQL must scope to snapshotId — no global search
-    expect(sql).toContain('"snapshotId"');
+    expect(text).toContain('"snapshotId"');
     // SQL searches name, filePath, artifactKey — not arbitrary columns
-    expect(sql).toContain('"filePath"');
-    expect(sql).toContain('"artifactKey"');
+    expect(text).toContain('"filePath"');
+    expect(text).toContain('"artifactKey"');
   });
 });

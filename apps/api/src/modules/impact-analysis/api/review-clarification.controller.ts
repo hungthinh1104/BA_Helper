@@ -4,9 +4,6 @@ import {
   Get,
   Param,
   Body,
-  BadRequestException,
-  NotFoundException,
-  UseGuards,
 } from '@nestjs/common';
 import {
   reviewClarificationCreateRequestSchema,
@@ -24,6 +21,7 @@ import { AnswerReviewClarificationUseCase } from '../application/answer-review-c
 import { CreateDerivedAnalysisFromClarificationUseCase } from '../application/create-derived-analysis-from-clarification.usecase';
 import { mapImpactAnalysisResponse } from '../infrastructure/impact-analysis.mapper';
 import { mapReviewClarificationRequest } from './review-clarification.mapper';
+import { ProjectPermissionService } from '../../project/application/project-permission.service';
 
 @Controller('/api/v1')
 export class ReviewClarificationController {
@@ -32,6 +30,7 @@ export class ReviewClarificationController {
     private readonly listClarifications: ListReviewClarificationsUseCase,
     private readonly answerClarification: AnswerReviewClarificationUseCase,
     private readonly createDerivedAnalysis: CreateDerivedAnalysisFromClarificationUseCase,
+    private readonly permissions: ProjectPermissionService,
   ) {}
 
   @Post('/impact-analyses/:analysisId/review-clarifications')
@@ -41,6 +40,11 @@ export class ReviewClarificationController {
     @Body() body: unknown,
     @CurrentUser() actor: RequestUser,
   ) {
+    await this.permissions.assertPermissionForAnalysis(
+      actor,
+      analysisId,
+      'clarification:write',
+    );
     const input = reviewClarificationCreateRequestSchema.parse(body);
 
     const result = await this.createClarification.execute(analysisId, input, actor);
@@ -51,7 +55,9 @@ export class ReviewClarificationController {
   @Get('/impact-analyses/:analysisId/review-clarifications')
   async listReviewClarifications(
     @Param('analysisId') analysisId: string,
+    @CurrentUser() actor: RequestUser,
   ) {
+    await this.permissions.assertCanReadAnalysis(actor, analysisId);
     const result = await this.listClarifications.execute(analysisId);
     return reviewClarificationListResponseSchema.parse({
       items: result.items.map(mapReviewClarificationRequest),
@@ -65,6 +71,11 @@ export class ReviewClarificationController {
     @Body() body: unknown,
     @CurrentUser() actor: RequestUser,
   ) {
+    await this.permissions.assertPermissionForReviewClarification(
+      actor,
+      clarificationId,
+      'clarification:write',
+    );
     const input = reviewClarificationAnswerRequestSchema.parse(body);
 
     const result = await this.answerClarification.execute(clarificationId, input.answer, actor);
@@ -76,7 +87,13 @@ export class ReviewClarificationController {
   @Roles('ADMIN', 'REVIEWER')
   async createDerivedAnalysisFromClarification(
     @Param('clarificationId') clarificationId: string,
+    @CurrentUser() actor: RequestUser,
   ) {
+    await this.permissions.assertPermissionForReviewClarification(
+      actor,
+      clarificationId,
+      'analysis:create-derived',
+    );
     const result = await this.createDerivedAnalysis.execute(clarificationId);
     return impactAnalysisResponseSchema.parse(mapImpactAnalysisResponse({ analysis: result }));
   }
