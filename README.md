@@ -9,21 +9,25 @@ When a business requirement changes, backend systems are highly susceptible to h
 Given a requirement change, the system securely scans backend repositories, identifies impacted code artifacts, extracts explicit evidence, highlights architectural and QA risks, supports human review workflows, and generates immutable traceability reports.
 
 ## Core Workflow
-1. **Scan**: Connect and scan your repository locally. The scanner builds a deterministic graph of endpoints, services, entities, and tests.
-2. **Ingest**: Submit a Requirement Change Request (e.g., "Allow users to cancel paid bookings and receive a refund").
-3. **Analyze**: The system matches the requirement against the codebase, finding affected artifacts and extracting explicit evidence.
-4. **Review**: Technical BAs and developers review the extracted impacts, unknown areas, and proposed QA scenarios.
-5. **Report**: Finalize the analysis to generate an immutable, exportable Markdown/PDF impact report.
+Requirement change &rarr; Impact Matrix &rarr; Evidence Drilldown &rarr; Review Coverage &rarr; Final Report
 
 ## In Action
 
-*(Placeholders for future demo assets)*
+*(TODO: Replace with real application screenshot before launch.)*
+- **Requirement Input**: ![Requirement Input](docs/assets/01-requirement-input.png)
 
-- **Requirement Input**: `TODO: Add screenshot of requirement ingestion UI`
-- **Impact Matrix**: `TODO: Add screenshot of the impact analysis matrix`
-- **Evidence Drilldown**: `TODO: Add screenshot of the evidence review drawer`
-- **Review Coverage**: `TODO: Add screenshot of the coverage and QA risk panel`
-- **Final Report**: [View a sample Markdown report](docs/sample-report.md)
+*(TODO: Replace with real application screenshot before launch.)*
+- **Impact Matrix**: ![Impact Matrix](docs/assets/02-impact-matrix.png)
+
+*(TODO: Replace with real application screenshot before launch.)*
+- **Evidence Drilldown**: ![Evidence Drilldown](docs/assets/03-evidence-drilldown.png)
+
+*(TODO: Replace with real application screenshot before launch.)*
+- **Review Coverage**: ![Review Coverage](docs/assets/04-review-coverage.png)
+
+*(TODO: Replace with real application screenshot before launch.)*
+- **Final Report**: ![Final Report](docs/assets/05-merged-report-export.png)
+- [View a sample Markdown report](docs/sample-report.md)
 
 ## Why not just ask ChatGPT/Copilot?
 Generic AI coding agents are excellent at generating code blocks but struggle with system-wide impact analysis. This tool differs by focusing exclusively on:
@@ -82,7 +86,7 @@ We prioritize keeping your proprietary code safe:
 - **Bounded Diagnostics**: Scans are bounded by file size and count limits to prevent OOM errors. 
 - **Explicit Skips**: Large files, vendor directories (`node_modules`), binaries, and unsafe symlinks are automatically skipped and explicitly logged.
 - **PARTIAL vs FULL Coverage**: If limits are hit, the scan is explicitly marked as `PARTIAL`. A `PARTIAL` scan is not a failure, but explicitly warns reviewers that the LLM may be missing context.
-- **Immutable Reports**: Once finalized, reports are immutable and tied to a specific requirement revision and repository snapshot.
+- **Immutable Reports**: Once finalized, reports are immutable and tied to a specific requirement revision and repository snapshot. **Reports are snapshot-scoped and evidence-backed. Finalized exports use immutable report snapshots and do not recompute live state.**
 - **No Global Vector Search**: All RAG operations are strictly isolated by Tenant, Project, Repository, and Commit SHA.
 
 ## Architecture
