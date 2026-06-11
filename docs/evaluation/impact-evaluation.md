@@ -1,0 +1,40 @@
+# Impact Analysis Evaluation Pack
+
+This directory defines the methodology for deterministic, CI-safe evaluation of the Requirement-to-Code Impact Analyzer.
+
+## What This Measures
+This evaluation pack measures the quality of our core analytical heuristics and AI prompts by comparing generated outputs against 8-12 curated, known-good requirement changes (currently scoped to Booking, Payment, Refund, and Notification).
+
+Specifically, it scores:
+- **Artifact Recall:** Did we find all the code files that actually need to change?
+- **Artifact Precision:** Out of everything we flagged, how much was actually relevant?
+- **Evidence Coverage:** Do the flagged artifacts include solid, verifiable code excerpts to prove their relevance?
+- **Unknown Quality:** Did the system surface the right business/technical unknowns or BA questions?
+- **Risk & QA Coverage:** Were the right testing scenarios and risks generated?
+- **Negative Control:** Did the system successfully ignore completely unrelated artifacts?
+
+## What This Does NOT Measure
+- **End-to-End System Performance:** We skip the background job queue, database persistence, and polling lifecycle.
+- **Production Latency:** Real LLM API response times are not evaluated.
+- **Incremental Cache Hit Rates:** Not measured here.
+
+## Why Real LLM Calls Are Excluded From CI
+We mandate deterministic execution during regular Continuous Integration (CI). Real LLM calls are:
+1. Non-deterministic, which leads to flaky tests.
+2. Slow, which ruins developer feedback loops.
+3. Costly and require external network access.
+
+Therefore, CI relies on strict Zod schema validations of the cases and deterministic unit tests for the scoring helpers. Developers or specialized "evaluation pipelines" can opt-in to running a real provider adapter when tuning prompts.
+
+## How to Add a New Case
+1. Ensure the requirement matches an existing fixture in `tests/fixtures/`.
+2. Create a new `.ts` file under `tests/evaluation/cases/`.
+3. Export an object adhering to `EvaluationCase` (from `tests/evaluation/evaluation-types.ts`).
+4. Add it to `tests/evaluation/cases/index.ts`.
+5. Run `pnpm test` to verify your case schema.
+
+## Why Results are Internal Quality Signals
+These metrics are **internal quality signals**, NOT public benchmark claims. They are tuned to our specific curated subsets and fixtures. Our goal is to prevent regressions when modifying the extraction layer or LLM prompts, not to establish universal language model supremacy.
+
+## How Scoring Works
+Scoring uses normalized string matching (lowercased, stripped of punctuation, and collapsed whitespace) to check if the generated concepts semantically align with expected concepts. It explicitly handles division by zero to ensure metrics remain robust even when no artifacts are expected or found.
