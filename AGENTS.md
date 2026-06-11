@@ -36,28 +36,25 @@ Read: ui-tech-stack.md, ui-design.md, css-ownership.md
 For Prisma/state/API changes:
 Update docs + contracts + tests before completion.
 
-## Current Delivery Order
+## Current Delivery Focus
 
-Work backend and database first. Do not build frontend screens before the API
-contracts and backend behavior needed by those screens exist.
+Work is currently focused on:
 
 ```text
-1. Agent rules and project docs
-2. Workspace/contracts/database scaffold
-3. State policies and database constraints
-4. Booking fixture, input gates, and expected outputs
-5. Scanner and dependency graph
-6. Requirement retrieval and impact analysis
-7. Review and Markdown impact-report APIs
-8. Frontend workspace
+1. Snapshot drift and freshness lifecycle
+2. Drift-based stale/re-analysis warnings
+3. Incremental scan foundation
+4. Evaluation packs for impact quality
+5. Domain Pack architecture
+6. Public beta hardening
 ```
 
 ## Instruction Loading And Workflow
 
-This file is the repository-level instruction source. The workspace is
-currently documentation-only and may not yet have a Git root. Until Git is
-initialized, start Codex from the `BA_helper` root so this file is discovered;
-after initialization, nested package rules may be introduced close to code.
+This file is the repository-level instruction source. 
+Backend/API/worker/web/contracts/analyzer packages are active.
+
+**Project Memory:** Read [project-memory.md](docs/agent/project-memory.md) for the overarching product identity, engineering principles, and core mantra.
 
 Before making a change:
 
@@ -80,7 +77,7 @@ Before reporting completion, follow
 Use a TypeScript modular monolith with separate API and worker processes:
 
 ```text
-apps/web       Next.js UI, added after backend contracts are stable
+apps/web       Next.js UI
 apps/api       NestJS HTTP API
 apps/worker    NestJS BullMQ processors
 packages/contracts  Shared Zod API contracts and enums
@@ -122,6 +119,8 @@ errors/logging, TypeScript/lint/CI configuration, or async worker behavior.
 5. Every analysis and generated artifact is tied to a repository snapshot and
    its `commitSha`; moving-ref freshness is computed through its selected
    repository target, not stored as mutable snapshot identity.
+   Snapshot identity and freshness should account for `repositoryId`, `commitSha`, `scannerVersion`, `analyzerVersion`, and `profileVersion` where applicable.
+   Scanner/analyzer version changes may make drift counts incompatible.
 6. Frontend code must render backend state and capabilities; it must not derive business state from progress or local guesses.
 7. Prisma models are internal and must not be returned directly as API responses.
 8. Queue processors invoke application use cases; they must not contain business logic.
@@ -156,6 +155,11 @@ RAG Isolation Rules:
 - Future tenantId = organizationId.
 - Embedding chunks must be commit/snapshot scoped.
 - No global vector search is allowed.
+
+Artifact Drift Rules:
+- Snapshot drift must use exact `artifactKey` matching and artifact-level `contentHash`.
+- `Evidence.contentHash` must not be used as a proxy for artifact content changes.
+- If artifact-level `contentHash` is unavailable, changed/unchanged drift must be marked unavailable or a migration must add `CodeArtifact.contentHash`.
 
 ## State And Data Rules
 
@@ -218,10 +222,10 @@ Read [api-contracts.md](docs/agent/api-contracts.md) before adding endpoints.
 
 ## Analyzer And AI Rules
 
-MVP parsing targets TypeScript NestJS repositories using `ts-morph`.
-Use fixtures to drive extracted routes, services, entities, tests, and edges.
-Do not introduce multi-language parsing until the TypeScript vertical slice is
-proved.
+TypeScript/NestJS is the primary extraction path.
+Java Spring Boot exists as a bounded pilot adapter.
+Java Spring must remain PARTIAL until parser confidence improves.
+Do not add new language/framework support without fixtures, artifactKey rules, scan health semantics, and evaluation cases.
 
 Read [analyzer-rules.md](docs/agent/analyzer-rules.md) before implementing or
 changing scanner, extraction, framework detection, graph extraction, or
@@ -308,8 +312,6 @@ Read [ui-tech-stack.md](docs/agent/ui-tech-stack.md) before building UI componen
 
 Do not modify generated files, dependency lockfiles without a dependency
 change, unrelated modules, or frontend code during backend-only work.
-During the backend/DB-first phase, do not build frontend behavior unless it is
-explicitly requested.
 
 Add nested `AGENTS.md` files only after corresponding application/package
 directories exist and have specialized, stable rules worth loading
@@ -317,8 +319,7 @@ automatically.
 
 ## Verification
 
-The repository is initially documentation-only. Once workspace scripts exist,
-run the relevant checks before finishing a code change:
+Run the relevant checks before finishing a code change:
 
 ```bash
 pnpm typecheck
