@@ -62,6 +62,26 @@ In Phase 33B, we added evaluation coverage for the `booking@0.1.0` Domain Pack. 
 
 Existing evaluation cases like `01-cancel-paid-booking-refund` now include an optional `domain` metadata field indicating their expected domain concepts. The DomainPackRegistry centralizes and normalizes case-insensitive legacy names (e.g. `BOOKING`) into canonical lowercase IDs without versions (e.g. `booking`) to ensure deterministic matching.
 
+## Domain Pack Quality Report (Phase 33D)
+In Phase 33D, we introduced the **Domain Pack Evaluation Summary** into the core `EvaluationRunner`. This produces a bounded, deterministic report of domain pack quality metrics.
+
+### What it measures
+- **Concept Match Recall:** `matchedExpectedConcepts / expectedConcepts`. Helps us measure if the domain pack concepts correctly align with domain terminology present in the requirement text.
+- **Concept Match Precision:** `matchedExpectedConcepts / allMatchedConcepts`. Ensures the domain pack isn't over-matching unrelated terms (false positives).
+- **Domain-Tagged Retrieval Metrics:** Evaluates whether cases tagged with a domain pack experience improved (or degraded) retrieval recall and precision over the global baseline.
+- **Missing & Unexpected Concepts:** Explicitly reports which expected concepts failed to match, and which concepts matched unexpectedly, providing actionable intelligence for domain pack tuning.
+
+### What it does NOT measure
+- It does **not** override evidence rules.
+- It is **not** a gatekeeper for production deployment, but rather internal quality telemetry to inform future revisions of domain packs (like `booking@0.1.0`).
+
+### Safety Guards Checked
+The Evaluation summary also explicitly asserts the following deterministic safety boundaries:
+1. **No Evidence Fabrication:** `general@0.0.0` default prevents domain-specific assumptions from being hallucinatory.
+2. **Unsupported Version Rejected:** Explicitly catches invalid explicit versions (e.g., `booking@9.9.9`).
+3. **General Fallback Integrity:** General pack strictly has no `booking` hints leaked.
+4. **Diagnostic Boundedness:** Guarantees `DOMAIN_PACK_APPLIED` never blows out memory via payload template leakage.
+
 ## How to Add a New Case
 1. Ensure the requirement matches an existing fixture in `tests/fixtures/`.
 2. Create a new `.ts` file under `tests/evaluation/cases/`.

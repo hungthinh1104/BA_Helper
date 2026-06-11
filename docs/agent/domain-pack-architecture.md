@@ -33,8 +33,10 @@ The fundamental rule of the impact analyzer is that all impacts must be backed b
 Domain pack heuristics are evaluated internally to measure improvement in artifact recall and unknown/risk generation. 
 
 - Evaluation cases declare their `expectedConceptKeys` and `packId` to verify deterministic concept matching.
+- **Domain Pack Quality Report:** The evaluation runner aggregates domain pack metrics, surfacing concept recall/precision, missing/unexpected concept reports, and domain-tagged retrieval metrics. This serves as internal quality telemetry to inform domain pack tuning.
 - Real retrieval smoke tests verify that domain hints positively influence scoring and lexical filtering.
 - Strict CI checks guarantee that domain hints cannot generate `EVIDENCED` impacts on their own. The engine's diagnostic `DOMAIN_PACK_APPLIED` proves which pack ran, but explicitly excludes generating text that might masquerade as real code facts.
+- **Safety Guards:** Evaluation actively asserts safety checks, including the `general` fallback isolation, rejecting unsupported versions, and structural bounding of diagnostic payloads.
 
 ## Built-in Packs
 

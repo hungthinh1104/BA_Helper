@@ -31,6 +31,9 @@ export const normalizedEvaluationResultSchema = z.object({
   unknownsOrQuestions: z.array(z.string()),
   risks: z.array(z.string()),
   qaScenarios: z.array(z.string()),
+  domainPackId: z.string().optional(),
+  domainPackVersion: z.string().optional(),
+  matchedConceptKeys: z.array(z.string()).optional(),
 });
 
 export type NormalizedEvaluationResult = z.infer<typeof normalizedEvaluationResultSchema>;
@@ -46,6 +49,30 @@ export interface CaseScoreReport {
   unknownsMatched: string;
   risksMatched: string;
   qaScenariosMatched: string;
+  domainPackId?: string;
+  domainPackVersion?: string;
+  expectedConceptKeys?: string[];
+  matchedConceptKeys?: string[];
+  missingConceptKeys?: string[];
+  unexpectedConceptKeys?: string[];
+  retrievalRecall?: number;
+  retrievalPrecision?: number;
+}
+
+export interface DomainPackEvaluationSummary {
+  totalCasesWithDomain: number;
+  packIdsUsed: string[];
+  conceptMatchRecall: string;
+  missingExpectedConcepts: string[];
+  unexpectedMatchedConcepts: string[];
+  retrievalRecall: string;
+  retrievalPrecision: string;
+  safetyGuards: {
+    noEvidenceFabrication: boolean;
+    generalFallbackNoBookingHints: boolean;
+    unsupportedVersionRejected: boolean;
+    diagnosticBounded: boolean;
+  };
 }
 
 export interface EvaluationSummaryReport {
@@ -56,4 +83,5 @@ export interface EvaluationSummaryReport {
   averageQaCoverage: string;
   failedCases: string[];
   cases: CaseScoreReport[];
+  domainPackSummary?: DomainPackEvaluationSummary;
 }

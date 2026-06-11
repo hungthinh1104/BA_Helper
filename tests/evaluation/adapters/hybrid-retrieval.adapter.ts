@@ -118,6 +118,8 @@ export class HybridRetrievalEvaluationAdapter implements EvaluationAdapter {
       unknownsOrQuestions: [], // Retrieval does not generate these
       risks: [],
       qaScenarios: [],
+      domainPackId: selection.normalizedPackId,
+      domainPackVersion: selection.pack.version,
     };
   }
 }

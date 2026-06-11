@@ -77,3 +77,31 @@ export const computeConceptCoverage = (expectedConcepts: string[] | undefined, a
     total: expectedConcepts.length,
   };
 };
+
+export const computeConceptRecall = (expectedConceptKeys: string[] | undefined, matchedConceptKeys: string[] | undefined): { score: number; missing: string[]; matched: string[] } => {
+  if (!expectedConceptKeys || expectedConceptKeys.length === 0) return { score: 1, missing: [], matched: [] };
+  
+  const matchedSet = new Set(matchedConceptKeys || []);
+  const matched = expectedConceptKeys.filter(k => matchedSet.has(k));
+  const missing = expectedConceptKeys.filter(k => !matchedSet.has(k));
+  
+  return {
+    score: matched.length / expectedConceptKeys.length,
+    missing,
+    matched,
+  };
+};
+
+export const computeConceptPrecision = (expectedConceptKeys: string[] | undefined, matchedConceptKeys: string[] | undefined): { score: number; unexpected: string[]; matched: string[] } => {
+  if (!matchedConceptKeys || matchedConceptKeys.length === 0) return { score: 1, unexpected: [], matched: [] };
+  
+  const expectedSet = new Set(expectedConceptKeys || []);
+  const unexpected = matchedConceptKeys.filter(k => !expectedSet.has(k));
+  const matched = matchedConceptKeys.filter(k => expectedSet.has(k));
+  
+  return {
+    score: (matchedConceptKeys.length - unexpected.length) / matchedConceptKeys.length,
+    unexpected,
+    matched,
+  };
+};
