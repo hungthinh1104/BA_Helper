@@ -88,3 +88,39 @@ export const embeddingReusePlanPayloadSchema = z.object({
 export type ArtifactReuseSample = z.infer<typeof artifactReuseSampleSchema>;
 export type IncrementalScanSummaryPayload = z.infer<typeof incrementalScanSummaryPayloadSchema>;
 export type EmbeddingReusePlanPayload = z.infer<typeof embeddingReusePlanPayloadSchema>;
+
+// ── Phase 31D: Execution Diagnostic ──────────────────────────────────────────
+
+const reuseExecutionSampleSchema = z.object({
+  artifactKey: z.string(),
+  filePath: z.string(),
+  chunkType: z.string(),
+  reason: z.string().optional(),
+});
+
+export const embeddingReuseExecutionSummaryPayloadSchema = z.object({
+  mode: z.literal('SNAPSHOT_SCOPED_COPY'),
+  baseSnapshotId: z.string().uuid().nullable(),
+  targetSnapshotId: z.string().uuid(),
+  embeddingModel: z.string(),
+  chunkerVersion: z.string(),
+  copiedChunkCount: z.number().int().nonnegative(),
+  generatedChunkCount: z.number().int().nonnegative(),
+  ineligibleChunkCount: z.number().int().nonnegative(),
+  missingPreviousChunkCount: z.number().int().nonnegative(),
+  versionBlockedChunkCount: z.number().int().nonnegative(),
+  modelMismatchChunkCount: z.number().int().nonnegative(),
+  chunkHashMismatchCount: z.number().int().nonnegative(),
+  legacyChunkerVersionBlockedCount: z.number().int().nonnegative(),
+  sampleLimit: z.literal(20),
+  samples: z.object({
+    copied: z.array(reuseExecutionSampleSchema).max(20),
+    generated: z.array(reuseExecutionSampleSchema).max(20),
+    blocked: z.array(reuseExecutionSampleSchema).max(20),
+  }),
+});
+
+export type ReuseExecutionSample = z.infer<typeof reuseExecutionSampleSchema>;
+export type EmbeddingReuseExecutionSummaryPayload = z.infer<
+  typeof embeddingReuseExecutionSummaryPayloadSchema
+>;

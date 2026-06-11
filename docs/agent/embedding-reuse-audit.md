@@ -215,3 +215,17 @@ All invariants from `AGENTS.md` remain intact after Phase 31D-1:
 - Reuse copies produce new rows owned by the new snapshot — no shared rows
 - MVP: `tenantId = projectId` (no change)
 - Future: `tenantId = organizationId` (not affected by this schema addition)
+
+---
+
+## 7. Versioning Rules
+
+**Rule:** `CHUNK_BUILDER_VERSION` must be bumped whenever any of these change:
+* chunk text assembly
+* chunk field ordering
+* chunk labels/headings
+* redaction behavior that affects embedded text
+* chunk type generation logic
+* artifact-to-chunk mapping logic
+
+If redaction logic evolves separately, consider adding a future `redactionPolicyVersion` field.

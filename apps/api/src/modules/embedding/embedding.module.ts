@@ -6,10 +6,9 @@ import { GoogleEmbeddingProvider } from './infrastructure/google-embedding.provi
 import { EmbeddingChunkRepository } from './infrastructure/embedding-chunk.repository';
 import { EmbedSnapshotArtifactsUseCase } from './application/embed-snapshot-artifacts.usecase';
 import { PrismaModule } from '../prisma/prisma.module';
-import { ArtifactModule } from '../artifact/artifact.module';
 
 @Module({
-  imports: [PrismaModule, ArtifactModule],
+  imports: [PrismaModule],
   providers: [
     EmbeddingChunkRepository,
     EmbedSnapshotArtifactsUseCase,

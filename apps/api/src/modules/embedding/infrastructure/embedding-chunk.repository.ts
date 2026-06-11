@@ -138,4 +138,82 @@ export class EmbeddingChunkRepository {
       where: { artifactId },
     });
   }
+
+  /**
+   * Returns chunk metadata (no vector) for a set of artifact IDs in a given snapshot.
+   * Used at embed-time to determine which previous-snapshot chunks are reuse-eligible.
+   */
+  async listForReuseByArtifacts(params: {
+    snapshotId: string;
+    artifactIds: string[];
+    embeddingModel: string;
+    chunkerVersion: string;
+  }): Promise<Array<{ artifactId: string; contentHash: string; chunkerVersion: string | null; embeddingModel: string }>> {
+    if (params.artifactIds.length === 0) return [];
+    return this.prisma.embeddingChunk.findMany({
+      where: {
+        snapshotId: params.snapshotId,
+        artifactId: { in: params.artifactIds },
+        embeddingModel: params.embeddingModel,
+        chunkerVersion: params.chunkerVersion,
+      },
+      select: { artifactId: true, contentHash: true, chunkerVersion: true, embeddingModel: true },
+    }) as Promise<Array<{ artifactId: string; contentHash: string; chunkerVersion: string | null; embeddingModel: string }>>;
+  }
+
+  /**
+   * Copies the embedding vector from a previous snapshot's chunk into a new snapshot-scoped row.
+   * The SELECT reads the vector entirely inside PostgreSQL — it never leaves the DB.
+   * All identifying fields (snapshotId, artifactId, stableChunkId) are the NEW snapshot's values.
+   * Content is provided by the caller (current built content, whose hash must match).
+   * Returns true if a source chunk was found and the row was inserted; false if no source exists.
+   */
+  async copyChunk(params: {
+    baseSnapshotId: string;
+    oldArtifactId: string;
+    embeddingModel: string;
+    chunkerVersion: string;
+    contentHash: string;
+    // New row fields
+    tenantId: string;
+    projectId: string;
+    repositoryId: string;
+    targetSnapshotId: string;
+    newArtifactId: string;
+    newStableChunkId: string;
+    commitSha: string;
+    filePath: string;
+    symbolName: string | null;
+    artifactType: string;
+    content: string;
+    tokenCount: number;
+  }): Promise<boolean> {
+    const result = await this.prisma.$executeRaw`
+      INSERT INTO "EmbeddingChunk" (
+        id, "tenantId", "projectId", "repositoryId", "snapshotId", "artifactId",
+        "stableChunkId", "commitSha", "filePath", "symbolName", "artifactType",
+        content, "contentHash", "tokenCount", "chunkerVersion", "embeddingModel",
+        embedding, "createdAt"
+      )
+      SELECT
+        gen_random_uuid(),
+        ${params.tenantId}::uuid, ${params.projectId}::uuid,
+        ${params.repositoryId}::uuid, ${params.targetSnapshotId}::uuid,
+        ${params.newArtifactId}::uuid,
+        ${params.newStableChunkId}, ${params.commitSha},
+        ${params.filePath}, ${params.symbolName}, ${params.artifactType},
+        ${params.content}, ${params.contentHash}, ${params.tokenCount},
+        ${params.chunkerVersion}, ${params.embeddingModel},
+        embedding, NOW()
+      FROM "EmbeddingChunk"
+      WHERE "snapshotId"   = ${params.baseSnapshotId}::uuid
+        AND "artifactId"   = ${params.oldArtifactId}::uuid
+        AND "embeddingModel" = ${params.embeddingModel}
+        AND "chunkerVersion" = ${params.chunkerVersion}
+        AND "contentHash"  = ${params.contentHash}
+      LIMIT 1
+      ON CONFLICT ("snapshotId", "stableChunkId", "embeddingModel") DO NOTHING
+    `;
+    return result > 0;
+  }
 }

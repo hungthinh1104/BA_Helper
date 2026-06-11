@@ -85,6 +85,33 @@ describe('EmbeddingChunkRepository — multi-tenant isolation', () => {
       expect(results).toHaveLength(0);
       expect(results).not.toContainEqual(expect.objectContaining({ id: fakeTenantBChunk.id }));
     });
+
+    it('does NOT return old snapshot chunks for a new snapshot, even if vectors/content are identical (Retrieval Isolation)', async () => {
+      // 1. Old snapshot exists with chunks.
+      // 2. New snapshot is created and copied chunks exist.
+      // 3. run searchSimilar for new snapshot.
+      // 4. assert only new snapshot chunks are returned by verifying the snapshotId argument sent to Prisma.
+
+      await repo.searchSimilar({
+        tenantId: TENANT_A.tenantId,
+        projectId: TENANT_A.projectId,
+        repositoryId: TENANT_A.repositoryId,
+        snapshotId: 'new-snapshot-id',
+        queryEmbedding: new Array(1536).fill(0.1),
+      });
+
+      expect(prismaMock.$queryRaw as jest.Mock).toHaveBeenCalledTimes(1);
+      const queryCall = (prismaMock.$queryRaw as jest.Mock).mock.calls[0][0];
+
+      // Prisma template literals map the values to arguments.
+      // queryCall[1] to queryCall[N] are the actual values passed to ${params.x}
+      const valuesPassedToPrisma = (prismaMock.$queryRaw as jest.Mock).mock.calls[0].slice(1);
+      
+      // Ensure new snapshot id is passed to the query.
+      expect(valuesPassedToPrisma).toContain('new-snapshot-id');
+      // Ensure old snapshot chunks are not returned by ensuring old-snapshot-id is not in the query parameters.
+      expect(valuesPassedToPrisma).not.toContain('old-snapshot-id');
+    });
   });
 
   describe('deleteBySnapshot — cascade cleanup', () => {
@@ -148,7 +175,7 @@ describe('EmbedSnapshotArtifactsUseCase — stableChunkId cache semantics', () =
       },
     };
     provider = new FakeEmbeddingProvider();
-    useCase = new EmbedSnapshotArtifactsUseCase(artifactRepoMock, chunkRepoMock, provider, prismaMock);
+    useCase = new EmbedSnapshotArtifactsUseCase(chunkRepoMock, provider, prismaMock);
   });
 
   it('skips re-embed when same snapshotId + stableChunkId + contentHash already exists', async () => {

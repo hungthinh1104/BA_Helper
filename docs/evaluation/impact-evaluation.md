@@ -32,6 +32,17 @@ In Phase 32B, we introduced the `LexicalRetrievalEvaluationAdapter`. This adapte
 ### Why it is separate from full hybrid retrieval
 Vector search requires an external embedding provider, and graph expansion requires database persistence. To keep CI robust, fast, and 100% deterministic, we evaluate a lexical-only baseline offline directly against the `tests/fixtures/` filesystem. If the lexical baseline can retrieve the artifact, the full hybrid engine is even more likely to find it.
 
+## Hybrid Retrieval Smoke Evaluation Mode
+In Phase 32C, we introduced the `HybridRetrievalEvaluationAdapter` mapped to a separate test suite (`hybrid-retrieval.smoke.spec.ts`). This ensures our database integrations and real retrieval pipelines function correctly without polluting the strict `LexicalRetrievalEvaluation` suite.
+
+### Differences from Lexical Retrieval Evaluation
+- **Database Persistence:** The smoke mode runs full database queries via Prisma to extract code artifacts, edges, and repository context, whereas the Lexical Evaluation is 100% in-memory against the filesystem.
+- **Fake Vectors:** The Hybrid Smoke Evaluation explicitly mocks `chunkRepo.searchSimilar` to return deterministic hits or empty semantic results. This guarantees that external embedding providers are **never** called in normal CI.
+- **Case Filtering:** It intentionally only runs 1-2 cases instead of the full 8-12 case suite to prevent database teardown/setup cycles from slowing down CI.
+
+### Why this is not a Benchmark
+The smoke evaluation proves that the pipeline *can* retrieve and format artifacts through `HybridRetrievalService` into a `NormalizedEvaluationResult` successfully. It does not measure true semantic recall performance because the vector results are artificially stubbed for determinism. True benchmark scores should only be recorded outside of normal CI using real providers and manually triggered test runs.
+
 ## Why Real LLM Calls Are Excluded From CI
 We mandate deterministic execution during regular Continuous Integration (CI). Real LLM calls are:
 1. Non-deterministic, which leads to flaky tests.
