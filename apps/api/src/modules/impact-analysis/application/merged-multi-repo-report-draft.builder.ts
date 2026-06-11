@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { MultiRepoImpactMatrixResponse, ReviewCoverageResponse } from '@ba-helper/contracts';
+import { ReportScanHealth, formatSkipReason } from './scan-health-report.formatter';
 
 type EvidenceItem = {
   id: string;
@@ -46,6 +47,7 @@ type ChildDraftInput = {
   latestReviewDecision: 'ACCEPTED' | 'REJECTED' | 'NEEDS_MORE_CLARIFICATION' | null;
   insights: InsightItem[];
   traceabilityLinks: TraceabilityItem[];
+  scanHealth?: ReportScanHealth | null;
 };
 
 @Injectable()
@@ -188,6 +190,42 @@ export class MergedMultiRepoReportDraftBuilder {
       lines.push(`- Commit SHA: \`${child.commitSha}\``);
       lines.push(`- Target Ref: \`${child.sourceTargetRef}\``);
       lines.push(`- Latest Review Decision: ${child.latestReviewDecision ?? 'PENDING'}`);
+      lines.push('');
+
+      lines.push('#### Scan Health Summary');
+      lines.push('');
+      if (child.scanHealth) {
+        const sh = child.scanHealth;
+        let coverageStr = sh.coverageStatus ?? 'UNKNOWN';
+        if (coverageStr === 'READY') coverageStr = 'FULL';
+        lines.push(`- **Coverage Status**: ${coverageStr}`);
+        
+        if (coverageStr === 'PARTIAL') {
+          lines.push('> PARTIAL means the scanner completed with bounded skips, limits, or pilot-adapter constraints. It does not mean the scan fully failed.');
+        }
+
+        if (sh.scannerVersion || sh.analyzerVersion) {
+          lines.push(`- **Engine**: ${sh.scannerVersion ?? 'unknown'} / ${sh.analyzerVersion ?? 'unknown'}`);
+        }
+        lines.push(`- **Files**: ${sh.scannedFileCount ?? 0} scanned, ${sh.skippedFileCount ?? 0} skipped`);
+        lines.push(`- **Artifacts Extracted**: ${sh.artifactCount ?? 0}`);
+
+        if (sh.skippedSummary) {
+          const sortedSummary = Object.entries(sh.skippedSummary)
+            .filter(([, count]) => count > 0)
+            .sort((a, b) => b[1] - a[1]);
+
+          if (sortedSummary.length > 0) {
+            lines.push('');
+            lines.push('**Top Skip Reasons**');
+            for (const [reason, count] of sortedSummary) {
+              lines.push(`- ${formatSkipReason(reason)} (\`${reason}\`): ${count}`);
+            }
+          }
+        }
+      } else {
+        lines.push('- No scan health diagnostics available.');
+      }
       lines.push('');
 
       const risks = child.insights.filter(

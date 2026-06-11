@@ -8,6 +8,7 @@ import { MergedMultiRepoReportDraftBuilder } from './merged-multi-repo-report-dr
 import { BuildMultiRepoImpactMatrixReadModel } from './build-multi-repo-impact-matrix.read-model';
 import { GetReviewCoverageUseCase } from './get-review-coverage.usecase';
 import { RequestUser } from '@ba-helper/contracts';
+import { parseScanHealthPayload } from './scan-health-report.formatter';
 
 @Injectable()
 export class GetMergedMultiRepoReportDraftUseCase {
@@ -60,6 +61,11 @@ export class GetMergedMultiRepoReportDraftUseCase {
           latestReviewDecision: analysis.reviewDecisions?.[0]?.decision ?? null,
           insights: await this.insights.listByAnalysis(analysis.id),
           traceabilityLinks: await this.traceability.listByAnalysis(analysis.id),
+          scanHealth: parseScanHealthPayload(
+            ((analysis.snapshot.diagnostics as any[]) ?? []).find(
+              (d: any) => d?.code === 'SCAN_HEALTH',
+            )?.payload,
+          ),
         };
       }),
     );
