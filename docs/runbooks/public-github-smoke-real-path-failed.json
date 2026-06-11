@@ -3,7 +3,7 @@
   "partial": {
     "apiUrl": "http://localhost:3001",
     "manifest": "public-booking-demo",
-    "runbook": "/home/diphungthinh/Desktop/BA_helper_test/docs/runbooks/public-github-smoke-demo.md"
+    "runbook": "/home/diphungthinh/Desktop/BA_Helper/docs/runbooks/public-github-smoke-demo.md"
   },
   "status": "failed"
 }

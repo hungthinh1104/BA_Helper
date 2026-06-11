@@ -25,7 +25,7 @@ export function CtaBanner() {
             <ArrowRight className="w-4 h-4" />
           </Link>
           <Link 
-            href="https://github.com/diphungthinh/BA_helper_test" 
+            href="https://github.com/hungthinh1104/BA_Helper" 
             target="_blank"
             className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-surface border border-border text-foreground font-semibold rounded-full hover:bg-surface-muted transition-all"
           >

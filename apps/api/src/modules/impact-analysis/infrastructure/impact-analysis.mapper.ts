@@ -1,5 +1,10 @@
 import type { Prisma } from '@prisma/client';
-import type { ImpactAnalysisListItemResponse } from '@ba-helper/contracts';
+import type {
+  ImpactAnalysisListItemResponse,
+  MultiRepoAnalysisRunDetailResponse,
+  MultiRepoAnalysisRunListItemResponse,
+} from '@ba-helper/contracts';
+import { deriveMultiRepoRunAggregates } from '../application/multi-repo-run-readiness';
 
 type BaseAnalysis = Prisma.ImpactAnalysisGetPayload<Record<string, never>>;
 type AnalysisSourceTarget = {
@@ -29,6 +34,15 @@ type AnalysisWithRelations = BaseAnalysis & {
   snapshot: AnalysisSnapshot;
   sourceTarget: AnalysisSourceTarget;
   requirementRevision: AnalysisRequirementRevision;
+  reviewDecisions?: Array<{
+    decision: 'ACCEPTED' | 'REJECTED' | 'NEEDS_MORE_CLARIFICATION';
+    createdAt: Date;
+    reviewedByUserId: string;
+    reviewedByUser?: {
+      name: string | null;
+      email: string;
+    } | null;
+  }>;
 };
 
 const computeFreshness = (analysis: {
@@ -157,5 +171,149 @@ export const mapReviewDecision = (decision: any) => {
     note: decision.note,
     reviewedBy: decision.reviewedByUser?.name || decision.reviewedByUser?.email || decision.reviewedByUserId || 'Unknown',
     createdAt: decision.createdAt.toISOString(),
+  };
+};
+
+export const mapMergedMultiRepoReportReviewDecision = (decision: any) => {
+  return {
+    id: decision.id,
+    mergedReportId: decision.mergedReportId,
+    runId: decision.mergedReport.runId,
+    decision: decision.decision,
+    note: decision.note,
+    reviewedBy:
+      decision.reviewedByUser?.name ||
+      decision.reviewedByUser?.email ||
+      decision.reviewedByUserId ||
+      'Unknown',
+    createdAt: decision.createdAt.toISOString(),
+  };
+};
+
+export const mapMultiRepoAnalysisRunDetail = (run: {
+  id: string;
+  projectId: string;
+  requirementRevisionId: string;
+  requirementRevision: {
+    title: string;
+  };
+  createdByUser: {
+    name: string | null;
+    email: string;
+  };
+  createdAt: Date;
+  analyses: Array<AnalysisWithRelations & {
+    snapshot: AnalysisSnapshot & {
+      repository: {
+        canonicalUrl: string;
+      };
+    };
+  }>;
+}): MultiRepoAnalysisRunDetailResponse => {
+  const items = run.analyses.map((analysis) => {
+    const { isStale } = computeFreshness(analysis);
+    const repositoryDisplayName =
+      analysis.snapshot.repository.canonicalUrl.split('/').pop() ??
+      analysis.snapshot.repository.canonicalUrl;
+    const latestDecision = analysis.reviewDecisions?.[0] ?? null;
+
+    let blockingReason: MultiRepoAnalysisRunDetailResponse['items'][number]['blockingReason'] =
+      'NONE';
+
+    if (analysis.status === 'FAILED') {
+      blockingReason = 'FAILED';
+    } else if (latestDecision?.decision === 'NEEDS_MORE_CLARIFICATION') {
+      blockingReason = 'NEEDS_MORE_CLARIFICATION';
+    } else if (latestDecision?.decision === 'REJECTED') {
+      blockingReason = 'REJECTED';
+    } else if (analysis.status === 'WAITING_FOR_REVIEW') {
+      blockingReason = 'WAITING_FOR_REVIEW';
+    } else if (analysis.status !== 'COMPLETED') {
+      blockingReason = 'NOT_COMPLETED';
+    }
+
+    return {
+      analysisId: analysis.id,
+      repositoryId: analysis.snapshot.repositoryId,
+      repositoryDisplayName,
+      snapshotId: analysis.snapshot.id,
+      commitSha: analysis.snapshot.commitSha,
+      status: analysis.status,
+      isStale,
+      latestReviewDecision: latestDecision?.decision ?? null,
+      latestReviewDecisionAt: latestDecision?.createdAt.toISOString() ?? null,
+      reviewedBy:
+        latestDecision
+          ? latestDecision.reviewedByUser?.name ||
+            latestDecision.reviewedByUser?.email ||
+            latestDecision.reviewedByUserId
+          : null,
+      blockingReason,
+    };
+  });
+
+  const { runReadiness, childReviewSummary } = deriveMultiRepoRunAggregates(
+    items.map((item) => ({
+      status: item.status,
+      latestReviewDecision: item.latestReviewDecision,
+    })),
+  );
+
+  return {
+    runId: run.id,
+    projectId: run.projectId,
+    requirementRevisionId: run.requirementRevisionId,
+    requirementTitle: run.requirementRevision.title,
+    createdBy: run.createdByUser.name || run.createdByUser.email,
+    createdAt: run.createdAt.toISOString(),
+    runReadiness,
+    childReviewSummary,
+    items,
+  };
+};
+
+const EMPTY_MULTI_REPO_RUN_STATUS_COUNTS: MultiRepoAnalysisRunListItemResponse['statusCounts'] =
+  {
+    QUEUED: 0,
+    RUNNING: 0,
+    WAITING_FOR_REVIEW: 0,
+    COMPLETED: 0,
+    FAILED: 0,
+    CANCELLED: 0,
+  };
+
+export const mapMultiRepoAnalysisRunListItem = (run: {
+  id: string;
+  projectId: string;
+  requirementRevisionId: string;
+  requirementRevision: {
+    title: string;
+  };
+  createdByUser: {
+    name: string | null;
+    email: string;
+  };
+  createdAt: Date;
+  analyses: Array<{
+    status: keyof MultiRepoAnalysisRunListItemResponse['statusCounts'];
+  }>;
+}): MultiRepoAnalysisRunListItemResponse => {
+  const statusCounts = run.analyses.reduce(
+    (counts, analysis) => {
+      counts[analysis.status] += 1;
+      return counts;
+    },
+    { ...EMPTY_MULTI_REPO_RUN_STATUS_COUNTS },
+  );
+
+  return {
+    runId: run.id,
+    projectId: run.projectId,
+    requirementRevisionId: run.requirementRevisionId,
+    requirementTitle: run.requirementRevision.title,
+    createdBy: run.createdByUser.name || run.createdByUser.email,
+    createdAt: run.createdAt.toISOString(),
+    analysisCount: run.analyses.length,
+    statusCounts,
   };
 };

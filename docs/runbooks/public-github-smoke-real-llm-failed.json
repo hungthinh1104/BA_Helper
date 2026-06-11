@@ -3,7 +3,7 @@
   "partial": {
     "apiUrl": "http://localhost:3001",
     "manifest": "public-booking-demo",
-    "runbook": "/home/diphungthinh/Desktop/BA_helper_test/docs/runbooks/public-github-smoke-demo.md",
+    "runbook": "/home/diphungthinh/Desktop/BA_Helper/docs/runbooks/public-github-smoke-demo.md",
     "repositoryId": "ec380664-ea22-4031-a001-3ac607aafafc",
     "scanJobId": "4c35eaa7-b78d-43d8-98d7-a59aa15153dc",
     "snapshotId": "b59a91eb-89dc-4e9e-a8b9-7b945a4e2f0d",

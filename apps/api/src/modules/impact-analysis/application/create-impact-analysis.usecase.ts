@@ -24,6 +24,7 @@ export class CreateImpactAnalysisUseCase {
     sourceTargetId: string;
     requestKey: string;
     allowPartialSnapshot: boolean;
+    multiRepoRunId?: string;
     derivedFromAnalysisId?: string;
     sourceClarificationId?: string;
     reviewClarificationRequestId?: string;
@@ -181,6 +182,7 @@ export class CreateImpactAnalysisUseCase {
       requirementRevisionId: params.requirementRevisionId,
       snapshotId: params.snapshotId,
       sourceTargetId: params.sourceTargetId,
+      multiRepoRunId: params.multiRepoRunId,
       requestKey: params.requestKey,
       acceptedPartialCoverage:
         snapshot.coverageStatus === 'PARTIAL' && params.allowPartialSnapshot,

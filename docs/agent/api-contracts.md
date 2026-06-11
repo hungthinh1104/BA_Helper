@@ -42,6 +42,16 @@ POST /api/v1/requirements/:requirementId/revisions
 POST /api/v1/requirement-revisions/:revisionId/qualify
 POST /api/v1/requirement-revisions/:revisionId/impact-analyses
 POST /api/v1/projects/:projectId/multi-repo-analyses
+GET  /api/v1/projects/:projectId/multi-repo-runs
+GET  /api/v1/multi-repo-runs/:runId
+GET  /api/v1/multi-repo-runs/:runId/merged-report-draft
+POST /api/v1/multi-repo-runs/:runId/merged-report/finalize
+GET  /api/v1/multi-repo-runs/:runId/merged-report
+POST /api/v1/multi-repo-runs/:runId/merged-report/review-decisions
+GET  /api/v1/multi-repo-runs/:runId/merged-report/review-decisions
+GET  /api/v1/multi-repo-runs/:runId/merged-report/review-decisions/latest
+GET  /api/v1/multi-repo-runs/:runId/merged-report/export.md
+GET  /api/v1/multi-repo-runs/:runId/merged-report/export.pdf
 
 GET  /api/v1/projects/:projectId/analyses
 GET  /api/v1/impact-analyses/:analysisId
@@ -225,8 +235,31 @@ revision and a list of repository ids:
 
 The backend resolves the latest observed target plus matching latest snapshot
 for each repository in the same project, then creates or reuses one normal
-`ImpactAnalysis` per repository. This endpoint is a batch fan-out foundation,
-not a merged cross-repo report contract.
+`ImpactAnalysis` per repository. The response includes a stable `runId`, and
+`GET /api/v1/multi-repo-runs/:runId` returns the grouped child analyses.
+`GET /api/v1/projects/:projectId/multi-repo-runs` lists those runs for the
+current project with derived child status counts. Run detail also returns
+derived readiness and latest review-decision state per child analysis. This is
+a batch/run tracking foundation. `GET /api/v1/multi-repo-runs/:runId/merged-report-draft`
+returns a read-only merged Markdown draft only when every child analysis has a
+latest review decision of `ACCEPTED`. The merged draft is not persisted and
+does not create a `GeneratedDocument`.
+
+`POST /api/v1/multi-repo-runs/:runId/merged-report/finalize` persists an
+approved merged Markdown snapshot for the run. `GET /api/v1/multi-repo-runs/:runId/merged-report`
+returns that persisted snapshot plus provenance and stale status. The approved
+merged report is stale when child review decisions or child analysis snapshot
+provenance change after approval. `GET /api/v1/multi-repo-runs/:runId/merged-report/export.md`
+and `GET /api/v1/multi-repo-runs/:runId/merged-report/export.pdf` export only
+the persisted approved merged snapshot. Stale approved merged reports remain
+readable but export is blocked with `MERGED_REPORT_EXPORT_BLOCKED_STALE`.
+Merged report review decisions are append-only and operate on the approved,
+non-stale merged snapshot only: `POST /api/v1/multi-repo-runs/:runId/merged-report/review-decisions`
+records `ACCEPTED`, `REJECTED`, or `NEEDS_MORE_CLARIFICATION` plus an optional
+note; `GET /api/v1/multi-repo-runs/:runId/merged-report/review-decisions` and
+`GET /api/v1/multi-repo-runs/:runId/merged-report/review-decisions/latest`
+return the review history and latest merged decision. This phase does not add
+merged clarification loops or merged report editing.
 
 ## Status Contract
 

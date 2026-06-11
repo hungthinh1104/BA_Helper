@@ -60,6 +60,11 @@ import { ProjectModule } from '../project/project.module';
     MermaidImpactDiagramBuilder,
     MarkdownImpactReportBuilder,
   ],
-  exports: [DocumentRepository, MarkdownImpactReportBuilder],
+  exports: [
+    DocumentRepository,
+    MarkdownImpactReportBuilder,
+    MarkdownExportRenderer,
+    PdfExportRenderer,
+  ],
 })
 export class DocumentModule {}

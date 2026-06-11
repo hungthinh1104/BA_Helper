@@ -1,10 +1,17 @@
-import { Body, Controller, Get, Param, Post, Query, BadRequestException, NotFoundException, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, BadRequestException, NotFoundException, Res } from '@nestjs/common';
 import {
   impactAnalysisCreateRequestSchema,
   impactAnalysisListResponseSchema,
   impactAnalysisResponseSchema,
   multiRepoImpactAnalysisCreateRequestSchema,
   multiRepoImpactAnalysisCreateResponseSchema,
+  multiRepoAnalysisRunDetailResponseSchema,
+  multiRepoAnalysisRunListResponseSchema,
+  multiRepoMergedReportDraftResponseSchema,
+  multiRepoApprovedReportResponseSchema,
+  mergedMultiRepoReportReviewDecisionCreateResponseSchema,
+  mergedMultiRepoReportReviewDecisionListResponseSchema,
+  mergedMultiRepoReportReviewDecisionResponseSchema,
   finalizeImpactAnalysisRequestSchema,
   impactGraphResponseSchema,
   qaCoverageResponseSchema,
@@ -18,11 +25,19 @@ import {
   lineageTimelineResponseSchema,
   RequestUser,
 } from '@ba-helper/contracts';
-import { JwtAuthGuard } from '../../auth/application/jwt-auth.guard';
 import { CurrentUser } from '../../auth/api/current-user.decorator';
 import { CreateImpactAnalysisUseCase } from '../application/create-impact-analysis.usecase';
 import { CreateMultiRepoImpactAnalysesUseCase } from '../application/create-multi-repo-impact-analyses.usecase';
 import { GetImpactAnalysisUseCase } from '../application/get-impact-analysis.usecase';
+import { GetMultiRepoAnalysisRunUseCase } from '../application/get-multi-repo-analysis-run.usecase';
+import { GetMergedMultiRepoReportDraftUseCase } from '../application/get-merged-multi-repo-report-draft.usecase';
+import { FinalizeMultiRepoReportUseCase } from '../application/finalize-multi-repo-report.usecase';
+import { GetApprovedMultiRepoReportUseCase } from '../application/get-approved-multi-repo-report.usecase';
+import { ExportApprovedMultiRepoReportUseCase } from '../application/export-approved-multi-repo-report.usecase';
+import { ListMultiRepoAnalysisRunsUseCase } from '../application/list-multi-repo-analysis-runs.usecase';
+import { CreateMergedMultiRepoReportReviewDecisionUseCase } from '../application/create-merged-multi-repo-report-review-decision.usecase';
+import { ListMergedMultiRepoReportReviewDecisionsUseCase } from '../application/list-merged-multi-repo-report-review-decisions.usecase';
+import { GetLatestMergedMultiRepoReportReviewDecisionUseCase } from '../application/get-latest-merged-multi-repo-report-review-decision.usecase';
 import { FinalizeImpactAnalysisUseCase } from '../application/finalize-impact-analysis.usecase';
 import { ListImpactAnalysesUseCase } from '../application/list-impact-analyses.usecase';
 import { GetImpactGraphUseCase } from '../application/get-impact-graph.usecase';
@@ -36,6 +51,9 @@ import { GetImpactAnalysisLineageUseCase } from '../application/get-impact-analy
 import {
   mapImpactAnalysisListItem,
   mapImpactAnalysisResponse,
+  mapMergedMultiRepoReportReviewDecision,
+  mapMultiRepoAnalysisRunDetail,
+  mapMultiRepoAnalysisRunListItem,
   mapReviewDecision,
 } from '../infrastructure/impact-analysis.mapper';
 
@@ -48,6 +66,15 @@ export class ImpactAnalysisController {
     private readonly createAnalysis: CreateImpactAnalysisUseCase,
     private readonly createMultiRepoAnalyses: CreateMultiRepoImpactAnalysesUseCase,
     private readonly getAnalysis: GetImpactAnalysisUseCase,
+    private readonly getMultiRepoRun: GetMultiRepoAnalysisRunUseCase,
+    private readonly getMergedMultiRepoReportDraft: GetMergedMultiRepoReportDraftUseCase,
+    private readonly finalizeMultiRepoReport: FinalizeMultiRepoReportUseCase,
+    private readonly getApprovedMultiRepoReport: GetApprovedMultiRepoReportUseCase,
+    private readonly exportApprovedMultiRepoReport: ExportApprovedMultiRepoReportUseCase,
+    private readonly listMultiRepoRuns: ListMultiRepoAnalysisRunsUseCase,
+    private readonly createMergedReportReviewDecision: CreateMergedMultiRepoReportReviewDecisionUseCase,
+    private readonly listMergedReportReviewDecisions: ListMergedMultiRepoReportReviewDecisionsUseCase,
+    private readonly getLatestMergedReportReviewDecision: GetLatestMergedMultiRepoReportReviewDecisionUseCase,
     private readonly finalizeAnalysis: FinalizeImpactAnalysisUseCase,
     private readonly listAnalyses: ListImpactAnalysesUseCase,
     private readonly getImpactGraph: GetImpactGraphUseCase,
@@ -104,6 +131,7 @@ export class ImpactAnalysisController {
     );
     const input = multiRepoImpactAnalysisCreateRequestSchema.parse(body);
     const result = await this.createMultiRepoAnalyses.execute({
+      actorId: actor.id,
       projectId,
       requirementRevisionId: input.requirementRevisionId,
       repositoryIds: input.repositoryIds,
@@ -112,6 +140,164 @@ export class ImpactAnalysisController {
     });
 
     return multiRepoImpactAnalysisCreateResponseSchema.parse(result);
+  }
+
+  @Get('/multi-repo-runs/:runId')
+  async getMultiRepoRunDetail(
+    @Param('runId') runId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadMultiRepoRun(actor, runId);
+    const run = await this.getMultiRepoRun.execute(runId);
+    return multiRepoAnalysisRunDetailResponseSchema.parse(
+      mapMultiRepoAnalysisRunDetail(run),
+    );
+  }
+
+  @Get('/multi-repo-runs/:runId/merged-report-draft')
+  async getMergedMultiRepoReportDraftEndpoint(
+    @Param('runId') runId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadMultiRepoRun(actor, runId);
+    const result = await this.getMergedMultiRepoReportDraft.execute(runId);
+    return multiRepoMergedReportDraftResponseSchema.parse(result);
+  }
+
+  @Post('/multi-repo-runs/:runId/merged-report/finalize')
+  @Roles('ADMIN')
+  async finalizeMergedMultiRepoReportEndpoint(
+    @Param('runId') runId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertPermissionForMultiRepoRun(
+      actor,
+      runId,
+      'analysis:finalize',
+    );
+    const result = await this.finalizeMultiRepoReport.execute(runId);
+    return multiRepoApprovedReportResponseSchema.parse(result);
+  }
+
+  @Get('/multi-repo-runs/:runId/merged-report')
+  async getApprovedMultiRepoReportEndpoint(
+    @Param('runId') runId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadMultiRepoRun(actor, runId);
+    const result = await this.getApprovedMultiRepoReport.execute(runId);
+    return multiRepoApprovedReportResponseSchema.parse(result);
+  }
+
+  @Post('/multi-repo-runs/:runId/merged-report/review-decisions')
+  @Roles('ADMIN', 'REVIEWER')
+  async createMergedMultiRepoReportReviewDecisionEndpoint(
+    @Param('runId') runId: string,
+    @Body() body: unknown,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertPermissionForMultiRepoRun(
+      actor,
+      runId,
+      'review:write',
+    );
+    const input = reviewDecisionRequestSchema.parse(body);
+    const result = await this.createMergedReportReviewDecision.execute({
+      runId,
+      decision: input.decision,
+      note: input.note,
+      reviewedByUserId: actor.id,
+    });
+
+    return mergedMultiRepoReportReviewDecisionCreateResponseSchema.parse({
+      decision: mapMergedMultiRepoReportReviewDecision(result.decision),
+    });
+  }
+
+  @Get('/multi-repo-runs/:runId/merged-report/review-decisions')
+  async listMergedMultiRepoReportReviewDecisionsEndpoint(
+    @Param('runId') runId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadMultiRepoRun(actor, runId);
+    const result = await this.listMergedReportReviewDecisions.execute(runId);
+    return mergedMultiRepoReportReviewDecisionListResponseSchema.parse({
+      items: result.items.map((decision) =>
+        mapMergedMultiRepoReportReviewDecision(decision),
+      ),
+    });
+  }
+
+  @Get('/multi-repo-runs/:runId/merged-report/review-decisions/latest')
+  async getLatestMergedMultiRepoReportReviewDecisionEndpoint(
+    @Param('runId') runId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadMultiRepoRun(actor, runId);
+    const decision = await this.getLatestMergedReportReviewDecision.execute(runId);
+    if (!decision) {
+      throw new NotFoundException('Merged multi-repo report review decision not found.');
+    }
+
+    return mergedMultiRepoReportReviewDecisionResponseSchema.parse(
+      mapMergedMultiRepoReportReviewDecision(decision),
+    );
+  }
+
+  @Get('/multi-repo-runs/:runId/merged-report/export.md')
+  async exportApprovedMultiRepoReportMarkdownEndpoint(
+    @Param('runId') runId: string,
+    @CurrentUser() actor: RequestUser,
+    @Res() res: any,
+  ) {
+    await this.permissions.assertPermissionForMultiRepoRun(
+      actor,
+      runId,
+      'report:export',
+    );
+    const result = await this.exportApprovedMultiRepoReport.execute({
+      runId,
+      actor,
+      format: 'markdown',
+    });
+
+    res.setHeader('Content-Type', result.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.send(result.buffer);
+  }
+
+  @Get('/multi-repo-runs/:runId/merged-report/export.pdf')
+  async exportApprovedMultiRepoReportPdfEndpoint(
+    @Param('runId') runId: string,
+    @CurrentUser() actor: RequestUser,
+    @Res() res: any,
+  ) {
+    await this.permissions.assertPermissionForMultiRepoRun(
+      actor,
+      runId,
+      'report:export',
+    );
+    const result = await this.exportApprovedMultiRepoReport.execute({
+      runId,
+      actor,
+      format: 'pdf',
+    });
+
+    res.setHeader('Content-Type', result.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.send(result.buffer);
+  }
+
+  @Get('/projects/:projectId/multi-repo-runs')
+  async listMultiRepoRunsByProject(
+    @Param('projectId') projectId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadProject(actor, projectId);
+    const runs = await this.listMultiRepoRuns.execute(projectId);
+    return multiRepoAnalysisRunListResponseSchema.parse({
+      items: runs.map((run) => mapMultiRepoAnalysisRunListItem(run)),
+    });
   }
 
   @Get('/impact-analyses/:analysisId')

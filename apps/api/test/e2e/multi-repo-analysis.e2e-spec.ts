@@ -3,10 +3,21 @@ import request from 'supertest';
 import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../src/modules/prisma/prisma.service';
+import { PdfExportRenderer } from '../../src/modules/document/application/pdf-export.renderer';
+import { AppError } from '../../src/shared/app-error';
 import { createTestApp } from './helpers/test-app';
 import { resetDatabase } from './helpers/reset-db';
 import { grantProjectMembership } from './helpers/grant-project-membership';
-import { multiRepoImpactAnalysisCreateResponseSchema } from '@ba-helper/contracts';
+import {
+  multiRepoApprovedReportResponseSchema,
+  multiRepoAnalysisRunDetailResponseSchema,
+  multiRepoAnalysisRunListResponseSchema,
+  mergedMultiRepoReportReviewDecisionCreateResponseSchema,
+  mergedMultiRepoReportReviewDecisionListResponseSchema,
+  mergedMultiRepoReportReviewDecisionResponseSchema,
+  multiRepoMergedReportDraftResponseSchema,
+  multiRepoImpactAnalysisCreateResponseSchema,
+} from '@ba-helper/contracts';
 
 describe('Multi-repo analysis fan-out (e2e)', () => {
   let app: INestApplication;
@@ -123,7 +134,112 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
       },
     });
 
-    return { repositoryId, snapshotId, targetId };
+    return { repositoryId, snapshotId, targetId, commitSha };
+  }
+
+  async function createLatestReviewDecision(params: {
+    analysisId: string;
+    decision: 'ACCEPTED' | 'REJECTED' | 'NEEDS_MORE_CLARIFICATION';
+    createdAt?: Date;
+  }) {
+    return prisma.analysisReviewDecision.create({
+      data: {
+        id: crypto.randomUUID(),
+        analysisId: params.analysisId,
+        decision: params.decision,
+        reviewedByUserId: adminUserId,
+        createdAt: params.createdAt,
+      },
+    });
+  }
+
+  async function seedAcceptedInsight(params: {
+    analysisId: string;
+    insightKey: string;
+    title: string;
+    description: string;
+    insightType?: 'CLAIM' | 'QA_SCENARIO';
+  }) {
+    const evidenceId = crypto.randomUUID();
+    const insightId = crypto.randomUUID();
+
+    await prisma.evidence.create({
+      data: {
+        id: evidenceId,
+        provenanceKey: `prov:${params.analysisId}:${params.insightKey}`,
+        sourceType: 'CODE',
+        sourcePath: `src/${params.insightKey}.ts`,
+        startLine: 10,
+        endLine: 14,
+        excerpt: `evidence for ${params.insightKey}`,
+        contentHash: crypto.randomUUID().replace(/-/g, ''),
+      },
+    });
+
+    await prisma.baInsight.create({
+      data: {
+        id: insightId,
+        impactAnalysisId: params.analysisId,
+        insightKey: params.insightKey,
+        insightType: params.insightType ?? 'CLAIM',
+        certainty: 'EVIDENCED',
+        reviewStatus: 'CONFIRMED',
+        confidence: 0.9,
+        title: params.title,
+        description: params.description,
+      },
+    });
+
+    await prisma.insightEvidence.create({
+      data: {
+        insightId,
+        evidenceId,
+      },
+    });
+  }
+
+  async function seedReadyAcceptedRun() {
+    const { projectId, revisionId } = await seedProjectWithReadyRequirement();
+    const booking = await seedRepository(projectId, 'booking-service');
+    const payment = await seedRepository(projectId, 'payment-service');
+
+    const createResponse = await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requirementRevisionId: revisionId,
+        repositoryIds: [booking.repositoryId, payment.repositoryId],
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+      })
+      .expect(201);
+
+    const result = multiRepoImpactAnalysisCreateResponseSchema.parse(createResponse.body);
+
+    for (const item of result.items) {
+      await prisma.impactAnalysis.update({
+        where: { id: item.analysisId },
+        data: { status: 'COMPLETED' },
+      });
+      await createLatestReviewDecision({
+        analysisId: item.analysisId,
+        decision: 'ACCEPTED',
+      });
+      await seedAcceptedInsight({
+        analysisId: item.analysisId,
+        insightKey: `claim-${item.repositoryId.slice(0, 6)}`,
+        title: `Risk in ${item.repositoryDisplayName}`,
+        description: `Impact found in ${item.repositoryDisplayName}.`,
+      });
+    }
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/multi-repo-runs/${result.runId}/merged-report/finalize`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({})
+      .expect(201);
+
+    return { projectId, revisionId, booking, payment, result };
   }
 
   it('creates one normal analysis per selected repository in the same project', async () => {
@@ -146,6 +262,7 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
       response.body,
     );
 
+    expect(result.runId).toEqual(expect.any(String));
     expect(result.items).toHaveLength(2);
     expect(result.items).toEqual(
       expect.arrayContaining([
@@ -172,9 +289,72 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
     });
 
     expect(persisted).toHaveLength(2);
+    expect(new Set(persisted.map((item) => item.multiRepoRunId))).toEqual(
+      new Set([result.runId]),
+    );
     expect(new Set(persisted.map((item) => item.snapshotId))).toEqual(
       new Set([booking.snapshotId, payment.snapshotId]),
     );
+
+    const runDetailRes = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const runDetail = multiRepoAnalysisRunDetailResponseSchema.parse(
+      runDetailRes.body,
+    );
+    expect(runDetail.runId).toBe(result.runId);
+    expect(runDetail.projectId).toBe(projectId);
+    expect(runDetail.requirementRevisionId).toBe(revisionId);
+    expect(runDetail.items).toHaveLength(2);
+  });
+
+  it('reuses the same run and child analyses on request retry', async () => {
+    const { projectId, revisionId } = await seedProjectWithReadyRequirement();
+    const booking = await seedRepository(projectId, 'booking-service');
+    const payment = await seedRepository(projectId, 'payment-service');
+    const requestKey = crypto.randomUUID();
+
+    const first = await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requirementRevisionId: revisionId,
+        repositoryIds: [booking.repositoryId, payment.repositoryId],
+        allowPartialSnapshot: false,
+        requestKey,
+      })
+      .expect(201);
+
+    const second = await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requirementRevisionId: revisionId,
+        repositoryIds: [booking.repositoryId, payment.repositoryId],
+        allowPartialSnapshot: false,
+        requestKey,
+      })
+      .expect(201);
+
+    const firstResult = multiRepoImpactAnalysisCreateResponseSchema.parse(first.body);
+    const secondResult = multiRepoImpactAnalysisCreateResponseSchema.parse(second.body);
+
+    expect(secondResult.runId).toBe(firstResult.runId);
+    expect(secondResult.items.map((item) => item.analysisId).sort()).toEqual(
+      firstResult.items.map((item) => item.analysisId).sort(),
+    );
+
+    const runCount = await prisma.multiRepoAnalysisRun.count();
+    const analysisCount = await prisma.impactAnalysis.count({
+      where: {
+        multiRepoRunId: firstResult.runId,
+      },
+    });
+
+    expect(runCount).toBe(1);
+    expect(analysisCount).toBe(2);
   });
 
   it('returns 404 when any selected repository is outside the project', async () => {
@@ -228,5 +408,1168 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
       .expect(({ body }) => {
         expect(body.code).toBe('REPOSITORY_NOT_ANALYZABLE');
       });
+  });
+
+  it('returns 404 when reading a run outside project membership', async () => {
+    const { projectId, revisionId } = await seedProjectWithReadyRequirement();
+    const booking = await seedRepository(projectId, 'booking-service');
+    const payment = await seedRepository(projectId, 'payment-service');
+
+    const createResponse = await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requirementRevisionId: revisionId,
+        repositoryIds: [booking.repositoryId, payment.repositoryId],
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+      })
+      .expect(201);
+
+    const result = multiRepoImpactAnalysisCreateResponseSchema.parse(createResponse.body);
+
+    const outsider = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        email: 'outsider@ba-helper.local',
+        name: 'Outsider',
+        role: 'ADMIN',
+      },
+    });
+    const outsiderToken = jwtService.sign({
+      sub: outsider.id,
+      email: outsider.email,
+      role: outsider.role,
+      name: outsider.name,
+    });
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}`)
+      .set('Authorization', `Bearer ${outsiderToken}`)
+      .expect(404);
+  });
+
+  it('returns 409 for merged report draft when the run is not ready', async () => {
+    const { projectId, revisionId } = await seedProjectWithReadyRequirement();
+    const booking = await seedRepository(projectId, 'booking-service');
+    const payment = await seedRepository(projectId, 'payment-service');
+
+    const createResponse = await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requirementRevisionId: revisionId,
+        repositoryIds: [booking.repositoryId, payment.repositoryId],
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+      })
+      .expect(201);
+
+    const result = multiRepoImpactAnalysisCreateResponseSchema.parse(createResponse.body);
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report-draft`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(409)
+      .expect(({ body }) => {
+        expect(body.code).toBe('MULTI_REPO_RUN_NOT_READY');
+      });
+  });
+
+  it('returns 404 for merged report draft outside project membership', async () => {
+    const { projectId, revisionId } = await seedProjectWithReadyRequirement();
+    const booking = await seedRepository(projectId, 'booking-service');
+    const payment = await seedRepository(projectId, 'payment-service');
+
+    const createResponse = await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requirementRevisionId: revisionId,
+        repositoryIds: [booking.repositoryId, payment.repositoryId],
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+      })
+      .expect(201);
+
+    const result = multiRepoImpactAnalysisCreateResponseSchema.parse(createResponse.body);
+
+    for (const item of result.items) {
+      await prisma.impactAnalysis.update({
+        where: { id: item.analysisId },
+        data: { status: 'COMPLETED' },
+      });
+      await createLatestReviewDecision({
+        analysisId: item.analysisId,
+        decision: 'ACCEPTED',
+      });
+    }
+
+    const outsider = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        email: 'draft-outsider@ba-helper.local',
+        name: 'Draft Outsider',
+        role: 'ADMIN',
+      },
+    });
+    const outsiderToken = jwtService.sign({
+      sub: outsider.id,
+      email: outsider.email,
+      role: outsider.role,
+      name: outsider.name,
+    });
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report-draft`)
+      .set('Authorization', `Bearer ${outsiderToken}`)
+      .expect(404);
+  });
+
+  it('returns merged markdown draft for an all-accepted run without persisting GeneratedDocument', async () => {
+    const { projectId, revisionId } = await seedProjectWithReadyRequirement();
+    const booking = await seedRepository(projectId, 'booking-service');
+    const payment = await seedRepository(projectId, 'payment-service');
+
+    const createResponse = await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requirementRevisionId: revisionId,
+        repositoryIds: [booking.repositoryId, payment.repositoryId],
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+      })
+      .expect(201);
+
+    const result = multiRepoImpactAnalysisCreateResponseSchema.parse(createResponse.body);
+
+    for (const item of result.items) {
+      await prisma.impactAnalysis.update({
+        where: { id: item.analysisId },
+        data: { status: 'COMPLETED' },
+      });
+      await createLatestReviewDecision({
+        analysisId: item.analysisId,
+        decision: 'ACCEPTED',
+      });
+      await seedAcceptedInsight({
+        analysisId: item.analysisId,
+        insightKey: `claim-${item.repositoryId.slice(0, 6)}`,
+        title: `Risk in ${item.repositoryDisplayName}`,
+        description: `Impact found in ${item.repositoryDisplayName}.`,
+      });
+      await seedAcceptedInsight({
+        analysisId: item.analysisId,
+        insightKey: `qa-${item.repositoryId.slice(0, 6)}`,
+        insightType: 'QA_SCENARIO',
+        title: `QA for ${item.repositoryDisplayName}`,
+        description: `Validate flow in ${item.repositoryDisplayName}.`,
+      });
+    }
+
+    const beforeCount = await prisma.generatedDocument.count();
+
+    const response = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report-draft`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const draft = multiRepoMergedReportDraftResponseSchema.parse(response.body);
+
+    expect(draft.runId).toBe(result.runId);
+    expect(draft.childAnalysisCount).toBe(2);
+    expect(draft.repositories).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          repositoryId: booking.repositoryId,
+          snapshotId: booking.snapshotId,
+          commitSha: booking.commitSha,
+        }),
+        expect.objectContaining({
+          repositoryId: payment.repositoryId,
+          snapshotId: payment.snapshotId,
+        }),
+      ]),
+    );
+
+    expect(draft.markdown).toContain('## Requirement');
+    expect(draft.markdown).toContain('## Run Summary');
+    expect(draft.markdown).toContain('## Repository Coverage');
+    expect(draft.markdown).toContain('## Per-repository Analysis');
+    expect(draft.markdown).toContain('## Consolidated Risks');
+    expect(draft.markdown).toContain('## Consolidated QA Scenarios');
+    expect(draft.markdown).toContain('## Evidence Appendix');
+    expect(draft.markdown).toContain('## Provenance');
+    expect(draft.markdown).toContain('booking-service');
+    expect(draft.markdown).toContain('payment-service');
+    expect(draft.markdown).toContain(result.items[0].analysisId);
+    expect(draft.markdown).toContain(result.items[1].analysisId);
+    expect(draft.markdown).toContain(booking.snapshotId);
+    expect(draft.markdown).toContain(payment.snapshotId);
+
+    const afterCount = await prisma.generatedDocument.count();
+    expect(afterCount).toBe(beforeCount);
+    expect(afterCount).toBe(0);
+  });
+
+  it('finalize merged report returns 409 when run is not ready', async () => {
+    const { projectId, revisionId } = await seedProjectWithReadyRequirement();
+    const booking = await seedRepository(projectId, 'booking-service');
+    const payment = await seedRepository(projectId, 'payment-service');
+
+    const createResponse = await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requirementRevisionId: revisionId,
+        repositoryIds: [booking.repositoryId, payment.repositoryId],
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+      })
+      .expect(201);
+
+    const result = multiRepoImpactAnalysisCreateResponseSchema.parse(createResponse.body);
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/multi-repo-runs/${result.runId}/merged-report/finalize`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({})
+      .expect(409)
+      .expect(({ body }) => {
+        expect(body.code).toBe('MULTI_REPO_RUN_NOT_READY');
+      });
+  });
+
+  it('finalize merged report succeeds for all-accepted run and stores approved snapshot', async () => {
+    const { projectId, revisionId } = await seedProjectWithReadyRequirement();
+    const booking = await seedRepository(projectId, 'booking-service');
+    const payment = await seedRepository(projectId, 'payment-service');
+
+    const createResponse = await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requirementRevisionId: revisionId,
+        repositoryIds: [booking.repositoryId, payment.repositoryId],
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+      })
+      .expect(201);
+
+    const result = multiRepoImpactAnalysisCreateResponseSchema.parse(createResponse.body);
+
+    for (const item of result.items) {
+      await prisma.impactAnalysis.update({
+        where: { id: item.analysisId },
+        data: { status: 'COMPLETED' },
+      });
+      await createLatestReviewDecision({
+        analysisId: item.analysisId,
+        decision: 'ACCEPTED',
+      });
+      await seedAcceptedInsight({
+        analysisId: item.analysisId,
+        insightKey: `claim-${item.repositoryId.slice(0, 6)}`,
+        title: `Risk in ${item.repositoryDisplayName}`,
+        description: `Impact found in ${item.repositoryDisplayName}.`,
+      });
+    }
+
+    const finalizeResponse = await request(app.getHttpServer())
+      .post(`/api/v1/multi-repo-runs/${result.runId}/merged-report/finalize`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({})
+      .expect(201);
+
+    const finalized = multiRepoApprovedReportResponseSchema.parse(finalizeResponse.body);
+
+    expect(finalized.runId).toBe(result.runId);
+    expect(finalized.isStale).toBe(false);
+    expect(finalized.markdown).toContain('## Requirement');
+    expect(finalized.markdown).toContain('booking-service');
+    expect(finalized.markdown).toContain('payment-service');
+    expect(finalized.provenance.childAnalyses).toHaveLength(2);
+
+    const persisted = await prisma.mergedMultiRepoReport.findUnique({
+      where: { runId: result.runId },
+    });
+    expect(persisted).not.toBeNull();
+    expect(persisted?.content).toBe(finalized.markdown);
+  });
+
+  it('read approved merged report returns markdown, provenance, and stale state after child review changes', async () => {
+    const { projectId, revisionId } = await seedProjectWithReadyRequirement();
+    const booking = await seedRepository(projectId, 'booking-service');
+    const payment = await seedRepository(projectId, 'payment-service');
+
+    const createResponse = await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requirementRevisionId: revisionId,
+        repositoryIds: [booking.repositoryId, payment.repositoryId],
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+      })
+      .expect(201);
+
+    const result = multiRepoImpactAnalysisCreateResponseSchema.parse(createResponse.body);
+
+    for (const item of result.items) {
+      await prisma.impactAnalysis.update({
+        where: { id: item.analysisId },
+        data: { status: 'COMPLETED' },
+      });
+      await createLatestReviewDecision({
+        analysisId: item.analysisId,
+        decision: 'ACCEPTED',
+      });
+      await seedAcceptedInsight({
+        analysisId: item.analysisId,
+        insightKey: `claim-${item.repositoryId.slice(0, 6)}`,
+        title: `Risk in ${item.repositoryDisplayName}`,
+        description: `Impact found in ${item.repositoryDisplayName}.`,
+      });
+    }
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/multi-repo-runs/${result.runId}/merged-report/finalize`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({})
+      .expect(201);
+
+    const firstReadResponse = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const firstRead = multiRepoApprovedReportResponseSchema.parse(firstReadResponse.body);
+    expect(firstRead.isStale).toBe(false);
+    expect(firstRead.provenance.childAnalyses).toHaveLength(2);
+    expect(firstRead.markdown).toContain(result.items[0].analysisId);
+
+    await createLatestReviewDecision({
+      analysisId: result.items[0].analysisId,
+      decision: 'REJECTED',
+    });
+
+    const secondReadResponse = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const secondRead = multiRepoApprovedReportResponseSchema.parse(secondReadResponse.body);
+    expect(secondRead.isStale).toBe(true);
+    expect(secondRead.staleReason).toContain('review decisions changed');
+  });
+
+  it('merged report finalize and read enforce 404 outsider and 403 insufficient same-project role', async () => {
+    const { projectId, revisionId } = await seedProjectWithReadyRequirement();
+    const booking = await seedRepository(projectId, 'booking-service');
+    const payment = await seedRepository(projectId, 'payment-service');
+
+    const createResponse = await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requirementRevisionId: revisionId,
+        repositoryIds: [booking.repositoryId, payment.repositoryId],
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+      })
+      .expect(201);
+
+    const result = multiRepoImpactAnalysisCreateResponseSchema.parse(createResponse.body);
+
+    for (const item of result.items) {
+      await prisma.impactAnalysis.update({
+        where: { id: item.analysisId },
+        data: { status: 'COMPLETED' },
+      });
+      await createLatestReviewDecision({
+        analysisId: item.analysisId,
+        decision: 'ACCEPTED',
+      });
+      await seedAcceptedInsight({
+        analysisId: item.analysisId,
+        insightKey: `claim-${item.repositoryId.slice(0, 6)}`,
+        title: `Risk in ${item.repositoryDisplayName}`,
+        description: `Impact found in ${item.repositoryDisplayName}.`,
+      });
+    }
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/multi-repo-runs/${result.runId}/merged-report/finalize`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({})
+      .expect(201);
+
+    const outsider = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        email: 'merged-outsider@ba-helper.local',
+        name: 'Merged Outsider',
+        role: 'ADMIN',
+      },
+    });
+    const outsiderToken = jwtService.sign({
+      sub: outsider.id,
+      email: outsider.email,
+      role: outsider.role,
+      name: outsider.name,
+    });
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report`)
+      .set('Authorization', `Bearer ${outsiderToken}`)
+      .expect(404);
+
+    const limitedUser = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        email: 'limited@ba-helper.local',
+        name: 'Limited',
+        role: 'ADMIN',
+      },
+    });
+    await grantProjectMembership(prisma, {
+      projectId,
+      userId: limitedUser.id,
+      role: 'VIEWER',
+    });
+    const limitedToken = jwtService.sign({
+      sub: limitedUser.id,
+      email: limitedUser.email,
+      role: limitedUser.role,
+      name: limitedUser.name,
+    });
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/multi-repo-runs/${result.runId}/merged-report/finalize`)
+      .set('Authorization', `Bearer ${limitedToken}`)
+      .send({})
+      .expect(403);
+  });
+
+  it('duplicate finalize is idempotent when provenance is unchanged', async () => {
+    const { projectId, revisionId } = await seedProjectWithReadyRequirement();
+    const booking = await seedRepository(projectId, 'booking-service');
+    const payment = await seedRepository(projectId, 'payment-service');
+
+    const createResponse = await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requirementRevisionId: revisionId,
+        repositoryIds: [booking.repositoryId, payment.repositoryId],
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+      })
+      .expect(201);
+
+    const result = multiRepoImpactAnalysisCreateResponseSchema.parse(createResponse.body);
+
+    for (const item of result.items) {
+      await prisma.impactAnalysis.update({
+        where: { id: item.analysisId },
+        data: { status: 'COMPLETED' },
+      });
+      await createLatestReviewDecision({
+        analysisId: item.analysisId,
+        decision: 'ACCEPTED',
+      });
+      await seedAcceptedInsight({
+        analysisId: item.analysisId,
+        insightKey: `claim-${item.repositoryId.slice(0, 6)}`,
+        title: `Risk in ${item.repositoryDisplayName}`,
+        description: `Impact found in ${item.repositoryDisplayName}.`,
+      });
+    }
+
+    const firstFinalize = await request(app.getHttpServer())
+      .post(`/api/v1/multi-repo-runs/${result.runId}/merged-report/finalize`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({})
+      .expect(201);
+
+    const secondFinalize = await request(app.getHttpServer())
+      .post(`/api/v1/multi-repo-runs/${result.runId}/merged-report/finalize`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({})
+      .expect(201);
+
+    const first = multiRepoApprovedReportResponseSchema.parse(firstFinalize.body);
+    const second = multiRepoApprovedReportResponseSchema.parse(secondFinalize.body);
+    const sortProvenance = (
+      items: typeof first.provenance.childAnalyses,
+    ) => [...items].sort((left, right) => left.analysisId.localeCompare(right.analysisId));
+
+    expect(second.id).toBe(first.id);
+    expect(second.markdown).toBe(first.markdown);
+    expect(sortProvenance(second.provenance.childAnalyses)).toEqual(
+      sortProvenance(first.provenance.childAnalyses),
+    );
+  });
+
+  it('exports markdown and pdf for a non-stale approved merged report', async () => {
+    const { result } = await seedReadyAcceptedRun();
+
+    const markdownResponse = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report/export.md`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(markdownResponse.headers['content-type']).toContain('text/markdown');
+    expect(markdownResponse.headers['content-disposition']).toContain('.md');
+    expect(markdownResponse.text).toContain('## Requirement');
+    expect(markdownResponse.text).toContain(result.items[0].analysisId);
+
+    const pdfResponse = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report/export.pdf`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .buffer(true)
+      .parse((res, callback) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+        res.on('end', () => callback(null, Buffer.concat(chunks)));
+      })
+      .expect(200);
+
+    expect(pdfResponse.headers['content-type']).toContain('application/pdf');
+    expect(pdfResponse.headers['content-disposition']).toContain('.pdf');
+    expect(Buffer.isBuffer(pdfResponse.body)).toBe(true);
+    expect(pdfResponse.body.length).toBeGreaterThan(0);
+  });
+
+  it('returns 404 before merged report finalize and blocks stale merged report export', async () => {
+    const { projectId, revisionId } = await seedProjectWithReadyRequirement();
+    const booking = await seedRepository(projectId, 'booking-service');
+    const payment = await seedRepository(projectId, 'payment-service');
+
+    const createResponse = await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requirementRevisionId: revisionId,
+        repositoryIds: [booking.repositoryId, payment.repositoryId],
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+      })
+      .expect(201);
+
+    const result = multiRepoImpactAnalysisCreateResponseSchema.parse(createResponse.body);
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report/export.md`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(404)
+      .expect(({ body }) => {
+        expect(body.code).toBe('MERGED_MULTI_REPO_REPORT_NOT_FOUND');
+      });
+
+    for (const item of result.items) {
+      await prisma.impactAnalysis.update({
+        where: { id: item.analysisId },
+        data: { status: 'COMPLETED' },
+      });
+      await createLatestReviewDecision({
+        analysisId: item.analysisId,
+        decision: 'ACCEPTED',
+      });
+      await seedAcceptedInsight({
+        analysisId: item.analysisId,
+        insightKey: `claim-${item.repositoryId.slice(0, 6)}`,
+        title: `Risk in ${item.repositoryDisplayName}`,
+        description: `Impact found in ${item.repositoryDisplayName}.`,
+      });
+    }
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/multi-repo-runs/${result.runId}/merged-report/finalize`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({})
+      .expect(201);
+
+    await createLatestReviewDecision({
+      analysisId: result.items[0].analysisId,
+      decision: 'REJECTED',
+    });
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report/export.md`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(409)
+      .expect(({ body }) => {
+        expect(body.code).toBe('MERGED_REPORT_EXPORT_BLOCKED_STALE');
+      });
+  });
+
+  it('merged report export enforces 404 outsider and honors same-project export permission matrix', async () => {
+    const { projectId, result } = await seedReadyAcceptedRun();
+
+    const outsider = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        email: 'export-outsider@ba-helper.local',
+        name: 'Export Outsider',
+        role: 'ADMIN',
+      },
+    });
+    const outsiderToken = jwtService.sign({
+      sub: outsider.id,
+      email: outsider.email,
+      role: outsider.role,
+      name: outsider.name,
+    });
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report/export.md`)
+      .set('Authorization', `Bearer ${outsiderToken}`)
+      .expect(404);
+
+    const limitedUser = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        email: 'export-limited@ba-helper.local',
+        name: 'Export Limited',
+        role: 'ADMIN',
+      },
+    });
+    await grantProjectMembership(prisma, {
+      projectId,
+      userId: limitedUser.id,
+      role: 'VIEWER',
+    });
+    const limitedToken = jwtService.sign({
+      sub: limitedUser.id,
+      email: limitedUser.email,
+      role: limitedUser.role,
+      name: limitedUser.name,
+    });
+
+    const allowedResponse = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report/export.pdf`)
+      .set('Authorization', `Bearer ${limitedToken}`)
+      .buffer(true)
+      .parse((res, callback) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+        res.on('end', () => callback(null, Buffer.concat(chunks)));
+      })
+      .expect(200);
+
+    expect(allowedResponse.headers['content-type']).toContain('application/pdf');
+  });
+
+  it('pdf render failure does not mutate approved merged report state', async () => {
+    const { result } = await seedReadyAcceptedRun();
+    const before = await prisma.mergedMultiRepoReport.findUniqueOrThrow({
+      where: { runId: result.runId },
+    });
+
+    const renderSpy = jest
+      .spyOn(PdfExportRenderer.prototype, 'render')
+      .mockRejectedValueOnce(
+        new AppError('PDF_RENDER_FAILED', 'render crash'),
+      );
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report/export.pdf`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(502)
+      .expect(({ body }) => {
+        expect(body.code).toBe('PDF_RENDER_FAILED');
+      });
+
+    renderSpy.mockRestore();
+
+    const after = await prisma.mergedMultiRepoReport.findUniqueOrThrow({
+      where: { runId: result.runId },
+    });
+
+    expect(after.id).toBe(before.id);
+    expect(after.content).toBe(before.content);
+    expect(after.provenance).toEqual(before.provenance);
+  });
+
+  it('creates, lists, and reads latest merged report review decisions for a non-stale approved report', async () => {
+    const { result } = await seedReadyAcceptedRun();
+
+    const firstResponse = await request(app.getHttpServer())
+      .post(`/api/v1/multi-repo-runs/${result.runId}/merged-report/review-decisions`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        decision: 'NEEDS_MORE_CLARIFICATION',
+        note: 'Need cross-repository reconciliation detail.',
+      })
+      .expect(201);
+
+    const firstDecision = mergedMultiRepoReportReviewDecisionCreateResponseSchema.parse(
+      firstResponse.body,
+    );
+    expect(firstDecision.decision.runId).toBe(result.runId);
+    expect(firstDecision.decision.decision).toBe('NEEDS_MORE_CLARIFICATION');
+
+    const secondResponse = await request(app.getHttpServer())
+      .post(`/api/v1/multi-repo-runs/${result.runId}/merged-report/review-decisions`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        decision: 'ACCEPTED',
+        note: 'Merged report approved after follow-up check.',
+      })
+      .expect(201);
+
+    const secondDecision = mergedMultiRepoReportReviewDecisionCreateResponseSchema.parse(
+      secondResponse.body,
+    );
+    expect(secondDecision.decision.decision).toBe('ACCEPTED');
+
+    const listResponse = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report/review-decisions`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const list = mergedMultiRepoReportReviewDecisionListResponseSchema.parse(
+      listResponse.body,
+    );
+    expect(list.items).toHaveLength(2);
+    expect(list.items[0].decision).toBe('ACCEPTED');
+    expect(list.items[1].decision).toBe('NEEDS_MORE_CLARIFICATION');
+
+    const latestResponse = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report/review-decisions/latest`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const latest = mergedMultiRepoReportReviewDecisionResponseSchema.parse(
+      latestResponse.body,
+    );
+    expect(latest.id).toBe(secondDecision.decision.id);
+    expect(latest.reviewedBy).toBe('Admin');
+  });
+
+  it('blocks merged report review decision create when the approved report is stale', async () => {
+    const { result } = await seedReadyAcceptedRun();
+
+    await createLatestReviewDecision({
+      analysisId: result.items[0].analysisId,
+      decision: 'REJECTED',
+    });
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/multi-repo-runs/${result.runId}/merged-report/review-decisions`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        decision: 'ACCEPTED',
+      })
+      .expect(409)
+      .expect(({ body }) => {
+        expect(body.code).toBe('MERGED_MULTI_REPO_REPORT_STALE');
+      });
+
+    const historyResponse = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report/review-decisions`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const history = mergedMultiRepoReportReviewDecisionListResponseSchema.parse(
+      historyResponse.body,
+    );
+    expect(history.items).toHaveLength(0);
+  });
+
+  it('merged report review decisions enforce 404 outsider and 403 insufficient same-project role', async () => {
+    const { projectId, result } = await seedReadyAcceptedRun();
+
+    const outsider = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        email: 'merged-review-outsider@ba-helper.local',
+        name: 'Merged Review Outsider',
+        role: 'ADMIN',
+      },
+    });
+    const outsiderToken = jwtService.sign({
+      sub: outsider.id,
+      email: outsider.email,
+      role: outsider.role,
+      name: outsider.name,
+    });
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report/review-decisions`)
+      .set('Authorization', `Bearer ${outsiderToken}`)
+      .expect(404);
+
+    const limitedUser = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        email: 'merged-review-viewer@ba-helper.local',
+        name: 'Merged Review Viewer',
+        role: 'ADMIN',
+      },
+    });
+    await grantProjectMembership(prisma, {
+      projectId,
+      userId: limitedUser.id,
+      role: 'VIEWER',
+    });
+    const limitedToken = jwtService.sign({
+      sub: limitedUser.id,
+      email: limitedUser.email,
+      role: limitedUser.role,
+      name: limitedUser.name,
+    });
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/multi-repo-runs/${result.runId}/merged-report/review-decisions`)
+      .set('Authorization', `Bearer ${limitedToken}`)
+      .send({
+        decision: 'REJECTED',
+      })
+      .expect(403);
+  });
+
+  it('derives run readiness and latest review decisions correctly', async () => {
+    const { projectId, revisionId } = await seedProjectWithReadyRequirement();
+    const booking = await seedRepository(projectId, 'booking-service');
+    const payment = await seedRepository(projectId, 'payment-service');
+    const billing = await seedRepository(projectId, 'billing-service');
+    const ledger = await seedRepository(projectId, 'ledger-service');
+
+    const createResponse = await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requirementRevisionId: revisionId,
+        repositoryIds: [
+          booking.repositoryId,
+          payment.repositoryId,
+          billing.repositoryId,
+          ledger.repositoryId,
+        ],
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+      })
+      .expect(201);
+
+    const result = multiRepoImpactAnalysisCreateResponseSchema.parse(createResponse.body);
+
+    const analysesByRepo = new Map(
+      result.items.map((item) => [item.repositoryId, item.analysisId]),
+    );
+
+    await prisma.impactAnalysis.update({
+      where: { id: analysesByRepo.get(booking.repositoryId)! },
+      data: { status: 'COMPLETED' },
+    });
+    await prisma.impactAnalysis.update({
+      where: { id: analysesByRepo.get(payment.repositoryId)! },
+      data: { status: 'COMPLETED' },
+    });
+    await prisma.impactAnalysis.update({
+      where: { id: analysesByRepo.get(billing.repositoryId)! },
+      data: { status: 'WAITING_FOR_REVIEW' },
+    });
+    await prisma.impactAnalysis.update({
+      where: { id: analysesByRepo.get(ledger.repositoryId)! },
+      data: { status: 'FAILED' },
+    });
+
+    await createLatestReviewDecision({
+      analysisId: analysesByRepo.get(booking.repositoryId)!,
+      decision: 'REJECTED',
+      createdAt: new Date('2026-06-09T03:00:00Z'),
+    });
+    await createLatestReviewDecision({
+      analysisId: analysesByRepo.get(booking.repositoryId)!,
+      decision: 'ACCEPTED',
+      createdAt: new Date('2026-06-09T04:00:00Z'),
+    });
+    await createLatestReviewDecision({
+      analysisId: analysesByRepo.get(payment.repositoryId)!,
+      decision: 'NEEDS_MORE_CLARIFICATION',
+      createdAt: new Date('2026-06-09T05:00:00Z'),
+    });
+
+    const runDetailResponse = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const runDetail = multiRepoAnalysisRunDetailResponseSchema.parse(
+      runDetailResponse.body,
+    );
+
+    expect(runDetail.runReadiness).toEqual({
+      totalAnalyses: 4,
+      completedAnalyses: 2,
+      failedAnalyses: 1,
+      waitingForReviewAnalyses: 1,
+      allCompleted: false,
+      hasFailures: true,
+      canStartMergedReport: false,
+    });
+    expect(runDetail.childReviewSummary).toEqual({
+      accepted: 1,
+      rejected: 0,
+      needsMoreClarification: 1,
+      pendingReview: 2,
+    });
+
+    const bookingItem = runDetail.items.find(
+      (item) => item.repositoryId === booking.repositoryId,
+    );
+    expect(bookingItem).toMatchObject({
+      latestReviewDecision: 'ACCEPTED',
+      reviewedBy: 'Admin',
+      blockingReason: 'NONE',
+    });
+    expect(bookingItem?.latestReviewDecisionAt).toBe('2026-06-09T04:00:00.000Z');
+
+    const paymentItem = runDetail.items.find(
+      (item) => item.repositoryId === payment.repositoryId,
+    );
+    expect(paymentItem).toMatchObject({
+      latestReviewDecision: 'NEEDS_MORE_CLARIFICATION',
+      blockingReason: 'NEEDS_MORE_CLARIFICATION',
+    });
+
+    const billingItem = runDetail.items.find(
+      (item) => item.repositoryId === billing.repositoryId,
+    );
+    expect(billingItem).toMatchObject({
+      latestReviewDecision: null,
+      blockingReason: 'WAITING_FOR_REVIEW',
+    });
+
+    const ledgerItem = runDetail.items.find(
+      (item) => item.repositoryId === ledger.repositoryId,
+    );
+    expect(ledgerItem).toMatchObject({
+      latestReviewDecision: null,
+      blockingReason: 'FAILED',
+    });
+  });
+
+  it('canStartMergedReport becomes true only when every child is accepted', async () => {
+    const { projectId, revisionId } = await seedProjectWithReadyRequirement();
+    const booking = await seedRepository(projectId, 'booking-service');
+    const payment = await seedRepository(projectId, 'payment-service');
+
+    const createResponse = await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requirementRevisionId: revisionId,
+        repositoryIds: [booking.repositoryId, payment.repositoryId],
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+      })
+      .expect(201);
+
+    const result = multiRepoImpactAnalysisCreateResponseSchema.parse(createResponse.body);
+
+    for (const item of result.items) {
+      await prisma.impactAnalysis.update({
+        where: { id: item.analysisId },
+        data: { status: 'COMPLETED' },
+      });
+      await createLatestReviewDecision({
+        analysisId: item.analysisId,
+        decision: 'ACCEPTED',
+      });
+    }
+
+    const runDetailResponse = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const runDetail = multiRepoAnalysisRunDetailResponseSchema.parse(
+      runDetailResponse.body,
+    );
+
+    expect(runDetail.runReadiness).toMatchObject({
+      totalAnalyses: 2,
+      completedAnalyses: 2,
+      failedAnalyses: 0,
+      waitingForReviewAnalyses: 0,
+      allCompleted: true,
+      hasFailures: false,
+      canStartMergedReport: true,
+    });
+    expect(runDetail.childReviewSummary).toEqual({
+      accepted: 2,
+      rejected: 0,
+      needsMoreClarification: 0,
+      pendingReview: 0,
+    });
+    expect(runDetail.items.every((item) => item.blockingReason === 'NONE')).toBe(true);
+  });
+
+  it('lists only project runs with derived status counts in newest-first order', async () => {
+    const { projectId, revisionId } = await seedProjectWithReadyRequirement();
+    const booking = await seedRepository(projectId, 'booking-service');
+    const payment = await seedRepository(projectId, 'payment-service');
+    const billing = await seedRepository(projectId, 'billing-service');
+
+    const firstCreate = await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requirementRevisionId: revisionId,
+        repositoryIds: [booking.repositoryId, payment.repositoryId],
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+      })
+      .expect(201);
+
+    const firstRun = multiRepoImpactAnalysisCreateResponseSchema.parse(firstCreate.body);
+
+    await prisma.impactAnalysis.update({
+      where: { id: firstRun.items[0].analysisId },
+      data: { status: 'COMPLETED' },
+    });
+
+    await prisma.impactAnalysis.update({
+      where: { id: firstRun.items[1].analysisId },
+      data: { status: 'FAILED' },
+    });
+
+    const secondCreate = await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requirementRevisionId: revisionId,
+        repositoryIds: [billing.repositoryId, booking.repositoryId],
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+      })
+      .expect(201);
+
+    const secondRun = multiRepoImpactAnalysisCreateResponseSchema.parse(secondCreate.body);
+
+    const otherProjectId = crypto.randomUUID();
+    const otherRequirementId = crypto.randomUUID();
+    const otherRevisionId = crypto.randomUUID();
+
+    await prisma.project.create({
+      data: {
+        id: otherProjectId,
+        name: 'Other Project',
+      },
+    });
+
+    await prisma.requirement.create({
+      data: {
+        id: otherRequirementId,
+        projectId: otherProjectId,
+      },
+    });
+
+    await prisma.requirementRevision.create({
+      data: {
+        id: otherRevisionId,
+        requirementId: otherRequirementId,
+        title: 'Other project requirement',
+        rawText: 'Other project requirement',
+        normalizedText: 'Other project requirement',
+        readinessStatus: 'READY_FOR_ANALYSIS',
+      },
+    });
+
+    await seedRepository(otherProjectId, 'other-a');
+    await seedRepository(otherProjectId, 'other-b');
+
+    await prisma.multiRepoAnalysisRun.create({
+      data: {
+        id: crypto.randomUUID(),
+        projectId: otherProjectId,
+        requirementRevisionId: otherRevisionId,
+        createdByUserId: adminUserId,
+        requestKey: crypto.randomUUID(),
+      },
+    });
+
+    const listResponse = await request(app.getHttpServer())
+      .get(`/api/v1/projects/${projectId}/multi-repo-runs`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const result = multiRepoAnalysisRunListResponseSchema.parse(listResponse.body);
+
+    expect(result.items).toHaveLength(2);
+    expect(result.items.map((item) => item.runId)).toEqual([
+      secondRun.runId,
+      firstRun.runId,
+    ]);
+    expect(result.items[0].analysisCount).toBe(2);
+    expect(result.items[0].statusCounts).toEqual({
+      QUEUED: 2,
+      RUNNING: 0,
+      WAITING_FOR_REVIEW: 0,
+      COMPLETED: 0,
+      FAILED: 0,
+      CANCELLED: 0,
+    });
+    expect(result.items[1].statusCounts).toEqual({
+      QUEUED: 0,
+      RUNNING: 0,
+      WAITING_FOR_REVIEW: 0,
+      COMPLETED: 1,
+      FAILED: 1,
+      CANCELLED: 0,
+    });
+  });
+
+  it('returns an empty run list for a project with no multi-repo runs', async () => {
+    const { projectId } = await seedProjectWithReadyRequirement();
+
+    const response = await request(app.getHttpServer())
+      .get(`/api/v1/projects/${projectId}/multi-repo-runs`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const result = multiRepoAnalysisRunListResponseSchema.parse(response.body);
+    expect(result.items).toEqual([]);
+  });
+
+  it('returns 404 when listing runs outside project membership', async () => {
+    const { projectId, revisionId } = await seedProjectWithReadyRequirement();
+    const booking = await seedRepository(projectId, 'booking-service');
+    const payment = await seedRepository(projectId, 'payment-service');
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requirementRevisionId: revisionId,
+        repositoryIds: [booking.repositoryId, payment.repositoryId],
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+      })
+      .expect(201);
+
+    const outsider = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        email: 'run-outsider@ba-helper.local',
+        name: 'Run Outsider',
+        role: 'ADMIN',
+      },
+    });
+    const outsiderToken = jwtService.sign({
+      sub: outsider.id,
+      email: outsider.email,
+      role: outsider.role,
+      name: outsider.name,
+    });
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/projects/${projectId}/multi-repo-runs`)
+      .set('Authorization', `Bearer ${outsiderToken}`)
+      .expect(404);
   });
 });

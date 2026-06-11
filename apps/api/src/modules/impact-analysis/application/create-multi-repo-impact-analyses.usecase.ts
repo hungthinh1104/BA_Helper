@@ -4,6 +4,8 @@ import { AppError } from '../../../shared/app-error';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateImpactAnalysisUseCase } from './create-impact-analysis.usecase';
 import { RequirementRepository } from '../../requirement/infrastructure/requirement.repository';
+import { ImpactAnalysisRepository } from '../infrastructure/impact-analysis.repository';
+import { MultiRepoAnalysisRunRepository } from '../infrastructure/multi-repo-analysis-run.repository';
 
 type PlannedRepositoryAnalysis = {
   repositoryId: string;
@@ -16,11 +18,14 @@ type PlannedRepositoryAnalysis = {
 export class CreateMultiRepoImpactAnalysesUseCase {
   constructor(
     private readonly createImpactAnalysis: CreateImpactAnalysisUseCase,
+    private readonly impactAnalyses: ImpactAnalysisRepository,
+    private readonly runs: MultiRepoAnalysisRunRepository,
     private readonly prisma: PrismaService,
     private readonly requirements: RequirementRepository,
   ) {}
 
   async execute(params: {
+    actorId: string;
     projectId: string;
     requirementRevisionId: string;
     repositoryIds: string[];
@@ -59,15 +64,54 @@ export class CreateMultiRepoImpactAnalysesUseCase {
       ),
     );
 
+    const existingRun = await this.runs.findByProjectRequestKey(
+      params.projectId,
+      params.requestKey,
+    );
+
+    if (existingRun) {
+      const existingRepositoryIds = existingRun.analyses
+        .map((analysis) => analysis.snapshot.repositoryId)
+        .sort();
+      const requestedRepositoryIds = [...params.repositoryIds].sort();
+
+      if (
+        existingRun.requirementRevisionId !== params.requirementRevisionId ||
+        existingRepositoryIds.length !== requestedRepositoryIds.length ||
+        existingRepositoryIds.some(
+          (repositoryId, index) => repositoryId !== requestedRepositoryIds[index],
+        )
+      ) {
+        throw new AppError(
+          'REQUEST_KEY_MISMATCH',
+          'Request key reuse with different multi-repo payload.',
+        );
+      }
+    }
+
+    const run =
+      existingRun ??
+      (await this.runs.create({
+        projectId: params.projectId,
+        requirementRevisionId: params.requirementRevisionId,
+        createdByUserId: params.actorId,
+        requestKey: params.requestKey,
+      }));
+
     const analyses = await Promise.all(
       plans.map(async (plan) => {
         const analysis = await this.createImpactAnalysis.execute({
           requirementRevisionId: params.requirementRevisionId,
           snapshotId: plan.snapshotId,
           sourceTargetId: plan.sourceTargetId,
+          multiRepoRunId: run.id,
           requestKey: deriveChildRequestKey(params.requestKey, plan.repositoryId),
           allowPartialSnapshot: params.allowPartialSnapshot,
         });
+
+        if (analysis.multiRepoRunId !== run.id) {
+          await this.impactAnalyses.attachToMultiRepoRun(analysis.id, run.id);
+        }
 
         return {
           analysisId: analysis.id,
@@ -81,6 +125,7 @@ export class CreateMultiRepoImpactAnalysesUseCase {
     );
 
     return {
+      runId: run.id,
       items: analyses,
       requestKey: params.requestKey,
     };

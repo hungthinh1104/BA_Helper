@@ -56,6 +56,31 @@ export class ProjectPermissionService {
     );
   }
 
+  async assertCanReadMultiRepoRun(
+    actor: RequestUser,
+    runId: string,
+  ): Promise<void> {
+    await this.assertPermissionForScopedResource(
+      actor,
+      () => this.scope.findMultiRepoRunProjectId(runId),
+      'project:read',
+      'Multi-repo analysis run',
+    );
+  }
+
+  async assertPermissionForMultiRepoRun(
+    actor: RequestUser,
+    runId: string,
+    permission: ProjectPermission,
+  ): Promise<void> {
+    await this.assertPermissionForScopedResource(
+      actor,
+      () => this.scope.findMultiRepoRunProjectId(runId),
+      permission,
+      'Multi-repo analysis run',
+    );
+  }
+
   async assertPermissionForAnalysis(
     actor: RequestUser,
     analysisId: string,

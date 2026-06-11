@@ -1,0 +1,234 @@
+import { Injectable } from '@nestjs/common';
+
+type EvidenceItem = {
+  id: string;
+  sourcePath: string | null;
+  startLine: number | null;
+  endLine: number | null;
+  excerpt: string;
+};
+
+type InsightItem = {
+  id: string;
+  insightType: 'CLAIM' | 'UNKNOWN' | 'QUESTION' | 'ACCEPTANCE_CRITERIA' | 'QA_SCENARIO';
+  reviewStatus: 'NEEDS_REVIEW' | 'CONFIRMED' | 'REJECTED';
+  title: string;
+  description: string;
+  reasoning: string | null;
+  evidenceLinks: Array<{
+    evidence: EvidenceItem;
+  }>;
+};
+
+type TraceabilityItem = {
+  id: string;
+  linkType: 'AFFECTED' | 'RELATED';
+  reviewStatus: 'NEEDS_REVIEW' | 'CONFIRMED' | 'REJECTED';
+  artifact: {
+    name: string;
+    filePath: string;
+    artifactType: string;
+  } | null;
+  evidenceLinks: Array<{
+    evidence: EvidenceItem;
+  }>;
+};
+
+type ChildDraftInput = {
+  analysisId: string;
+  repositoryId: string;
+  repositoryDisplayName: string;
+  snapshotId: string;
+  commitSha: string;
+  sourceTargetRef: string;
+  latestReviewDecision: 'ACCEPTED' | 'REJECTED' | 'NEEDS_MORE_CLARIFICATION' | null;
+  insights: InsightItem[];
+  traceabilityLinks: TraceabilityItem[];
+};
+
+@Injectable()
+export class MergedMultiRepoReportDraftBuilder {
+  build(params: {
+    runId: string;
+    projectId: string;
+    requirementRevisionId: string;
+    requirementTitle: string;
+    requirementRawText: string;
+    generatedAt: string;
+    children: ChildDraftInput[];
+  }) {
+    const { children } = params;
+    const lines: string[] = [];
+
+    const allInsights = children.flatMap((child) =>
+      child.insights
+        .filter((insight) => insight.reviewStatus !== 'REJECTED')
+        .map((insight) => ({ child, insight })),
+    );
+
+    const consolidatedRisks = allInsights.filter(
+      ({ insight }) => insight.insightType === 'CLAIM' || insight.insightType === 'UNKNOWN' || insight.insightType === 'QUESTION',
+    );
+    const qaScenarios = allInsights.filter(
+      ({ insight }) => insight.insightType === 'QA_SCENARIO',
+    );
+
+    const evidenceMap = new Map<string, { child: ChildDraftInput; evidence: EvidenceItem; source: string }>();
+    for (const child of children) {
+      for (const insight of child.insights.filter((item) => item.reviewStatus !== 'REJECTED')) {
+        for (const link of insight.evidenceLinks) {
+          if (!evidenceMap.has(link.evidence.id)) {
+            evidenceMap.set(link.evidence.id, {
+              child,
+              evidence: link.evidence,
+              source: `Insight: ${insight.title}`,
+            });
+          }
+        }
+      }
+      for (const link of child.traceabilityLinks.filter((item) => item.reviewStatus !== 'REJECTED')) {
+        for (const evidenceLink of link.evidenceLinks) {
+          if (!evidenceMap.has(evidenceLink.evidence.id)) {
+            evidenceMap.set(evidenceLink.evidence.id, {
+              child,
+              evidence: evidenceLink.evidence,
+              source: `Traceability: ${link.artifact?.name ?? link.id}`,
+            });
+          }
+        }
+      }
+    }
+
+    lines.push(`# Multi-repo Merged Report Draft: ${params.requirementTitle}`);
+    lines.push('');
+    lines.push('## Requirement');
+    lines.push('');
+    lines.push(`> ${params.requirementRawText.split('\n').join('\n> ')}`);
+    lines.push('');
+
+    lines.push('## Run Summary');
+    lines.push('');
+    lines.push(`- Run ID: \`${params.runId}\``);
+    lines.push(`- Project ID: \`${params.projectId}\``);
+    lines.push(`- Requirement Revision ID: \`${params.requirementRevisionId}\``);
+    lines.push(`- Generated At: ${params.generatedAt}`);
+    lines.push(`- Child Analyses: ${children.length}`);
+    lines.push('');
+
+    lines.push('## Repository Coverage');
+    lines.push('');
+    lines.push('| Repository | Analysis ID | Snapshot ID | Commit | Review |');
+    lines.push('|---|---|---|---|---|');
+    for (const child of children) {
+      lines.push(
+        `| ${child.repositoryDisplayName} | \`${child.analysisId}\` | \`${child.snapshotId}\` | \`${child.commitSha}\` | ${child.latestReviewDecision ?? 'PENDING'} |`,
+      );
+    }
+    lines.push('');
+
+    lines.push('## Per-repository Analysis');
+    lines.push('');
+    for (const child of children) {
+      lines.push(`### ${child.repositoryDisplayName}`);
+      lines.push('');
+      lines.push(`- Analysis ID: \`${child.analysisId}\``);
+      lines.push(`- Snapshot ID: \`${child.snapshotId}\``);
+      lines.push(`- Commit SHA: \`${child.commitSha}\``);
+      lines.push(`- Target Ref: \`${child.sourceTargetRef}\``);
+      lines.push(`- Latest Review Decision: ${child.latestReviewDecision ?? 'PENDING'}`);
+      lines.push('');
+
+      const risks = child.insights.filter(
+        (insight) =>
+          insight.reviewStatus !== 'REJECTED' &&
+          (insight.insightType === 'CLAIM' ||
+            insight.insightType === 'UNKNOWN' ||
+            insight.insightType === 'QUESTION'),
+      );
+
+      lines.push('**Risks and Findings**');
+      lines.push('');
+      if (risks.length === 0) {
+        lines.push('- None.');
+      } else {
+        for (const insight of risks) {
+          lines.push(`- ${insight.title}: ${insight.description}`);
+        }
+      }
+      lines.push('');
+
+      lines.push('**Impacted Artifacts**');
+      lines.push('');
+      const links = child.traceabilityLinks.filter((link) => link.reviewStatus !== 'REJECTED');
+      if (links.length === 0) {
+        lines.push('- None.');
+      } else {
+        for (const link of links) {
+          const artifact = link.artifact;
+          lines.push(
+            `- ${artifact?.artifactType ?? 'Unknown'} ${artifact?.name ? `\`${artifact.name}\`` : link.id} (${artifact?.filePath ?? 'unknown path'})`,
+          );
+        }
+      }
+      lines.push('');
+    }
+
+    lines.push('## Consolidated Risks');
+    lines.push('');
+    if (consolidatedRisks.length === 0) {
+      lines.push('- None.');
+    } else {
+      for (const { child, insight } of consolidatedRisks) {
+        lines.push(`- [${child.repositoryDisplayName}] ${insight.title}: ${insight.description}`);
+      }
+    }
+    lines.push('');
+
+    lines.push('## Consolidated QA Scenarios');
+    lines.push('');
+    if (qaScenarios.length === 0) {
+      lines.push('- None.');
+    } else {
+      for (const { child, insight } of qaScenarios) {
+        lines.push(`- [${child.repositoryDisplayName}] ${insight.title}: ${insight.description}`);
+      }
+    }
+    lines.push('');
+
+    lines.push('## Evidence Appendix');
+    lines.push('');
+    if (evidenceMap.size === 0) {
+      lines.push('- None.');
+    } else {
+      for (const { child, evidence, source } of evidenceMap.values()) {
+        const location =
+          evidence.sourcePath && evidence.startLine && evidence.endLine
+            ? `${evidence.sourcePath}:${evidence.startLine}-${evidence.endLine}`
+            : evidence.sourcePath ?? 'unknown location';
+        lines.push(`### ${child.repositoryDisplayName} — ${source}`);
+        lines.push('');
+        lines.push(`- Evidence ID: \`${evidence.id}\``);
+        lines.push(`- Location: \`${location}\``);
+        lines.push('');
+        lines.push('```text');
+        lines.push(evidence.excerpt);
+        lines.push('```');
+        lines.push('');
+      }
+    }
+
+    lines.push('## Provenance');
+    lines.push('');
+    for (const child of children) {
+      lines.push(`- Repository: ${child.repositoryDisplayName}`);
+      lines.push(`  - Analysis ID: \`${child.analysisId}\``);
+      lines.push(`  - Repository ID: \`${child.repositoryId}\``);
+      lines.push(`  - Snapshot ID: \`${child.snapshotId}\``);
+      lines.push(`  - Commit SHA: \`${child.commitSha}\``);
+      lines.push(`  - Target Ref: \`${child.sourceTargetRef}\``);
+    }
+    lines.push('');
+
+    return lines.join('\n');
+  }
+}

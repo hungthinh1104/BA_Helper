@@ -6,11 +6,28 @@ import {
   ImpactAnalysisDetailResponse,
   ImpactAnalysisCreateRequest,
   ImpactAnalysisResponse,
+  MultiRepoImpactAnalysisCreateRequest,
+  MultiRepoImpactAnalysisCreateResponse,
+  MultiRepoAnalysisRunDetailResponse,
+  MultiRepoAnalysisRunListResponse,
+  MultiRepoMergedReportDraftResponse,
+  MultiRepoApprovedReportResponse,
+  MergedMultiRepoReportReviewDecisionResponse,
+  MergedMultiRepoReportReviewDecisionListResponse,
+  MergedMultiRepoReportReviewDecisionCreateResponse,
   InsightListResponse,
   TraceabilityLinkListResponse,
   InsightReviewRequest,
   impactAnalysisListResponseSchema,
   impactAnalysisResponseSchema,
+  multiRepoImpactAnalysisCreateResponseSchema,
+  multiRepoAnalysisRunDetailResponseSchema,
+  multiRepoAnalysisRunListResponseSchema,
+  multiRepoMergedReportDraftResponseSchema,
+  multiRepoApprovedReportResponseSchema,
+  mergedMultiRepoReportReviewDecisionResponseSchema,
+  mergedMultiRepoReportReviewDecisionListResponseSchema,
+  mergedMultiRepoReportReviewDecisionCreateResponseSchema,
   insightListResponseSchema,
   traceabilityLinkListResponseSchema,
   TraceabilityReviewRequest,
@@ -77,6 +94,194 @@ export function useCreateAnalysis(projectId?: string) {
       })
       queryClient.invalidateQueries({
         queryKey: queryKeys.repositories.all,
+      })
+    },
+  })
+}
+
+export function useCreateMultiRepoAnalyses(projectId?: string) {
+  const activeProjectId = useOptionalProjectId()
+  const effectiveProjectId = projectId ?? activeProjectId
+  const projectQueryKey = effectiveProjectId ?? "__workspace-pending__"
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (data: {
+      requirementRevisionId: string
+      repositoryIds: string[]
+      allowPartialSnapshot: boolean
+      requestKey: string
+    }) => {
+      if (!effectiveProjectId) {
+        throw new Error("No active project selected.")
+      }
+
+      const request: MultiRepoImpactAnalysisCreateRequest = {
+        requirementRevisionId: data.requirementRevisionId,
+        repositoryIds: data.repositoryIds,
+        allowPartialSnapshot: data.allowPartialSnapshot,
+        requestKey: data.requestKey,
+      }
+
+      return apiPost<MultiRepoImpactAnalysisCreateResponse>(
+        `/api/v1/projects/${effectiveProjectId}/multi-repo-analyses`,
+        request,
+        multiRepoImpactAnalysisCreateResponseSchema,
+      )
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.analyses.list(projectQueryKey),
+      })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.analyses.all,
+      })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.analyses.runs.list(projectQueryKey),
+      })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.requirements.all,
+      })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.repositories.all,
+      })
+    },
+  })
+}
+
+export function useMultiRepoAnalysisRunDetail(runId: string) {
+  return useQuery({
+    queryKey: queryKeys.analyses.runs.detail(runId),
+    queryFn: async () => {
+      return apiGet<MultiRepoAnalysisRunDetailResponse>(
+        `/api/v1/multi-repo-runs/${runId}`,
+        multiRepoAnalysisRunDetailResponseSchema,
+      )
+    },
+    enabled: Boolean(runId),
+    refetchOnWindowFocus: true,
+  })
+}
+
+export function useMultiRepoMergedReportDraft(runId: string) {
+  return useQuery({
+    queryKey: queryKeys.analyses.runs.mergedReport(runId),
+    queryFn: async () => {
+      return apiGet<MultiRepoMergedReportDraftResponse>(
+        `/api/v1/multi-repo-runs/${runId}/merged-report-draft`,
+        multiRepoMergedReportDraftResponseSchema,
+      )
+    },
+    enabled: Boolean(runId),
+    refetchOnWindowFocus: true,
+  })
+}
+
+export function useApprovedMultiRepoReport(runId: string) {
+  return useQuery({
+    queryKey: queryKeys.analyses.runs.approvedReport(runId),
+    queryFn: async () => {
+      return apiGet<MultiRepoApprovedReportResponse>(
+        `/api/v1/multi-repo-runs/${runId}/merged-report`,
+        multiRepoApprovedReportResponseSchema,
+      )
+    },
+    enabled: Boolean(runId),
+    refetchOnWindowFocus: true,
+  })
+}
+
+export function useMultiRepoAnalysisRuns(projectId?: string) {
+  const activeProjectId = useOptionalProjectId()
+  const effectiveProjectId = projectId ?? activeProjectId
+
+  return useQuery({
+    queryKey: queryKeys.analyses.runs.list(
+      effectiveProjectId ?? "__workspace-pending__",
+    ),
+    queryFn: async () => {
+      return apiGet<MultiRepoAnalysisRunListResponse>(
+        `/api/v1/projects/${effectiveProjectId}/multi-repo-runs`,
+        multiRepoAnalysisRunListResponseSchema,
+      )
+    },
+    enabled: Boolean(effectiveProjectId),
+    refetchOnWindowFocus: true,
+  })
+}
+
+export function useFinalizeMultiRepoReport(runId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async () => {
+      return apiPost<MultiRepoApprovedReportResponse>(
+        `/api/v1/multi-repo-runs/${runId}/merged-report/finalize`,
+        {},
+        multiRepoApprovedReportResponseSchema,
+      )
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.analyses.runs.detail(runId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.analyses.runs.approvedReport(runId),
+      })
+    },
+  })
+}
+
+export function useMergedMultiRepoReportReviewDecisions(runId: string) {
+  return useQuery({
+    queryKey: queryKeys.analyses.runs.reviewDecisions(runId),
+    queryFn: async () => {
+      return apiGet<MergedMultiRepoReportReviewDecisionListResponse>(
+        `/api/v1/multi-repo-runs/${runId}/merged-report/review-decisions`,
+        mergedMultiRepoReportReviewDecisionListResponseSchema,
+      )
+    },
+    enabled: Boolean(runId),
+  })
+}
+
+export function useLatestMergedMultiRepoReportReviewDecision(runId: string) {
+  return useQuery({
+    queryKey: queryKeys.analyses.runs.latestReviewDecision(runId),
+    queryFn: async () => {
+      return apiGet<MergedMultiRepoReportReviewDecisionResponse>(
+        `/api/v1/multi-repo-runs/${runId}/merged-report/review-decisions/latest`,
+        mergedMultiRepoReportReviewDecisionResponseSchema,
+      )
+    },
+    enabled: Boolean(runId),
+    retry: false,
+  })
+}
+
+export function useCreateMergedMultiRepoReportReviewDecision(runId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ data }: { data: ReviewDecisionRequest }) => {
+      return apiPost<MergedMultiRepoReportReviewDecisionCreateResponse>(
+        `/api/v1/multi-repo-runs/${runId}/merged-report/review-decisions`,
+        data,
+        mergedMultiRepoReportReviewDecisionCreateResponseSchema,
+      )
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.analyses.runs.reviewDecisions(runId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.analyses.runs.latestReviewDecision(runId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.analyses.runs.approvedReport(runId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.analyses.runs.detail(runId),
       })
     },
   })

@@ -17,7 +17,7 @@ export default function LandingPage() {
           </div>
           <div className="landing-nav-links flex items-center gap-6">
             <ThemeToggle />
-            <Link href="https://github.com/diphungthinh/BA_helper_test" target="_blank" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">GitHub</Link>
+            <Link href="https://github.com/hungthinh1104/BA_Helper" target="_blank" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">GitHub</Link>
             <Link href="/login?next=/analyses" className="text-sm font-medium bg-foreground text-background px-4 py-2 rounded-full hover:bg-foreground/90 transition-colors">Enter Workspace</Link>
           </div>
         </div>
@@ -52,9 +52,9 @@ export default function LandingPage() {
           <div>
             <h4 className="font-semibold mb-4 text-foreground">Open Source</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="https://github.com/diphungthinh/BA_helper_test" target="_blank" className="hover:text-primary">GitHub Repository</Link></li>
-              <li><Link href="https://github.com/diphungthinh/BA_helper_test/blob/main/README.md" target="_blank" className="hover:text-primary">Documentation</Link></li>
-              <li><Link href="https://github.com/diphungthinh/BA_helper_test/blob/main/AGENTS.md" target="_blank" className="hover:text-primary">Agent Rules</Link></li>
+              <li><Link href="https://github.com/hungthinh1104/BA_Helper" target="_blank" className="hover:text-primary">GitHub Repository</Link></li>
+              <li><Link href="https://github.com/hungthinh1104/BA_Helper/blob/main/README.md" target="_blank" className="hover:text-primary">Documentation</Link></li>
+              <li><Link href="https://github.com/hungthinh1104/BA_Helper/blob/main/AGENTS.md" target="_blank" className="hover:text-primary">Agent Rules</Link></li>
             </ul>
           </div>
         </div>

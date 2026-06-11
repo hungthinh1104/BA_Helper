@@ -137,6 +137,7 @@ export const impactAnalysisListResponseSchema = z.object({
 });
 
 export const multiRepoImpactAnalysisCreateResponseSchema = z.object({
+	runId: z.string().uuid(),
 	requestKey: z.string().uuid(),
 	items: z.array(z.object({
 		repositoryId: z.string().uuid(),
@@ -146,6 +147,129 @@ export const multiRepoImpactAnalysisCreateResponseSchema = z.object({
 		sourceTargetId: z.string().uuid(),
 		status: impactAnalysisStatusSchema,
 	})),
+});
+
+export const multiRepoAnalysisRunDetailResponseSchema = z.object({
+	runId: z.string().uuid(),
+	projectId: z.string().uuid(),
+	requirementRevisionId: z.string().uuid(),
+	requirementTitle: z.string(),
+	createdBy: z.string(),
+	createdAt: z.string(),
+	runReadiness: z.object({
+		totalAnalyses: z.number().int().nonnegative(),
+		completedAnalyses: z.number().int().nonnegative(),
+		failedAnalyses: z.number().int().nonnegative(),
+		waitingForReviewAnalyses: z.number().int().nonnegative(),
+		allCompleted: z.boolean(),
+		hasFailures: z.boolean(),
+		canStartMergedReport: z.boolean(),
+	}),
+	childReviewSummary: z.object({
+		accepted: z.number().int().nonnegative(),
+		rejected: z.number().int().nonnegative(),
+		needsMoreClarification: z.number().int().nonnegative(),
+		pendingReview: z.number().int().nonnegative(),
+	}),
+	items: z.array(z.object({
+		analysisId: z.string().uuid(),
+		repositoryId: z.string().uuid(),
+		repositoryDisplayName: z.string(),
+		snapshotId: z.string().uuid(),
+		commitSha: z.string(),
+		status: impactAnalysisStatusSchema,
+		isStale: z.boolean(),
+		latestReviewDecision: z.enum(['ACCEPTED', 'REJECTED', 'NEEDS_MORE_CLARIFICATION']).nullable(),
+		latestReviewDecisionAt: z.string().nullable(),
+		reviewedBy: z.string().nullable(),
+		blockingReason: z.enum([
+			'FAILED',
+			'NOT_COMPLETED',
+			'WAITING_FOR_REVIEW',
+			'NEEDS_MORE_CLARIFICATION',
+			'REJECTED',
+			'NONE',
+		]),
+	})),
+});
+
+export const multiRepoAnalysisRunStatusCountsSchema = z.object({
+	QUEUED: z.number().int().nonnegative(),
+	RUNNING: z.number().int().nonnegative(),
+	WAITING_FOR_REVIEW: z.number().int().nonnegative(),
+	COMPLETED: z.number().int().nonnegative(),
+	FAILED: z.number().int().nonnegative(),
+	CANCELLED: z.number().int().nonnegative(),
+});
+
+export const multiRepoAnalysisRunListItemResponseSchema = z.object({
+	runId: z.string().uuid(),
+	projectId: z.string().uuid(),
+	requirementRevisionId: z.string().uuid(),
+	requirementTitle: z.string(),
+	createdBy: z.string(),
+	createdAt: z.string(),
+	analysisCount: z.number().int().nonnegative(),
+	statusCounts: multiRepoAnalysisRunStatusCountsSchema,
+});
+
+export const multiRepoAnalysisRunListResponseSchema = z.object({
+	items: z.array(multiRepoAnalysisRunListItemResponseSchema),
+});
+
+export const multiRepoMergedReportDraftResponseSchema = z.object({
+	runId: z.string().uuid(),
+	projectId: z.string().uuid(),
+	requirementRevisionId: z.string().uuid(),
+	requirementTitle: z.string(),
+	generatedAt: z.string(),
+	childAnalysisCount: z.number().int().nonnegative(),
+	repositories: z.array(z.object({
+		repositoryId: z.string().uuid(),
+		repositoryDisplayName: z.string(),
+		analysisId: z.string().uuid(),
+		snapshotId: z.string().uuid(),
+		commitSha: z.string(),
+	})),
+	markdown: z.string(),
+});
+
+export const multiRepoApprovedReportResponseSchema = z.object({
+	id: z.string().uuid(),
+	runId: z.string().uuid(),
+	projectId: z.string().uuid(),
+	requirementRevisionId: z.string().uuid(),
+	requirementTitle: z.string(),
+	markdown: z.string(),
+	approvedAt: z.string(),
+	isStale: z.boolean(),
+	staleReason: z.string().optional(),
+	provenance: z.object({
+		childAnalyses: z.array(z.object({
+			analysisId: z.string().uuid(),
+			latestReviewDecisionId: z.string().uuid(),
+			snapshotId: z.string().uuid(),
+			commitSha: z.string(),
+		})),
+	}),
+});
+
+export const mergedMultiRepoReportReviewDecisionResponseSchema = z.object({
+	id: z.string().uuid(),
+	mergedReportId: z.string().uuid(),
+	runId: z.string().uuid(),
+	decision: z.enum(['ACCEPTED', 'REJECTED', 'NEEDS_MORE_CLARIFICATION']),
+	note: z.string().nullable(),
+	reviewedBy: z.string(),
+	createdAt: z.string(),
+});
+
+export const mergedMultiRepoReportReviewDecisionListResponseSchema = z.object({
+	items: z.array(mergedMultiRepoReportReviewDecisionResponseSchema),
+});
+
+export const mergedMultiRepoReportReviewDecisionCreateResponseSchema = z.object({
+	decision: mergedMultiRepoReportReviewDecisionResponseSchema,
 });
 
 export const diffArtifactSchema = z.object({
@@ -208,6 +332,14 @@ export type ImpactAnalysisDetailResponse = ImpactAnalysisResponse; // Alias for 
 export type ImpactAnalysisListItemResponse = z.infer<typeof impactAnalysisListItemResponseSchema>;
 export type ImpactAnalysisListResponse = z.infer<typeof impactAnalysisListResponseSchema>;
 export type MultiRepoImpactAnalysisCreateResponse = z.infer<typeof multiRepoImpactAnalysisCreateResponseSchema>;
+export type MultiRepoAnalysisRunDetailResponse = z.infer<typeof multiRepoAnalysisRunDetailResponseSchema>;
+export type MultiRepoAnalysisRunListItemResponse = z.infer<typeof multiRepoAnalysisRunListItemResponseSchema>;
+export type MultiRepoAnalysisRunListResponse = z.infer<typeof multiRepoAnalysisRunListResponseSchema>;
+export type MultiRepoMergedReportDraftResponse = z.infer<typeof multiRepoMergedReportDraftResponseSchema>;
+export type MultiRepoApprovedReportResponse = z.infer<typeof multiRepoApprovedReportResponseSchema>;
+export type MergedMultiRepoReportReviewDecisionResponse = z.infer<typeof mergedMultiRepoReportReviewDecisionResponseSchema>;
+export type MergedMultiRepoReportReviewDecisionListResponse = z.infer<typeof mergedMultiRepoReportReviewDecisionListResponseSchema>;
+export type MergedMultiRepoReportReviewDecisionCreateResponse = z.infer<typeof mergedMultiRepoReportReviewDecisionCreateResponseSchema>;
 export type ImpactAnalysisDiffResponse = z.infer<typeof impactAnalysisDiffResponseSchema>;
 export type DiffArtifact = z.infer<typeof diffArtifactSchema>;
 export type DiffInsight = z.infer<typeof diffInsightSchema>;

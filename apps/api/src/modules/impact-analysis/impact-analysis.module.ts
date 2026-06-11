@@ -21,6 +21,16 @@ import { AnswerReviewClarificationUseCase } from './application/answer-review-cl
 import { CreateDerivedAnalysisFromClarificationUseCase } from './application/create-derived-analysis-from-clarification.usecase';
 import { GetImpactAnalysisLineageUseCase } from './application/get-impact-analysis-lineage.usecase';
 import { CreateMultiRepoImpactAnalysesUseCase } from './application/create-multi-repo-impact-analyses.usecase';
+import { GetMultiRepoAnalysisRunUseCase } from './application/get-multi-repo-analysis-run.usecase';
+import { GetMergedMultiRepoReportDraftUseCase } from './application/get-merged-multi-repo-report-draft.usecase';
+import { FinalizeMultiRepoReportUseCase } from './application/finalize-multi-repo-report.usecase';
+import { GetApprovedMultiRepoReportUseCase } from './application/get-approved-multi-repo-report.usecase';
+import { ExportApprovedMultiRepoReportUseCase } from './application/export-approved-multi-repo-report.usecase';
+import { ListMultiRepoAnalysisRunsUseCase } from './application/list-multi-repo-analysis-runs.usecase';
+import { CreateMergedMultiRepoReportReviewDecisionUseCase } from './application/create-merged-multi-repo-report-review-decision.usecase';
+import { ListMergedMultiRepoReportReviewDecisionsUseCase } from './application/list-merged-multi-repo-report-review-decisions.usecase';
+import { GetLatestMergedMultiRepoReportReviewDecisionUseCase } from './application/get-latest-merged-multi-repo-report-review-decision.usecase';
+import { MergedMultiRepoReportDraftBuilder } from './application/merged-multi-repo-report-draft.builder';
 import { ReviewNoteController } from './api/review-note.controller';
 import { ReviewClarificationController } from './api/review-clarification.controller';
 import { ReviewNoteRepository } from './infrastructure/review-note.repository';
@@ -28,6 +38,9 @@ import { ReviewDecisionRepository } from './infrastructure/review-decision.repos
 import { ReviewClarificationRepository } from './infrastructure/review-clarification.repository';
 import { ImpactGraphReadModelBuilder } from './application/impact-graph-read-model.builder';
 import { ImpactAnalysisRepository } from './infrastructure/impact-analysis.repository';
+import { MultiRepoAnalysisRunRepository } from './infrastructure/multi-repo-analysis-run.repository';
+import { MultiRepoMergedReportRepository } from './infrastructure/multi-repo-merged-report.repository';
+import { MergedMultiRepoReportReviewDecisionRepository } from './infrastructure/merged-multi-repo-report-review-decision.repository';
 import { RequirementRepository } from '../requirement/infrastructure/requirement.repository';
 import { ArtifactRepository } from '../artifact/infrastructure/artifact.repository';
 import { EvidenceRepository } from '../evidence/infrastructure/evidence.repository';
@@ -56,6 +69,9 @@ import { ProjectModule } from '../project/project.module';
   controllers: [ImpactAnalysisController, ReviewNoteController, ReviewClarificationController],
   providers: [
     ImpactAnalysisRepository,
+    MultiRepoAnalysisRunRepository,
+    MultiRepoMergedReportRepository,
+    MergedMultiRepoReportReviewDecisionRepository,
     RequirementRepository,
     CreateRequirementRevisionUseCase,
     ArtifactRepository,
@@ -65,6 +81,16 @@ import { ProjectModule } from '../project/project.module';
     CreateImpactAnalysisUseCase,
     CreateMultiRepoImpactAnalysesUseCase,
     GetImpactAnalysisUseCase,
+    GetMultiRepoAnalysisRunUseCase,
+    GetMergedMultiRepoReportDraftUseCase,
+    FinalizeMultiRepoReportUseCase,
+    GetApprovedMultiRepoReportUseCase,
+    ExportApprovedMultiRepoReportUseCase,
+    ListMultiRepoAnalysisRunsUseCase,
+    CreateMergedMultiRepoReportReviewDecisionUseCase,
+    ListMergedMultiRepoReportReviewDecisionsUseCase,
+    GetLatestMergedMultiRepoReportReviewDecisionUseCase,
+    MergedMultiRepoReportDraftBuilder,
     FinalizeImpactAnalysisUseCase,
     RunImpactAnalysisUseCase,
     ImpactGraphReadModelBuilder,

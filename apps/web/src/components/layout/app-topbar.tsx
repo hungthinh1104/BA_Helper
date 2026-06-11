@@ -23,6 +23,7 @@ import { toast } from "sonner"
 
 const BREADCRUMB_MAP: Record<string, { label: string; parent?: { label: string; href: string } }> = {
   "/analyses": { label: "Impact Analyses" },
+  "/analyses/runs": { label: "Multi-repo Runs", parent: { label: "Impact Analyses", href: "/analyses" } },
   "/repositories": { label: "Repositories" },
   "/requirements": { label: "Requirements" },
   "/reports": { label: "Reports" },
@@ -34,6 +35,10 @@ function getBreadcrumb(pathname: string) {
   // Exact match first
   if (BREADCRUMB_MAP[pathname]) return BREADCRUMB_MAP[pathname]
   // Dynamic segments
+  if (pathname.startsWith("/analyses/runs/") && pathname.endsWith("/merged-report")) {
+    return { label: "Merged Report Draft", parent: { label: "Multi-repo Runs", href: "/analyses/runs" } }
+  }
+  if (pathname.startsWith("/analyses/runs/")) return { label: "Run Detail", parent: { label: "Multi-repo Runs", href: "/analyses/runs" } }
   if (pathname.startsWith("/analyses/")) return { label: "Analysis Detail", parent: { label: "Impact Analyses", href: "/analyses" } }
   if (pathname.startsWith("/repositories/")) return { label: "Repository Detail", parent: { label: "Repositories", href: "/repositories" } }
   if (pathname.startsWith("/requirements/")) return { label: "Requirement Detail", parent: { label: "Requirements", href: "/requirements" } }

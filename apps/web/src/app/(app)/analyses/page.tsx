@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { WorkspacePageHeader } from "@/components/workspace/page-header"
 import { DataList, DataListHeader, DataListRow, DataListCell } from "@/components/workspace/data-list"
@@ -33,11 +34,16 @@ export default function AnalysesPage() {
           title="Impact Analyses"
           description="Manage and view requirement impact analyses linked to repository snapshots."
         >
-          <NewAnalysisDialog>
-            <Button size="sm" className="h-8 shadow-none gap-1.5">
-              <Plus className="w-3.5 h-3.5" /> New Analysis
-            </Button>
-          </NewAnalysisDialog>
+          <div className="flex items-center gap-2">
+            <Link href="/analyses/runs" className="text-[12px] text-muted-foreground hover:text-foreground">
+              Multi-repo Runs
+            </Link>
+            <NewAnalysisDialog>
+              <Button size="sm" className="h-8 shadow-none gap-1.5">
+                <Plus className="w-3.5 h-3.5" /> New Analysis
+              </Button>
+            </NewAnalysisDialog>
+          </div>
         </WorkspacePageHeader>
 
         <DataList>

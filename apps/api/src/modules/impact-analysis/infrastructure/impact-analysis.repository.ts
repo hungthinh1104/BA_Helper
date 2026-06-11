@@ -115,6 +115,7 @@ export class ImpactAnalysisRepository {
     requirementRevisionId: string;
     snapshotId: string;
     sourceTargetId: string;
+    multiRepoRunId?: string | null;
     requestKey: string;
     acceptedPartialCoverage: boolean;
     coverageWarning?: string | null;
@@ -127,6 +128,7 @@ export class ImpactAnalysisRepository {
         requirementRevisionId: params.requirementRevisionId,
         snapshotId: params.snapshotId,
         sourceTargetId: params.sourceTargetId,
+        multiRepoRunId: params.multiRepoRunId ?? null,
         requestKey: params.requestKey,
         status: 'QUEUED',
         stage: 'WAITING',
@@ -136,6 +138,16 @@ export class ImpactAnalysisRepository {
         derivedFromAnalysisId: params.derivedFromAnalysisId,
         sourceClarificationId: params.sourceClarificationId,
         reviewClarificationRequestId: params.reviewClarificationRequestId,
+      },
+      include: IMPACT_ANALYSIS_INCLUDE,
+    });
+  }
+
+  async attachToMultiRepoRun(analysisId: string, multiRepoRunId: string) {
+    return this.prisma.impactAnalysis.update({
+      where: { id: analysisId },
+      data: {
+        multiRepoRunId,
       },
       include: IMPACT_ANALYSIS_INCLUDE,
     });

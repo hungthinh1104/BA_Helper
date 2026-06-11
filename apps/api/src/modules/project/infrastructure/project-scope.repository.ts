@@ -178,4 +178,13 @@ export class ProjectScopeRepository {
 
     return link?.impactAnalysis.requirementRevision.requirement.projectId ?? null;
   }
+
+  async findMultiRepoRunProjectId(runId: string): Promise<string | null> {
+    const run = await this.prisma.multiRepoAnalysisRun.findUnique({
+      where: { id: runId },
+      select: { projectId: true },
+    });
+
+    return run?.projectId ?? null;
+  }
 }

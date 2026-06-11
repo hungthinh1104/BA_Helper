@@ -53,6 +53,8 @@ export class AppExceptionFilter implements ExceptionFilter {
       case 'PROJECT_MEMBER_NOT_FOUND':
       case 'PROJECT_MEMBER_USER_NOT_FOUND':
       case 'REPOSITORY_NOT_FOUND':
+      case 'MULTI_REPO_ANALYSIS_RUN_NOT_FOUND':
+      case 'MERGED_MULTI_REPO_REPORT_NOT_FOUND':
       case 'SCAN_JOB_NOT_FOUND':
       case 'REQUIREMENT_NOT_FOUND':
       case 'REQUIREMENT_REVISION_NOT_FOUND':
@@ -63,9 +65,12 @@ export class AppExceptionFilter implements ExceptionFilter {
         return HttpStatus.NOT_FOUND;
       case 'REQUEST_KEY_MISMATCH':
       case 'REPOSITORY_NOT_ANALYZABLE':
+      case 'MULTI_REPO_RUN_NOT_READY':
+      case 'MERGED_MULTI_REPO_REPORT_STALE':
       case 'LAST_PROJECT_OWNER_REQUIRED':
       case 'INVALID_STATE_TRANSITION':
       case 'ANALYSIS_STALE':
+      case 'MERGED_REPORT_EXPORT_BLOCKED_STALE':
       case 'REPORT_EXPORT_BLOCKED_STALE':
         return HttpStatus.CONFLICT;
       case 'PDF_RENDER_FAILED':
