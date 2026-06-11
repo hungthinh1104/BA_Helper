@@ -1,0 +1,435 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ScanJobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum ScanJobStage {
+  WAITING
+  CLONING_REPO
+  RESOLVING_SOURCE_REF
+  DETECTING_PROJECT
+  FILTERING_FILES
+  EXTRACTING_ARTIFACTS
+  BUILDING_GRAPH
+  GENERATING_SUMMARIES
+  DONE
+}
+
+enum SnapshotCoverageStatus {
+  READY
+  PARTIAL
+}
+
+enum SnapshotIndexStatus {
+  NOT_INDEXED
+  LEXICAL_READY
+  VECTOR_INDEXING
+  VECTOR_READY
+  VECTOR_FAILED
+}
+
+enum ResolvedRefType {
+  BRANCH
+  TAG
+  COMMIT
+}
+
+enum RequirementReadinessStatus {
+  DRAFT
+  READY_FOR_ANALYSIS
+  NEEDS_CLARIFICATION
+  ARCHIVED
+}
+
+enum ImpactAnalysisStatus {
+  QUEUED
+  RUNNING
+  WAITING_FOR_REVIEW
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum ImpactAnalysisStage {
+  WAITING
+  RETRIEVING_EVIDENCE
+  EXPANDING_GRAPH
+  RUNNING_AI_REASONING
+  GENERATING_INSIGHTS
+  GENERATING_DOCUMENTS
+  DONE
+}
+
+enum EvidenceSourceType {
+  CODE
+  TEST
+  STATIC_ANALYSIS
+  REQUIREMENT_INPUT
+  COVERAGE
+  HUMAN_NOTE
+}
+
+enum InsightCertainty {
+  EVIDENCED
+  INFERRED
+  UNKNOWN
+  CONFLICTING
+}
+
+enum InsightType {
+  CLAIM
+  UNKNOWN
+  QUESTION
+  ACCEPTANCE_CRITERIA
+  QA_SCENARIO
+}
+
+enum TraceabilityLinkType {
+  AFFECTED
+  RELATED
+}
+
+enum DocumentType {
+  IMPACT_REPORT
+}
+
+enum DocumentStatus {
+  DRAFT
+  APPROVED
+}
+
+enum ReviewStatus {
+  NEEDS_REVIEW
+  CONFIRMED
+  REJECTED
+}
+
+enum TraceabilityLinkBasis {
+  EVIDENCED
+  INFERRED
+}
+
+enum DependencyEdgeType {
+  CALLS
+  REFERENCES
+  IMPORTS
+  TESTS
+}
+
+model Project {
+  id          String       @id @default(uuid())
+  name        String
+  repositories Repository[]
+  requirements Requirement[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Repository {
+  id           String              @id @default(uuid())
+  projectId    String
+  canonicalUrl String
+  targets      RepositoryTarget[]
+  snapshots    RepositorySnapshot[]
+  scanJobs     ScanJob[]
+  project      Project             @relation(fields: [projectId], references: [id])
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@unique([projectId, canonicalUrl])
+}
+
+model RepositoryTarget {
+  id                     String      @id @default(uuid())
+  repositoryId           String
+  targetKey              String
+  requestedRef           String
+  resolvedRefType        ResolvedRefType
+  latestObservedCommitSha String
+  lastObservedAt         DateTime
+  repository             Repository  @relation(fields: [repositoryId], references: [id])
+  analyses               ImpactAnalysis[]
+  scanJobs               ScanJob[]
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+
+  @@unique([repositoryId, targetKey])
+}
+
+model RepositorySnapshot {
+  id              String                @id @default(uuid())
+  repositoryId    String
+  commitSha       String
+  analyzerVersion String
+  coverageStatus  SnapshotCoverageStatus
+  indexStatus     SnapshotIndexStatus    @default(NOT_INDEXED)
+  artifacts       CodeArtifact[]
+  edges           DependencyEdge[]
+  evidences       Evidence[]
+  analyses        ImpactAnalysis[]
+  scanJobs        ScanJob[]
+  embeddingChunks EmbeddingChunk[]
+  repository      Repository            @relation(fields: [repositoryId], references: [id])
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  @@unique([repositoryId, commitSha, analyzerVersion])
+}
+
+model ScanJob {
+  id               String       @id @default(uuid())
+  repositoryId     String
+  requestKey       String
+  requestedRef     String?
+  status           ScanJobStatus
+  stage            ScanJobStage
+  progress         Int          @default(0)
+  errorCode        String?
+  errorMessage     String?
+  sourceTargetId   String?
+  snapshotId       String?
+  repository       Repository   @relation(fields: [repositoryId], references: [id])
+  sourceTarget     RepositoryTarget? @relation(fields: [sourceTargetId], references: [id])
+  snapshot         RepositorySnapshot? @relation(fields: [snapshotId], references: [id])
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@unique([repositoryId, requestKey])
+}
+
+model CodeArtifact {
+  id           String             @id @default(uuid())
+  snapshotId   String
+  artifactKey  String
+  name         String
+  artifactType String
+  filePath     String
+  startLine    Int?
+  endLine      Int?
+  language     String?
+  snapshot     RepositorySnapshot @relation(fields: [snapshotId], references: [id])
+  outgoingEdges DependencyEdge[]  @relation("FromArtifact")
+  incomingEdges DependencyEdge[]  @relation("ToArtifact")
+  evidences    Evidence[]
+  traceabilityLinks TraceabilityLink[]
+  embeddingChunks EmbeddingChunk[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@unique([snapshotId, artifactKey])
+}
+
+model DependencyEdge {
+  id            String             @id @default(uuid())
+  snapshotId    String
+  fromArtifactId String
+  toArtifactId   String
+  type          DependencyEdgeType
+  snapshot      RepositorySnapshot @relation(fields: [snapshotId], references: [id])
+  fromArtifact  CodeArtifact       @relation("FromArtifact", fields: [fromArtifactId], references: [id])
+  toArtifact    CodeArtifact       @relation("ToArtifact", fields: [toArtifactId], references: [id])
+  createdAt     DateTime           @default(now())
+
+  @@unique([snapshotId, fromArtifactId, toArtifactId, type])
+}
+
+model Evidence {
+  id                   String             @id @default(uuid())
+  provenanceKey        String
+  sourceType           EvidenceSourceType
+  snapshotId           String?
+  artifactId           String?
+  requirementRevisionId String?
+  sourcePath           String?
+  startLine            Int?
+  endLine              Int?
+  excerpt              String
+  contentHash          String
+  isRedacted           Boolean            @default(false)
+  redactionMetadata    Json?
+  snapshot             RepositorySnapshot? @relation(fields: [snapshotId], references: [id])
+  artifact             CodeArtifact?       @relation(fields: [artifactId], references: [id])
+  requirementRevision  RequirementRevision? @relation(fields: [requirementRevisionId], references: [id])
+  insightEvidence      InsightEvidence[]
+  traceabilityEvidence TraceabilityEvidence[]
+  createdAt            DateTime            @default(now())
+
+  @@unique([provenanceKey])
+}
+
+model Requirement {
+  id           String                @id @default(uuid())
+  projectId    String
+  revisions    RequirementRevision[]
+  project      Project               @relation(fields: [projectId], references: [id])
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+}
+
+model RequirementRevision {
+  id                String                   @id @default(uuid())
+  requirementId     String
+  title             String
+  rawText           String
+  normalizedText    String
+  readinessStatus   RequirementReadinessStatus
+  validationIssues  Json?
+  requirement       Requirement              @relation(fields: [requirementId], references: [id])
+  evidences         Evidence[]
+  analyses          ImpactAnalysis[]
+  createdAt         DateTime                 @default(now())
+}
+
+model ImpactAnalysis {
+  id                     String              @id @default(uuid())
+  requirementRevisionId  String
+  snapshotId             String
+  sourceTargetId         String
+  requestKey             String
+  status                 ImpactAnalysisStatus
+  stage                  ImpactAnalysisStage
+  progress               Int                 @default(0)
+  acceptedPartialCoverage Boolean            @default(false)
+  coverageWarning        String?
+  requirementRevision    RequirementRevision @relation(fields: [requirementRevisionId], references: [id])
+  snapshot               RepositorySnapshot  @relation(fields: [snapshotId], references: [id])
+  sourceTarget           RepositoryTarget    @relation(fields: [sourceTargetId], references: [id])
+  insights               BaInsight[]
+  traceabilityLinks      TraceabilityLink[]
+  documents              GeneratedDocument[]
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  @@unique([requirementRevisionId, snapshotId, sourceTargetId, requestKey])
+}
+
+model BaInsight {
+  id              String           @id @default(uuid())
+  impactAnalysisId String
+  insightKey      String
+  insightType     InsightType
+  certainty       InsightCertainty
+  reviewStatus    ReviewStatus
+  confidence      Float?
+  title           String
+  description     String
+  reasoning       String?
+  impactAnalysis  ImpactAnalysis   @relation(fields: [impactAnalysisId], references: [id])
+  evidenceLinks   InsightEvidence[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@unique([impactAnalysisId, insightKey])
+}
+
+model InsightEvidence {
+  id         String   @id @default(uuid())
+  insightId  String
+  evidenceId String
+  insight    BaInsight @relation(fields: [insightId], references: [id])
+  evidence   Evidence  @relation(fields: [evidenceId], references: [id])
+
+  @@unique([insightId, evidenceId])
+}
+
+model TraceabilityLink {
+  id               String              @id @default(uuid())
+  impactAnalysisId String
+  artifactId       String
+  linkType         TraceabilityLinkType
+  linkBasis        TraceabilityLinkBasis
+  reviewStatus     ReviewStatus
+  confidence       Float?
+  impactAnalysis   ImpactAnalysis      @relation(fields: [impactAnalysisId], references: [id])
+  artifact         CodeArtifact        @relation(fields: [artifactId], references: [id])
+  evidenceLinks    TraceabilityEvidence[]
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@unique([impactAnalysisId, artifactId, linkType])
+}
+
+model TraceabilityEvidence {
+  id                String           @id @default(uuid())
+  traceabilityLinkId String
+  evidenceId         String
+  traceabilityLink   TraceabilityLink @relation(fields: [traceabilityLinkId], references: [id])
+  evidence           Evidence         @relation(fields: [evidenceId], references: [id])
+
+  @@unique([traceabilityLinkId, evidenceId])
+}
+
+model GeneratedDocument {
+  id               String         @id @default(uuid())
+  impactAnalysisId String
+  type             DocumentType
+  status           DocumentStatus
+  content          String
+  impactAnalysis   ImpactAnalysis @relation(fields: [impactAnalysisId], references: [id])
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([impactAnalysisId, type, status])
+}
+
+model DomainEvent {
+  id             String   @id @default(uuid())
+  eventType      String
+  idempotencyKey String
+  payload        Json
+  createdAt      DateTime @default(now())
+
+  @@unique([idempotencyKey])
+}
+
+// =======================
+// Embedding / RAG
+// =======================
+
+model EmbeddingChunk {
+  // Isolation scope: MVP tenantId = projectId; future = organizationId
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String   @db.Uuid
+  projectId      String   @db.Uuid
+  repositoryId   String   @db.Uuid
+  snapshotId     String   @db.Uuid
+  artifactId     String?  @db.Uuid
+
+  // Stable identifier for idempotent upserts: "artifact:<stableId>:<contentHash>"
+  stableChunkId  String
+
+  commitSha      String
+  filePath       String
+  symbolName     String?
+  artifactType   String
+
+  content        String
+  contentHash    String
+  tokenCount     Int
+
+  embeddingModel String
+  embedding      Unsupported("vector(1536)")
+
+  snapshot       RepositorySnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  artifact       CodeArtifact?      @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+  createdAt      DateTime           @default(now())
+
+  @@unique([snapshotId, stableChunkId, embeddingModel])
+  @@index([tenantId])
+  @@index([projectId])
+  @@index([repositoryId])
+  @@index([snapshotId])
+  @@index([artifactId])
+  @@index([commitSha])
+}

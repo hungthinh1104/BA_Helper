@@ -1,0 +1,179 @@
+/* apps/web/src/styles/tokens.css */
+
+/* =========================================================
+   DESIGN SYSTEM
+   Light mode: Letters-inspired landing
+   Dark mode: Linear-inspired product workspace
+   ========================================================= */
+
+@theme {
+  /* Font */
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: "Open Runde", Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Berkeley Mono", "IBM Plex Mono", "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+  --radius-card: 48px;
+  --radius-pill: 9999px;
+
+  /* Spacing base */
+  --spacing-unit: 4px;
+}
+
+/* =========================================================
+   LIGHT THEME — Letters style
+   Used for landing, docs, public pages
+   ========================================================= */
+
+:root {
+  color-scheme: light;
+
+  /* Base */
+  --background: #ffffff;
+  --foreground: #000000;
+
+  --surface: #ffffff;
+  --surface-muted: #f5f5f5;
+  --surface-soft: #eef8ff;
+  --surface-blue: #c0eaff;
+
+  --border: #99a0ae;
+  --border-subtle: #e4e7eb;
+
+  --text-primary: #000000;
+  --text-secondary: #60606c;
+  --text-tertiary: #8b8b8b;
+  --text-disabled: #bebecc;
+
+  /* Brand */
+  --accent: #2597d0;
+  --accent-soft: #c0eaff;
+  --primary-action: #070709;
+  --primary-action-text: #ffffff;
+
+  /* Status */
+  --success: #16a34a;
+  --success-soft: #e8f8ee;
+  --warning: #ca8a04;
+  --warning-soft: #fff7d6;
+  --danger: #dc2626;
+  --danger-soft: #fee2e2;
+  --unknown: #8b8b8b;
+  --unknown-soft: #f5f5f5;
+  --info: #2597d0;
+  --info-soft: #e7f6ff;
+
+  /* Hero gradient */
+  --hero-gradient: linear-gradient(
+    180deg,
+    rgb(119, 155, 193) 0%,
+    rgb(154, 191, 218) 58%,
+    rgb(203, 223, 236) 100%
+  );
+
+  /* Shadows */
+  --shadow-card: rgba(23, 107, 197, 0.08) 0px 1px 1px 0px,
+    rgba(23, 107, 197, 0.07) 0px 3px 3px 0px;
+  --shadow-xl: rgba(16, 55, 132, 0.03) 0px 17px 37px 0px,
+    rgba(16, 55, 132, 0.03) 0px 67px 67px 0px,
+    rgba(16, 55, 132, 0.02) 0px 150px 90px 0px;
+
+  /* App-specific */
+  --evidence-bg: #f5f5f5;
+  --code-bg: #f7f7f8;
+  --code-text: #111827;
+  --inspector-bg: #ffffff;
+
+  /* Shadcn UI aliases */
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface);
+  --popover-foreground: var(--foreground);
+  --primary: var(--primary-action);
+  --primary-foreground: var(--primary-action-text);
+  --secondary: var(--surface-muted);
+  --secondary-foreground: var(--accent);
+  --muted: var(--surface-muted);
+  --muted-foreground: var(--text-tertiary);
+  --destructive: var(--danger);
+  --destructive-foreground: #ffffff;
+  --ring: var(--accent-soft);
+  --radius: 12px;
+}
+
+/* =========================================================
+   DARK THEME — Linear style
+   Used for product workspace, evidence review, code UI
+   ========================================================= */
+
+.dark {
+  color-scheme: dark;
+
+  /* Base */
+  --background: #08090a;
+  --foreground: #f7f8f8;
+
+  --surface: #0f1011;
+  --surface-muted: #161718;
+  --surface-soft: #23252a;
+  --surface-blue: #111827;
+
+  --border: #23252a;
+  --border-subtle: #323334;
+
+  --text-primary: #f7f8f8;
+  --text-secondary: #d0d6e0;
+  --text-tertiary: #8a8f98;
+  --text-disabled: #62666d;
+
+  /* Brand */
+  --accent: #e4f222;
+  --accent-soft: rgba(228, 242, 34, 0.12);
+  --primary-action: #e4f222;
+  --primary-action-text: #08090a;
+
+  /* Status */
+  --success: #27a644;
+  --success-soft: rgba(39, 166, 68, 0.14);
+  --warning: #eab308;
+  --warning-soft: rgba(234, 179, 8, 0.14);
+  --danger: #eb5757;
+  --danger-soft: rgba(235, 87, 87, 0.14);
+  --unknown: #8a8f98;
+  --unknown-soft: #23252a;
+  --info: #5e6ad2;
+  --info-soft: rgba(94, 106, 210, 0.16);
+
+  /* Hero gradient not used in workspace */
+  --hero-gradient: linear-gradient(180deg, #08090a 0%, #0f1011 100%);
+
+  /* Shadows */
+  --shadow-card: rgba(0, 0, 0, 0.4) 0px 2px 4px 0px;
+  --shadow-xl: rgba(8, 9, 10, 0.6) 0px 4px 32px 0px;
+
+  /* App-specific */
+  --evidence-bg: #0f1011;
+  --code-bg: #08090a;
+  --code-text: #d0d6e0;
+  --inspector-bg: #0f1011;
+
+  /* Shadcn UI aliases */
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface);
+  --popover-foreground: var(--foreground);
+  --primary: var(--primary-action);
+  --primary-foreground: var(--primary-action-text);
+  --secondary: var(--surface-muted);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--surface-muted);
+  --muted-foreground: var(--text-tertiary);
+  --destructive: var(--danger);
+  --destructive-foreground: #ffffff;
+  --ring: var(--accent-soft);
+}

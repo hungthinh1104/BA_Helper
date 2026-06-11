@@ -1,0 +1,160 @@
+/* apps/web/src/styles/landing.css */
+
+/* =========================================================
+   LANDING PAGE — Letters-inspired
+   ========================================================= */
+
+.landing-hero {
+  position: relative;
+  overflow: hidden;
+  min-height: 720px;
+  padding: 120px 0 80px;
+  background: 
+    radial-gradient(circle at 15% 30%, rgba(59, 130, 246, 0.15) 0%, transparent 40%),
+    radial-gradient(circle at 85% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
+    linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%);
+}
+
+.landing-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto -10% -20% -10%;
+  height: 300px;
+  background: linear-gradient(to bottom, transparent, var(--background));
+  pointer-events: none;
+}
+
+.landing-nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: color-mix(in srgb, var(--background) 86%, transparent);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.landing-nav-inner {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.landing-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.landing-nav-links a:hover {
+  color: var(--accent);
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  margin-bottom: 24px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--background) 80%, transparent);
+  color: var(--text-secondary);
+  font-size: 13px;
+  box-shadow: var(--shadow-card);
+}
+
+.hero-subtitle {
+  max-width: 680px;
+  margin: 24px auto 0;
+  color: var(--text-secondary);
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+.hero-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 32px;
+  flex-wrap: wrap;
+}
+
+.hero-mockup {
+  position: relative;
+  z-index: 1;
+  width: min(100% - 32px, 1120px);
+  margin: 72px auto 0;
+}
+
+/* =========================================================
+   PRODUCT MOCKUP
+   ========================================================= */
+
+.product-mockup {
+  overflow: hidden;
+  border-radius: 32px;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-xl);
+}
+
+.product-mockup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface);
+}
+
+.product-mockup-dots {
+  display: flex;
+  gap: 7px;
+}
+
+.product-mockup-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  background: var(--border);
+}
+
+.product-mockup-body {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr) 320px;
+  min-height: 520px;
+  background: var(--surface-muted);
+}
+
+.mockup-sidebar {
+  padding: 18px;
+  border-right: 1px solid var(--border-subtle);
+  background: var(--surface);
+}
+
+.mockup-main {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mockup-inspector {
+  padding: 18px;
+  border-left: 1px solid var(--border-subtle);
+  background: var(--inspector-bg);
+}
+
+
