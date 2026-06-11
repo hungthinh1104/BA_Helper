@@ -22,14 +22,22 @@ export class PdfExportRenderer implements DocumentExportRenderer {
       );
     }
 
-    return Promise.race([
-      this.renderPdf(input.markdown, input.metadata),
-      new Promise<RenderedExport>((_, reject) => {
-        setTimeout(() => {
-          reject(new AppError('PDF_RENDER_FAILED', 'PDF rendering timed out.'));
-        }, RENDER_TIMEOUT_MS);
-      }),
-    ]);
+    let timeoutId: NodeJS.Timeout | null = null;
+
+    try {
+      return await Promise.race([
+        this.renderPdf(input.markdown, input.metadata),
+        new Promise<RenderedExport>((_, reject) => {
+          timeoutId = setTimeout(() => {
+            reject(new AppError('PDF_RENDER_FAILED', 'PDF rendering timed out.'));
+          }, RENDER_TIMEOUT_MS);
+        }),
+      ]);
+    } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    }
   }
 
   private async renderPdf(
