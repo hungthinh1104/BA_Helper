@@ -1,0 +1,32 @@
+{
+  "edges": [
+    {
+      "stableId": "edge:booking.controller.cancel->booking.service.cancelBooking",
+      "type": "CALLS",
+      "from": "api:booking.controller.cancel",
+      "to": "service-method:booking.service.cancelBooking",
+      "confidence": 1
+    },
+    {
+      "stableId": "edge:booking.service.cancelBooking->payment.service.refund",
+      "type": "CALLS",
+      "from": "service-method:booking.service.cancelBooking",
+      "to": "service-method:payment.service.refund",
+      "confidence": 1
+    },
+    {
+      "stableId": "edge:booking.service.cancelBooking->slot.service.releaseSlot",
+      "type": "CALLS",
+      "from": "service-method:booking.service.cancelBooking",
+      "to": "service-method:slot.service.releaseSlot",
+      "confidence": 1
+    },
+    {
+      "stableId": "edge:booking.service.cancelBooking->notification.service.notifyOwner",
+      "type": "CALLS",
+      "from": "service-method:booking.service.cancelBooking",
+      "to": "service-method:notification.service.notifyOwner",
+      "confidence": 1
+    }
+  ]
+}

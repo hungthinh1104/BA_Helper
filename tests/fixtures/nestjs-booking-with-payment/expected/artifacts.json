@@ -1,0 +1,68 @@
+{
+  "artifacts": [
+    {
+      "stableId": "api:booking.controller.cancel",
+      "type": "API_ROUTE",
+      "filePath": "src/booking/booking.controller.ts",
+      "symbolName": "BookingController.cancel",
+      "startLine": 8,
+      "endLine": 11
+    },
+    {
+      "stableId": "service-method:booking.service.cancelBooking",
+      "type": "SERVICE_METHOD",
+      "filePath": "src/booking/booking.service.ts",
+      "symbolName": "BookingService.cancelBooking",
+      "startLine": 15,
+      "endLine": 24
+    },
+    {
+      "stableId": "service-method:payment.service.refund",
+      "type": "SERVICE_METHOD",
+      "filePath": "src/payment/payment.service.ts",
+      "symbolName": "PaymentService.refund",
+      "startLine": 6,
+      "endLine": 10
+    },
+    {
+      "stableId": "service-method:slot.service.releaseSlot",
+      "type": "SERVICE_METHOD",
+      "filePath": "src/slot/slot.service.ts",
+      "symbolName": "SlotService.releaseSlot",
+      "startLine": 5,
+      "endLine": 7
+    },
+    {
+      "stableId": "service-method:notification.service.notifyOwner",
+      "type": "SERVICE_METHOD",
+      "filePath": "src/notification/notification.service.ts",
+      "symbolName": "NotificationService.notifyOwner",
+      "startLine": 5,
+      "endLine": 7
+    },
+    {
+      "stableId": "entity:booking",
+      "type": "ENTITY",
+      "filePath": "src/booking/booking.entity.ts",
+      "symbolName": "Booking",
+      "startLine": 6,
+      "endLine": 19
+    },
+    {
+      "stableId": "entity:paymentTransaction",
+      "type": "ENTITY",
+      "filePath": "src/payment/payment.entity.ts",
+      "symbolName": "PaymentTransaction",
+      "startLine": 6,
+      "endLine": 11
+    },
+    {
+      "stableId": "test:booking.cancel.spec",
+      "type": "TEST",
+      "filePath": "src/booking/booking-cancel.spec.ts",
+      "symbolName": "BookingService.cancelBooking.spec",
+      "startLine": 1,
+      "endLine": 16
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "unknowns": [
+    {
+      "insightKey": "unknown:refund-percentage",
+      "description": "Refund percentage is not confirmed from code evidence.",
+      "reasoning": "No explicit refund percentage or refund policy artifact was found."
+    },
+    {
+      "insightKey": "unknown:refund-deadline",
+      "description": "Refund deadline is not confirmed from code evidence.",
+      "reasoning": "No explicit refund deadline was found in the evidence scope."
+    },
+    {
+      "insightKey": "unknown:who-may-cancel",
+      "description": "Who may cancel a booking is not confirmed from code evidence.",
+      "reasoning": "No authorization or role checks were found in the cancellation flow."
+    },
+    {
+      "insightKey": "unknown:owner-approval",
+      "description": "Owner approval requirements are not confirmed from code evidence.",
+      "reasoning": "No approval or confirmation step was found in the cancellation flow."
+    },
+    {
+      "insightKey": "unknown:slot-reopen",
+      "description": "Slot re-open policy is not confirmed from code evidence.",
+      "reasoning": "Slot release is called, but no policy for rebooking timing was found."
+    }
+  ]
+}

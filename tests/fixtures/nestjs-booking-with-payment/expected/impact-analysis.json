@@ -1,0 +1,42 @@
+{
+  "analysisId": "analysis-1",
+  "insights": [
+    {
+      "insightKey": "claim:cancel-route",
+      "certainty": "EVIDENCED",
+      "description": "The system exposes an API route for cancelling a booking."
+    },
+    {
+      "insightKey": "claim:cancel-refund",
+      "certainty": "EVIDENCED",
+      "description": "Cancellation triggers a refund operation."
+    },
+    {
+      "insightKey": "claim:release-slot",
+      "certainty": "EVIDENCED",
+      "description": "Cancellation releases the booked slot."
+    },
+    {
+      "insightKey": "claim:notify-owner",
+      "certainty": "EVIDENCED",
+      "description": "Cancellation notifies the booking owner."
+    }
+  ],
+  "traceability": [
+    {
+      "artifactKey": "api:booking.controller.cancel",
+      "linkType": "AFFECTED",
+      "linkBasis": "EVIDENCED"
+    },
+    {
+      "artifactKey": "service-method:booking.service.cancelBooking",
+      "linkType": "AFFECTED",
+      "linkBasis": "EVIDENCED"
+    },
+    {
+      "artifactKey": "service-method:payment.service.refund",
+      "linkType": "AFFECTED",
+      "linkBasis": "EVIDENCED"
+    }
+  ]
+}
