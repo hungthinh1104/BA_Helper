@@ -1,5 +1,6 @@
 import { Project } from 'ts-morph';
 import { join, relative } from 'node:path';
+import { ANALYZER_VERSION } from './scanner.types';
 import type { ScanInput, ScanResult, ScanArtifact } from './scanner.types';
 
 export const scanFixture = (input: ScanInput): ScanResult => {
@@ -201,7 +202,7 @@ export const scanProject = (input: ScanInput & { tsFiles: string[], coverage?: i
   };
 
   return {
-    analyzerVersion: input.analyzerVersion || '0.1.0',
+    analyzerVersion: input.analyzerVersion || ANALYZER_VERSION,
     artifacts,
     coverage: input.coverage || defaultCoverage,
     sourceRoot: input.fixturePath,

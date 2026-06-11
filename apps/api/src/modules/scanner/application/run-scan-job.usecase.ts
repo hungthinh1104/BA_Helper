@@ -168,7 +168,7 @@ export class RunScanJobUseCase {
         } else {
           scanResult = scanProject({
             fixturePath: tempDir,
-            analyzerVersion: '0.1.0',
+            analyzerVersion: '0.2.0',
             tsFiles: enumResult.tsFiles,
             coverage: scanCoverage,
           });
@@ -177,7 +177,7 @@ export class RunScanJobUseCase {
         commitSha = 'mock-commit-sha';
         scanResult = scanFixture({
           fixturePath: sourceRoot,
-          analyzerVersion: '0.1.0',
+          analyzerVersion: '0.2.0',
         });
       }
 
@@ -192,7 +192,7 @@ export class RunScanJobUseCase {
       // Record detailed scan health into snapshot diagnostics
       const scanHealth: import('@ba-helper/analyzer').ScanHealthDiagnostics = {
         coverageStatus: scanResult.coverage.status,
-        scannerVersion: 'scanner@0.1.0',
+        scannerVersion: 'scanner@0.2.0',
         analyzerVersion: scanResult.analyzerVersion,
         scannedFileCount: scanResult.artifacts.length, // approximation or use enumResult if possible
         skippedFileCount: Object.values(scanResult.coverage.skippedSummary).reduce((a, b) => a + b, 0),

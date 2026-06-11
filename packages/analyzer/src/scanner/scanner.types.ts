@@ -1,5 +1,5 @@
-export const SCANNER_VERSION = 'scanner@0.1.0';
-export const ANALYZER_VERSION = 'analyzer@0.1.0';
+export const SCANNER_VERSION = 'scanner@0.2.0';
+export const ANALYZER_VERSION = 'analyzer@0.2.0';
 
 export type ScanInput = {
   fixturePath: string;

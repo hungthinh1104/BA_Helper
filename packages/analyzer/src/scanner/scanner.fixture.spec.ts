@@ -75,6 +75,13 @@ describe('Scanner Golden Fixtures', () => {
     const controllerMethods = result.artifacts.filter(a => a.type === 'SPRING_CONTROLLER_METHOD');
     
     expect(controllerMethods.length).toBeGreaterThan(0);
+
+    const stableKeys = result.artifacts.map(a => a.stableId);
+    expect(stableKeys).toContain('api:src/main/java/com/example/booking/BookingController.java:BookingController.getBooking:GET:/api/v1/bookings/{id}');
+    expect(stableKeys).toContain('api:src/main/java/com/example/booking/BookingController.java:BookingController.createBooking:POST:/api/v1/bookings');
+    expect(stableKeys).toContain('service-method:src/main/java/com/example/booking/BookingService.java:BookingService.createBooking');
+    expect(stableKeys).toContain('entity:src/main/java/com/example/booking/BookingEntity.java:BookingEntity');
+    expect(stableKeys).toContain('test:src/test/java/com/example/booking/BookingServiceTest.java:BookingServiceTest');
   });
 
   it('should hit file limit and return PARTIAL', async () => {

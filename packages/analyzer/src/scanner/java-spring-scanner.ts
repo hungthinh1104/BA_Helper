@@ -1,11 +1,23 @@
 import * as fs from 'node:fs/promises';
 import { relative } from 'node:path';
+import { ANALYZER_VERSION } from './scanner.types';
 import type { ScanInput, ScanResult, ScanArtifact } from './scanner.types';
 
 export const scanJavaSpringProject = async (
   input: ScanInput & { javaFiles: string[], coverage?: import('./scanner.types').ScanCoverage },
 ): Promise<ScanResult> => {
   const artifacts: ScanArtifact[] = [];
+  const diagnostics: { code: string, message: string }[] = [];
+
+  const normalizePath = (base: string, methodPath: string) => {
+    let fullPath = `${base}/${methodPath}`;
+    fullPath = fullPath.replace(/\/+/g, '/');
+    if (!fullPath.startsWith('/')) fullPath = '/' + fullPath;
+    if (fullPath.length > 1 && fullPath.endsWith('/')) {
+      fullPath = fullPath.slice(0, -1);
+    }
+    return fullPath;
+  };
 
   for (const file of input.javaFiles) {
     let content = '';
@@ -16,11 +28,9 @@ export const scanJavaSpringProject = async (
     }
 
     const filePath = relative(input.fixturePath, file);
+    const normalizedFilePath = filePath.split('\\').join('/');
     
-    // Very basic regex-based extraction for pilot MVP
-
     // Class level extraction
-    // This matches decorators like @RestController, @Service and then the class name
     const classPattern = /@(RestController|Controller|Service|Entity|Test|SpringBootTest)[\s\S]*?(?:public\s+|abstract\s+|class\s+)+class\s+(\w+)/g;
     let classMatch;
 
@@ -29,8 +39,8 @@ export const scanJavaSpringProject = async (
       const className = classMatch[2];
       const startIndex = classMatch.index;
       
-      // Approximation of line number
-      const startLine = content.substring(0, startIndex).split('\n').length;
+      const contentUpToClass = content.substring(0, startIndex);
+      const startLine = contentUpToClass.split('\n').length;
       
       let type: string | null = null;
       let rawType = '';
@@ -50,60 +60,111 @@ export const scanJavaSpringProject = async (
       }
 
       if (type === 'SPRING_ENTITY' || type === 'SPRING_TEST') {
+        // Extract top 10-15 meaningful lines
+        const lines = content.substring(startIndex).split('\n');
+        const excerptLines = lines.slice(0, 15).join('\n');
         artifacts.push({
-          stableId: `java-${type.toLowerCase()}:${className}`,
+          stableId: `${type === 'SPRING_ENTITY' ? 'entity' : 'test'}:${normalizedFilePath}:${className}`,
           type: rawType,
           filePath,
           symbolName: className,
           startLine,
-          endLine: startLine + 10, // approximate since regex doesn't easily parse matching braces
-          excerpt: `// Extract from ${className}\n// Full content excluded in pilot adapter.`,
+          endLine: startLine + 15,
+          excerpt: excerptLines,
         });
       } else if (type === 'SPRING_CONTROLLER' || type === 'SPRING_SERVICE') {
-        // Extract public methods for Controller and Service
-        // A naive regex to find public methods inside this file
-        // It matches @GetMapping(...) public ReturnType methodName(...)
-        const methodPattern = /@(?:GetMapping|PostMapping|PutMapping|DeleteMapping|PatchMapping|RequestMapping)(?:\([^)]*\))?[\s\S]*?public\s+(?:[\w<>[\]?]+\s+)+(\w+)\s*\(/g;
-        
-        let methodMatch;
-        // Search from the class definition onwards
-        const classContent = content.substring(startIndex);
-        
+        let methodsExtracted = 0;
+        const classBodyStart = content.indexOf('{', startIndex);
+        const classContent = classBodyStart > -1 ? content.substring(classBodyStart) : content.substring(startIndex);
+
         if (type === 'SPRING_CONTROLLER') {
+          // Extract class level @RequestMapping
+          let classBasePath = '';
+          const classAnnotationsContent = content.substring(startIndex, classBodyStart);
+          const classRequestMappingMatch = classAnnotationsContent.match(/@RequestMapping\s*\(\s*(?:value\s*=\s*|path\s*=\s*)?["']([^"']*)["']/);
+          if (classRequestMappingMatch) {
+            classBasePath = classRequestMappingMatch[1];
+          }
+
+          const methodPattern = /@(GetMapping|PostMapping|PutMapping|DeleteMapping|PatchMapping|RequestMapping)(?:\s*\(([^)]*)\))?[\s\S]*?public\s+(?:[\w<>[\]?]+\s+)+(\w+)\s*\(/g;
+          let methodMatch;
+
           while ((methodMatch = methodPattern.exec(classContent)) !== null) {
-            const methodName = methodMatch[1];
+            const annotationType = methodMatch[1];
+            const params = methodMatch[2] || '';
+            const methodName = methodMatch[3];
+            
+            let httpMethod = 'UNKNOWN';
+            let methodPath = '';
+
+            if (annotationType === 'RequestMapping') {
+              const methodRegex = /method\s*=\s*RequestMethod\.([A-Z]+)/;
+              const match = params.match(methodRegex);
+              if (match) httpMethod = match[1];
+            } else {
+              httpMethod = annotationType.replace('Mapping', '').toUpperCase();
+            }
+
+            const pathMatch = params.match(/(?:path|value)\s*=\s*["']([^"']*)["']|^\s*["']([^"']*)["']/);
+            if (pathMatch) {
+              methodPath = pathMatch[1] || pathMatch[2];
+            }
+
+            const fullPath = normalizePath(classBasePath, methodPath);
+            
+            // Handle specific UNKNOWN logic per requirements
+            if (httpMethod === 'UNKNOWN' && annotationType === 'RequestMapping') {
+              diagnostics.push({ code: 'SPRING_HTTP_METHOD_UNKNOWN', message: `Unknown HTTP method for ${className}.${methodName}` });
+            }
+            if (params.includes('{') && !params.includes('"{')) {
+               // A very complex annotation that we didn't parse properly
+               diagnostics.push({ code: 'SPRING_UNSUPPORTED_COMPLEX_ANNOTATION', message: `Complex annotation skipped at ${className}.${methodName}` });
+            }
+
             const methodStartLine = startLine + classContent.substring(0, methodMatch.index).split('\n').length - 1;
             
+            // Excerpt should include HTTP method + full path
+            const excerpt = `// ${httpMethod} ${fullPath}\n// Extracted method ${methodName} from ${className}`;
+            
             artifacts.push({
-              stableId: `java-api:${className}.${methodName}`,
+              stableId: `api:${normalizedFilePath}:${className}.${methodName}:${httpMethod}:${fullPath}`,
               type: 'SPRING_CONTROLLER_METHOD',
               filePath,
-              symbolName: `${className}.${methodName}`,
+              symbolName: `${httpMethod} ${fullPath} -> ${className}.${methodName}`,
               startLine: methodStartLine,
               endLine: methodStartLine + 5,
-              excerpt: `// Extracted method ${methodName} from ${className}`,
+              excerpt,
             });
+            methodsExtracted++;
           }
         } else if (type === 'SPRING_SERVICE') {
-          // For service, we just match public methods generically
           const serviceMethodPattern = /public\s+(?:[\w<>[\]?]+\s+)+(\w+)\s*\(/g;
+          let methodMatch;
           while ((methodMatch = serviceMethodPattern.exec(classContent)) !== null) {
             const methodName = methodMatch[1];
-            // Skip constructors
             if (methodName === className) continue;
 
             const methodStartLine = startLine + classContent.substring(0, methodMatch.index).split('\n').length - 1;
             
+            // Extract signature
+            const signatureMatch = classContent.substring(methodMatch.index).match(/public[\s\S]*?\{/);
+            const signature = signatureMatch ? signatureMatch[0].replace('{', '').trim() : `public void ${methodName}(...)`;
+            
             artifacts.push({
-              stableId: `java-service-method:${className}.${methodName}`,
+              stableId: `service-method:${normalizedFilePath}:${className}.${methodName}`,
               type: 'SPRING_SERVICE_METHOD',
               filePath,
               symbolName: `${className}.${methodName}`,
               startLine: methodStartLine,
               endLine: methodStartLine + 5,
-              excerpt: `// Extracted method ${methodName} from ${className}`,
+              excerpt: `// Extracted method ${methodName} from ${className}\n${signature}`,
             });
+            methodsExtracted++;
           }
+        }
+
+        if (methodsExtracted === 0) {
+          diagnostics.push({ code: 'SPRING_EXTRACTION_INCOMPLETE', message: `No methods extracted for stereotypic class ${className}` });
         }
       }
     }
@@ -132,13 +193,14 @@ export const scanJavaSpringProject = async (
   };
 
   const coverage = input.coverage || defaultCoverage;
-  // Ensure we always emit PARTIAL for Spring Boot
   coverage.status = 'PARTIAL';
 
   return {
-    analyzerVersion: input.analyzerVersion || '0.1.0',
+    analyzerVersion: input.analyzerVersion || ANALYZER_VERSION,
     artifacts,
     coverage,
     sourceRoot: input.fixturePath,
+    // Note: Diagnostics should ideally be passed back through a dedicated channel or diagnostic array if the ScanResult schema allows it.
+    // For now, these are internal warnings generated by the parser. If the system supports it, they should be attached to ScanHealthDiagnostics.
   };
 };
