@@ -1,6 +1,8 @@
 # Requirement-to-Code Impact Analyzer
 
-**Requirement-to-code impact analyzer for backend teams: evidence-backed traceability, QA risks, review coverage, and report export.**
+Map requirement changes to impacted backend code, evidence, QA risks, review coverage, and immutable reports.
+
+**BA Helper** is a requirement-to-code impact analyzer for backend teams.
 
 ## The Problem
 When a business requirement changes, backend systems are highly susceptible to hidden impacts. Traditional impact analysis is either entirely manual (relying on tribal knowledge) or requires heavy, proprietary integration. Generic AI chatbots lack repository-wide context and fail to provide auditable evidence of *why* specific code blocks are impacted, leading to brittle updates and missed QA regressions.
@@ -13,20 +15,15 @@ Requirement change &rarr; Impact Matrix &rarr; Evidence Drilldown &rarr; Review 
 
 ## In Action
 
-*(TODO: Replace with real application screenshot before launch.)*
-- **Requirement Input**: ![Requirement Input](docs/assets/01-requirement-input.png)
+> TODO: Add screenshot — Requirement Input UI
 
-*(TODO: Replace with real application screenshot before launch.)*
-- **Impact Matrix**: ![Impact Matrix](docs/assets/02-impact-matrix.png)
+> TODO: Add screenshot — Impact Matrix
 
-*(TODO: Replace with real application screenshot before launch.)*
-- **Evidence Drilldown**: ![Evidence Drilldown](docs/assets/03-evidence-drilldown.png)
+> TODO: Add screenshot — Evidence Drilldown
 
-*(TODO: Replace with real application screenshot before launch.)*
-- **Review Coverage**: ![Review Coverage](docs/assets/04-review-coverage.png)
+> TODO: Add screenshot — Review Coverage
 
-*(TODO: Replace with real application screenshot before launch.)*
-- **Final Report**: ![Final Report](docs/assets/05-merged-report-export.png)
+> TODO: Add screenshot — Final Report
 - [View a sample Markdown report](docs/sample-report.md)
 
 ## Why not just ask ChatGPT/Copilot?
@@ -43,7 +40,7 @@ Generic AI coding agents are excellent at generating code blocks but struggle wi
 - Docker & Docker Compose
 - Node.js (v20+)
 - pnpm
-- A valid OpenAI API Key (or use the fake provider for testing)
+- OpenAI API key only if using the real AI provider (No AI key required when using `AI_PROVIDER=fake`)
 
 ### Installation
 ```bash
@@ -63,15 +60,19 @@ cp apps/web/.env.example apps/web/.env.local
 # 1. Start the database and cache
 docker compose up -d postgres redis
 
-# 2. Start the backend API
+# 2. Setup the Database
+pnpm --dir apps/api prisma generate
+pnpm --dir apps/api prisma migrate dev
+
+# 3. Start the backend API
 PORT=3001 ENABLE_DEV_LOGIN=true WORKSPACE_MODE=dev-single-user \
   AI_PROVIDER=fake EMBEDDING_PROVIDER=fake pnpm --dir apps/api dev
 
-# 3. Start the background worker
+# 4. Start the background worker
 WORKSPACE_MODE=dev-single-user AI_PROVIDER=fake EMBEDDING_PROVIDER=fake \
   pnpm --dir apps/worker dev
 
-# 4. Start the frontend web application
+# 5. Start the frontend web application
 NEXT_PUBLIC_API_URL=http://localhost:3001 NEXTAUTH_SECRET=replace-with-a-long-random-secret-32-chars-min \
   pnpm --dir apps/web dev
 ```
@@ -87,7 +88,7 @@ We prioritize keeping your proprietary code safe:
 - **Explicit Skips**: Large files, vendor directories (`node_modules`), binaries, and unsafe symlinks are automatically skipped and explicitly logged.
 - **PARTIAL vs FULL Coverage**: If limits are hit, the scan is explicitly marked as `PARTIAL`. A `PARTIAL` scan is not a failure, but explicitly warns reviewers that the LLM may be missing context.
 - **Immutable Reports**: Once finalized, reports are immutable and tied to a specific requirement revision and repository snapshot. **Reports are snapshot-scoped and evidence-backed. Finalized exports use immutable report snapshots and do not recompute live state.**
-- **No Global Vector Search**: All RAG operations are strictly isolated by Tenant, Project, Repository, and Commit SHA.
+- **Vector Retrieval Scoping**: Vector retrieval is scoped by project, repository, snapshot, and commit SHA. The system does not search across unrelated repositories globally.
 
 ## Architecture
 Built as a TypeScript modular monolith to balance speed of development with eventual microservice readiness:
@@ -111,9 +112,9 @@ Built as a TypeScript modular monolith to balance speed of development with even
 - **Integrations**: Direct Jira/Confluence/GitHub App syncs are currently out of scope.
 
 ## Roadmap
-1. Enhance Java Spring AST parser for `FULL` scan coverage.
+1. Harden Java Spring pilot extraction while keeping scan coverage explicitly PARTIAL until parser confidence improves.
 2. Introduce Mermaid.js architectural graph generation.
-3. Multi-user RBAC and workspace organization management.
+3. Harden multi-user workspace flows, invite/onboarding, and project administration.
 4. Native OAuth and GitHub App integrations.
 
 ## Contributing

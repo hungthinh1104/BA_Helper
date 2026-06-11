@@ -1,12 +1,12 @@
-> This is an illustrative sample report based on a synthetic booking/refund scenario. It is not from a production repository.
+> This is an illustrative sample report based on a synthetic booking/refund scenario. It is not generated from a production repository and should be treated as example output only.
 
-# Impact Analysis Report
+# Impact Analysis Report — Illustrative Sample
 
 **Requirement:** Allow users to cancel paid bookings and receive a refund.  
 **Repository:** `nestjs-booking-with-payment`  
 **Commit:** `SAMPLE_COMMIT`  
-**Status:** `FINALIZED`  
-**Coverage:** `FULL`
+**Status:** `ILLUSTRATIVE_SAMPLE`  
+**Coverage:** `Example only`
 
 ---
 
@@ -17,14 +17,14 @@ This requirement impacts the core booking state machine and requires integration
 
 | Artifact | Type | Certainty | Reason |
 | :--- | :--- | :--- | :--- |
-| `api:booking.controller.cancel` | Endpoint | **EVIDENCED** | The primary entry point for users to initiate a cancellation. Needs to be updated to trigger the refund workflow. |
-| `service-method:refund.service.processRefund` | Domain Service | **EVIDENCED** | Must execute the generic payment provider API call to reverse the initial transaction. |
-| `entity:booking.entity` | Data Model | **EVIDENCED** | Requires a new state enum value `CANCELLED_REFUNDED` to track the lifecycle. |
-| `test:booking.service.spec` | Test Case | **EVIDENCED** | Must include new unit tests validating the refund calculation logic. |
+| `BookingController.cancelBooking` | Endpoint | **EVIDENCED** | The primary entry point for users to initiate a cancellation. Needs to be updated to trigger the refund workflow. |
+| `RefundService.processRefund` | Domain Service | **EVIDENCED** | Must execute the generic payment provider API call to reverse the initial transaction. |
+| `BookingEntity` | Data Model | **EVIDENCED** | Requires a new state enum value `CANCELLED_REFUNDED` to track the lifecycle. |
+| `BookingServiceSpec` | Test Case | **EVIDENCED** | Must include new unit tests validating the refund calculation logic. |
 
 ## 3. Detailed Evidence
 
-### `api:booking.controller.cancel`
+### `BookingController.cancelBooking`
 **Extracted Context:**
 ```typescript
 @Post(':id/cancel')
@@ -34,7 +34,7 @@ async cancelBooking(@Param('id') id: string) {
 ```
 **Impact Note:** The controller currently only delegates to `cancel`. It needs to be updated to accept a `reason` payload and perhaps explicitly return a refund status object to the frontend.
 
-### `service-method:refund.service.processRefund`
+### `RefundService.processRefund`
 **Extracted Context:**
 ```typescript
 async processRefund(transactionId: string, amount: number) {

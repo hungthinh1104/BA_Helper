@@ -7,16 +7,18 @@ Before launching the repository publicly on GitHub or Product Hunt, ensure the f
 - [ ] **Description**: Updated to match positioning: `"Requirement-to-code impact analyzer for backend teams: evidence-backed traceability, QA risks, review coverage, and report export."`
 - [ ] **URL**: Add a link to the live demo, landing page, or the primary documentation site if available.
 - [ ] **Topics**: Ensure the following topics are applied to the GitHub repository:
-  - `requirement-analysis`
+  - `requirements-traceability`
   - `impact-analysis`
+  - `change-impact-analysis`
   - `traceability`
-  - `qa`
-  - `software-architecture`
+  - `qa-automation`
+  - `business-analysis`
   - `static-analysis`
   - `developer-tools`
-  - `ai-tools`
+  - `software-architecture`
   - `nestjs`
   - `spring-boot`
+  - `typescript`
 
 ## 2. Documentation & Assets
 - [ ] **README.md**: Verify that all 13 required sections are present and accurately describe the MVP.
