@@ -1,9 +1,9 @@
 # Embedding Chunk Reuse Feasibility Audit
 
-**Phase:** 31D-0  
-**Date:** 2026-06-11  
+**Phase:** 31D-0 (Audit) / 31D-1 (Schema Foundation Completed)  
+**Date:** 2026-06-11 (Audit) / 2026-06-12 (Foundation)  
 **Auditor:** Antigravity Agent  
-**Status:** COMPLETE — Schema is partially ready; one versioning gap blocks safe reuse.
+**Status:** 31D-1 COMPLETE — `chunkerVersion` blocker resolved. Actual reuse not yet implemented.
 
 ---
 
@@ -26,7 +26,7 @@
 | `tokenCount` | Int | ✅ | Rough estimate (`length / 4`) |
 | `embedding` | `vector(1536)` | ✅ | pgvector column |
 | `createdAt` | DateTime | ✅ | |
-| **`chunkerVersion`** | — | ❌ **MISSING** | No field recording the chunk-builder strategy version |
+| **`chunkerVersion`** | String? | ✅ **ADDED (31D-1)** | `'artifact-chunker@0.1.0'` for new chunks; `null` for legacy rows (not reuse-eligible) |
 | **`analyzerVersion`** | — | ❌ **MISSING** | No field linking to the scanner/analyzer version used during extraction |
 
 **Idempotency key:** `@@unique([snapshotId, stableChunkId, embeddingModel])`
@@ -94,36 +94,33 @@ Instead of calling the embedding API for an unchanged artifact, copy the vector 
 | Reused chunks point to current `CodeArtifact.id` | ✅ Will be enforced by copy logic (not yet written) | None (future) |
 | No query reads old snapshot chunks directly | ✅ All queries filter by `snapshotId` | None |
 
-### Verdict: **NOT SAFE TODAY — Phase 31D-1 Required**
+### Verdict: **CONDITIONALLY SAFE — pending Phase 31D implementation**
 
-The schema is missing a `chunkerVersion` field.
-Without it, a chunker strategy change would produce silently incorrect reused vectors:
-same `contentHash`, same `embeddingModel`, but different chunk text structure → misleading semantic vectors.
+**Phase 31D-1 resolved the blocking gap.** `chunkerVersion` is now:
+- Present as a nullable column on `EmbeddingChunk`
+- Populated with `CHUNK_BUILDER_VERSION = 'artifact-chunker@0.1.0'` on every new chunk
+- `null` on all pre-31D-1 legacy rows
+- Excluded from `ON CONFLICT DO UPDATE` so idempotent re-inserts never silently change the recorded version
+- Returned by `listBySnapshot` for future reuse eligibility checks
 
-This is a **BLOCKER** for safe reuse. The schema must be extended before any copy-path is opened.
+**Legacy chunk rule (enforced by design):**
+> Chunks with `chunkerVersion = null` or any value ≠ `CHUNK_BUILDER_VERSION` are NOT reuse-eligible.
+> They remain fully valid for retrieval (RAG queries do not filter by `chunkerVersion`).
+
+Actual vector/chunk copying is not yet implemented. No retrieval behavior was changed.
 
 ---
 
 ## 4. Required Schema Gaps
 
-### Gap 1 (BLOCKER): `chunkerVersion` missing from `EmbeddingChunk`
+### ~~Gap 1 (BLOCKER): `chunkerVersion` missing from `EmbeddingChunk`~~ — RESOLVED in Phase 31D-1
 
-**Risk:** If `ArtifactChunkBuilder.build()` logic is updated (e.g. new fields added to chunk content, different evidence selection, `mapArtifactType` changes), existing chunks produced by the old builder will have a different content structure than new chunks, even when `contentHash` matches the raw artifact content.
-
-**Required addition:**
-```prisma
-model EmbeddingChunk {
-  // ... existing fields ...
-  chunkerVersion String  // e.g. "artifact-chunk-builder@0.1.0"
-  // Update unique constraint:
-  @@unique([snapshotId, stableChunkId, embeddingModel, chunkerVersion])
-}
-```
-
-The `chunkerVersion` must be:
-- A stable string constant exported from `ArtifactChunkBuilder` (e.g. `CHUNK_BUILDER_VERSION = 'artifact-chunk-builder@0.1.0'`)
-- Bumped manually when the builder's `build()` output format changes
-- Compared during reuse eligibility: source chunk `chunkerVersion` must equal current `CHUNK_BUILDER_VERSION`
+**Resolution:**
+- `chunkerVersion String?` added to `EmbeddingChunk` (migration `20260611173129_add_embedding_chunker_version`)
+- `CHUNK_BUILDER_VERSION = 'artifact-chunker@0.1.0'` exported from `ArtifactChunkBuilder`
+- Every new chunk persists this value via `insertMany`
+- `listBySnapshot` now returns `chunkerVersion`
+- `ON CONFLICT DO UPDATE` intentionally excludes `chunkerVersion` (creation-time value is immutable)
 
 ### Gap 2 (MINOR): `analyzerVersion` not stored on `EmbeddingChunk`
 
@@ -187,22 +184,25 @@ async listBySnapshot(snapshotId: string, embeddingModel: string, chunkerVersion:
 
 ## 6. Recommended Next Phase
 
-### → Phase 31D-1: Schema Foundation for Chunk Reuse
+### → Phase 31D: Actual Snapshot-Scoped Chunk Reuse
 
-**Do not attempt actual reuse until Phase 31D-1 completes.**
+**Phase 31D-1 is complete.** The schema foundation is in place.
 
-Phase 31D-1 scope:
-- Add `chunkerVersion String` to `EmbeddingChunk` schema
-- Create and apply migration
-- Export `CHUNK_BUILDER_VERSION` constant from `ArtifactChunkBuilder`
-- Pass `chunkerVersion` through `insertMany` call in `EmbedSnapshotArtifactsUseCase`
-- Update `listBySnapshot` to accept `chunkerVersion`
-- Update `@@unique` constraint to include `chunkerVersion`
-- Update contracts and tests
+Phase 31D scope:
+- Implement `EmbeddingChunkRepository.copyChunks(sourceSnapshotId, targetSnapshotId, artifactIdMap, chunkerVersion, embeddingModel)`
+- In `EmbedSnapshotArtifactsUseCase`, load the `EMBEDDING_REUSE_PLAN` diagnostic from `snapshot.diagnostics`
+- For each eligible artifact in the plan: call `copyChunks` instead of embedding
+- Still call `embeddingProvider.embed()` for ineligible artifacts (ADDED / CHANGED / HASH_UNAVAILABLE / null chunkerVersion)
+- Persist a reuse metrics diagnostic (reused count vs. re-embedded count)
+- Tests must cover: copy path, ineligible path, mixed path, version mismatch path
 
-After Phase 31D-1:
-- Reuse plan in `EMBEDDING_REUSE_PLAN` can be validated against `chunkerVersion` at copy-time
-- Proceed to Phase 31D: actual `copyChunks` implementation
+**Pre-conditions for Phase 31D (all met after 31D-1):**
+- [x] `chunkerVersion` stored per chunk
+- [x] `CHUNK_BUILDER_VERSION` exported from builder
+- [x] `listBySnapshot` returns `chunkerVersion`
+- [x] `EMBEDDING_REUSE_PLAN` diagnostic computed per scan
+- [x] RAG isolation enforced on all queries (no cross-snapshot reads)
+- [ ] `copyChunks` method implemented (Phase 31D)
 
 ---
 

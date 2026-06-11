@@ -78,7 +78,8 @@ export class EmbedSnapshotArtifactsUseCase {
           content: builtChunk.content, 
           contentHash, 
           stableChunkId: builtChunk.stableChunkId,
-          chunkType: builtChunk.chunkType
+          chunkType: builtChunk.chunkType,
+          chunkerVersion: builtChunk.chunkerVersion,
         };
       });
 
@@ -110,10 +111,11 @@ export class EmbedSnapshotArtifactsUseCase {
           commitSha,
           filePath: item.artifact.filePath,
           symbolName: item.artifact.name,
-          artifactType: item.chunkType, // Use the mapped chunkType
+          artifactType: item.chunkType,
           content: item.redactedContent,
           contentHash: item.contentHash,
           tokenCount: Math.ceil(item.redactedContent.length / 4), // rough estimate
+          chunkerVersion: item.chunkerVersion,
           embeddingModel: result.model,
           embedding: result.embeddings[index],
         }));

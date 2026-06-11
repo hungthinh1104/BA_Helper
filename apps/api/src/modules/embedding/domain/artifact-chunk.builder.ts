@@ -1,5 +1,12 @@
 import { CodeArtifact, Evidence } from '@prisma/client';
 
+/**
+ * Bumped whenever build() text assembly logic changes.
+ * All new EmbeddingChunks must persist this value.
+ * Old chunks with null/legacy values are NOT reuse-eligible.
+ */
+export const CHUNK_BUILDER_VERSION = 'artifact-chunker@0.1.0';
+
 export type ArtifactChunkBuilderInput = {
   artifact: CodeArtifact;
   evidence?: Evidence[];
@@ -9,6 +16,7 @@ export type BuiltChunk = {
   stableChunkId: string;
   chunkType: string;
   content: string;
+  chunkerVersion: string;
 };
 
 export class ArtifactChunkBuilder {
@@ -42,6 +50,7 @@ export class ArtifactChunkBuilder {
       stableChunkId,
       chunkType,
       content,
+      chunkerVersion: CHUNK_BUILDER_VERSION,
     };
   }
 

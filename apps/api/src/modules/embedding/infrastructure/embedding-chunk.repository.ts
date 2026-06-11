@@ -31,6 +31,7 @@ export class EmbeddingChunkRepository {
       content: string;
       contentHash: string;
       tokenCount: number;
+      chunkerVersion: string | null;
       embeddingModel: string;
       embedding: number[];
     }>,
@@ -43,7 +44,7 @@ export class EmbeddingChunkRepository {
         INSERT INTO "EmbeddingChunk" (
           id, "tenantId", "projectId", "repositoryId", "snapshotId", "artifactId",
           "stableChunkId", "commitSha", "filePath", "symbolName", "artifactType",
-          content, "contentHash", "tokenCount", "embeddingModel",
+          content, "contentHash", "tokenCount", "chunkerVersion", "embeddingModel",
           embedding, "createdAt"
         ) VALUES (
           gen_random_uuid(),
@@ -53,7 +54,8 @@ export class EmbeddingChunkRepository {
           ${chunk.stableChunkId}, ${chunk.commitSha},
           ${chunk.filePath}, ${chunk.symbolName}, ${chunk.artifactType},
           ${chunk.content}, ${chunk.contentHash}, ${chunk.tokenCount},
-          ${chunk.embeddingModel}, ${vectorStr}::vector, NOW()
+          ${chunk.chunkerVersion ?? null}, ${chunk.embeddingModel},
+          ${vectorStr}::vector, NOW()
         )
         ON CONFLICT ("snapshotId", "stableChunkId", "embeddingModel")
         DO UPDATE SET
@@ -66,6 +68,8 @@ export class EmbeddingChunkRepository {
           "symbolName" = EXCLUDED."symbolName",
           "artifactType" = EXCLUDED."artifactType",
           "commitSha" = EXCLUDED."commitSha"
+          -- NOTE: chunkerVersion is intentionally excluded from DO UPDATE
+          -- so re-runs never silently change the version recorded at creation time.
       `;
     }
   }
@@ -113,7 +117,7 @@ export class EmbeddingChunkRepository {
   async listBySnapshot(snapshotId: string, embeddingModel: string) {
     return this.prisma.embeddingChunk.findMany({
       where: { snapshotId, embeddingModel },
-      select: { stableChunkId: true, contentHash: true, artifactId: true },
+      select: { stableChunkId: true, contentHash: true, artifactId: true, chunkerVersion: true },
     });
   }
 

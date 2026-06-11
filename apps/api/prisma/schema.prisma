@@ -707,6 +707,7 @@ model EmbeddingChunk {
   content     String
   contentHash String
   tokenCount  Int
+  chunkerVersion String?
 
   embeddingModel String
   embedding      Unsupported("vector(1536)")
