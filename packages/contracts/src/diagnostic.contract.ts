@@ -59,5 +59,32 @@ export const incrementalScanSummaryPayloadSchema = z.object({
   }),
 });
 
+export const embeddingReusePlanPayloadSchema = z.object({
+  baseSnapshotId: z.string().uuid().nullable(),
+  targetSnapshotId: z.string().uuid(),
+  reuseMode: z.literal('PLAN_ONLY'),
+  reuseSafety: z.enum([
+    'NO_BASELINE',
+    'SAFE_FOR_FUTURE_REUSE',
+    'VERSION_CHANGED_REVIEW_REQUIRED'
+  ]),
+  eligibleArtifactCount: z.number().int().nonnegative(),
+  ineligibleArtifactCount: z.number().int().nonnegative(),
+  eligibleRatio: z.number().min(0).max(1),
+  ineligibleReasons: z.object({
+    addedArtifactCount: z.number().int().nonnegative(),
+    changedArtifactCount: z.number().int().nonnegative(),
+    removedArtifactCount: z.number().int().nonnegative(),
+    hashUnavailableArtifactCount: z.number().int().nonnegative(),
+    versionChangedBlockedCount: z.number().int().nonnegative(),
+  }),
+  sampleLimit: z.literal(20),
+  samples: z.object({
+    eligible: z.array(artifactReuseSampleSchema),
+    ineligible: z.array(artifactReuseSampleSchema),
+  }),
+});
+
 export type ArtifactReuseSample = z.infer<typeof artifactReuseSampleSchema>;
 export type IncrementalScanSummaryPayload = z.infer<typeof incrementalScanSummaryPayloadSchema>;
+export type EmbeddingReusePlanPayload = z.infer<typeof embeddingReusePlanPayloadSchema>;

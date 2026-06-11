@@ -218,8 +218,9 @@ describe('RunScanJobUseCase', () => {
           repositoryId: 'repo-1',
           commitSha: '0123456789abcdef0123456789abcdef01234567',
           diagnostics: expect.objectContaining({
-            total: 0,
-            bySeverity: { BLOCKER: 0, ERROR: 0, WARN: 0, INFO: 0 },
+            // SCAN_HEALTH + INCREMENTAL_SCAN_SUMMARY + EMBEDDING_REUSE_PLAN
+            total: 3,
+            bySeverity: { BLOCKER: 0, ERROR: 0, WARN: 0, INFO: 3 },
           }),
         }),
       }),
@@ -307,9 +308,9 @@ describe('RunScanJobUseCase', () => {
 
     await useCase.execute({ jobId: 'job-1' });
 
-    expect(prisma.repositorySnapshot.upsert).toHaveBeenCalledWith(
+    expect(prisma.repositorySnapshot.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        create: expect.objectContaining({
+        data: expect.objectContaining({
           diagnostics: expect.arrayContaining([
             expect.objectContaining({
               code: 'INCREMENTAL_SCAN_SUMMARY',
@@ -319,6 +320,12 @@ describe('RunScanJobUseCase', () => {
                 unchangedArtifactCount: 1,
                 removedArtifactCount: 1,
               })
+            }),
+            expect.objectContaining({
+              code: 'EMBEDDING_REUSE_PLAN',
+              payload: expect.objectContaining({
+                reuseMode: 'PLAN_ONLY',
+              })
             })
           ])
         })
@@ -326,8 +333,8 @@ describe('RunScanJobUseCase', () => {
     );
 
     // Verify sample payload does not have raw source or hashes
-    const callArgs = prisma.repositorySnapshot.upsert.mock.calls[0][0];
-    const diag = callArgs.create.diagnostics.find((d: any) => d.code === 'INCREMENTAL_SCAN_SUMMARY');
+    const callArgs = prisma.repositorySnapshot.update.mock.calls[0][0];
+    const diag = callArgs.data.diagnostics.find((d: any) => d.code === 'INCREMENTAL_SCAN_SUMMARY');
     const removedSample = diag.payload.samples.removed[0];
     
     expect(removedSample).not.toHaveProperty('contentHash');

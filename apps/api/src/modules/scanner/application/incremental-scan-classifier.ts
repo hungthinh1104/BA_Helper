@@ -1,16 +1,17 @@
 import type { ScanArtifact } from '@ba-helper/analyzer';
 import { normalizeArtifactKind } from '../../artifact/domain/universal-artifact-kind';
-import type { IncrementalScanSummaryPayload, ArtifactReuseSample } from '@ba-helper/contracts';
+import type { IncrementalScanSummaryPayload, ArtifactReuseSample, EmbeddingReusePlanPayload } from '@ba-helper/contracts';
 import type { CodeArtifact } from '@prisma/client';
 
 export class IncrementalScanClassifier {
-  static classify(params: {
+  static generateDiagnostics(params: {
+    targetSnapshotId: string;
     currentArtifacts: ScanArtifact[];
     currentAnalyzerVersion: string;
     previousSnapshot: { id: string; analyzerVersion: string } | null;
     previousArtifacts: CodeArtifact[];
-  }): IncrementalScanSummaryPayload {
-    const { currentArtifacts, currentAnalyzerVersion, previousSnapshot, previousArtifacts } = params;
+  }): { scanSummary: IncrementalScanSummaryPayload; reusePlan: EmbeddingReusePlanPayload } {
+    const { targetSnapshotId, currentArtifacts, currentAnalyzerVersion, previousSnapshot, previousArtifacts } = params;
 
     let addedArtifactCount = 0;
     let changedArtifactCount = 0;
@@ -64,24 +65,48 @@ export class IncrementalScanClassifier {
       for (const cur of currentArtifacts) {
         addSample(added, mapToSample(cur, true));
       }
+      const addedSorted = this.sortSamples(added);
       return {
-        baseSnapshotId: null,
-        addedArtifactCount,
-        changedArtifactCount: 0,
-        unchangedArtifactCount: 0,
-        removedArtifactCount: 0,
-        hashUnavailableArtifactCount: 0,
-        reuseEligibleArtifactCount: 0,
-        reuseEligibleRatio: 0,
-        reuseSafety: 'NO_BASELINE',
-        warnings: [],
-        sampleLimit: 20,
-        samples: {
-          added: this.sortSamples(added).slice(0, 20),
-          changed: [],
-          removed: [],
-          hashUnavailable: [],
+        scanSummary: {
+          baseSnapshotId: null,
+          addedArtifactCount,
+          changedArtifactCount: 0,
+          unchangedArtifactCount: 0,
+          removedArtifactCount: 0,
+          hashUnavailableArtifactCount: 0,
+          reuseEligibleArtifactCount: 0,
+          reuseEligibleRatio: 0,
+          reuseSafety: 'NO_BASELINE',
+          warnings: [],
+          sampleLimit: 20,
+          samples: {
+            added: addedSorted.slice(0, 20),
+            changed: [],
+            removed: [],
+            hashUnavailable: [],
+          },
         },
+        reusePlan: {
+          baseSnapshotId: null,
+          targetSnapshotId,
+          reuseMode: 'PLAN_ONLY',
+          reuseSafety: 'NO_BASELINE',
+          eligibleArtifactCount: 0,
+          ineligibleArtifactCount: addedArtifactCount,
+          eligibleRatio: 0,
+          ineligibleReasons: {
+            addedArtifactCount,
+            changedArtifactCount: 0,
+            removedArtifactCount: 0,
+            hashUnavailableArtifactCount: 0,
+            versionChangedBlockedCount: 0,
+          },
+          sampleLimit: 20,
+          samples: {
+            eligible: [],
+            ineligible: addedSorted.slice(0, 20),
+          },
+        }
       };
     }
 
@@ -113,35 +138,71 @@ export class IncrementalScanClassifier {
       addSample(removed, mapToSample(prev, false));
     }
 
-    const reuseEligibleArtifactCount = unchangedArtifactCount;
-    const reuseEligibleRatio = currentArtifacts.length > 0 ? unchangedArtifactCount / currentArtifacts.length : 0;
-    
+    let reuseEligibleArtifactCount = unchangedArtifactCount;
     let reuseSafety: IncrementalScanSummaryPayload['reuseSafety'] = 'SAFE_FOR_FUTURE_REUSE';
     const warnings: string[] = [];
+    let versionChangedBlockedCount = 0;
+
+    let eligibleSamples = unchanged;
+    let ineligibleSamples = [...added, ...changed, ...hashUnavailable]; // do not include removed
 
     if (currentAnalyzerVersion !== previousSnapshot.analyzerVersion) {
       reuseSafety = 'VERSION_CHANGED_REVIEW_REQUIRED';
       warnings.push('SCANNER_OR_ANALYZER_VERSION_CHANGED');
+      
+      // All unchanged artifacts become blocked
+      versionChangedBlockedCount = unchangedArtifactCount;
+      reuseEligibleArtifactCount = 0;
+      
+      // Move eligible to ineligible
+      ineligibleSamples.push(...unchanged);
+      eligibleSamples = [];
     }
 
+    const reuseEligibleRatio = currentArtifacts.length > 0 ? reuseEligibleArtifactCount / currentArtifacts.length : 0;
+    const ineligibleArtifactCount = currentArtifacts.length - reuseEligibleArtifactCount;
+
     return {
-      baseSnapshotId: previousSnapshot.id,
-      addedArtifactCount,
-      changedArtifactCount,
-      unchangedArtifactCount,
-      removedArtifactCount,
-      hashUnavailableArtifactCount,
-      reuseEligibleArtifactCount,
-      reuseEligibleRatio,
-      reuseSafety,
-      warnings,
-      sampleLimit: 20,
-      samples: {
-        added: this.sortSamples(added).slice(0, 20),
-        changed: this.sortSamples(changed).slice(0, 20),
-        removed: this.sortSamples(removed).slice(0, 20),
-        hashUnavailable: this.sortSamples(hashUnavailable).slice(0, 20),
+      scanSummary: {
+        baseSnapshotId: previousSnapshot.id,
+        addedArtifactCount,
+        changedArtifactCount,
+        unchangedArtifactCount,
+        removedArtifactCount,
+        hashUnavailableArtifactCount,
+        reuseEligibleArtifactCount,
+        reuseEligibleRatio,
+        reuseSafety,
+        warnings,
+        sampleLimit: 20,
+        samples: {
+          added: this.sortSamples(added).slice(0, 20),
+          changed: this.sortSamples(changed).slice(0, 20),
+          removed: this.sortSamples(removed).slice(0, 20),
+          hashUnavailable: this.sortSamples(hashUnavailable).slice(0, 20),
+        },
       },
+      reusePlan: {
+        baseSnapshotId: previousSnapshot.id,
+        targetSnapshotId,
+        reuseMode: 'PLAN_ONLY',
+        reuseSafety,
+        eligibleArtifactCount: reuseEligibleArtifactCount,
+        ineligibleArtifactCount,
+        eligibleRatio: reuseEligibleRatio,
+        ineligibleReasons: {
+          addedArtifactCount,
+          changedArtifactCount,
+          removedArtifactCount, // Context only, not in ineligibleArtifactCount
+          hashUnavailableArtifactCount,
+          versionChangedBlockedCount,
+        },
+        sampleLimit: 20,
+        samples: {
+          eligible: this.sortSamples(eligibleSamples).slice(0, 20),
+          ineligible: this.sortSamples(ineligibleSamples).slice(0, 20),
+        },
+      }
     };
   }
 

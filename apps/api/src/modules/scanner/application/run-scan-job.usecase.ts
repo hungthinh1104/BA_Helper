@@ -196,12 +196,12 @@ export class RunScanJobUseCase {
         scannerVersion: 'scanner@0.2.0',
         analyzerVersion: scanResult.analyzerVersion,
         scannedFileCount: scanResult.artifacts.length, // approximation or use enumResult if possible
-        skippedFileCount: Object.values(scanResult.coverage.skippedSummary).reduce((a, b) => a + b, 0),
+        skippedFileCount: Object.values(scanResult.coverage?.skippedSummary || {}).reduce((a, b) => a + b, 0),
         artifactCount: scanResult.artifacts.length,
-        skippedSummary: scanResult.coverage.skippedSummary,
-        skippedFilesSample: scanResult.coverage.skippedFiles,
-        limits: scanResult.coverage.limits,
-        limitHits: scanResult.coverage.limitHits,
+        skippedSummary: scanResult.coverage?.skippedSummary || {},
+        skippedFilesSample: scanResult.coverage?.skippedFiles || [],
+        limits: scanResult.coverage?.limits || { maxFiles: 0, maxFileSize: 0 },
+        limitHits: scanResult.coverage?.limitHits || [],
       };
 
       collector.add({
@@ -222,10 +222,31 @@ export class RunScanJobUseCase {
           { id: 'desc' },
         ],
       });
-      
+      const snapshot = await this.prisma.repositorySnapshot.upsert({
+        where: {
+          repositoryId_commitSha_analyzerVersion: {
+            repositoryId: job.repositoryId,
+            commitSha: commitSha,
+            analyzerVersion: scanResult.analyzerVersion,
+          },
+        },
+        create: {
+          repositoryId: job.repositoryId,
+          commitSha: commitSha,
+          analyzerVersion: scanResult.analyzerVersion,
+          coverageStatus: coverageStatus,
+          diagnostics: [] as unknown as import('@prisma/client').Prisma.InputJsonValue,
+        },
+        update: {
+          coverageStatus: coverageStatus,
+          diagnostics: [] as unknown as import('@prisma/client').Prisma.InputJsonValue,
+        },
+      });
+
       const previousArtifacts = previousSnapshot ? await this.artifactRepository.listBySnapshot(previousSnapshot.id) : [];
 
-      const incrementalSummary = IncrementalScanClassifier.classify({
+      const { scanSummary: incrementalSummary, reusePlan } = IncrementalScanClassifier.generateDiagnostics({
+        targetSnapshotId: snapshot.id,
         currentArtifacts: scanResult.artifacts,
         currentAnalyzerVersion: scanResult.analyzerVersion,
         previousSnapshot: previousSnapshot ? { id: previousSnapshot.id, analyzerVersion: previousSnapshot.analyzerVersion } : null,
@@ -238,6 +259,14 @@ export class RunScanJobUseCase {
         message: 'Incremental scan classification summary generated',
         category: 'SCANNER',
         payload: incrementalSummary as unknown as Record<string, unknown>,
+      });
+
+      collector.add({
+        code: 'EMBEDDING_REUSE_PLAN',
+        severity: 'INFO',
+        message: 'Embedding chunk reuse plan generated',
+        category: 'SCANNER',
+        payload: reusePlan as unknown as Record<string, unknown>,
       });
 
       const target = await this.prisma.repositoryTarget.upsert({
@@ -261,25 +290,10 @@ export class RunScanJobUseCase {
         },
       });
 
-      const snapshot = await this.prisma.repositorySnapshot.upsert({
-        where: {
-          repositoryId_commitSha_analyzerVersion: {
-            repositoryId: job.repositoryId,
-            commitSha: commitSha,
-            analyzerVersion: scanResult.analyzerVersion,
-          },
-        },
-        create: {
-          repositoryId: job.repositoryId,
-          commitSha: commitSha,
-          analyzerVersion: scanResult.analyzerVersion,
-          coverageStatus: coverageStatus,
-          diagnostics: collector.getItems() as unknown as import('@prisma/client').Prisma.InputJsonValue,
-        },
-        update: {
-          coverageStatus: coverageStatus,
-          diagnostics: collector.getItems() as unknown as import('@prisma/client').Prisma.InputJsonValue,
-        },
+      // Update snapshot with final diagnostics
+      await this.prisma.repositorySnapshot.update({
+        where: { id: snapshot.id },
+        data: { diagnostics: collector.getItems() as unknown as import('@prisma/client').Prisma.InputJsonValue },
       });
 
       if (repositoryProfile) {
