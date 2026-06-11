@@ -5,6 +5,7 @@ const IMPACT_ANALYSIS_INCLUDE = {
   snapshot: {
     include: {
       repository: true,
+      profile: true,
     },
   },
   sourceTarget: true,

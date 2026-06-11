@@ -61,3 +61,25 @@ export function matchDomainTerms(text: string, domain?: string): string[] {
   const lowerText = text.toLowerCase();
   return glossary.filter((term) => lowerText.includes(term.toLowerCase()));
 }
+
+/**
+ * Builds a compact, bounded domain context string for LLM prompt injection.
+ *
+ * Rules:
+ * - At most 5 glossary terms, 4 risk categories, 3 QA focus areas.
+ * - UNKNOWN domain produces a generic advisory, not domain-specific hints.
+ * - Never dumps the full profile into the prompt.
+ */
+export function buildCompactDomainContext(domain?: string): string {
+  const profile = getDomainProfile(domain);
+  const glossaryHints = profile.glossary.slice(0, 5).join(', ');
+  const riskHints = profile.riskCategories.slice(0, 4).map((r) => `- ${r}`).join('\n');
+  const qaHints = profile.qaScenarioTemplates.slice(0, 3).map((q) => `- ${q}`).join('\n');
+
+  return [
+    `Domain: ${profile.domain}`,
+    `Key terms: ${glossaryHints}`,
+    `Risk focus:\n${riskHints}`,
+    `QA focus:\n${qaHints}`,
+  ].join('\n');
+}

@@ -9,6 +9,7 @@ import { InsightRepository } from '../../insight/infrastructure/insight.reposito
 import { TraceabilityRepository } from '../../traceability/infrastructure/traceability.repository';
 import { LlmProvider } from '../../ai/domain/llm-provider.interface';
 import { renderPrompt } from '../../ai/domain/prompt-registry';
+import { buildCompactDomainContext } from '../../domain-profile';
 import { impactAnalysisAiSchema } from '../../ai/domain/ai.schema';
 import { HybridRetrievalService } from '../../retrieval/application/hybrid-retrieval.service';
 import { EvidencePackFormatter, EvidenceCandidate } from '../../ai/application/evidence-pack.formatter';
@@ -315,11 +316,16 @@ export class RunImpactAnalysisUseCase {
         } as unknown as EvidenceCandidate);
       }
 
+      // Read domain from snapshot profile; fall back safely to undefined (→ BOOKING default)
+      const snapshotDomain = (analysis.snapshot as any).profile?.domain ?? params.domain;
+      const domainContext = buildCompactDomainContext(snapshotDomain);
+
       const { systemPrompt, userPrompt, version } = renderPrompt('IMPACT_ANALYSIS', {
         changeRequest: analysis.requirementRevision.rawText,
         snapshotId: analysis.snapshot.id,
         analyzerVersion: analysis.snapshot.analyzerVersion,
         evidenceExcerpts: EvidencePackFormatter.format(evidenceCandidates),
+        domainContext,
       });
 
       const { data: llmResponse, metadata } = await this.llmProvider.generateStructured(
@@ -432,6 +438,7 @@ export class RunImpactAnalysisUseCase {
             evidenceItems: evidenceCandidates.length,
             evidenceChars: totalEvidenceChars,
             evidenceTruncated,
+            domainContextUsed: snapshotDomain ?? 'BOOKING',
           }
         },
       });

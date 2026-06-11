@@ -61,6 +61,9 @@ UNKNOWN items should explain what evidence is missing.`,
     userPromptTemplate: `## Change Request
 {{changeRequest}}
 
+## Domain Context
+{{domainContext}}
+
 ## Evidence Excerpts (from snapshot {{snapshotId}}, analyzer {{analyzerVersion}})
 {{evidenceExcerpts}}
 

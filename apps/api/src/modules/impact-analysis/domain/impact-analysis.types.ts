@@ -10,6 +10,8 @@ export type ImpactAnalysisMetadata = {
     evidenceItems?: number;
     evidenceChars?: number;
     evidenceTruncated?: boolean;
+    /** Domain profile key used for context injection. 'BOOKING' if none specified. */
+    domainContextUsed?: string;
   };
   retrieval?: {
     strategy: string;
