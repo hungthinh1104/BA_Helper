@@ -12,9 +12,10 @@ import { AiModule } from '../../../api/src/modules/ai/ai.module';
 import { LlmProvider } from '../../../api/src/modules/ai/domain/llm-provider.interface';
 import { RetrievalModule } from '../../../api/src/modules/retrieval/retrieval.module';
 import { HybridRetrievalService } from '../../../api/src/modules/retrieval/application/hybrid-retrieval.service';
+import { DomainPackModule } from '../../../api/src/modules/domain-pack/domain-pack.module';
 
 @Module({
-  imports: [PrismaModule, AiModule, RetrievalModule],
+  imports: [PrismaModule, AiModule, RetrievalModule, DomainPackModule],
   providers: [
     ImpactAnalysisProcessor,
     ImpactAnalysisRepository,
