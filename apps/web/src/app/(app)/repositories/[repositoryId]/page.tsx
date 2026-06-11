@@ -9,6 +9,7 @@ import { Play, GitBranch, AlertTriangle, Layers, Server, Box, Beaker, Database, 
 import { ScanJobProgress } from "@/components/workspace/repository/scan-job-progress"
 import { NewAnalysisDialog } from "@/components/workspace/analysis/new-analysis/new-analysis-dialog"
 import { ScanDiagnosticsPanel } from "@/components/workspace/analysis/scan-diagnostics-panel"
+import { ScanHealthCard } from "@/components/workspace/repository/scan-health-card"
 import { BackButton } from "@/components/workspace/shared/back-button"
 import { useRepositoryDetail } from "@/hooks/api/use-repositories"
 import { useCreateScanJob } from "@/hooks/api/use-scan-jobs"
@@ -109,6 +110,9 @@ export default function RepositoryDetailsPage({ params }: PageProps) {
   const isBlocked = job?.status === "FAILED" && hasBlocker
   const primaryDiagnostic = diagnostics[0]
   const failureGuidance = getFailureGuidance(job?.error?.code, job?.error?.message ?? primaryDiagnostic?.message)
+
+  const scanHealthDiag = diagnostics.find(d => d.code === "SCAN_HEALTH")
+  const regularDiagnostics = diagnostics.filter(d => d.code !== "SCAN_HEALTH")
 
   const handleRetryScan = async () => {
     try {
@@ -231,8 +235,12 @@ export default function RepositoryDetailsPage({ params }: PageProps) {
             )}
           </div>
 
-          {diagnostics.length > 0 && (
-            <ScanDiagnosticsPanel diagnostics={diagnostics} />
+          {scanHealthDiag && (
+            <ScanHealthCard payload={scanHealthDiag.payload} />
+          )}
+
+          {regularDiagnostics.length > 0 && (
+            <ScanDiagnosticsPanel diagnostics={regularDiagnostics} />
           )}
 
           {!job && (
