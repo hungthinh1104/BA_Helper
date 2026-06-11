@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "baseUrl": ".",
+    "paths": {
+      "@ba-helper/contracts": ["packages/contracts/src/index.ts"],
+      "@ba-helper/shared": ["packages/shared/src/index.ts"],
+      "@ba-helper/analyzer": ["packages/analyzer/src/index.ts"]
+    },
+    "strict": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "declaration": false
+  }
+}

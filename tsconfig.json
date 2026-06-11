@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {},
+  "include": [
+    "apps/**/*.ts",
+    "packages/**/*.ts",
+    "tests/**/*.ts",
+    "tests/**/*.d.ts"
+  ],
+  "exclude": [
+    "tests/fixtures/**/*.ts"
+  ]
+}

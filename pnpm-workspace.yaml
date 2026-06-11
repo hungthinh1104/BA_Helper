@@ -1,0 +1,16 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+  - "tests"
+allowBuilds:
+  '@nestjs/core': false
+  '@prisma/engines': false
+  '@scarf/scarf': set this to true or false
+  '@swc/core': false
+  msgpackr-extract: false
+  msw: true
+  prisma: false
+  sharp: true
+  unrs-resolver: false
+minimumReleaseAgeExclude:
+  - bullmq@5.77.6
