@@ -159,7 +159,7 @@ class StubTraceabilityRepo {
 
 class StubRetrievalService {
   retrieve = async (request: any) => {
-    expect(request.domain).toBe('BOOKING');
+    expect(request.domain).toBe('booking');
     return [
       { id: 'a1', artifactKey: 'api:booking.controller.cancel', filePath: 'src/booking/booking.controller.ts', name: 'BookingController.cancel', artifactType: 'API_ROUTE', retrievalMethod: 'LEXICAL' as const },
       { id: 'a2', artifactKey: 'service-method:booking.service.cancelBooking', filePath: 'src/booking/booking.service.ts', name: 'BookingService.cancelBooking', artifactType: 'SERVICE_METHOD', retrievalMethod: 'LEXICAL' as const },

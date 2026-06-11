@@ -156,13 +156,19 @@ export class RunImpactAnalysisUseCase {
       const snapshotId = analysis.snapshot.id;
       const artifacts = await this.artifactRepo.listBySnapshot(snapshotId);
 
+      const snapshotDomain = (analysis.snapshot as any).profile?.domain;
+      const domainPackSelection = this.domainPackRegistry.selectPack({
+        manualPackId: params.domain,
+        repositoryProfileDomain: snapshotDomain,
+      });
+
       // Retrieve using Hybrid RAG — domain scopes keyword expansion via DomainProfile
       const retrievedArtifacts = await this.retrievalService.retrieve({
         projectId: (analysis.snapshot as any).repository?.projectId ?? 'unknown',
         repositoryId: analysis.snapshot.repositoryId,
         snapshotId,
         changeRequest: analysis.requirementRevision.rawText,
-        domain: params.domain, // Removed MVP hardcode, falls back via RetrievalService to BOOKING if undefined
+        domain: domainPackSelection.normalizedPackId,
         expandGraph: params.expandGraph ?? true,
         maxResults: 20,
       });
@@ -318,11 +324,8 @@ export class RunImpactAnalysisUseCase {
         } as unknown as EvidenceCandidate);
       }
 
-      // Read domain from snapshot profile; fall back safely to undefined (→ BOOKING default)
-      const snapshotDomain = (analysis.snapshot as any).profile?.domain ?? params.domain;
-      const domainContext = buildCompactDomainContext(snapshotDomain);
-      
-      const domainPack = this.domainPackRegistry.selectForRepository(snapshotDomain);
+      const domainPack = domainPackSelection.pack;
+      const domainContext = buildCompactDomainContext(domainPackSelection.normalizedPackId);
 
       const { systemPrompt, userPrompt, version } = renderPrompt('IMPACT_ANALYSIS', {
         changeRequest: analysis.requirementRevision.rawText,
@@ -442,12 +445,12 @@ export class RunImpactAnalysisUseCase {
             evidenceItems: evidenceCandidates.length,
             evidenceChars: totalEvidenceChars,
             evidenceTruncated,
-            domainContextUsed: snapshotDomain ?? 'BOOKING',
+            domainContextUsed: domainPackSelection.normalizedPackId,
           },
           domainPack: {
             id: domainPack.id,
             version: domainPack.version,
-            selectedBy: snapshotDomain ? 'repository_profile' : 'safe_default',
+            selectedBy: domainPackSelection.selectedBy,
           },
           diagnostics: [
             {
@@ -457,7 +460,7 @@ export class RunImpactAnalysisUseCase {
               payload: {
                 domainPackId: domainPack.id,
                 domainPackVersion: domainPack.version,
-                selectedBy: snapshotDomain ? 'repository_profile' : 'safe_default',
+                selectedBy: domainPackSelection.selectedBy,
                 conceptCount: domainPack.concepts.length,
                 retrievalHintCount: domainPack.retrievalHints.length,
                 riskTemplateCount: domainPack.riskTemplates.length,

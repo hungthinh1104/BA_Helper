@@ -34,11 +34,15 @@ class StubImpactRepo {
     status: string;
     stage: string;
     progress: number;
+    metadata?: any;
+    error?: any;
   }) => ({
     id: params.id,
     status: params.status,
     stage: params.stage,
     progress: params.progress,
+    metadata: params.metadata,
+    error: params.error,
   });
 }
 
@@ -105,7 +109,7 @@ class StubRetrievalService {
   constructor(private readonly artifacts: StubArtifact[]) {}
 
   retrieve = async (request: any) => {
-    expect(request.domain).toBe('BOOKING');
+    expect(request.domain).toBe('booking');
     return this.artifacts
       .filter(a => a.id !== 'noise-1') // simulate RAG filtering out irrelevant artifacts
       .map(a => ({
@@ -346,7 +350,7 @@ describe('RunImpactAnalysisUseCase', () => {
     expect(diagnostic.payload).toMatchObject({
       domainPackId: 'booking',
       domainPackVersion: expect.any(String),
-      selectedBy: expect.any(String),
+      selectedBy: 'manual_config',
       conceptCount: expect.any(Number),
       retrievalHintCount: expect.any(Number),
       riskTemplateCount: expect.any(Number),
@@ -358,6 +362,88 @@ describe('RunImpactAnalysisUseCase', () => {
     expect(diagnostic.payload.templateBodies).toBeUndefined();
     expect(diagnostic.payload.rawPrompts).toBeUndefined();
     expect(diagnostic.payload.sourceCode).toBeUndefined();
+  });
+
+  it('unknown profile emits general@0.0.0', async () => {
+    class UnknownProfileRepo extends StubImpactRepo {
+      findById = async () => ({
+        id: 'analysis-1',
+        status: 'QUEUED',
+        stage: 'WAITING',
+        progress: 0,
+        snapshot: {
+          id: 'snap-1',
+          analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
+          coverageStatus: 'READY',
+          profile: { domain: 'UNKNOWN' },
+        },
+        requirementRevision: {
+          rawText: '...',
+        },
+      });
+    }
+
+    const impactRepo = new UnknownProfileRepo();
+    const updateSpy = jest.spyOn(impactRepo, 'updateStatus');
+    const useCase = new RunImpactAnalysisUseCase(
+      impactRepo as any,
+      new StubArtifactRepo([]) as any,
+      new StubEvidenceRepo() as any,
+      new StubInsightRepo() as any,
+      new StubTraceabilityRepo() as any,
+      new FakeLlmProvider() as any,
+      new class { retrieve = async () => [] }() as any,
+      new DomainPackRegistry()
+    );
+
+    await useCase.execute({ analysisId: 'analysis-1' });
+
+    const finalUpdateCall = updateSpy.mock.calls.find(call => call[0].stage === 'DONE');
+    const diagnostic = finalUpdateCall![0].metadata.diagnostics.find((d: any) => d.code === 'DOMAIN_PACK_APPLIED');
+
+    expect(diagnostic.payload.domainPackId).toBe('general');
+    expect(diagnostic.payload.selectedBy).toBe('safe_default');
+  });
+
+  it('booking profile emits booking@0.1.0', async () => {
+    class BookingProfileRepo extends StubImpactRepo {
+      findById = async () => ({
+        id: 'analysis-1',
+        status: 'QUEUED',
+        stage: 'WAITING',
+        progress: 0,
+        snapshot: {
+          id: 'snap-1',
+          analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
+          coverageStatus: 'READY',
+          profile: { domain: 'BOOKING' },
+        },
+        requirementRevision: {
+          rawText: '...',
+        },
+      });
+    }
+
+    const impactRepo = new BookingProfileRepo();
+    const updateSpy = jest.spyOn(impactRepo, 'updateStatus');
+    const useCase = new RunImpactAnalysisUseCase(
+      impactRepo as any,
+      new StubArtifactRepo([]) as any,
+      new StubEvidenceRepo() as any,
+      new StubInsightRepo() as any,
+      new StubTraceabilityRepo() as any,
+      new FakeLlmProvider() as any,
+      new class { retrieve = async () => [] }() as any,
+      new DomainPackRegistry()
+    );
+
+    await useCase.execute({ analysisId: 'analysis-1' });
+
+    const finalUpdateCall = updateSpy.mock.calls.find(call => call[0].stage === 'DONE');
+    const diagnostic = finalUpdateCall![0].metadata.diagnostics.find((d: any) => d.code === 'DOMAIN_PACK_APPLIED');
+
+    expect(diagnostic.payload.domainPackId).toBe('booking');
+    expect(diagnostic.payload.selectedBy).toBe('repository_profile');
   });
 
   it('rejects non-runnable analyses', async () => {

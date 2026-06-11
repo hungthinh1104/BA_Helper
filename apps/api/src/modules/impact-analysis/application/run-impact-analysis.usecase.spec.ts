@@ -56,14 +56,18 @@ describe('RunImpactAnalysisUseCase', () => {
     } as unknown as jest.Mocked<HybridRetrievalService>;
 
     domainPackRegistry = {
-        selectForRepository: jest.fn().mockReturnValue({
-          id: 'test-pack',
-          version: '1.0',
-          concepts: [],
-          retrievalHints: [],
-          riskTemplates: [],
-          qaTemplates: [],
-          unknownTemplates: [],
+        selectPack: jest.fn().mockReturnValue({
+          pack: {
+            id: 'test-pack',
+            version: '1.0',
+            concepts: [],
+            retrievalHints: [],
+            riskTemplates: [],
+            qaTemplates: [],
+            unknownTemplates: [],
+          },
+          normalizedPackId: 'test-pack',
+          selectedBy: 'safe_default',
         }),
     } as unknown as jest.Mocked<DomainPackRegistry>;
 

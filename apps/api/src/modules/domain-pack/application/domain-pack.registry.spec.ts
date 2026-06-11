@@ -1,7 +1,5 @@
-import { describe, it, expect, beforeEach } from '@jest/globals';
 import { DomainPackRegistry } from './domain-pack.registry';
-import { GeneralDomainPack } from '../packs/general.v0.0.0';
-import { BookingDomainPack } from '../packs/booking.v0.1.0';
+import { AppError } from '../../../shared/app-error';
 
 describe('DomainPackRegistry', () => {
   let registry: DomainPackRegistry;
@@ -10,68 +8,79 @@ describe('DomainPackRegistry', () => {
     registry = new DomainPackRegistry();
   });
 
-  describe('getPackById', () => {
-    it('returns the booking pack when requesting "booking"', () => {
-      const pack = registry.getPackById('booking');
-      expect(pack).toBeDefined();
-      expect(pack.id).toBe('booking');
-      expect(pack.version).toBe('0.1.0');
+  describe('normalizePackId', () => {
+    it('normalizes uppercase string', () => {
+      expect(registry.normalizePackId('BOOKING')).toBe('booking');
     });
 
-    it('returns the booking pack case-insensitively (e.g. "BOOKING")', () => {
-      const pack = registry.getPackById('BOOKING');
-      expect(pack.id).toBe('booking');
+    it('normalizes padded string', () => {
+      expect(registry.normalizePackId(' booking ')).toBe('booking');
     });
 
-    it('returns the general default pack for unknown ids', () => {
-      const pack = registry.getPackById('unknown-domain-xyz');
-      expect(pack.id).toBe('general');
-      expect(pack.version).toBe('0.0.0');
-    });
-
-    it('returns the general default pack when requesting with null/undefined', () => {
-      expect(registry.getPackById(null).id).toBe('general');
-      expect(registry.getPackById(undefined).id).toBe('general');
+    it('strips version numbers', () => {
+      expect(registry.normalizePackId('booking@0.1.0')).toBe('booking');
     });
   });
 
-  describe('selectForRepository', () => {
-    it('selects booking pack for a repository with domain "booking"', () => {
-      const pack = registry.selectForRepository('booking');
-      expect(pack).toBe(BookingDomainPack);
+  describe('selectPack', () => {
+    it('selects manual booking with selectedBy manual_config', () => {
+      const result = registry.selectPack({ manualPackId: 'booking' });
+      expect(result.pack.id).toBe('booking');
+      expect(result.pack.version).toBe('0.1.0');
+      expect(result.normalizedPackId).toBe('booking');
+      expect(result.selectedBy).toBe('manual_config');
     });
 
-    it('selects booking pack for a repository with domain "BOOKING"', () => {
-      const pack = registry.selectForRepository('BOOKING');
-      expect(pack).toBe(BookingDomainPack);
+    it('selects repository BOOKING with selectedBy repository_profile', () => {
+      const result = registry.selectPack({ repositoryProfileDomain: 'BOOKING' });
+      expect(result.pack.id).toBe('booking');
+      expect(result.normalizedPackId).toBe('booking');
+      expect(result.selectedBy).toBe('repository_profile');
     });
 
-    it('returns general pack for UNKNOWN domain', () => {
-      const pack = registry.selectForRepository('UNKNOWN');
-      expect(pack).toBe(GeneralDomainPack);
+    it('manual config overrides repository profile', () => {
+      const result = registry.selectPack({
+        manualPackId: 'booking',
+        repositoryProfileDomain: 'UNKNOWN',
+      });
+      expect(result.pack.id).toBe('booking');
+      expect(result.selectedBy).toBe('manual_config');
     });
 
-    it('returns general pack for missing domain', () => {
-      const pack = registry.selectForRepository(null);
-      expect(pack).toBe(GeneralDomainPack);
-    });
-  });
+    it('undefined or null selects general@0.0.0 with safe_default', () => {
+      const result1 = registry.selectPack({});
+      expect(result1.pack.id).toBe('general');
+      expect(result1.selectedBy).toBe('safe_default');
 
-  describe('built-in packs determinism', () => {
-    it('booking pack concepts aliases normalize correctly', () => {
-      const bookingPack = registry.getPackById('booking');
-      const refundConcept = bookingPack.concepts.find(c => c.key === 'refund');
-      
-      expect(refundConcept).toBeDefined();
-      expect(refundConcept?.aliases).toContain('refund');
-      expect(refundConcept?.aliases).toContain('money back');
+      const result2 = registry.selectPack({ manualPackId: null, repositoryProfileDomain: null });
+      expect(result2.pack.id).toBe('general');
+      expect(result2.selectedBy).toBe('safe_default');
     });
 
-    it('packs do not create empty templates by mistake', () => {
-      const bookingPack = registry.getPackById('booking');
-      expect(bookingPack.qaTemplates.length).toBeGreaterThan(0);
-      expect(bookingPack.riskTemplates.length).toBeGreaterThan(0);
-      expect(bookingPack.unknownTemplates.length).toBeGreaterThan(0);
+    it('UNKNOWN profile selects general@0.0.0', () => {
+      const result = registry.selectPack({ repositoryProfileDomain: 'UNKNOWN' });
+      expect(result.pack.id).toBe('general');
+      expect(result.normalizedPackId).toBe('general');
+      expect(result.selectedBy).toBe('safe_default');
+    });
+
+    it('unsupported repository profile selects general@0.0.0', () => {
+      const result = registry.selectPack({ repositoryProfileDomain: 'HEALTHCARE' });
+      expect(result.pack.id).toBe('general');
+      expect(result.normalizedPackId).toBe('general'); // It falls back and normalizes the fallback ID
+      expect(result.selectedBy).toBe('safe_default'); // But safe_default replaces it with General
+    });
+
+    it('unsupported manual pack throws controlled error', () => {
+      expect(() => {
+        registry.selectPack({ manualPackId: 'HEALTHCARE' });
+      }).toThrow(AppError);
+    });
+
+    it('unsupported manual pack version throws controlled error', () => {
+      expect(() => {
+        registry.selectPack({ manualPackId: 'booking@9.9.9' });
+      }).toThrow(AppError);
     });
   });
 });

@@ -6,6 +6,7 @@ import { SafeFileEnumerator } from '../../../packages/analyzer/src/scanner/safe-
 import { scanProject } from '../../../packages/analyzer/src/scanner/scanner';
 import { PrismaService } from '../../../apps/api/src/modules/prisma/prisma.service';
 import { HybridRetrievalService } from '../../../apps/api/src/modules/retrieval/application/hybrid-retrieval.service';
+import { DomainPackRegistry } from '../../../apps/api/src/modules/domain-pack/application/domain-pack.registry';
 
 export class HybridRetrievalEvaluationAdapter implements EvaluationAdapter {
   private readonly fixtureRoot = path.join(process.cwd(), 'tests/fixtures');
@@ -13,6 +14,7 @@ export class HybridRetrievalEvaluationAdapter implements EvaluationAdapter {
   constructor(
     private readonly prisma: PrismaService,
     private readonly hybridRetrievalService: HybridRetrievalService,
+    private readonly domainPackRegistry: DomainPackRegistry,
   ) {}
 
   async evaluateCase(evalCase: EvaluationCase): Promise<NormalizedEvaluationResult> {
@@ -86,12 +88,16 @@ export class HybridRetrievalEvaluationAdapter implements EvaluationAdapter {
     // 3. Run Real Hybrid Retrieval
     // Note: chunkRepo.searchSimilar is expected to be mocked by the spec file
     // to prevent real external embedding calls but still provide deterministic fake semantic hits.
+    const selection = this.domainPackRegistry.selectPack({
+      manualPackId: evalCase.domain?.packId,
+    });
+
     const results = await this.hybridRetrievalService.retrieve({
       projectId,
       repositoryId,
       snapshotId,
       changeRequest: `${evalCase.requirementTitle} ${evalCase.requirementText}`,
-      domain: evalCase.domain?.packId ?? 'general', // Use the domain from the fixture context or fallback to general
+      domain: selection.normalizedPackId,
       maxResults: 20,
       expandGraph: false, // Turn off graph expansion for pure retrieval testing unless needed
     });

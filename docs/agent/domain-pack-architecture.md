@@ -8,10 +8,16 @@ The Domain Pack architecture provides a structured, versioned mechanism to injec
 
 ## Selection Rules
 
-Domain packs are selected through the `DomainPackRegistry` based on the repository's configuration.
+Domain packs are selected through the `DomainPackRegistry` based on deterministic priority:
 
-- If a repository specifies a `domain` (e.g., in its profile or through manual configuration), the registry will attempt to load the matching domain pack.
-- If the domain is unknown, missing, or unrecognized, the registry **will safely fall back to the `general@0.0.0` default pack.**
+1. **Manual Configuration** (`manualPackId`)
+2. **Repository Profile** (`repositoryProfileDomain`)
+3. **Safe Default** (`general@0.0.0`)
+
+### Canonical IDs and Versioning
+Internally, the system normalizes IDs to a lowercase canonical format without versions (e.g., `booking`, `general`). Versions (like `@0.1.0`) are separated and asserted during manual selection.
+- If an unknown repository domain (e.g. `UNKNOWN` or unsupported) is provided, the registry safely falls back to the `general@0.0.0` default pack.
+- If an unsupported manual domain pack or version is requested explicitly, the registry throws a controlled error.
 - The `booking@0.1.0` pack is never globally applied to unknown repositories.
 
 ## Evidence Hierarchy

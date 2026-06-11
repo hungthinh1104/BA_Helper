@@ -8,6 +8,7 @@ import { prepareIsolatedTestEnv } from '../../apps/api/test/e2e/helpers/prepare-
 import { ALL_EVALUATION_CASES } from './cases';
 import { EvaluationRunner } from './evaluation-runner';
 import { HybridRetrievalEvaluationAdapter } from './adapters/hybrid-retrieval.adapter';
+import { DomainPackRegistry } from '../../apps/api/src/modules/domain-pack/application/domain-pack.registry';
 // @ts-ignore
 import * as dotenv from 'dotenv';
 import { resolve } from 'node:path';
@@ -36,8 +37,10 @@ describe('Hybrid Retrieval Evaluation Smoke', () => {
       hybridRetrievalService = app.get(HybridRetrievalService);
       chunkRepo = app.get(EmbeddingChunkRepository);
 
+      const domainPackRegistry = app.get(DomainPackRegistry);
+
       runner = new EvaluationRunner(
-        new HybridRetrievalEvaluationAdapter(prisma, hybridRetrievalService)
+        new HybridRetrievalEvaluationAdapter(prisma, hybridRetrievalService, domainPackRegistry)
       );
     } catch (e) {
       console.error('NestJS initialization failed:', e);

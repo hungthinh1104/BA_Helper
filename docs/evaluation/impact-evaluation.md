@@ -58,9 +58,9 @@ In Phase 33B, we added evaluation coverage for the `booking@0.1.0` Domain Pack. 
 - **Concept Matching:** Verification that domain terms (like "refund", "cancellation") deterministically map to domain concepts via alias matching.
 - **Safety Fallback:** Ensuring that `general@0.0.0` is safely applied when the domain is unknown.
 - **Impact Safety:** A strict integration test proving that domain pack risk/QA hints *do not* create `EVIDENCED` impact without matching retrieved code excerpts.
-- **Diagnostic Bounding:** Verification that the `DOMAIN_PACK_APPLIED` diagnostic remains bounded and excludes sensitive fields like template bodies or source code.
+- **Diagnostic Bounding:** Verification that the `DOMAIN_PACK_APPLIED` diagnostic remains bounded and excludes sensitive fields like template bodies or source code, and strictly enforces the `selectedBy` property.
 
-Existing evaluation cases like `01-cancel-paid-booking-refund` now include an optional `domain` metadata field indicating their expected domain concepts.
+Existing evaluation cases like `01-cancel-paid-booking-refund` now include an optional `domain` metadata field indicating their expected domain concepts. The DomainPackRegistry centralizes and normalizes case-insensitive legacy names (e.g. `BOOKING`) into canonical lowercase IDs without versions (e.g. `booking`) to ensure deterministic matching.
 
 ## How to Add a New Case
 1. Ensure the requirement matches an existing fixture in `tests/fixtures/`.
