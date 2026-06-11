@@ -216,5 +216,15 @@ Built as a TypeScript modular monolith to balance speed of development with even
 3. Harden multi-user workspace flows, invite/onboarding, and project administration.
 4. Native OAuth and GitHub App integrations.
 
+## Documentation & Assets
+- **[Golden Path Demo Guide](docs/demo/golden-path.md)**
+- **[Sample Requirement Change](docs/demo/sample-requirement-change.md)**
+- **[Public Beta Release Note](docs/demo/public-beta-release-note.md)**
+- **[Portfolio Proof Pack](docs/demo/portfolio-proof-pack.md)**
+- **[Impact Evaluation Docs](docs/evaluation/impact-evaluation.md)**
+- **[Domain Pack Architecture](docs/agent/domain-pack-architecture.md)**
+- **[Security Policy](SECURITY.md)**
+- **[Contributing Guide](CONTRIBUTING.md)**
+
 ## Contributing
 Please see our [agent rules](AGENTS.md) and [coding standards](docs/agent/code-quality-governance.md) before submitting pull requests. All code must adhere to the modular monolith boundaries and state machine invariants.
