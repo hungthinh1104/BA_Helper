@@ -20,12 +20,12 @@ import { MatrixRowDetailDrawer } from "@/components/workspace/matrix/matrix-row-
 import { ReviewCoveragePanel } from "@/components/workspace/review/review-coverage-panel"
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  QUEUED:             { label: "Queued",       className: "bg-border text-muted-foreground border-border/50" },
-  RUNNING:            { label: "Running",      className: "bg-primary/10 text-primary border-primary/50" },
-  WAITING_FOR_REVIEW: { label: "Needs Review", className: "bg-warning/10 text-warning border-warning/50" },
-  COMPLETED:          { label: "Completed",    className: "bg-success/10 text-success border-success/50" },
-  FAILED:             { label: "Failed",       className: "bg-destructive/10 text-destructive border-destructive/50" },
-  CANCELLED:          { label: "Cancelled",    className: "bg-muted text-muted-foreground border-border/50" },
+  QUEUED:             { label: "Queued",       className: "bg-[var(--surface-muted)] text-[var(--text-tertiary)] border-[var(--border)]" },
+  RUNNING:            { label: "Running",      className: "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent-soft)]" },
+  WAITING_FOR_REVIEW: { label: "Needs Review", className: "bg-[var(--warning-soft)] text-[var(--warning)] border-[var(--warning-soft)]" },
+  COMPLETED:          { label: "Completed",    className: "bg-[var(--success-soft)] text-[var(--success)] border-[var(--success-soft)]" },
+  FAILED:             { label: "Failed",       className: "bg-[var(--danger-soft)] text-[var(--danger)] border-[var(--danger-soft)]" },
+  CANCELLED:          { label: "Cancelled",    className: "bg-[var(--surface-muted)] text-[var(--text-tertiary)] border-[var(--border)]" },
 }
 
 const gridCols = "minmax(180px, 1.8fr) minmax(120px, 1fr) 130px 110px minmax(150px, 1.3fr) minmax(120px, 1fr)"
@@ -60,16 +60,16 @@ function SummaryCard({
 }) {
   const toneClass =
     tone === "success"
-      ? "border-success/30 text-success"
+      ? "border-[var(--success-soft)] text-[var(--success)] bg-[var(--success-soft)]"
       : tone === "warning"
-        ? "border-warning/30 text-warning"
+        ? "border-[var(--warning-soft)] text-[var(--warning)] bg-[var(--warning-soft)]"
         : tone === "destructive"
-          ? "border-destructive/30 text-destructive"
-          : "border-border/50 text-foreground"
+          ? "border-[var(--danger-soft)] text-[var(--danger)] bg-[var(--danger-soft)]"
+          : "border-[var(--border)] text-[var(--text-primary)] bg-[var(--surface-muted)]"
 
   return (
-    <div className={`rounded-lg border bg-surface px-3 py-2 ${toneClass}`}>
-      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+    <div className={`rounded-lg border px-3 py-2 ${toneClass}`}>
+      <div className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">{label}</div>
       <div className="mt-1 text-[16px] font-semibold">{value}</div>
     </div>
   )
@@ -136,7 +136,7 @@ export default function MultiRepoAnalysisRunDetailPage({
                 <>
                   <Link
                     href={`/analyses/runs/${runId}/merged-report`}
-                    className="text-[12px] text-primary hover:text-primary/80"
+                    className="text-[12px] text-[var(--accent)] hover:underline"
                   >
                     View merged report
                   </Link>
@@ -154,12 +154,12 @@ export default function MultiRepoAnalysisRunDetailPage({
                 <>
                   <Link
                     href={`/analyses/runs/${runId}/merged-report`}
-                    className="text-[12px] text-primary hover:text-primary/80"
+                    className="text-[12px] text-[var(--accent)] hover:underline"
                   >
                     View approved merged report
                   </Link>
                   <span
-                    className="text-[12px] text-muted-foreground"
+                    className="text-[12px] text-[var(--text-tertiary)]"
                     title="Merged report exists, but the run is not currently ready for a fresh merged snapshot."
                   >
                     Refresh blocked until child analyses are accepted again
@@ -167,14 +167,14 @@ export default function MultiRepoAnalysisRunDetailPage({
                 </>
               ) : (
                 <span
-                  className="text-[12px] text-muted-foreground"
+                  className="text-[12px] text-[var(--text-tertiary)]"
                   title="Every child analysis must have latest review decision ACCEPTED."
                 >
                   Merged report not ready
                 </span>
               )
             )}
-            <Link href="/analyses/runs" className="text-[12px] text-muted-foreground hover:text-foreground">
+            <Link href="/analyses/runs" className="text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]">
               Back to runs
             </Link>
           </div>
@@ -196,7 +196,7 @@ export default function MultiRepoAnalysisRunDetailPage({
               />
             </div>
 
-            <div className="rounded-lg border border-border/50 bg-surface px-3 py-2 text-[12px] text-muted-foreground">
+            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2 text-[12px] text-[var(--text-secondary)]">
               Review summary: accepted {data.childReviewSummary.accepted} • rejected {data.childReviewSummary.rejected} • needs clarification {data.childReviewSummary.needsMoreClarification} • pending {data.childReviewSummary.pendingReview}
             </div>
           </div>
@@ -241,9 +241,9 @@ export default function MultiRepoAnalysisRunDetailPage({
               )}
 
               {error && !isLoading && (
-                <div className="flex flex-col items-center py-16 text-muted-foreground">
-                  <AlertCircle className="w-6 h-6 text-destructive mb-4" />
-                  <p className="text-[13px] font-medium text-foreground">Failed to load multi-repo run</p>
+                <div className="flex flex-col items-center py-16 text-[var(--text-tertiary)]">
+                  <AlertCircle className="w-6 h-6 text-[var(--danger)] mb-4" />
+                  <p className="text-[13px] font-medium text-[var(--text-primary)]">Failed to load multi-repo run</p>
                   <p className="text-[12px]">{error.message}</p>
                 </div>
               )}
@@ -258,11 +258,11 @@ export default function MultiRepoAnalysisRunDetailPage({
                     href={`/analyses/${item.analysisId}`}
                   >
                     <DataListCell>
-                      <div className="font-medium text-[13px] text-foreground leading-snug">{item.repositoryDisplayName}</div>
-                      <div className="text-muted-foreground text-[11px] font-mono mt-0.5">{item.analysisId}</div>
+                      <div className="font-medium text-[13px] text-[var(--text-primary)] leading-snug">{item.repositoryDisplayName}</div>
+                      <div className="text-[var(--text-tertiary)] text-[11px] font-mono mt-0.5">{item.analysisId}</div>
                     </DataListCell>
                     <DataListCell>
-                      <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground font-mono">
+                      <div className="flex items-center gap-1.5 text-[12px] text-[var(--text-tertiary)] font-mono">
                         <GitBranch className="w-3.5 h-3.5" />
                         {item.commitSha.substring(0, 7)}
                       </div>
@@ -273,29 +273,29 @@ export default function MultiRepoAnalysisRunDetailPage({
                       </span>
                     </DataListCell>
                     <DataListCell>
-                      <span className={`text-[12px] ${item.isStale ? "text-warning" : "text-muted-foreground"}`}>
+                      <span className={`text-[12px] ${item.isStale ? "text-[var(--warning)]" : "text-[var(--text-tertiary)]"}`}>
                         {item.isStale ? "Stale" : "Current"}
                       </span>
                     </DataListCell>
                     <DataListCell>
                       {item.latestReviewDecision ? (
                         <div className="space-y-0.5">
-                          <div className="text-[12px] text-foreground">
+                          <div className="text-[12px] text-[var(--text-primary)]">
                             {item.latestReviewDecision === "NEEDS_MORE_CLARIFICATION"
                               ? "Needs clarification"
                               : item.latestReviewDecision.charAt(0) + item.latestReviewDecision.slice(1).toLowerCase()}
                           </div>
-                          <div className="text-[11px] text-muted-foreground">
+                          <div className="text-[11px] text-[var(--text-tertiary)]">
                             {item.reviewedBy ?? "Unknown"}
                             {item.latestReviewDecisionAt ? ` • ${formatDate(item.latestReviewDecisionAt)}` : ""}
                           </div>
                         </div>
                       ) : (
-                        <span className="text-[12px] text-muted-foreground">Pending review</span>
+                        <span className="text-[12px] text-[var(--text-tertiary)]">Pending review</span>
                       )}
                     </DataListCell>
                     <DataListCell>
-                      <span className={`text-[12px] ${item.blockingReason === "NONE" ? "text-success" : "text-warning"}`}>
+                      <span className={`text-[12px] ${item.blockingReason === "NONE" ? "text-[var(--success)]" : "text-[var(--warning)]"}`}>
                         {BLOCKING_REASON_LABEL[item.blockingReason]}
                       </span>
                     </DataListCell>
