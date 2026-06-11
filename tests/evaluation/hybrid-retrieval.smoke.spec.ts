@@ -98,4 +98,78 @@ describe('Hybrid Retrieval Evaluation Smoke', () => {
     console.log(result.textSummary);
     console.log('--------------------------------------\n');
   }, 30000); // Give generous timeout for DB operations
+
+  it('observes domain hints and applies no global booking fallback for unknown domain', async () => {
+    const projectId = 'smoke-proj-domain';
+    const repositoryId = 'smoke-repo-domain';
+    const snapshotId = 'smoke-snap-domain';
+
+    await prisma.project.create({ data: { id: projectId, name: `Project domain` } });
+    await prisma.repository.create({ data: { id: repositoryId, projectId, canonicalUrl: `http://fake` } });
+    await prisma.repositorySnapshot.create({
+      data: {
+        id: snapshotId,
+        repositoryId,
+        commitSha: `commit-domain`,
+        analyzerVersion: 'smoke-eval-v1',
+        coverageStatus: 'READY',
+        indexStatus: 'VECTOR_READY',
+      },
+    });
+
+    const searchSimilarSpy = jest.spyOn(chunkRepo, 'searchSimilar').mockResolvedValue([]);
+
+    // 1. With BOOKING domain pack
+    const bookingResults = await hybridRetrievalService.retrieve({
+      projectId, repositoryId, snapshotId,
+      changeRequest: 'cancel the booking for a refund',
+      domain: 'booking',
+      maxResults: 5,
+    });
+
+    // We may not have any matching artifacts since we didn't insert any code artifacts, 
+    // but we can test the fallback on `undefined` domain.
+    // Wait, to test if it uses booking vs general, we need artifacts!
+    // Let's insert a dummy artifact
+    await prisma.codeArtifact.create({
+      data: {
+        id: 'dummy-art', snapshotId, artifactKey: 'some.refund.service',
+        name: 'refund', artifactType: 'SERVICE', filePath: 'refund.ts',
+        startLine: 1, endLine: 10, universalKind: 'DOMAIN_SERVICE'
+      }
+    });
+
+    const bookingResultsWithArtifact = await hybridRetrievalService.retrieve({
+      projectId, repositoryId, snapshotId,
+      changeRequest: 'cancel the booking for a refund',
+      domain: 'booking',
+      maxResults: 5,
+    });
+
+    // Since domain='booking', "refund" is a glossary term.
+    // The lexical reasons should mention domain match.
+    expect(bookingResultsWithArtifact.length).toBeGreaterThan(0);
+    const art = bookingResultsWithArtifact.find(a => a.artifactKey === 'some.refund.service');
+    expect(art).toBeDefined();
+    expect(art?.retrievalSignals.includes('DOMAIN')).toBe(true);
+    expect(art?.domainBoost).toBeGreaterThan(0);
+
+    // 2. With UNKNOWN domain, it should fallback to General pack, which has no "refund" concept
+    const generalResults = await hybridRetrievalService.retrieve({
+      projectId, repositoryId, snapshotId,
+      changeRequest: 'cancel the booking for a refund',
+      domain: 'UNKNOWN',
+      maxResults: 5,
+    });
+
+    const generalArt = generalResults.find(a => a.artifactKey === 'some.refund.service');
+    // It might still match lexically because of exact symbol match on "refund",
+    // but the domain match reason should NOT be present.
+    if (generalArt) {
+      expect(generalArt.retrievalSignals.includes('DOMAIN')).toBe(false);
+      expect(generalArt.domainBoost).toBe(0);
+    }
+
+    searchSimilarSpy.mockRestore();
+  });
 });

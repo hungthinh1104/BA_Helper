@@ -91,7 +91,7 @@ export class HybridRetrievalEvaluationAdapter implements EvaluationAdapter {
       repositoryId,
       snapshotId,
       changeRequest: `${evalCase.requirementTitle} ${evalCase.requirementText}`,
-      domain: 'BOOKING', // Use the domain from the fixture context
+      domain: evalCase.domain?.packId ?? 'general', // Use the domain from the fixture context or fallback to general
       maxResults: 20,
       expandGraph: false, // Turn off graph expansion for pure retrieval testing unless needed
     });

@@ -1,6 +1,7 @@
 import { RunImpactAnalysisUseCase } from '../../apps/api/src/modules/impact-analysis/application/run-impact-analysis.usecase';
 import { AppError } from '../../apps/api/src/shared/app-error';
 import { FakeLlmProvider } from '../../apps/api/src/modules/ai/infrastructure/fake-ai.provider';
+import { DomainPackRegistry } from '../../apps/api/src/modules/domain-pack/application/domain-pack.registry';
 
 type StubArtifact = {
   id: string;
@@ -219,6 +220,7 @@ describe('RunImpactAnalysisUseCase', () => {
       traceabilityRepo as any,
       llmProvider as any,
       new StubRetrievalService(artifacts) as any,
+      new DomainPackRegistry()
     );
 
     await useCase.execute({ analysisId: 'analysis-1', domain: 'BOOKING' });
@@ -296,6 +298,7 @@ describe('RunImpactAnalysisUseCase', () => {
       new StubTraceabilityRepo() as any,
       llmProvider as any,
       new StubRetrievalService(artifacts) as any,
+      new DomainPackRegistry()
     );
 
     await useCase.execute({ analysisId: 'analysis-1', domain: 'BOOKING' });
@@ -303,6 +306,58 @@ describe('RunImpactAnalysisUseCase', () => {
     expect(
       insightRepo.created.some((item) => item.insightKey === 'claim:cancel-refund'),
     ).toBe(false);
+  });
+
+  it('domain pack hints alone do not create EVIDENCED impact and diagnostic is bounded', async () => {
+    // Empty artifacts so no code evidence can be extracted
+    const artifacts: StubArtifact[] = [];
+
+    const impactRepo = new StubImpactRepo();
+    const updateSpy = jest.spyOn(impactRepo, 'updateStatus');
+    const insightRepo = new StubInsightRepo();
+    const llmProvider = new FakeLlmProvider();
+
+    const useCase = new RunImpactAnalysisUseCase(
+      impactRepo as any,
+      new StubArtifactRepo(artifacts) as any,
+      new StubEvidenceRepo() as any,
+      insightRepo as any,
+      new StubTraceabilityRepo() as any,
+      llmProvider as any,
+      new StubRetrievalService(artifacts) as any,
+      new DomainPackRegistry()
+    );
+
+    await useCase.execute({ analysisId: 'analysis-1', domain: 'BOOKING' });
+
+    // Ensure no EVIDENCED insight is created
+    const evidencedCount = insightRepo.created.filter(i => i.certainty === 'EVIDENCED').length;
+    expect(evidencedCount).toBe(0);
+
+    // Get the final call to updateStatus
+    const finalUpdateCall = updateSpy.mock.calls.find(call => call[0].stage === 'DONE');
+    expect(finalUpdateCall).toBeDefined();
+    
+    const metadata = (finalUpdateCall![0] as any).metadata;
+    const diagnostic = metadata?.diagnostics?.find((d: any) => d.code === 'DOMAIN_PACK_APPLIED');
+    expect(diagnostic).toBeDefined();
+
+    // Verify bounded fields
+    expect(diagnostic.payload).toMatchObject({
+      domainPackId: 'booking',
+      domainPackVersion: expect.any(String),
+      selectedBy: expect.any(String),
+      conceptCount: expect.any(Number),
+      retrievalHintCount: expect.any(Number),
+      riskTemplateCount: expect.any(Number),
+      qaTemplateCount: expect.any(Number),
+      unknownTemplateCount: expect.any(Number),
+    });
+
+    // Verify excluded fields
+    expect(diagnostic.payload.templateBodies).toBeUndefined();
+    expect(diagnostic.payload.rawPrompts).toBeUndefined();
+    expect(diagnostic.payload.sourceCode).toBeUndefined();
   });
 
   it('rejects non-runnable analyses', async () => {
@@ -331,6 +386,7 @@ describe('RunImpactAnalysisUseCase', () => {
       new StubTraceabilityRepo() as any,
       undefined as any, // llmProvider not reached
       new StubRetrievalService([]) as any,
+      new DomainPackRegistry()
     );
 
     await expect(useCase.execute({ analysisId: 'analysis-2' })).rejects.toMatchObject({

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { RunImpactAnalysisUseCase } from '../../apps/api/src/modules/impact-analysis/application/run-impact-analysis.usecase';
 import { FakeLlmProvider } from '../../apps/api/src/modules/ai/infrastructure/fake-ai.provider';
+import { DomainPackRegistry } from '../../apps/api/src/modules/domain-pack/application/domain-pack.registry';
 
 class StubImpactRepo {
   findById = async () => ({
@@ -211,6 +212,7 @@ describe('impact analysis fixture output', () => {
       traceabilityRepo as any,
       llmProvider as any,
       new StubRetrievalService() as any,
+      new DomainPackRegistry()
     );
 
     await useCase.execute({ analysisId: 'analysis-1', domain: 'BOOKING' });

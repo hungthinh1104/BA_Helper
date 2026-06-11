@@ -11,5 +11,9 @@ export const case03: EvaluationCase = {
     evidenceHints: ['50%', '24 hours'],
     unknownsOrQuestions: ['timezone for 24 hours check'],
     qaScenarios: ['cancel at 23 hours gets 50%', 'cancel at 25 hours gets 100%'],
+  },
+  domain: {
+    packId: 'booking',
+    expectedConceptKeys: ['refund', 'cancellation']
   }
 };

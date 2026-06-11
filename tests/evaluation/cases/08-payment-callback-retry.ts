@@ -11,5 +11,9 @@ export const case08: EvaluationCase = {
     evidenceHints: ['status === PAID', 'already processed'],
     risks: ['concurrent webhook deliveries causing race conditions'],
     qaScenarios: ['receive webhook twice yields one state change'],
+  },
+  domain: {
+    packId: 'booking',
+    expectedConceptKeys: ['payment', 'booking']
   }
 };

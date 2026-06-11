@@ -51,6 +51,17 @@ We mandate deterministic execution during regular Continuous Integration (CI). R
 
 Therefore, CI relies on strict Zod schema validations of the cases and deterministic unit tests for the scoring helpers. Developers or specialized "evaluation pipelines" can opt-in to running a real provider adapter when tuning prompts.
 
+## Domain Pack Evaluation (Phase 33B)
+In Phase 33B, we added evaluation coverage for the `booking@0.1.0` Domain Pack. This measures whether domain hints improve concept matching and retrieval coverage without violating the evidence hierarchy.
+
+### What is evaluated:
+- **Concept Matching:** Verification that domain terms (like "refund", "cancellation") deterministically map to domain concepts via alias matching.
+- **Safety Fallback:** Ensuring that `general@0.0.0` is safely applied when the domain is unknown.
+- **Impact Safety:** A strict integration test proving that domain pack risk/QA hints *do not* create `EVIDENCED` impact without matching retrieved code excerpts.
+- **Diagnostic Bounding:** Verification that the `DOMAIN_PACK_APPLIED` diagnostic remains bounded and excludes sensitive fields like template bodies or source code.
+
+Existing evaluation cases like `01-cancel-paid-booking-refund` now include an optional `domain` metadata field indicating their expected domain concepts.
+
 ## How to Add a New Case
 1. Ensure the requirement matches an existing fixture in `tests/fixtures/`.
 2. Create a new `.ts` file under `tests/evaluation/cases/`.

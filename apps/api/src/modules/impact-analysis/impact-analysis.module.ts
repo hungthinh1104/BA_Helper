@@ -68,9 +68,10 @@ import { CreateRequirementRevisionUseCase } from '../requirement/application/cre
 import { ProjectModule } from '../project/project.module';
 import { RepositoryModule } from '../repository/repository.module';
 import { GetAnalysisDriftFreshnessUseCase } from './application/get-analysis-drift-freshness.usecase';
+import { DomainPackModule } from '../domain-pack/domain-pack.module';
 
 @Module({
-  imports: [PrismaModule, EventLogModule, DocumentModule, QueueModule, AiModule, RetrievalModule, GraphModule, ClarificationModule, ProjectModule, RepositoryModule],
+  imports: [PrismaModule, EventLogModule, DocumentModule, QueueModule, AiModule, RetrievalModule, GraphModule, ClarificationModule, ProjectModule, RepositoryModule, DomainPackModule],
   controllers: [ImpactAnalysisController, ReviewNoteController, ReviewClarificationController],
   providers: [
     ImpactAnalysisRepository,

@@ -13,6 +13,7 @@ import { buildCompactDomainContext } from '../../domain-profile';
 import { impactAnalysisAiSchema } from '../../ai/domain/ai.schema';
 import { HybridRetrievalService } from '../../retrieval/application/hybrid-retrieval.service';
 import { EvidencePackFormatter, EvidenceCandidate } from '../../ai/application/evidence-pack.formatter';
+import { DomainPackRegistry } from '../../domain-pack/application/domain-pack.registry';
 import { z } from 'zod';
 
 type PersistedArtifact = {
@@ -124,6 +125,7 @@ export class RunImpactAnalysisUseCase {
     private readonly traceabilityRepo: TraceabilityRepository,
     private readonly llmProvider: LlmProvider,
     private readonly retrievalService: HybridRetrievalService,
+    private readonly domainPackRegistry: DomainPackRegistry,
   ) {}
 
   async execute(params: { analysisId: string; expandGraph?: boolean; domain?: string }) {
@@ -319,6 +321,8 @@ export class RunImpactAnalysisUseCase {
       // Read domain from snapshot profile; fall back safely to undefined (→ BOOKING default)
       const snapshotDomain = (analysis.snapshot as any).profile?.domain ?? params.domain;
       const domainContext = buildCompactDomainContext(snapshotDomain);
+      
+      const domainPack = this.domainPackRegistry.selectForRepository(snapshotDomain);
 
       const { systemPrompt, userPrompt, version } = renderPrompt('IMPACT_ANALYSIS', {
         changeRequest: analysis.requirementRevision.rawText,
@@ -439,7 +443,29 @@ export class RunImpactAnalysisUseCase {
             evidenceChars: totalEvidenceChars,
             evidenceTruncated,
             domainContextUsed: snapshotDomain ?? 'BOOKING',
-          }
+          },
+          domainPack: {
+            id: domainPack.id,
+            version: domainPack.version,
+            selectedBy: snapshotDomain ? 'repository_profile' : 'safe_default',
+          },
+          diagnostics: [
+            {
+              code: 'DOMAIN_PACK_APPLIED',
+              severity: 'INFO',
+              message: `Applied domain pack ${domainPack.id}@${domainPack.version}`,
+              payload: {
+                domainPackId: domainPack.id,
+                domainPackVersion: domainPack.version,
+                selectedBy: snapshotDomain ? 'repository_profile' : 'safe_default',
+                conceptCount: domainPack.concepts.length,
+                retrievalHintCount: domainPack.retrievalHints.length,
+                riskTemplateCount: domainPack.riskTemplates.length,
+                qaTemplateCount: domainPack.qaTemplates.length,
+                unknownTemplateCount: domainPack.unknownTemplates.length,
+              }
+            }
+          ]
         },
       });
     } catch (e: any) {

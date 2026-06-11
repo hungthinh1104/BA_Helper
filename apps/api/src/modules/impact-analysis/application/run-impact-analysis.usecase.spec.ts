@@ -8,6 +8,7 @@ import { LlmProvider } from '../../ai/domain/llm-provider.interface';
 import { HybridRetrievalService } from '../../retrieval/application/hybrid-retrieval.service';
 import { AppError } from '../../../shared/app-error';
 import { renderPrompt } from '../../ai/domain/prompt-registry';
+import { DomainPackRegistry } from '../../domain-pack/application/domain-pack.registry';
 
 jest.mock('../../ai/domain/prompt-registry');
 
@@ -20,6 +21,7 @@ describe('RunImpactAnalysisUseCase', () => {
   let traceabilityRepo: jest.Mocked<TraceabilityRepository>;
   let llmProvider: jest.Mocked<LlmProvider>;
   let retrievalService: jest.Mocked<HybridRetrievalService>;
+  let domainPackRegistry: jest.Mocked<DomainPackRegistry>;
 
   beforeEach(() => {
     impactRepo = {
@@ -53,6 +55,18 @@ describe('RunImpactAnalysisUseCase', () => {
       retrieve: jest.fn(),
     } as unknown as jest.Mocked<HybridRetrievalService>;
 
+    domainPackRegistry = {
+        selectForRepository: jest.fn().mockReturnValue({
+          id: 'test-pack',
+          version: '1.0',
+          concepts: [],
+          retrievalHints: [],
+          riskTemplates: [],
+          qaTemplates: [],
+          unknownTemplates: [],
+        }),
+    } as unknown as jest.Mocked<DomainPackRegistry>;
+
     useCase = new RunImpactAnalysisUseCase(
       impactRepo,
       artifactRepo,
@@ -61,6 +75,7 @@ describe('RunImpactAnalysisUseCase', () => {
       traceabilityRepo,
       llmProvider,
       retrievalService,
+      domainPackRegistry,
     );
 
     (renderPrompt as jest.Mock).mockReturnValue({

@@ -151,16 +151,18 @@ export class SafeFileEnumerator {
         const fullPath = path.join(currentDir, entry.name);
         const relativePath = path.relative(resolvedRoot, fullPath);
 
-        if (entry.isSymbolicLink()) {
+          if (entry.isSymbolicLink()) {
           try {
             const realPath = await fs.realpath(fullPath);
             if (!realPath.startsWith(resolvedRoot)) {
+              diagnostics.push({ code: 'SYMLINK_SKIPPED', severity: 'INFO', message: 'Symlink outside root', filePath: relativePath });
               this.recordSkip(relativePath, 'SYMLINK_OUTSIDE_ROOT');
               continue;
             }
           } catch {
              // Broken symlink
           }
+          diagnostics.push({ code: 'SYMLINK_SKIPPED', severity: 'INFO', message: 'Symlink skipped', filePath: relativePath });
           this.recordSkip(relativePath, 'SYMLINK_OUTSIDE_ROOT');
           continue;
         }
@@ -183,6 +185,7 @@ export class SafeFileEnumerator {
           const ext = path.extname(entry.name).toLowerCase();
           
           if (IGNORED_EXTENSIONS.has(ext)) {
+             diagnostics.push({ code: 'BINARY_SKIPPED', severity: 'INFO', message: 'Binary file skipped', filePath: relativePath });
              this.recordSkip(relativePath, 'BINARY_FILE');
              continue;
           }
@@ -202,6 +205,7 @@ export class SafeFileEnumerator {
             const sizeKb = stat.size / 1024;
             
             if (this.limitsPolicy.isFileSizeExceeded(sizeKb)) {
+              diagnostics.push({ code: 'FILE_TOO_LARGE', severity: 'WARN', message: 'File too large', filePath: relativePath });
               this.recordSkip(relativePath, 'FILE_TOO_LARGE');
               continue;
             }
@@ -211,6 +215,7 @@ export class SafeFileEnumerator {
             if (this.limitsPolicy.isRepoSizeExceeded(totalSizeMb)) {
               limitHits.repoSizeLimitHit = true;
               isPartial = true;
+              diagnostics.push({ code: 'REPO_LIMIT_EXCEEDED', severity: 'ERROR', message: 'Repo size limit exceeded', filePath: relativePath });
               this.recordSkip(relativePath, 'REPO_SIZE_LIMIT_EXCEEDED');
               break;
             }
@@ -223,6 +228,7 @@ export class SafeFileEnumerator {
           if (this.limitsPolicy.isFileCountExceeded(fileCount)) {
             limitHits.fileLimitHit = true;
             isPartial = true;
+            diagnostics.push({ code: 'FILE_LIMIT_EXCEEDED', severity: 'ERROR', message: 'File count limit exceeded', filePath: relativePath });
             this.recordSkip(relativePath, 'REPO_FILE_LIMIT_EXCEEDED');
             break;
           }
@@ -235,6 +241,7 @@ export class SafeFileEnumerator {
             if (this.limitsPolicy.isTsFileCountExceeded(tsFileCount)) {
               limitHits.fileLimitHit = true;
               isPartial = true;
+              diagnostics.push({ code: 'TS_FILE_LIMIT_EXCEEDED', severity: 'ERROR', message: 'TS file limit exceeded', filePath: relativePath });
               this.recordSkip(relativePath, 'REPO_FILE_LIMIT_EXCEEDED');
               break;
             }

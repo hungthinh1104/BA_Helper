@@ -24,3 +24,4 @@ export * from './clarification.contract';
 export * from './pagination.contract';
 export * from './auth.contract';
 export * from './repository-drift.contract';
+export * from './domain-pack.contract';

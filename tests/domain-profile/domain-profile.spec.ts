@@ -21,9 +21,9 @@ describe('getDomainProfile', () => {
     expect(profile).toBe(BookingDomainProfile);
   });
 
-  it('throws UnsupportedDomainError for an explicit unknown domain', () => {
-    expect(() => getDomainProfile('HEALTHCARE')).toThrow('HEALTHCARE');
-    expect(() => getDomainProfile('LOGISTICS')).toThrow('not supported');
+  it('does not throw for an explicit unknown domain but falls back to UNKNOWN', () => {
+    expect(getDomainProfile('HEALTHCARE').domain).toBe('UNKNOWN');
+    expect(getDomainProfile('LOGISTICS').domain).toBe('UNKNOWN');
   });
 
   it('includes non-empty glossary, riskCategories, promptContext, questionTemplates, qaScenarioTemplates', () => {
@@ -52,8 +52,8 @@ describe('getDomainGlossary', () => {
     expect(glossary.length).toBeGreaterThan(0);
   });
 
-  it('throws for unsupported explicit domain', () => {
-    expect(() => getDomainGlossary('HEALTHCARE')).toThrow('not supported');
+  it('returns generic glossary for unsupported explicit domain', () => {
+    expect(getDomainGlossary('HEALTHCARE')).toEqual(getDomainGlossary('UNKNOWN'));
   });
 });
 
@@ -100,7 +100,7 @@ describe('HybridRetrievalService — domain-aware keyword extraction', () => {
     expect(keywordFlat).toContain('cancellation');
   });
 
-  it('throws when domain is explicitly unsupported', async () => {
+  it('does not throw when domain is explicitly unsupported (falls back safely)', async () => {
     await expect(
       service.retrieve({
         projectId: 'proj-1',
@@ -109,7 +109,7 @@ describe('HybridRetrievalService — domain-aware keyword extraction', () => {
         changeRequest: 'cancel booking',
         domain: 'HEALTHCARE', // not supported
       }),
-    ).rejects.toThrow('not supported');
+    ).resolves.toBeDefined();
   });
 
   it('does not inject glossary into prompt — only snapshotId-scoped SQL search', async () => {

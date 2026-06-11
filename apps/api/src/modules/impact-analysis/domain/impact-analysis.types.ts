@@ -19,4 +19,15 @@ export type ImpactAnalysisMetadata = {
     artifactCount: number;
     vectorSignalCount?: number;
   };
+  domainPack?: {
+    id: string;
+    version: string;
+    selectedBy: string;
+  };
+  diagnostics?: Array<{
+    code: string;
+    severity: string;
+    message: string;
+    payload?: any;
+  }>;
 };

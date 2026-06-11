@@ -124,3 +124,20 @@ export type ReuseExecutionSample = z.infer<typeof reuseExecutionSampleSchema>;
 export type EmbeddingReuseExecutionSummaryPayload = z.infer<
   typeof embeddingReuseExecutionSummaryPayloadSchema
 >;
+
+// ── Phase 33A: Domain Pack Diagnostic ──────────────────────────────────────────
+
+export const domainPackAppliedDiagnosticPayloadSchema = z.object({
+  domainPackId: z.string(),
+  domainPackVersion: z.string(),
+  selectedBy: z.enum(['repository_profile', 'manual_config', 'safe_default']),
+  conceptCount: z.number().int().nonnegative(),
+  retrievalHintCount: z.number().int().nonnegative(),
+  riskTemplateCount: z.number().int().nonnegative(),
+  qaTemplateCount: z.number().int().nonnegative(),
+  unknownTemplateCount: z.number().int().nonnegative(),
+});
+
+export type DomainPackAppliedDiagnosticPayload = z.infer<
+  typeof domainPackAppliedDiagnosticPayloadSchema
+>;

@@ -89,8 +89,8 @@ describe('HybridRetrievalService', () => {
       expect(art2?.retrievalMethod).toBe('VECTOR');
       expect(art2?.retrievalSignals).toContain('VECTOR');
       expect(art2?.retrievalSignals).not.toContain('LEXICAL');
-      // art-2 vector score = 0.85 * 0.20 = 0.17
-      expect(art2?.score).toBeCloseTo(0.17, 2);
+      // art-2 vector score = 0.85 * 0.35 = 0.2975
+      expect(art2?.score).toBeCloseTo(0.2975, 2);
     });
 
     it('should assign GRAPH_EXPANSION method and correct depth score', async () => {
@@ -110,8 +110,8 @@ describe('HybridRetrievalService', () => {
 
       const art3 = results.find(r => r.artifactId === 'art-3');
       expect(art3?.retrievalMethod).toBe('GRAPH_EXPANSION');
-      // graph depth 1 = 0.7 * 0.35 = 0.245
-      expect(art3?.score).toBeCloseTo(0.245, 2);
+      // graph depth 1 = 0.7 * 0.15 = 0.105
+      expect(art3?.score).toBeCloseTo(0.105, 2);
     });
 
     it('should drop vector-only low similarity candidates', async () => {
@@ -141,8 +141,8 @@ describe('HybridRetrievalService', () => {
       const results = await service.retrieve({ ...BASE_REQUEST, changeRequest: 'normal change' });
       const artTest = results.find(r => r.artifactId === 'art-test');
       
-      // score = vector(0.73 * 0.20 = 0.146) - penalty(0.05) = 0.096
-      expect(artTest?.score).toBeCloseTo(0.096, 3);
+      // score = vector(0.73 * 0.35 = 0.2555) - penalty(0.05) = 0.2055
+      expect(artTest?.score).toBeCloseTo(0.2055, 3);
     });
 
     it('should not penalize test artifact if reached via graph edge', async () => {
@@ -161,8 +161,8 @@ describe('HybridRetrievalService', () => {
       const results = await service.retrieve({ ...BASE_REQUEST, expandGraph: true });
       const artTest = results.find(r => r.artifactId === 'art-test');
       
-      // score = graph(0.7 * 0.35 = 0.245) - 0 penalty = 0.245
-      expect(artTest?.score).toBeCloseTo(0.245, 3);
+      // score = graph(0.7 * 0.15 = 0.105) - 0 penalty = 0.105
+      expect(artTest?.score).toBeCloseTo(0.105, 3);
     });
   });
 

@@ -11,5 +11,9 @@ export const case02: EvaluationCase = {
     evidenceHints: ['idempotency', 'already refunded'],
     risks: ['race condition in refund processing'],
     qaScenarios: ['submit cancel twice yields one refund'],
+  },
+  domain: {
+    packId: 'booking',
+    expectedConceptKeys: ['refund', 'cancellation']
   }
 };

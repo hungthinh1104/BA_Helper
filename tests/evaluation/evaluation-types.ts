@@ -16,6 +16,10 @@ export const evaluationCaseSchema = z.object({
   requirementText: z.string().min(1),
   targetFixture: z.string().min(1),
   expected: evaluationCaseExpectedSchema,
+  domain: z.object({
+    packId: z.string(),
+    expectedConceptKeys: z.array(z.string())
+  }).optional(),
 });
 
 export type EvaluationCase = z.infer<typeof evaluationCaseSchema>;

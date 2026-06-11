@@ -32,7 +32,8 @@ export function getDomainProfile(domain?: string): DomainProfile {
   if (domain === undefined || domain === null || domain === '') {
     return BookingDomainProfile;
   }
-  return DOMAIN_PROFILES[domain] ?? UnknownDomainProfile;
+  const normalizedDomain = domain.toUpperCase();
+  return DOMAIN_PROFILES[normalizedDomain] ?? UnknownDomainProfile;
 }
 
 /**
@@ -41,7 +42,8 @@ export function getDomainProfile(domain?: string): DomainProfile {
  */
 export function isDomainSupported(domain?: string): boolean {
   if (!domain) return false;
-  return domain in DOMAIN_PROFILES && domain !== 'UNKNOWN';
+  const normalizedDomain = domain.toUpperCase();
+  return normalizedDomain in DOMAIN_PROFILES && normalizedDomain !== 'UNKNOWN';
 }
 
 /**
