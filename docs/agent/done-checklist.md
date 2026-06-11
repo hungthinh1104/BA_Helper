@@ -80,8 +80,8 @@ applicable only when the task did not affect that area.
 
 ## Verification
 
-While the repository remains documentation-only, verify document consistency
-and record that executable checks are not available.
+Verify document consistency and run the executable checks below when code is
+changed.
 
 Once workspace scripts exist, run relevant checks before finishing:
 

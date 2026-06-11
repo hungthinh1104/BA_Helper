@@ -10,9 +10,9 @@ This document tracks intentional shortcuts taken for the MVP and backend testing
 - **Current State**: `domain` is passed to the retrieval service, falling back to `BOOKING` if not provided. In the future, it should be rigorously pulled from `Organization`/`Project` settings.
 - **Resolution**: Implement DB-backed `DomainProfile` and allow project-level overrides.
 
-## TD-003: tenantId = projectId is MVP-only
-- **Current State**: We use `projectId` as the `tenantId` because there is no User/Organization auth layer yet.
-- **Resolution**: Introduce the `Auth` module and migrate `tenantId` to `organizationId`. Update vector search and retrieval filters accordingly.
+## TD-003: Workspace boundary is still project-scoped
+- **Current State**: Dev-login/auth/RBAC exists, but `projectId` is still the MVP-level workspace boundary. Project membership, organization/team scoping, production-grade credentials auth, and private repository authorization are still future work.
+- **Resolution**: Introduce the project membership/organization model and migrate `tenantId` to the eventual organization-scoped boundary. Update vector search and retrieval filters accordingly.
 
 ## TD-004: Evidence mapping robustness
 - **Current State**: If an AI provider returns an evidence key that cannot be resolved against the snapshot, we silently ignore it (or in the first iteration, we only mapped `evidenceKeys[0]`).

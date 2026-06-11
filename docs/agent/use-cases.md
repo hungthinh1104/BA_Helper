@@ -277,10 +277,12 @@ The pipeline generates a machine `DRAFT` impact report before finalization.
 Finalization creates an `APPROVED` impact report projection based on the
 current review decisions.
 
-For the backend milestone, `IMPACT_REPORT` Markdown is required. Mermaid
-diagram generation is deferred until the report/review flow passes its tests;
-when implemented, it follows the same draft/approved/freshness rules.
-MVP export means retrieving/downloading the approved Markdown report with
+For the backend milestone, `IMPACT_REPORT` Markdown is required and remains
+the persisted source of truth. Mermaid diagram generation is deferred until
+the report/review flow passes its tests; when implemented, it follows the same
+draft/approved/freshness rules.
+Phase 13C export means retrieving/downloading the approved Markdown snapshot
+and a deterministic PDF rendered from that same approved snapshot, both with
 provenance metadata; richer document/export integrations remain out of scope.
 
 Any output can later be returned with `isStale=true` when a later safe source
@@ -292,10 +294,10 @@ state, not continuous remote-head monitoring.
 
 ```text
 private repository authentication
-multi-user authorization enforcement beyond dev ownership
+project membership / organization-scoped auth beyond dev-login RBAC
 Express and multi-language parsing
 general documentation/wiki generation
-PDF/DOCX/export integrations
+DOCX/Jira/Confluence export integrations
 full workflow/BPMN modeling
 ```
 

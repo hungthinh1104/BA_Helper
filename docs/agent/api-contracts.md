@@ -14,6 +14,9 @@ Keep contracts in `packages/contracts` after workspace scaffolding exists.
 ## MVP Resources
 
 ```http
+POST /api/v1/auth/dev-login
+GET  /api/v1/auth/me
+
 POST /api/v1/projects
 GET  /api/v1/workspace/current
 GET  /api/v1/system/health
@@ -46,6 +49,8 @@ POST /api/v1/traceability-links/:linkId/reject
 
 GET  /api/v1/impact-analyses/:analysisId/documents
 GET  /api/v1/impact-analyses/:analysisId/approved-report
+GET  /api/v1/impact-analyses/:analysisId/approved-report/export.md
+GET  /api/v1/impact-analyses/:analysisId/approved-report/export.pdf
 ```
 
 Deferred until after the Markdown report/review completion gate:
@@ -69,6 +74,10 @@ Workspace resolution for the web client is backend-owned:
 In the MVP deploy path, the backend decides the current workspace in
 `dev-single-user` mode and returns a stable project id for the session. The
 frontend must not invent or hardcode `"default-project"` as a fake project id.
+
+The web app signs in through `/login` using dev-login (email + role, no
+password). App routes are middleware-gated, and backend RBAC remains the
+authoritative permission source. Disabled controls in the frontend are UX only.
 
 Runtime health for deploy/debug visibility uses:
 
@@ -366,9 +375,11 @@ approved output projections. It does not silently treat unreviewed insight
 statements as approved facts. Finalization is rejected when `isStale=true` or
 when the analysis is already terminal.
 
-In the MVP, `canExport` refers to exporting/downloading the approved Markdown
-impact report with its provenance metadata. PDF, DOCX, Jira, and Confluence
-exports remain out of scope.
+The approved Markdown snapshot is the persisted source of truth. `canExport`
+refers to exporting/downloading that snapshot in Markdown or deterministic PDF
+form. `GET /approved-report` returns JSON metadata + Markdown snapshot; the
+`export.md` and `export.pdf` endpoints return file attachments. DOCX, Jira, and
+Confluence exports remain out of scope.
 
 Before committing finalization, the backend must re-evaluate known freshness
 for moving refs. If the latest persisted successful source-resolution

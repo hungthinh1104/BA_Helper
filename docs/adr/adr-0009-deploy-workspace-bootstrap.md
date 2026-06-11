@@ -4,6 +4,8 @@
 
 Accepted
 
+> Superseding note: dev-login, middleware-gated web routes, and ADMIN/REVIEWER/VIEWER RBAC now exist. This ADR remains a historical record for the deploy-safe workspace bootstrap boundary; project membership and private repository auth are still future work.
+
 ## Context
 
 The MVP web client must bootstrap a project-scoped workspace before repository,
@@ -39,4 +41,3 @@ must prepare a clean boundary for future auth.
   replacing ad hoc bootstrap logic spread across screens.
 - The system remains single-workspace in production until a later auth phase
   introduces user/session-backed workspace resolution.
-

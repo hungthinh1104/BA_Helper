@@ -19,7 +19,8 @@ Requirement change
 → lấy code evidence
 → sinh insights/unknowns/QA scenarios
 → BA/QA review
-→ finalize Markdown impact report
+→ finalize approved Markdown report snapshot
+→ export Markdown/PDF khi cần
 ```
 
 ### Không phải

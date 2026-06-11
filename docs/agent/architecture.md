@@ -23,7 +23,7 @@ Analyzer        simple-git + ts-morph, NestJS TypeScript MVP adapter
 Contracts       Zod (packages/contracts — shared API wire types and enums)
 Shared utils    packages/shared — small cross-package utilities only
 AI              provider adapter with structured output
-Documents       Markdown impact report
+Documents       approved Markdown snapshot + on-demand PDF export artifact
 Diagrams        deferred; graph JSON source + Mermaid rendering later
 Local infra     Docker Compose
 ```
@@ -40,7 +40,8 @@ Requirement
   -> immutable RequirementRevision (title + raw/normalized change text)
      -> ImpactAnalysis on one snapshot + source target
      -> TraceabilityLink + BaInsight
-     -> GeneratedDocument
+     -> Approved Markdown impact report snapshot
+     -> deterministic PDF export artifact rendered on demand
      -> Human review decisions
 ```
 
@@ -76,7 +77,7 @@ requirement       owns change requests and immutable analysis revisions
 impact-analysis   orchestrates impact runs over snapshot + requirement
 insight           owns BA insights and their evidence joins
 traceability      owns requirement-to-artifact links
-document          owns generated Markdown artifacts
+document          owns approved Markdown snapshots and export artifacts
 diagram           later owns generated graph/diagram artifacts
 review            owns human decisions
 event-log         owns auditable domain events
