@@ -38,6 +38,7 @@ Read:
 - `auth-permissions.md`
 - `api-contracts.md`
 - `current-state.md`
+- `scoped-authorization-audit.md`
 
 ### Report / export
 

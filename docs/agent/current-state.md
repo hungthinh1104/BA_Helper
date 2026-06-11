@@ -13,6 +13,15 @@ lineage timeline -> approved report -> Markdown/PDF export.
 - Dev-login uses email + role, no password.
 - Web routes are middleware-gated.
 - Roles: `ADMIN`, `REVIEWER`, `VIEWER`.
+- `ProjectMember` and `ProjectRole` exist.
+- `ProjectPermissionService` is authoritative for project-owned resources.
+- `workspace/current` returns `membershipRole`.
+- `dev-single-user` membership mapping:
+  - `ADMIN -> OWNER`
+  - `REVIEWER -> REVIEWER`
+  - `VIEWER -> VIEWER`
+- Outside project membership scope returns `404`.
+- Same-project insufficient role returns `403`.
 - Backend RBAC is authoritative.
 - Frontend disabled controls are UX only.
 
@@ -32,7 +41,8 @@ lineage timeline -> approved report -> Markdown/PDF export.
 
 - private repos
 - OAuth / GitHub App
-- project membership
+- membership management UI
+- project switching
 - multi-repo analysis
 - DOCX
 - Jira

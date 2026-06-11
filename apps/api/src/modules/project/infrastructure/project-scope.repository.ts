@@ -57,6 +57,21 @@ export class ProjectScopeRepository {
     return repository?.projectId ?? null;
   }
 
+  async findSnapshotProjectId(snapshotId: string): Promise<string | null> {
+    const snapshot = await this.prisma.repositorySnapshot.findUnique({
+      where: { id: snapshotId },
+      select: {
+        repository: {
+          select: {
+            projectId: true,
+          },
+        },
+      },
+    });
+
+    return snapshot?.repository.projectId ?? null;
+  }
+
   async findScanJobProjectId(scanJobId: string): Promise<string | null> {
     const job = await this.prisma.scanJob.findUnique({
       where: { id: scanJobId },

@@ -4,9 +4,10 @@ import { GetGraphUseCase } from './application/get-graph.usecase';
 import { GraphRepository } from './infrastructure/graph.repository';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PrismaService } from '../prisma/prisma.service';
+import { ProjectModule } from '../project/project.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, ProjectModule],
   controllers: [GraphController],
   providers: [
     {

@@ -16,13 +16,16 @@ Current MVP auth boundary:
 dev-single-user workspace mode
 dev-login web sign-in
 ADMIN / REVIEWER / VIEWER backend-enforced RBAC
+ProjectMember / ProjectRole project scoping
 public repository scan only
 ```
 
 Still future work:
 
 ```text
-project membership and team-scoped access
+membership management UI
+project switching / last-selected project UX
+team / organization scoping
 private repos
 GitHub App / OAuth
 encrypted credential handling beyond the current MVP
@@ -51,9 +54,9 @@ Current web boundary:
 - backend public bootstrap endpoints remain public for deploy/runtime checks
 ```
 
-## Future Role Model
+## Project Membership Model
 
-If the product later grows into team-scoped workspace membership:
+Current project-scoped roles:
 
 ```text
 OWNER       project/member/repository administration
@@ -63,8 +66,8 @@ REVIEWER    insight and traceability decisions
 VIEWER      read-only access
 ```
 
-Permissions are backend enforced and project scoped. A frontend-hidden button
-is not authorization.
+Permissions are backend enforced and project scoped through
+`ProjectPermissionService`. A frontend-hidden button is not authorization.
 
 ## Current MVP RBAC Matrix
 
@@ -100,6 +103,45 @@ ADMIN and REVIEWER:
 VIEWER:
 - read-only GET access
 - no mutating endpoints
+```
+
+Current project-scoped enforcement baseline:
+
+```text
+OWNER:
+- all project-owned permissions
+
+MAINTAINER:
+- project read
+- repository manage
+- scan run
+- report export
+
+ANALYST:
+- project read
+- requirement create
+- base analysis create
+- derived analysis create
+- analysis finalize
+- report export
+
+REVIEWER:
+- project read
+- review write
+- clarification write
+- derived analysis create
+- report export
+
+VIEWER:
+- project read
+- report export only
+```
+
+Scope behavior:
+
+```text
+resource outside actor membership scope -> 404
+resource in actor project but insufficient role -> 403
 ```
 
 Public endpoints must be explicit:

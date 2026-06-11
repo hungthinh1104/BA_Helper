@@ -4,9 +4,10 @@ import { ListEvidenceUseCase } from './application/list-evidence.usecase';
 import { EvidenceRepository } from './infrastructure/evidence.repository';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PrismaService } from '../prisma/prisma.service';
+import { ProjectModule } from '../project/project.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, ProjectModule],
   controllers: [EvidenceController],
   providers: [
     {

@@ -143,6 +143,18 @@ export class ProjectPermissionService {
     );
   }
 
+  async assertCanReadSnapshot(
+    actor: RequestUser,
+    snapshotId: string,
+  ): Promise<void> {
+    await this.assertPermissionForScopedResource(
+      actor,
+      () => this.scope.findSnapshotProjectId(snapshotId),
+      'project:read',
+      'Repository snapshot',
+    );
+  }
+
   async assertPermissionForClarification(
     actor: RequestUser,
     clarificationId: string,

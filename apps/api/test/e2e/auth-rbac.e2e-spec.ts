@@ -757,4 +757,131 @@ describe('Auth and RBAC (e2e)', () => {
       .send({ decision: 'REJECTED' })
       .expect(404);
   });
+
+  it('returns 404 for cross-project snapshot artifacts, graph, and evidence reads', async () => {
+    const projectId = crypto.randomUUID();
+    const repositoryId = crypto.randomUUID();
+    const targetId = crypto.randomUUID();
+    const snapshotId = crypto.randomUUID();
+    const requirementId = crypto.randomUUID();
+    const revisionId = crypto.randomUUID();
+    const analysisId = crypto.randomUUID();
+    const artifactId = crypto.randomUUID();
+    const evidenceId = crypto.randomUUID();
+
+    await prisma.project.create({ data: { id: projectId, name: 'Hidden Graph Project' } });
+    await grantProjectMembership(prisma, {
+      projectId,
+      userId: adminUserId,
+      role: 'OWNER',
+    });
+    await prisma.repository.create({
+      data: {
+        id: repositoryId,
+        projectId,
+        canonicalUrl: 'https://github.com/example/hidden-graph',
+      },
+    });
+    await prisma.repositoryTarget.create({
+      data: {
+        id: targetId,
+        repositoryId,
+        targetKey: 'main',
+        requestedRef: 'main',
+        resolvedRefType: 'BRANCH',
+        latestObservedCommitSha: 'abc1234',
+        lastObservedAt: new Date(),
+      },
+    });
+    await prisma.repositorySnapshot.create({
+      data: {
+        id: snapshotId,
+        repositoryId,
+        commitSha: 'abc1234',
+        analyzerVersion: '1.0.0',
+        coverageStatus: 'READY',
+      },
+    });
+    await prisma.codeArtifact.create({
+      data: {
+        id: artifactId,
+        snapshotId,
+        artifactKey: 'src/hidden.ts:HiddenService',
+        name: 'HiddenService',
+        artifactType: 'SERVICE',
+        filePath: 'src/hidden.ts',
+      },
+    });
+    await prisma.requirement.create({
+      data: {
+        id: requirementId,
+        projectId,
+      },
+    });
+    await prisma.requirementRevision.create({
+      data: {
+        id: revisionId,
+        requirementId,
+        title: 'Hidden evidence',
+        rawText: 'Hidden evidence',
+        normalizedText: 'Hidden evidence',
+        readinessStatus: 'READY_FOR_ANALYSIS',
+      },
+    });
+    await prisma.impactAnalysis.create({
+      data: {
+        id: analysisId,
+        requirementRevisionId: revisionId,
+        snapshotId,
+        sourceTargetId: targetId,
+        requestKey: crypto.randomUUID(),
+        status: 'COMPLETED',
+        stage: 'DONE',
+      },
+    });
+    await prisma.evidence.create({
+      data: {
+        id: evidenceId,
+        provenanceKey: 'hidden-evidence',
+        sourceType: 'CODE',
+        excerpt: 'hidden',
+        contentHash: 'hidden-hash',
+        sourcePath: 'src/hidden.ts',
+      },
+    });
+    await prisma.insightEvidence.create({
+      data: {
+        insightId: (
+          await prisma.baInsight.create({
+            data: {
+              id: crypto.randomUUID(),
+              impactAnalysisId: analysisId,
+              insightKey: 'hidden-insight',
+              insightType: 'CLAIM',
+              certainty: 'EVIDENCED',
+              reviewStatus: 'NEEDS_REVIEW',
+              title: 'Hidden insight',
+              description: 'Hidden desc',
+            },
+          })
+        ).id,
+        evidenceId,
+      },
+    });
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/snapshots/${snapshotId}/artifacts`)
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/snapshots/${snapshotId}/graph`)
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/evidence`)
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .expect(404);
+  });
 });
