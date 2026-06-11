@@ -36,7 +36,7 @@ export function useCreateRequirement(projectId?: string) {
       if (!effectiveProjectId) {
         throw new Error("Workspace project is not ready.")
       }
-      return apiPost<RequirementCreateResponse>(`/api/v1/projects/${effectiveProjectId}/requirements`, input, requirementCreateResponseSchema as any)
+      return apiPost<RequirementCreateResponse>(`/api/v1/projects/${effectiveProjectId}/requirements`, input, requirementCreateResponseSchema)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({

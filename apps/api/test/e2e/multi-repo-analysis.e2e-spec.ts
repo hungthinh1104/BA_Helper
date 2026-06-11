@@ -1573,4 +1573,66 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
       .set('Authorization', `Bearer ${outsiderToken}`)
       .expect(404);
   });
+
+  it('returns 404 for review coverage endpoint outside project membership', async () => {
+    const { projectId, revisionId } = await seedProjectWithReadyRequirement();
+    const booking = await seedRepository(projectId, 'booking-service');
+    const payment = await seedRepository(projectId, 'payment-service');
+
+    const createResponse = await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requirementRevisionId: revisionId,
+        repositoryIds: [booking.repositoryId, payment.repositoryId],
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+      })
+      .expect(201);
+
+    const result = multiRepoImpactAnalysisCreateResponseSchema.parse(createResponse.body);
+
+    const outsider = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        email: 'coverage-outsider@ba-helper.local',
+        name: 'Coverage Outsider',
+        role: 'ADMIN',
+      },
+    });
+    const outsiderToken = jwtService.sign({
+      sub: outsider.id,
+      email: outsider.email,
+      role: outsider.role,
+      name: outsider.name,
+    });
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/review-coverage`)
+      .set('Authorization', `Bearer ${outsiderToken}`)
+      .expect(404);
+  });
+
+  it('returns 401 for review coverage endpoint unauthenticated', async () => {
+    const { projectId, revisionId } = await seedProjectWithReadyRequirement();
+    const booking = await seedRepository(projectId, 'booking-service');
+    const payment = await seedRepository(projectId, 'payment-service');
+
+    const createResponse = await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requirementRevisionId: revisionId,
+        repositoryIds: [booking.repositoryId, payment.repositoryId],
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+      })
+      .expect(201);
+
+    const result = multiRepoImpactAnalysisCreateResponseSchema.parse(createResponse.body);
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/review-coverage`)
+      .expect(401);
+  });
 });

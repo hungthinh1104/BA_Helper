@@ -20,6 +20,7 @@ import { ListReviewClarificationsUseCase } from './application/list-review-clari
 import { AnswerReviewClarificationUseCase } from './application/answer-review-clarification.usecase';
 import { CreateDerivedAnalysisFromClarificationUseCase } from './application/create-derived-analysis-from-clarification.usecase';
 import { GetImpactAnalysisLineageUseCase } from './application/get-impact-analysis-lineage.usecase';
+import { GetReviewCoverageUseCase } from './application/get-review-coverage.usecase';
 import { CreateMultiRepoImpactAnalysesUseCase } from './application/create-multi-repo-impact-analyses.usecase';
 import { GetMultiRepoAnalysisRunUseCase } from './application/get-multi-repo-analysis-run.usecase';
 import { BuildMultiRepoImpactMatrixReadModel } from './application/build-multi-repo-impact-matrix.read-model';
@@ -116,6 +117,7 @@ import { ProjectModule } from '../project/project.module';
     AnswerReviewClarificationUseCase,
     CreateDerivedAnalysisFromClarificationUseCase,
     GetImpactAnalysisLineageUseCase,
+    GetReviewCoverageUseCase,
     {
       provide: ProjectRepository,
       useFactory: (prisma: PrismaService) => new ProjectRepository(prisma),

@@ -51,6 +51,7 @@ import { CreateAnalysisReviewDecisionUseCase } from '../application/create-analy
 import { ListReviewDecisionsUseCase } from '../application/list-review-decisions.usecase';
 import { GetLatestReviewDecisionUseCase } from '../application/get-latest-review-decision.usecase';
 import { GetImpactAnalysisLineageUseCase } from '../application/get-impact-analysis-lineage.usecase';
+import { GetReviewCoverageUseCase } from '../application/get-review-coverage.usecase';
 import {
   mapImpactAnalysisListItem,
   mapImpactAnalysisResponse,
@@ -90,6 +91,7 @@ export class ImpactAnalysisController {
     private readonly listReviewDecisions: ListReviewDecisionsUseCase,
     private readonly getLatestReviewDecision: GetLatestReviewDecisionUseCase,
     private readonly getLineage: GetImpactAnalysisLineageUseCase,
+    private readonly getReviewCoverage: GetReviewCoverageUseCase,
     private readonly permissions: ProjectPermissionService,
   ) {}
 
@@ -157,6 +159,16 @@ export class ImpactAnalysisController {
     return multiRepoAnalysisRunDetailResponseSchema.parse(
       mapMultiRepoAnalysisRunDetail(run),
     );
+  }
+
+  @Get('/multi-repo-runs/:runId/review-coverage')
+  async getReviewCoverageEndpoint(
+    @Param('runId') runId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    // Permission is checked within the use case
+    const result = await this.getReviewCoverage.execute(actor, runId);
+    return result; // result is already validated by contract schema format implicitly, or we can use reviewCoverageResponseSchema.parse
   }
 
   @Get('/multi-repo-runs/:runId/impact-matrix')

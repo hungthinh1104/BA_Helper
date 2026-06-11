@@ -482,3 +482,52 @@ export type MatrixRowEvidenceItem = z.infer<typeof matrixRowEvidenceItemSchema>;
 export type MatrixRowInsightRef = z.infer<typeof matrixRowInsightRefSchema>;
 export type MatrixRowArtifactDetail = z.infer<typeof matrixRowArtifactDetailSchema>;
 export type MatrixRowDetailResponse = z.infer<typeof matrixRowDetailResponseSchema>;
+
+export const reviewCoverageStatusSchema = z.enum(['PASS', 'WARN', 'FAIL']);
+
+export const reviewCoverageGateCategorySchema = z.enum([
+	'REVIEW_DECISION',
+	'EVIDENCE_COVERAGE',
+	'QA_COVERAGE',
+	'RISK_COVERAGE',
+	'REPOSITORY_READINESS',
+]);
+
+export const reviewCoverageGateSchema = z.object({
+	gateId: z.string(),
+	category: reviewCoverageGateCategorySchema,
+	status: reviewCoverageStatusSchema,
+	title: z.string(),
+	description: z.string(),
+	recommendedAction: z.string(),
+	affectedAnalysisIds: z.array(z.string().uuid()),
+	affectedArtifactIds: z.array(z.string().uuid()),
+	affectedInsightIds: z.array(z.string().uuid()),
+	affectedRepositoryIds: z.array(z.string().uuid()),
+});
+
+export const reviewCoverageResponseSchema = z.object({
+	runId: z.string().uuid(),
+	status: reviewCoverageStatusSchema,
+	summary: z.object({
+		totalRepositories: z.number().int().nonnegative(),
+		acceptedRepositories: z.number().int().nonnegative(),
+		pendingRepositories: z.number().int().nonnegative(),
+		rejectedRepositories: z.number().int().nonnegative(),
+		impactedArtifacts: z.number().int().nonnegative(),
+		artifactsWithEvidence: z.number().int().nonnegative(),
+		uncoveredArtifacts: z.number().int().nonnegative(),
+		risks: z.number().int().nonnegative(),
+		risksWithQa: z.number().int().nonnegative(),
+		risksWithoutQa: z.number().int().nonnegative(),
+		qaScenarios: z.number().int().nonnegative(),
+		blockingGates: z.number().int().nonnegative(),
+		warningGates: z.number().int().nonnegative(),
+	}),
+	gates: z.array(reviewCoverageGateSchema),
+});
+
+export type ReviewCoverageStatus = z.infer<typeof reviewCoverageStatusSchema>;
+export type ReviewCoverageGateCategory = z.infer<typeof reviewCoverageGateCategorySchema>;
+export type ReviewCoverageGate = z.infer<typeof reviewCoverageGateSchema>;
+export type ReviewCoverageResponse = z.infer<typeof reviewCoverageResponseSchema>;
