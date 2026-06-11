@@ -30,6 +30,7 @@ export const scanFixture = (input: ScanInput): ScanResult => {
         symbolName: sourceFile.getBaseName(),
         startLine: 1,
         endLine: sourceFile.getEndLineNumber(),
+        excerpt: sourceFile.getText(),
       });
       continue;
     }
@@ -52,6 +53,7 @@ export const scanFixture = (input: ScanInput): ScanResult => {
           symbolName: className,
           startLine: cls.getStartLineNumber(),
           endLine: cls.getEndLineNumber(),
+          excerpt: cls.getText(),
         });
       } else if (isController || isService) {
         // Also extract public methods for Controllers and Services
@@ -69,6 +71,7 @@ export const scanFixture = (input: ScanInput): ScanResult => {
             symbolName: `${className}.${methodName}`,
             startLine: method.getStartLineNumber(),
             endLine: method.getEndLineNumber(),
+            excerpt: method.getText(),
           });
         }
       }

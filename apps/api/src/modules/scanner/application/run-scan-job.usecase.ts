@@ -1,3 +1,4 @@
+import { Injectable } from '@nestjs/common';
 import { ScanJobRepository } from '../infrastructure/scan-job.repository';
 import { EventLogService } from '../../event-log/application/event-log.service';
 import { AppError } from '../../../shared/app-error';
@@ -6,12 +7,16 @@ import { ArtifactRepository } from '../../artifact/infrastructure/artifact.repos
 import { scanFixture } from '@ba-helper/analyzer';
 import { PrismaService } from '../../prisma/prisma.service';
 import { QueueService } from '../../queue/queue.service';
+import { EvidenceRepository } from '../../evidence/infrastructure/evidence.repository';
+import { createHash } from 'node:crypto';
 
+@Injectable()
 export class RunScanJobUseCase {
   constructor(
     private readonly scanJobRepository: ScanJobRepository,
     private readonly artifactRepository: ArtifactRepository,
     private readonly eventLogService: EventLogService,
+    private readonly evidenceRepo: EvidenceRepository,
     private readonly prisma: PrismaService,
     private readonly queueService: QueueService,
   ) {}
@@ -39,11 +44,42 @@ export class RunScanJobUseCase {
         analyzerVersion: '0.1.0',
       });
 
-      const snapshot = await this.prisma.repositorySnapshot.create({
-        data: {
+      const target = await this.prisma.repositoryTarget.upsert({
+        where: {
+          repositoryId_targetKey: {
+            repositoryId: job.repositoryId,
+            targetKey: job.requestedRef ?? 'main',
+          },
+        },
+        create: {
+          repositoryId: job.repositoryId,
+          targetKey: job.requestedRef ?? 'main',
+          requestedRef: job.requestedRef ?? 'main',
+          resolvedRefType: 'BRANCH',
+          latestObservedCommitSha: 'mock-commit-sha', // TODO: actual
+          lastObservedAt: new Date(),
+        },
+        update: {
+          latestObservedCommitSha: 'mock-commit-sha',
+          lastObservedAt: new Date(),
+        },
+      });
+
+      const snapshot = await this.prisma.repositorySnapshot.upsert({
+        where: {
+          repositoryId_commitSha_analyzerVersion: {
+            repositoryId: job.repositoryId,
+            commitSha: 'mock-commit-sha', // TODO: Get actual commit SHA
+            analyzerVersion: scanResult.analyzerVersion,
+          },
+        },
+        create: {
           repositoryId: job.repositoryId,
           commitSha: 'mock-commit-sha', // TODO: Get actual commit SHA
           analyzerVersion: scanResult.analyzerVersion,
+          coverageStatus: scanResult.coverage.status,
+        },
+        update: {
           coverageStatus: scanResult.coverage.status,
         },
       });
@@ -57,11 +93,12 @@ export class RunScanJobUseCase {
 
       await this.prisma.scanJob.update({
         where: { id: job.id },
-        data: { snapshotId: snapshot.id },
+        data: { snapshotId: snapshot.id, sourceTargetId: target.id },
       });
 
       if (scanResult.artifacts.length > 0) {
-        await this.artifactRepository.createMany(
+        // Wait until artifacts are created first since evidence needs artifact references
+        const createdArtifacts = await this.artifactRepository.createMany(
           scanResult.artifacts.map((artifact) => ({
             snapshotId: snapshot.id,
             artifactKey: artifact.stableId,
@@ -72,6 +109,32 @@ export class RunScanJobUseCase {
             endLine: artifact.endLine,
           })),
         );
+
+        // Fetch back artifacts to insert their excerpts into Evidence
+        const persistedArtifacts = await this.artifactRepository.listBySnapshot(snapshot.id);
+        const evidenceInputs = scanResult.artifacts.map(artifact => {
+            const persistedId = persistedArtifacts.find(pa => pa.artifactKey === artifact.stableId)?.id;
+            if (!persistedId) return null;
+            
+            const excerpt = artifact.excerpt || '';
+            const contentHash = createHash('sha256').update(excerpt).digest('hex');
+
+            return {
+                provenanceKey: `snapshot:${snapshot.id}:artifact:${artifact.stableId}`,
+                sourceType: artifact.type === 'TEST' ? 'TEST' : 'CODE',
+                snapshotId: snapshot.id,
+                artifactId: persistedId,
+                sourcePath: artifact.filePath,
+                startLine: artifact.startLine,
+                endLine: artifact.endLine,
+                excerpt,
+                contentHash,
+                isRedacted: false,
+                redactionMetadata: null,
+            };
+        }).filter(Boolean);
+
+        await this.evidenceRepo.upsertMany(evidenceInputs as any);
 
         // Snapshot is now LEXICAL_READY, enqueue for embedding
         await this.prisma.repositorySnapshot.update({

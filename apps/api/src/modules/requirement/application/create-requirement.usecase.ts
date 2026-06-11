@@ -34,7 +34,7 @@ export class CreateRequirementUseCase {
       ? RequirementPolicy.qualifyReadiness(params.rawText)
       : { status: 'DRAFT' as const, issues: [] };
 
-    const revision = await this.repository.createRevision({
+    const revision = await this.repository.createRevisionWithReadinessTransition({
       requirementId: requirement.id,
       title: params.title.trim(),
       rawText: params.rawText,

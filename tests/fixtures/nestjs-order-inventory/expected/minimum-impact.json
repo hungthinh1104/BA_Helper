@@ -1,0 +1,50 @@
+{
+  "requiredEvidenced": [
+    {
+      "concept": "Order cancellation endpoint or service is affected",
+      "mustReferenceAny": ["OrderService.cancelOrder", "order.controller.ts", "order.service.ts"]
+    },
+    {
+      "concept": "Inventory reservation release is affected",
+      "mustReferenceAny": ["InventoryService.releaseReservation", "inventory.service.ts", "StockReservation"]
+    }
+  ],
+  "requiredUnknowns": [
+    {
+      "concept": "Refund or payment behavior is missing",
+      "mustReferenceAny": ["refund", "payment"]
+    },
+    {
+      "concept": "Shipment boundary behavior is missing",
+      "mustReferenceAny": ["shipment", "shipped", "shipping"]
+    }
+  ],
+  "requiredQaScenarios": [
+    {
+      "concept": "Cancel order before shipment",
+      "mustReferenceAny": ["before shipment", "prior to shipment"]
+    },
+    {
+      "concept": "Reject cancellation after shipment started",
+      "mustReferenceAny": ["after shipment", "already shipped", "shipment started", "shipped order"]
+    },
+    {
+      "concept": "Duplicate cancel / idempotency",
+      "mustReferenceAny": ["duplicate", "twice", "idempotent", "already cancelled"]
+    },
+    {
+      "concept": "Inventory release failure",
+      "mustReferenceAny": ["inventory release fail", "inventory fail", "fail to release"]
+    },
+    {
+      "concept": "Reserved inventory is released when cancellation succeeds",
+      "mustReferenceAny": ["happy path", "successfully released", "reserved inventory released"]
+    }
+  ],
+  "hallucinationTriggers": [
+    {
+      "concept": "Payment refund is confirmed",
+      "mustReferenceAny": ["refund", "payment"]
+    }
+  ]
+}

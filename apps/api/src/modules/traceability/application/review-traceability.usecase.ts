@@ -31,6 +31,10 @@ export class ReviewTraceabilityUseCase {
       );
     }
 
+    if (link.reviewStatus === params.reviewStatus) {
+      return link;
+    }
+
     const updateResult = await this.repository.updateReviewStatusIfCurrent({
       linkId: params.linkId,
       reviewStatus: params.reviewStatus,

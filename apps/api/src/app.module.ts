@@ -31,7 +31,7 @@ import { AiModule } from './modules/ai/ai.module';
     ArtifactModule,
     GraphModule,
     QueueModule,
-    AiModule,
+    AiModule.forRoot(),
   ],
 })
 export class AppModule {}

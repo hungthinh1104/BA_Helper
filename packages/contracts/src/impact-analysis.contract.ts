@@ -65,9 +65,29 @@ export const impactAnalysisResponseSchema = z.object({
 	}),
 });
 
-export type ImpactAnalysisCreateRequest = z.infer<
-	typeof impactAnalysisCreateRequestSchema
->;
-export type ImpactAnalysisResponse = z.infer<
-	typeof impactAnalysisResponseSchema
->;
+export const impactAnalysisListItemResponseSchema = z.object({
+	id: z.string().uuid(),
+	title: z.string(),
+	status: impactAnalysisStatusSchema,
+	stage: impactAnalysisStageSchema,
+	isStale: z.boolean(),
+	requirementRevisionTitle: z.string(),
+	repositoryDisplayName: z.string(),
+	snapshotCommitSha: z.string(),
+	createdAt: z.string(),
+	capabilities: z.object({
+		canReview: z.boolean(),
+		canFinalize: z.boolean(),
+		canExport: z.boolean(),
+	}),
+});
+
+export const impactAnalysisListResponseSchema = z.object({
+	items: z.array(impactAnalysisListItemResponseSchema),
+});
+
+export type ImpactAnalysisCreateRequest = z.infer<typeof impactAnalysisCreateRequestSchema>;
+export type ImpactAnalysisResponse = z.infer<typeof impactAnalysisResponseSchema>;
+export type ImpactAnalysisDetailResponse = ImpactAnalysisResponse; // Alias for clarity
+export type ImpactAnalysisListItemResponse = z.infer<typeof impactAnalysisListItemResponseSchema>;
+export type ImpactAnalysisListResponse = z.infer<typeof impactAnalysisListResponseSchema>;

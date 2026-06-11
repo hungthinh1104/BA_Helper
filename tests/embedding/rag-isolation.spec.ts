@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { EmbeddingChunkRepository } from '../../apps/api/src/modules/embedding/infrastructure/embedding-chunk.repository';
 import { EmbedSnapshotArtifactsUseCase } from '../../apps/api/src/modules/embedding/application/embed-snapshot-artifacts.usecase';
 import { FakeEmbeddingProvider } from '../../apps/api/src/modules/embedding/infrastructure/fake-embedding.provider';
-import { EmbeddingPolicy } from '../../apps/api/src/modules/embedding/domain/embedding.policy';
+import { ArtifactChunkBuilder } from '../../apps/api/src/modules/embedding/domain/artifact-chunk.builder';
+import { createHash } from 'node:crypto';
 
 // ─── Shared constants ────────────────────────────────────────────────────────
 
@@ -11,10 +12,16 @@ const TENANT_B = { tenantId: 'tenant-b', projectId: 'proj-b', repositoryId: 'rep
 
 const ARTIFACT = {
   id: 'art-1',
+  snapshotId: 'snap-1',
   artifactKey: 'src/booking.service.ts::cancelBooking',
   artifactType: 'SERVICE_METHOD',
   name: 'BookingService.cancelBooking',
   filePath: 'src/booking.service.ts',
+  evidences: [
+    {
+      excerpt: 'async cancelBooking() { }',
+    },
+  ],
 };
 
 // ─── Phase 1.1–1.4: EmbeddingChunkRepository isolation ──────────────────────
@@ -136,15 +143,22 @@ describe('EmbedSnapshotArtifactsUseCase — stableChunkId cache semantics', () =
         findUnique: jest.fn<any>().mockResolvedValue(SNAPSHOT),
         update: jest.fn<any>(),
       },
+      codeArtifact: {
+        findMany: jest.fn<any>().mockResolvedValue([ARTIFACT]),
+      },
     };
     provider = new FakeEmbeddingProvider();
     useCase = new EmbedSnapshotArtifactsUseCase(artifactRepoMock, chunkRepoMock, provider, prismaMock);
   });
 
   it('skips re-embed when same snapshotId + stableChunkId + contentHash already exists', async () => {
-    const content = EmbeddingPolicy.buildArtifactContent(ARTIFACT);
-    const contentHash = EmbeddingPolicy.computeContentHash(content);
-    const stableChunkId = `artifact:${ARTIFACT.artifactKey}:${contentHash}`;
+    const builtChunk = ArtifactChunkBuilder.build({
+      artifact: ARTIFACT as any,
+      evidence: ARTIFACT.evidences as any,
+    });
+    
+    const contentHash = createHash('sha256').update(builtChunk.content).digest('hex');
+    const stableChunkId = builtChunk.stableChunkId;
 
     // Exact same chunk already in DB for this snapshot
     chunkRepoMock.listBySnapshot.mockResolvedValue([{ stableChunkId, contentHash }]);
@@ -155,9 +169,13 @@ describe('EmbedSnapshotArtifactsUseCase — stableChunkId cache semantics', () =
   });
 
   it('re-embeds when same stableChunkId but contentHash differs (artifact content changed)', async () => {
-    const content = EmbeddingPolicy.buildArtifactContent(ARTIFACT);
-    const contentHash = EmbeddingPolicy.computeContentHash(content);
-    const stableChunkId = `artifact:${ARTIFACT.artifactKey}:${contentHash}`;
+    const builtChunk = ArtifactChunkBuilder.build({
+      artifact: ARTIFACT as any,
+      evidence: ARTIFACT.evidences as any,
+    });
+    
+    const contentHash = createHash('sha256').update(builtChunk.content).digest('hex');
+    const stableChunkId = builtChunk.stableChunkId;
 
     // DB has this stableChunkId but with an OLD content hash → content changed → must re-embed
     chunkRepoMock.listBySnapshot.mockResolvedValue([

@@ -1,0 +1,89 @@
+[32m[Nest] 22799  - [39m21:36:18 29/05/2026 [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 22799  - [39m21:36:18 29/05/2026 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +21ms[39m
+[32m[Nest] 22799  - [39m21:36:18 29/05/2026 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mBullModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22799  - [39m21:36:18 29/05/2026 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPrismaModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22799  - [39m21:36:18 29/05/2026 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAiModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22799  - [39m21:36:18 29/05/2026 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mBullModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22799  - [39m21:36:18 29/05/2026 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAiModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 22799  - [39m21:36:18 29/05/2026 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDiscoveryModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22799  - [39m21:36:18 29/05/2026 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mRetrievalModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22799  - [39m21:36:18 29/05/2026 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEmbeddingModule dependencies initialized[39m[38;5;3m +3ms[39m
+[32m[Nest] 22799  - [39m21:36:18 29/05/2026 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEventLogModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22799  - [39m21:36:18 29/05/2026 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEmbeddingWorkerModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 22799  - [39m21:36:18 29/05/2026 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mBullModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22799  - [39m21:36:18 29/05/2026 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mBullModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22799  - [39m21:36:18 29/05/2026 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mBullModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22799  - [39m21:36:18 29/05/2026 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mBullModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22799  - [39m21:36:18 29/05/2026 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mBullModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22799  - [39m21:36:18 29/05/2026 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mBullModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22799  - [39m21:36:18 29/05/2026 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mBullModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22799  - [39m21:36:18 29/05/2026 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mImpactAnalysisWorkerModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22799  - [39m21:36:18 29/05/2026 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mArtifactModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 22799  - [39m21:36:18 29/05/2026 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mGraphModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22799  - [39m21:36:18 29/05/2026 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mQueueModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22799  - [39m21:36:18 29/05/2026 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mRepositoryModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22799  - [39m21:36:18 29/05/2026 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mScanJobWorkerModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 22799  - [39m21:36:18 29/05/2026 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mScannerModule dependencies initialized[39m[38;5;3m +0ms[39m
+Vector search failed, falling back to lexical only TypeError: Cannot read properties of undefined (reading '$queryRaw')
+    at EmbeddingChunkRepository.searchSimilar (/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/api/src/modules/embedding/infrastructure/embedding-chunk.repository.js:52:28)
+    at HybridRetrievalService.retrieve (/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/api/src/modules/retrieval/application/hybrid-retrieval.service.js:62:53)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async RunImpactAnalysisUseCase.execute (/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/api/src/modules/impact-analysis/application/run-impact-analysis.usecase.js:94:40)
+    at async ImpactAnalysisProcessor.process (/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/worker/src/impact-analysis/impact-analysis.processor.js:22:13)
+    at async /home/diphungthinh/Desktop/BA_helper_test/node_modules/.pnpm/bullmq@5.77.6/node_modules/bullmq/dist/cjs/classes/worker.js:589:32
+Vector search failed, falling back to lexical only TypeError: Cannot read properties of undefined (reading '$queryRaw')
+    at EmbeddingChunkRepository.searchSimilar (/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/api/src/modules/embedding/infrastructure/embedding-chunk.repository.js:52:28)
+    at HybridRetrievalService.retrieve (/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/api/src/modules/retrieval/application/hybrid-retrieval.service.js:62:53)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async RunImpactAnalysisUseCase.execute (/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/api/src/modules/impact-analysis/application/run-impact-analysis.usecase.js:94:40)
+    at async ImpactAnalysisProcessor.process (/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/worker/src/impact-analysis/impact-analysis.processor.js:22:13)
+    at async /home/diphungthinh/Desktop/BA_helper_test/node_modules/.pnpm/bullmq@5.77.6/node_modules/bullmq/dist/cjs/classes/worker.js:589:32
+ImpactAnalysisProcessor failed for job impact-5670da2c-090f-4013-adbb-6c11f45274df: PrismaClientKnownRequestError: 
+Invalid `this.prisma.impactAnalysis.update()` invocation in
+/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/api/src/modules/impact-analysis/infrastructure/impact-analysis.repository.js:80:43
+
+  77     });
+  78 }
+  79 async updateStatus(params) {
+→ 80     return this.prisma.impactAnalysis.update(
+An operation failed because it depends on one or more records that were required but not found. No record was found for an update.
+    at zr.handleRequestError (/home/diphungthinh/Desktop/BA_helper_test/node_modules/.pnpm/@prisma+client@7.8.0_prisma@7.8.0_@types+react-dom@19.2.3_@types+react@19.2.15__@types+_5141f3c5e02aaa1c3c31e2ec8ab196c9/node_modules/@prisma/client/runtime/client.js:65:8286)
+    at zr.handleAndLogRequestError (/home/diphungthinh/Desktop/BA_helper_test/node_modules/.pnpm/@prisma+client@7.8.0_prisma@7.8.0_@types+react-dom@19.2.3_@types+react@19.2.15__@types+_5141f3c5e02aaa1c3c31e2ec8ab196c9/node_modules/@prisma/client/runtime/client.js:65:7581)
+    at zr.request (/home/diphungthinh/Desktop/BA_helper_test/node_modules/.pnpm/@prisma+client@7.8.0_prisma@7.8.0_@types+react-dom@19.2.3_@types+react@19.2.15__@types+_5141f3c5e02aaa1c3c31e2ec8ab196c9/node_modules/@prisma/client/runtime/client.js:65:7288)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async a (/home/diphungthinh/Desktop/BA_helper_test/node_modules/.pnpm/@prisma+client@7.8.0_prisma@7.8.0_@types+react-dom@19.2.3_@types+react@19.2.15__@types+_5141f3c5e02aaa1c3c31e2ec8ab196c9/node_modules/@prisma/client/runtime/client.js:75:6862)
+    at async RunImpactAnalysisUseCase.execute (/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/api/src/modules/impact-analysis/application/run-impact-analysis.usecase.js:84:9)
+    at async ImpactAnalysisProcessor.process (/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/worker/src/impact-analysis/impact-analysis.processor.js:22:13)
+    at async /home/diphungthinh/Desktop/BA_helper_test/node_modules/.pnpm/bullmq@5.77.6/node_modules/bullmq/dist/cjs/classes/worker.js:589:32 {
+  code: 'P2025',
+  meta: { modelName: 'ImpactAnalysis', operation: 'an update' },
+  clientVersion: '7.8.0'
+}
+Vector search failed, falling back to lexical only TypeError: Cannot read properties of undefined (reading '$queryRaw')
+    at EmbeddingChunkRepository.searchSimilar (/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/api/src/modules/embedding/infrastructure/embedding-chunk.repository.js:52:28)
+    at HybridRetrievalService.retrieve (/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/api/src/modules/retrieval/application/hybrid-retrieval.service.js:62:53)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async RunImpactAnalysisUseCase.execute (/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/api/src/modules/impact-analysis/application/run-impact-analysis.usecase.js:94:40)
+    at async ImpactAnalysisProcessor.process (/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/worker/src/impact-analysis/impact-analysis.processor.js:22:13)
+    at async /home/diphungthinh/Desktop/BA_helper_test/node_modules/.pnpm/bullmq@5.77.6/node_modules/bullmq/dist/cjs/classes/worker.js:589:32
+Vector search failed, falling back to lexical only TypeError: Cannot read properties of undefined (reading '$queryRaw')
+    at EmbeddingChunkRepository.searchSimilar (/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/api/src/modules/embedding/infrastructure/embedding-chunk.repository.js:52:28)
+    at HybridRetrievalService.retrieve (/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/api/src/modules/retrieval/application/hybrid-retrieval.service.js:62:53)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async RunImpactAnalysisUseCase.execute (/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/api/src/modules/impact-analysis/application/run-impact-analysis.usecase.js:94:40)
+    at async ImpactAnalysisProcessor.process (/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/worker/src/impact-analysis/impact-analysis.processor.js:22:13)
+    at async /home/diphungthinh/Desktop/BA_helper_test/node_modules/.pnpm/bullmq@5.77.6/node_modules/bullmq/dist/cjs/classes/worker.js:589:32
+Vector search failed, falling back to lexical only TypeError: Cannot read properties of undefined (reading '$queryRaw')
+    at EmbeddingChunkRepository.searchSimilar (/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/api/src/modules/embedding/infrastructure/embedding-chunk.repository.js:52:28)
+    at HybridRetrievalService.retrieve (/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/api/src/modules/retrieval/application/hybrid-retrieval.service.js:62:53)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async RunImpactAnalysisUseCase.execute (/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/api/src/modules/impact-analysis/application/run-impact-analysis.usecase.js:94:40)
+    at async ImpactAnalysisProcessor.process (/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/worker/src/impact-analysis/impact-analysis.processor.js:22:13)
+    at async /home/diphungthinh/Desktop/BA_helper_test/node_modules/.pnpm/bullmq@5.77.6/node_modules/bullmq/dist/cjs/classes/worker.js:589:32
+Vector search failed, falling back to lexical only TypeError: Cannot read properties of undefined (reading '$queryRaw')
+    at EmbeddingChunkRepository.searchSimilar (/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/api/src/modules/embedding/infrastructure/embedding-chunk.repository.js:52:28)
+    at HybridRetrievalService.retrieve (/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/api/src/modules/retrieval/application/hybrid-retrieval.service.js:62:53)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async RunImpactAnalysisUseCase.execute (/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/api/src/modules/impact-analysis/application/run-impact-analysis.usecase.js:94:40)
+    at async ImpactAnalysisProcessor.process (/home/diphungthinh/Desktop/BA_helper_test/apps/worker/dist/apps/worker/src/impact-analysis/impact-analysis.processor.js:22:13)
+    at async /home/diphungthinh/Desktop/BA_helper_test/node_modules/.pnpm/bullmq@5.77.6/node_modules/bullmq/dist/cjs/classes/worker.js:589:32

@@ -84,6 +84,8 @@ domain-profile    static domain config (glossary, risk hints, QA templates, prom
 retrieval         hybrid evidence retrieval (lexical + vector + graph)
 embedding         artifact embedding pipeline and vector chunk persistence
 ai                adapts LLM providers only
+
+Vector retrieval design is documented in [docs/agent/adr-0007-vector-retrieval.md](adr-0007-vector-retrieval.md).
 queue             queues work only
 prisma            persistence integration only
 ```

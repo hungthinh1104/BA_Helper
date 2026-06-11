@@ -308,6 +308,7 @@ model ImpactAnalysis {
   insights               BaInsight[]
   traceabilityLinks      TraceabilityLink[]
   documents              GeneratedDocument[]
+  metadata               Json?
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
 
@@ -399,12 +400,12 @@ model DomainEvent {
 
 model EmbeddingChunk {
   // Isolation scope: MVP tenantId = projectId; future = organizationId
-  id             String   @id @default(uuid()) @db.Uuid
-  tenantId       String   @db.Uuid
-  projectId      String   @db.Uuid
-  repositoryId   String   @db.Uuid
-  snapshotId     String   @db.Uuid
-  artifactId     String?  @db.Uuid
+  id             String   @id @default(uuid())
+  tenantId       String
+  projectId      String
+  repositoryId   String
+  snapshotId     String
+  artifactId     String?
 
   // Stable identifier for idempotent upserts: "artifact:<stableId>:<contentHash>"
   stableChunkId  String

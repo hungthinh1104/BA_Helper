@@ -54,7 +54,16 @@ export class EmbeddingChunkRepository {
           ${chunk.embeddingModel}, ${vectorStr}::vector, NOW()
         )
         ON CONFLICT ("snapshotId", "stableChunkId", "embeddingModel")
-        DO NOTHING
+        DO UPDATE SET
+          "content" = EXCLUDED."content",
+          "contentHash" = EXCLUDED."contentHash",
+          "tokenCount" = EXCLUDED."tokenCount",
+          "embedding" = EXCLUDED."embedding",
+          "artifactId" = EXCLUDED."artifactId",
+          "filePath" = EXCLUDED."filePath",
+          "symbolName" = EXCLUDED."symbolName",
+          "artifactType" = EXCLUDED."artifactType",
+          "commitSha" = EXCLUDED."commitSha"
       `;
     }
   }

@@ -17,61 +17,12 @@ import { HybridRetrievalService } from '../../../api/src/modules/retrieval/appli
   imports: [PrismaModule, AiModule, RetrievalModule],
   providers: [
     ImpactAnalysisProcessor,
-    {
-      provide: ImpactAnalysisRepository,
-      useFactory: (prisma: PrismaService) => new ImpactAnalysisRepository(prisma),
-      inject: [PrismaService],
-    },
-    {
-      provide: ArtifactRepository,
-      useFactory: (prisma: PrismaService) => new ArtifactRepository(prisma),
-      inject: [PrismaService],
-    },
-    {
-      provide: EvidenceRepository,
-      useFactory: (prisma: PrismaService) => new EvidenceRepository(prisma),
-      inject: [PrismaService],
-    },
-    {
-      provide: InsightRepository,
-      useFactory: (prisma: PrismaService) => new InsightRepository(prisma),
-      inject: [PrismaService],
-    },
-    {
-      provide: TraceabilityRepository,
-      useFactory: (prisma: PrismaService) => new TraceabilityRepository(prisma),
-      inject: [PrismaService],
-    },
-    {
-      provide: RunImpactAnalysisUseCase,
-      useFactory: (
-        repo: ImpactAnalysisRepository,
-        artifactRepo: ArtifactRepository,
-        evidenceRepo: EvidenceRepository,
-        insightRepo: InsightRepository,
-        traceabilityRepo: TraceabilityRepository,
-        llmProvider: LlmProvider,
-        retrievalService: HybridRetrievalService,
-      ) =>
-        new RunImpactAnalysisUseCase(
-          repo,
-          artifactRepo,
-          evidenceRepo,
-          insightRepo,
-          traceabilityRepo,
-          llmProvider,
-          retrievalService,
-        ),
-      inject: [
-        ImpactAnalysisRepository,
-        ArtifactRepository,
-        EvidenceRepository,
-        InsightRepository,
-        TraceabilityRepository,
-        LlmProvider,
-        HybridRetrievalService,
-      ],
-    },
+    ImpactAnalysisRepository,
+    ArtifactRepository,
+    EvidenceRepository,
+    InsightRepository,
+    TraceabilityRepository,
+    RunImpactAnalysisUseCase,
   ],
 })
 export class ImpactAnalysisWorkerModule {}

@@ -10,6 +10,7 @@ export type ScanArtifact = {
   symbolName: string;
   startLine: number;
   endLine: number;
+  excerpt: string;
 };
 
 export type ScanCoverage = {

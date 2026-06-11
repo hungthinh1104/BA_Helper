@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 import { LlmProvider, LlmRequest, LlmResult } from '../domain/llm-provider.interface';
 import { AiConfig, AI_CONFIG_TOKEN } from '../domain/ai-config';
+import { parseStructuredLlmOutput } from './structured-output';
 
 @Injectable()
 export class AnthropicLlmProvider extends LlmProvider {
@@ -29,8 +30,13 @@ export class AnthropicLlmProvider extends LlmProvider {
     });
 
     const content = response.content[0];
-    const raw = JSON.parse(content.type === 'text' ? content.text : '{}');
-    const data = schema.parse(raw);
+    const rawText = content.type === 'text' ? content.text : undefined;
+    
+    const { data, parseMode, rawLength, jsonLength } = parseStructuredLlmOutput({
+      rawText,
+      schema,
+      allowJsonExtraction: true, // Anthropic doesn't force JSON natively yet
+    });
 
     return {
       data,
@@ -41,6 +47,9 @@ export class AnthropicLlmProvider extends LlmProvider {
         durationMs: Date.now() - start,
         inputTokens: response.usage?.input_tokens,
         outputTokens: response.usage?.output_tokens,
+        parseMode,
+        rawLength,
+        jsonLength,
       },
     };
   }

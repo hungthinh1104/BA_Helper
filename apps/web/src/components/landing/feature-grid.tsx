@@ -23,14 +23,14 @@ export function FeatureGrid() {
     <section className="py-24 bg-surface text-center">
       <div className="max-w-6xl mx-auto px-4">
         <h2 className="text-3xl font-bold text-foreground mb-16">Built for Technical Business Analysts</h2>
-        <div className="grid md:grid-cols-3 gap-12">
+        <div className="grid md:grid-cols-3 gap-6">
           {features.map(f => (
-            <div key={f.title} className="flex flex-col items-center p-6 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
+            <div key={f.title} className="flex flex-col items-start p-8 text-left bg-surface-soft border border-border/60 rounded-3xl hover:bg-surface-muted transition-colors">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
                 {f.icon}
               </div>
               <h3 className="text-xl font-semibold mb-3 text-foreground">{f.title}</h3>
-              <p className="text-muted-foreground">{f.description}</p>
+              <p className="text-muted-foreground leading-relaxed">{f.description}</p>
             </div>
           ))}
         </div>

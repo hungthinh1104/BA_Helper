@@ -1,0 +1,11 @@
+{
+  "name": "nestjs-order-inventory-fixture",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@nestjs/common": "^10.0.0",
+    "@nestjs/core": "^10.0.0",
+    "rxjs": "^7.8.1",
+    "typeorm": "^0.3.17"
+  }
+}

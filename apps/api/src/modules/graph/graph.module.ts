@@ -21,5 +21,6 @@ import { PrismaService } from '../prisma/prisma.service';
       inject: [GraphRepository, PrismaService],
     },
   ],
+  exports: [GraphRepository],
 })
 export class GraphModule {}

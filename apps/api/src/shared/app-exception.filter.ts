@@ -15,11 +15,9 @@ export class AppExceptionFilter implements ExceptionFilter {
     const response = host.switchToHttp().getResponse();
     const status = AppExceptionFilter.mapStatus(exception.code);
 
-    this.logger.warn({
-      code: exception.code,
-      message: exception.message,
-      status,
-    });
+    this.logger.warn(
+      `AppError [${exception.code}]: ${exception.message} (status: ${status})`
+    );
 
     response.status(status).json({
       code: exception.code,
@@ -33,9 +31,11 @@ export class AppExceptionFilter implements ExceptionFilter {
       case 'INVALID_REPOSITORY_URL':
       case 'INVALID_REPOSITORY_REF':
       case 'INVALID_REQUIREMENT_INPUT':
-      case 'REQUEST_KEY_MISMATCH':
       case 'FINALIZE_REQUIRES_REVIEW_ACK':
       case 'REVIEW_NOT_ALLOWED':
+      case 'INPUT_PROJECT_MISMATCH':
+      case 'REQUIREMENT_REVISION_NOT_READY':
+      case 'UNSUPPORTED_DOMAIN':
         return HttpStatus.BAD_REQUEST;
       case 'PROJECT_NOT_FOUND':
       case 'REPOSITORY_NOT_FOUND':
@@ -45,7 +45,12 @@ export class AppExceptionFilter implements ExceptionFilter {
       case 'SNAPSHOT_NOT_FOUND':
       case 'SOURCE_TARGET_NOT_FOUND':
       case 'IMPACT_ANALYSIS_NOT_FOUND':
+      case 'APPROVED_REPORT_NOT_FOUND':
         return HttpStatus.NOT_FOUND;
+      case 'REQUEST_KEY_MISMATCH':
+      case 'INVALID_STATE_TRANSITION':
+      case 'ANALYSIS_STALE':
+        return HttpStatus.CONFLICT;
       default:
         return HttpStatus.BAD_REQUEST;
     }

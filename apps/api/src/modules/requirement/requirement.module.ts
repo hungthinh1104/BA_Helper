@@ -4,6 +4,8 @@ import { RequirementRepository } from './infrastructure/requirement.repository';
 import { CreateRequirementUseCase } from './application/create-requirement.usecase';
 import { CreateRequirementRevisionUseCase } from './application/create-revision.usecase';
 import { QualifyRequirementRevisionUseCase } from './application/qualify-revision.usecase';
+import { ListRequirementsUseCase } from './application/list-requirements.usecase';
+import { GetRequirementUseCase } from './application/get-requirement.usecase';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventLogModule } from '../event-log/event-log.module';
@@ -35,15 +37,26 @@ import { ProjectRepository } from '../project/infrastructure/project.repository'
     },
     {
       provide: CreateRequirementRevisionUseCase,
-      useFactory: (repo: RequirementRepository, eventLog: EventLogService) =>
-        new CreateRequirementRevisionUseCase(repo, eventLog),
-      inject: [RequirementRepository, EventLogService],
+      useFactory: (repo: RequirementRepository) =>
+        new CreateRequirementRevisionUseCase(repo),
+      inject: [RequirementRepository],
     },
     {
       provide: QualifyRequirementRevisionUseCase,
-      useFactory: (repo: RequirementRepository, eventLog: EventLogService) =>
-        new QualifyRequirementRevisionUseCase(repo, eventLog),
-      inject: [RequirementRepository, EventLogService],
+      useFactory: (repo: RequirementRepository) =>
+        new QualifyRequirementRevisionUseCase(repo),
+      inject: [RequirementRepository],
+    },
+    {
+      provide: ListRequirementsUseCase,
+      useFactory: (repo: RequirementRepository, projectRepo: ProjectRepository) =>
+        new ListRequirementsUseCase(repo, projectRepo),
+      inject: [RequirementRepository, ProjectRepository],
+    },
+    {
+      provide: GetRequirementUseCase,
+      useFactory: (repo: RequirementRepository) => new GetRequirementUseCase(repo),
+      inject: [RequirementRepository],
     },
   ],
 })

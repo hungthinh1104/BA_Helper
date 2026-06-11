@@ -9,5 +9,5 @@ export type RetrievalInput = {
 };
 
 export type RetrievalResult = {
-  artifacts: ScanArtifact[];
+  artifacts: (ScanArtifact & { retrievalReason?: string })[];
 };

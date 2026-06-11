@@ -3,6 +3,7 @@ import OpenAI from 'openai';
 import { z } from 'zod';
 import { LlmProvider, LlmRequest, LlmResult } from '../domain/llm-provider.interface';
 import { AiConfig, AI_CONFIG_TOKEN } from '../domain/ai-config';
+import { parseStructuredLlmOutput } from './structured-output';
 
 @Injectable()
 export class OpenAiLlmProvider extends LlmProvider {
@@ -32,8 +33,12 @@ export class OpenAiLlmProvider extends LlmProvider {
       ],
     });
 
-    const raw = JSON.parse(response.choices[0].message.content ?? '{}');
-    const data = schema.parse(raw); // Zod validates
+    const rawText = response.choices[0].message.content;
+    const { data, parseMode, rawLength, jsonLength } = parseStructuredLlmOutput({
+      rawText,
+      schema,
+      allowJsonExtraction: true, // fallback extraction for safety
+    });
 
     return {
       data,
@@ -44,6 +49,9 @@ export class OpenAiLlmProvider extends LlmProvider {
         durationMs: Date.now() - start,
         inputTokens: response.usage?.prompt_tokens,
         outputTokens: response.usage?.completion_tokens,
+        parseMode,
+        rawLength,
+        jsonLength,
       },
     };
   }

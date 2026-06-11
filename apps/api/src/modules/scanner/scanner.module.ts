@@ -13,9 +13,10 @@ import { ArtifactModule } from '../artifact/artifact.module';
 import { ArtifactRepository } from '../artifact/infrastructure/artifact.repository';
 import { QueueModule } from '../queue/queue.module';
 import { QueueService } from '../queue/queue.service';
+import { EvidenceModule } from '../evidence/evidence.module';
 
 @Module({
-  imports: [PrismaModule, EventLogModule, RepositoryModule, ArtifactModule, QueueModule],
+  imports: [PrismaModule, EventLogModule, RepositoryModule, ArtifactModule, QueueModule, EvidenceModule],
   controllers: [ScanJobController],
   providers: [
     {
@@ -24,30 +25,12 @@ import { QueueService } from '../queue/queue.service';
       inject: [PrismaService],
     },
     {
-      provide: RunScanJobUseCase,
-      useFactory: (
-        scanRepo: ScanJobRepository,
-        artifactRepo: ArtifactRepository,
-        eventLog: EventLogService,
-        prisma: PrismaService,
-        queueService: QueueService,
-      ) => new RunScanJobUseCase(scanRepo, artifactRepo, eventLog, prisma, queueService),
-      inject: [ScanJobRepository, ArtifactRepository, EventLogService, PrismaService, QueueService],
-    },
-    {
       provide: RepositoryRepository,
       useFactory: (prisma: PrismaService) => new RepositoryRepository(prisma),
       inject: [PrismaService],
     },
-    {
-      provide: CreateScanJobUseCase,
-      useFactory: (
-        scanRepo: ScanJobRepository,
-        repoRepo: RepositoryRepository,
-        eventLog: EventLogService,
-      ) => new CreateScanJobUseCase(scanRepo, repoRepo, eventLog),
-      inject: [ScanJobRepository, RepositoryRepository, EventLogService],
-    },
+    RunScanJobUseCase,
+    CreateScanJobUseCase,
   ],
   exports: [RunScanJobUseCase, ScanJobRepository],
 })

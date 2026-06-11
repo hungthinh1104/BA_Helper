@@ -1,8 +1,13 @@
+import { Injectable } from "@nestjs/common";
+
 import { ImpactAnalysisRepository } from '../infrastructure/impact-analysis.repository';
 import { DocumentRepository } from '../../document/infrastructure/document.repository';
 import { EventLogService } from '../../event-log/application/event-log.service';
 import { AppError } from '../../../shared/app-error';
 
+
+
+@Injectable()
 export class FinalizeImpactAnalysisUseCase {
   constructor(
     private readonly impactRepo: ImpactAnalysisRepository,
@@ -31,7 +36,7 @@ export class FinalizeImpactAnalysisUseCase {
 
     if (analysis.status !== 'WAITING_FOR_REVIEW') {
       throw new AppError(
-        'ANALYSIS_STALE',
+        'INVALID_STATE_TRANSITION',
         'Analysis is not ready for finalization.',
       );
     }
@@ -98,19 +103,25 @@ export class FinalizeImpactAnalysisUseCase {
     lines.push('');
     
     if (analysis.insights && analysis.insights.length > 0) {
-      lines.push('## Insights');
-      lines.push('');
-      for (const insight of analysis.insights) {
-        lines.push(`### [${insight.category}] ${insight.title}`);
-        if (insight.description && insight.description !== insight.title) {
-          lines.push(`**Description**: ${insight.description}`);
-        }
-        lines.push(`- **Certainty**: ${insight.certainty}`);
-        lines.push(`- **Review Status**: ${insight.reviewStatus}`);
-        if (insight.reasoning) {
-          lines.push(`- **Reasoning**: ${insight.reasoning}`);
-        }
+      const approvedInsights = analysis.insights.filter(
+        (insight: any) => insight.reviewStatus !== 'REJECTED',
+      );
+
+      if (approvedInsights.length > 0) {
+        lines.push('## Insights');
         lines.push('');
+        for (const insight of approvedInsights) {
+          lines.push(`### [${insight.insightType}] ${insight.title}`);
+          if (insight.description && insight.description !== insight.title) {
+            lines.push(`**Description**: ${insight.description}`);
+          }
+          lines.push(`- **Certainty**: ${insight.certainty}`);
+          lines.push(`- **Review Status**: ${insight.reviewStatus}`);
+          if (insight.reasoning) {
+            lines.push(`- **Reasoning**: ${insight.reasoning}`);
+          }
+          lines.push('');
+        }
       }
     }
     

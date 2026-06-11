@@ -3,6 +3,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { ImpactAnalysisWorkerModule } from './impact-analysis/impact-analysis.worker.module';
 import { ScanJobWorkerModule } from './scan-job/scan-job.worker.module';
 import { EmbeddingWorkerModule } from './embedding/embedding.worker.module';
+import { AiModule } from '../../api/src/modules/ai/ai.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { EmbeddingWorkerModule } from './embedding/embedding.worker.module';
     BullModule.registerQueue({ name: 'impact-analysis' }),
     BullModule.registerQueue({ name: 'scan-job' }),
     BullModule.registerQueue({ name: 'embedding' }),
+    AiModule.forRoot(),
     ImpactAnalysisWorkerModule,
     ScanJobWorkerModule,
     EmbeddingWorkerModule,

@@ -7,7 +7,11 @@ import { PrismaService } from '../prisma/prisma.service';
 @Module({
   imports: [PrismaModule],
   providers: [
-    EventLogService,
+    {
+      provide: EventLogService,
+      useFactory: (repo: EventLogRepository) => new EventLogService(repo),
+      inject: [EventLogRepository],
+    },
     {
       provide: EventLogRepository,
       useFactory: (prisma: PrismaService) => new EventLogRepository(prisma),

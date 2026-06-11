@@ -31,6 +31,10 @@ export class ReviewInsightUseCase {
       );
     }
 
+    if (insight.reviewStatus === params.reviewStatus) {
+      return insight;
+    }
+
     const updateResult = await this.repository.updateReviewStatusIfCurrent({
       insightId: params.insightId,
       reviewStatus: params.reviewStatus,

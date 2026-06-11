@@ -9,9 +9,14 @@ export class ImpactAnalysisProcessor extends WorkerHost {
   }
 
   async process(job: Job<{ analysisId: string }>): Promise<void> {
-    await this.runAnalysis.execute({
-      analysisId: job.data.analysisId,
-      expandGraph: true,
-    });
+    try {
+      await this.runAnalysis.execute({
+        analysisId: job.data.analysisId,
+        expandGraph: true,
+      });
+    } catch (e: any) {
+      console.error(`ImpactAnalysisProcessor failed for job ${job.id}:`, e);
+      throw e;
+    }
   }
 }

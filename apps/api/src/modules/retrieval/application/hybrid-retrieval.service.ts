@@ -29,7 +29,7 @@ export class HybridRetrievalService {
       const lexicalHits = await this.prisma.$queryRawUnsafe<any[]>(
         `SELECT id, "artifactKey", "filePath", name AS "symbolName", "artifactType"
          FROM "CodeArtifact"
-         WHERE "snapshotId" = $1::uuid
+         WHERE "snapshotId" = $1
            AND (
              "name"        ILIKE ANY($2)
              OR "filePath"    ILIKE ANY($2)

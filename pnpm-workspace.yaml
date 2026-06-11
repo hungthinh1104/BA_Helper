@@ -7,6 +7,7 @@ allowBuilds:
   '@prisma/engines': false
   '@scarf/scarf': set this to true or false
   '@swc/core': false
+  esbuild: set this to true or false
   msgpackr-extract: false
   msw: true
   prisma: false

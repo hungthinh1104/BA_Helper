@@ -1,0 +1,84 @@
+{
+  "artifacts": [
+    {
+      "stableId": "api:order.controller.cancelOrder",
+      "type": "API_ROUTE",
+      "filePath": "src/order/order.controller.ts",
+      "symbolName": "OrderController.cancelOrder",
+      "startLine": 8,
+      "endLine": 12
+    },
+    {
+      "stableId": "api:order.controller.shipOrder",
+      "type": "API_ROUTE",
+      "filePath": "src/order/order.controller.ts",
+      "symbolName": "OrderController.shipOrder",
+      "startLine": 14,
+      "endLine": 18
+    },
+    {
+      "stableId": "service-method:order.service.cancelOrder",
+      "type": "SERVICE_METHOD",
+      "filePath": "src/order/order.service.ts",
+      "symbolName": "OrderService.cancelOrder",
+      "startLine": 14,
+      "endLine": 31
+    },
+    {
+      "stableId": "service-method:order.service.shipOrder",
+      "type": "SERVICE_METHOD",
+      "filePath": "src/order/order.service.ts",
+      "symbolName": "OrderService.shipOrder",
+      "startLine": 33,
+      "endLine": 41
+    },
+    {
+      "stableId": "service-method:inventory.service.reserveStock",
+      "type": "SERVICE_METHOD",
+      "filePath": "src/inventory/inventory.service.ts",
+      "symbolName": "InventoryService.reserveStock",
+      "startLine": 13,
+      "endLine": 21
+    },
+    {
+      "stableId": "service-method:inventory.service.releaseReservation",
+      "type": "SERVICE_METHOD",
+      "filePath": "src/inventory/inventory.service.ts",
+      "symbolName": "InventoryService.releaseReservation",
+      "startLine": 23,
+      "endLine": 36
+    },
+    {
+      "stableId": "service-method:inventory.service.consumeReservation",
+      "type": "SERVICE_METHOD",
+      "filePath": "src/inventory/inventory.service.ts",
+      "symbolName": "InventoryService.consumeReservation",
+      "startLine": 38,
+      "endLine": 45
+    },
+    {
+      "stableId": "entity:order",
+      "type": "ENTITY",
+      "filePath": "src/order/order.entity.ts",
+      "symbolName": "Order",
+      "startLine": 6,
+      "endLine": 32
+    },
+    {
+      "stableId": "entity:stockreservation",
+      "type": "ENTITY",
+      "filePath": "src/inventory/stock-reservation.entity.ts",
+      "symbolName": "StockReservation",
+      "startLine": 9,
+      "endLine": 29
+    },
+    {
+      "stableId": "test:src.order.order-cancel.spec.ts",
+      "type": "TEST",
+      "filePath": "src/order/order-cancel.spec.ts",
+      "symbolName": "order-cancel.spec.ts",
+      "startLine": 1,
+      "endLine": 16
+    }
+  ]
+}

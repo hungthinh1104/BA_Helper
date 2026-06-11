@@ -3,6 +3,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { z } from 'zod';
 import { LlmProvider, LlmRequest, LlmResult } from '../domain/llm-provider.interface';
 import { AiConfig, AI_CONFIG_TOKEN } from '../domain/ai-config';
+import { parseStructuredLlmOutput } from './structured-output';
 
 @Injectable()
 export class GoogleLlmProvider extends LlmProvider {
@@ -11,7 +12,7 @@ export class GoogleLlmProvider extends LlmProvider {
 
   constructor(@Inject(AI_CONFIG_TOKEN) private config: AiConfig) {
     super();
-    this.client = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || '');
+    this.client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || '');
   }
 
   async generateStructured<T>(
@@ -32,8 +33,13 @@ export class GoogleLlmProvider extends LlmProvider {
       },
     });
 
-    const raw = JSON.parse(result.response.text());
-    const data = schema.parse(raw);
+    const rawText = result.response.text();
+    console.log('Gemini finishReason:', result.response.candidates?.[0]?.finishReason);
+    const { data, parseMode, rawLength, jsonLength } = parseStructuredLlmOutput({
+      rawText,
+      schema,
+      allowJsonExtraction: false, // Gemini guarantees JSON via responseMimeType
+    });
 
     return {
       data,
@@ -42,6 +48,9 @@ export class GoogleLlmProvider extends LlmProvider {
         model,
         promptVersion: '',
         durationMs: Date.now() - start,
+        parseMode,
+        rawLength,
+        jsonLength,
       },
     };
   }

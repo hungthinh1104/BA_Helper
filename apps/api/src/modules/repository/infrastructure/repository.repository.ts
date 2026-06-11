@@ -26,6 +26,19 @@ export class RepositoryRepository {
   async findById(id: string) {
     return this.prisma.repository.findUnique({
       where: { id },
+      include: {
+        targets: true,
+      },
+    });
+  }
+
+  async findByProject(projectId: string) {
+    return this.prisma.repository.findMany({
+      where: { projectId },
+      include: {
+        targets: true,
+      },
+      orderBy: { createdAt: 'desc' },
     });
   }
 }

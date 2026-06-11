@@ -1,0 +1,22 @@
+{
+  "results": [
+    {
+      "artifactKey": "api:order.controller.cancelOrder"
+    },
+    {
+      "artifactKey": "service-method:order.service.cancelOrder"
+    },
+    {
+      "artifactKey": "service-method:inventory.service.releaseReservation"
+    },
+    {
+      "artifactKey": "entity:order"
+    },
+    {
+      "artifactKey": "entity:stockreservation"
+    },
+    {
+      "artifactKey": "test:src.order.order-cancel.spec.ts"
+    }
+  ]
+}

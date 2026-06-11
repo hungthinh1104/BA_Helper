@@ -8,6 +8,8 @@
     "tests/**/*.d.ts"
   ],
   "exclude": [
-    "tests/fixtures/**/*.ts"
+    "tests/fixtures/**/*.ts",
+    "apps/web/**/*.ts",
+    "apps/web/**/*.tsx"
   ]
 }

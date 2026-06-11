@@ -16,16 +16,22 @@ Keep contracts in `packages/contracts` after workspace scaffolding exists.
 ```http
 POST /api/v1/projects
 
+GET  /api/v1/projects/:projectId/repositories
+GET  /api/v1/repositories/:repositoryId
 POST /api/v1/projects/:projectId/repositories
 POST /api/v1/repositories/:repositoryId/scan-jobs
 GET  /api/v1/scan-jobs/:scanJobId
 GET  /api/v1/snapshots/:snapshotId/artifacts
 GET  /api/v1/snapshots/:snapshotId/graph
 
+GET  /api/v1/projects/:projectId/requirements
+GET  /api/v1/requirements/:requirementId
 POST /api/v1/projects/:projectId/requirements
 POST /api/v1/requirements/:requirementId/revisions
 POST /api/v1/requirement-revisions/:revisionId/qualify
 POST /api/v1/requirement-revisions/:revisionId/impact-analyses
+
+GET  /api/v1/projects/:projectId/impact-analyses
 GET  /api/v1/impact-analyses/:analysisId
 GET  /api/v1/impact-analyses/:analysisId/insights
 GET  /api/v1/impact-analyses/:analysisId/evidence
@@ -36,7 +42,8 @@ POST /api/v1/insights/:insightId/reject
 POST /api/v1/traceability-links/:linkId/confirm
 POST /api/v1/traceability-links/:linkId/reject
 
-GET /api/v1/impact-analyses/:analysisId/documents
+GET  /api/v1/impact-analyses/:analysisId/documents
+GET  /api/v1/impact-analyses/:analysisId/approved-report
 ```
 
 Deferred until after the Markdown report/review completion gate:

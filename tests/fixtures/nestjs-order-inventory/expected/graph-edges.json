@@ -1,0 +1,29 @@
+{
+  "edges": [
+    {
+      "from": "api:order.controller.cancelOrder",
+      "to": "service-method:order.service.cancelOrder",
+      "type": "CALLS"
+    },
+    {
+      "from": "service-method:order.service.cancelOrder",
+      "to": "entity:order",
+      "type": "USES"
+    },
+    {
+      "from": "service-method:order.service.cancelOrder",
+      "to": "service-method:inventory.service.releaseReservation",
+      "type": "CALLS"
+    },
+    {
+      "from": "test:src.order.order-cancel.spec.ts",
+      "to": "service-method:order.service.cancelOrder",
+      "type": "TESTS"
+    },
+    {
+      "from": "service-method:inventory.service.releaseReservation",
+      "to": "entity:stockreservation",
+      "type": "USES"
+    }
+  ]
+}

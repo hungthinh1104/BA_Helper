@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { EmbedSnapshotArtifactsUseCase } from '../../apps/api/src/modules/embedding/application/embed-snapshot-artifacts.usecase';
 import { FakeEmbeddingProvider } from '../../apps/api/src/modules/embedding/infrastructure/fake-embedding.provider';
-import { EmbeddingPolicy } from '../../apps/api/src/modules/embedding/domain/embedding.policy';
+import { ArtifactChunkBuilder } from '../../apps/api/src/modules/embedding/domain/artifact-chunk.builder';
+import { createHash } from 'node:crypto';
 
 describe('EmbedSnapshotArtifactsUseCase', () => {
   let useCase: EmbedSnapshotArtifactsUseCase;
@@ -19,10 +20,16 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
 
   const ARTIFACT = {
     id: 'art-1',
+    snapshotId: 'snap-1',
     artifactKey: 'src/index.ts::func1',
-    artifactType: 'FILE',
+    artifactType: 'SERVICE_METHOD',
     name: 'index.ts',
     filePath: 'src/index.ts',
+    evidences: [
+      {
+        excerpt: 'const x = 1;',
+      },
+    ],
   };
 
   beforeEach(() => {
@@ -36,6 +43,9 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
         findUnique: jest.fn(),
         update: jest.fn(),
       },
+      codeArtifact: {
+        findMany: jest.fn(),
+      }
     };
     provider = new FakeEmbeddingProvider();
 
@@ -54,7 +64,7 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
 
   it('should transition to VECTOR_READY if no artifacts exist', async () => {
     prismaMock.repositorySnapshot.findUnique.mockResolvedValue(SNAPSHOT);
-    artifactRepoMock.listBySnapshot.mockResolvedValue([]);
+    prismaMock.codeArtifact.findMany.mockResolvedValue([]);
 
     await useCase.execute({ snapshotId: 'snap-1' });
 
@@ -71,11 +81,15 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
 
   it('should skip embedding for unchanged artifacts (stableChunkId cache hit)', async () => {
     prismaMock.repositorySnapshot.findUnique.mockResolvedValue(SNAPSHOT);
-    artifactRepoMock.listBySnapshot.mockResolvedValue([ARTIFACT]);
+    prismaMock.codeArtifact.findMany.mockResolvedValue([ARTIFACT]);
 
-    const content = EmbeddingPolicy.buildArtifactContent(ARTIFACT);
-    const contentHash = EmbeddingPolicy.computeContentHash(content);
-    const stableChunkId = `artifact:${ARTIFACT.artifactKey}:${contentHash}`;
+    const builtChunk = ArtifactChunkBuilder.build({
+      artifact: ARTIFACT as any,
+      evidence: ARTIFACT.evidences as any,
+    });
+    
+    const contentHash = createHash('sha256').update(builtChunk.content).digest('hex');
+    const stableChunkId = builtChunk.stableChunkId;
 
     // Existing chunk matches stableChunkId + contentHash → skip
     chunkRepoMock.listBySnapshot.mockResolvedValue([{ stableChunkId, contentHash }]);
@@ -91,11 +105,15 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
 
   it('should re-embed when artifact content changed (stableChunkId exists but contentHash differs)', async () => {
     prismaMock.repositorySnapshot.findUnique.mockResolvedValue(SNAPSHOT);
-    artifactRepoMock.listBySnapshot.mockResolvedValue([ARTIFACT]);
+    prismaMock.codeArtifact.findMany.mockResolvedValue([ARTIFACT]);
 
-    const content = EmbeddingPolicy.buildArtifactContent(ARTIFACT);
-    const contentHash = EmbeddingPolicy.computeContentHash(content);
-    const stableChunkId = `artifact:${ARTIFACT.artifactKey}:${contentHash}`;
+    const builtChunk = ArtifactChunkBuilder.build({
+      artifact: ARTIFACT as any,
+      evidence: ARTIFACT.evidences as any,
+    });
+    
+    const contentHash = createHash('sha256').update(builtChunk.content).digest('hex');
+    const stableChunkId = builtChunk.stableChunkId;
 
     // Existing chunk has same stableChunkId but DIFFERENT contentHash → re-embed
     chunkRepoMock.listBySnapshot.mockResolvedValue([
@@ -109,7 +127,7 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
 
   it('should embed new artifacts with tenantId=projectId and correct stableChunkId format', async () => {
     prismaMock.repositorySnapshot.findUnique.mockResolvedValue(SNAPSHOT);
-    artifactRepoMock.listBySnapshot.mockResolvedValue([ARTIFACT]);
+    prismaMock.codeArtifact.findMany.mockResolvedValue([ARTIFACT]);
     chunkRepoMock.listBySnapshot.mockResolvedValue([]); // No existing cache
 
     await useCase.execute({ snapshotId: 'snap-1' });
@@ -127,11 +145,11 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
       artifactId: 'art-1',
       commitSha: 'sha-1',
       filePath: 'src/index.ts',
-      artifactType: 'FILE',
+      artifactType: 'METHOD_BODY',
       embeddingModel: 'fake-embedding',
     });
-    // stableChunkId follows pattern "artifact:<artifactKey>:<contentHash>"
-    expect(chunk.stableChunkId).toMatch(/^artifact:src\/index\.ts::func1:/);
+    // stableChunkId follows pattern "snapshotId:artifactKey:chunkType"
+    expect(chunk.stableChunkId).toBe('snap-1:src/index.ts::func1:METHOD_BODY');
     expect(chunk.embedding).toHaveLength(1536);
 
     expect(prismaMock.repositorySnapshot.update as jest.Mock).toHaveBeenCalledWith({
@@ -142,7 +160,7 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
 
   it('should transition to VECTOR_FAILED and re-throw if embedding throws', async () => {
     prismaMock.repositorySnapshot.findUnique.mockResolvedValue(SNAPSHOT);
-    artifactRepoMock.listBySnapshot.mockResolvedValue([ARTIFACT]);
+    prismaMock.codeArtifact.findMany.mockResolvedValue([ARTIFACT]);
     chunkRepoMock.listBySnapshot.mockResolvedValue([]);
 
     jest.spyOn(provider, 'embed').mockRejectedValue(new Error('API Down'));

@@ -1,3 +1,4 @@
+import { Injectable } from '@nestjs/common';
 import { ImpactAnalysisRepository } from '../infrastructure/impact-analysis.repository';
 import { RequirementRepository } from '../../requirement/infrastructure/requirement.repository';
 import { AppError } from '../../../shared/app-error';
@@ -6,6 +7,8 @@ import { EventLogService } from '../../event-log/application/event-log.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { QueueService } from '../../queue/queue.service';
 
+
+@Injectable()
 export class CreateImpactAnalysisUseCase {
   constructor(
     private readonly impactRepo: ImpactAnalysisRepository,
@@ -41,10 +44,22 @@ export class CreateImpactAnalysisUseCase {
 
     const snapshot = await this.prisma.repositorySnapshot.findUnique({
       where: { id: params.snapshotId },
+      include: { repository: true },
     });
 
     if (!snapshot) {
       throw new AppError('SNAPSHOT_NOT_FOUND', 'Snapshot not found.');
+    }
+
+    const requirement = await this.prisma.requirement.findUnique({
+      where: { id: revision.requirementId },
+    });
+
+    if (requirement?.projectId !== snapshot.repository.projectId) {
+      throw new AppError(
+        'INPUT_PROJECT_MISMATCH',
+        'Requirement and repository belong to different projects.',
+      );
     }
 
     const sourceTarget = await this.prisma.repositoryTarget.findUnique({
@@ -82,14 +97,14 @@ export class CreateImpactAnalysisUseCase {
     }
 
     const existingByRequestKey = await this.impactRepo.findByRequestKey({
-      requirementRevisionId: params.requirementRevisionId,
       requestKey: params.requestKey,
     });
 
     if (
       existingByRequestKey &&
       (existingByRequestKey.snapshotId !== params.snapshotId ||
-        existingByRequestKey.sourceTargetId !== params.sourceTargetId)
+        existingByRequestKey.sourceTargetId !== params.sourceTargetId ||
+        existingByRequestKey.requirementRevisionId !== params.requirementRevisionId)
     ) {
       throw new AppError(
         'REQUEST_KEY_MISMATCH',

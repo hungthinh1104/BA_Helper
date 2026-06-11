@@ -17,7 +17,7 @@ export function SnapshotHeader({ repository, scanJob }: SnapshotHeaderProps) {
           <FolderGit2 className="w-6 h-6 text-primary" />
           <h1 className="text-xl font-bold m-0">{repository.canonicalUrl.split('/').pop()}</h1>
           {isReady ? (
-            <Badge className="bg-success text-white hover:bg-success/90">Index Ready</Badge>
+            <Badge className="bg-success text-primary-foreground hover:bg-success/90">Index Ready</Badge>
           ) : (
             <Badge variant="outline" className="text-warning border-warning/30">Partial/Indexing</Badge>
           )}

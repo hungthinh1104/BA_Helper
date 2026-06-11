@@ -5,6 +5,7 @@ import { FakeLlmProvider } from './infrastructure/fake-ai.provider';
 import { OpenAiLlmProvider } from './infrastructure/openai.provider';
 import { AnthropicLlmProvider } from './infrastructure/anthropic.provider';
 import { GoogleLlmProvider } from './infrastructure/google.provider';
+import { DeepseekLlmProvider } from './infrastructure/deepseek.provider';
 
 @Module({})
 export class AiModule {
@@ -35,6 +36,7 @@ export class AiModule {
               case 'openai':    return new OpenAiLlmProvider(cfg);
               case 'anthropic': return new AnthropicLlmProvider(cfg);
               case 'google':    return new GoogleLlmProvider(cfg);
+              case 'deepseek':  return new DeepseekLlmProvider(cfg);
               case 'fake':
               default:          return new FakeLlmProvider();
             }

@@ -1,13 +1,9 @@
 import { RequirementRepository } from '../infrastructure/requirement.repository';
 import { RequirementPolicy } from '../domain/requirement.policy';
-import { EventLogService } from '../../event-log/application/event-log.service';
 import { AppError } from '../../../shared/app-error';
 
 export class CreateRequirementRevisionUseCase {
-  constructor(
-    private readonly repository: RequirementRepository,
-    private readonly eventLog: EventLogService,
-  ) {}
+  constructor(private readonly repository: RequirementRepository) {}
 
   async execute(params: {
     requirementId: string;
@@ -32,19 +28,13 @@ export class CreateRequirementRevisionUseCase {
       ? RequirementPolicy.qualifyReadiness(params.rawText)
       : { status: 'DRAFT' as const, issues: [] };
 
-    const revision = await this.repository.createRevision({
+    const revision = await this.repository.createRevisionWithReadinessTransition({
       requirementId: requirement.id,
       title: params.title.trim(),
       rawText: params.rawText,
       normalizedText,
       readinessStatus: readiness.status,
       validationIssues: readiness.issues,
-    });
-
-    await this.eventLog.recordEvent({
-      eventType: 'REQUIREMENT_REVISION_CREATED',
-      idempotencyKey: `requirement:${requirement.id}:revision:${revision.id}`,
-      payload: { requirementId: requirement.id, revisionId: revision.id },
     });
 
     return { requirement, revision, readiness };

@@ -1,5 +1,7 @@
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
+@Injectable()
 export class ImpactAnalysisRepository {
   constructor(private readonly prisma: PrismaService) {}
 
@@ -43,12 +45,10 @@ export class ImpactAnalysisRepository {
   }
 
   async findByRequestKey(params: {
-    requirementRevisionId: string;
     requestKey: string;
   }) {
     return this.prisma.impactAnalysis.findFirst({
       where: {
-        requirementRevisionId: params.requirementRevisionId,
         requestKey: params.requestKey,
       },
     });
@@ -88,6 +88,7 @@ export class ImpactAnalysisRepository {
     status: 'COMPLETED' | 'WAITING_FOR_REVIEW' | 'FAILED' | 'CANCELLED' | 'RUNNING' | 'QUEUED';
     stage: 'WAITING' | 'RETRIEVING_EVIDENCE' | 'EXPANDING_GRAPH' | 'RUNNING_AI_REASONING' | 'GENERATING_INSIGHTS' | 'GENERATING_DOCUMENTS' | 'DONE';
     progress: number;
+    metadata?: import('../domain/impact-analysis.types').ImpactAnalysisMetadata;
   }) {
     return this.prisma.impactAnalysis.update({
       where: { id: params.id },
@@ -95,6 +96,7 @@ export class ImpactAnalysisRepository {
         status: params.status,
         stage: params.stage,
         progress: params.progress,
+        ...(params.metadata ? { metadata: params.metadata as any } : {}),
       },
       include: {
         snapshot: true,

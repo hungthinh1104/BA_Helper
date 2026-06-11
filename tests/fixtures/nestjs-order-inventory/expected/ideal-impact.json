@@ -1,0 +1,44 @@
+{
+  "insights": [
+    {
+      "insightKey": "evidenced:order.controller.cancelOrder",
+      "certainty": "EVIDENCED",
+      "description": "OrderController.cancelOrder provides the entry point for order cancellation."
+    },
+    {
+      "insightKey": "evidenced:order.service.cancelOrder",
+      "certainty": "EVIDENCED",
+      "description": "OrderService.cancelOrder contains the business logic to update the order status and coordinate inventory release."
+    },
+    {
+      "insightKey": "evidenced:inventory.service.releaseReservation",
+      "certainty": "EVIDENCED",
+      "description": "InventoryService.releaseReservation handles the release of the reserved stock."
+    },
+    {
+      "insightKey": "evidenced:entity.order",
+      "certainty": "EVIDENCED",
+      "description": "Order entity stores the status of the order which is updated to CANCELLED."
+    },
+    {
+      "insightKey": "unknown:refund-payment",
+      "certainty": "UNKNOWN",
+      "description": "The requirement does not specify whether the user should be refunded, or if payment was already captured."
+    },
+    {
+      "insightKey": "unknown:partial-cancellation",
+      "certainty": "UNKNOWN",
+      "description": "The requirement does not specify if partial order cancellations are allowed."
+    },
+    {
+      "insightKey": "unknown:inventory-failure",
+      "certainty": "UNKNOWN",
+      "description": "The requirement does not specify what should happen to the order if the inventory release fails."
+    },
+    {
+      "insightKey": "unknown:async-release",
+      "certainty": "UNKNOWN",
+      "description": "The requirement does not specify whether inventory release should happen synchronously or asynchronously via events."
+    }
+  ]
+}

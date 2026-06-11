@@ -202,6 +202,15 @@ Prisma types are backend persistence representations. Public API/FE wire types
 belong to `packages/contracts`; do not duplicate API enums by hand in the
 frontend or treat Prisma types as wire contracts.
 
+Data fetching rules:
+- Pages/components must not call fetch directly.
+- Use hooks under hooks/api (via TanStack Query).
+- Use queryKeys factory.
+- API client owns base URL, error mapping, auth token injection.
+- All API responses must use @ba-helper/contracts types.
+- Mutations must invalidate affected list/detail query keys.
+- Mock data may exist only behind hook-level adapters, not imported by page components.
+
 Responses for jobs and analyses must expose explicit state and backend-computed
 capabilities such as `canReview`, `canFinalize`, `canExport`, `canRerun`, and `canCancel`.
 
@@ -272,9 +281,14 @@ Read [auth-permissions.md](docs/agent/auth-permissions.md) before adding auth.
 
 ## UI Rules
 
+- Marketing and workspace must support both light and dark.
+- Default theme = system.
+- Landing visual direction remains Letters-inspired.
+- Workspace visual direction remains Linear-inspired.
+- Do not scope dark mode to inner containers; theme class must live on `<html>`.
 - Use Next.js route groups:
-  - (marketing) = Letters-inspired light landing
-  - (app) = Linear-inspired dark workspace
+  - (marketing) = Landing pages
+  - (app) = Application workspace
 - Use shadcn/ui as primitives only.
 - Do not use shadcn dashboard templates as product architecture.
 - Product-specific components live under components/workspace.
@@ -284,7 +298,6 @@ Read [auth-permissions.md](docs/agent/auth-permissions.md) before adding auth.
 - Put landing-specific styles in landing.css.
 - Put workspace-specific styles in workspace.css.
 - Do not create one-off colors; use CSS variables.
-- Do not mix landing visual style into app workspace.
 - App workspace must support evidence review, not just dashboard cards.
 - Mobile workspace should prioritize review task, not full graph.
 

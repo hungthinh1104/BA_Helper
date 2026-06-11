@@ -1,6 +1,11 @@
+import { Injectable } from "@nestjs/common";
+
 import { ImpactAnalysisRepository } from '../infrastructure/impact-analysis.repository';
 import { AppError } from '../../../shared/app-error';
 
+
+
+@Injectable()
 export class GetImpactAnalysisUseCase {
   constructor(private readonly repository: ImpactAnalysisRepository) {}
 

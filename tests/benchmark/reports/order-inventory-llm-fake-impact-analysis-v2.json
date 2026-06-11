@@ -1,0 +1,9 @@
+{
+  "promptVersion": "impact-analysis-v2",
+  "provider": "fake",
+  "model": "unknown",
+  "parseMode": "raw",
+  "fixture": "nestjs-order-inventory",
+  "totalMismatches": 0,
+  "mismatches": []
+}

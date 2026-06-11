@@ -21,5 +21,6 @@ import { PrismaService } from '../prisma/prisma.service';
       inject: [EvidenceRepository, PrismaService],
     },
   ],
+  exports: [EvidenceRepository],
 })
 export class EvidenceModule {}

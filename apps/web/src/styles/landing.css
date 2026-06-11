@@ -4,15 +4,22 @@
    LANDING PAGE — Letters-inspired
    ========================================================= */
 
+.landing-page {
+  /* Only apply specific layout/structural adjustments for the landing page */
+
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
 .landing-hero {
   position: relative;
   overflow: hidden;
   min-height: 720px;
   padding: 120px 0 80px;
   background: 
-    radial-gradient(circle at 15% 30%, rgba(59, 130, 246, 0.15) 0%, transparent 40%),
-    radial-gradient(circle at 85% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
-    linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%);
+    radial-gradient(circle at 15% 30%, color-mix(in srgb, var(--primary) 15%, transparent) 0%, transparent 40%),
+    radial-gradient(circle at 85% 20%, color-mix(in srgb, var(--accent) 15%, transparent) 0%, transparent 40%),
+    linear-gradient(180deg, color-mix(in srgb, var(--primary) 5%, var(--background)) 0%, var(--background) 100%);
 }
 
 .landing-hero::after {
@@ -155,6 +162,61 @@
   padding: 18px;
   border-left: 1px solid var(--border-subtle);
   background: var(--inspector-bg);
+}
+
+/* =========================================================
+   ANIMATIONS
+   ========================================================= */
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scan-line {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(600px);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-scan-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--primary);
+  box-shadow: 0 0 12px 2px var(--primary);
+  opacity: 0.6;
+  animation: scan-line 1.2s linear infinite;
+  z-index: 20;
+  pointer-events: none;
 }
 
 

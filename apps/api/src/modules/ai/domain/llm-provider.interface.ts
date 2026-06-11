@@ -20,6 +20,9 @@ export interface LlmCallMetadata {
   durationMs: number;
   inputTokens?: number;
   outputTokens?: number;
+  parseMode?: 'raw' | 'extracted';
+  rawLength?: number;
+  jsonLength?: number;
 }
 
 export interface LlmResult<T> {

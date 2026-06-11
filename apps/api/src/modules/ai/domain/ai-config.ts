@@ -1,5 +1,5 @@
 export interface AiConfig {
-  provider: 'fake' | 'openai' | 'anthropic' | 'google';
+  provider: 'fake' | 'openai' | 'anthropic' | 'google' | 'deepseek';
   defaultModel: string;
   temperature: number;
   maxTokens: number;

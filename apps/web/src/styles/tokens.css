@@ -23,6 +23,34 @@
 
   /* Spacing base */
   --spacing-unit: 4px;
+
+  /* Tailwind V4 Color Mappings */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-soft: var(--surface-soft);
+  --color-surface-blue: var(--surface-blue);
+  
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
 }
 
 /* =========================================================
@@ -107,6 +135,20 @@
 }
 
 /* =========================================================
+   WORKSPACE LIGHT THEME OVERRIDES
+   Ensures dense, technical look for the app shell in light mode
+   ========================================================= */
+
+html:not(.dark) .app-shell {
+  --border: #6b7280;
+  --border-subtle: #d1d5db;
+  --evidence-bg: #f3f4f6;
+  --code-bg: #f8fafc;
+  --code-text: #0f172a;
+  --inspector-bg: #f9fafb;
+}
+
+/* =========================================================
    DARK THEME — Linear style
    Used for product workspace, evidence review, code UI
    ========================================================= */
@@ -115,16 +157,16 @@
   color-scheme: dark;
 
   /* Base */
-  --background: #08090a;
+  --background: #111214;
   --foreground: #f7f8f8;
 
-  --surface: #0f1011;
-  --surface-muted: #161718;
-  --surface-soft: #23252a;
+  --surface: #181A1F;
+  --surface-muted: #21232A;
+  --surface-soft: #2A2D35;
   --surface-blue: #111827;
 
-  --border: #23252a;
-  --border-subtle: #323334;
+  --border: #2A2D35;
+  --border-subtle: #3A3D45;
 
   --text-primary: #f7f8f8;
   --text-secondary: #d0d6e0;
@@ -132,10 +174,10 @@
   --text-disabled: #62666d;
 
   /* Brand */
-  --accent: #e4f222;
-  --accent-soft: rgba(228, 242, 34, 0.12);
-  --primary-action: #e4f222;
-  --primary-action-text: #08090a;
+  --accent: #6366F1;
+  --accent-soft: rgba(99, 102, 241, 0.15);
+  --primary-action: #6366F1;
+  --primary-action-text: #ffffff;
 
   /* Status */
   --success: #27a644;
@@ -157,10 +199,10 @@
   --shadow-xl: rgba(8, 9, 10, 0.6) 0px 4px 32px 0px;
 
   /* App-specific */
-  --evidence-bg: #0f1011;
-  --code-bg: #08090a;
+  --evidence-bg: #181A1F;
+  --code-bg: #0A0A0C;
   --code-text: #d0d6e0;
-  --inspector-bg: #0f1011;
+  --inspector-bg: #141517;
 
   /* Shadcn UI aliases */
   --card: var(--surface);

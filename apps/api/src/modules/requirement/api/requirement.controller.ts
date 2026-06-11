@@ -1,14 +1,18 @@
-import { Body, Controller, Param, Post } from '@nestjs/common';
+import { Body, Controller, Param, Post, Get } from '@nestjs/common';
 import {
   requirementCreateRequestSchema,
   requirementCreateResponseSchema,
   requirementRevisionCreateRequestSchema,
   requirementRevisionCreateResponseSchema,
   requirementRevisionQualifyResponseSchema,
+  requirementListResponseSchema,
+  requirementDetailResponseSchema,
 } from '@ba-helper/contracts';
 import { CreateRequirementUseCase } from '../application/create-requirement.usecase';
 import { CreateRequirementRevisionUseCase } from '../application/create-revision.usecase';
 import { QualifyRequirementRevisionUseCase } from '../application/qualify-revision.usecase';
+import { ListRequirementsUseCase } from '../application/list-requirements.usecase';
+import { GetRequirementUseCase } from '../application/get-requirement.usecase';
 
 @Controller('/api/v1')
 export class RequirementController {
@@ -16,6 +20,8 @@ export class RequirementController {
     private readonly createRequirement: CreateRequirementUseCase,
     private readonly createRevision: CreateRequirementRevisionUseCase,
     private readonly qualifyRevision: QualifyRequirementRevisionUseCase,
+    private readonly listRequirements: ListRequirementsUseCase,
+    private readonly getRequirement: GetRequirementUseCase,
   ) {}
 
   @Post('/projects/:projectId/requirements')
@@ -70,6 +76,49 @@ export class RequirementController {
       revisionId: result.revision.id,
       readinessStatus: result.revision.readinessStatus,
       validationIssues: result.revision.validationIssues ?? [],
+    });
+  }
+
+  @Get('/projects/:projectId/requirements')
+  async listRequirementsEndpoint(@Param('projectId') projectId: string) {
+    const requirements = await this.listRequirements.execute({ projectId });
+    return requirementListResponseSchema.parse({
+      items: requirements.map((r) => {
+        const latest = r.revisions[r.revisions.length - 1];
+        return {
+          id: r.id,
+          latestRevision: {
+            id: latest.id,
+            versionNumber: r.revisions.length,
+            title: latest.title,
+            rawText: latest.rawText,
+            readinessStatus: latest.readinessStatus,
+            validationIssues: latest.validationIssues ?? [],
+            createdAt: latest.createdAt.toISOString(),
+          },
+          canStartAnalysis: latest.readinessStatus === 'READY_FOR_ANALYSIS',
+        };
+      }),
+    });
+  }
+
+  @Get('/projects/:projectId/requirements/:requirementId')
+  async getRequirementEndpoint(
+    @Param('projectId') projectId: string,
+    @Param('requirementId') requirementId: string,
+  ) {
+    const r = await this.getRequirement.execute({ requirementId });
+    return requirementDetailResponseSchema.parse({
+      id: r.id,
+      revisions: r.revisions.map((rev: any, index: number) => ({
+        id: rev.id,
+        versionNumber: index + 1,
+        title: rev.title,
+        rawText: rev.rawText,
+        readinessStatus: rev.readinessStatus,
+        validationIssues: rev.validationIssues ?? [],
+        createdAt: rev.createdAt.toISOString(),
+      })),
     });
   }
 }

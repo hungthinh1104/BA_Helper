@@ -1,0 +1,78 @@
+{
+  "fixture": "nestjs-order-inventory",
+  "retriever": "deterministic-lexical-graph",
+  "cases": [
+    {
+      "changeRequest": "Allow customers to abort a purchase before fulfillment and restore reserved stock.",
+      "retrievedArtifactKeys": [
+        "entity:stockreservation",
+        "service-method:inventory.service.reserveStock",
+        "service-method:inventory.service.consumeReservation",
+        "service-method:inventory.service.releaseReservation",
+        "test:src.inventory.inventory-reservation.spec.ts"
+      ],
+      "missingCriticalArtifacts": [
+        "service-method:order.service.cancelOrder",
+        "entity:order"
+      ],
+      "failures": [
+        {
+          "failureClass": "RETRIEVAL_MISS",
+          "reason": "VECTOR_GAP_DETECTED",
+          "expected": "service-method:order.service.cancelOrder",
+          "actual": "Missing",
+          "details": "Semantic gap: Deterministic pipeline missed service-method:order.service.cancelOrder for paraphrase: \"Allow customers to abort a purchase before fulfillment and restore reserved stock.\""
+        },
+        {
+          "failureClass": "RETRIEVAL_MISS",
+          "reason": "VECTOR_GAP_DETECTED",
+          "expected": "entity:order",
+          "actual": "Missing",
+          "details": "Semantic gap: Deterministic pipeline missed entity:order for paraphrase: \"Allow customers to abort a purchase before fulfillment and restore reserved stock.\""
+        }
+      ]
+    },
+    {
+      "changeRequest": "When an order is withdrawn, return held inventory back to availability.",
+      "retrievedArtifactKeys": [
+        "entity:stockreservation",
+        "service-method:inventory.service.consumeReservation",
+        "service-method:inventory.service.releaseReservation",
+        "service-method:inventory.service.reserveStock",
+        "test:src.inventory.inventory-reservation.spec.ts",
+        "entity:order",
+        "service-method:order.service.cancelOrder",
+        "service-method:order.service.shipOrder",
+        "api:order.controller.cancelOrder",
+        "api:order.controller.shipOrder",
+        "entity:orderitem",
+        "service-method:discount.service.applyDiscountToOrder"
+      ],
+      "missingCriticalArtifacts": [],
+      "failures": []
+    },
+    {
+      "changeRequest": "Prevent shipment and rollback stock reservation when cancellation happens.",
+      "retrievedArtifactKeys": [
+        "entity:stockreservation",
+        "entity:shipment",
+        "service-method:inventory.service.releaseReservation",
+        "service-method:inventory.service.reserveStock",
+        "service-method:inventory.service.consumeReservation",
+        "service-method:shipment.service.createShipment",
+        "test:src.inventory.inventory-reservation.spec.ts",
+        "service-method:order.service.cancelOrder",
+        "api:order.controller.cancelOrder",
+        "test:src.order.order-cancel.spec.ts",
+        "entity:order"
+      ],
+      "missingCriticalArtifacts": [],
+      "failures": []
+    }
+  ],
+  "summary": {
+    "totalCases": 3,
+    "casesWithMisses": 1,
+    "criticalMissCount": 2
+  }
+}

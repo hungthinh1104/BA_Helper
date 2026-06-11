@@ -62,6 +62,7 @@ describe('retrieval fixture expectations', () => {
             symbolName: 'AdminRefundReportService.generateReport',
             startLine: 3,
             endLine: 5,
+            excerpt: '',
           },
         ],
         coverage: scan.coverage,

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Inject } from '@nestjs/common';
 import {
   scanJobCreateRequestSchema,
   scanJobResponseSchema,
@@ -14,7 +14,7 @@ export class ScanJobController {
     private readonly scanJobRepository: ScanJobRepository,
   ) {}
 
-  @Get('/api/v1/scan-jobs/:scanJobId')
+  @Get('/:scanJobId')
   async get(@Param('scanJobId') scanJobId: string) {
     const job = await this.scanJobRepository.findById(scanJobId);
     if (!job) {

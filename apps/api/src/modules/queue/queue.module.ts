@@ -11,6 +11,7 @@ import { QueueService } from './queue.service';
     }),
     BullModule.registerQueue({ name: 'impact-analysis' }),
     BullModule.registerQueue({ name: 'embedding' }),
+    BullModule.registerQueue({ name: 'scan-job' }),
   ],
   providers: [QueueService],
   exports: [QueueService],

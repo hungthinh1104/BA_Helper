@@ -1,14 +1,18 @@
+import { Injectable } from '@nestjs/common';
 import { ScanJobRepository } from '../infrastructure/scan-job.repository';
 import { RepositoryRepository } from '../../repository/infrastructure/repository.repository';
 import { ScanJobPolicy } from '../domain/scan-job.policy';
 import { AppError } from '../../../shared/app-error';
 import { EventLogService } from '../../event-log/application/event-log.service';
+import { QueueService } from '../../queue/queue.service';
 
+@Injectable()
 export class CreateScanJobUseCase {
   constructor(
     private readonly scanJobRepository: ScanJobRepository,
     private readonly repositoryRepository: RepositoryRepository,
     private readonly eventLog: EventLogService,
+    private readonly queueService: QueueService,
   ) {}
 
   async execute(params: {
@@ -41,22 +45,29 @@ export class CreateScanJobUseCase {
       return existing;
     }
 
-    const job = await this.scanJobRepository.createQueued({
-      repositoryId: params.repositoryId,
-      requestKey: params.requestKey,
-      requestedRef: params.requestedRef,
-    });
+    try {
+      const job = await this.scanJobRepository.createQueued({
+        repositoryId: params.repositoryId,
+        requestKey: params.requestKey,
+        requestedRef: params.requestedRef,
+      });
 
-    await this.eventLog.recordEvent({
-      eventType: 'SCAN_JOB_QUEUED',
-      idempotencyKey: `scan:${job.id}:queued`,
-      payload: {
-        repositoryId: job.repositoryId,
-        scanJobId: job.id,
-        requestKey: job.requestKey,
-      },
-    });
+      await this.eventLog.recordEvent({
+        eventType: 'SCAN_JOB_QUEUED',
+        idempotencyKey: `scan:${job.id}:queued`,
+        payload: {
+          repositoryId: job.repositoryId,
+          scanJobId: job.id,
+          requestKey: job.requestKey,
+        },
+      });
 
-    return job;
+      await this.queueService.enqueueScanJob(job.id);
+
+      return job;
+    } catch (e: any) {
+      console.error('CreateScanJob error:', e?.message, e?.stack);
+      throw e;
+    }
   }
 }
