@@ -184,6 +184,30 @@ describe('MarkdownImpactReportBuilder', () => {
     expect(report).toContain('> This report was finalized with unreviewed items acknowledged.');
   });
 
+  it('uses universalKind fallback in impacted area labels', () => {
+    const report = builder.build({
+      analysis: mockAnalysis,
+      insights: [],
+      traceabilityLinks: [
+        {
+          id: 'link-1',
+          reviewStatus: 'CONFIRMED',
+          artifact: {
+            id: 'artifact-1',
+            name: 'BookingAggregate',
+            artifactType: 'CLASS',
+            universalKind: 'DATA_MODEL',
+            filePath: 'src/booking.aggregate.ts',
+          },
+        },
+      ] as unknown as any[],
+      hasUnreviewedItems: false,
+    });
+
+    expect(report).toContain('The primary impacted areas are data model layers.');
+    expect(report).toContain('| Data Model | `BookingAggregate` | `src/booking.aggregate.ts` | Confirmed |');
+  });
+
   it('includes a provenance block when metadata is provided', () => {
     const report = builder.build({
       analysis: mockAnalysis,

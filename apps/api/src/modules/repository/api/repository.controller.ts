@@ -83,6 +83,15 @@ export class RepositoryController {
     };
   }
 
+  private summarizeArtifactStats(artifacts: Array<{ universalKind?: string }>) {
+    return {
+      controllers: artifacts.filter((artifact) => artifact.universalKind === 'API_ENDPOINT').length,
+      services: artifacts.filter((artifact) => artifact.universalKind === 'DOMAIN_SERVICE').length,
+      entities: artifacts.filter((artifact) => artifact.universalKind === 'DATA_MODEL').length,
+      tests: artifacts.filter((artifact) => artifact.universalKind === 'TEST_CASE').length,
+    };
+  }
+
   @Post()
   @Roles('ADMIN')
   async create(
@@ -144,14 +153,11 @@ export class RepositoryController {
     );
     const r = await this.getRepository.execute({ repositoryId });
     const artifacts = (r as any).snapshots?.[0]?.artifacts || [];
-    const controllers = artifacts.filter((a: any) => a.artifactType === 'CONTROLLER').length;
-    const services = artifacts.filter((a: any) => a.artifactType === 'SERVICE').length;
-    const entities = artifacts.filter((a: any) => a.artifactType === 'ENTITY').length;
-    const tests = artifacts.filter((a: any) => a.artifactType === 'TEST').length;
+    const artifactStats = this.summarizeArtifactStats(artifacts);
 
     return repositoryDetailResponseSchema.parse({
       ...this.mapRepository(r),
-      artifactStats: { controllers, services, entities, tests },
+      artifactStats,
     });
   }
 }

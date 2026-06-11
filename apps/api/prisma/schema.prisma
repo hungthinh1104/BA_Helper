@@ -338,6 +338,7 @@ model CodeArtifact {
   artifactKey       String
   name              String
   artifactType      String
+  universalKind     String             @default("UNKNOWN") @map("universal_kind")
   filePath          String
   startLine         Int?
   endLine           Int?

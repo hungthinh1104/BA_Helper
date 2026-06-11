@@ -21,6 +21,7 @@ export class ArtifactRepository {
     snapshotId: string;
     artifactKey: string;
     artifactType: string;
+    universalKind: string;
     name: string;
     filePath: string;
     startLine?: number;

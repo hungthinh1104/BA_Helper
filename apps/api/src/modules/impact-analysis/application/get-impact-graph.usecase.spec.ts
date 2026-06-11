@@ -10,6 +10,7 @@ const makeArtifact = (id: string, overrides: Record<string, unknown> = {}) => ({
   name: `Symbol_${id}`,
   artifactKey: `key-${id}`,
   artifactType: 'SERVICE',
+  universalKind: 'DOMAIN_SERVICE',
   filePath: `src/${id}.ts`,
   ...overrides,
 });
@@ -107,6 +108,19 @@ describe('GetImpactGraphUseCase', () => {
     expect(artNode?.type).toBe('CONTROLLER');
     expect(artNode?.filePath).toBe('src/art-1.ts');
     expect(artNode?.artifactKey).toBe('key-art-1');
+  });
+
+  it('maps legacy raw artifact types via universalKind fallback', async () => {
+    const artifact = makeArtifact('art-legacy', {
+      artifactType: 'CLASS',
+      universalKind: 'DATA_MODEL',
+    });
+    const analysis = makeAnalysis({ traceabilityLinks: [makeTraceabilityLink('link-legacy', artifact)] });
+    const useCase = new GetImpactGraphUseCase(new ImpactGraphReadModelBuilder(makePrisma(analysis) as any));
+    const result = await useCase.execute('analysis-1');
+
+    const artNode = result.nodes.find((n) => n.id === `artifact-${artifact.id}`);
+    expect(artNode?.type).toBe('ENTITY');
   });
 
   it('UC-GRAPH-05: AFFECTS edge from Analysis to each artifact node', async () => {

@@ -33,6 +33,13 @@ import { ApprovedReportMetadata } from '../domain/approved-report-metadata';
 export class MarkdownImpactReportBuilder {
   constructor(private readonly mermaidBuilder: MermaidImpactDiagramBuilder) {}
 
+  private resolveArtifactDisplayType(artifact?: { artifactType?: string | null; universalKind?: string | null } | null): string {
+    if (!artifact) return 'Unknown';
+    if (artifact.universalKind) return this.formatArtifactType(artifact.universalKind);
+    if (artifact.artifactType) return this.formatArtifactType(artifact.artifactType);
+    return 'Unknown';
+  }
+
   build(params: {
     analysis: AnalysisSnapshot;
     insights: InsightWithEvidence[];
@@ -124,7 +131,9 @@ export class MarkdownImpactReportBuilder {
     lines.push(`This analysis identified ${claims.length} evidence-backed impacts, ${qaScenarios.length} QA scenarios, and ${openQuestions.length} open questions.`);
     
     if (traceabilityLinks.length > 0) {
-      const topAreas = Array.from(new Set(traceabilityLinks.map(l => l.artifact?.artifactType || 'Unknown'))).join(' and ');
+      const topAreas = Array.from(
+        new Set(traceabilityLinks.map((l) => this.resolveArtifactDisplayType(l.artifact))),
+      ).join(' and ');
       lines.push(`The primary impacted areas are ${topAreas.toLowerCase()} layers.`);
     }
     lines.push('');
@@ -148,7 +157,7 @@ export class MarkdownImpactReportBuilder {
       
       const sortedLinks = [...traceabilityLinks].sort((a, b) => a.reviewStatus.localeCompare(b.reviewStatus));
       for (const link of sortedLinks) {
-        const type = link.artifact?.artifactType ? this.formatArtifactType(link.artifact.artifactType) : 'Unknown';
+        const type = this.resolveArtifactDisplayType(link.artifact);
         const name = link.artifact?.name ? `\`${link.artifact.name}\`` : 'Unknown';
         const file = link.artifact?.filePath ? `\`${link.artifact.filePath}\`` : 'Unknown';
         const status = link.reviewStatus === 'CONFIRMED' ? 'Confirmed' : link.reviewStatus === 'NEEDS_REVIEW' ? 'Needs Review' : link.reviewStatus;

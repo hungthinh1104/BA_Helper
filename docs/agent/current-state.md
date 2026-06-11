@@ -20,6 +20,7 @@ exists as a narrow approved-artifact + decision surface:
 - approved merged reports can be exported as Markdown/PDF only when non-stale
 - approved merged reports become stale when child review decisions or child
   analysis provenance changes after approval
+- code artifacts now persist both raw `artifactType` and normalized `universalKind`
 
 ## Auth and RBAC
 

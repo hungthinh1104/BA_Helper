@@ -154,6 +154,26 @@ API:
 - CORS_ALLOWED_ORIGINS
 ```
 
+Artifact read responses include both the raw extracted type and the additive
+normalized kind:
+
+```json
+{
+  "id": "uuid",
+  "artifactKey": "api:booking.controller.cancel",
+  "name": "BookingController.cancel",
+  "artifactType": "API_ROUTE",
+  "universalKind": "API_ENDPOINT",
+  "filePath": "src/booking/booking.controller.ts",
+  "startLine": 10,
+  "endLine": 22,
+  "language": null
+}
+```
+
+`artifactType` remains adapter-specific in 20B. `universalKind` is additive
+and is the bridge toward later multi-framework adapters.
+
 Production-like API deploys must configure an explicit comma-separated
 `CORS_ALLOWED_ORIGINS` allowlist. The web client requires an explicit
 `NEXT_PUBLIC_API_URL` in production and must not rely on localhost fallback.

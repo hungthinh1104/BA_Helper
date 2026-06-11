@@ -18,20 +18,12 @@ export class ArtifactController {
   ) {
     await this.permissions.assertCanReadSnapshot(actor, snapshotId);
     const items = await this.listArtifacts.execute(snapshotId);
-    const mapped = items.map((artifact: {
-      id: string;
-      artifactKey: string;
-      name: string;
-      artifactType: string;
-      filePath: string;
-      startLine: number | null;
-      endLine: number | null;
-      language: string | null;
-    }) => ({
+    const mapped = items.map((artifact) => ({
       id: artifact.id,
       artifactKey: artifact.artifactKey,
       name: artifact.name,
       artifactType: artifact.artifactType,
+      universalKind: artifact.universalKind ?? 'UNKNOWN',
       filePath: artifact.filePath,
       startLine: artifact.startLine,
       endLine: artifact.endLine,

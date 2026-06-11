@@ -190,6 +190,23 @@ excerpt before persistence while retaining source locator, content hash, and
 redaction metadata needed for provenance.
 ```
 
+`CodeArtifact` keeps both adapter-specific and normalized type:
+
+```text
+artifactType   raw framework-specific extracted type
+universalKind  framework-neutral normalized kind
+```
+
+Current normalized kinds:
+
+```text
+API_ENDPOINT
+DOMAIN_SERVICE
+DATA_MODEL
+TEST_CASE
+UNKNOWN
+```
+
 ## Requirement Revision Semantics
 
 Do not analyze mutable text. Model requirement input as:

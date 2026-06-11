@@ -71,6 +71,15 @@ describe('RunScanJobUseCase', () => {
 
   beforeEach(() => {
     jest.resetAllMocks();
+    const secretRedactor = (
+      jest.requireMock('@ba-helper/analyzer') as {
+        SecretRedactor: { redact: jest.Mock };
+      }
+    ).SecretRedactor;
+    secretRedactor.redact.mockImplementation((content: string) => ({
+      redactedContent: content,
+      foundSecrets: false,
+    }));
 
     scanJobRepository = {
       findById: jest.fn().mockResolvedValue({
@@ -85,7 +94,12 @@ describe('RunScanJobUseCase', () => {
 
     artifactRepository = {
       createMany: jest.fn().mockResolvedValue(undefined),
-      listBySnapshot: jest.fn().mockResolvedValue([]),
+      listBySnapshot: jest.fn().mockResolvedValue([
+        {
+          id: 'artifact-1',
+          artifactKey: 'api:booking.controller.cancel',
+        },
+      ]),
     };
 
     eventLogService = {
@@ -150,7 +164,17 @@ describe('RunScanJobUseCase', () => {
     }));
     analyzer.scanProject.mockReturnValue({
       analyzerVersion: '0.1.0',
-      artifacts: [],
+      artifacts: [
+        {
+          stableId: 'api:booking.controller.cancel',
+          type: 'API_ROUTE',
+          filePath: 'src/booking/booking.controller.ts',
+          symbolName: 'BookingController.cancel',
+          startLine: 10,
+          endLine: 20,
+          excerpt: 'cancel() {}',
+        },
+      ],
       coverage: { status: 'READY', skippedFiles: [] },
       sourceRoot: '/tmp/ba-scan-success',
     });
@@ -166,6 +190,13 @@ describe('RunScanJobUseCase', () => {
           profileVersion: 'repo-profile@0.1.0',
         }),
       }),
+    );
+    expect(artifactRepository.createMany).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          universalKind: expect.any(String),
+        }),
+      ]),
     );
 
     expect(fs.rm).toHaveBeenCalledWith('/tmp/ba-scan-success', {

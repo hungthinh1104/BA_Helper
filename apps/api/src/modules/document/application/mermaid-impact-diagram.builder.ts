@@ -29,6 +29,21 @@ type RequirementRevision = Prisma.RequirementRevisionGetPayload<{}>;
 
 @Injectable()
 export class MermaidImpactDiagramBuilder {
+  private getArtifactTypeLabel(artifact: { artifactType: string; universalKind?: string | null }): string {
+    const type = artifact.artifactType;
+
+    if (artifact.universalKind === 'API_ENDPOINT') return 'API';
+    if (artifact.universalKind === 'DOMAIN_SERVICE') return 'Service';
+    if (artifact.universalKind === 'DATA_MODEL') return 'Entity';
+    if (artifact.universalKind === 'TEST_CASE') return 'Test';
+
+    if (type.includes('CONTROLLER') || type.includes('ROUTE')) return 'API';
+    if (type.includes('SERVICE')) return 'Service';
+    if (type.includes('ENTITY') || type.includes('MODEL')) return 'Entity';
+    if (type.includes('TEST')) return 'Test';
+    return 'Component';
+  }
+
   build(params: {
     requirement: RequirementRevision;
     traceabilityLinks: TraceabilityLinkWithArtifact[];
@@ -63,12 +78,7 @@ export class MermaidImpactDiagramBuilder {
       if (!link.artifact) continue;
       
       const type = link.artifact.artifactType;
-      // Map artifact types to simple labels
-      const typeLabel = type.includes('CONTROLLER') || type.includes('ROUTE') ? 'API' 
-                      : type.includes('SERVICE') ? 'Service'
-                      : type.includes('ENTITY') || type.includes('MODEL') ? 'Entity'
-                      : type.includes('TEST') ? 'Test'
-                      : 'Component';
+      const typeLabel = this.getArtifactTypeLabel(link.artifact);
 
       // Priority: API > Service Method > Service Class > Entity > Test
       let priority = 5;

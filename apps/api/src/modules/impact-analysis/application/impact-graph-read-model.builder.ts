@@ -15,6 +15,21 @@ export class ImpactGraphReadModelBuilder {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  private mapGraphNodeType(artifact: { artifactType: string; universalKind?: string | null }): GraphNodeType {
+    if (artifact.artifactType === 'CONTROLLER') return 'CONTROLLER';
+    if (artifact.artifactType === 'API_ROUTE') return 'API_ROUTE';
+    if (artifact.artifactType === 'SERVICE_METHOD') return 'SERVICE_METHOD';
+    if (artifact.artifactType === 'ENTITY') return 'ENTITY';
+    if (artifact.artifactType === 'TEST') return 'TEST';
+
+    if (artifact.universalKind === 'API_ENDPOINT') return 'API_ROUTE';
+    if (artifact.universalKind === 'DOMAIN_SERVICE') return 'SERVICE_METHOD';
+    if (artifact.universalKind === 'DATA_MODEL') return 'ENTITY';
+    if (artifact.universalKind === 'TEST_CASE') return 'TEST';
+
+    return 'SERVICE';
+  }
+
   async buildGraph(analysisId: string): Promise<ImpactGraphResponse> {
     const analysis = await this.prisma.impactAnalysis.findUnique({
       where: { id: analysisId },
@@ -91,13 +106,7 @@ export class ImpactGraphReadModelBuilder {
       const nodeId = `artifact-${artifact.id}`;
       affectedArtifactIds.add(artifact.id);
 
-      // Map DB type to GraphNodeType
-      let type: GraphNodeType = 'SERVICE';
-      if (artifact.artifactType === 'CONTROLLER') type = 'CONTROLLER';
-      else if (artifact.artifactType === 'API_ROUTE') type = 'API_ROUTE';
-      else if (artifact.artifactType === 'SERVICE_METHOD') type = 'SERVICE_METHOD';
-      else if (artifact.artifactType === 'ENTITY') type = 'ENTITY';
-      else if (artifact.artifactType === 'TEST') type = 'TEST';
+      const type = this.mapGraphNodeType(artifact);
 
       nodes.push({
         id: nodeId,

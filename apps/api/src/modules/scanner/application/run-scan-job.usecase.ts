@@ -4,6 +4,7 @@ import { EventLogService } from '../../event-log/application/event-log.service';
 import { AppError } from '../../../shared/app-error';
 import { ScanJobStatus, ScanJobStage } from '@prisma/client';
 import { ArtifactRepository } from '../../artifact/infrastructure/artifact.repository';
+import { normalizeArtifactKind } from '../../artifact/domain/universal-artifact-kind';
 import { 
   scanFixture, 
   scanProject, 
@@ -258,6 +259,7 @@ export class RunScanJobUseCase {
             snapshotId: snapshot.id,
             artifactKey: artifact.stableId,
             artifactType: artifact.type,
+            universalKind: normalizeArtifactKind(artifact.type),
             name: artifact.symbolName,
             filePath: artifact.filePath,
             startLine: artifact.startLine,

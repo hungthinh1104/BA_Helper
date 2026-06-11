@@ -6,6 +6,7 @@ import { PrismaService } from '../../src/modules/prisma/prisma.service';
 import { createTestApp } from './helpers/test-app';
 import { resetDatabase } from './helpers/reset-db';
 import { grantProjectMembership } from './helpers/grant-project-membership';
+import { artifactListResponseSchema } from '@ba-helper/contracts';
 
 describe('Auth and RBAC (e2e)', () => {
   let app: INestApplication;
@@ -151,6 +152,7 @@ describe('Auth and RBAC (e2e)', () => {
         artifactKey: 'src/orders/orders.service.ts#OrdersService',
         name: 'OrdersService',
         artifactType: 'SERVICE',
+        universalKind: 'DOMAIN_SERVICE',
         filePath: 'src/orders/orders.service.ts',
       },
     });
@@ -210,6 +212,7 @@ describe('Auth and RBAC (e2e)', () => {
 
     return {
       projectId,
+      snapshotId,
       requirementId,
       revisionId,
       analysisId,
@@ -883,5 +886,24 @@ describe('Auth and RBAC (e2e)', () => {
       .get(`/api/v1/impact-analyses/${analysisId}/evidence`)
       .set('Authorization', `Bearer ${viewerToken}`)
       .expect(404);
+  });
+
+  it('returns universalKind for same-project snapshot artifact reads', async () => {
+    const seeded = await seedAnalysisGraph('WAITING_FOR_REVIEW');
+
+    const response = await request(app.getHttpServer())
+      .get(`/api/v1/snapshots/${seeded.snapshotId}/artifacts`)
+      .set('Authorization', `Bearer ${reviewerToken}`)
+      .expect(200);
+
+    const parsed = artifactListResponseSchema.parse(response.body);
+    expect(parsed.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          artifactType: 'SERVICE',
+          universalKind: 'DOMAIN_SERVICE',
+        }),
+      ]),
+    );
   });
 });

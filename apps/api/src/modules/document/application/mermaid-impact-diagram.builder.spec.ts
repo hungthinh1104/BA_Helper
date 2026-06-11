@@ -77,4 +77,17 @@ describe('MermaidImpactDiagramBuilder', () => {
     const result = builder.build({ requirement, traceabilityLinks, dependencyEdges: [], insights: [] });
     expect(result.mermaid).not.toContain('BadArtifact');
   });
+
+  it('uses universalKind fallback for legacy artifact labels', () => {
+    const requirement = { title: 'Req' } as unknown as import('@prisma/client').RequirementRevision;
+    const traceabilityLinks = [
+      {
+        reviewStatus: 'CONFIRMED',
+        artifact: { id: 'a1', name: 'BookingAggregate', artifactType: 'CLASS', universalKind: 'DATA_MODEL' },
+      },
+    ] as unknown as any[];
+
+    const result = builder.build({ requirement, traceabilityLinks, dependencyEdges: [], insights: [] });
+    expect(result.mermaid).toContain('["[Entity] BookingAggregate"]');
+  });
 });
