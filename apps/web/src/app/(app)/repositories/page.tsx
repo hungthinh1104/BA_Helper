@@ -1,10 +1,10 @@
 "use client"
 
 
-import { WorkspacePageHeader } from "@/components/workspace/page-header"
-import { DataList, DataListHeader, DataListRow, DataListCell } from "@/components/workspace/data-list"
-import { ConnectRepoDialog } from "@/components/workspace/connect-repo-dialog"
-import { ScanJobProgress, ScanJobStatus } from "@/components/workspace/scan-job-progress"
+import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
+import { DataList, DataListHeader, DataListRow, DataListCell } from "@/components/workspace/shared/data-list"
+import { ConnectRepoDialog } from "@/components/workspace/repository/connect-repo-dialog"
+import { ScanJobProgress, ScanJobStatus } from "@/components/workspace/repository/scan-job-progress"
 import { Button } from "@/components/ui/button"
 import { useRepositories } from "@/hooks/api/use-repositories"
 import { useCreateScanJob } from "@/hooks/api/use-scan-jobs"

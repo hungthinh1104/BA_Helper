@@ -1,7 +1,7 @@
 "use client"
 
-import { WorkspacePageHeader } from "@/components/workspace/page-header"
-import { DataList, DataListHeader, DataListRow, DataListCell } from "@/components/workspace/data-list"
+import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
+import { DataList, DataListHeader, DataListRow, DataListCell } from "@/components/workspace/shared/data-list"
 import { Dialog, DialogContent, DialogTrigger, DialogClose } from "@/components/ui/dialog"
 import { CheckCircle2, AlertTriangle, Printer, X, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"

@@ -1,8 +1,8 @@
 "use client"
 
-import { InsightList } from "@/components/workspace/insight-list"
-import { AffectedArtifactCard } from "@/components/workspace/affected-artifact-card"
-import { InsightFilterBar, type InsightFilterValue } from "@/components/workspace/insight-filter-bar"
+import { InsightList } from "@/components/workspace/shared/insight/insight-list"
+import { AffectedArtifactCard } from "@/components/workspace/analysis/affected-artifact-card"
+import { InsightFilterBar, type InsightFilterValue } from "@/components/workspace/shared/insight/insight-filter-bar"
 import { Button } from "@/components/ui/button"
 import type { InsightListResponse, TraceabilityLinkListResponse } from "@ba-helper/contracts"
 

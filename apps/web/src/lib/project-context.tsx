@@ -33,6 +33,7 @@ const ProjectContext = createContext<ProjectContextValue>({ status: "loading" })
 export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<ProjectReadyState | { status: "loading" } | { status: "error"; apiBaseUrl?: string; code: string; message: string }>({ status: "loading" })
   const { data: session, status } = useSession()
+  const accessToken = (session as { accessToken?: string })?.accessToken
   const queryClient = useQueryClient()
 
   useEffect(() => {
@@ -47,8 +48,8 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       try {
         apiBaseUrl = getApiBaseUrl()
         const authHeaders =
-          typeof (session as any)?.accessToken === "string" && session?.accessToken
-            ? { Authorization: `Bearer ${session?.accessToken}` }
+          typeof accessToken === "string" && accessToken
+            ? { Authorization: `Bearer ${accessToken}` }
             : undefined
         const workspace = await apiGet(
           "/api/v1/workspace/current",
@@ -80,7 +81,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [queryClient, (session as any)?.accessToken, status])
+  }, [queryClient, accessToken, status])
 
   const value: ProjectContextValue =
     state.status !== "ready"
@@ -89,8 +90,8 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
           ...state,
           switchProject: async (projectId: string) => {
             const authHeaders =
-              typeof (session as any)?.accessToken === "string" && session?.accessToken
-                ? { Authorization: `Bearer ${session?.accessToken}` }
+              typeof accessToken === "string" && accessToken
+                ? { Authorization: `Bearer ${accessToken}` }
                 : undefined
 
             if (!authHeaders) {

@@ -54,7 +54,7 @@ export function ImpactMatrixTable({ runId, onViewDetails }: ImpactMatrixTablePro
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.rows.map((row: any) => (
+          {data.rows.map((row: import("@ba-helper/contracts").MultiRepoImpactMatrixRow) => (
             <TableRow key={row.analysisId}>
               <TableCell className="font-medium">{row.domain}</TableCell>
               <TableCell>

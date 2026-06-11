@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { HelpCircle, CheckCircle2, XCircle, MessageSquare } from 'lucide-react';
 import { useAnalysisDetail } from '@/hooks/api/use-analyses';
-import { NewAnalysisDialog } from './new-analysis-dialog';
+import { NewAnalysisDialog } from "@/components/workspace/analysis/new-analysis/new-analysis-dialog";
 import { ClarificationItemDto } from '@ba-helper/contracts';
 import { useAuth } from '@/hooks/use-auth';
 

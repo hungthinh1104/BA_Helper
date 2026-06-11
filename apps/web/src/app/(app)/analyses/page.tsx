@@ -2,9 +2,9 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { WorkspacePageHeader } from "@/components/workspace/page-header"
-import { DataList, DataListHeader, DataListRow, DataListCell } from "@/components/workspace/data-list"
-import { NewAnalysisDialog } from "@/components/workspace/new-analysis-dialog"
+import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
+import { DataList, DataListHeader, DataListRow, DataListCell } from "@/components/workspace/shared/data-list"
+import { NewAnalysisDialog } from "@/components/workspace/analysis/new-analysis/new-analysis-dialog"
 import { useAnalyses } from "@/hooks/api/use-analyses"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Plus, AlertCircle, Activity } from "lucide-react"

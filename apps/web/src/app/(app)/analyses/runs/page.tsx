@@ -2,8 +2,8 @@
 
 import Link from "next/link"
 import { AlertCircle, FolderGit2 } from "lucide-react"
-import { WorkspacePageHeader } from "@/components/workspace/page-header"
-import { DataList, DataListCell, DataListHeader, DataListRow } from "@/components/workspace/data-list"
+import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
+import { DataList, DataListCell, DataListHeader, DataListRow } from "@/components/workspace/shared/data-list"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useMultiRepoAnalysisRuns } from "@/hooks/api/use-analyses"
 

@@ -7,7 +7,7 @@ import { AlertCircle, FileWarning, Copy, Download, CheckCircle2, Loader2 } from 
 import ReactMarkdown from "react-markdown"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
-import { MermaidRenderer } from "@/components/workspace/mermaid-renderer"
+import { MermaidRenderer } from "@/components/workspace/shared/mermaid-renderer"
 import remarkGfm from "remark-gfm"
 import { apiGetFile } from "@/lib/api-client"
 import { toast } from "sonner"

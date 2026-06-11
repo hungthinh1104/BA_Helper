@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge"
 import { TraceabilityLinkListResponse } from "@ba-helper/contracts"
-import { RetrievalSignalBadge } from "./retrieval-signals"
+import { RetrievalSignalBadge } from "@/components/workspace/shared/retrieval/retrieval-signals"
 
 type TraceabilityLink = TraceabilityLinkListResponse["items"][number]
 

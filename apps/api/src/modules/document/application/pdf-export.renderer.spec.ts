@@ -19,12 +19,36 @@ describe('PdfExportRenderer', () => {
     staleStatusAtReadTime: false,
   };
 
-  it('renders a deterministic PDF buffer', async () => {
+  it('renders a deterministic PDF buffer with various markdown elements', async () => {
+    const markdownWithElements = `
+# Approved report
+
+This is a paragraph with some text.
+
+## Details
+
+> This is a blockquote.
+
+- List item 1
+- List item 2
+
+\`\`\`typescript
+const foo = "bar";
+\`\`\`
+
+| Domain | Repository | Risk |
+|---|---|---|
+| Payments | payment-service | High |
+| Booking | booking-service | Low |
+`;
+
     const result = await renderer.render({
-      markdown: '# Approved report\n\n## Evidence Appendix\n\n- persisted',
+      markdown: markdownWithElements,
       metadata,
     });
 
+    expect(Buffer.isBuffer(result.buffer)).toBe(true);
+    expect(result.buffer.length).toBeGreaterThan(0);
     expect(result.contentType).toBe('application/pdf');
     expect(result.filename).toBe('refund-paid-bookings-impact-report.pdf');
     expect(result.buffer.subarray(0, 4).toString()).toBe('%PDF');

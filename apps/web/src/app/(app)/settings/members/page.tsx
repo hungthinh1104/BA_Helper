@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { WorkspacePageHeader } from "@/components/workspace/page-header"
+import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
 import {
   useProjectMembers,
   useRemoveProjectMember,

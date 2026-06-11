@@ -6,7 +6,7 @@ import { notFound } from "next/navigation"
 import { AlertCircle, CheckCircle2, Download, FileWarning, Loader2, MessageSquareWarning, ShieldCheck, XCircle } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
-import { WorkspacePageHeader } from "@/components/workspace/page-header"
+import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -275,7 +275,7 @@ export default function ApprovedMultiRepoReportPage({
                     No merged report review decisions yet.
                   </div>
                 )}
-                {reviewDecisions.map((item: any) => (
+                {reviewDecisions.map((item: import("@ba-helper/contracts").MergedMultiRepoReportReviewDecisionResponse) => (
                   <div key={item.id} className="rounded-lg border border-border/50 bg-background/60 px-3 py-3">
                     <div className="mb-1 flex flex-wrap items-center gap-2 text-[12px]">
                       <Badge

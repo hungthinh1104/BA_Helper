@@ -5,8 +5,8 @@ import { use } from "react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { AlertCircle, GitBranch } from "lucide-react"
-import { WorkspacePageHeader } from "@/components/workspace/page-header"
-import { DataList, DataListCell, DataListHeader, DataListRow } from "@/components/workspace/data-list"
+import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
+import { DataList, DataListCell, DataListHeader, DataListRow } from "@/components/workspace/shared/data-list"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { useApprovedMultiRepoReport, useMultiRepoAnalysisRunDetail, useFinalizeMultiRepoReport } from "@/hooks/api/use-analyses"
@@ -15,8 +15,8 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ImpactMatrixTable } from "@/components/workspace/impact-matrix-table"
-import { MatrixRowDetailDrawer } from "@/components/workspace/matrix-row-detail-drawer"
+import { ImpactMatrixTable } from "@/components/workspace/matrix/impact-matrix-table"
+import { MatrixRowDetailDrawer } from "@/components/workspace/matrix/matrix-row-detail-drawer"
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   QUEUED:             { label: "Queued",       className: "bg-border text-muted-foreground border-border/50" },

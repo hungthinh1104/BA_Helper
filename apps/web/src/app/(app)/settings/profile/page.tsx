@@ -2,8 +2,8 @@
 
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import { WorkspacePageHeader } from "@/components/workspace/page-header"
-import { WorkspacePanel, WorkspacePanelSection, WorkspaceProperty } from "@/components/workspace/panel"
+import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
+import { WorkspacePanel, WorkspacePanelSection, WorkspaceProperty } from "@/components/workspace/shared/panel"
 import { useCurrentWorkspace, useWorkspaceRuntime } from "@/lib/project-context"
 import { useSystemHealth } from "@/hooks/api/use-system"
 

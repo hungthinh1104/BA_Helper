@@ -2,14 +2,14 @@
 
 import { use } from "react"
 
-import { WorkspacePageHeader } from "@/components/workspace/page-header"
+import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
 
 import { Button } from "@/components/ui/button"
 import { Play, GitBranch, AlertTriangle, Layers, Server, Box, Beaker, Database, Activity, AlertCircle, ShieldAlert } from "lucide-react"
-import { ScanJobProgress } from "@/components/workspace/scan-job-progress"
-import { NewAnalysisDialog } from "@/components/workspace/new-analysis-dialog"
-import { ScanDiagnosticsPanel } from "@/components/workspace/scan-diagnostics-panel"
-import { BackButton } from "@/components/workspace/back-button"
+import { ScanJobProgress } from "@/components/workspace/repository/scan-job-progress"
+import { NewAnalysisDialog } from "@/components/workspace/analysis/new-analysis/new-analysis-dialog"
+import { ScanDiagnosticsPanel } from "@/components/workspace/analysis/scan-diagnostics-panel"
+import { BackButton } from "@/components/workspace/shared/back-button"
 import { useRepositoryDetail } from "@/hooks/api/use-repositories"
 import { useCreateScanJob } from "@/hooks/api/use-scan-jobs"
 import { useRepositoryStatusWatcher } from "@/hooks/ui/use-status-watcher"

@@ -3,14 +3,14 @@
 import { useRepositories } from "@/hooks/api/use-repositories"
 import { useAnalyses } from "@/hooks/api/use-analyses"
 import { useRequirements } from "@/hooks/api/use-requirements"
-import { WorkspacePageHeader } from "@/components/workspace/page-header"
+import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { GitBranch, Activity, Database, ChevronRight, AlertCircle, FileText } from "lucide-react"
 import Link from "next/link"
-import { ConnectRepoDialog } from "@/components/workspace/connect-repo-dialog"
-import { NewRequirementDialog } from "@/components/workspace/new-requirement-dialog"
-import { NewAnalysisDialog } from "@/components/workspace/new-analysis-dialog"
+import { ConnectRepoDialog } from "@/components/workspace/repository/connect-repo-dialog"
+import { NewRequirementDialog } from "@/components/workspace/requirement/new-requirement-dialog"
+import { NewAnalysisDialog } from "@/components/workspace/analysis/new-analysis/new-analysis-dialog"
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })

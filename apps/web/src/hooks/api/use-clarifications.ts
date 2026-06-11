@@ -9,6 +9,8 @@ import {
   ConvertClarificationResponseSchema,
 } from '@ba-helper/contracts';
 import { toast } from 'sonner';
+import { queryKeys } from '@/lib/api/query-keys';
+import { useOptionalProjectId } from '@/lib/project-context';
 
 export const clarificationKeys = {
   all: ['clarifications'] as const,
@@ -107,4 +109,82 @@ export function useConvertClarification(analysisId: string) {
       });
     },
   });
+}
+
+export function useReviewClarifications(analysisId: string) {
+  return useQuery({
+    queryKey: [...queryKeys.analyses.detail(analysisId), "review-clarifications"],
+    queryFn: async () => {
+      const { reviewClarificationListResponseSchema } = await import("@ba-helper/contracts")
+      return apiGet(
+        `/api/v1/impact-analyses/${analysisId}/review-clarifications`,
+        reviewClarificationListResponseSchema
+      )
+    },
+    enabled: Boolean(analysisId),
+  })
+}
+
+export function useCreateReviewClarification(analysisId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ data }: { data: import("@ba-helper/contracts").ReviewClarificationCreateRequest }) => {
+      const { reviewClarificationRequestSchema } = await import("@ba-helper/contracts")
+      return apiPost(
+        `/api/v1/impact-analyses/${analysisId}/review-clarifications`,
+        data,
+        reviewClarificationRequestSchema
+      )
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [...queryKeys.analyses.detail(analysisId), "review-clarifications"],
+      })
+    },
+  })
+}
+
+export function useAnswerReviewClarification(analysisId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ clarificationId, data }: { clarificationId: string; data: { answer: string } }) => {
+      const { reviewClarificationRequestSchema } = await import("@ba-helper/contracts")
+      return apiPost(
+        `/api/v1/review-clarifications/${clarificationId}/answer`,
+        data,
+        reviewClarificationRequestSchema
+      )
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [...queryKeys.analyses.detail(analysisId), "review-clarifications"],
+      })
+    },
+  })
+}
+
+export function useCreateDerivedAnalysisFromClarification(analysisId: string) {
+  const queryClient = useQueryClient()
+  const activeProjectId = useOptionalProjectId()
+
+  return useMutation({
+    mutationFn: async (clarificationId: string) => {
+      const { impactAnalysisResponseSchema } = await import("@ba-helper/contracts")
+      return apiPost(
+        `/api/v1/review-clarifications/${clarificationId}/derived-analyses`,
+        {},
+        impactAnalysisResponseSchema
+      )
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [...queryKeys.analyses.detail(analysisId), "review-clarifications"],
+      })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.analyses.list(activeProjectId ?? "__workspace-pending__"),
+      })
+    },
+  })
 }

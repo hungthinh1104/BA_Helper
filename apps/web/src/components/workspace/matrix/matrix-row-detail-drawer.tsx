@@ -1,6 +1,5 @@
 import React from "react"
-import { AlertCircle, FileText, CheckCircle2, AlertTriangle, HelpCircle } from "lucide-react"
-import { MatrixRowDetailResponse } from "@ba-helper/contracts"
+import { AlertCircle, CheckCircle2, AlertTriangle, HelpCircle } from "lucide-react"
 import { useMatrixRowDetail } from "@/hooks/api/use-analyses"
 import {
   Sheet,
@@ -15,19 +14,14 @@ import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { MatrixArtifactDetailCard } from "./matrix-artifact-detail-card"
+import { MatrixInsightList } from "./matrix-insight-list"
+import { MatrixDiagnosticsPanel } from "./matrix-diagnostics-panel"
 
 interface MatrixRowDetailDrawerProps {
   runId: string
   analysisId: string | null
   open: boolean
   onOpenChange: (open: boolean) => void
-}
-
-const CERTAINTY_COLORS: Record<string, string> = {
-  EVIDENCED: "bg-success/10 text-success border-success/20",
-  INFERRED: "bg-warning/10 text-warning border-warning/20",
-  UNKNOWN: "bg-destructive/10 text-destructive border-destructive/20",
-  CONFLICTING: "bg-destructive/10 text-destructive border-destructive/20",
 }
 
 const STATUS_ICONS: Record<string, React.ReactNode> = {
@@ -44,7 +38,6 @@ export function MatrixRowDetailDrawer({
 }: MatrixRowDetailDrawerProps) {
   const { data, isLoading, error } = useMatrixRowDetail(runId, analysisId)
 
-  // Drawer should ideally be 60-70% width on desktop. In Tailwind, we can override max-w.
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-2xl md:max-w-3xl lg:max-w-4xl p-0 flex flex-col h-full bg-background border-l">
@@ -65,11 +58,11 @@ export function MatrixRowDetailDrawer({
         {error && !isLoading && (
           <div className="flex flex-col items-center justify-center h-full p-6 text-center">
             <AlertCircle className="w-8 h-8 text-destructive mb-4" />
-            {(error as any)?.status === 404 ? (
+            {(error as { status?: number })?.status === 404 ? (
               <p className="text-[14px] font-medium text-foreground">
                 This analysis is not available for the selected run.
               </p>
-            ) : (error as any)?.status === 403 ? (
+            ) : (error as { status?: number })?.status === 403 ? (
               <p className="text-[14px] font-medium text-foreground">
                 You do not have permission to view this analysis.
               </p>
@@ -174,97 +167,23 @@ export function MatrixRowDetailDrawer({
                   </TabsContent>
 
                   <TabsContent value="risks" className="mt-0 space-y-3">
-                    {data.risks.length === 0 ? (
-                      <div className="text-center py-10 text-muted-foreground text-sm">
-                        No risks found for this repository.
-                      </div>
-                    ) : (
-                      data.risks.map((risk) => (
-                        <div key={risk.insightId} className="rounded border border-destructive/20 bg-destructive/5 p-4">
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <h4 className="text-[13px] font-medium text-foreground">{risk.title}</h4>
-                            {risk.certainty && (
-                              <Badge variant="outline" className={`text-[10px] uppercase ${CERTAINTY_COLORS[risk.certainty] || ""}`}>
-                                {risk.certainty}
-                              </Badge>
-                            )}
-                          </div>
-                          {risk.description && (
-                            <p className="text-[13px] text-muted-foreground leading-relaxed mb-3">
-                              {risk.description}
-                            </p>
-                          )}
-                          <div className="text-[11px] text-muted-foreground">
-                            {risk.relatedEvidenceIds.length} evidence references
-                          </div>
-                        </div>
-                      ))
-                    )}
+                    <MatrixInsightList 
+                      insights={data.risks} 
+                      type="risk" 
+                      emptyMessage="No risks found for this repository." 
+                    />
                   </TabsContent>
 
                   <TabsContent value="qa" className="mt-0 space-y-3">
-                    {data.qaScenarios.length === 0 ? (
-                      <div className="text-center py-10 text-muted-foreground text-sm">
-                        No QA scenarios found for this repository.
-                      </div>
-                    ) : (
-                      data.qaScenarios.map((qa) => (
-                        <div key={qa.insightId} className="rounded border border-success/20 bg-success/5 p-4">
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <h4 className="text-[13px] font-medium text-foreground">{qa.title}</h4>
-                            {qa.certainty && (
-                              <Badge variant="outline" className={`text-[10px] uppercase ${CERTAINTY_COLORS[qa.certainty] || ""}`}>
-                                {qa.certainty}
-                              </Badge>
-                            )}
-                          </div>
-                          {qa.description && (
-                            <p className="text-[13px] text-muted-foreground leading-relaxed mb-3">
-                              {qa.description}
-                            </p>
-                          )}
-                          <div className="text-[11px] text-muted-foreground">
-                            {qa.relatedEvidenceIds.length} evidence references
-                          </div>
-                        </div>
-                      ))
-                    )}
+                    <MatrixInsightList 
+                      insights={data.qaScenarios} 
+                      type="qa" 
+                      emptyMessage="No QA scenarios found for this repository." 
+                    />
                   </TabsContent>
 
                   <TabsContent value="diagnostics" className="mt-0 space-y-4">
-                    {data.impactedArtifacts.length === 0 ? (
-                      <div className="text-center py-10 text-muted-foreground text-sm">
-                        No diagnostics available.
-                      </div>
-                    ) : (
-                      data.impactedArtifacts.map((artifact) => {
-                        const diag = artifact.retrievalDiagnostics as Record<string, any> | undefined
-                        if (!diag) return null
-
-                        return (
-                          <div key={artifact.artifactId} className="rounded-lg border bg-surface p-4">
-                            <h4 className="text-[13px] font-medium mb-3 flex items-center gap-2">
-                              <FileText className="w-3.5 h-3.5 text-muted-foreground" />
-                              {artifact.displayName}
-                            </h4>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                              {Object.entries(diag)
-                                .filter(([k, v]) => typeof v === "number" || typeof v === "string")
-                                .map(([k, v]) => (
-                                  <div key={k} className="flex flex-col">
-                                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">
-                                      {k}
-                                    </span>
-                                    <span className="text-[12px] font-mono font-medium">
-                                      {typeof v === "number" ? v.toFixed(3) : String(v)}
-                                    </span>
-                                  </div>
-                                ))}
-                            </div>
-                          </div>
-                        )
-                      })
-                    )}
+                    <MatrixDiagnosticsPanel artifacts={data.impactedArtifacts} />
                   </TabsContent>
                 </div>
               </ScrollArea>

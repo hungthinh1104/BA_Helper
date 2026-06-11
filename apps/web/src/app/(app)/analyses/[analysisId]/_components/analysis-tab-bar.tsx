@@ -3,9 +3,9 @@
 import { useRouter } from "next/navigation"
 import { AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { FinalizeAnalysisDialog } from "@/components/workspace/finalize-analysis-dialog"
-import { AnalysisHeader } from "@/components/workspace/analysis-header"
-import { E2ETimeline } from "@/components/workspace/e2e-timeline"
+import { FinalizeAnalysisDialog } from "@/components/workspace/analysis/finalize-analysis-dialog"
+import { AnalysisHeader } from "@/components/workspace/analysis/analysis-header"
+import { E2ETimeline } from "@/components/workspace/analysis/e2e-timeline"
 import type { ImpactAnalysisResponse } from "@ba-helper/contracts"
 
 type TabValue = "insights" | "graph" | "qa-coverage" | "review-queue" | "diff" | "lineage"

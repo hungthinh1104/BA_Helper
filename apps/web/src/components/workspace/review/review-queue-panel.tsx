@@ -6,7 +6,7 @@ import { CheckCircle, XCircle, SkipForward, AlertCircle, Activity, LayoutList } 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useReviewInsight, useReviewTraceabilityLink } from "@/hooks/api/use-analyses"
-import { DecisionNoteForm } from "./decision-note-form"
+import { DecisionNoteForm } from "@/components/workspace/review/decision-note-form"
 
 interface ReviewQueuePanelProps {
   queueData: ReviewQueueResponse

@@ -1,8 +1,8 @@
 "use client"
 
-import { WorkspacePageHeader } from "@/components/workspace/page-header"
-import { DataList, DataListHeader, DataListRow, DataListCell } from "@/components/workspace/data-list"
-import { NewRequirementDialog, ReadinessStatusBadge } from "@/components/workspace/new-requirement-dialog"
+import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
+import { DataList, DataListHeader, DataListRow, DataListCell } from "@/components/workspace/shared/data-list"
+import { NewRequirementDialog, ReadinessStatusBadge } from "@/components/workspace/requirement/new-requirement-dialog"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useRequirements } from "@/hooks/api/use-requirements"

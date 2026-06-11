@@ -2,7 +2,7 @@ import React from "react"
 import { MatrixRowArtifactDetail, MatrixRowInsightRef } from "@ba-helper/contracts"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CodeEvidenceBlock } from "./code-evidence-block"
+import { MatrixEvidenceList } from "./matrix-evidence-list"
 
 interface MatrixArtifactDetailCardProps {
   artifact: MatrixRowArtifactDetail
@@ -62,36 +62,7 @@ export function MatrixArtifactDetailCard({
       </div>
 
       <div className="w-full flex flex-col">
-        {artifact.evidenceItems.length > 0 && (
-          <details className="group border-b px-3 py-1 open:pb-3" open>
-            <summary className="text-[12px] font-medium py-2 text-muted-foreground hover:text-foreground cursor-pointer list-none flex items-center justify-between">
-              Evidence ({artifact.evidenceItems.length})
-              <span className="text-muted-foreground/50 text-[10px] group-open:rotate-180 transition-transform">▼</span>
-            </summary>
-            <div className="pt-1 space-y-3">
-              {artifact.evidenceItems.map((evidence) => (
-                <div key={evidence.evidenceId} className="flex flex-col gap-1.5">
-                  <div className="text-[11px] text-muted-foreground font-mono">
-                    {evidence.sourceFile || artifact.filePath}
-                    {evidence.startLine !== null && evidence.endLine !== null
-                      ? `:${evidence.startLine}-${evidence.endLine}`
-                      : ""}
-                  </div>
-                  <CodeEvidenceBlock
-                    evidence={{
-                      id: evidence.evidenceId,
-                      sourceType: "CODE",
-                      filePath: evidence.sourceFile || artifact.filePath,
-                      startLine: evidence.startLine,
-                      endLine: evidence.endLine,
-                      excerpt: evidence.quoteOrSnippet,
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-          </details>
-        )}
+        <MatrixEvidenceList artifact={artifact} />
 
         {artifactRisks.length > 0 && (
           <details className="group border-b px-3 py-1 open:pb-3" open>
@@ -164,7 +135,7 @@ export function MatrixArtifactDetailCard({
             <div className="pt-1">
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[11px] font-mono bg-muted/30 p-2 rounded border border-border/50">
                 {Object.entries(artifact.retrievalDiagnostics)
-                  .filter(([k, v]) => typeof v === "number" || typeof v === "string")
+                  .filter(([, v]) => typeof v === "number" || typeof v === "string")
                   .map(([k, v]) => (
                     <div key={k} className="flex justify-between gap-4">
                       <span className="text-muted-foreground">{k}</span>

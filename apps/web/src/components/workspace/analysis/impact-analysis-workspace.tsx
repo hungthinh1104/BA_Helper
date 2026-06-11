@@ -1,5 +1,5 @@
 import { ReactNode } from "react"
-import { EvidenceInspector } from "./evidence-inspector"
+import { EvidenceInspector } from "@/components/workspace/shared/retrieval/evidence-inspector"
 import { MousePointerClick } from "lucide-react"
 import { Group, Panel, Separator } from "react-resizable-panels"
 

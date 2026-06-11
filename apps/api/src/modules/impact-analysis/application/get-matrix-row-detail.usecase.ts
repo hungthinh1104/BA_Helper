@@ -114,11 +114,11 @@ export class GetMatrixRowDetailUseCase {
           startLine: artifact.startLine,
           endLine: artifact.endLine,
           linkStrength: link.linkBasis,
-          linkReason: link.reviewNote?.content ?? null,
+          linkReason: (link as any).reviewNote?.content ?? null,
           evidenceItems: [],
           relatedRisks: new Set<string>(),
           relatedQaScenarios: new Set<string>(),
-          retrievalDiagnostics: (link.retrievalMetadata as any)?.diagnostics ?? undefined,
+          retrievalDiagnostics: (link as any).retrievalMetadata?.diagnostics ?? undefined,
         });
       }
 
@@ -134,7 +134,7 @@ export class GetMatrixRowDetailUseCase {
             startLine: evidence.startLine,
             endLine: evidence.endLine,
             linkType: link.linkType,
-            retrievalSignals: (evidence.retrievalMetadata as any)?.diagnostics ?? undefined, // not strictly needed from evidence but maybe available
+            retrievalSignals: (evidence as any).retrievalMetadata?.diagnostics ?? undefined, // not strictly needed from evidence but maybe available
           });
         }
         
