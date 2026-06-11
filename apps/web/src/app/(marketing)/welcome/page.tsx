@@ -18,7 +18,7 @@ export default function LandingPage() {
           <div className="landing-nav-links flex items-center gap-6">
             <ThemeToggle />
             <Link href="https://github.com/diphungthinh/BA_helper_test" target="_blank" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">GitHub</Link>
-            <Link href="/analyses/mock-analysis-123" className="text-sm font-medium bg-foreground text-background px-4 py-2 rounded-full hover:bg-foreground/90 transition-colors">Try Demo</Link>
+            <Link href="/login?next=/analyses" className="text-sm font-medium bg-foreground text-background px-4 py-2 rounded-full hover:bg-foreground/90 transition-colors">Enter Workspace</Link>
           </div>
         </div>
       </header>
@@ -44,9 +44,9 @@ export default function LandingPage() {
           <div>
             <h4 className="font-semibold mb-4 text-foreground">Product</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="/analyses" className="hover:text-primary">Impact Analysis</Link></li>
-              <li><Link href="/repositories" className="hover:text-primary">Repository Snapshots</Link></li>
-              <li><Link href="/reports" className="hover:text-primary">Traceability Reports</Link></li>
+              <li><Link href="/login?next=/analyses" className="hover:text-primary">Impact Analysis</Link></li>
+              <li><Link href="/login?next=/repositories" className="hover:text-primary">Repository Snapshots</Link></li>
+              <li><Link href="/login?next=/reports" className="hover:text-primary">Traceability Reports</Link></li>
             </ul>
           </div>
           <div>

@@ -7,7 +7,7 @@ import { RequestUser, LoginRequest, LoginResponse } from '@ba-helper/contracts';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags('Auth')
-@Controller('v1/auth')
+@Controller('/api/v1/auth')
 export class AuthController {
   constructor(
     private readonly jwtService: JwtService,

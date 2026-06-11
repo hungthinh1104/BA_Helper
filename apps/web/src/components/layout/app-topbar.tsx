@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { ChevronRight } from "lucide-react"
 import { useSystemHealth } from "@/hooks/api/use-system"
+import { useAuth } from "@/hooks/use-auth"
 import { useWorkspaceRuntime } from "@/lib/project-context"
 
 const BREADCRUMB_MAP: Record<string, { label: string; parent?: { label: string; href: string } }> = {
@@ -34,6 +35,7 @@ export function AppTopbar() {
   const analysisId = isAnalysisDetail ? pathname.split("/")[2] : null
   const workspace = useWorkspaceRuntime()
   const health = useSystemHealth()
+  const { user, logout } = useAuth()
 
   const healthLabel = health.isLoading
     ? "API checking"
@@ -61,6 +63,16 @@ export function AppTopbar() {
         <Badge variant="outline" className="h-6 rounded-md px-2 text-[10px] uppercase tracking-wider">
           {workspace.mode}
         </Badge>
+        {user && (
+          <>
+            <Badge variant="outline" className="h-6 rounded-md px-2 text-[10px] uppercase tracking-wider">
+              {user.role}
+            </Badge>
+            <span className="hidden text-sm text-muted-foreground md:inline">
+              {user.name ?? user.email}
+            </span>
+          </>
+        )}
         <Badge
           variant="outline"
           className={`h-6 rounded-md px-2 text-[10px] uppercase tracking-wider ${
@@ -74,6 +86,9 @@ export function AppTopbar() {
           {healthLabel}
         </Badge>
         <ThemeToggle />
+        <Button variant="outline" size="sm" className="h-8 shadow-none" onClick={() => void logout()}>
+          Sign out
+        </Button>
         {isAnalysisDetail && (
           <>
             <Button variant="ghost" size="sm" className="h-8 shadow-none text-muted-foreground">Share</Button>

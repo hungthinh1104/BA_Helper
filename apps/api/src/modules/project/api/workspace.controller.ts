@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { currentWorkspaceResponseSchema } from '@ba-helper/contracts';
+import { Public } from '../../auth/application/jwt-auth.guard';
 import { GetCurrentWorkspaceUseCase } from '../application/get-current-workspace.usecase';
 
 @Controller('/api/v1/workspace')
@@ -8,6 +9,7 @@ export class WorkspaceController {
     private readonly getCurrentWorkspace: GetCurrentWorkspaceUseCase,
   ) {}
 
+  @Public()
   @Get('/current')
   async getCurrent() {
     const result = await this.getCurrentWorkspace.execute();
