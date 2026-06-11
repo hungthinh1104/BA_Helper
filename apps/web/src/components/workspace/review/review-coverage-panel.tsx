@@ -17,16 +17,16 @@ function SummaryCard({
 }) {
   const toneClass =
     tone === "success"
-      ? "border-success/30 text-success"
+      ? "border-[var(--success-soft)] text-[var(--success)] bg-[var(--success-soft)]"
       : tone === "warning"
-        ? "border-warning/30 text-warning"
+        ? "border-[var(--warning-soft)] text-[var(--warning)] bg-[var(--warning-soft)]"
         : tone === "destructive"
-          ? "border-destructive/30 text-destructive"
-          : "border-border/50 text-foreground"
+          ? "border-[var(--danger-soft)] text-[var(--danger)] bg-[var(--danger-soft)]"
+          : "border-[var(--border)] text-[var(--text-primary)] bg-[var(--surface-muted)]"
 
   return (
-    <div className={`rounded-lg border bg-surface px-3 py-2 ${toneClass}`}>
-      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+    <div className={`rounded-lg border px-3 py-2 ${toneClass}`}>
+      <div className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">{label}</div>
       <div className="mt-1 text-[16px] font-semibold">{value}</div>
     </div>
   )
@@ -35,7 +35,7 @@ function SummaryCard({
 function GateStatusBadge({ status }: { status: "PASS" | "WARN" | "FAIL" }) {
   if (status === "PASS") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-md border border-success/30 bg-success/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-success">
+      <span className="inline-flex items-center gap-1 rounded-md border border-[var(--success-soft)] bg-[var(--success-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--success)]">
         <CheckCircle2 className="h-3 w-3" />
         Pass
       </span>
@@ -43,14 +43,14 @@ function GateStatusBadge({ status }: { status: "PASS" | "WARN" | "FAIL" }) {
   }
   if (status === "WARN") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-md border border-warning/30 bg-warning/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-warning">
+      <span className="inline-flex items-center gap-1 rounded-md border border-[var(--warning-soft)] bg-[var(--warning-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--warning)]">
         <AlertCircle className="h-3 w-3" />
         Warn
       </span>
     )
   }
   return (
-    <span className="inline-flex items-center gap-1 rounded-md border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-destructive">
+    <span className="inline-flex items-center gap-1 rounded-md border border-[var(--danger-soft)] bg-[var(--danger-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--danger)]">
       <ShieldAlert className="h-3 w-3" />
       Fail
     </span>
@@ -64,29 +64,29 @@ function GateItem({ gate }: { gate: ReviewCoverageGate }) {
   const affectedRepoCount = gate.affectedRepositoryIds?.length ?? 0
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border/50 bg-surface/50 p-3 text-[13px] transition-colors hover:bg-surface">
+    <div className="flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-3 text-[13px] transition-colors hover:bg-[var(--surface-soft)]">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <GateStatusBadge status={gate.status} />
-            <span className="font-semibold text-foreground">{gate.title}</span>
+            <span className="font-semibold text-[var(--text-primary)]">{gate.title}</span>
           </div>
-          <div className="text-muted-foreground">{gate.description}</div>
+          <div className="text-[var(--text-secondary)]">{gate.description}</div>
         </div>
-        <div className="shrink-0 text-right text-[11px] font-mono text-muted-foreground">
+        <div className="shrink-0 text-right text-[11px] font-mono text-[var(--text-tertiary)]">
           {gate.category}
         </div>
       </div>
 
       <div className="mt-1 space-y-2">
         {gate.recommendedAction && (
-          <div className="rounded border border-primary/20 bg-primary/5 px-2 py-1.5 text-[12px] text-foreground">
-            <span className="font-medium text-primary">Action: </span>
+          <div className="rounded border border-[var(--accent-soft)] bg-[var(--accent-soft)] px-2 py-1.5 text-[12px] text-[var(--text-primary)]">
+            <span className="font-medium text-[var(--accent)]">Action: </span>
             {gate.recommendedAction}
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[var(--text-tertiary)]">
           {affectedRepoCount > 0 && <span>{affectedRepoCount} repositories affected</span>}
           {affectedArtifactCount > 0 && <span>{affectedArtifactCount} artifacts affected</span>}
           {affectedInsightCount > 0 && <span>{affectedInsightCount} insights affected</span>}
@@ -99,7 +99,7 @@ function GateItem({ gate }: { gate: ReviewCoverageGate }) {
                   <Link
                     key={id}
                     href={`/analyses/${id}`}
-                    className="font-mono text-primary hover:underline"
+                    className="font-mono text-[var(--accent)] hover:underline"
                   >
                     {id.substring(0, 8)}
                   </Link>
@@ -119,8 +119,8 @@ export function ReviewCoveragePanel({ runId }: { runId: string }) {
   if (isLoading) {
     return (
       <div className="mb-6 space-y-4">
-        <div className="text-lg font-semibold tracking-tight">Review Coverage</div>
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">Review Coverage</div>
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
           <div className="space-y-4">
             <Skeleton className="h-10 w-full max-w-sm" />
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
@@ -137,8 +137,8 @@ export function ReviewCoveragePanel({ runId }: { runId: string }) {
   if (isError) {
     return (
       <div className="mb-6 space-y-4">
-        <div className="text-lg font-semibold tracking-tight">Review Coverage</div>
-        <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4 text-[13px] text-destructive shadow-sm">
+        <div className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">Review Coverage</div>
+        <div className="rounded-xl border border-[var(--danger-soft)] bg-[var(--danger-soft)] p-4 text-[13px] text-[var(--danger)] shadow-sm">
           <AlertCircle className="mr-2 inline-block h-4 w-4" />
           Unable to load review coverage.
         </div>
@@ -150,25 +150,25 @@ export function ReviewCoveragePanel({ runId }: { runId: string }) {
 
   return (
     <div className="mb-6 space-y-4">
-      <div className="text-lg font-semibold tracking-tight">Review Coverage</div>
+      <div className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">Review Coverage</div>
       
-      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-        <div className="p-4 border-b bg-muted/20">
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-[var(--border)] bg-[var(--surface-muted)]">
           <div className="flex items-center gap-3">
             {data.status === "PASS" && (
-              <div className="flex items-center gap-2 text-success">
+              <div className="flex items-center gap-2 text-[var(--success)]">
                 <CheckCircle2 className="h-5 w-5" />
                 <span className="font-semibold uppercase tracking-wide">PASS: No review coverage gaps detected.</span>
               </div>
             )}
             {data.status === "WARN" && (
-              <div className="flex items-center gap-2 text-warning">
+              <div className="flex items-center gap-2 text-[var(--warning)]">
                 <AlertCircle className="h-5 w-5" />
                 <span className="font-semibold uppercase tracking-wide">WARN: Some review coverage gaps need attention. This does not block report export.</span>
               </div>
             )}
             {data.status === "FAIL" && (
-              <div className="flex items-center gap-2 text-destructive">
+              <div className="flex items-center gap-2 text-[var(--danger)]">
                 <ShieldAlert className="h-5 w-5" />
                 <span className="font-semibold uppercase tracking-wide">FAIL: Review readiness issues were detected. This does not automatically block report export.</span>
               </div>
@@ -203,13 +203,13 @@ export function ReviewCoveragePanel({ runId }: { runId: string }) {
           </div>
 
           <div className="space-y-3">
-            <h3 className="text-sm font-medium">Coverage Gates</h3>
+            <h3 className="text-sm font-medium text-[var(--text-primary)]">Coverage Gates</h3>
             {data.gates.length === 0 ? (
-              <div className="text-[13px] text-muted-foreground italic">
+              <div className="text-[13px] text-[var(--text-tertiary)] italic">
                 {data.status === "PASS" ? "No review coverage gaps detected." : "No gate data available."}
               </div>
             ) : (
-              <ScrollArea className="h-[400px] rounded-md border pr-4">
+              <ScrollArea className="h-[400px] rounded-md border border-[var(--border)] pr-4">
                 <div className="flex flex-col gap-3 p-1">
                   {data.gates.map((gate) => (
                     <GateItem key={gate.gateId} gate={gate} />
@@ -223,3 +223,4 @@ export function ReviewCoveragePanel({ runId }: { runId: string }) {
     </div>
   )
 }
+
