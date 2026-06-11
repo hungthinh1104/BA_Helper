@@ -32,6 +32,7 @@ import { CreateMultiRepoImpactAnalysesUseCase } from '../application/create-mult
 import { GetImpactAnalysisUseCase } from '../application/get-impact-analysis.usecase';
 import { GetMultiRepoAnalysisRunUseCase } from '../application/get-multi-repo-analysis-run.usecase';
 import { BuildMultiRepoImpactMatrixReadModel } from '../application/build-multi-repo-impact-matrix.read-model';
+import { GetMatrixRowDetailUseCase } from '../application/get-matrix-row-detail.usecase';
 import { GetMergedMultiRepoReportDraftUseCase } from '../application/get-merged-multi-repo-report-draft.usecase';
 import { FinalizeMultiRepoReportUseCase } from '../application/finalize-multi-repo-report.usecase';
 import { GetApprovedMultiRepoReportUseCase } from '../application/get-approved-multi-repo-report.usecase';
@@ -70,6 +71,7 @@ export class ImpactAnalysisController {
     private readonly getAnalysis: GetImpactAnalysisUseCase,
     private readonly getMultiRepoRun: GetMultiRepoAnalysisRunUseCase,
     private readonly getMultiRepoImpactMatrix: BuildMultiRepoImpactMatrixReadModel,
+    private readonly getMatrixRowDetail: GetMatrixRowDetailUseCase,
     private readonly getMergedMultiRepoReportDraft: GetMergedMultiRepoReportDraftUseCase,
     private readonly finalizeMultiRepoReport: FinalizeMultiRepoReportUseCase,
     private readonly getApprovedMultiRepoReport: GetApprovedMultiRepoReportUseCase,
@@ -165,6 +167,19 @@ export class ImpactAnalysisController {
     await this.permissions.assertCanReadMultiRepoRun(actor, runId);
     const result = await this.getMultiRepoImpactMatrix.execute(runId);
     return multiRepoImpactMatrixResponseSchema.parse(result);
+  }
+
+  @Get('/multi-repo-runs/:runId/impact-matrix/analyses/:analysisId/details')
+  async getMatrixRowDetailEndpoint(
+    @Param('runId') runId: string,
+    @Param('analysisId') analysisId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadMultiRepoRun(actor, runId);
+    // Extra guard: analysis membership to project is naturally enforced because actor must have access to runId,
+    // and the use case itself validates that analysisId belongs to runId.
+    const result = await this.getMatrixRowDetail.execute(runId, analysisId);
+    return result; // result is already built to schema shape
   }
 
   @Get('/multi-repo-runs/:runId/merged-report-draft')

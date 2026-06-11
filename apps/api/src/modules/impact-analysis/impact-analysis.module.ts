@@ -23,6 +23,7 @@ import { GetImpactAnalysisLineageUseCase } from './application/get-impact-analys
 import { CreateMultiRepoImpactAnalysesUseCase } from './application/create-multi-repo-impact-analyses.usecase';
 import { GetMultiRepoAnalysisRunUseCase } from './application/get-multi-repo-analysis-run.usecase';
 import { BuildMultiRepoImpactMatrixReadModel } from './application/build-multi-repo-impact-matrix.read-model';
+import { GetMatrixRowDetailUseCase } from './application/get-matrix-row-detail.usecase';
 import { GetMergedMultiRepoReportDraftUseCase } from './application/get-merged-multi-repo-report-draft.usecase';
 import { FinalizeMultiRepoReportUseCase } from './application/finalize-multi-repo-report.usecase';
 import { GetApprovedMultiRepoReportUseCase } from './application/get-approved-multi-repo-report.usecase';
@@ -84,6 +85,7 @@ import { ProjectModule } from '../project/project.module';
     GetImpactAnalysisUseCase,
     GetMultiRepoAnalysisRunUseCase,
     BuildMultiRepoImpactMatrixReadModel,
+    GetMatrixRowDetailUseCase,
     GetMergedMultiRepoReportDraftUseCase,
     FinalizeMultiRepoReportUseCase,
     GetApprovedMultiRepoReportUseCase,

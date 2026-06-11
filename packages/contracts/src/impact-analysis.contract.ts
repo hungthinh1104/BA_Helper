@@ -422,3 +422,63 @@ export type ReviewDecisionRequest = z.infer<typeof reviewDecisionRequestSchema>;
 export type ReviewDecisionResponse = z.infer<typeof reviewDecisionResponseSchema>;
 export type ReviewDecisionListResponse = z.infer<typeof reviewDecisionListResponseSchema>;
 export type ReviewDecisionCreateResponse = z.infer<typeof reviewDecisionCreateResponseSchema>;
+
+export const matrixRowEvidenceItemSchema = z.object({
+	evidenceId: z.string().uuid(),
+	quoteOrSnippet: z.string(),
+	sourceFile: z.string().nullable(),
+	startLine: z.number().nullable(),
+	endLine: z.number().nullable(),
+	linkType: z.string(),
+	retrievalSignals: z.any().optional(),
+});
+
+export const matrixRowInsightRefSchema = z.object({
+	insightId: z.string().uuid(),
+	insightType: z.string(),
+	title: z.string(),
+	description: z.string().nullable().optional(),
+	certainty: z.string().nullable().optional(),
+	relatedEvidenceIds: z.array(z.string().uuid()),
+});
+
+export const matrixRowArtifactDetailSchema = z.object({
+	artifactId: z.string().uuid(),
+	artifactKey: z.string(),
+	displayName: z.string(),
+	universalKind: z.string(),
+	rawArtifactType: z.string(),
+	filePath: z.string(),
+	startLine: z.number().nullable(),
+	endLine: z.number().nullable(),
+	linkStrength: z.string(),
+	linkReason: z.string().nullable(),
+	evidenceItems: z.array(matrixRowEvidenceItemSchema),
+	relatedRisks: z.array(z.string().uuid()),
+	relatedQaScenarios: z.array(z.string().uuid()),
+	retrievalDiagnostics: z.any().optional(),
+});
+
+export const matrixRowDetailResponseSchema = z.object({
+	runId: z.string().uuid(),
+	analysisId: z.string().uuid(),
+	domain: z.string().nullable(),
+	repository: z.string(),
+	impactedArtifacts: z.array(matrixRowArtifactDetailSchema),
+	risks: z.array(matrixRowInsightRefSchema),
+	qaScenarios: z.array(matrixRowInsightRefSchema),
+	evidenceSummary: z.object({
+		totalEvidenceItems: z.number().int().nonnegative(),
+		coveredArtifacts: z.number().int().nonnegative(),
+		uncoveredArtifacts: z.number().int().nonnegative(),
+	}),
+	reviewState: z.object({
+		status: impactAnalysisStatusSchema,
+		latestDecision: z.string().nullable(),
+	}),
+});
+
+export type MatrixRowEvidenceItem = z.infer<typeof matrixRowEvidenceItemSchema>;
+export type MatrixRowInsightRef = z.infer<typeof matrixRowInsightRefSchema>;
+export type MatrixRowArtifactDetail = z.infer<typeof matrixRowArtifactDetailSchema>;
+export type MatrixRowDetailResponse = z.infer<typeof matrixRowDetailResponseSchema>;
