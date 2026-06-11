@@ -1,5 +1,5 @@
-export const SCANNER_VERSION = 'scanner@0.2.0';
-export const ANALYZER_VERSION = 'analyzer@0.2.0';
+export const SCANNER_VERSION = 'scanner@0.3.0';
+export const ANALYZER_VERSION = 'analyzer@0.3.0';
 
 export type ScanInput = {
   fixturePath: string;
@@ -14,6 +14,7 @@ export type ScanArtifact = {
   startLine: number;
   endLine: number;
   excerpt: string;
+  contentHash?: string | null;
 };
 
 export type ScanSkipReason =

@@ -43,9 +43,11 @@ describe('Scanner Golden Fixtures', () => {
     expect(serviceMethods.length).toBeGreaterThan(0);
     expect(entities.length).toBeGreaterThan(0);
     
-    // Stable keys check
     const stableKeys = result.artifacts.map(a => a.stableId);
     expect(stableKeys).toContain('api:booking.controller.cancel');
+
+    // Verify content hashes
+    expect(result.artifacts.every(a => a.contentHash && a.contentHash.startsWith('sha256:'))).toBe(true);
   });
 
   it('should scan java-spring-basic and produce PARTIAL coverage with stable artifact counts', async () => {
@@ -82,6 +84,9 @@ describe('Scanner Golden Fixtures', () => {
     expect(stableKeys).toContain('service-method:src/main/java/com/example/booking/BookingService.java:BookingService.createBooking');
     expect(stableKeys).toContain('entity:src/main/java/com/example/booking/BookingEntity.java:BookingEntity');
     expect(stableKeys).toContain('test:src/test/java/com/example/booking/BookingServiceTest.java:BookingServiceTest');
+
+    // Verify content hashes
+    expect(result.artifacts.every(a => a.contentHash && a.contentHash.startsWith('sha256:'))).toBe(true);
   });
 
   it('should hit file limit and return PARTIAL', async () => {

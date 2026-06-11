@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { RepositoryController } from './api/repository.controller';
+import { RepositorySnapshotController } from './api/repository-snapshot.controller';
+import { GetRepositorySnapshotDriftUseCase } from './application/get-repository-snapshot-drift.usecase';
 import { CreateRepositoryUseCase } from './application/create-repository.usecase';
 import { RepositoryRepository } from './infrastructure/repository.repository';
 import { ListRepositoriesUseCase } from './application/list-repositories.usecase';
@@ -13,7 +15,7 @@ import { ProjectModule } from '../project/project.module';
 
 @Module({
   imports: [PrismaModule, EventLogModule, ProjectModule],
-  controllers: [RepositoryController],
+  controllers: [RepositoryController, RepositorySnapshotController],
   providers: [
     {
       provide: RepositoryRepository,
@@ -44,6 +46,11 @@ import { ProjectModule } from '../project/project.module';
       provide: GetRepositoryUseCase,
       useFactory: (repo: RepositoryRepository) => new GetRepositoryUseCase(repo),
       inject: [RepositoryRepository],
+    },
+    {
+      provide: GetRepositorySnapshotDriftUseCase,
+      useFactory: (prisma: PrismaService) => new GetRepositorySnapshotDriftUseCase(prisma),
+      inject: [PrismaService],
     },
   ],
 })

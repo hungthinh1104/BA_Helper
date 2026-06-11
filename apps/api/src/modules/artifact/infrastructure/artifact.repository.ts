@@ -26,6 +26,7 @@ export class ArtifactRepository {
     filePath: string;
     startLine?: number;
     endLine?: number;
+    contentHash?: string | null;
   }>) {
     return this.prisma.codeArtifact.createMany({
       data,

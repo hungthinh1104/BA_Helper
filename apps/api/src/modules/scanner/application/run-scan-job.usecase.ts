@@ -312,6 +312,7 @@ export class RunScanJobUseCase {
             filePath: artifact.filePath,
             startLine: artifact.startLine,
             endLine: artifact.endLine,
+            contentHash: artifact.contentHash,
           })),
         );
 

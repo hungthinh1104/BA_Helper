@@ -2,6 +2,7 @@ import { Project } from 'ts-morph';
 import { join, relative } from 'node:path';
 import { ANALYZER_VERSION } from './scanner.types';
 import type { ScanInput, ScanResult, ScanArtifact } from './scanner.types';
+import { computeArtifactContentHash } from './content-hasher';
 
 export const scanFixture = (input: ScanInput): ScanResult => {
   if (input.fixturePath.includes('express-unsupported')) {
@@ -24,6 +25,7 @@ export const scanFixture = (input: ScanInput): ScanResult => {
 
     // 1. Detect tests
     if (filePath.includes('.spec.ts') || filePath.includes('.test.ts')) {
+      const excerpt = sourceFile.getText();
       artifacts.push({
         stableId: `test:${filePath.replace(/[\/\\]/g, '.')}`,
         type: 'TEST',
@@ -31,7 +33,8 @@ export const scanFixture = (input: ScanInput): ScanResult => {
         symbolName: sourceFile.getBaseName(),
         startLine: 1,
         endLine: sourceFile.getEndLineNumber(),
-        excerpt: sourceFile.getText(),
+        excerpt,
+        contentHash: computeArtifactContentHash(excerpt),
       });
       continue;
     }
@@ -47,6 +50,7 @@ export const scanFixture = (input: ScanInput): ScanResult => {
       const isEntity = decorators.includes('Entity') || filePath.includes('.entity.ts');
 
       if (isEntity) {
+        const excerpt = cls.getText();
         artifacts.push({
           stableId: `entity:${className.toLowerCase()}`,
           type: 'ENTITY',
@@ -54,7 +58,8 @@ export const scanFixture = (input: ScanInput): ScanResult => {
           symbolName: className,
           startLine: cls.getStartLineNumber(),
           endLine: cls.getEndLineNumber(),
-          excerpt: cls.getText(),
+          excerpt,
+          contentHash: computeArtifactContentHash(excerpt),
         });
       } else if (isController || isService) {
         // Also extract public methods for Controllers and Services
@@ -63,6 +68,7 @@ export const scanFixture = (input: ScanInput): ScanResult => {
           // Skip private/protected or constructor
           if (method.getScope() !== 'public' && method.getScope() !== undefined) continue;
 
+          const excerpt = method.getText();
           artifacts.push({
             stableId: isController
               ? `api:${filePath.split('/').pop()?.replace('.ts', '')}.${methodName}`
@@ -72,7 +78,8 @@ export const scanFixture = (input: ScanInput): ScanResult => {
             symbolName: `${className}.${methodName}`,
             startLine: method.getStartLineNumber(),
             endLine: method.getEndLineNumber(),
-            excerpt: method.getText(),
+            excerpt,
+            contentHash: computeArtifactContentHash(excerpt),
           });
         }
       }
@@ -124,6 +131,7 @@ export const scanProject = (input: ScanInput & { tsFiles: string[], coverage?: i
 
     // 1. Detect tests
     if (filePath.includes('.spec.ts') || filePath.includes('.test.ts')) {
+      const excerpt = sourceFile.getText();
       artifacts.push({
         stableId: `test:${filePath.replace(/[\/\\]/g, '.')}`,
         type: 'TEST',
@@ -131,7 +139,8 @@ export const scanProject = (input: ScanInput & { tsFiles: string[], coverage?: i
         symbolName: sourceFile.getBaseName(),
         startLine: 1,
         endLine: sourceFile.getEndLineNumber(),
-        excerpt: sourceFile.getText(),
+        excerpt,
+        contentHash: computeArtifactContentHash(excerpt),
       });
       continue;
     }
@@ -147,6 +156,7 @@ export const scanProject = (input: ScanInput & { tsFiles: string[], coverage?: i
       const isEntity = decorators.includes('Entity') || filePath.includes('.entity.ts');
 
       if (isEntity) {
+        const excerpt = cls.getText();
         artifacts.push({
           stableId: `entity:${className.toLowerCase()}`,
           type: 'ENTITY',
@@ -154,7 +164,8 @@ export const scanProject = (input: ScanInput & { tsFiles: string[], coverage?: i
           symbolName: className,
           startLine: cls.getStartLineNumber(),
           endLine: cls.getEndLineNumber(),
-          excerpt: cls.getText(),
+          excerpt,
+          contentHash: computeArtifactContentHash(excerpt),
         });
       } else if (isController || isService) {
         // Also extract public methods for Controllers and Services
@@ -163,6 +174,7 @@ export const scanProject = (input: ScanInput & { tsFiles: string[], coverage?: i
           // Skip private/protected or constructor
           if (method.getScope() !== 'public' && method.getScope() !== undefined) continue;
 
+          const excerpt = method.getText();
           artifacts.push({
             stableId: isController
               ? `api:${filePath.split('/').pop()?.replace('.ts', '')}.${methodName}`
@@ -172,7 +184,8 @@ export const scanProject = (input: ScanInput & { tsFiles: string[], coverage?: i
             symbolName: `${className}.${methodName}`,
             startLine: method.getStartLineNumber(),
             endLine: method.getEndLineNumber(),
-            excerpt: method.getText(),
+            excerpt,
+            contentHash: computeArtifactContentHash(excerpt),
           });
         }
       }

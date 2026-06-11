@@ -17,12 +17,12 @@ describe('scanJavaSpringProject', () => {
 
     expect(scanResult.artifacts.length).toBeGreaterThan(0);
 
-    const controllerMethod1 = scanResult.artifacts.find(a => a.stableId === 'java-api:BookingController.getBooking');
-    const controllerMethod2 = scanResult.artifacts.find(a => a.stableId === 'java-api:BookingController.createBooking');
-    const serviceMethod1 = scanResult.artifacts.find(a => a.stableId === 'java-service-method:BookingService.getBooking');
-    const serviceMethod2 = scanResult.artifacts.find(a => a.stableId === 'java-service-method:BookingService.createBooking');
-    const entity = scanResult.artifacts.find(a => a.stableId === 'java-spring_entity:BookingEntity');
-    const testClass = scanResult.artifacts.find(a => a.stableId === 'java-spring_test:BookingServiceTest');
+    const controllerMethod1 = scanResult.artifacts.find(a => a.type === 'SPRING_CONTROLLER_METHOD' && a.stableId.includes('getBooking'));
+    const controllerMethod2 = scanResult.artifacts.find(a => a.type === 'SPRING_CONTROLLER_METHOD' && a.stableId.includes('createBooking'));
+    const serviceMethod1 = scanResult.artifacts.find(a => a.type === 'SPRING_SERVICE_METHOD' && a.stableId.includes('getBooking'));
+    const serviceMethod2 = scanResult.artifacts.find(a => a.type === 'SPRING_SERVICE_METHOD' && a.stableId.includes('createBooking'));
+    const entity = scanResult.artifacts.find(a => a.type === 'SPRING_ENTITY' && a.stableId.includes('BookingEntity'));
+    const testClass = scanResult.artifacts.find(a => a.type === 'SPRING_TEST' && a.stableId.includes('BookingServiceTest'));
 
     expect(controllerMethod1).toBeDefined();
     expect(controllerMethod1?.type).toBe('SPRING_CONTROLLER_METHOD');

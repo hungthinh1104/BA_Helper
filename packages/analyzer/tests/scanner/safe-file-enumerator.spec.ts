@@ -108,7 +108,7 @@ describe('SafeFileEnumerator', () => {
     const result = await enumerator.enumerate();
 
     expect(result.isPartial).toBe(true);
-    expect(result.diagnostics.some(d => d.code === 'TS_FILE_LIMIT_EXCEEDED')).toBe(true);
+    expect(result.diagnostics.some(d => d.code === 'REPO_FILE_LIMIT_EXCEEDED')).toBe(true);
   });
 
   it('enforces MAX_REPO_SIZE_MB across enumerated files', async () => {
@@ -129,6 +129,6 @@ describe('SafeFileEnumerator', () => {
     const result = await enumerator.enumerate();
 
     expect(result.isPartial).toBe(true);
-    expect(result.diagnostics.some(d => d.code === 'REPO_LIMIT_EXCEEDED')).toBe(true);
+    expect(result.diagnostics.some(d => d.code === 'REPO_SIZE_LIMIT_EXCEEDED')).toBe(true);
   });
 });

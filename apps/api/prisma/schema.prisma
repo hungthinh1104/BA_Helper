@@ -345,6 +345,7 @@ model CodeArtifact {
   startLine         Int?
   endLine           Int?
   language          String?
+  contentHash       String?
   snapshot          RepositorySnapshot @relation(fields: [snapshotId], references: [id])
   outgoingEdges     DependencyEdge[]   @relation("FromArtifact")
   incomingEdges     DependencyEdge[]   @relation("ToArtifact")
