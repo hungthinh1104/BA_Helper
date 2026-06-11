@@ -178,6 +178,22 @@ export function useMultiRepoImpactMatrix(runId: string) {
   })
 }
 
+export function useMatrixRowDetail(runId: string, analysisId: string | null) {
+  return useQuery({
+    queryKey: ["multi-repo-run", runId, "impact-matrix-row-detail", analysisId],
+    queryFn: async () => {
+      if (!analysisId) throw new Error("analysisId is required")
+      const { matrixRowDetailResponseSchema } = await import("@ba-helper/contracts")
+      return apiGet<import("@ba-helper/contracts").MatrixRowDetailResponse>(
+        `/api/v1/multi-repo-runs/${runId}/impact-matrix/analyses/${analysisId}/details`,
+        matrixRowDetailResponseSchema,
+      )
+    },
+    enabled: Boolean(runId && analysisId),
+    refetchOnWindowFocus: false, // Keep data stable while drawer is open
+  })
+}
+
 export function useMultiRepoMergedReportDraft(runId: string) {
   return useQuery({
     queryKey: queryKeys.analyses.runs.mergedReport(runId),
