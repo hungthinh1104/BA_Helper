@@ -6,6 +6,8 @@ import { TraceabilityRepository } from '../../traceability/infrastructure/tracea
 import { MultiRepoAnalysisRunRepository } from '../infrastructure/multi-repo-analysis-run.repository';
 import { MergedMultiRepoReportDraftBuilder } from './merged-multi-repo-report-draft.builder';
 import { BuildMultiRepoImpactMatrixReadModel } from './build-multi-repo-impact-matrix.read-model';
+import { GetReviewCoverageUseCase } from './get-review-coverage.usecase';
+import { RequestUser } from '@ba-helper/contracts';
 
 @Injectable()
 export class GetMergedMultiRepoReportDraftUseCase {
@@ -15,9 +17,10 @@ export class GetMergedMultiRepoReportDraftUseCase {
     private readonly traceability: TraceabilityRepository,
     private readonly builder: MergedMultiRepoReportDraftBuilder,
     private readonly matrixReadModel: BuildMultiRepoImpactMatrixReadModel,
+    private readonly reviewCoverage: GetReviewCoverageUseCase,
   ) {}
 
-  async execute(runId: string) {
+  async execute(runId: string, actor: RequestUser) {
     const run = await this.runs.findById(runId);
     if (!run) {
       throw new AppError(
@@ -62,6 +65,7 @@ export class GetMergedMultiRepoReportDraftUseCase {
     );
 
     const matrix = await this.matrixReadModel.execute(runId);
+    const coverage = await this.reviewCoverage.execute(actor, runId);
 
     return {
       runId: run.id,
@@ -86,6 +90,7 @@ export class GetMergedMultiRepoReportDraftUseCase {
         generatedAt,
         children,
         matrix,
+        reviewCoverage: coverage,
       }),
     };
   }

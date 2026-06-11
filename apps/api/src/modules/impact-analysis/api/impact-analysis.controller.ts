@@ -200,7 +200,7 @@ export class ImpactAnalysisController {
     @CurrentUser() actor: RequestUser,
   ) {
     await this.permissions.assertCanReadMultiRepoRun(actor, runId);
-    const result = await this.getMergedMultiRepoReportDraft.execute(runId);
+    const result = await this.getMergedMultiRepoReportDraft.execute(runId, actor);
     return multiRepoMergedReportDraftResponseSchema.parse(result);
   }
 
@@ -215,7 +215,7 @@ export class ImpactAnalysisController {
       runId,
       'analysis:finalize',
     );
-    const result = await this.finalizeMultiRepoReport.execute(runId);
+    const result = await this.finalizeMultiRepoReport.execute(runId, actor);
     return multiRepoApprovedReportResponseSchema.parse(result);
   }
 

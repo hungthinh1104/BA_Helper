@@ -595,6 +595,9 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
 
     expect(draft.markdown).toContain('## Requirement');
     expect(draft.markdown).toContain('## Run Summary');
+    expect(draft.markdown).toContain('## Review Coverage');
+    expect(draft.markdown).toContain('Status:');
+    expect(draft.markdown).toContain('Coverage Gates');
     expect(draft.markdown).toContain('## Cross-domain Impact Matrix');
     expect(draft.markdown).toContain('## Repository Coverage');
     expect(draft.markdown).toContain('## Per-repository Analysis');
@@ -688,6 +691,8 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
     expect(finalized.runId).toBe(result.runId);
     expect(finalized.isStale).toBe(false);
     expect(finalized.markdown).toContain('## Requirement');
+    expect(finalized.markdown).toContain('## Review Coverage');
+    expect(finalized.markdown).toContain('Coverage Gates');
     expect(finalized.markdown).toContain('booking-service');
     expect(finalized.markdown).toContain('payment-service');
     expect(finalized.provenance.childAnalyses).toHaveLength(2);

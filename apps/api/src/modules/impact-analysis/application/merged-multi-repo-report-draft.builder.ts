@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { MultiRepoImpactMatrixResponse } from '@ba-helper/contracts';
+import { MultiRepoImpactMatrixResponse, ReviewCoverageResponse } from '@ba-helper/contracts';
 
 type EvidenceItem = {
   id: string;
@@ -64,8 +64,9 @@ export class MergedMultiRepoReportDraftBuilder {
     generatedAt: string;
     children: ChildDraftInput[];
     matrix: MultiRepoImpactMatrixResponse;
+    reviewCoverage: ReviewCoverageResponse;
   }) {
-    const { children, matrix } = params;
+    const { children, matrix, reviewCoverage } = params;
     const lines: string[] = [];
 
     const allInsights = children.flatMap((child) =>
@@ -121,6 +122,34 @@ export class MergedMultiRepoReportDraftBuilder {
     lines.push(`- Requirement Revision ID: \`${params.requirementRevisionId}\``);
     lines.push(`- Generated At: ${params.generatedAt}`);
     lines.push(`- Child Analyses: ${children.length}`);
+    lines.push('');
+
+    lines.push('## Review Coverage');
+    lines.push('');
+    lines.push(`Status: ${reviewCoverage.status}`);
+    lines.push('');
+    lines.push('This is an advisory readiness check. It does not automatically block report finalization or export.');
+    lines.push('');
+    lines.push('| Metric | Value |');
+    lines.push('|---|---:|');
+    lines.push(`| Accepted repositories | ${reviewCoverage.summary.acceptedRepositories} / ${reviewCoverage.summary.totalRepositories} |`);
+    lines.push(`| Impacted artifacts | ${reviewCoverage.summary.impactedArtifacts} |`);
+    lines.push(`| Artifacts without evidence | ${reviewCoverage.summary.uncoveredArtifacts} |`);
+    lines.push(`| Risks without QA coverage | ${reviewCoverage.summary.risksWithoutQa} |`);
+    lines.push(`| Warning gates | ${reviewCoverage.summary.warningGates} |`);
+    lines.push(`| Blocking gates | ${reviewCoverage.summary.blockingGates} |`);
+    lines.push('');
+    lines.push('### Coverage Gates');
+    lines.push('');
+    if (reviewCoverage.status === 'PASS' && reviewCoverage.gates.length === 0) {
+      lines.push('No review coverage gaps detected.');
+    } else {
+      lines.push('| Status | Category | Gate | Recommended Action |');
+      lines.push('|---|---|---|---|');
+      for (const gate of reviewCoverage.gates) {
+        lines.push(`| ${gate.status} | ${gate.category} | ${gate.title} | ${gate.recommendedAction} |`);
+      }
+    }
     lines.push('');
 
     lines.push('## Cross-domain Impact Matrix');

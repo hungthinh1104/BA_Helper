@@ -4,6 +4,7 @@ import { GetMergedMultiRepoReportDraftUseCase } from './get-merged-multi-repo-re
 import { MultiRepoAnalysisRunRepository } from '../infrastructure/multi-repo-analysis-run.repository';
 import { MultiRepoMergedReportRepository } from '../infrastructure/multi-repo-merged-report.repository';
 import { GetApprovedMultiRepoReportUseCase } from './get-approved-multi-repo-report.usecase';
+import { RequestUser } from '@ba-helper/contracts';
 
 @Injectable()
 export class FinalizeMultiRepoReportUseCase {
@@ -14,7 +15,7 @@ export class FinalizeMultiRepoReportUseCase {
     private readonly getApproved: GetApprovedMultiRepoReportUseCase,
   ) {}
 
-  async execute(runId: string) {
+  async execute(runId: string, actor: RequestUser) {
     const run = await this.runs.findById(runId);
     if (!run) {
       throw new AppError(
@@ -59,7 +60,7 @@ export class FinalizeMultiRepoReportUseCase {
       }
     }
 
-    const draft = await this.draft.execute(runId);
+    const draft = await this.draft.execute(runId, actor);
     const report = await this.reports.upsertApproved({
       runId,
       content: draft.markdown,
