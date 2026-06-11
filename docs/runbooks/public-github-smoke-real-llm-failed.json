@@ -1,11 +1,15 @@
 {
-  "error": "Scan job failed with status=FAILED code=CLONE_FAILED",
+  "error": "Impact analysis failed with status=FAILED",
   "partial": {
     "apiUrl": "http://localhost:3001",
     "manifest": "public-booking-demo",
     "runbook": "/home/diphungthinh/Desktop/BA_helper_test/docs/runbooks/public-github-smoke-demo.md",
-    "repositoryId": "e480d4fd-9e80-44cd-8dbb-150b1d764efb",
-    "scanJobId": "c8e7ffdb-4216-443e-a68b-57a82c9b8ca8"
+    "repositoryId": "ec380664-ea22-4031-a001-3ac607aafafc",
+    "scanJobId": "4c35eaa7-b78d-43d8-98d7-a59aa15153dc",
+    "snapshotId": "b59a91eb-89dc-4e9e-a8b9-7b945a4e2f0d",
+    "requirementId": "6f1efb95-9a9f-4c98-bb15-0002410710ab",
+    "revisionId": "b0dd8ccf-b5f6-4394-aa68-cbfb35c2bb39",
+    "analysisId": "f7a5f44d-f680-4c78-a0a1-044341b38473"
   },
   "status": "failed"
 }

@@ -2,10 +2,10 @@
   "status": "ok",
   "summary": {
     "analysis": {
-      "id": "476452ca-bad0-49d8-a2b4-69c8fbea024f",
+      "id": "69a99e4f-ddd9-439d-a0b1-a973643adddd",
       "insightCount": 5,
       "status": "COMPLETED",
-      "durationMs": 2016
+      "durationMs": 12082
     },
     "diagnostics": {
       "blockerSecurityCount": 0,
@@ -13,23 +13,23 @@
       "snapshotDiagnosticCount": 0
     },
     "report": {
-      "id": "d3f47b9c-fc63-4a42-bba0-b0b66fe166f2",
+      "id": "30a6c70d-3a6d-4c5d-96b8-5dc200ecb81f",
       "isStale": false,
       "title": "Paid booking cancellation refund",
-      "markdownLength": 1213
+      "markdownLength": 7136
     },
     "repository": {
-      "id": "e480d4fd-9e80-44cd-8dbb-150b1d764efb",
+      "id": "ec380664-ea22-4031-a001-3ac607aafafc",
       "requestedRef": "main",
       "url": "https://github.com/ndmen/booking"
     },
     "scan": {
       "commitSha": "f26cd56837cd10a1c00bb89d74d97519abc6f732",
       "coverageStatus": "READY",
-      "jobId": "7e6a4c30-fd6f-4cd1-902b-01c94985447b",
-      "snapshotId": "8dc3b25e-e8f1-4906-8d33-aa3da166e1cf",
+      "jobId": "f225ad41-2450-46ee-ab83-7d8ecc2a4aec",
+      "snapshotId": "b59a91eb-89dc-4e9e-a8b9-7b945a4e2f0d",
       "status": "COMPLETED",
-      "durationMs": 2017
+      "durationMs": 2018
     },
     "tempWorkspaceCleanup": {
       "afterCount": 0,
@@ -38,7 +38,32 @@
     },
     "workspace": {
       "mode": "dev-single-user",
-      "projectId": "cf691b7f-fef0-489d-b5fb-bdd36707b850"
+      "projectId": "858c6a0f-36ef-41b7-b294-f1f152ce1f56"
+    },
+    "vector": {
+      "indexStatus": "VECTOR_READY",
+      "embeddingChunkCount": 31,
+      "embeddingModel": "text-embedding-3-small",
+      "vectorSignalCount": 20,
+      "hybridSignalCount": 20
+    },
+    "llm": {
+      "provider": "google",
+      "model": "gemini-2.5-flash",
+      "promptVersion": "2.0.0",
+      "parseMode": "raw",
+      "inputTokens": 2000,
+      "outputTokens": 1008
+    },
+    "reviewQueue": {
+      "total": 44,
+      "remaining": 44,
+      "highRiskRemaining": 21,
+      "blockingRemaining": 24
+    },
+    "links": {
+      "analysisUrl": "http://localhost:3000/analyses/69a99e4f-ddd9-439d-a0b1-a973643adddd",
+      "reportUrl": "http://localhost:3000/reports?analysisId=69a99e4f-ddd9-439d-a0b1-a973643adddd"
     }
   }
 }

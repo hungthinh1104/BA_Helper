@@ -50,6 +50,8 @@ export class AppExceptionFilter implements ExceptionFilter {
       case 'DOCUMENT_EXPORT_UNAUTHENTICATED':
         return HttpStatus.UNAUTHORIZED;
       case 'PROJECT_NOT_FOUND':
+      case 'PROJECT_MEMBER_NOT_FOUND':
+      case 'PROJECT_MEMBER_USER_NOT_FOUND':
       case 'REPOSITORY_NOT_FOUND':
       case 'SCAN_JOB_NOT_FOUND':
       case 'REQUIREMENT_NOT_FOUND':
@@ -60,6 +62,7 @@ export class AppExceptionFilter implements ExceptionFilter {
       case 'APPROVED_REPORT_NOT_FOUND':
         return HttpStatus.NOT_FOUND;
       case 'REQUEST_KEY_MISMATCH':
+      case 'LAST_PROJECT_OWNER_REQUIRED':
       case 'INVALID_STATE_TRANSITION':
       case 'ANALYSIS_STALE':
       case 'REPORT_EXPORT_BLOCKED_STALE':

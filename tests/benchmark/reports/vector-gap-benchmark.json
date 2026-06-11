@@ -9,11 +9,11 @@
         "service-method:inventory.service.releaseReservation",
         "entity:stockreservation",
         "entity:order",
-        "service-method:inventory.service.reserveStock",
-        "test:src.order.order-cancel.spec.ts",
         "service-method:inventory.service.consumeReservation",
-        "api:order.controller.cancelOrder",
-        "service-method:order.service.shipOrder"
+        "service-method:inventory.service.reserveStock",
+        "service-method:order.service.shipOrder",
+        "test:src.order.order-cancel.spec.ts",
+        "api:order.controller.cancelOrder"
       ],
       "missingCriticalArtifacts": [],
       "failures": []
@@ -26,12 +26,12 @@
         "service-method:inventory.service.releaseReservation",
         "entity:stockreservation",
         "entity:order",
-        "service-method:inventory.service.reserveStock",
-        "test:src.order.order-cancel.spec.ts",
         "service-method:inventory.service.consumeReservation",
-        "api:order.controller.cancelOrder",
+        "entity:product",
+        "service-method:inventory.service.reserveStock",
         "service-method:order.service.shipOrder",
-        "entity:product"
+        "test:src.order.order-cancel.spec.ts",
+        "api:order.controller.cancelOrder"
       ],
       "missingCriticalArtifacts": [],
       "failures": []
@@ -46,9 +46,9 @@
         "service-method:order.service.cancelOrder",
         "entity:order",
         "service-method:inventory.service.reserveStock",
+        "service-method:order.service.shipOrder",
         "test:src.order.order-cancel.spec.ts",
-        "api:order.controller.cancelOrder",
-        "service-method:order.service.shipOrder"
+        "api:order.controller.cancelOrder"
       ],
       "missingCriticalArtifacts": [],
       "failures": []

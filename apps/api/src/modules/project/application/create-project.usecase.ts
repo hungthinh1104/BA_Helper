@@ -22,6 +22,7 @@ export class CreateProjectUseCase {
       params.actor.id,
       mapGlobalRoleToProjectRole(params.actor.role),
     );
+    await this.repository.setSelectedProject(params.actor.id, project.id);
     await this.eventLog.recordEvent({
       eventType: 'PROJECT_CREATED',
       idempotencyKey: `project:${project.id}:created`,

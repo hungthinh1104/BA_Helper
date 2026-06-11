@@ -80,5 +80,5 @@ Read:
 - Prefer code as the source of truth when docs conflict.
 - Keep scope narrow.
 - Do not add new product scope from this index.
-- Out of scope: private repos, OAuth/GitHub App, project membership,
-  multi-repo, DOCX, Jira, and Confluence.
+- Out of scope: private repos, OAuth/GitHub App,
+  organizations/teams/invites, multi-repo, DOCX, Jira, and Confluence.

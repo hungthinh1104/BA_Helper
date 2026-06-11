@@ -15,7 +15,10 @@ lineage timeline -> approved report -> Markdown/PDF export.
 - Roles: `ADMIN`, `REVIEWER`, `VIEWER`.
 - `ProjectMember` and `ProjectRole` exist.
 - `ProjectPermissionService` is authoritative for project-owned resources.
-- `workspace/current` returns `membershipRole`.
+- `workspace/current` returns backend-owned current project selection plus `membershipRole`.
+- `GET /api/v1/projects` returns only projects where the actor has membership.
+- `POST /api/v1/workspace/select-project` persists the selected project on the user.
+- OWNER-only membership management exists under `/api/v1/projects/:projectId/members`.
 - `dev-single-user` membership mapping:
   - `ADMIN -> OWNER`
   - `REVIEWER -> REVIEWER`
@@ -41,9 +44,8 @@ lineage timeline -> approved report -> Markdown/PDF export.
 
 - private repos
 - OAuth / GitHub App
-- membership management UI
-- project switching
 - multi-repo analysis
+- organizations / teams / invites
 - DOCX
 - Jira
 - Confluence

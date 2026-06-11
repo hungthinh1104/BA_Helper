@@ -35,7 +35,7 @@ async function getAuthHeaders() {
 }
 
 async function requestJson<T>(
-  method: "GET" | "POST" | "PATCH",
+  method: "GET" | "POST" | "PATCH" | "DELETE",
   path: string,
   body?: unknown,
   schema?: z.ZodType<T>,
@@ -147,6 +147,10 @@ export async function apiPost<T>(path: string, body: unknown, schema?: z.ZodType
 
 export async function apiPatch<T>(path: string, body: unknown, schema?: z.ZodType<T>, headers?: Record<string, string>): Promise<T> {
   return requestJson("PATCH", path, body, schema, headers)
+}
+
+export async function apiDelete<T>(path: string, schema?: z.ZodType<T>, headers?: Record<string, string>): Promise<T> {
+  return requestJson("DELETE", path, undefined, schema, headers)
 }
 
 export async function apiGetFile(path: string): Promise<{

@@ -33,6 +33,8 @@ services:
       NODE_ENV: development
       PORT: 3001
       WORKSPACE_MODE: dev-single-user
+      ENABLE_DEV_LOGIN: ${ENABLE_DEV_LOGIN:-true}
+      JWT_SECRET: ${JWT_SECRET:-dev-only-local-jwt-secret}
       CORS_ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
       DATABASE_URL: postgresql://ba_helper:ba_helper@postgres:5432/ba_helper
       REDIS_URL: redis://redis:6379

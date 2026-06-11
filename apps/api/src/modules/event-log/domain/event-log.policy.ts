@@ -39,6 +39,10 @@ export const EventLogPolicy = {
       'SCAN_JOB_FAILED',
       'SCAN_JOB_QUEUED',
       'TRACEABILITY_REVIEWED',
+      'PROJECT_SELECTED',
+      'PROJECT_MEMBER_UPSERTED',
+      'PROJECT_MEMBER_UPDATED',
+      'PROJECT_MEMBER_REMOVED',
     ];
 
     if (!knownEventTypes.includes(params.eventType)) {

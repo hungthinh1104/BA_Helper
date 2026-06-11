@@ -17,12 +17,18 @@ Keep contracts in `packages/contracts` after workspace scaffolding exists.
 POST /api/v1/auth/dev-login
 GET  /api/v1/auth/me
 
+GET  /api/v1/projects
 POST /api/v1/projects
+GET  /api/v1/projects/:projectId/members
+POST /api/v1/projects/:projectId/members
+PATCH /api/v1/projects/:projectId/members/:userId
+DELETE /api/v1/projects/:projectId/members/:userId
 GET  /api/v1/workspace/current
+POST /api/v1/workspace/select-project
 GET  /api/v1/system/health
 
 GET  /api/v1/projects/:projectId/repositories
-GET  /api/v1/repositories/:repositoryId
+GET  /api/v1/projects/:projectId/repositories/:repositoryId
 POST /api/v1/projects/:projectId/repositories
 POST /api/v1/repositories/:repositoryId/scan-jobs
 GET  /api/v1/scan-jobs/:scanJobId
@@ -30,13 +36,13 @@ GET  /api/v1/snapshots/:snapshotId/artifacts
 GET  /api/v1/snapshots/:snapshotId/graph
 
 GET  /api/v1/projects/:projectId/requirements
-GET  /api/v1/requirements/:requirementId
+GET  /api/v1/projects/:projectId/requirements/:requirementId
 POST /api/v1/projects/:projectId/requirements
 POST /api/v1/requirements/:requirementId/revisions
 POST /api/v1/requirement-revisions/:revisionId/qualify
 POST /api/v1/requirement-revisions/:revisionId/impact-analyses
 
-GET  /api/v1/projects/:projectId/impact-analyses
+GET  /api/v1/projects/:projectId/analyses
 GET  /api/v1/impact-analyses/:analysisId
 GET  /api/v1/impact-analyses/:analysisId/insights
 GET  /api/v1/impact-analyses/:analysisId/evidence
@@ -67,13 +73,48 @@ Workspace resolution for the web client is backend-owned:
 {
   "projectId": "uuid",
   "name": "Default Project",
-  "mode": "dev-single-user"
+  "mode": "dev-single-user",
+  "membershipRole": "OWNER"
 }
 ```
 
 In the MVP deploy path, the backend decides the current workspace in
-`dev-single-user` mode and returns a stable project id for the session. The
-frontend must not invent or hardcode `"default-project"` as a fake project id.
+`dev-single-user` mode and returns the selected project for the authenticated
+actor. The frontend must not invent or hardcode `"default-project"` as a fake
+project id or treat local storage as the source of truth.
+
+Project switching uses:
+
+```json
+{
+  "projectId": "uuid"
+}
+```
+
+Project list response includes:
+
+```json
+{
+  "items": [
+    {
+      "projectId": "uuid",
+      "name": "Alpha Project",
+      "membershipRole": "OWNER",
+      "isSelected": true,
+      "createdAt": "2026-06-08T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+Project membership management uses existing users only:
+
+```json
+{
+  "email": "reviewer@ba-helper.local",
+  "role": "REVIEWER"
+}
+```
 
 The web app signs in through `/login` using dev-login (email + role, no
 password). App routes are middleware-gated, and backend RBAC remains the

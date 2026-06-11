@@ -1,26 +1,39 @@
 "use client"
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react"
+import { createContext, useContext, useEffect, useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import { useSession } from "next-auth/react"
 import { ApiError } from "@/lib/api-error"
-import { apiGet, getApiBaseUrl } from "@/lib/api-client"
+import { apiGet, apiPost, getApiBaseUrl } from "@/lib/api-client"
+import { queryKeys } from "@/lib/api/query-keys"
 import {
   currentWorkspaceResponseSchema,
+  projectListResponseSchema,
   type CurrentWorkspaceResponse,
+  type ProjectListItemResponse,
 } from "@ba-helper/contracts"
 
-const STORAGE_KEY = "ba_helper:projectId"
+type ReadyProjectContext = {
+  status: "ready"
+  apiBaseUrl: string
+  projects: ProjectListItemResponse[]
+  switchingProjectId: string | null
+  switchProject: (projectId: string) => Promise<void>
+} & CurrentWorkspaceResponse
+
+type ProjectReadyState = Omit<ReadyProjectContext, "switchProject">
 
 type ProjectContextValue =
   | { status: "loading" }
-  | ({ status: "ready"; apiBaseUrl: string } & CurrentWorkspaceResponse)
+  | ReadyProjectContext
   | { status: "error"; apiBaseUrl?: string; code: string; message: string }
 
 const ProjectContext = createContext<ProjectContextValue>({ status: "loading" })
 
 export function ProjectProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<ProjectContextValue>({ status: "loading" })
+  const [state, setState] = useState<ProjectReadyState | { status: "loading" } | { status: "error"; apiBaseUrl?: string; code: string; message: string }>({ status: "loading" })
   const { data: session, status } = useSession()
+  const queryClient = useQueryClient()
 
   useEffect(() => {
     if (status === "loading") {
@@ -37,14 +50,23 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
           typeof session?.accessToken === "string" && session.accessToken
             ? { Authorization: `Bearer ${session.accessToken}` }
             : undefined
-        const currentWorkspace = await apiGet(
+        const workspace = await apiGet(
           "/api/v1/workspace/current",
           currentWorkspaceResponseSchema,
           authHeaders,
         )
+        const projectList = authHeaders
+          ? await apiGet("/api/v1/projects", projectListResponseSchema, authHeaders)
+          : { items: [] }
+
         if (cancelled) return
-        window.localStorage.setItem(STORAGE_KEY, currentWorkspace.projectId)
-        setState({ status: "ready", apiBaseUrl, ...currentWorkspace })
+        setState({
+          status: "ready",
+          apiBaseUrl,
+          projects: projectList.items,
+          switchingProjectId: null,
+          ...workspace,
+        })
       } catch (e: unknown) {
         if (cancelled) return
         setState({
@@ -58,18 +80,77 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [session?.accessToken, status])
+  }, [queryClient, session?.accessToken, status])
 
-  const value = useMemo(() => state, [state])
+  const value: ProjectContextValue =
+    state.status !== "ready"
+      ? state
+      : {
+          ...state,
+          switchProject: async (projectId: string) => {
+            const authHeaders =
+              typeof session?.accessToken === "string" && session.accessToken
+                ? { Authorization: `Bearer ${session.accessToken}` }
+                : undefined
+
+            if (!authHeaders) {
+              throw new Error("Cannot switch project without an authenticated session.")
+            }
+
+            setState((previous) =>
+              previous.status === "ready"
+                ? { ...previous, switchingProjectId: projectId }
+                : previous,
+            )
+
+            try {
+              const workspace = await apiPost(
+                "/api/v1/workspace/select-project",
+                { projectId },
+                currentWorkspaceResponseSchema,
+                authHeaders,
+              )
+              const projectList = await apiGet(
+                "/api/v1/projects",
+                projectListResponseSchema,
+                authHeaders,
+              )
+
+              await Promise.all([
+                queryClient.invalidateQueries({ queryKey: queryKeys.workspace.current }),
+                queryClient.invalidateQueries({ queryKey: queryKeys.workspace.projects }),
+                queryClient.invalidateQueries({ queryKey: queryKeys.repositories.all }),
+                queryClient.invalidateQueries({ queryKey: queryKeys.requirements.all }),
+                queryClient.invalidateQueries({ queryKey: queryKeys.analyses.all }),
+              ])
+
+              setState((previous) =>
+                previous.status === "ready"
+                  ? {
+                      ...previous,
+                      ...workspace,
+                      projects: projectList.items,
+                      switchingProjectId: null,
+                    }
+                  : previous,
+              )
+            } catch (error) {
+              setState((previous) =>
+                previous.status === "ready"
+                  ? { ...previous, switchingProjectId: null }
+                  : previous,
+              )
+              throw error
+            }
+          },
+        }
+
   return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>
 }
 
 export function useProjectId(): string {
   const value = useContext(ProjectContext)
   if (value.status === "ready") return value.projectId
-  if (typeof window !== "undefined") {
-    return window.localStorage.getItem(STORAGE_KEY) ?? ""
-  }
   return ""
 }
 
@@ -106,6 +187,9 @@ export function useWorkspaceRuntime() {
       mode: value.mode,
       name: value.name,
       projectId: value.projectId,
+      projects: value.projects,
+      switchingProjectId: value.switchingProjectId,
+      switchProject: value.switchProject,
     }
   }
   throw new Error(value.status === "error" ? value.message : "Project is not ready.")
@@ -139,13 +223,14 @@ function formatBootstrapError(
         return {
           apiBaseUrl,
           code: error.code,
-          message: `Configured API URL points to a server that is not the BA Helper API. Check NEXT_PUBLIC_API_URL and make sure it targets the backend, not the Next.js web app.`,
+          message: "Configured API URL points to a server that is not the BA Helper API.",
         }
       case "API_CONTRACT_MISMATCH":
         return {
           apiBaseUrl,
           code: error.code,
-          message: "Workspace bootstrap failed because the backend response no longer matches the shared contract.",
+          message:
+            "Workspace bootstrap failed because the backend response no longer matches the shared contract.",
         }
       case "WORKSPACE_MODE_UNSUPPORTED":
         return {

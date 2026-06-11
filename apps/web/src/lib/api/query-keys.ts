@@ -1,4 +1,9 @@
 export const queryKeys = {
+  workspace: {
+    current: ["workspace", "current"] as const,
+    projects: ["workspace", "projects"] as const,
+    members: (projectId: string) => ["workspace", "project-members", projectId] as const,
+  },
   system: {
     health: ["system", "health"] as const,
   },

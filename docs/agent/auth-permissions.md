@@ -23,8 +23,6 @@ public repository scan only
 Still future work:
 
 ```text
-membership management UI
-project switching / last-selected project UX
 team / organization scoping
 private repos
 GitHub App / OAuth
@@ -52,6 +50,7 @@ Current web boundary:
 - /welcome and /login are public web routes
 - /(app) routes require authentication at middleware level
 - backend public bootstrap endpoints remain public for deploy/runtime checks
+- selected project is backend-owned and persisted on the user
 ```
 
 ## Project Membership Model
@@ -68,6 +67,15 @@ VIEWER      read-only access
 
 Permissions are backend enforced and project scoped through
 `ProjectPermissionService`. A frontend-hidden button is not authorization.
+
+Current project selection and membership management:
+
+```text
+- workspace/current resolves the selected project for the actor
+- GET /api/v1/projects lists only projects where the actor has membership
+- POST /api/v1/workspace/select-project switches current project if the actor is a member
+- OWNER manages project members by exact existing-user email
+```
 
 ## Current MVP RBAC Matrix
 

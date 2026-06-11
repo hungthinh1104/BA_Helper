@@ -31,12 +31,15 @@ RUN /app/node_modules/.bin/tsc -p /app/packages/contracts/tsconfig.json \
 
 FROM base AS runtime
 ENV NODE_ENV=production
+ENV NODE_PATH=/app/apps/api/node_modules:/app/node_modules
 RUN apk add --no-cache git
 RUN addgroup -S app && adduser -S app -G app
 WORKDIR /app
 COPY --from=build /app/node_modules /app/node_modules
+COPY --from=build /app/apps/api/node_modules /app/apps/api/node_modules
 COPY --from=build /app/apps/worker/node_modules /app/apps/worker/node_modules
 COPY --from=build /app/packages /app/packages
 COPY --from=build /app/apps/worker/dist /app/apps/worker/dist
+COPY --from=build /app/apps/api/node_modules /app/apps/worker/dist/apps/api/node_modules
 USER app
 CMD ["node", "/app/apps/worker/dist/apps/worker/src/main.js"]

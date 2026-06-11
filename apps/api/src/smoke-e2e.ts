@@ -39,6 +39,7 @@ const API_URL = normalizeApiBaseUrl(
     process.env.NEXT_PUBLIC_API_URL ??
     `http://localhost:${process.env.PORT ?? '3001'}`,
 );
+const SMOKE_BEARER_TOKEN = process.env.SMOKE_BEARER_TOKEN?.trim();
 const POLL_INTERVAL_MS = Number(process.env.SMOKE_POLL_INTERVAL_MS ?? '2000');
 const REQUEST_TIMEOUT_MS = Number(process.env.SMOKE_REQUEST_TIMEOUT_MS ?? '15000');
 
@@ -380,7 +381,7 @@ async function apiGet<T>(
   schema: { parse: (input: unknown) => T },
 ): Promise<T> {
   const response = await fetchWithTimeout(`${API_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: buildHeaders(),
     method: 'GET',
   });
   const payload = await parseJson(response);
@@ -401,7 +402,7 @@ async function apiPost<T>(
 ): Promise<T> {
   const response = await fetchWithTimeout(`${API_URL}${path}`, {
     body: body === undefined ? undefined : JSON.stringify(body),
-    headers: { 'Content-Type': 'application/json' },
+    headers: buildHeaders(),
     method: 'POST',
   });
   const payload = await parseJson(response);
@@ -444,6 +445,18 @@ async function fetchWithTimeout(
 
 async function parseJson(response: Response): Promise<unknown> {
   return response.json().catch(() => null);
+}
+
+function buildHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (SMOKE_BEARER_TOKEN) {
+    headers.Authorization = `Bearer ${SMOKE_BEARER_TOKEN}`;
+  }
+
+  return headers;
 }
 
 function getApiErrorMessage(payload: unknown): string {
