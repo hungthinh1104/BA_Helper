@@ -6,6 +6,7 @@ import { HelpCircle, CheckCircle2, XCircle, MessageSquare } from 'lucide-react';
 import { useAnalysisDetail } from '@/hooks/api/use-analyses';
 import { NewAnalysisDialog } from './new-analysis-dialog';
 import { ClarificationItemDto } from '@ba-helper/contracts';
+import { useAuth } from '@/hooks/use-auth';
 
 interface ClarificationWidgetProps {
   analysisId: string;
@@ -19,6 +20,7 @@ export function ClarificationWidget({ analysisId, insightId }: ClarificationWidg
   const answerMut = useAnswerClarification(analysisId);
   const dismissMut = useDismissClarification(analysisId);
   const convertMut = useConvertClarification(analysisId);
+  const { user } = useAuth();
 
   const [answerText, setAnswerText] = useState('');
   const [dismissReason, setDismissReason] = useState('');
@@ -27,6 +29,7 @@ export function ClarificationWidget({ analysisId, insightId }: ClarificationWidg
 
   const clarification = clarifications?.find((c: ClarificationItemDto) => c.sourceInsightId === insightId);
   const isCompleted = analysis?.status === 'COMPLETED';
+  const isViewer = user?.role === 'VIEWER';
 
   if (isLoading) return null;
 
@@ -43,7 +46,8 @@ export function ClarificationWidget({ analysisId, insightId }: ClarificationWidg
           variant="outline" 
           size="sm" 
           onClick={() => ensureMut.mutate({ sourceInsightId: insightId })}
-          disabled={ensureMut.isPending}
+          disabled={ensureMut.isPending || isViewer}
+          title={isViewer ? "You have view-only access. Reviewer or Admin role required." : undefined}
         >
           {ensureMut.isPending ? 'Requesting...' : 'Request Clarification'}
         </Button>
@@ -97,8 +101,9 @@ export function ClarificationWidget({ analysisId, insightId }: ClarificationWidg
             <Button 
               size="sm" 
               variant="default"
-              disabled={convertMut.isPending}
+              disabled={convertMut.isPending || isViewer}
               onClick={() => convertMut.mutate(clarification.id)}
+              title={isViewer ? "Admin role required to convert clarification into a requirement revision." : undefined}
             >
               {convertMut.isPending ? 'Converting...' : 'Convert to Requirement Revision'}
             </Button>
@@ -139,13 +144,15 @@ export function ClarificationWidget({ analysisId, insightId }: ClarificationWidg
                   value={answerText}
                   onChange={e => setAnswerText(e.target.value)}
                   className="min-h-[80px] text-sm"
+                  disabled={isViewer}
                 />
                 <div className="flex justify-end gap-2">
                   <Button variant="ghost" size="sm" onClick={() => setIsAnswering(false)}>Cancel</Button>
                   <Button 
                     size="sm" 
-                    disabled={!answerText.trim() || answerMut.isPending}
+                    disabled={!answerText.trim() || answerMut.isPending || isViewer}
                     onClick={() => answerMut.mutate({ id: clarification.id, answer: answerText })}
+                    title={isViewer ? "You have view-only access. Reviewer or Admin role required." : undefined}
                   >
                     Submit Answer
                   </Button>
@@ -158,14 +165,16 @@ export function ClarificationWidget({ analysisId, insightId }: ClarificationWidg
                   value={dismissReason}
                   onChange={e => setDismissReason(e.target.value)}
                   className="min-h-[80px] text-sm"
+                  disabled={isViewer}
                 />
                 <div className="flex justify-end gap-2">
                   <Button variant="ghost" size="sm" onClick={() => setIsDismissing(false)}>Cancel</Button>
                   <Button 
                     variant="destructive"
                     size="sm" 
-                    disabled={dismissMut.isPending}
+                    disabled={dismissMut.isPending || isViewer}
                     onClick={() => dismissMut.mutate({ id: clarification.id, reason: dismissReason })}
+                    title={isViewer ? "You have view-only access. Reviewer or Admin role required." : undefined}
                   >
                     Confirm Dismiss
                   </Button>
@@ -173,10 +182,10 @@ export function ClarificationWidget({ analysisId, insightId }: ClarificationWidg
               </div>
             ) : (
               <div className="flex items-center gap-2 pt-2 border-t border-warning/10">
-                <Button size="sm" className="flex-1" onClick={() => setIsAnswering(true)}>
+                <Button size="sm" className="flex-1" onClick={() => setIsAnswering(true)} disabled={isViewer} title={isViewer ? "You have view-only access. Reviewer or Admin role required." : undefined}>
                   Answer
                 </Button>
-                <Button variant="outline" size="sm" className="flex-1" onClick={() => setIsDismissing(true)}>
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => setIsDismissing(true)} disabled={isViewer} title={isViewer ? "You have view-only access. Reviewer or Admin role required." : undefined}>
                   Dismiss
                 </Button>
               </div>

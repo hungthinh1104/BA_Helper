@@ -3,12 +3,14 @@
 import { useApprovedReport } from "@/hooks/api/use-approved-report"
 import { useAnalysisDetail } from "@/hooks/api/use-analyses"
 import { Skeleton } from "@/components/ui/skeleton"
-import { AlertCircle, FileWarning, Copy, Download, CheckCircle2 } from "lucide-react"
+import { AlertCircle, FileWarning, Copy, Download, CheckCircle2, Loader2 } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
 import { MermaidRenderer } from "@/components/workspace/mermaid-renderer"
 import remarkGfm from "remark-gfm"
+import { apiGetFile } from "@/lib/api-client"
+import { toast } from "sonner"
 
 interface ReportViewerProps {
   analysisId: string;
@@ -20,6 +22,7 @@ export function ReportViewer({ analysisId, commitSha, generatedAt }: ReportViewe
   const { data: analysis, isLoading: analysisLoading } = useAnalysisDetail(undefined, analysisId)
   const { data: report, isLoading: reportLoading, error } = useApprovedReport(analysisId, analysis?.status)
   const [copied, setCopied] = useState(false)
+  const [exportingFormat, setExportingFormat] = useState<"md" | "pdf" | null>(null)
 
   const handleCopy = async () => {
     if (!report?.markdown) return;
@@ -32,17 +35,30 @@ export function ReportViewer({ analysisId, commitSha, generatedAt }: ReportViewe
     }
   };
 
-  const handleDownload = () => {
-    if (!report?.markdown) return;
-    const blob = new Blob([report.markdown], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `impact-report-${analysisId.substring(0, 8)}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const handleDownload = async (format: "md" | "pdf") => {
+    if (!report || report.isStale) return;
+    setExportingFormat(format);
+    try {
+      const file = await apiGetFile(`/api/v1/impact-analyses/${analysisId}/approved-report/export.${format}`);
+      const url = URL.createObjectURL(file.blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("Report Exported Successfully", {
+        description: file.filename,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to export report.";
+      toast.error("Export Failed", {
+        description: message,
+      });
+    } finally {
+      setExportingFormat(null);
+    }
   };
 
   if (analysisLoading || reportLoading) {
@@ -77,9 +93,27 @@ export function ReportViewer({ analysisId, commitSha, generatedAt }: ReportViewe
               {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
               {copied ? 'Copied!' : 'Copy .md'}
             </Button>
-            <Button size="sm" variant="outline" className="h-8 gap-1.5 shadow-none" onClick={handleDownload}>
-              <Download className="w-3.5 h-3.5" />
-              Download .md
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 gap-1.5 shadow-none"
+              onClick={() => handleDownload("md")}
+              disabled={report.isStale || exportingFormat !== null}
+              title={report.isStale ? "Report is stale; rerun/finalize again before export" : undefined}
+            >
+              {exportingFormat === "md" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+              Export Markdown
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 gap-1.5 shadow-none"
+              onClick={() => handleDownload("pdf")}
+              disabled={report.isStale || exportingFormat !== null}
+              title={report.isStale ? "Report is stale; rerun/finalize again before export" : undefined}
+            >
+              {exportingFormat === "pdf" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+              Export PDF
             </Button>
           </div>
         </div>

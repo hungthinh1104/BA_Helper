@@ -7,6 +7,7 @@ import { ImpactAnalysisResponse } from "@ba-helper/contracts"
 import { WorkspacePageHeader } from "./page-header"
 import { CheckCircle2, Loader2, Download } from "lucide-react"
 import { toast } from "sonner"
+import { apiGetFile } from "@/lib/api-client"
 
 interface AnalysisHeaderProps {
   analysis: ImpactAnalysisResponse
@@ -23,62 +24,34 @@ interface AnalysisHeaderProps {
 export function AnalysisHeader({ analysis, stats }: AnalysisHeaderProps) {
   const isStale = analysis.freshness.isStale
   const finalized = analysis.status === "COMPLETED"
-  const canExport = analysis.capabilities.canExport || finalized
-  const [isExporting, setIsExporting] = useState(false)
+  const canExport = analysis.capabilities.canExport && finalized && !isStale
+  const [exportingFormat, setExportingFormat] = useState<"md" | "pdf" | null>(null)
 
-  const handleExport = async () => {
-    setIsExporting(true)
+  const handleExport = async (format: "md" | "pdf") => {
+    setExportingFormat(format)
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-      const res = await fetch(`${baseUrl}/api/v1/impact-analyses/${analysis.id}/approved-report/export.md`)
-      
-      if (!res.ok) {
-        if (res.status === 404) {
-          throw new Error("Approved report not found. Please ensure the analysis is completed and finalized.")
-        }
-        throw new Error("Failed to export report.")
-      }
-
-      // Check if stale header was set
-      const isReportStale = res.headers.get("X-Report-Stale") === "true"
-
-      const blob = await res.blob()
-      
-      // Extract filename from Content-Disposition if present
-      const contentDisposition = res.headers.get("Content-Disposition")
-      let filename = "impact-report.md"
-      if (contentDisposition && contentDisposition.includes("filename=")) {
-        const match = contentDisposition.match(/filename="?([^"]+)"?/)
-        if (match && match[1]) {
-          filename = match[1]
-        }
-      }
-
-      const url = window.URL.createObjectURL(blob)
+      const file = await apiGetFile(
+        `/api/v1/impact-analyses/${analysis.id}/approved-report/export.${format}`,
+      )
+      const url = window.URL.createObjectURL(file.blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = filename
+      a.download = file.filename
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
 
-      if (isReportStale) {
-        toast.warning("Report Exported", {
-          description: "This report may be stale because the repository snapshot has changed.",
-        })
-      } else {
-        toast.success("Report Exported Successfully", {
-          description: filename,
-        })
-      }
+      toast.success("Report Exported Successfully", {
+        description: file.filename,
+      })
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error(String(err));
       toast.error("Export Failed", {
         description: error.message || "An unexpected error occurred while exporting.",
       })
     } finally {
-      setIsExporting(false)
+      setExportingFormat(null)
     }
   }
 
@@ -107,11 +80,23 @@ export function AnalysisHeader({ analysis, stats }: AnalysisHeaderProps) {
           variant="outline" 
           size="sm" 
           className="h-8 shadow-none bg-surface" 
-          disabled={!canExport || isExporting}
-          onClick={handleExport}
+          disabled={!canExport || exportingFormat !== null}
+          onClick={() => handleExport("md")}
+          title={!finalized ? "Finalize analysis before export" : isStale ? "Report is stale; rerun/finalize again before export" : undefined}
         >
-          {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
-          Download .md
+          {exportingFormat === "md" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+          Export Markdown
+        </Button>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="h-8 shadow-none bg-surface" 
+          disabled={!canExport || exportingFormat !== null}
+          onClick={() => handleExport("pdf")}
+          title={!finalized ? "Finalize analysis before export" : isStale ? "Report is stale; rerun/finalize again before export" : undefined}
+        >
+          {exportingFormat === "pdf" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+          Export PDF
         </Button>
       </WorkspacePageHeader>
 
