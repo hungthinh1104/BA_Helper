@@ -1,53 +1,116 @@
-# BA Helper
+# Requirement-to-Code Impact Analyzer
 
-Project-facing name: `requirement-impact-analyzer`.
-Requirement-to-code impact analyzer for the booking/payment/refund MVP.
+**Requirement-to-code impact analyzer for backend teams: evidence-backed traceability, QA risks, review coverage, and report export.**
 
-## Current state
+## The Problem
+When a business requirement changes, backend systems are highly susceptible to hidden impacts. Traditional impact analysis is either entirely manual (relying on tribal knowledge) or requires heavy, proprietary integration. Generic AI chatbots lack repository-wide context and fail to provide auditable evidence of *why* specific code blocks are impacted, leading to brittle updates and missed QA regressions.
 
-- Backend, worker, and web app are implemented.
-- Auth/RBAC exists with dev-login, JWT/NextAuth, route gating, and roles:
-  `ADMIN`, `REVIEWER`, `VIEWER`.
-- Project membership, selected-project switching, and OWNER-managed member
-  administration are implemented.
-- Multi-repo workflow is implemented through fan-out, run tracking, readiness,
-  merged draft, approved merged report, export, and merged report review
-  decisions.
-- The approved Markdown report snapshot is the persisted source of truth.
-- PDF is rendered on demand from the approved Markdown snapshot.
-- Stale approved reports are readable but not exportable.
-- Private repos, OAuth/GitHub App, merged clarification loop, DOCX, Jira, and
-  Confluence remain out of scope.
+## What It Does
+Given a requirement change, the system securely scans backend repositories, identifies impacted code artifacts, extracts explicit evidence, highlights architectural and QA risks, supports human review workflows, and generates immutable traceability reports.
 
-## Quick start
+## Core Workflow
+1. **Scan**: Connect and scan your repository locally. The scanner builds a deterministic graph of endpoints, services, entities, and tests.
+2. **Ingest**: Submit a Requirement Change Request (e.g., "Allow users to cancel paid bookings and receive a refund").
+3. **Analyze**: The system matches the requirement against the codebase, finding affected artifacts and extracting explicit evidence.
+4. **Review**: Technical BAs and developers review the extracted impacts, unknown areas, and proposed QA scenarios.
+5. **Report**: Finalize the analysis to generate an immutable, exportable Markdown/PDF impact report.
 
+## In Action
+
+*(Placeholders for future demo assets)*
+
+- **Requirement Input**: `TODO: Add screenshot of requirement ingestion UI`
+- **Impact Matrix**: `TODO: Add screenshot of the impact analysis matrix`
+- **Evidence Drilldown**: `TODO: Add screenshot of the evidence review drawer`
+- **Review Coverage**: `TODO: Add screenshot of the coverage and QA risk panel`
+- **Final Report**: [View a sample Markdown report](docs/sample-report.md)
+
+## Why not just ask ChatGPT/Copilot?
+Generic AI coding agents are excellent at generating code blocks but struggle with system-wide impact analysis. This tool differs by focusing exclusively on:
+- **Snapshot-scoped repository analysis**: It analyzes code frozen at a specific commit SHA, not a floating window of active files.
+- **Evidence-backed impact links**: Every claimed impact is tied to an explicit, extracted `Evidence` record from your code.
+- **Review coverage gates**: Machine output is explicitly separated from human finalization; AI never autonomously finalizes a report.
+- **Matrix/drilldown auditability**: Understand exactly *why* a file was flagged without reading through a massive unstructured chat transcript.
+- **Finalized immutable reports**: Output is designed for stakeholder sign-off, QA test generation, and compliance.
+
+## Quickstart
+
+### Prerequisites
+- Docker & Docker Compose
+- Node.js (v20+)
+- pnpm
+- A valid OpenAI API Key (or use the fake provider for testing)
+
+### Installation
 ```bash
-docker compose up -d postgres redis
+git clone https://github.com/your-org/requirement-impact-analyzer.git
+cd requirement-impact-analyzer
+pnpm install
+```
 
+### Environment Setup
+```bash
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env.local
+```
 
+### Run Locally
+```bash
+# 1. Start the database and cache
+docker compose up -d postgres redis
+
+# 2. Start the backend API
 PORT=3001 ENABLE_DEV_LOGIN=true WORKSPACE_MODE=dev-single-user \
   AI_PROVIDER=fake EMBEDDING_PROVIDER=fake pnpm --dir apps/api dev
 
+# 3. Start the background worker
 WORKSPACE_MODE=dev-single-user AI_PROVIDER=fake EMBEDDING_PROVIDER=fake \
   pnpm --dir apps/worker dev
 
+# 4. Start the frontend web application
 NEXT_PUBLIC_API_URL=http://localhost:3001 NEXTAUTH_SECRET=replace-with-a-long-random-secret-32-chars-min \
   pnpm --dir apps/web dev
 ```
+Open `http://localhost:3000/login` and sign in using the dev-login bypass.
 
-Open `http://localhost:3000/login` to sign in with dev-login.
+> **Known local setup caveats:**
+> The setup currently assumes a UNIX-like environment. Windows users should use WSL2. The `fake` AI provider allows testing the pipeline without an LLM key, but impact analysis quality will be mock data.
 
-## Demo path
+## Trust & Security Model
+We prioritize keeping your proprietary code safe:
+- **No Remote Code Execution**: The scanner performs static regex and AST-based extraction. It never executes your repository code.
+- **Bounded Diagnostics**: Scans are bounded by file size and count limits to prevent OOM errors. 
+- **Explicit Skips**: Large files, vendor directories (`node_modules`), binaries, and unsafe symlinks are automatically skipped and explicitly logged.
+- **PARTIAL vs FULL Coverage**: If limits are hit, the scan is explicitly marked as `PARTIAL`. A `PARTIAL` scan is not a failure, but explicitly warns reviewers that the LLM may be missing context.
+- **Immutable Reports**: Once finalized, reports are immutable and tied to a specific requirement revision and repository snapshot.
+- **No Global Vector Search**: All RAG operations are strictly isolated by Tenant, Project, Repository, and Commit SHA.
 
-- [docs/demo/walkthrough.md](docs/demo/walkthrough.md)
-- [docs/deployment/smoke-checklist.md](docs/deployment/smoke-checklist.md)
+## Architecture
+Built as a TypeScript modular monolith to balance speed of development with eventual microservice readiness:
+- **apps/web**: Next.js App Router frontend (React, Tailwind, Shadcn).
+- **apps/api**: NestJS HTTP API serving frontend requests.
+- **apps/worker**: NestJS BullMQ background processors for heavy analysis and extraction.
+- **packages/analyzer**: Headless TypeScript and Java Spring code extraction utilities.
+- **packages/contracts**: Shared Zod API schemas bounding the frontend and backend.
+- **Persistence**: PostgreSQL (Prisma) for relational state and pgvector for embeddings. Redis for job queues.
 
-## Docs
+*For more details, see [Architecture Documentation](docs/agent/architecture.md).*
 
-- [docs/agent/CONTEXT_INDEX.md](docs/agent/CONTEXT_INDEX.md)
-- [docs/agent/architecture.md](docs/agent/architecture.md)
-- [docs/agent/use-cases.md](docs/agent/use-cases.md)
-- [docs/agent/api-contracts.md](docs/agent/api-contracts.md)
-- [docs/agent/auth-permissions.md](docs/agent/auth-permissions.md)
+## Current Capabilities
+- **Languages/Frameworks**: Deep AST extraction for **TypeScript/NestJS**.
+- **Java Spring (Pilot)**: Regex-based extraction for Java Spring Boot. *Note: Spring support is currently marked as a pilot adapter and will always yield `PARTIAL` scan coverage.*
+- **Output Generation**: Impact Matrices, QA Scenarios, Unknown Area tracking, and Markdown Exports.
+
+## Limitations
+- **Multi-language**: Full AST parsing is currently only available for TypeScript. Java Spring is heavily best-effort.
+- **Single User Dev Mode**: The MVP defaults to a single-user workspace bypass for local testing.
+- **Integrations**: Direct Jira/Confluence/GitHub App syncs are currently out of scope.
+
+## Roadmap
+1. Enhance Java Spring AST parser for `FULL` scan coverage.
+2. Introduce Mermaid.js architectural graph generation.
+3. Multi-user RBAC and workspace organization management.
+4. Native OAuth and GitHub App integrations.
+
+## Contributing
+Please see our [agent rules](AGENTS.md) and [coding standards](docs/agent/code-quality-governance.md) before submitting pull requests. All code must adhere to the modular monolith boundaries and state machine invariants.
