@@ -141,10 +141,14 @@ export class RunScanJobUseCase {
         for (const d of enumResult.diagnostics) {
           collector.addFromFileDiagnostic(d, d.filePath ? path.relative(tempDir, d.filePath) : undefined);
         }
-        
-        if (enumResult.isPartial) {
-          coverageStatus = 'PARTIAL';
-        }
+
+        const scanCoverage: import('@ba-helper/analyzer').ScanCoverage = {
+          status: enumResult.isPartial ? 'PARTIAL' : 'FULL',
+          skippedFiles: enumResult.skippedFiles,
+          skippedSummary: enumResult.skippedSummary,
+          limits: enumResult.limits,
+          limitHits: enumResult.limitHits,
+        };
 
         currentStage = ScanJobStage.EXTRACTING_ARTIFACTS;
         
@@ -153,8 +157,8 @@ export class RunScanJobUseCase {
             fixturePath: tempDir,
             analyzerVersion: '0.1.0',
             javaFiles: enumResult.javaFiles,
+            coverage: scanCoverage,
           });
-          coverageStatus = 'PARTIAL';
           collector.add({
             code: 'SPRING_BOOT_PILOT_ADAPTER',
             severity: 'WARN',
@@ -166,6 +170,7 @@ export class RunScanJobUseCase {
             fixturePath: tempDir,
             analyzerVersion: '0.1.0',
             tsFiles: enumResult.tsFiles,
+            coverage: scanCoverage,
           });
         }
       } else {
@@ -176,9 +181,35 @@ export class RunScanJobUseCase {
         });
       }
 
+      // FULL maps to READY because Prisma enum predates scan-health terminology.
+      // FAILED does not create RepositorySnapshot.
+      coverageStatus = scanResult.coverage.status === 'FULL' ? 'READY' : 'PARTIAL';
+
       if (!commitSha) {
         throw new Error('Commit SHA was not resolved for scan job.');
       }
+
+      // Record detailed scan health into snapshot diagnostics
+      const scanHealth: import('@ba-helper/analyzer').ScanHealthDiagnostics = {
+        coverageStatus: scanResult.coverage.status,
+        scannerVersion: 'scanner@0.1.0',
+        analyzerVersion: scanResult.analyzerVersion,
+        scannedFileCount: scanResult.artifacts.length, // approximation or use enumResult if possible
+        skippedFileCount: Object.values(scanResult.coverage.skippedSummary).reduce((a, b) => a + b, 0),
+        artifactCount: scanResult.artifacts.length,
+        skippedSummary: scanResult.coverage.skippedSummary,
+        skippedFilesSample: scanResult.coverage.skippedFiles,
+        limits: scanResult.coverage.limits,
+        limitHits: scanResult.coverage.limitHits,
+      };
+
+      collector.add({
+        code: 'SCAN_HEALTH',
+        severity: 'INFO',
+        message: 'Scan health summary generated',
+        category: 'SCANNER',
+        payload: scanHealth as unknown as Record<string, unknown>,
+      });
 
       const target = await this.prisma.repositoryTarget.upsert({
         where: {

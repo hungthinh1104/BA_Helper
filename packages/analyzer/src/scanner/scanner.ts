@@ -79,14 +79,34 @@ export const scanFixture = (input: ScanInput): ScanResult => {
   }
 
   return {
-    analyzerVersion: input.analyzerVersion,
+    analyzerVersion: input.analyzerVersion || '0.1.0',
     artifacts,
-    coverage: { status: 'READY', skippedFiles: [] },
+    coverage: { 
+      status: 'FULL', 
+      skippedFiles: [], 
+      skippedSummary: {
+        IGNORED_DIRECTORY: 0,
+        UNSUPPORTED_EXTENSION: 0,
+        GENERATED_FILE: 0,
+        VENDOR_FILE: 0,
+        BUILD_OUTPUT: 0,
+        FILE_TOO_LARGE: 0,
+        REPO_FILE_LIMIT_EXCEEDED: 0,
+        REPO_SIZE_LIMIT_EXCEEDED: 0,
+        SYMLINK_OUTSIDE_ROOT: 0,
+        BINARY_FILE: 0,
+        READ_ERROR: 0,
+        UNSUPPORTED_FRAMEWORK: 0,
+        UNSUPPORTED_LANGUAGE: 0,
+      },
+      limits: { maxFiles: 0, maxFileBytes: 0 },
+      limitHits: { fileLimitHit: false, repoSizeLimitHit: false }
+    },
     sourceRoot: input.fixturePath,
   };
 };
 
-export const scanProject = (input: ScanInput & { tsFiles: string[] }): ScanResult => {
+export const scanProject = (input: ScanInput & { tsFiles: string[], coverage?: import('./scanner.types').ScanCoverage }): ScanResult => {
   const project = new Project({
     useInMemoryFileSystem: false,
     skipFileDependencyResolution: true,
@@ -158,10 +178,32 @@ export const scanProject = (input: ScanInput & { tsFiles: string[] }): ScanResul
     }
   }
 
+  const defaultCoverage: import('./scanner.types').ScanCoverage = {
+    status: 'FULL',
+    skippedFiles: [],
+    skippedSummary: {
+        IGNORED_DIRECTORY: 0,
+        UNSUPPORTED_EXTENSION: 0,
+        GENERATED_FILE: 0,
+        VENDOR_FILE: 0,
+        BUILD_OUTPUT: 0,
+        FILE_TOO_LARGE: 0,
+        REPO_FILE_LIMIT_EXCEEDED: 0,
+        REPO_SIZE_LIMIT_EXCEEDED: 0,
+        SYMLINK_OUTSIDE_ROOT: 0,
+        BINARY_FILE: 0,
+        READ_ERROR: 0,
+        UNSUPPORTED_FRAMEWORK: 0,
+        UNSUPPORTED_LANGUAGE: 0,
+    },
+    limits: { maxFiles: 0, maxFileBytes: 0 },
+    limitHits: { fileLimitHit: false, repoSizeLimitHit: false }
+  };
+
   return {
-    analyzerVersion: input.analyzerVersion,
+    analyzerVersion: input.analyzerVersion || '0.1.0',
     artifacts,
-    coverage: { status: 'READY', skippedFiles: [] },
+    coverage: input.coverage || defaultCoverage,
     sourceRoot: input.fixturePath,
   };
 };

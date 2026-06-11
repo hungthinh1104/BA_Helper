@@ -18,6 +18,7 @@ export const diagnosticItemSchema = z.object({
   category: diagnosticCategorySchema.optional(),
   count: z.number().int().min(1).optional(),
   samplePaths: z.array(z.string()).max(5).optional(),
+  payload: z.record(z.unknown()).optional(),
 });
 
 export type DiagnosticSeverity = z.infer<typeof diagnosticSeveritySchema>;

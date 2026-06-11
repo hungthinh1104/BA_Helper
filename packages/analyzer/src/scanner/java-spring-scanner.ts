@@ -3,7 +3,7 @@ import { relative } from 'node:path';
 import type { ScanInput, ScanResult, ScanArtifact } from './scanner.types';
 
 export const scanJavaSpringProject = async (
-  input: ScanInput & { javaFiles: string[] },
+  input: ScanInput & { javaFiles: string[], coverage?: import('./scanner.types').ScanCoverage },
 ): Promise<ScanResult> => {
   const artifacts: ScanArtifact[] = [];
 
@@ -109,11 +109,36 @@ export const scanJavaSpringProject = async (
     }
   }
 
+  const defaultCoverage: import('./scanner.types').ScanCoverage = {
+    status: 'PARTIAL',
+    skippedFiles: [],
+    skippedSummary: {
+        IGNORED_DIRECTORY: 0,
+        UNSUPPORTED_EXTENSION: 0,
+        GENERATED_FILE: 0,
+        VENDOR_FILE: 0,
+        BUILD_OUTPUT: 0,
+        FILE_TOO_LARGE: 0,
+        REPO_FILE_LIMIT_EXCEEDED: 0,
+        REPO_SIZE_LIMIT_EXCEEDED: 0,
+        SYMLINK_OUTSIDE_ROOT: 0,
+        BINARY_FILE: 0,
+        READ_ERROR: 0,
+        UNSUPPORTED_FRAMEWORK: 0,
+        UNSUPPORTED_LANGUAGE: 0,
+    },
+    limits: { maxFiles: 0, maxFileBytes: 0 },
+    limitHits: { fileLimitHit: false, repoSizeLimitHit: false }
+  };
+
+  const coverage = input.coverage || defaultCoverage;
+  // Ensure we always emit PARTIAL for Spring Boot
+  coverage.status = 'PARTIAL';
+
   return {
-    analyzerVersion: input.analyzerVersion,
+    analyzerVersion: input.analyzerVersion || '0.1.0',
     artifacts,
-    // Spring Boot adapter natively sets PARTIAL coverage in the usecase.
-    coverage: { status: 'READY', skippedFiles: [] },
+    coverage,
     sourceRoot: input.fixturePath,
   };
 };

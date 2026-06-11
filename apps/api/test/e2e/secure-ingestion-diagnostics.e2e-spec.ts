@@ -184,7 +184,27 @@ describe('Secure Ingestion Diagnostics (E2E)', () => {
     analyzer.scanProject.mockReturnValue({
       analyzerVersion: '0.1.0',
       artifacts: [],
-      coverage: { status: 'PARTIAL', skippedFiles: ['src/huge.ts'] },
+      coverage: { 
+        status: 'PARTIAL', 
+        skippedFiles: [{ path: 'src/huge.ts', reason: 'REPO_LIMIT_EXCEEDED' }],
+        skippedSummary: {
+          IGNORED_DIRECTORY: 0,
+          UNSUPPORTED_EXTENSION: 0,
+          GENERATED_FILE: 0,
+          VENDOR_FILE: 0,
+          BUILD_OUTPUT: 0,
+          FILE_TOO_LARGE: 0,
+          REPO_FILE_LIMIT_EXCEEDED: 0,
+          REPO_SIZE_LIMIT_EXCEEDED: 1,
+          SYMLINK_OUTSIDE_ROOT: 0,
+          BINARY_FILE: 0,
+          READ_ERROR: 0,
+          UNSUPPORTED_FRAMEWORK: 0,
+          UNSUPPORTED_LANGUAGE: 0,
+        },
+        limits: { maxFiles: 100, maxFileBytes: 1024 },
+        limitHits: { fileLimitHit: false, repoSizeLimitHit: true }
+      },
       sourceRoot: '/tmp/ba-scan-partial',
     });
 
@@ -262,7 +282,7 @@ describe('Secure Ingestion Diagnostics (E2E)', () => {
       commitSha: '0123456789abcdef0123456789abcdef01234567',
       coverageStatus: 'PARTIAL',
       diagnostics: expect.objectContaining({
-        codes: ['REPO_LIMIT_EXCEEDED'],
+        codes: expect.arrayContaining(['REPO_LIMIT_EXCEEDED']),
       }),
     });
   });

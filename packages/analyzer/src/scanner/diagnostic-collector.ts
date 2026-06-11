@@ -7,6 +7,7 @@ export interface DiagnosticItem {
   category?: 'SECURITY' | 'LIMIT' | 'FRAMEWORK' | 'FILE_SYSTEM' | 'GIT' | 'SCANNER';
   count?: number;
   samplePaths?: string[];
+  payload?: Record<string, unknown>;
 }
 
 export class DiagnosticCollector {

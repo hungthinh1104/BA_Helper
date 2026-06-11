@@ -2,6 +2,7 @@ import type { Dirent } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { ScanLimitsPolicy } from './limits';
+import type { ScanSkipReason } from './scanner.types';
 
 export interface FileDiagnostic {
   code:
@@ -22,6 +23,17 @@ export interface EnumeratorResult {
   allFiles: string[];
   diagnostics: FileDiagnostic[];
   isPartial: boolean;
+  skippedFiles: Array<{ path: string; reason: ScanSkipReason }>;
+  skippedSummary: Record<ScanSkipReason, number>;
+  limits: {
+    maxFiles: number;
+    maxFileBytes: number;
+    maxTotalBytes?: number;
+  };
+  limitHits: {
+    fileLimitHit: boolean;
+    repoSizeLimitHit: boolean;
+  };
 }
 
 const IGNORED_DIRS = new Set([
@@ -35,6 +47,12 @@ const IGNORED_DIRS = new Set([
   '.cache',
   'vendor',
   'tmp',
+  'out',
+  'target',
+  '.idea',
+  '.vscode',
+  '.mvn',
+  '.gradle'
 ]);
 
 const IGNORED_EXTENSIONS = new Set([
@@ -55,14 +73,42 @@ const IGNORED_EXTENSIONS = new Set([
   '.gif',
   '.ico',
   '.pdf',
-  '.csv', // Often huge
+  '.csv',
 ]);
 
+const INITIAL_SKIPPED_SUMMARY: Record<ScanSkipReason, number> = {
+  IGNORED_DIRECTORY: 0,
+  UNSUPPORTED_EXTENSION: 0,
+  GENERATED_FILE: 0,
+  VENDOR_FILE: 0,
+  BUILD_OUTPUT: 0,
+  FILE_TOO_LARGE: 0,
+  REPO_FILE_LIMIT_EXCEEDED: 0,
+  REPO_SIZE_LIMIT_EXCEEDED: 0,
+  SYMLINK_OUTSIDE_ROOT: 0,
+  BINARY_FILE: 0,
+  READ_ERROR: 0,
+  UNSUPPORTED_FRAMEWORK: 0,
+  UNSUPPORTED_LANGUAGE: 0,
+};
+
 export class SafeFileEnumerator {
+  private skippedFiles: Array<{ path: string; reason: ScanSkipReason }> = [];
+  private skippedSummary: Record<ScanSkipReason, number> = { ...INITIAL_SKIPPED_SUMMARY };
+
   constructor(
     private readonly rootDir: string,
     private readonly limitsPolicy: ScanLimitsPolicy = new ScanLimitsPolicy()
   ) {}
+
+  private recordSkip(filePath: string, reason: ScanSkipReason) {
+    this.skippedSummary[reason]++;
+    if (this.skippedFiles.length < 100) {
+      // Normalize path separator to '/' to ensure determinism across OSes
+      const normalizedPath = filePath.split(path.sep).join('/');
+      this.skippedFiles.push({ path: normalizedPath, reason });
+    }
+  }
 
   async enumerate(): Promise<EnumeratorResult> {
     const tsFiles: string[] = [];
@@ -75,55 +121,59 @@ export class SafeFileEnumerator {
     let tsFileCount = 0;
     let totalSizeBytes = 0;
 
+    let limitHits = {
+      fileLimitHit: false,
+      repoSizeLimitHit: false,
+    };
+
     // Resolve real root to prevent symlink traversal escaping root
     const resolvedRoot = await fs.realpath(this.rootDir);
 
     const queue: string[] = [resolvedRoot];
 
     while (queue.length > 0) {
-
-
+      // Sort the queue to ensure deterministic traversal order
+      queue.sort();
       const currentDir = queue.shift()!;
       let entries: Dirent[];
       
       try {
         entries = await fs.readdir(currentDir, { withFileTypes: true });
+        // Sort entries by name for determinism within directory
+        entries.sort((a, b) => a.name.localeCompare(b.name));
       } catch (err) {
+        const relativePath = path.relative(resolvedRoot, currentDir) || '.';
+        this.recordSkip(relativePath, 'READ_ERROR');
         continue;
       }
 
       for (const entry of entries) {
         const fullPath = path.join(currentDir, entry.name);
+        const relativePath = path.relative(resolvedRoot, fullPath);
 
         if (entry.isSymbolicLink()) {
           try {
             const realPath = await fs.realpath(fullPath);
             if (!realPath.startsWith(resolvedRoot)) {
-              diagnostics.push({
-                code: 'SYMLINK_SKIPPED',
-                severity: 'INFO',
-                message: 'Skipped symlink pointing outside workspace',
-                filePath: fullPath,
-              });
+              this.recordSkip(relativePath, 'SYMLINK_OUTSIDE_ROOT');
               continue;
             }
-            // If it's a safe symlink, we can treat it as a normal file/dir
-            // But to avoid circular loops and complexity in MVP, we just skip ALL symlinks as requested by the rule:
-            // "do not follow symlink outside repo root, skip symlink by default"
           } catch {
-            // Broken symlink
+             // Broken symlink
           }
-          diagnostics.push({
-            code: 'SYMLINK_SKIPPED',
-            severity: 'INFO',
-            message: 'Skipped symlink by default',
-            filePath: fullPath,
-          });
+          this.recordSkip(relativePath, 'SYMLINK_OUTSIDE_ROOT');
           continue;
         }
 
         if (entry.isDirectory()) {
-          if (!IGNORED_DIRS.has(entry.name)) {
+          if (IGNORED_DIRS.has(entry.name)) {
+            let reason: ScanSkipReason = 'IGNORED_DIRECTORY';
+            if (['node_modules', 'vendor'].includes(entry.name)) reason = 'VENDOR_FILE';
+            if (['dist', 'build', 'out', 'target', '.next'].includes(entry.name)) reason = 'BUILD_OUTPUT';
+            
+            this.recordSkip(relativePath, reason);
+            // DO NOT descend into ignored directories
+          } else {
             queue.push(fullPath);
           }
           continue;
@@ -133,16 +183,17 @@ export class SafeFileEnumerator {
           const ext = path.extname(entry.name).toLowerCase();
           
           if (IGNORED_EXTENSIONS.has(ext)) {
-             diagnostics.push({
-                code: 'BINARY_SKIPPED',
-                severity: 'INFO',
-                message: 'Skipped binary/archive file',
-                filePath: fullPath,
-              });
+             this.recordSkip(relativePath, 'BINARY_FILE');
              continue;
           }
 
           if (entry.name === 'package-lock.json' || entry.name === 'yarn.lock' || entry.name === 'pnpm-lock.yaml') {
+            this.recordSkip(relativePath, 'VENDOR_FILE');
+            continue;
+          }
+
+          if (entry.name.includes('.generated.') || entry.name.includes('.gen.')) {
+            this.recordSkip(relativePath, 'GENERATED_FILE');
             continue;
           }
 
@@ -151,57 +202,45 @@ export class SafeFileEnumerator {
             const sizeKb = stat.size / 1024;
             
             if (this.limitsPolicy.isFileSizeExceeded(sizeKb)) {
-               diagnostics.push({
-                code: 'FILE_TOO_LARGE',
-                severity: 'INFO',
-                message: `File exceeded max size (${this.limitsPolicy.getLimits().MAX_FILE_SIZE_KB} KB)`,
-                filePath: fullPath,
-              });
+              this.recordSkip(relativePath, 'FILE_TOO_LARGE');
               continue;
             }
 
             totalSizeBytes += stat.size;
             const totalSizeMb = totalSizeBytes / (1024 * 1024);
             if (this.limitsPolicy.isRepoSizeExceeded(totalSizeMb)) {
-              diagnostics.push({
-                code: 'REPO_LIMIT_EXCEEDED',
-                severity: 'WARN',
-                message: `Maximum repository size (${this.limitsPolicy.getLimits().MAX_REPO_SIZE_MB} MB) exceeded.`,
-              });
+              limitHits.repoSizeLimitHit = true;
               isPartial = true;
+              this.recordSkip(relativePath, 'REPO_SIZE_LIMIT_EXCEEDED');
               break;
             }
           } catch {
+            this.recordSkip(relativePath, 'READ_ERROR');
             continue;
           }
 
           fileCount++;
           if (this.limitsPolicy.isFileCountExceeded(fileCount)) {
-            diagnostics.push({
-              code: 'FILE_LIMIT_EXCEEDED',
-              severity: 'WARN',
-              message: `Maximum file count (${this.limitsPolicy.getLimits().MAX_FILE_COUNT}) exceeded.`,
-            });
+            limitHits.fileLimitHit = true;
             isPartial = true;
+            this.recordSkip(relativePath, 'REPO_FILE_LIMIT_EXCEEDED');
             break;
           }
           
-          allFiles.push(fullPath);
+          // Normalize paths for files as well
+          allFiles.push(fullPath.split(path.sep).join('/'));
 
           if (ext === '.ts' || ext === '.tsx') {
             tsFileCount++;
             if (this.limitsPolicy.isTsFileCountExceeded(tsFileCount)) {
-              diagnostics.push({
-                code: 'TS_FILE_LIMIT_EXCEEDED',
-                severity: 'WARN',
-                message: `Maximum TS file count (${this.limitsPolicy.getLimits().MAX_TS_FILE_COUNT}) exceeded.`,
-              });
+              limitHits.fileLimitHit = true;
               isPartial = true;
+              this.recordSkip(relativePath, 'REPO_FILE_LIMIT_EXCEEDED');
               break;
             }
-            tsFiles.push(fullPath);
+            tsFiles.push(fullPath.split(path.sep).join('/'));
           } else if (ext === '.java') {
-            javaFiles.push(fullPath);
+            javaFiles.push(fullPath.split(path.sep).join('/'));
           }
         }
       }
@@ -209,12 +248,22 @@ export class SafeFileEnumerator {
       if (isPartial) break;
     }
 
+    const limits = this.limitsPolicy.getLimits();
+
     return {
       tsFiles,
       javaFiles,
       allFiles,
       diagnostics,
-      isPartial
+      isPartial,
+      skippedFiles: this.skippedFiles,
+      skippedSummary: this.skippedSummary,
+      limits: {
+        maxFiles: limits.MAX_FILE_COUNT,
+        maxFileBytes: limits.MAX_FILE_SIZE_KB * 1024,
+        maxTotalBytes: limits.MAX_REPO_SIZE_MB * 1024 * 1024,
+      },
+      limitHits,
     };
   }
 }
