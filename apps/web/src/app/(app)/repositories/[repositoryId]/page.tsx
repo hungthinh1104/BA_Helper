@@ -102,9 +102,6 @@ export default function RepositoryDetailsPage({ params }: PageProps) {
   if (!repo) return null;
 
   const job = repo.latestScanJob
-  const hasError = repo.latestScanJob?.status === "FAILED" || repo.latestScanJob?.status === "CANCELED"
-  const hasIndexFailed = repo.latestSnapshot?.indexStatus === "VECTOR_FAILED"
-
   const snapshots = snapshotList?.items || []
   const latestUsable = snapshots[0]
   const previousUsable = snapshots[1]

@@ -95,8 +95,8 @@ export function AppTopbar() {
             <ChevronsUpDown className="size-3.5 text-muted-foreground" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-56">
-            <DropdownMenuLabel>Projects</DropdownMenuLabel>
             <DropdownMenuRadioGroup value={workspace.projectId}>
+              <DropdownMenuLabel>Projects</DropdownMenuLabel>
               {workspace.projects.map((project) => (
                 <DropdownMenuRadioItem
                   key={project.projectId}

@@ -1,9 +1,7 @@
 import { useState } from "react"
 import { useRepositorySnapshotDrift } from "@/hooks/api/use-snapshot-drift"
-import { Activity, AlertTriangle, ChevronDown, ChevronUp, FileCode, Layers, SearchX, CheckCircle, ShieldAlert } from "lucide-react"
+import { Activity, AlertTriangle, ChevronDown, ChevronUp, Layers, CheckCircle, ShieldAlert } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 
 interface SnapshotDriftCardProps {
   projectId: string
@@ -210,7 +208,13 @@ function MetricCard({ label, value, isWarning }: { label: string; value: number;
   )
 }
 
-function SampleList({ title, count, items, isExpanded, onToggle }: { title: string, count: number, items: Array<any>, isExpanded: boolean, onToggle: () => void }) {
+interface SampleItem {
+  artifactKey: string
+  displayName?: string
+  symbolName?: string
+}
+
+function SampleList({ title, count, items, isExpanded, onToggle }: { title: string, count: number, items: Array<SampleItem>, isExpanded: boolean, onToggle: () => void }) {
   return (
     <div className="flex flex-col border border-border/40 rounded-lg overflow-hidden">
       <button

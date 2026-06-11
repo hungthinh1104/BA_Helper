@@ -1,7 +1,7 @@
 "use client"
 
 import { useAnalysisDriftFreshness } from "@/hooks/api/use-analyses"
-import { AlertCircle, CheckCircle2, Info, ShieldAlert, FileDigit, FilePlus, FileMinus } from "lucide-react"
+import { AlertCircle, Info, ShieldAlert, FileDigit, FilePlus, FileMinus } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -20,16 +20,18 @@ export function AnalysisDriftWarning({ projectId, analysisId }: AnalysisDriftWar
 
   const { status, severity, reason, driftSummary, shouldRerunAnalysis } = driftRecommendation
 
-  const RerunCTA = () => (
+  const rerunCTA = (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="ml-auto inline-block">
-            <Button size="sm" variant="secondary" className="h-7 text-xs px-3 font-semibold" disabled>
-              Re-run analysis
-            </Button>
-          </span>
-        </TooltipTrigger>
+        <TooltipTrigger
+          render={
+            <span className="ml-auto inline-block">
+              <Button size="sm" variant="secondary" className="h-7 text-xs px-3 font-semibold" disabled>
+                Re-run analysis
+              </Button>
+            </span>
+          }
+        />
         <TooltipContent>
           <p>Re-analysis action will be added in a later phase.</p>
         </TooltipContent>
@@ -37,16 +39,18 @@ export function AnalysisDriftWarning({ projectId, analysisId }: AnalysisDriftWar
     </TooltipProvider>
   )
 
-  const ReviewCTA = () => (
+  const reviewCTA = (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="ml-auto inline-block">
-            <Button size="sm" variant="secondary" className="h-7 text-xs px-3 font-semibold" disabled>
-              Review drift details
-            </Button>
-          </span>
-        </TooltipTrigger>
+        <TooltipTrigger
+          render={
+            <span className="ml-auto inline-block">
+              <Button size="sm" variant="secondary" className="h-7 text-xs px-3 font-semibold" disabled>
+                Review drift details
+              </Button>
+            </span>
+          }
+        />
         <TooltipContent>
           <p>Drift details view will be added in a later phase.</p>
         </TooltipContent>
@@ -72,7 +76,7 @@ export function AnalysisDriftWarning({ projectId, analysisId }: AnalysisDriftWar
         <span className="text-[13px] font-medium leading-relaxed">
           {reason || "Repository freshness cannot be fully determined because some artifacts do not have content hashes."}
         </span>
-        <ReviewCTA />
+        {reviewCTA}
       </div>
     )
   }
@@ -84,7 +88,7 @@ export function AnalysisDriftWarning({ projectId, analysisId }: AnalysisDriftWar
         <span className="text-[13px] font-medium leading-relaxed flex-1">
           {reason || "Repository scanner/analyzer versions changed significantly. Re-analysis is recommended."}
         </span>
-        <RerunCTA />
+        {rerunCTA}
       </div>
     )
   }
@@ -126,7 +130,7 @@ export function AnalysisDriftWarning({ projectId, analysisId }: AnalysisDriftWar
           )}
         </div>
 
-        {shouldRerunAnalysis ? <RerunCTA /> : <ReviewCTA />}
+        {shouldRerunAnalysis ? rerunCTA : reviewCTA}
       </div>
   )
 }

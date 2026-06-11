@@ -1,6 +1,5 @@
 import { useState } from "react"
 import { Activity, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, FileCode, Layers, SearchX } from "lucide-react"
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
 export interface ScanHealthPayload {
@@ -25,13 +24,13 @@ export interface ScanHealthPayload {
 
 export function parseScanHealthPayload(payload: unknown): ScanHealthPayload | null {
   if (!payload || typeof payload !== 'object') return null
-  const p = payload as Record<string, any>
+  const p = payload as Record<string, unknown>
   
   if (typeof p.coverageStatus !== 'string') return null
   if (typeof p.scannedFileCount !== 'number') return null
   if (typeof p.skippedFileCount !== 'number') return null
   
-  return p as ScanHealthPayload
+  return p as unknown as ScanHealthPayload
 }
 
 const HUMAN_READABLE_REASONS: Record<string, string> = {
@@ -69,7 +68,7 @@ export function ScanHealthCard({ payload }: { payload?: unknown }) {
   }
 
   const sortedSummary = Object.entries(data.skippedSummary || {})
-    .filter(([_, count]) => count > 0)
+    .filter(([, count]) => count > 0)
     .sort((a, b) => b[1] - a[1])
 
   const samplePaths = data.skippedFilesSample || []
