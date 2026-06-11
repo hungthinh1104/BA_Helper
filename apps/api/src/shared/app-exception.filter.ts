@@ -62,6 +62,7 @@ export class AppExceptionFilter implements ExceptionFilter {
       case 'APPROVED_REPORT_NOT_FOUND':
         return HttpStatus.NOT_FOUND;
       case 'REQUEST_KEY_MISMATCH':
+      case 'REPOSITORY_NOT_ANALYZABLE':
       case 'LAST_PROJECT_OWNER_REQUIRED':
       case 'INVALID_STATE_TRANSITION':
       case 'ANALYSIS_STALE':

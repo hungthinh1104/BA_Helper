@@ -6,6 +6,10 @@ Repository scan -> requirement creation -> impact analysis -> review
 decisions -> clarification loop -> derived analysis -> impact diff ->
 lineage timeline -> approved report -> Markdown/PDF export.
 
+Multi-repo fan-out foundation exists for backend batch creation: one ready
+requirement revision can spawn multiple normal per-repository analyses inside
+the same project. Merged cross-repo review/report output does not exist yet.
+
 ## Auth and RBAC
 
 - Dev-login exists.
@@ -44,7 +48,7 @@ lineage timeline -> approved report -> Markdown/PDF export.
 
 - private repos
 - OAuth / GitHub App
-- multi-repo analysis
+- merged cross-repo analysis/report
 - organizations / teams / invites
 - DOCX
 - Jira

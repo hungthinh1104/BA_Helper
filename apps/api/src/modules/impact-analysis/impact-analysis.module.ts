@@ -20,6 +20,7 @@ import { ListReviewClarificationsUseCase } from './application/list-review-clari
 import { AnswerReviewClarificationUseCase } from './application/answer-review-clarification.usecase';
 import { CreateDerivedAnalysisFromClarificationUseCase } from './application/create-derived-analysis-from-clarification.usecase';
 import { GetImpactAnalysisLineageUseCase } from './application/get-impact-analysis-lineage.usecase';
+import { CreateMultiRepoImpactAnalysesUseCase } from './application/create-multi-repo-impact-analyses.usecase';
 import { ReviewNoteController } from './api/review-note.controller';
 import { ReviewClarificationController } from './api/review-clarification.controller';
 import { ReviewNoteRepository } from './infrastructure/review-note.repository';
@@ -62,6 +63,7 @@ import { ProjectModule } from '../project/project.module';
     InsightRepository,
     TraceabilityRepository,
     CreateImpactAnalysisUseCase,
+    CreateMultiRepoImpactAnalysesUseCase,
     GetImpactAnalysisUseCase,
     FinalizeImpactAnalysisUseCase,
     RunImpactAnalysisUseCase,

@@ -81,4 +81,5 @@ Read:
 - Keep scope narrow.
 - Do not add new product scope from this index.
 - Out of scope: private repos, OAuth/GitHub App,
-  organizations/teams/invites, multi-repo, DOCX, Jira, and Confluence.
+  organizations/teams/invites, merged cross-repo reports, DOCX, Jira, and
+  Confluence.

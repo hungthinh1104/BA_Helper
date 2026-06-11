@@ -3,6 +3,8 @@ import {
   impactAnalysisCreateRequestSchema,
   impactAnalysisListResponseSchema,
   impactAnalysisResponseSchema,
+  multiRepoImpactAnalysisCreateRequestSchema,
+  multiRepoImpactAnalysisCreateResponseSchema,
   finalizeImpactAnalysisRequestSchema,
   impactGraphResponseSchema,
   qaCoverageResponseSchema,
@@ -19,6 +21,7 @@ import {
 import { JwtAuthGuard } from '../../auth/application/jwt-auth.guard';
 import { CurrentUser } from '../../auth/api/current-user.decorator';
 import { CreateImpactAnalysisUseCase } from '../application/create-impact-analysis.usecase';
+import { CreateMultiRepoImpactAnalysesUseCase } from '../application/create-multi-repo-impact-analyses.usecase';
 import { GetImpactAnalysisUseCase } from '../application/get-impact-analysis.usecase';
 import { FinalizeImpactAnalysisUseCase } from '../application/finalize-impact-analysis.usecase';
 import { ListImpactAnalysesUseCase } from '../application/list-impact-analyses.usecase';
@@ -43,6 +46,7 @@ import { ProjectPermissionService } from '../../project/application/project-perm
 export class ImpactAnalysisController {
   constructor(
     private readonly createAnalysis: CreateImpactAnalysisUseCase,
+    private readonly createMultiRepoAnalyses: CreateMultiRepoImpactAnalysesUseCase,
     private readonly getAnalysis: GetImpactAnalysisUseCase,
     private readonly finalizeAnalysis: FinalizeImpactAnalysisUseCase,
     private readonly listAnalyses: ListImpactAnalysesUseCase,
@@ -83,6 +87,31 @@ export class ImpactAnalysisController {
     );
 
     return response;
+  }
+
+  @Post('/projects/:projectId/multi-repo-analyses')
+  @Roles('ADMIN')
+  async createMultiRepo(
+    @Param('projectId') projectId: string,
+    @Body() body: unknown,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertPermission(
+      actor,
+      projectId,
+      'analysis:create',
+      'Project',
+    );
+    const input = multiRepoImpactAnalysisCreateRequestSchema.parse(body);
+    const result = await this.createMultiRepoAnalyses.execute({
+      projectId,
+      requirementRevisionId: input.requirementRevisionId,
+      repositoryIds: input.repositoryIds,
+      requestKey: input.requestKey,
+      allowPartialSnapshot: input.allowPartialSnapshot,
+    });
+
+    return multiRepoImpactAnalysisCreateResponseSchema.parse(result);
   }
 
   @Get('/impact-analyses/:analysisId')

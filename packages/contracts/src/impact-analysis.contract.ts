@@ -26,6 +26,22 @@ export const impactAnalysisCreateRequestSchema = z.object({
 	}
 });
 
+export const multiRepoImpactAnalysisCreateRequestSchema = z.object({
+	requirementRevisionId: z.string().uuid(),
+	repositoryIds: z.array(z.string().uuid()).min(2).max(20),
+	allowPartialSnapshot: z.boolean().default(false),
+	requestKey: z.string().uuid(),
+}).superRefine((data, ctx) => {
+	const unique = new Set(data.repositoryIds);
+	if (unique.size !== data.repositoryIds.length) {
+		ctx.addIssue({
+			code: z.ZodIssueCode.custom,
+			message: 'repositoryIds must be unique',
+			path: ['repositoryIds'],
+		});
+	}
+});
+
 export const impactAnalysisStatusSchema = z.enum([
 	'QUEUED',
 	'RUNNING',
@@ -120,6 +136,18 @@ export const impactAnalysisListResponseSchema = z.object({
 	items: z.array(impactAnalysisListItemResponseSchema),
 });
 
+export const multiRepoImpactAnalysisCreateResponseSchema = z.object({
+	requestKey: z.string().uuid(),
+	items: z.array(z.object({
+		repositoryId: z.string().uuid(),
+		repositoryDisplayName: z.string(),
+		analysisId: z.string().uuid(),
+		snapshotId: z.string().uuid(),
+		sourceTargetId: z.string().uuid(),
+		status: impactAnalysisStatusSchema,
+	})),
+});
+
 export const diffArtifactSchema = z.object({
 	artifactKey: z.string(),
 	name: z.string(),
@@ -174,10 +202,12 @@ export const impactAnalysisDiffResponseSchema = z.object({
 });
 
 export type ImpactAnalysisCreateRequest = z.infer<typeof impactAnalysisCreateRequestSchema>;
+export type MultiRepoImpactAnalysisCreateRequest = z.infer<typeof multiRepoImpactAnalysisCreateRequestSchema>;
 export type ImpactAnalysisResponse = z.infer<typeof impactAnalysisResponseSchema>;
 export type ImpactAnalysisDetailResponse = ImpactAnalysisResponse; // Alias for clarity
 export type ImpactAnalysisListItemResponse = z.infer<typeof impactAnalysisListItemResponseSchema>;
 export type ImpactAnalysisListResponse = z.infer<typeof impactAnalysisListResponseSchema>;
+export type MultiRepoImpactAnalysisCreateResponse = z.infer<typeof multiRepoImpactAnalysisCreateResponseSchema>;
 export type ImpactAnalysisDiffResponse = z.infer<typeof impactAnalysisDiffResponseSchema>;
 export type DiffArtifact = z.infer<typeof diffArtifactSchema>;
 export type DiffInsight = z.infer<typeof diffInsightSchema>;

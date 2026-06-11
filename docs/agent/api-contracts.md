@@ -41,6 +41,7 @@ POST /api/v1/projects/:projectId/requirements
 POST /api/v1/requirements/:requirementId/revisions
 POST /api/v1/requirement-revisions/:revisionId/qualify
 POST /api/v1/requirement-revisions/:revisionId/impact-analyses
+POST /api/v1/projects/:projectId/multi-repo-analyses
 
 GET  /api/v1/projects/:projectId/analyses
 GET  /api/v1/impact-analyses/:analysisId
@@ -209,6 +210,23 @@ If a revision was stored as `DRAFT`,
 `POST /requirement-revisions/:revisionId/qualify` runs readiness validation
 without changing its immutable title/raw text and transitions it to
 `READY_FOR_ANALYSIS` or `NEEDS_CLARIFICATION`.
+
+Multi-repo fan-out creation uses the selected project plus a ready requirement
+revision and a list of repository ids:
+
+```json
+{
+  "requirementRevisionId": "uuid",
+  "repositoryIds": ["uuid", "uuid"],
+  "allowPartialSnapshot": false,
+  "requestKey": "uuid"
+}
+```
+
+The backend resolves the latest observed target plus matching latest snapshot
+for each repository in the same project, then creates or reuses one normal
+`ImpactAnalysis` per repository. This endpoint is a batch fan-out foundation,
+not a merged cross-repo report contract.
 
 ## Status Contract
 
