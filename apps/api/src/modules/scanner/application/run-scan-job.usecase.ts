@@ -29,6 +29,28 @@ import type { DiagnosticItem } from '@ba-helper/contracts';
 import { summarizeDiagnostics } from './scan-diagnostic-summary';
 import { IncrementalScanClassifier } from './incremental-scan-classifier';
 
+/**
+ * Required diagnostic codes for every successfully finalized snapshot.
+ * If any of these are missing after classification, the scan is treated as
+ * incomplete and the snapshot must not be left in a usable state silently.
+ */
+const REQUIRED_SCAN_DIAGNOSTIC_CODES = [
+  'SCAN_HEALTH',
+  'INCREMENTAL_SCAN_SUMMARY',
+  'EMBEDDING_REUSE_PLAN',
+] as const;
+
+function assertRequiredDiagnostics(items: DiagnosticItem[]): void {
+  const presentCodes = new Set(items.map((d) => d.code));
+  const missing = REQUIRED_SCAN_DIAGNOSTIC_CODES.filter((code) => !presentCodes.has(code));
+  if (missing.length > 0) {
+    throw new AppError(
+      'SNAPSHOT_DIAGNOSTICS_INCOMPLETE',
+      `Required scan diagnostics missing before finalization: ${missing.join(', ')}`,
+    );
+  }
+}
+
 const safeRm = async (targetDir?: string): Promise<void> => {
   if (!targetDir) {
     return;
@@ -290,10 +312,16 @@ export class RunScanJobUseCase {
         },
       });
 
+      // Validate all required diagnostics are present before committing the snapshot as usable.
+      // If any are missing (e.g. classifier threw), this throws and the catch block
+      // marks the job as FAILED — the snapshot is left without a LEXICAL_READY promotion.
+      const finalDiagnostics = collector.getItems() as DiagnosticItem[];
+      assertRequiredDiagnostics(finalDiagnostics);
+
       // Update snapshot with final diagnostics
       await this.prisma.repositorySnapshot.update({
         where: { id: snapshot.id },
-        data: { diagnostics: collector.getItems() as unknown as import('@prisma/client').Prisma.InputJsonValue },
+        data: { diagnostics: finalDiagnostics as unknown as import('@prisma/client').Prisma.InputJsonValue },
       });
 
       if (repositoryProfile) {

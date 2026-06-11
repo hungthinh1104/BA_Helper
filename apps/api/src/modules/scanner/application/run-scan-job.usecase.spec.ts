@@ -340,4 +340,62 @@ describe('RunScanJobUseCase', () => {
     expect(removedSample).not.toHaveProperty('contentHash');
     expect(removedSample).not.toHaveProperty('excerpt');
   });
+
+  it('persists all three required diagnostics: SCAN_HEALTH, INCREMENTAL_SCAN_SUMMARY, EMBEDDING_REUSE_PLAN', async () => {
+    (fs.mkdtemp as jest.Mock).mockResolvedValue('/tmp/ba-scan-required-diag');
+    (fs.rm as jest.Mock).mockResolvedValue(undefined);
+    analyzer.GitHubUrlValidator.validate.mockReturnValue({ isValid: true });
+    analyzer.GitRepositoryFetcher.fetch.mockResolvedValue({ commitSha: 'req-commit' });
+    analyzer.FrameworkDetector.detect.mockResolvedValue({ isSupported: true });
+    analyzer.RepositoryProfileDetector.detect.mockResolvedValue({ domain: 'BOOKING', framework: 'NESTJS' });
+    analyzer.SafeFileEnumerator.mockImplementation(() => ({
+      enumerate: jest.fn().mockResolvedValue({ tsFiles: [], allFiles: [], diagnostics: [], isPartial: false }),
+    }));
+    analyzer.scanProject.mockReturnValue({
+      analyzerVersion: '0.2.0',
+      artifacts: [],
+      coverage: { status: 'READY', skippedSummary: {} },
+    });
+
+    await useCase.execute({ jobId: 'job-1' });
+
+    const updateCall = prisma.repositorySnapshot.update.mock.calls[0][0];
+    const diagnosticCodes: string[] = updateCall.data.diagnostics.map((d: any) => d.code);
+
+    expect(diagnosticCodes).toContain('SCAN_HEALTH');
+    expect(diagnosticCodes).toContain('INCREMENTAL_SCAN_SUMMARY');
+    expect(diagnosticCodes).toContain('EMBEDDING_REUSE_PLAN');
+  });
+
+  it('fails the job explicitly when diagnostics update throws — no silent success', async () => {
+    (fs.mkdtemp as jest.Mock).mockResolvedValue('/tmp/ba-scan-diag-fail');
+    (fs.rm as jest.Mock).mockResolvedValue(undefined);
+    analyzer.GitHubUrlValidator.validate.mockReturnValue({ isValid: true });
+    analyzer.GitRepositoryFetcher.fetch.mockResolvedValue({ commitSha: 'diag-fail-commit' });
+    analyzer.FrameworkDetector.detect.mockResolvedValue({ isSupported: true });
+    analyzer.RepositoryProfileDetector.detect.mockResolvedValue({ domain: 'BOOKING', framework: 'NESTJS' });
+    analyzer.SafeFileEnumerator.mockImplementation(() => ({
+      enumerate: jest.fn().mockResolvedValue({ tsFiles: [], allFiles: [], diagnostics: [], isPartial: false }),
+    }));
+    analyzer.scanProject.mockReturnValue({
+      analyzerVersion: '0.2.0',
+      artifacts: [],
+      coverage: { status: 'READY', skippedSummary: {} },
+    });
+
+    // Simulate DB failure when persisting final diagnostics
+    prisma.repositorySnapshot.update.mockRejectedValueOnce(new Error('db connection lost'));
+
+    await expect(useCase.execute({ jobId: 'job-1' })).rejects.toThrow('db connection lost');
+
+    // Job must be marked FAILED — not COMPLETED
+    const finalState = scanJobRepository.updateState.mock.calls.at(-1)?.[0];
+    expect(finalState?.status).toBe(ScanJobStatus.FAILED);
+
+    // No SCAN_JOB_COMPLETED event should have been emitted
+    const completedCall = eventLogService.recordEvent.mock.calls.find(
+      (c: any[]) => c[0]?.eventType === 'SCAN_JOB_COMPLETED',
+    );
+    expect(completedCall).toBeUndefined();
+  });
 });

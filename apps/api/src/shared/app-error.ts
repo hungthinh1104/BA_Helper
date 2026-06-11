@@ -97,7 +97,9 @@ export type AppErrorCode =
   | 'INVALID_ACTOR'
   | 'UNKNOWN_EVENT_TYPE'
   | 'INVALID_IDEMPOTENCY_KEY'
-  | 'MISSING_IDEMPOTENCY_KEY';
+  | 'MISSING_IDEMPOTENCY_KEY'
+  | 'SNAPSHOT_DIAGNOSTICS_INCOMPLETE';
+
 
 export class AppError extends Error {
   constructor(
