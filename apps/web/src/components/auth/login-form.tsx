@@ -23,7 +23,7 @@ export function LoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const safeNext = useMemo(
-    () => getSafeNext(searchParams.get("next")),
+    () => getSafeNext(searchParams?.get("next")),
     [searchParams],
   )
 

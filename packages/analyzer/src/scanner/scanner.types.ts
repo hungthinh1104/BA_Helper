@@ -31,6 +31,7 @@ export type RepositoryProfileLanguage = 'TYPESCRIPT' | 'UNKNOWN';
 
 export type RepositoryProfileFramework =
   | 'NESTJS'
+  | 'SPRING_BOOT'
   | 'GENERIC_TYPESCRIPT'
   | 'UNKNOWN';
 

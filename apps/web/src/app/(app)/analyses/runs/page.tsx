@@ -20,20 +20,22 @@ function formatDate(iso: string) {
 }
 
 function formatStatusCounts(counts: Record<string, number>) {
-  const entries = [
+  const entries: [string, number][] = [
     ["Queued", counts.QUEUED],
     ["Running", counts.RUNNING],
     ["Review", counts.WAITING_FOR_REVIEW],
     ["Done", counts.COMPLETED],
     ["Failed", counts.FAILED],
     ["Cancelled", counts.CANCELLED],
-  ].filter(([, count]) => count > 0)
+  ];
 
-  if (entries.length === 0) {
+  const filtered = entries.filter(([, count]) => count > 0);
+
+  if (filtered.length === 0) {
     return "No child analyses"
   }
 
-  return entries.map(([label, count]) => `${label} ${count}`).join(" • ")
+  return filtered.map(([label, count]) => `${label} ${count}`).join(" • ")
 }
 
 export default function MultiRepoRunsPage() {

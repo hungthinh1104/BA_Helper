@@ -127,7 +127,7 @@ export default function ApprovedMultiRepoReportPage({
           icon: <MessageSquareWarning className="w-3.5 h-3.5" />,
           variant: "secondary" as const,
         },
-      }[latestReviewedDecision.decision]
+      }[latestReviewedDecision.decision as "ACCEPTED" | "REJECTED" | "NEEDS_MORE_CLARIFICATION"]
     : null
 
   return (
@@ -275,7 +275,7 @@ export default function ApprovedMultiRepoReportPage({
                     No merged report review decisions yet.
                   </div>
                 )}
-                {reviewDecisions.map((item) => (
+                {reviewDecisions.map((item: any) => (
                   <div key={item.id} className="rounded-lg border border-border/50 bg-background/60 px-3 py-3">
                     <div className="mb-1 flex flex-wrap items-center gap-2 text-[12px]">
                       <Badge

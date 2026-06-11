@@ -218,6 +218,52 @@ export const multiRepoAnalysisRunListResponseSchema = z.object({
 	items: z.array(multiRepoAnalysisRunListItemResponseSchema),
 });
 
+export const multiRepoImpactMatrixRowSchema = z.object({
+	domain: z.string().nullable(),
+	repositoryId: z.string().uuid(),
+	repositoryDisplayName: z.string(),
+	language: z.string().nullable(),
+	framework: z.string().nullable(),
+	analysisId: z.string().uuid(),
+	analysisStatus: impactAnalysisStatusSchema,
+	latestReviewDecision: z.enum(['ACCEPTED', 'REJECTED', 'NEEDS_MORE_CLARIFICATION']).nullable(),
+	artifactCounts: z.object({
+		API_ENDPOINT: z.number().int().nonnegative(),
+		DOMAIN_SERVICE: z.number().int().nonnegative(),
+		DATA_MODEL: z.number().int().nonnegative(),
+		TEST_CASE: z.number().int().nonnegative(),
+		UNKNOWN: z.number().int().nonnegative(),
+	}),
+	riskCount: z.number().int().nonnegative(),
+	unknownCount: z.number().int().nonnegative(),
+	conflictingCount: z.number().int().nonnegative(),
+	qaScenarioCount: z.number().int().nonnegative(),
+	evidenceCount: z.number().int().nonnegative(),
+	blockingReason: z.enum([
+		'FAILED',
+		'NOT_COMPLETED',
+		'WAITING_FOR_REVIEW',
+		'NEEDS_MORE_CLARIFICATION',
+		'REJECTED',
+		'NONE',
+	]).nullable(),
+});
+
+export const multiRepoImpactMatrixResponseSchema = z.object({
+	runId: z.string().uuid(),
+	requirementTitle: z.string(),
+	rows: z.array(multiRepoImpactMatrixRowSchema),
+	summary: z.object({
+		totalRepositories: z.number().int().nonnegative(),
+		domainsImpacted: z.array(z.string()),
+		totalArtifacts: z.number().int().nonnegative(),
+		totalRisks: z.number().int().nonnegative(),
+		totalQaScenarios: z.number().int().nonnegative(),
+		acceptedRepos: z.number().int().nonnegative(),
+		blockedRepos: z.number().int().nonnegative(),
+	}),
+});
+
 export const multiRepoMergedReportDraftResponseSchema = z.object({
 	runId: z.string().uuid(),
 	projectId: z.string().uuid(),
@@ -337,6 +383,8 @@ export type MultiRepoImpactAnalysisCreateResponse = z.infer<typeof multiRepoImpa
 export type MultiRepoAnalysisRunDetailResponse = z.infer<typeof multiRepoAnalysisRunDetailResponseSchema>;
 export type MultiRepoAnalysisRunListItemResponse = z.infer<typeof multiRepoAnalysisRunListItemResponseSchema>;
 export type MultiRepoAnalysisRunListResponse = z.infer<typeof multiRepoAnalysisRunListResponseSchema>;
+export type MultiRepoImpactMatrixRow = z.infer<typeof multiRepoImpactMatrixRowSchema>;
+export type MultiRepoImpactMatrixResponse = z.infer<typeof multiRepoImpactMatrixResponseSchema>;
 export type MultiRepoMergedReportDraftResponse = z.infer<typeof multiRepoMergedReportDraftResponseSchema>;
 export type MultiRepoApprovedReportResponse = z.infer<typeof multiRepoApprovedReportResponseSchema>;
 export type MergedMultiRepoReportReviewDecisionResponse = z.infer<typeof mergedMultiRepoReportReviewDecisionResponseSchema>;

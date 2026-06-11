@@ -47,8 +47,8 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       try {
         apiBaseUrl = getApiBaseUrl()
         const authHeaders =
-          typeof session?.accessToken === "string" && session.accessToken
-            ? { Authorization: `Bearer ${session.accessToken}` }
+          typeof (session as any)?.accessToken === "string" && session?.accessToken
+            ? { Authorization: `Bearer ${session?.accessToken}` }
             : undefined
         const workspace = await apiGet(
           "/api/v1/workspace/current",
@@ -80,7 +80,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [queryClient, session?.accessToken, status])
+  }, [queryClient, (session as any)?.accessToken, status])
 
   const value: ProjectContextValue =
     state.status !== "ready"
@@ -89,8 +89,8 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
           ...state,
           switchProject: async (projectId: string) => {
             const authHeaders =
-              typeof session?.accessToken === "string" && session.accessToken
-                ? { Authorization: `Bearer ${session.accessToken}` }
+              typeof (session as any)?.accessToken === "string" && session?.accessToken
+                ? { Authorization: `Bearer ${session?.accessToken}` }
                 : undefined
 
             if (!authHeaders) {

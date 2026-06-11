@@ -23,7 +23,7 @@ function ReportsPageContent() {
 
   const searchParams = useSearchParams()
   const router = useRouter()
-  const urlAnalysisId = searchParams.get("analysisId")
+  const urlAnalysisId = searchParams?.get("analysisId")
   const activeAnalysisId =
     urlAnalysisId && completedAnalyses.some((analysis) => analysis.id === urlAnalysisId)
       ? urlAnalysisId

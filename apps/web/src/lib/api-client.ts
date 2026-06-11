@@ -17,7 +17,7 @@ type SessionWithAccessToken = {
   }
 }
 
-async function getAuthHeaders() {
+async function getAuthHeaders(): Promise<Record<string, string>> {
   if (typeof window === "undefined") {
     return {};
   }

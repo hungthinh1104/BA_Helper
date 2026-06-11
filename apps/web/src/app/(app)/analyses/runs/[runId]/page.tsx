@@ -13,6 +13,10 @@ import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useMultiRepoImpactMatrix } from "@/hooks/api/use-analyses"
+
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   QUEUED:             { label: "Queued",       className: "bg-border text-muted-foreground border-border/50" },
   RUNNING:            { label: "Running",      className: "bg-primary/10 text-primary border-primary/50" },
@@ -65,6 +69,91 @@ function SummaryCard({
     <div className={`rounded-lg border bg-surface px-3 py-2 ${toneClass}`}>
       <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
       <div className="mt-1 text-[16px] font-semibold">{value}</div>
+    </div>
+  )
+}
+
+function ImpactMatrixTable({ runId }: { runId: string }) {
+  const { data, isLoading, error } = useMultiRepoImpactMatrix(runId)
+
+  if (isLoading) {
+    return <div className="py-8 text-center text-sm text-muted-foreground">Loading matrix...</div>
+  }
+
+  if (error || !data) {
+    return (
+      <div className="flex flex-col items-center py-8 text-muted-foreground">
+        <AlertCircle className="w-5 h-5 text-destructive mb-2" />
+        <p className="text-[13px] font-medium text-foreground">Failed to load impact matrix</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-md border bg-surface">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Domain</TableHead>
+            <TableHead>Repository</TableHead>
+            <TableHead className="text-right">API</TableHead>
+            <TableHead className="text-right">Service</TableHead>
+            <TableHead className="text-right">Data</TableHead>
+            <TableHead className="text-right">Test</TableHead>
+            <TableHead className="text-right">Risks</TableHead>
+            <TableHead className="text-right">QA</TableHead>
+            <TableHead>Review</TableHead>
+            <TableHead>Status</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {data.rows.map((row: any) => (
+            <TableRow key={row.analysisId}>
+              <TableCell className="font-medium">{row.domain}</TableCell>
+              <TableCell>
+                <Link href={`/analyses/${row.analysisId}`} className="hover:underline text-primary">
+                  {row.repositoryDisplayName}
+                </Link>
+              </TableCell>
+              <TableCell className="text-right">{row.artifactCounts.API_ENDPOINT || "-"}</TableCell>
+              <TableCell className="text-right">{row.artifactCounts.DOMAIN_SERVICE || "-"}</TableCell>
+              <TableCell className="text-right">{row.artifactCounts.DATA_MODEL || "-"}</TableCell>
+              <TableCell className="text-right">{row.artifactCounts.TEST_CASE || "-"}</TableCell>
+              <TableCell className="text-right">
+                {row.riskCount > 0 ? (
+                  <span className="text-destructive font-medium">{row.riskCount}</span>
+                ) : (
+                  <span className="text-muted-foreground">-</span>
+                )}
+              </TableCell>
+              <TableCell className="text-right">{row.qaScenarioCount || "-"}</TableCell>
+              <TableCell>
+                {row.latestReviewDecision === "ACCEPTED" ? (
+                  <span className="text-success font-medium">Accepted</span>
+                ) : row.latestReviewDecision === "REJECTED" ? (
+                  <span className="text-destructive font-medium">Rejected</span>
+                ) : row.latestReviewDecision === "NEEDS_MORE_CLARIFICATION" ? (
+                  <span className="text-warning font-medium">Clarification</span>
+                ) : (
+                  <span className="text-muted-foreground">Pending</span>
+                )}
+              </TableCell>
+              <TableCell>
+                <span className={`text-[12px] ${row.blockingReason === "NONE" ? "text-success" : "text-warning"}`}>
+                  {BLOCKING_REASON_LABEL[row.blockingReason || "NONE"]}
+                </span>
+              </TableCell>
+            </TableRow>
+          ))}
+          {data.rows.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={10} className="text-center text-muted-foreground h-24">
+                No repositories found in this run.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
     </div>
   )
 }
@@ -193,94 +282,107 @@ export default function MultiRepoAnalysisRunDetailPage({
           </div>
         )}
 
-        <DataList>
-          <DataListHeader gridCols={gridCols}>
-            <DataListCell>Repository</DataListCell>
-            <DataListCell>Commit</DataListCell>
-            <DataListCell>Status</DataListCell>
-            <DataListCell>Freshness</DataListCell>
-            <DataListCell>Latest Review</DataListCell>
-            <DataListCell>Blocking</DataListCell>
-          </DataListHeader>
+        <Tabs defaultValue="matrix" className="mt-6">
+          <TabsList>
+            <TabsTrigger value="matrix">Impact Matrix</TabsTrigger>
+            <TabsTrigger value="list">Child Analyses</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="matrix" className="mt-4">
+            <ImpactMatrixTable runId={runId} />
+          </TabsContent>
+          
+          <TabsContent value="list" className="mt-4">
+            <DataList>
+              <DataListHeader gridCols={gridCols}>
+                <DataListCell>Repository</DataListCell>
+                <DataListCell>Commit</DataListCell>
+                <DataListCell>Status</DataListCell>
+                <DataListCell>Freshness</DataListCell>
+                <DataListCell>Latest Review</DataListCell>
+                <DataListCell>Blocking</DataListCell>
+              </DataListHeader>
 
-          {isLoading && (
-            <>
-              {[1, 2, 3].map((item) => (
-                <DataListRow key={item} gridCols={gridCols}>
-                  <DataListCell><Skeleton className="h-4 w-[180px]" /></DataListCell>
-                  <DataListCell><Skeleton className="h-4 w-[100px]" /></DataListCell>
-                  <DataListCell><Skeleton className="h-5 w-[80px] rounded-md" /></DataListCell>
-                  <DataListCell><Skeleton className="h-4 w-[70px]" /></DataListCell>
-                  <DataListCell><Skeleton className="h-4 w-[120px]" /></DataListCell>
-                  <DataListCell><Skeleton className="h-4 w-[90px]" /></DataListCell>
-                </DataListRow>
-              ))}
-            </>
-          )}
+              {isLoading && (
+                <>
+                  {[1, 2, 3].map((item) => (
+                    <DataListRow key={item} gridCols={gridCols}>
+                      <DataListCell><Skeleton className="h-4 w-[180px]" /></DataListCell>
+                      <DataListCell><Skeleton className="h-4 w-[100px]" /></DataListCell>
+                      <DataListCell><Skeleton className="h-5 w-[80px] rounded-md" /></DataListCell>
+                      <DataListCell><Skeleton className="h-4 w-[70px]" /></DataListCell>
+                      <DataListCell><Skeleton className="h-4 w-[120px]" /></DataListCell>
+                      <DataListCell><Skeleton className="h-4 w-[90px]" /></DataListCell>
+                    </DataListRow>
+                  ))}
+                </>
+              )}
 
-          {error && !isLoading && (
-            <div className="flex flex-col items-center py-16 text-muted-foreground">
-              <AlertCircle className="w-6 h-6 text-destructive mb-4" />
-              <p className="text-[13px] font-medium text-foreground">Failed to load multi-repo run</p>
-              <p className="text-[12px]">{error.message}</p>
-            </div>
-          )}
+              {error && !isLoading && (
+                <div className="flex flex-col items-center py-16 text-muted-foreground">
+                  <AlertCircle className="w-6 h-6 text-destructive mb-4" />
+                  <p className="text-[13px] font-medium text-foreground">Failed to load multi-repo run</p>
+                  <p className="text-[12px]">{error.message}</p>
+                </div>
+              )}
 
-          {data?.items.map((item) => {
-            const badge = STATUS_BADGE[item.status] ?? STATUS_BADGE.QUEUED
+              {data?.items.map((item) => {
+                const badge = STATUS_BADGE[item.status] ?? STATUS_BADGE.QUEUED
 
-            return (
-              <DataListRow
-                key={item.analysisId}
-                gridCols={gridCols}
-                href={`/analyses/${item.analysisId}`}
-              >
-                <DataListCell>
-                  <div className="font-medium text-[13px] text-foreground leading-snug">{item.repositoryDisplayName}</div>
-                  <div className="text-muted-foreground text-[11px] font-mono mt-0.5">{item.analysisId}</div>
-                </DataListCell>
-                <DataListCell>
-                  <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground font-mono">
-                    <GitBranch className="w-3.5 h-3.5" />
-                    {item.commitSha.substring(0, 7)}
-                  </div>
-                </DataListCell>
-                <DataListCell>
-                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 border rounded-md text-[10px] font-semibold tracking-wide uppercase ${badge.className}`}>
-                    {badge.label}
-                  </span>
-                </DataListCell>
-                <DataListCell>
-                  <span className={`text-[12px] ${item.isStale ? "text-warning" : "text-muted-foreground"}`}>
-                    {item.isStale ? "Stale" : "Current"}
-                  </span>
-                </DataListCell>
-                <DataListCell>
-                  {item.latestReviewDecision ? (
-                    <div className="space-y-0.5">
-                      <div className="text-[12px] text-foreground">
-                        {item.latestReviewDecision === "NEEDS_MORE_CLARIFICATION"
-                          ? "Needs clarification"
-                          : item.latestReviewDecision.charAt(0) + item.latestReviewDecision.slice(1).toLowerCase()}
+                return (
+                  <DataListRow
+                    key={item.analysisId}
+                    gridCols={gridCols}
+                    href={`/analyses/${item.analysisId}`}
+                  >
+                    <DataListCell>
+                      <div className="font-medium text-[13px] text-foreground leading-snug">{item.repositoryDisplayName}</div>
+                      <div className="text-muted-foreground text-[11px] font-mono mt-0.5">{item.analysisId}</div>
+                    </DataListCell>
+                    <DataListCell>
+                      <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground font-mono">
+                        <GitBranch className="w-3.5 h-3.5" />
+                        {item.commitSha.substring(0, 7)}
                       </div>
-                      <div className="text-[11px] text-muted-foreground">
-                        {item.reviewedBy ?? "Unknown"}
-                        {item.latestReviewDecisionAt ? ` • ${formatDate(item.latestReviewDecisionAt)}` : ""}
-                      </div>
-                    </div>
-                  ) : (
-                    <span className="text-[12px] text-muted-foreground">Pending review</span>
-                  )}
-                </DataListCell>
-                <DataListCell>
-                  <span className={`text-[12px] ${item.blockingReason === "NONE" ? "text-success" : "text-warning"}`}>
-                    {BLOCKING_REASON_LABEL[item.blockingReason]}
-                  </span>
-                </DataListCell>
-              </DataListRow>
-            )
-          })}
-        </DataList>
+                    </DataListCell>
+                    <DataListCell>
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 border rounded-md text-[10px] font-semibold tracking-wide uppercase ${badge.className}`}>
+                        {badge.label}
+                      </span>
+                    </DataListCell>
+                    <DataListCell>
+                      <span className={`text-[12px] ${item.isStale ? "text-warning" : "text-muted-foreground"}`}>
+                        {item.isStale ? "Stale" : "Current"}
+                      </span>
+                    </DataListCell>
+                    <DataListCell>
+                      {item.latestReviewDecision ? (
+                        <div className="space-y-0.5">
+                          <div className="text-[12px] text-foreground">
+                            {item.latestReviewDecision === "NEEDS_MORE_CLARIFICATION"
+                              ? "Needs clarification"
+                              : item.latestReviewDecision.charAt(0) + item.latestReviewDecision.slice(1).toLowerCase()}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground">
+                            {item.reviewedBy ?? "Unknown"}
+                            {item.latestReviewDecisionAt ? ` • ${formatDate(item.latestReviewDecisionAt)}` : ""}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-[12px] text-muted-foreground">Pending review</span>
+                      )}
+                    </DataListCell>
+                    <DataListCell>
+                      <span className={`text-[12px] ${item.blockingReason === "NONE" ? "text-success" : "text-warning"}`}>
+                        {BLOCKING_REASON_LABEL[item.blockingReason]}
+                      </span>
+                    </DataListCell>
+                  </DataListRow>
+                )
+              })}
+            </DataList>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )

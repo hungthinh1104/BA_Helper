@@ -22,6 +22,7 @@ import { CreateDerivedAnalysisFromClarificationUseCase } from './application/cre
 import { GetImpactAnalysisLineageUseCase } from './application/get-impact-analysis-lineage.usecase';
 import { CreateMultiRepoImpactAnalysesUseCase } from './application/create-multi-repo-impact-analyses.usecase';
 import { GetMultiRepoAnalysisRunUseCase } from './application/get-multi-repo-analysis-run.usecase';
+import { GetMultiRepoImpactMatrixUseCase } from './application/get-multi-repo-impact-matrix.usecase';
 import { GetMergedMultiRepoReportDraftUseCase } from './application/get-merged-multi-repo-report-draft.usecase';
 import { FinalizeMultiRepoReportUseCase } from './application/finalize-multi-repo-report.usecase';
 import { GetApprovedMultiRepoReportUseCase } from './application/get-approved-multi-repo-report.usecase';
@@ -82,6 +83,7 @@ import { ProjectModule } from '../project/project.module';
     CreateMultiRepoImpactAnalysesUseCase,
     GetImpactAnalysisUseCase,
     GetMultiRepoAnalysisRunUseCase,
+    GetMultiRepoImpactMatrixUseCase,
     GetMergedMultiRepoReportDraftUseCase,
     FinalizeMultiRepoReportUseCase,
     GetApprovedMultiRepoReportUseCase,
