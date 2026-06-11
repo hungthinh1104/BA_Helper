@@ -10,11 +10,11 @@ import { getDomainGlossary } from '../../domain-profile';
 import { Prisma } from '@prisma/client';
 
 const WEIGHTS = {
-  lexical: 0.40,
-  graph: 0.35,
-  vector: 0.20,
-  domain: 0.05,
-};
+  lexical: 0.45,
+  vector: 0.35,
+  graph: 0.15,
+  kindBoost: 0.05,
+} as const;
 
 const MIN_VECTOR_SIMILARITY = 0.72;
 const WEAK_VECTOR_THRESHOLD = 0.75;
@@ -26,8 +26,9 @@ type Candidate = {
   graphScoreNorm: number;
   vectorScoreNorm: number;
   domainBoostNorm: number;
+  kindBoostNorm: number;
   noisePenalty: number;
-  signals: Set<'LEXICAL' | 'GRAPH' | 'VECTOR' | 'DOMAIN'>;
+  signals: Set<'LEXICAL' | 'GRAPH' | 'VECTOR' | 'DOMAIN' | 'KIND'>;
   graphDepth?: number;
   lexicalReasons: string[];
 };
@@ -49,8 +50,10 @@ export class HybridRetrievalService {
     
     const snapshot = await this.prisma.repositorySnapshot.findUnique({
       where: { id: request.snapshotId },
+      include: { profile: true },
     });
     const indexStatus = snapshot?.indexStatus ?? 'NOT_INDEXED';
+    const profileDomain = snapshot?.profile?.domain;
 
     const candidates = new Map<string, Candidate>();
 
@@ -63,6 +66,7 @@ export class HybridRetrievalService {
           graphScoreNorm: 0,
           vectorScoreNorm: 0,
           domainBoostNorm: 0,
+          kindBoostNorm: 0,
           noisePenalty: 0,
           signals: new Set(),
           lexicalReasons: [],
@@ -73,13 +77,20 @@ export class HybridRetrievalService {
     };
 
     // 1. Lexical search — domain-glossary-aware keyword extraction
-    const { glossaryMatches, symbolMatches } = this.extractKeywords(request.changeRequest, request.domain);
+    const { glossaryMatches, symbolMatches } = this.extractKeywords(request.changeRequest, profileDomain ?? request.domain);
     const keywords = [...glossaryMatches, ...symbolMatches];
+    
+    // Intent Detection
+    const lowerReq = request.changeRequest.toLowerCase();
+    const wantsApi = /(api|endpoint|controller|route|http)/i.test(lowerReq);
+    const wantsService = /(business|logic|service|rule)/i.test(lowerReq);
+    const wantsData = /(database|save|persist|data|model|schema|table)/i.test(lowerReq);
+    const wantsTest = /(test|qa|regression|verify|spec)/i.test(lowerReq);
     
     if (keywords.length > 0) {
       const lexicalPatterns = keywords.map((keyword) => Prisma.sql`${`%${keyword}%`}`);
       const lexicalHits = await this.prisma.$queryRaw<any[]>(Prisma.sql`
-        SELECT id, "artifactKey", "filePath", name AS "symbolName", "artifactType"
+        SELECT id, "artifactKey", "filePath", name AS "symbolName", "artifactType", "universal_kind" AS "universalKind"
         FROM "CodeArtifact"
         WHERE "snapshotId" = ${request.snapshotId}
           AND (
@@ -228,7 +239,6 @@ export class HybridRetrievalService {
       if (isNoisySupport) {
          c.noisePenalty = 0.15;
       } else if (isWeakVector && isVectorOnly) {
-         // This block might not be hit if we drop them above, but keeps logic solid if threshold drops
          if (isTest && !mentionsTest) {
              c.noisePenalty = 0.05;
          } else {
@@ -236,11 +246,22 @@ export class HybridRetrievalService {
          }
       }
 
+      // Calculate kindBoostNorm
+      const kind = artifact.universalKind;
+      if (kind === 'API_ENDPOINT' && wantsApi) c.kindBoostNorm = 1.0;
+      else if (kind === 'DOMAIN_SERVICE' && wantsService) c.kindBoostNorm = 1.0;
+      else if (kind === 'DATA_MODEL' && wantsData) c.kindBoostNorm = 1.0;
+      else if (kind === 'TEST_CASE' && wantsTest) c.kindBoostNorm = 1.0;
+
+      if (c.kindBoostNorm > 0) {
+        c.signals.add('KIND');
+      }
+
       const finalScore = 
         (c.lexicalScoreNorm * WEIGHTS.lexical) + 
         (c.graphScoreNorm * WEIGHTS.graph) + 
         (c.vectorScoreNorm * WEIGHTS.vector) + 
-        (c.domainBoostNorm * WEIGHTS.domain) - 
+        (c.kindBoostNorm * WEIGHTS.kindBoost) - 
         c.noisePenalty;
         
       if (finalScore <= 0) continue;
@@ -273,6 +294,7 @@ export class HybridRetrievalService {
         graphScore: c.graphScoreNorm,
         vectorScore: c.vectorScoreNorm,
         domainBoost: c.domainBoostNorm,
+        kindBoost: c.kindBoostNorm,
         finalScore: finalScore,
       };
       
