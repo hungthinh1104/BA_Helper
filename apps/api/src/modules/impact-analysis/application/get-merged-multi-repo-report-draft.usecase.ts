@@ -5,6 +5,7 @@ import { InsightRepository } from '../../insight/infrastructure/insight.reposito
 import { TraceabilityRepository } from '../../traceability/infrastructure/traceability.repository';
 import { MultiRepoAnalysisRunRepository } from '../infrastructure/multi-repo-analysis-run.repository';
 import { MergedMultiRepoReportDraftBuilder } from './merged-multi-repo-report-draft.builder';
+import { BuildMultiRepoImpactMatrixReadModel } from './build-multi-repo-impact-matrix.read-model';
 
 @Injectable()
 export class GetMergedMultiRepoReportDraftUseCase {
@@ -13,6 +14,7 @@ export class GetMergedMultiRepoReportDraftUseCase {
     private readonly insights: InsightRepository,
     private readonly traceability: TraceabilityRepository,
     private readonly builder: MergedMultiRepoReportDraftBuilder,
+    private readonly matrixReadModel: BuildMultiRepoImpactMatrixReadModel,
   ) {}
 
   async execute(runId: string) {
@@ -59,6 +61,8 @@ export class GetMergedMultiRepoReportDraftUseCase {
       }),
     );
 
+    const matrix = await this.matrixReadModel.execute(runId);
+
     return {
       runId: run.id,
       projectId: run.projectId,
@@ -81,6 +85,7 @@ export class GetMergedMultiRepoReportDraftUseCase {
         requirementRawText: run.requirementRevision.rawText,
         generatedAt,
         children,
+        matrix,
       }),
     };
   }

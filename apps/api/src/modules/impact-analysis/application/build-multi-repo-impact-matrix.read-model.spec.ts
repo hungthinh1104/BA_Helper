@@ -1,7 +1,7 @@
-import { GetMultiRepoImpactMatrixUseCase } from './get-multi-repo-impact-matrix.usecase';
+import { BuildMultiRepoImpactMatrixReadModel } from './build-multi-repo-impact-matrix.read-model';
 import { NotFoundException } from '@nestjs/common';
 
-describe('GetMultiRepoImpactMatrixUseCase', () => {
+describe('BuildMultiRepoImpactMatrixReadModel', () => {
   it('aggregates metrics correctly', async () => {
     const runRepo = {
       findById: jest.fn().mockResolvedValue({
@@ -49,7 +49,7 @@ describe('GetMultiRepoImpactMatrixUseCase', () => {
       },
     } as any;
 
-    const useCase = new GetMultiRepoImpactMatrixUseCase(prisma, runRepo as any);
+    const useCase = new BuildMultiRepoImpactMatrixReadModel(prisma, runRepo as any);
     const result = await useCase.execute('run-1');
 
     expect(result.runId).toBe('run-1');
@@ -90,7 +90,7 @@ describe('GetMultiRepoImpactMatrixUseCase', () => {
 
   it('throws not found if run missing', async () => {
     const runRepo = { findById: jest.fn().mockResolvedValue(null) };
-    const useCase = new GetMultiRepoImpactMatrixUseCase({} as any, runRepo as any);
+    const useCase = new BuildMultiRepoImpactMatrixReadModel({} as any, runRepo as any);
     
     await expect(useCase.execute('run-X')).rejects.toThrow(NotFoundException);
   });

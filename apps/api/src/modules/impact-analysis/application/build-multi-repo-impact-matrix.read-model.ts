@@ -4,7 +4,7 @@ import { MultiRepoAnalysisRunRepository } from '../infrastructure/multi-repo-ana
 import { MultiRepoImpactMatrixResponse, MultiRepoImpactMatrixRow } from '@ba-helper/contracts';
 
 @Injectable()
-export class GetMultiRepoImpactMatrixUseCase {
+export class BuildMultiRepoImpactMatrixReadModel {
   constructor(
     private readonly prisma: PrismaService,
     private readonly runRepo: MultiRepoAnalysisRunRepository,

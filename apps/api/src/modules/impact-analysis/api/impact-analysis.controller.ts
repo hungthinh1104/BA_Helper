@@ -31,7 +31,7 @@ import { CreateImpactAnalysisUseCase } from '../application/create-impact-analys
 import { CreateMultiRepoImpactAnalysesUseCase } from '../application/create-multi-repo-impact-analyses.usecase';
 import { GetImpactAnalysisUseCase } from '../application/get-impact-analysis.usecase';
 import { GetMultiRepoAnalysisRunUseCase } from '../application/get-multi-repo-analysis-run.usecase';
-import { GetMultiRepoImpactMatrixUseCase } from '../application/get-multi-repo-impact-matrix.usecase';
+import { BuildMultiRepoImpactMatrixReadModel } from '../application/build-multi-repo-impact-matrix.read-model';
 import { GetMergedMultiRepoReportDraftUseCase } from '../application/get-merged-multi-repo-report-draft.usecase';
 import { FinalizeMultiRepoReportUseCase } from '../application/finalize-multi-repo-report.usecase';
 import { GetApprovedMultiRepoReportUseCase } from '../application/get-approved-multi-repo-report.usecase';
@@ -69,7 +69,7 @@ export class ImpactAnalysisController {
     private readonly createMultiRepoAnalyses: CreateMultiRepoImpactAnalysesUseCase,
     private readonly getAnalysis: GetImpactAnalysisUseCase,
     private readonly getMultiRepoRun: GetMultiRepoAnalysisRunUseCase,
-    private readonly getMultiRepoImpactMatrix: GetMultiRepoImpactMatrixUseCase,
+    private readonly getMultiRepoImpactMatrix: BuildMultiRepoImpactMatrixReadModel,
     private readonly getMergedMultiRepoReportDraft: GetMergedMultiRepoReportDraftUseCase,
     private readonly finalizeMultiRepoReport: FinalizeMultiRepoReportUseCase,
     private readonly getApprovedMultiRepoReport: GetApprovedMultiRepoReportUseCase,

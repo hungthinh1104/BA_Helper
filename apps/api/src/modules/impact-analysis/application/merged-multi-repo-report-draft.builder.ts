@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { MultiRepoImpactMatrixResponse } from '@ba-helper/contracts';
 
 type EvidenceItem = {
   id: string;
@@ -62,8 +63,9 @@ export class MergedMultiRepoReportDraftBuilder {
     requirementRawText: string;
     generatedAt: string;
     children: ChildDraftInput[];
+    matrix: MultiRepoImpactMatrixResponse;
   }) {
-    const { children } = params;
+    const { children, matrix } = params;
     const lines: string[] = [];
 
     const allInsights = children.flatMap((child) =>
@@ -119,6 +121,21 @@ export class MergedMultiRepoReportDraftBuilder {
     lines.push(`- Requirement Revision ID: \`${params.requirementRevisionId}\``);
     lines.push(`- Generated At: ${params.generatedAt}`);
     lines.push(`- Child Analyses: ${children.length}`);
+    lines.push('');
+
+    lines.push('## Cross-domain Impact Matrix');
+    lines.push('');
+    if (matrix.rows.length === 0) {
+      lines.push('No impacted repositories were found for this run.');
+    } else {
+      lines.push('| Domain | Repository | API | Service | Data | Test | Risks | QA | Review |');
+      lines.push('|---|---|---:|---:|---:|---:|---:|---:|---|');
+      for (const row of matrix.rows) {
+        lines.push(
+          `| ${row.domain} | ${row.repositoryDisplayName} | ${row.artifactCounts.API_ENDPOINT} | ${row.artifactCounts.DOMAIN_SERVICE} | ${row.artifactCounts.DATA_MODEL} | ${row.artifactCounts.TEST_CASE} | ${row.riskCount} | ${row.qaScenarioCount} | ${row.latestReviewDecision ?? 'PENDING'} |`
+        );
+      }
+    }
     lines.push('');
 
     lines.push('## Repository Coverage');

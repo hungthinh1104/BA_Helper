@@ -595,6 +595,7 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
 
     expect(draft.markdown).toContain('## Requirement');
     expect(draft.markdown).toContain('## Run Summary');
+    expect(draft.markdown).toContain('## Cross-domain Impact Matrix');
     expect(draft.markdown).toContain('## Repository Coverage');
     expect(draft.markdown).toContain('## Per-repository Analysis');
     expect(draft.markdown).toContain('## Consolidated Risks');
