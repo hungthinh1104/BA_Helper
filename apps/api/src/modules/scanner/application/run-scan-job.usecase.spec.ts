@@ -113,6 +113,7 @@ describe('RunScanJobUseCase', () => {
     prisma = {
       repositoryTarget: { upsert: jest.fn().mockResolvedValue({ id: 'target-1' }) },
       repositorySnapshot: {
+        findFirst: jest.fn().mockResolvedValue(null),
         upsert: jest.fn().mockResolvedValue({ id: 'snapshot-1' }),
         update: jest.fn().mockResolvedValue(undefined),
       },
@@ -270,5 +271,66 @@ describe('RunScanJobUseCase', () => {
       }),
     );
     expect(prisma.repositoryProfile.upsert).not.toHaveBeenCalled();
+  });
+
+  it('persists INCREMENTAL_SCAN_SUMMARY diagnostic without raw source or hashes', async () => {
+    (fs.mkdtemp as jest.Mock).mockResolvedValue('/tmp/ba-scan-incremental');
+    (fs.rm as jest.Mock).mockResolvedValue(undefined);
+    analyzer.GitHubUrlValidator.validate.mockReturnValue({ isValid: true });
+    analyzer.GitRepositoryFetcher.fetch.mockResolvedValue({ commitSha: 'new-commit' });
+    analyzer.FrameworkDetector.detect.mockResolvedValue({ isSupported: true });
+    analyzer.RepositoryProfileDetector.detect.mockResolvedValue({ domain: 'BOOKING', framework: 'NESTJS' });
+    analyzer.SafeFileEnumerator.mockImplementation(() => ({
+      enumerate: jest.fn().mockResolvedValue({ tsFiles: [], allFiles: [], diagnostics: [], isPartial: false }),
+    }));
+    analyzer.scanProject.mockReturnValue({
+      analyzerVersion: '0.2.0',
+      artifacts: [{
+        stableId: 'api:booking.controller.cancel',
+        type: 'API_ROUTE',
+        filePath: 'src/booking.ts',
+        contentHash: 'hash-abc',
+        excerpt: 'cancel() {}'
+      }],
+      coverage: { status: 'READY', skippedSummary: {} },
+    });
+
+    prisma.repositorySnapshot.findFirst.mockResolvedValue({
+      id: 'prev-snapshot',
+      analyzerVersion: '0.2.0',
+    });
+
+    artifactRepository.listBySnapshot.mockResolvedValue([
+      { artifactKey: 'api:booking.controller.cancel', contentHash: 'hash-abc', universalKind: 'API_ROUTE', filePath: 'src/booking.ts' },
+      { artifactKey: 'api:booking.controller.other', contentHash: 'hash-def', universalKind: 'API_ROUTE', filePath: 'src/other.ts' },
+    ]);
+
+    await useCase.execute({ jobId: 'job-1' });
+
+    expect(prisma.repositorySnapshot.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          diagnostics: expect.arrayContaining([
+            expect.objectContaining({
+              code: 'INCREMENTAL_SCAN_SUMMARY',
+              payload: expect.objectContaining({
+                baseSnapshotId: 'prev-snapshot',
+                addedArtifactCount: 0,
+                unchangedArtifactCount: 1,
+                removedArtifactCount: 1,
+              })
+            })
+          ])
+        })
+      })
+    );
+
+    // Verify sample payload does not have raw source or hashes
+    const callArgs = prisma.repositorySnapshot.upsert.mock.calls[0][0];
+    const diag = callArgs.create.diagnostics.find((d: any) => d.code === 'INCREMENTAL_SCAN_SUMMARY');
+    const removedSample = diag.payload.samples.removed[0];
+    
+    expect(removedSample).not.toHaveProperty('contentHash');
+    expect(removedSample).not.toHaveProperty('excerpt');
   });
 });

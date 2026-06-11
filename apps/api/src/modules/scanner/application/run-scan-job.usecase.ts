@@ -27,6 +27,7 @@ import * as path from 'node:path';
 import type { DetectedRepositoryProfile, ScanArtifact, ScanResult } from '@ba-helper/analyzer';
 import type { DiagnosticItem } from '@ba-helper/contracts';
 import { summarizeDiagnostics } from './scan-diagnostic-summary';
+import { IncrementalScanClassifier } from './incremental-scan-classifier';
 
 const safeRm = async (targetDir?: string): Promise<void> => {
   if (!targetDir) {
@@ -209,6 +210,34 @@ export class RunScanJobUseCase {
         message: 'Scan health summary generated',
         category: 'SCANNER',
         payload: scanHealth as unknown as Record<string, unknown>,
+      });
+
+      const previousSnapshot = await this.prisma.repositorySnapshot.findFirst({
+        where: {
+          repositoryId: job.repositoryId,
+          coverageStatus: { in: ['READY', 'PARTIAL'] },
+        },
+        orderBy: [
+          { createdAt: 'desc' },
+          { id: 'desc' },
+        ],
+      });
+      
+      const previousArtifacts = previousSnapshot ? await this.artifactRepository.listBySnapshot(previousSnapshot.id) : [];
+
+      const incrementalSummary = IncrementalScanClassifier.classify({
+        currentArtifacts: scanResult.artifacts,
+        currentAnalyzerVersion: scanResult.analyzerVersion,
+        previousSnapshot: previousSnapshot ? { id: previousSnapshot.id, analyzerVersion: previousSnapshot.analyzerVersion } : null,
+        previousArtifacts,
+      });
+
+      collector.add({
+        code: 'INCREMENTAL_SCAN_SUMMARY',
+        severity: 'INFO',
+        message: 'Incremental scan classification summary generated',
+        category: 'SCANNER',
+        payload: incrementalSummary as unknown as Record<string, unknown>,
       });
 
       const target = await this.prisma.repositoryTarget.upsert({
