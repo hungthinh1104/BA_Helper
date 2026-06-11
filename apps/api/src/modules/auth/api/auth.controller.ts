@@ -1,9 +1,9 @@
-import { Controller, Post, Get, Body, UnauthorizedException, HttpException, HttpStatus, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, Body, Controller, ForbiddenException, Get, Post } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Public } from '../application/jwt-auth.guard';
 import { CurrentUser } from './current-user.decorator';
-import { RequestUser, LoginRequest, LoginResponse } from '@ba-helper/contracts';
+import { loginRequestSchema, RequestUser, type LoginRequest, type LoginResponse } from '@ba-helper/contracts';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags('Auth')
@@ -18,33 +18,35 @@ export class AuthController {
   @Post('dev-login')
   @ApiOperation({ summary: 'Login or create a dev user (MVP only)' })
   @ApiResponse({ status: 200, description: 'Returns JWT and user profile' })
-  async devLogin(@Body() body: LoginRequest): Promise<LoginResponse> {
+  async devLogin(@Body() body: unknown): Promise<LoginResponse> {
     if (process.env.ENABLE_DEV_LOGIN !== 'true') {
       throw new ForbiddenException('Dev login is disabled');
     }
 
-    if (!body.email) {
-      throw new HttpException('Email is required', HttpStatus.BAD_REQUEST);
+    const parsed = loginRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.errors);
     }
+    const input: LoginRequest = parsed.data;
 
     let user = await this.prisma.user.findUnique({
-      where: { email: body.email },
+      where: { email: input.email },
     });
 
     if (!user) {
-      const role = body.role || 'ADMIN';
+      const role = input.role || 'ADMIN';
       // Auto-create dev user if not exists for convenience during Phase 13A
       user = await this.prisma.user.create({
         data: {
-          email: body.email,
-          name: body.email.split('@')[0],
+          email: input.email,
+          name: input.email.split('@')[0],
           role: role,
         },
       });
-    } else if (body.role && user.role !== body.role) {
+    } else if (input.role && user.role !== input.role) {
       user = await this.prisma.user.update({
-        where: { email: body.email },
-        data: { role: body.role },
+        where: { email: input.email },
+        data: { role: input.role },
       });
     }
 

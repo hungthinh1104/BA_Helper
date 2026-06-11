@@ -39,4 +39,18 @@ describe('jwt-config', () => {
     process.env.NODE_ENV = 'production';
     expect(() => resolveJwtSecret()).toThrow('JWT_SECRET is required in production');
   });
+
+  it('should throw Error if JWT_SECRET uses a weak example value in production', () => {
+    process.env.JWT_SECRET = 'dev-secret-change-me';
+    process.env.NODE_ENV = 'production';
+    expect(() => resolveJwtSecret()).toThrow(
+      'JWT_SECRET must not use a default or weak example value in production',
+    );
+  });
+
+  it('should accept a strong custom JWT secret in production', () => {
+    process.env.JWT_SECRET = '0123456789abcdef0123456789abcdef';
+    process.env.NODE_ENV = 'production';
+    expect(resolveJwtSecret()).toBe('0123456789abcdef0123456789abcdef');
+  });
 });

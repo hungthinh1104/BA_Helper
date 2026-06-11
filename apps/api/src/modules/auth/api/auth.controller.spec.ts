@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ForbiddenException, HttpException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -84,6 +84,33 @@ describe('AuthController', () => {
         name: 'test',
         role: 'ADMIN',
       });
+    });
+
+    it('should reject invalid email with 400 if ENABLE_DEV_LOGIN is true', async () => {
+      process.env.ENABLE_DEV_LOGIN = 'true';
+
+      await expect(
+        controller.devLogin({ email: 'not-an-email', role: 'ADMIN' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prismaService.user.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('should reject invalid role with 400 if ENABLE_DEV_LOGIN is true', async () => {
+      process.env.ENABLE_DEV_LOGIN = 'true';
+
+      await expect(
+        controller.devLogin({ email: 'test@example.com', role: 'OWNER' as any }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prismaService.user.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('should reject missing email with 400 if ENABLE_DEV_LOGIN is true', async () => {
+      process.env.ENABLE_DEV_LOGIN = 'true';
+
+      await expect(
+        controller.devLogin({ role: 'ADMIN' } as any),
+      ).rejects.toThrow(BadRequestException);
+      expect(prismaService.user.findUnique).not.toHaveBeenCalled();
     });
 
     it('should update role if requested role differs from existing user role', async () => {

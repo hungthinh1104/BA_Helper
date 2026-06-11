@@ -10,7 +10,7 @@ export const requestUserSchema = z.object({
 });
 
 export const loginRequestSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().email().max(254),
   role: userRoleSchema.optional(),
 });
 

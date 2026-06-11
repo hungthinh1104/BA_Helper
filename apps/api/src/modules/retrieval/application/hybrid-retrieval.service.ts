@@ -7,6 +7,7 @@ import { ArtifactRepository } from '../../artifact/infrastructure/artifact.repos
 import { GraphRepository } from '../../graph/infrastructure/graph.repository';
 import { PrismaService } from '../../prisma/prisma.service';
 import { getDomainGlossary } from '../../domain-profile';
+import { Prisma } from '@prisma/client';
 
 const WEIGHTS = {
   lexical: 0.40,
@@ -17,6 +18,7 @@ const WEIGHTS = {
 
 const MIN_VECTOR_SIMILARITY = 0.72;
 const WEAK_VECTOR_THRESHOLD = 0.75;
+const MAX_RETRIEVAL_RESULTS = 100;
 
 type Candidate = {
   artifact: any;
@@ -41,7 +43,7 @@ export class HybridRetrievalService {
   ) {}
 
   async retrieve(request: RetrievalRequest): Promise<RetrievedArtifact[]> {
-    const maxResults = request.maxResults ?? 20;
+    const maxResults = this.normalizeLimit(request.maxResults ?? 20);
     // MVP: tenantId = projectId. Future: pass organizationId.
     const tenantId = request.tenantId ?? request.projectId;
     
@@ -75,18 +77,17 @@ export class HybridRetrievalService {
     const keywords = [...glossaryMatches, ...symbolMatches];
     
     if (keywords.length > 0) {
-      const lexicalHits = await this.prisma.$queryRawUnsafe<any[]>(
-        `SELECT id, "artifactKey", "filePath", name AS "symbolName", "artifactType"
-         FROM "CodeArtifact"
-         WHERE "snapshotId" = $1
-           AND (
-             "name"        ILIKE ANY($2)
-             OR "filePath"    ILIKE ANY($2)
-             OR "artifactKey" ILIKE ANY($2)
-           )`,
-        request.snapshotId,
-        keywords.map(k => `%${k}%`),
-      );
+      const lexicalPatterns = keywords.map((keyword) => Prisma.sql`${`%${keyword}%`}`);
+      const lexicalHits = await this.prisma.$queryRaw<any[]>(Prisma.sql`
+        SELECT id, "artifactKey", "filePath", name AS "symbolName", "artifactType"
+        FROM "CodeArtifact"
+        WHERE "snapshotId" = ${request.snapshotId}
+          AND (
+            "name"        ILIKE ANY(ARRAY[${Prisma.join(lexicalPatterns)}]::text[])
+            OR "filePath"    ILIKE ANY(ARRAY[${Prisma.join(lexicalPatterns)}]::text[])
+            OR "artifactKey" ILIKE ANY(ARRAY[${Prisma.join(lexicalPatterns)}]::text[])
+          )
+      `);
 
       for (const hit of lexicalHits) {
         const c = getCandidate(hit.id, hit);
@@ -138,7 +139,7 @@ export class HybridRetrievalService {
           repositoryId: request.repositoryId,
           snapshotId: request.snapshotId,
           queryEmbedding,
-          limit: maxResults * 2, // fetch more to allow dropping
+          limit: this.normalizeLimit(maxResults * 2), // fetch more to allow dropping
         });
 
         for (const hit of vectorHits) {
@@ -283,6 +284,14 @@ export class HybridRetrievalService {
     return finalResults.slice(0, maxResults);
   }
 
+  private normalizeLimit(value: number): number {
+    if (!Number.isFinite(value)) {
+      return 20;
+    }
+
+    return Math.max(1, Math.min(Math.trunc(value), MAX_RETRIEVAL_RESULTS));
+  }
+
   private extractKeywords(text: string, domain?: string): { glossaryMatches: string[], symbolMatches: string[] } {
     const glossary = getDomainGlossary(domain ?? 'BOOKING');
     const lowerText = text.toLowerCase();
@@ -304,4 +313,3 @@ export class HybridRetrievalService {
     };
   }
 }
-
