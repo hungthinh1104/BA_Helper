@@ -1,16 +1,22 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RepositorySnapshotController } from './repository-snapshot.controller';
 import { GetRepositorySnapshotDriftUseCase } from '../application/get-repository-snapshot-drift.usecase';
+import { ListRepositorySnapshotsUseCase } from '../application/list-repository-snapshots.usecase';
 import { ProjectPermissionService } from '../../project/application/project-permission.service';
 import { UnauthorizedException, NotFoundException } from '@nestjs/common';
 
 describe('RepositorySnapshotController (API/E2E)', () => {
   let controller: RepositorySnapshotController;
   let useCase: jest.Mocked<GetRepositorySnapshotDriftUseCase>;
+  let listUseCase: jest.Mocked<ListRepositorySnapshotsUseCase>;
   let permissions: jest.Mocked<ProjectPermissionService>;
 
   beforeEach(async () => {
     useCase = {
+      execute: jest.fn(),
+    } as any;
+
+    listUseCase = {
       execute: jest.fn(),
     } as any;
 
@@ -22,6 +28,7 @@ describe('RepositorySnapshotController (API/E2E)', () => {
       controllers: [RepositorySnapshotController],
       providers: [
         { provide: GetRepositorySnapshotDriftUseCase, useValue: useCase },
+        { provide: ListRepositorySnapshotsUseCase, useValue: listUseCase },
         { provide: ProjectPermissionService, useValue: permissions },
       ],
     }).compile();
@@ -111,5 +118,46 @@ describe('RepositorySnapshotController (API/E2E)', () => {
       targetSnapshotId: validTargetSnapId,
     });
     expect(result.targetSnapshotId).toBe(validTargetSnapId);
+  });
+
+  describe('listSnapshots', () => {
+    it('returns a bounded list of usable snapshots', async () => {
+      permissions.assertCanReadRepository.mockResolvedValueOnce(undefined);
+      listUseCase.execute.mockResolvedValueOnce({
+        items: [
+          {
+            id: '55555555-5555-5555-5555-555555555555',
+            commitSha: 'c1',
+            createdAt: '2026-06-11T00:00:00.000Z',
+            coverageStatus: 'READY',
+            analyzerVersion: '0.1.0',
+            artifactCount: 10,
+          },
+        ],
+      });
+
+      const result = await controller.listSnapshots(validProjId, validRepoId, '10', mockActor);
+
+      expect(permissions.assertCanReadRepository).toHaveBeenCalledWith(mockActor, validRepoId, validProjId);
+      expect(listUseCase.execute).toHaveBeenCalledWith({
+        projectId: validProjId,
+        repositoryId: validRepoId,
+        limit: 10,
+      });
+      expect(result.items).toHaveLength(1);
+    });
+
+    it('falls back to default limit when omitted or invalid', async () => {
+      permissions.assertCanReadRepository.mockResolvedValueOnce(undefined);
+      listUseCase.execute.mockResolvedValueOnce({ items: [] });
+
+      await controller.listSnapshots(validProjId, validRepoId, undefined, mockActor);
+
+      expect(listUseCase.execute).toHaveBeenCalledWith({
+        projectId: validProjId,
+        repositoryId: validRepoId,
+        limit: 20,
+      });
+    });
   });
 });

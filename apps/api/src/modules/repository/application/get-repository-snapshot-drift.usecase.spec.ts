@@ -35,12 +35,12 @@ describe('GetRepositorySnapshotDriftUseCase', () => {
   };
 
   it('throws 404 if base snapshot is missing or belongs to different project', async () => {
-    prisma.repositorySnapshot.findUnique.mockResolvedValueOnce(null);
+    (prisma.repositorySnapshot.findUnique as jest.Mock).mockResolvedValueOnce(null);
     await expect(useCase.execute({ projectId: 'proj-1', repositoryId: 'repo-1', baseSnapshotId: 'base' })).rejects.toThrow('Base snapshot not found');
   });
 
   it('returns NO_DRIFT when base equals target', async () => {
-    prisma.repositorySnapshot.findUnique
+    (prisma.repositorySnapshot.findUnique as jest.Mock)
       .mockResolvedValueOnce(baseSnapshot as any)
       .mockResolvedValueOnce(baseSnapshot as any);
     const result = await useCase.execute({
@@ -54,11 +54,11 @@ describe('GetRepositorySnapshotDriftUseCase', () => {
   });
 
   it('determines added, removed, and changed artifacts deterministically', async () => {
-    prisma.repositorySnapshot.findUnique
+    (prisma.repositorySnapshot.findUnique as jest.Mock)
       .mockResolvedValueOnce(baseSnapshot as any)
       .mockResolvedValueOnce(targetSnapshot as any);
 
-    prisma.codeArtifact.findMany
+    (prisma.codeArtifact.findMany as jest.Mock)
       .mockResolvedValueOnce([
         { id: '1', artifactKey: 'unchanged', contentHash: 'hash-1' },
         { id: '2', artifactKey: 'changed', contentHash: 'hash-old' },
@@ -86,11 +86,11 @@ describe('GetRepositorySnapshotDriftUseCase', () => {
   });
 
   it('flags UNKNOWN when hashes are missing but no other drift exists', async () => {
-    prisma.repositorySnapshot.findUnique
+    (prisma.repositorySnapshot.findUnique as jest.Mock)
       .mockResolvedValueOnce(baseSnapshot as any)
       .mockResolvedValueOnce(targetSnapshot as any);
 
-    prisma.codeArtifact.findMany
+    (prisma.codeArtifact.findMany as jest.Mock)
       .mockResolvedValueOnce([
         { id: '1', artifactKey: 'maybe-changed', contentHash: null },
       ] as any)
@@ -116,11 +116,11 @@ describe('GetRepositorySnapshotDriftUseCase', () => {
     const base = { ...baseSnapshot, analyzerVersion: '0.1.0' };
     const target = { ...targetSnapshot, analyzerVersion: '0.2.0' };
 
-    prisma.repositorySnapshot.findUnique
+    (prisma.repositorySnapshot.findUnique as jest.Mock)
       .mockResolvedValueOnce(base as any)
       .mockResolvedValueOnce(target as any);
 
-    prisma.codeArtifact.findMany
+    (prisma.codeArtifact.findMany as jest.Mock)
       .mockResolvedValueOnce([
         { id: '1', artifactKey: 'a1', contentHash: 'h1' },
         { id: '2', artifactKey: 'a2', contentHash: 'h2' },

@@ -11,6 +11,8 @@ export const queryKeys = {
     all: ["repositories"] as const,
     list: (projectId: string, params?: { limit?: number; offset?: number }) => ["repositories", "list", projectId, params] as const,
     detail: (repositoryId: string) => ["repositories", "detail", repositoryId] as const,
+    snapshots: (repositoryId: string, params?: { limit?: number }) => ["repositories", "snapshots", repositoryId, params] as const,
+    snapshotDrift: (repositoryId: string, baseSnapshotId: string, targetSnapshotId?: string) => ["repositories", "snapshot-drift", repositoryId, baseSnapshotId, targetSnapshotId] as const,
   },
   requirements: {
     all: ["requirements"] as const,

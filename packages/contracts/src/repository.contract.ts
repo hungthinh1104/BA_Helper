@@ -116,9 +116,26 @@ export const repositoryDetailResponseSchema = repositoryListItemResponseSchema.e
 	}),
 });
 
+export const repositorySnapshotListItemSchema = z.object({
+	id: z.string().uuid(),
+	commitSha: z.string(),
+	createdAt: z.string(),
+	coverageStatus: z.enum(['READY', 'PARTIAL']),
+	analyzerVersion: z.string(),
+	scannerVersion: z.string().optional(),
+	profileVersion: z.string().optional(),
+	artifactCount: z.number().int().optional(),
+});
+
+export const repositorySnapshotListResponseSchema = z.object({
+	items: z.array(repositorySnapshotListItemSchema),
+});
+
 export type RepositoryCreateRequest = z.infer<typeof repositoryCreateRequestSchema>;
 export type RepositoryCreateResponse = z.infer<typeof repositoryCreateResponseSchema>;
 export type RepositoryListItemResponse = z.infer<typeof repositoryListItemResponseSchema>;
 export type RepositoryListResponse = z.infer<typeof repositoryListResponseSchema>;
 export type RepositoryDetailResponse = z.infer<typeof repositoryDetailResponseSchema>;
 export type RepositoryProfileResponse = z.infer<typeof repositoryProfileResponseSchema>;
+export type RepositorySnapshotListItem = z.infer<typeof repositorySnapshotListItemSchema>;
+export type RepositorySnapshotListResponse = z.infer<typeof repositorySnapshotListResponseSchema>;

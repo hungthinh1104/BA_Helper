@@ -24,7 +24,7 @@ export class GetRepositorySnapshotDriftUseCase {
     });
 
     if (!baseSnapshot || baseSnapshot.repository.projectId !== projectId || baseSnapshot.repositoryId !== repositoryId) {
-      throw new AppError('SNAPSHOT_NOT_FOUND', 'Base snapshot not found in this repository.', 404);
+      throw new AppError('SNAPSHOT_NOT_FOUND', 'Base snapshot not found in this repository.');
     }
 
     let targetSnapshot;
@@ -34,7 +34,7 @@ export class GetRepositorySnapshotDriftUseCase {
         include: { repository: true },
       });
       if (!targetSnapshot || targetSnapshot.repository.projectId !== projectId || targetSnapshot.repositoryId !== repositoryId) {
-        throw new AppError('SNAPSHOT_NOT_FOUND', 'Target snapshot not found in this repository.', 404);
+        throw new AppError('SNAPSHOT_NOT_FOUND', 'Target snapshot not found in this repository.');
       }
     } else {
       targetSnapshot = await this.prisma.repositorySnapshot.findFirst({
@@ -47,7 +47,7 @@ export class GetRepositorySnapshotDriftUseCase {
       });
 
       if (!targetSnapshot) {
-        throw new AppError('SNAPSHOT_NOT_FOUND', 'No suitable target snapshot found for comparison.', 404);
+        throw new AppError('SNAPSHOT_NOT_FOUND', 'No suitable target snapshot found for comparison.');
       }
     }
 
@@ -65,7 +65,7 @@ export class GetRepositorySnapshotDriftUseCase {
         universalKind: true,
         artifactType: true,
         filePath: true,
-        symbolName: true,
+        name: true,
         contentHash: true,
       },
     });
@@ -78,7 +78,7 @@ export class GetRepositorySnapshotDriftUseCase {
         universalKind: true,
         artifactType: true,
         filePath: true,
-        symbolName: true,
+        name: true,
         contentHash: true,
       },
     });
@@ -162,7 +162,7 @@ export class GetRepositorySnapshotDriftUseCase {
       arr.sort((a, b) => {
         if (a.universalKind !== b.universalKind) return (a.universalKind || '').localeCompare(b.universalKind || '');
         if (a.filePath !== b.filePath) return (a.filePath || '').localeCompare(b.filePath || '');
-        if (a.symbolName !== b.symbolName) return (a.symbolName || '').localeCompare(b.symbolName || '');
+        if (a.name !== b.name) return (a.name || '').localeCompare(b.name || '');
         return a.artifactKey.localeCompare(b.artifactKey);
       });
       return arr.slice(0, 50);
@@ -212,8 +212,8 @@ export class GetRepositorySnapshotDriftUseCase {
       universalKind: a.universalKind,
       artifactType: a.artifactType,
       filePath: a.filePath,
-      symbolName: a.symbolName,
-      displayName: a.symbolName || a.artifactKey,
+      symbolName: a.name,
+      displayName: a.name || a.artifactKey,
     };
   }
 

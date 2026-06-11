@@ -10,9 +10,12 @@ import { ScanJobProgress } from "@/components/workspace/repository/scan-job-prog
 import { NewAnalysisDialog } from "@/components/workspace/analysis/new-analysis/new-analysis-dialog"
 import { ScanDiagnosticsPanel } from "@/components/workspace/analysis/scan-diagnostics-panel"
 import { ScanHealthCard } from "@/components/workspace/repository/scan-health-card"
+import { SnapshotDriftCard } from "@/components/workspace/repository/snapshot-drift-card"
 import { BackButton } from "@/components/workspace/shared/back-button"
 import { useRepositoryDetail } from "@/hooks/api/use-repositories"
+import { useRepositorySnapshots } from "@/hooks/api/use-repository-snapshots"
 import { useCreateScanJob } from "@/hooks/api/use-scan-jobs"
+import { useOptionalProjectId } from "@/lib/project-context"
 import { useRepositoryStatusWatcher } from "@/hooks/ui/use-status-watcher"
 import { useAuth } from "@/hooks/use-auth"
 import { DiagnosticItem } from "@ba-helper/contracts"
@@ -42,9 +45,11 @@ function getFailureGuidance(errorCode?: string, message?: string) {
 export default function RepositoryDetailsPage({ params }: PageProps) {
   // Since Next.js 15, params is a Promise that needs to be unwrapped with React.use
   const { repositoryId } = use(params)
+  const activeProjectId = useOptionalProjectId()
   
-  const { data: repo, isLoading, error } = useRepositoryDetail(undefined, repositoryId)
-  const { mutateAsync: retryScan, isPending: isRetrying } = useCreateScanJob(undefined, repositoryId)
+  const { data: repo, isLoading, error } = useRepositoryDetail(activeProjectId, repositoryId)
+  const { data: snapshotList } = useRepositorySnapshots(activeProjectId, repositoryId)
+  const { mutateAsync: retryScan, isPending: isRetrying } = useCreateScanJob(activeProjectId, repositoryId)
 
   const { user } = useAuth()
   const isAdmin = user?.role === 'ADMIN'
@@ -97,6 +102,13 @@ export default function RepositoryDetailsPage({ params }: PageProps) {
   if (!repo) return null;
 
   const job = repo.latestScanJob
+  const hasError = repo.latestScanJob?.status === "FAILED" || repo.latestScanJob?.status === "CANCELED"
+  const hasIndexFailed = repo.latestSnapshot?.indexStatus === "VECTOR_FAILED"
+
+  const snapshots = snapshotList?.items || []
+  const latestUsable = snapshots[0]
+  const previousUsable = snapshots[1]
+
   const isReady = job?.status === "COMPLETED" && repo.latestSnapshot?.id
   const isPartial = repo.latestSnapshot?.coverageStatus === "PARTIAL"
   
@@ -238,6 +250,15 @@ export default function RepositoryDetailsPage({ params }: PageProps) {
           {scanHealthDiag && (
             <ScanHealthCard payload={scanHealthDiag.payload} />
           )}
+
+          <div className="flex flex-col gap-3">
+            <SnapshotDriftCard 
+              projectId={activeProjectId || ''} 
+              repositoryId={repositoryId} 
+              baseSnapshotId={previousUsable?.id}
+              targetSnapshotId={latestUsable?.id}
+            />
+          </div>
 
           {regularDiagnostics.length > 0 && (
             <ScanDiagnosticsPanel diagnostics={regularDiagnostics} />
