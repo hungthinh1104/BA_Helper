@@ -1640,4 +1640,256 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
       .get(`/api/v1/multi-repo-runs/${result.runId}/review-coverage`)
       .expect(401);
   });
+
+  // ─── Phase 25C: Snapshot Integrity & Regression Guard ────────────────────────
+
+  it('merged report draft includes both Review Coverage and Cross-domain Impact Matrix sections', async () => {
+    const { projectId, revisionId } = await seedProjectWithReadyRequirement();
+    const booking = await seedRepository(projectId, 'booking-service');
+    const payment = await seedRepository(projectId, 'payment-service');
+
+    const createResponse = await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requirementRevisionId: revisionId,
+        repositoryIds: [booking.repositoryId, payment.repositoryId],
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+      })
+      .expect(201);
+
+    const result = multiRepoImpactAnalysisCreateResponseSchema.parse(createResponse.body);
+
+    for (const item of result.items) {
+      await prisma.impactAnalysis.update({
+        where: { id: item.analysisId },
+        data: { status: 'COMPLETED' },
+      });
+      await createLatestReviewDecision({ analysisId: item.analysisId, decision: 'ACCEPTED' });
+      await seedAcceptedInsight({
+        analysisId: item.analysisId,
+        insightKey: `claim-${item.repositoryId.slice(0, 6)}`,
+        title: `Risk in ${item.repositoryDisplayName}`,
+        description: `Impact found in ${item.repositoryDisplayName}.`,
+      });
+    }
+
+    const response = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report-draft`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const draft = multiRepoMergedReportDraftResponseSchema.parse(response.body);
+    expect(draft.markdown).toContain('## Review Coverage');
+    expect(draft.markdown).toContain('Status:');
+    expect(draft.markdown).toContain('### Coverage Gates');
+    expect(draft.markdown).toContain('## Cross-domain Impact Matrix');
+    expect(draft.markdown).toContain('advisory readiness check');
+  });
+
+  it('finalized merged report snapshot includes Review Coverage and Cross-domain Impact Matrix', async () => {
+    const { result } = await seedReadyAcceptedRun();
+
+    const reportResponse = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const report = multiRepoApprovedReportResponseSchema.parse(reportResponse.body);
+    expect(report.markdown).toContain('## Review Coverage');
+    expect(report.markdown).toContain('### Coverage Gates');
+    expect(report.markdown).toContain('## Cross-domain Impact Matrix');
+    expect(report.markdown).toContain('advisory readiness check');
+  });
+
+  it('markdown export includes Review Coverage from finalized snapshot and not recomputed live', async () => {
+    // Finalize while all analyses are ACCEPTED → coverage status PASS
+    const { projectId, revisionId } = await seedProjectWithReadyRequirement();
+    const booking = await seedRepository(projectId, 'booking-service');
+    const payment = await seedRepository(projectId, 'payment-service');
+
+    const createResponse = await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requirementRevisionId: revisionId,
+        repositoryIds: [booking.repositoryId, payment.repositoryId],
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+      })
+      .expect(201);
+
+    const result = multiRepoImpactAnalysisCreateResponseSchema.parse(createResponse.body);
+
+    for (const item of result.items) {
+      await prisma.impactAnalysis.update({
+        where: { id: item.analysisId },
+        data: { status: 'COMPLETED' },
+      });
+      await createLatestReviewDecision({ analysisId: item.analysisId, decision: 'ACCEPTED' });
+      await seedAcceptedInsight({
+        analysisId: item.analysisId,
+        insightKey: `claim-${item.repositoryId.slice(0, 6)}`,
+        title: `Risk in ${item.repositoryDisplayName}`,
+        description: `Impact found in ${item.repositoryDisplayName}.`,
+      });
+    }
+
+    // Finalize — snapshot captures current state including Review Coverage
+    await request(app.getHttpServer())
+      .post(`/api/v1/multi-repo-runs/${result.runId}/merged-report/finalize`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({})
+      .expect(201);
+
+    // Read the persisted snapshot to capture what was stored at finalization
+    const snapshotResponse = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const snapshot = multiRepoApprovedReportResponseSchema.parse(snapshotResponse.body);
+    const snapshotMarkdown = snapshot.markdown;
+
+    // Verify coverage section was captured in snapshot
+    expect(snapshotMarkdown).toContain('## Review Coverage');
+
+    // Export markdown → must serve content identical to finalized snapshot
+    const exportResponse = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report/export.md`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(exportResponse.text).toBe(snapshotMarkdown);
+    expect(exportResponse.text).toContain('## Review Coverage');
+    expect(exportResponse.text).toContain('## Cross-domain Impact Matrix');
+  });
+
+  it('pdf export includes Review Coverage from finalized snapshot', async () => {
+    const { result } = await seedReadyAcceptedRun();
+
+    const pdfResponse = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report/export.pdf`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .buffer(true)
+      .parse((res, callback) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+        res.on('end', () => callback(null, Buffer.concat(chunks)));
+      })
+      .expect(200);
+
+    expect(pdfResponse.headers['content-type']).toContain('application/pdf');
+    expect(Buffer.isBuffer(pdfResponse.body)).toBe(true);
+    expect(pdfResponse.body.length).toBeGreaterThan(0);
+    // PDF binary header marker
+    expect(pdfResponse.body.slice(0, 4).toString()).toBe('%PDF');
+  });
+
+  it('export uses finalized snapshot even if underlying review coverage changes after finalization', async () => {
+    const { projectId, revisionId } = await seedProjectWithReadyRequirement();
+    const booking = await seedRepository(projectId, 'booking-service');
+    const payment = await seedRepository(projectId, 'payment-service');
+
+    const createResponse = await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requirementRevisionId: revisionId,
+        repositoryIds: [booking.repositoryId, payment.repositoryId],
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+      })
+      .expect(201);
+
+    const result = multiRepoImpactAnalysisCreateResponseSchema.parse(createResponse.body);
+
+    // All accepted with insights → coverage will likely PASS
+    for (const item of result.items) {
+      await prisma.impactAnalysis.update({
+        where: { id: item.analysisId },
+        data: { status: 'COMPLETED' },
+      });
+      await createLatestReviewDecision({ analysisId: item.analysisId, decision: 'ACCEPTED' });
+      await seedAcceptedInsight({
+        analysisId: item.analysisId,
+        insightKey: `claim-${item.repositoryId.slice(0, 6)}`,
+        title: `Snapshot stability marker`,
+        description: `Marker text: FINALIZED_COVERAGE_STATE`,
+      });
+    }
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/multi-repo-runs/${result.runId}/merged-report/finalize`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({})
+      .expect(201);
+
+    // Capture the persisted snapshot before any mutation
+    const snapshotBefore = await prisma.mergedMultiRepoReport.findUniqueOrThrow({
+      where: { runId: result.runId },
+    });
+
+    // Mutate underlying state: reject one analysis (coverage would change if recomputed)
+    await createLatestReviewDecision({
+      analysisId: result.items[0].analysisId,
+      decision: 'REJECTED',
+    });
+
+    // Snapshot must be unchanged in DB (immutable finalized record)
+    const snapshotAfter = await prisma.mergedMultiRepoReport.findUniqueOrThrow({
+      where: { runId: result.runId },
+    });
+    expect(snapshotAfter.content).toBe(snapshotBefore.content);
+
+    // Read endpoint correctly marks report stale due to policy drift
+    const readResponse = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const staleReport = multiRepoApprovedReportResponseSchema.parse(readResponse.body);
+    expect(staleReport.isStale).toBe(true);
+
+    // Export is blocked because report is stale (existing policy unchanged)
+    await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report/export.md`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(409)
+      .expect(({ body }) => {
+        expect(body.code).toBe('MERGED_REPORT_EXPORT_BLOCKED_STALE');
+      });
+  });
+
+  it('stale finalized report remains readable but its content reflects the finalized snapshot', async () => {
+    const { result } = await seedReadyAcceptedRun();
+
+    // Capture snapshot content
+    const reportResponse = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const freshReport = multiRepoApprovedReportResponseSchema.parse(reportResponse.body);
+    const capturedMarkdown = freshReport.markdown;
+    expect(freshReport.isStale).toBe(false);
+
+    // Trigger staleness
+    await createLatestReviewDecision({
+      analysisId: result.items[0].analysisId,
+      decision: 'REJECTED',
+    });
+
+    const staleResponse = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const staleReport = multiRepoApprovedReportResponseSchema.parse(staleResponse.body);
+    expect(staleReport.isStale).toBe(true);
+    // Content is unchanged: reads from persisted snapshot, never recomputed
+    expect(staleReport.markdown).toBe(capturedMarkdown);
+    expect(staleReport.markdown).toContain('## Review Coverage');
+  });
 });
