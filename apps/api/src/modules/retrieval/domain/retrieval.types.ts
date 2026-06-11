@@ -11,7 +11,11 @@ export interface RetrievalDiagnostics {
     domain?: string | null;
     framework?: string | null;
     language?: string | null;
+    /** true when the domain resolved to the UNKNOWN fallback profile */
+    domainProfileFallback?: boolean;
   } | null;
+  /** Glossary terms from the domain profile that appeared in the change request. Max 10. */
+  matchedDomainTerms?: string[];
   finalScore: number;
 }
 

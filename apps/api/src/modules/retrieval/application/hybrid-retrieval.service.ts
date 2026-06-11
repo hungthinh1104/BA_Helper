@@ -6,7 +6,7 @@ import { EmbeddingProvider } from '../../embedding/domain/embedding-provider.int
 import { ArtifactRepository } from '../../artifact/infrastructure/artifact.repository';
 import { GraphRepository } from '../../graph/infrastructure/graph.repository';
 import { PrismaService } from '../../prisma/prisma.service';
-import { getDomainGlossary } from '../../domain-profile';
+import { getDomainGlossary, matchDomainTerms, isDomainSupported } from '../../domain-profile';
 import { Prisma } from '@prisma/client';
 
 const WEIGHTS = {
@@ -315,7 +315,12 @@ export class HybridRetrievalService {
             domain: snapshot.profile.domain,
             framework: snapshot.profile.framework,
             language: snapshot.profile.language,
+            domainProfileFallback: !isDomainSupported(snapshot.profile.domain ?? undefined),
           } : null,
+          matchedDomainTerms: matchDomainTerms(
+            request.changeRequest,
+            profileDomain ?? request.domain,
+          ).slice(0, 10),
           finalScore,
         }
       };
@@ -337,7 +342,8 @@ export class HybridRetrievalService {
   }
 
   private extractKeywords(text: string, domain?: string): { glossaryMatches: string[], symbolMatches: string[] } {
-    const glossary = getDomainGlossary(domain ?? 'BOOKING');
+    // Pass domain as-is — getDomainGlossary handles unknown via UNKNOWN profile, no hard-code needed
+    const glossary = getDomainGlossary(domain);
     const lowerText = text.toLowerCase();
 
     const glossaryMatches = glossary.filter(term => lowerText.includes(term.toLowerCase()));
