@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { retrievalMetadataSchema } from './retrieval.contract';
+import { evidenceSchema } from './evidence.contract';
 
 export const insightReviewRequestSchema = z.object({
 	reviewStatus: z.enum(['CONFIRMED', 'REJECTED']),
@@ -17,23 +19,7 @@ export const insightSchema = z.object({
 	certainty: z.enum(['EVIDENCED', 'INFERRED', 'UNKNOWN', 'CONFLICTING']),
 	reviewStatus: z.enum(['NEEDS_REVIEW', 'CONFIRMED', 'REJECTED']),
 	confidence: z.number().min(0).max(1).nullable(),
-	evidence: z.array(
-		z.object({
-			id: z.string().uuid(),
-			sourceType: z.enum([
-				'CODE',
-				'TEST',
-				'STATIC_ANALYSIS',
-				'REQUIREMENT_INPUT',
-				'COVERAGE',
-				'HUMAN_NOTE',
-			]),
-			filePath: z.string().nullable(),
-			startLine: z.number().nullable(),
-			endLine: z.number().nullable(),
-			excerpt: z.string(),
-		}),
-	),
+	evidence: z.array(evidenceSchema),
 });
 
 export const insightListResponseSchema = z.object({

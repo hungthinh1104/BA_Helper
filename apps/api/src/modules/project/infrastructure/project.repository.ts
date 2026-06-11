@@ -14,4 +14,11 @@ export class ProjectRepository {
       where: { id },
     });
   }
+
+  async findByName(name: string) {
+    return this.prisma.project.findFirst({
+      where: { name },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
 }

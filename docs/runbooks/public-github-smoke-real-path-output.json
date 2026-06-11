@@ -1,0 +1,69 @@
+{
+  "status": "ok",
+  "summary": {
+    "analysis": {
+      "id": "8a266491-a87a-4976-9da1-fadc57b68973",
+      "insightCount": 4,
+      "status": "COMPLETED",
+      "durationMs": 16066
+    },
+    "diagnostics": {
+      "blockerSecurityCount": 0,
+      "scanDiagnosticCount": 0,
+      "snapshotDiagnosticCount": 0
+    },
+    "report": {
+      "id": "7c8d159e-a9d6-45b4-a08a-c7447232b7d0",
+      "isStale": false,
+      "title": "Paid booking cancellation refund",
+      "markdownLength": 2789
+    },
+    "repository": {
+      "id": "e480d4fd-9e80-44cd-8dbb-150b1d764efb",
+      "requestedRef": "main",
+      "url": "https://github.com/ndmen/booking"
+    },
+    "scan": {
+      "commitSha": "f26cd56837cd10a1c00bb89d74d97519abc6f732",
+      "coverageStatus": "READY",
+      "jobId": "7be41773-31e6-43af-a695-fe87e1e38b70",
+      "snapshotId": "8dc3b25e-e8f1-4906-8d33-aa3da166e1cf",
+      "status": "COMPLETED",
+      "durationMs": 4031
+    },
+    "tempWorkspaceCleanup": {
+      "afterCount": 0,
+      "beforeCount": 0,
+      "leaked": false
+    },
+    "workspace": {
+      "mode": "dev-single-user",
+      "projectId": "cf691b7f-fef0-489d-b5fb-bdd36707b850"
+    },
+    "vector": {
+      "indexStatus": "VECTOR_READY",
+      "embeddingChunkCount": 62,
+      "embeddingModel": "text-embedding-3-small",
+      "vectorSignalCount": 20,
+      "hybridSignalCount": 20
+    },
+    "llm": {
+      "provider": "google",
+      "model": "gemini-2.5-flash",
+      "promptVersion": "2.0.0",
+      "parseMode": "raw",
+      "inputTokens": 1999,
+      "outputTokens": 1067
+    },
+    "reviewQueue": {
+      "total": 43,
+      "remaining": 43,
+      "highRiskRemaining": 20,
+      "blockingRemaining": 23
+    },
+    "links": {
+      "analysisUrl": "http://localhost:3000/analyses/8a266491-a87a-4976-9da1-fadc57b68973",
+      "reportUrl": "http://localhost:3000/reports?analysisId=8a266491-a87a-4976-9da1-fadc57b68973"
+    }
+  }
+}

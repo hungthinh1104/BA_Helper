@@ -1,20 +1,25 @@
 import 'reflect-metadata';
+import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import { AppModule } from './app.module';
-import { AppExceptionFilter } from './shared/app-exception.filter';
+import { configureApp } from './bootstrap/configure-app';
+import { getRuntimeConfig, validateRuntimeConfig } from './bootstrap/runtime-config';
 
 const bootstrap = async () => {
-	const app = await NestFactory.create(AppModule, { cors: true });
-	app.useGlobalFilters(new AppExceptionFilter());
+	const config = getRuntimeConfig();
+	validateRuntimeConfig(config);
 
-	const config = new DocumentBuilder()
+	const app = await NestFactory.create(AppModule, { cors: false });
+	configureApp(app, config);
+
+	const swaggerConfig = new DocumentBuilder()
 		.setTitle('BA Helper API')
 		.setDescription('The BA Helper API documentation')
-		.setVersion('1.0')
+		.setVersion(config.apiVersion)
 		.build();
-	const document = SwaggerModule.createDocument(app, config);
+	const document = SwaggerModule.createDocument(app, swaggerConfig);
 
 	app.use(
 		'/api/docs',
@@ -25,7 +30,7 @@ const bootstrap = async () => {
 		}),
 	);
 
-	await app.listen(process.env.PORT || 3001);
+	await app.listen(config.port);
 };
 
 void bootstrap();

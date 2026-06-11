@@ -16,9 +16,20 @@ export class AiModule {
       throw new Error('FakeLlmProvider is forbidden in production. Please set AI_PROVIDER.');
     }
 
+    let defaultModel = process.env.AI_MODEL ?? config?.defaultModel;
+    if (!defaultModel) {
+      switch (provider) {
+        case 'google': defaultModel = process.env.GOOGLE_MODEL ?? process.env.GEMINI_MODEL ?? 'gemini-2.5-flash'; break;
+        case 'anthropic': defaultModel = process.env.ANTHROPIC_MODEL ?? 'claude-3-5-sonnet-20241022'; break;
+        case 'openai': defaultModel = process.env.OPENAI_MODEL ?? 'gpt-4o'; break;
+        case 'deepseek': defaultModel = process.env.DEEPSEEK_MODEL ?? 'deepseek-chat'; break;
+        default: defaultModel = 'gpt-4o';
+      }
+    }
+
     const resolvedConfig: AiConfig = {
       provider,
-      defaultModel: process.env.AI_MODEL ?? config?.defaultModel ?? 'gpt-4o',
+      defaultModel,
       temperature: Number(process.env.AI_TEMPERATURE ?? config?.temperature ?? 0.2),
       maxTokens: Number(process.env.AI_MAX_TOKENS ?? config?.maxTokens ?? 4096),
       redactSecrets: process.env.NODE_ENV !== 'test',

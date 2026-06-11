@@ -5,9 +5,9 @@ packages:
 allowBuilds:
   '@nestjs/core': false
   '@prisma/engines': false
-  '@scarf/scarf': set this to true or false
+  '@scarf/scarf': false
   '@swc/core': false
-  esbuild: set this to true or false
+  esbuild: true
   msgpackr-extract: false
   msw: true
   prisma: false

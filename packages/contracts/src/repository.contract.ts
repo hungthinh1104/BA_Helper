@@ -1,5 +1,16 @@
 import { z } from 'zod';
 import { scanJobStatusSchema, scanJobStageSchema } from './scan-job.contract';
+import { diagnosticItemSchema } from './diagnostic.contract';
+import { errorCodeSchema } from './error.contract';
+
+export const snapshotIndexStatusSchema = z.enum([
+	'NOT_INDEXED',
+	'LEXICAL_READY',
+	'VECTOR_INDEXING',
+	'VECTOR_READY',
+	'VECTOR_FAILED',
+]);
+export type SnapshotIndexStatus = z.infer<typeof snapshotIndexStatusSchema>;
 
 export const repositoryCreateRequestSchema = z.object({
 	url: z.string().url(),
@@ -18,6 +29,7 @@ export const repositoryListItemResponseSchema = z.object({
 	displayName: z.string(),
 	framework: z.string().optional(),
 	latestTarget: z.object({
+		id: z.string().uuid(),
 		requestedRef: z.string(),
 		resolvedCommitSha: z.string().optional(),
 	}).optional(),
@@ -27,14 +39,23 @@ export const repositoryListItemResponseSchema = z.object({
 		stage: scanJobStageSchema,
 		progress: z.number().min(0).max(100),
 		canCancel: z.boolean(),
+		diagnostics: z.array(diagnosticItemSchema).optional(),
+		error: z
+			.object({
+				code: errorCodeSchema,
+				message: z.string(),
+			})
+			.nullable(),
 	}).optional(),
 	latestSnapshot: z.object({
 		id: z.string().uuid(),
 		commitSha: z.string(),
 		analyzerVersion: z.string(),
 		coverageStatus: z.enum(['READY', 'PARTIAL']),
-		indexStatus: z.string(),
+		indexStatus: snapshotIndexStatusSchema,
+        diagnostics: z.array(diagnosticItemSchema).optional(),
 	}).optional(),
+	createdAt: z.string(),
 });
 
 export const repositoryListResponseSchema = z.object({

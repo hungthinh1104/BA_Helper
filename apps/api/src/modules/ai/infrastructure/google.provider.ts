@@ -3,7 +3,9 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { z } from 'zod';
 import { LlmProvider, LlmRequest, LlmResult } from '../domain/llm-provider.interface';
 import { AiConfig, AI_CONFIG_TOKEN } from '../domain/ai-config';
+import { AiPolicy } from '../domain/ai.policy';
 import { parseStructuredLlmOutput } from './structured-output';
+import { AppError } from '../../../shared/app-error';
 
 @Injectable()
 export class GoogleLlmProvider extends LlmProvider {
@@ -12,7 +14,20 @@ export class GoogleLlmProvider extends LlmProvider {
 
   constructor(@Inject(AI_CONFIG_TOKEN) private config: AiConfig) {
     super();
-    this.client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || '');
+    // Priority: GOOGLE_API_KEY > GEMINI_API_KEY > GOOGLE_AI_API_KEY
+    const apiKey =
+      process.env.GOOGLE_API_KEY ??
+      process.env.GEMINI_API_KEY ??
+      process.env.GOOGLE_AI_API_KEY;
+
+    if (!apiKey) {
+      throw new AppError(
+        'AI_PROVIDER_AUTH_FAILED',
+        'Google LLM provider requires GOOGLE_API_KEY, GEMINI_API_KEY, or GOOGLE_AI_API_KEY to be set.',
+      );
+    }
+
+    this.client = new GoogleGenerativeAI(apiKey);
   }
 
   async generateStructured<T>(
@@ -20,12 +35,19 @@ export class GoogleLlmProvider extends LlmProvider {
     schema: z.ZodSchema<T>,
   ): Promise<LlmResult<T>> {
     const model = request.options?.model ?? this.config.defaultModel;
+    const promptVersion = request.options?.promptVersion ?? '';
     const start = Date.now();
+
+    // Invariant #11: Redact secrets from evidence before sending to real provider
+    const safeUserPrompt = this.config.redactSecrets
+      ? AiPolicy.redactPayload(request.userPrompt).redactedPayload
+      : request.userPrompt;
+
     const genModel = this.client.getGenerativeModel({ model });
 
     const result = await genModel.generateContent({
       systemInstruction: request.systemPrompt,
-      contents: [{ role: 'user', parts: [{ text: request.userPrompt }] }],
+      contents: [{ role: 'user', parts: [{ text: safeUserPrompt }] }],
       generationConfig: {
         responseMimeType: 'application/json',
         temperature: request.options?.temperature ?? this.config.temperature,
@@ -34,7 +56,11 @@ export class GoogleLlmProvider extends LlmProvider {
     });
 
     const rawText = result.response.text();
-    console.log('Gemini finishReason:', result.response.candidates?.[0]?.finishReason);
+    const finishReason = result.response.candidates?.[0]?.finishReason;
+    if (finishReason && finishReason !== 'STOP') {
+      console.warn(`[GoogleLlmProvider] Unexpected finishReason: ${finishReason}`);
+    }
+
     const { data, parseMode, rawLength, jsonLength } = parseStructuredLlmOutput({
       rawText,
       schema,
@@ -46,11 +72,13 @@ export class GoogleLlmProvider extends LlmProvider {
       metadata: {
         provider: 'google',
         model,
-        promptVersion: '',
+        promptVersion,
         durationMs: Date.now() - start,
         parseMode,
         rawLength,
         jsonLength,
+        inputTokens: result.response.usageMetadata?.promptTokenCount,
+        outputTokens: result.response.usageMetadata?.candidatesTokenCount,
       },
     };
   }

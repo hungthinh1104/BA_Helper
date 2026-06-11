@@ -28,6 +28,7 @@ export class AppExceptionFilter implements ExceptionFilter {
   private static mapStatus(code: AppError['code']): number {
     switch (code) {
       case 'INVALID_PROJECT_NAME':
+      case 'WORKSPACE_MODE_UNSUPPORTED':
       case 'INVALID_REPOSITORY_URL':
       case 'INVALID_REPOSITORY_REF':
       case 'INVALID_REQUIREMENT_INPUT':
@@ -36,7 +37,14 @@ export class AppExceptionFilter implements ExceptionFilter {
       case 'INPUT_PROJECT_MISMATCH':
       case 'REQUIREMENT_REVISION_NOT_READY':
       case 'UNSUPPORTED_DOMAIN':
+      case 'UNSUPPORTED_FRAMEWORK':
         return HttpStatus.BAD_REQUEST;
+      case 'REPO_LIMIT_EXCEEDED':
+        return HttpStatus.PAYLOAD_TOO_LARGE;
+      case 'CLONE_FAILED':
+        return HttpStatus.BAD_GATEWAY;
+      case 'SECURITY_RISK_BLOCKED':
+        return HttpStatus.FORBIDDEN;
       case 'PROJECT_NOT_FOUND':
       case 'REPOSITORY_NOT_FOUND':
       case 'SCAN_JOB_NOT_FOUND':

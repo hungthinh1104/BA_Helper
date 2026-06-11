@@ -1,17 +1,46 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ScanJobRepository } from '../infrastructure/scan-job.repository';
 import { EventLogService } from '../../event-log/application/event-log.service';
 import { AppError } from '../../../shared/app-error';
 import { ScanJobStatus, ScanJobStage } from '@prisma/client';
 import { ArtifactRepository } from '../../artifact/infrastructure/artifact.repository';
-import { scanFixture } from '@ba-helper/analyzer';
+import { 
+  scanFixture, 
+  scanProject, 
+  GitHubUrlValidator, 
+  GitRepositoryFetcher, 
+  FrameworkDetector, 
+  SafeFileEnumerator, 
+  SecretRedactor,
+  DiagnosticCollector
+} from '@ba-helper/analyzer';
 import { PrismaService } from '../../prisma/prisma.service';
 import { QueueService } from '../../queue/queue.service';
 import { EvidenceRepository } from '../../evidence/infrastructure/evidence.repository';
 import { createHash } from 'node:crypto';
+import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import type { ScanArtifact, ScanResult } from '@ba-helper/analyzer';
+import type { DiagnosticItem } from '@ba-helper/contracts';
+import { summarizeDiagnostics } from './scan-diagnostic-summary';
+
+const safeRm = async (targetDir?: string): Promise<void> => {
+  if (!targetDir) {
+    return;
+  }
+
+  try {
+    await fs.rm(targetDir, { recursive: true, force: true });
+  } catch {
+    // Cleanup failure must not mask the original scan error.
+  }
+};
 
 @Injectable()
 export class RunScanJobUseCase {
+  private readonly logger = new Logger(RunScanJobUseCase.name);
+
   constructor(
     private readonly scanJobRepository: ScanJobRepository,
     private readonly artifactRepository: ArtifactRepository,
@@ -38,11 +67,93 @@ export class RunScanJobUseCase {
       progress: 10,
     });
 
+    let cleanupDir: string | undefined;
+    const collector = new DiagnosticCollector();
+    let commitSha: string | null = null;
+    let currentStage: ScanJobStage = ScanJobStage.EXTRACTING_ARTIFACTS;
+
     try {
-      const scanResult = scanFixture({
-        fixturePath: job.repository.canonicalUrl,
-        analyzerVersion: '0.1.0',
-      });
+      let scanResult: ScanResult;
+      let coverageStatus: 'READY' | 'PARTIAL' = 'READY';
+      
+      const sourceRoot = job.repository.canonicalUrl;
+      const urlValidation = GitHubUrlValidator.validate(sourceRoot);
+
+      if (urlValidation.isValid) {
+        currentStage = ScanJobStage.CLONING_REPO;
+        await this.scanJobRepository.updateState({
+          jobId: job.id,
+          status: ScanJobStatus.RUNNING,
+          stage: currentStage,
+          progress: 15,
+        });
+        const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ba-scan-'));
+        cleanupDir = tempDir;
+
+        try {
+          const fetchResult = await GitRepositoryFetcher.fetch({
+            url: sourceRoot,
+            targetDir: tempDir,
+            ref: job.requestedRef ?? undefined,
+          });
+          commitSha = fetchResult.commitSha;
+        } catch (err) {
+          throw new AppError('CLONE_FAILED', (err as Error).message);
+        }
+
+        currentStage = ScanJobStage.DETECTING_PROJECT;
+        await this.scanJobRepository.updateState({
+          jobId: job.id,
+          status: ScanJobStatus.RUNNING,
+          stage: currentStage,
+          progress: 25,
+        });
+        const frameworkResult = await FrameworkDetector.detect(tempDir);
+        if (!frameworkResult.isSupported) {
+          collector.add({
+            code: 'UNSUPPORTED_FRAMEWORK',
+            severity: 'BLOCKER',
+            message: frameworkResult.reason || 'Not a NestJS repository',
+            category: 'FRAMEWORK',
+          });
+          throw new AppError('UNSUPPORTED_FRAMEWORK', frameworkResult.reason || 'Not a NestJS repository');
+        }
+
+        currentStage = ScanJobStage.FILTERING_FILES;
+        await this.scanJobRepository.updateState({
+          jobId: job.id,
+          status: ScanJobStatus.RUNNING,
+          stage: currentStage,
+          progress: 35,
+        });
+        const enumerator = new SafeFileEnumerator(tempDir);
+        const enumResult = await enumerator.enumerate();
+        
+        for (const d of enumResult.diagnostics) {
+          collector.addFromFileDiagnostic(d, d.filePath ? path.relative(tempDir, d.filePath) : undefined);
+        }
+        
+        if (enumResult.isPartial) {
+          coverageStatus = 'PARTIAL';
+        }
+
+        currentStage = ScanJobStage.EXTRACTING_ARTIFACTS;
+        scanResult = scanProject({
+          fixturePath: tempDir,
+          analyzerVersion: '0.1.0',
+          tsFiles: enumResult.tsFiles,
+        });
+      } else {
+        commitSha = 'mock-commit-sha';
+        scanResult = scanFixture({
+          fixturePath: sourceRoot,
+          analyzerVersion: '0.1.0',
+        });
+      }
+
+      if (!commitSha) {
+        throw new Error('Commit SHA was not resolved for scan job.');
+      }
 
       const target = await this.prisma.repositoryTarget.upsert({
         where: {
@@ -56,11 +167,11 @@ export class RunScanJobUseCase {
           targetKey: job.requestedRef ?? 'main',
           requestedRef: job.requestedRef ?? 'main',
           resolvedRefType: 'BRANCH',
-          latestObservedCommitSha: 'mock-commit-sha', // TODO: actual
+          latestObservedCommitSha: commitSha,
           lastObservedAt: new Date(),
         },
         update: {
-          latestObservedCommitSha: 'mock-commit-sha',
+          latestObservedCommitSha: commitSha,
           lastObservedAt: new Date(),
         },
       });
@@ -69,18 +180,20 @@ export class RunScanJobUseCase {
         where: {
           repositoryId_commitSha_analyzerVersion: {
             repositoryId: job.repositoryId,
-            commitSha: 'mock-commit-sha', // TODO: Get actual commit SHA
+            commitSha: commitSha,
             analyzerVersion: scanResult.analyzerVersion,
           },
         },
         create: {
           repositoryId: job.repositoryId,
-          commitSha: 'mock-commit-sha', // TODO: Get actual commit SHA
+          commitSha: commitSha,
           analyzerVersion: scanResult.analyzerVersion,
-          coverageStatus: scanResult.coverage.status,
+          coverageStatus: coverageStatus,
+          diagnostics: collector.getItems() as unknown as import('@prisma/client').Prisma.InputJsonValue,
         },
         update: {
-          coverageStatus: scanResult.coverage.status,
+          coverageStatus: coverageStatus,
+          diagnostics: collector.getItems() as unknown as import('@prisma/client').Prisma.InputJsonValue,
         },
       });
 
@@ -98,8 +211,8 @@ export class RunScanJobUseCase {
 
       if (scanResult.artifacts.length > 0) {
         // Wait until artifacts are created first since evidence needs artifact references
-        const createdArtifacts = await this.artifactRepository.createMany(
-          scanResult.artifacts.map((artifact) => ({
+        await this.artifactRepository.createMany(
+          scanResult.artifacts.map((artifact: ScanArtifact) => ({
             snapshotId: snapshot.id,
             artifactKey: artifact.stableId,
             artifactType: artifact.type,
@@ -112,11 +225,14 @@ export class RunScanJobUseCase {
 
         // Fetch back artifacts to insert their excerpts into Evidence
         const persistedArtifacts = await this.artifactRepository.listBySnapshot(snapshot.id);
-        const evidenceInputs = scanResult.artifacts.map(artifact => {
-            const persistedId = persistedArtifacts.find(pa => pa.artifactKey === artifact.stableId)?.id;
+        const evidenceInputs = scanResult.artifacts.map((artifact: ScanArtifact) => {
+            const persistedId = persistedArtifacts.find((persistedArtifact: { artifactKey: string; id: string }) => persistedArtifact.artifactKey === artifact.stableId)?.id;
             if (!persistedId) return null;
             
-            const excerpt = artifact.excerpt || '';
+            let excerpt = artifact.excerpt || '';
+            const redaction = SecretRedactor.redact(excerpt);
+            excerpt = redaction.redactedContent;
+            
             const contentHash = createHash('sha256').update(excerpt).digest('hex');
 
             return {
@@ -129,12 +245,20 @@ export class RunScanJobUseCase {
                 endLine: artifact.endLine,
                 excerpt,
                 contentHash,
-                isRedacted: false,
+                isRedacted: redaction.foundSecrets,
                 redactionMetadata: null,
             };
-        }).filter(Boolean);
+        }).filter((e): e is NonNullable<typeof e> => e !== null);
+        
+        if (evidenceInputs.some(e => e.isRedacted)) {
+            collector.addSecretRedacted('source files');
+            await this.prisma.repositorySnapshot.update({
+              where: { id: snapshot.id },
+              data: { diagnostics: collector.getItems() as unknown as import('@prisma/client').Prisma.InputJsonValue },
+            });
+        }
 
-        await this.evidenceRepo.upsertMany(evidenceInputs as any);
+        await this.evidenceRepo.upsertMany(evidenceInputs);
 
         // Snapshot is now LEXICAL_READY, enqueue for embedding
         await this.prisma.repositorySnapshot.update({
@@ -153,23 +277,131 @@ export class RunScanJobUseCase {
       await this.eventLogService.recordEvent({
         eventType: 'SCAN_JOB_COMPLETED',
         idempotencyKey: `scan-job:${job.id}:completed`,
-        payload: { jobId: job.id },
+        payload: {
+          jobId: job.id,
+          repositoryId: job.repositoryId,
+          requestedRef: job.requestedRef ?? 'main',
+          sourceTargetId: target.id,
+          snapshotId: snapshot.id,
+          commitSha,
+          analyzerVersion: scanResult.analyzerVersion,
+          coverageStatus,
+          diagnostics: summarizeDiagnostics(collector.getItems() as DiagnosticItem[]),
+        },
       });
+      this.logger.log(
+        JSON.stringify({
+          event: 'SCAN_JOB_COMPLETED',
+          jobId: job.id,
+          repositoryId: job.repositoryId,
+          requestedRef: job.requestedRef ?? 'main',
+          sourceTargetId: target.id,
+          snapshotId: snapshot.id,
+          commitSha,
+          coverageStatus,
+          diagnostics: summarizeDiagnostics(collector.getItems() as DiagnosticItem[]),
+        }),
+      );
     } catch (error) {
-      await this.scanJobRepository.updateState({
-        jobId: job.id,
-        status: ScanJobStatus.FAILED,
-        stage: ScanJobStage.DONE,
-        progress: 0,
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
-      });
-      
-      await this.eventLogService.recordEvent({
-        eventType: 'SCAN_JOB_FAILED',
-        idempotencyKey: `scan-job:${job.id}:failed`,
-        payload: { jobId: job.id },
-      });
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      const errorCode = error instanceof AppError ? error.code : null;
+      if (error instanceof AppError && error.code === 'UNSUPPORTED_FRAMEWORK') {
+        // Blocker diagnostic already collected above
+      } else {
+        collector.add({
+          code: 'SCAN_FAILED',
+          severity: 'BLOCKER',
+          message: errorMsg,
+          category: 'SCANNER'
+        });
+      }
+
+      try {
+        await this.scanJobRepository.updateState({
+          jobId: job.id,
+          status: ScanJobStatus.FAILED,
+          stage: ScanJobStage.DONE,
+          progress: 0,
+          errorCode,
+          errorMessage: errorMsg,
+        });
+      } catch (persistError) {
+        this.logger.warn(
+          JSON.stringify({
+            event: 'SCAN_JOB_FAILURE_STATE_PERSIST_FAILED',
+            jobId: job.id,
+            repositoryId: job.repositoryId,
+            originalErrorCode: errorCode,
+            originalErrorMessage: errorMsg,
+            persistenceError:
+              persistError instanceof Error ? persistError.message : 'Unknown persistence error',
+          }),
+        );
+      }
+
+      try {
+        await this.prisma.scanJob.update({
+          where: { id: job.id },
+          data: { diagnostics: collector.getItems() as unknown as import('@prisma/client').Prisma.InputJsonValue },
+        });
+      } catch (persistError) {
+        this.logger.warn(
+          JSON.stringify({
+            event: 'SCAN_JOB_FAILURE_DIAGNOSTICS_PERSIST_FAILED',
+            jobId: job.id,
+            repositoryId: job.repositoryId,
+            originalErrorCode: errorCode,
+            originalErrorMessage: errorMsg,
+            persistenceError:
+              persistError instanceof Error ? persistError.message : 'Unknown persistence error',
+          }),
+        );
+      }
+
+      try {
+        await this.eventLogService.recordEvent({
+          eventType: 'SCAN_JOB_FAILED',
+          idempotencyKey: `scan-job:${job.id}:failed`,
+          payload: {
+            jobId: job.id,
+            repositoryId: job.repositoryId,
+            requestedRef: job.requestedRef ?? 'main',
+            stage: currentStage,
+            commitSha,
+            errorCode,
+            errorMessage: errorMsg,
+            diagnostics: summarizeDiagnostics(collector.getItems() as DiagnosticItem[]),
+          },
+        });
+      } catch (persistError) {
+        this.logger.warn(
+          JSON.stringify({
+            event: 'SCAN_JOB_FAILURE_EVENT_PERSIST_FAILED',
+            jobId: job.id,
+            repositoryId: job.repositoryId,
+            originalErrorCode: errorCode,
+            originalErrorMessage: errorMsg,
+            persistenceError:
+              persistError instanceof Error ? persistError.message : 'Unknown persistence error',
+          }),
+        );
+      }
+      this.logger.error(
+        JSON.stringify({
+          event: 'SCAN_JOB_FAILED',
+          jobId: job.id,
+          repositoryId: job.repositoryId,
+          requestedRef: job.requestedRef ?? 'main',
+          stage: currentStage,
+          commitSha,
+          errorCode,
+          errorMessage: errorMsg,
+          diagnostics: summarizeDiagnostics(collector.getItems() as DiagnosticItem[]),
+        }),
+      );
       throw error;
+    } finally {
+      await safeRm(cleanupDir);
     }
   }
 }

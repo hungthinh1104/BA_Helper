@@ -1,0 +1,41 @@
+{
+  "status": "ok",
+  "summary": {
+    "analysis": {
+      "id": "86b5990b-5f01-4aea-a82d-b188384babba",
+      "insightCount": 5,
+      "status": "COMPLETED"
+    },
+    "diagnostics": {
+      "blockerSecurityCount": 0,
+      "scanDiagnosticCount": 0,
+      "snapshotDiagnosticCount": 0
+    },
+    "report": {
+      "id": "318db078-42a4-46fd-93e5-d78321ca5704",
+      "isStale": false,
+      "title": "Paid booking cancellation refund"
+    },
+    "repository": {
+      "id": "a9ae244a-8315-4860-b104-b736f4768fcd",
+      "requestedRef": "main",
+      "url": "https://github.com/ndmen/booking"
+    },
+    "scan": {
+      "commitSha": "f26cd56837cd10a1c00bb89d74d97519abc6f732",
+      "coverageStatus": "READY",
+      "jobId": "d2d7b810-f6b1-4f92-a54f-d7a558e6e660",
+      "snapshotId": "1698ffc6-1cde-4dc9-838e-6441eac1c3f5",
+      "status": "COMPLETED"
+    },
+    "tempWorkspaceCleanup": {
+      "afterCount": 0,
+      "beforeCount": 0,
+      "leaked": false
+    },
+    "workspace": {
+      "mode": "dev-single-user",
+      "projectId": "4b916ad1-97e9-4cd1-8092-e648114d6dc2"
+    }
+  }
+}

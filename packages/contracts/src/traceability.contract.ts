@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { retrievalMetadataSchema } from './retrieval.contract';
+import { evidenceSchema } from './evidence.contract';
 
 export const traceabilityReviewRequestSchema = z.object({
 	reviewStatus: z.enum(['CONFIRMED', 'REJECTED']),
@@ -11,23 +13,8 @@ export const traceabilityLinkSchema = z.object({
 	linkBasis: z.enum(['EVIDENCED', 'INFERRED']),
 	reviewStatus: z.enum(['NEEDS_REVIEW', 'CONFIRMED', 'REJECTED']),
 	confidence: z.number().min(0).max(1).nullable(),
-	evidence: z.array(
-		z.object({
-			id: z.string().uuid(),
-			sourceType: z.enum([
-				'CODE',
-				'TEST',
-				'STATIC_ANALYSIS',
-				'REQUIREMENT_INPUT',
-				'COVERAGE',
-				'HUMAN_NOTE',
-			]),
-			filePath: z.string().nullable(),
-			startLine: z.number().nullable(),
-			endLine: z.number().nullable(),
-			excerpt: z.string(),
-		}),
-	),
+	retrieval: retrievalMetadataSchema.optional(),
+	evidence: z.array(evidenceSchema),
 });
 
 export const traceabilityLinkListResponseSchema = z.object({

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { diagnosticItemSchema } from './diagnostic.contract';
 
 export const scanJobCreateRequestSchema = z.object({
 	ref: z.string().min(1).optional(),
@@ -30,6 +31,7 @@ export const scanJobResponseSchema = z.object({
 	status: scanJobStatusSchema,
 	stage: scanJobStageSchema,
 	progress: z.number().min(0).max(100),
+    diagnostics: z.array(diagnosticItemSchema).optional(),
 	error: z
 		.object({
 			code: z.string(),

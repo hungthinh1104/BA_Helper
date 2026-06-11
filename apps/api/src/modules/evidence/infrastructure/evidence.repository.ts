@@ -39,7 +39,7 @@ export class EvidenceRepository {
     await this.prisma.evidence.createMany({
       data: items.map((item) => ({
         provenanceKey: item.provenanceKey,
-        sourceType: item.sourceType as any,
+        sourceType: item.sourceType as import('@prisma/client').EvidenceSourceType,
         snapshotId: item.snapshotId ?? null,
         artifactId: item.artifactId ?? null,
         requirementRevisionId: item.requirementRevisionId ?? null,
@@ -49,7 +49,7 @@ export class EvidenceRepository {
         excerpt: item.excerpt,
         contentHash: item.contentHash,
         isRedacted: item.isRedacted,
-        redactionMetadata: (item.redactionMetadata ?? null) as any,
+        redactionMetadata: (item.redactionMetadata ?? null) as import('@prisma/client').Prisma.InputJsonValue,
       })),
       skipDuplicates: true,
     });

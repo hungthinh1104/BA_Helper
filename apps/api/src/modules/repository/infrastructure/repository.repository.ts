@@ -27,16 +27,43 @@ export class RepositoryRepository {
     return this.prisma.repository.findUnique({
       where: { id },
       include: {
-        targets: true,
+        targets: {
+          orderBy: { lastObservedAt: 'desc' },
+          take: 1,
+        },
+        snapshots: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          include: {
+            artifacts: true,
+          }
+        },
+        scanJobs: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        }
       },
     });
   }
 
-  async findByProject(projectId: string) {
+  async findByProject(projectId: string, limit?: number, offset?: number) {
     return this.prisma.repository.findMany({
       where: { projectId },
+      take: limit,
+      skip: offset,
       include: {
-        targets: true,
+        targets: {
+          orderBy: { lastObservedAt: 'desc' },
+          take: 1,
+        },
+        snapshots: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+        scanJobs: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        }
       },
       orderBy: { createdAt: 'desc' },
     });

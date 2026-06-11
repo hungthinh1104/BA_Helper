@@ -1,5 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import { JwtService } from '@nestjs/jwt';
+import * as crypto from 'crypto';
 import { createTestApp } from './helpers/test-app';
 import { resetDatabase } from './helpers/reset-db';
 import { PrismaService } from '../../src/modules/prisma/prisma.service';
@@ -7,10 +9,13 @@ import { PrismaService } from '../../src/modules/prisma/prisma.service';
 describe('Error Mapping (E2E)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
+  let jwtService: JwtService;
+  let adminToken: string;
 
   beforeAll(async () => {
     app = await createTestApp();
     prisma = app.get(PrismaService);
+    jwtService = app.get(JwtService);
   });
 
   afterAll(async () => {
@@ -20,11 +25,21 @@ describe('Error Mapping (E2E)', () => {
 
   beforeEach(async () => {
     await resetDatabase(prisma);
+    const user = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        email: 'admin@ba-helper.local',
+        name: 'John Doe',
+        role: 'ADMIN',
+      },
+    });
+    adminToken = jwtService.sign({ sub: user.id, email: user.email, role: user.role });
   });
 
   it('APPROVED_REPORT_NOT_FOUND maps to 404', async () => {
     const response = await request(app.getHttpServer())
       .get('/api/v1/impact-analyses/dummy-id/approved-report')
+      .set('Authorization', `Bearer ${adminToken}`)
       .expect(404);
 
     expect(response.body).toMatchObject({
@@ -74,6 +89,7 @@ describe('Error Mapping (E2E)', () => {
 
     const response = await request(app.getHttpServer())
       .post(`/api/v1/requirement-revisions/${revision.id}/impact-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         snapshotId: snapshot.id,
         sourceTargetId: target.id,
@@ -137,6 +153,7 @@ describe('Error Mapping (E2E)', () => {
 
     const response = await request(app.getHttpServer())
       .post(`/api/v1/impact-analyses/${analysis.id}/finalize`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ acknowledgeUnreviewed: false })
       .expect(409);
 

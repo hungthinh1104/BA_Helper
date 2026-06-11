@@ -10,7 +10,7 @@ export type EvidenceCandidate = {
 
 export class EvidencePackFormatter {
   static format(candidates: EvidenceCandidate[]): string {
-    return candidates
+    const formatted = candidates
       .map((candidate, index) => {
         return `[EVIDENCE ${index + 1}]
 artifactKey: ${candidate.artifactKey}
@@ -23,5 +23,7 @@ excerpt:
 ${candidate.excerpt}`;
       })
       .join('\n\n');
+
+    return `UNTRUSTED_REPOSITORY_CONTENT_START\n${formatted}\nUNTRUSTED_REPOSITORY_CONTENT_END`;
   }
 }

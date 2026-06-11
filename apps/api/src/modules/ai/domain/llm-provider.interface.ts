@@ -11,6 +11,7 @@ export interface LlmRequestOptions {
   model?: string;        // override default model
   temperature?: number;
   maxTokens?: number;
+  promptVersion?: string; // propagated from renderPrompt() for audit metadata
 }
 
 export interface LlmCallMetadata {

@@ -1,0 +1,15 @@
+{
+  "error": "Cannot read properties of undefined (reading 'length')",
+  "partial": {
+    "apiUrl": "http://localhost:3001",
+    "manifest": "public-booking-demo",
+    "runbook": "/home/diphungthinh/Desktop/BA_helper_test/docs/runbooks/public-github-smoke-demo.md",
+    "repositoryId": "e480d4fd-9e80-44cd-8dbb-150b1d764efb",
+    "scanJobId": "d8aaa2b5-615e-44fb-8ec1-773137714b03",
+    "snapshotId": "8dc3b25e-e8f1-4906-8d33-aa3da166e1cf",
+    "requirementId": "bb8501c7-8b37-4189-95e9-4a618788762d",
+    "revisionId": "40d6883a-69a4-4b8d-b361-92b9e7a58dd5",
+    "analysisId": "81731308-1ba2-45ec-9259-aa557deae709"
+  },
+  "status": "failed"
+}

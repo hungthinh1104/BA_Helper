@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "exclude": [
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts",
+    "../api/src/**/*.spec.ts",
+    "../api/src/**/*.test.ts",
+    "../api/src/smoke/**/*.ts",
+    "../api/src/smoke-e2e.ts"
+  ]
+}

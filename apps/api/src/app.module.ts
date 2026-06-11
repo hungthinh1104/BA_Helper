@@ -14,9 +14,16 @@ import { ArtifactModule } from './modules/artifact/artifact.module';
 import { GraphModule } from './modules/graph/graph.module';
 import { QueueModule } from './modules/queue/queue.module';
 import { AiModule } from './modules/ai/ai.module';
+import { SystemModule } from './modules/system/system.module';
+import { ClarificationModule } from './modules/clarification/clarification.module';
+
+import { AuthModule } from './modules/auth/auth.module';
+import { JwtAuthGuard } from './modules/auth/application/jwt-auth.guard';
+import { RolesGuard } from './modules/auth/application/roles.guard';
 
 @Module({
   imports: [
+    AuthModule,
     PrismaModule,
     EventLogModule,
     ProjectModule,
@@ -31,7 +38,19 @@ import { AiModule } from './modules/ai/ai.module';
     ArtifactModule,
     GraphModule,
     QueueModule,
+    SystemModule,
+    ClarificationModule,
     AiModule.forRoot(),
+  ],
+  providers: [
+    {
+      provide: 'APP_GUARD',
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: 'APP_GUARD',
+      useClass: RolesGuard,
+    },
   ],
 })
 export class AppModule {}

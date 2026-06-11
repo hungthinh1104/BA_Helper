@@ -1,6 +1,8 @@
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ScanJobStatus, ScanJobStage } from '@prisma/client';
 
+@Injectable()
 export class ScanJobRepository {
   constructor(private readonly prisma: PrismaService) {}
 
@@ -52,6 +54,7 @@ export class ScanJobRepository {
     status: ScanJobStatus;
     stage: ScanJobStage;
     progress: number;
+    errorCode?: string | null;
     errorMessage?: string;
   }) {
     return this.prisma.scanJob.update({
@@ -60,6 +63,7 @@ export class ScanJobRepository {
         status: params.status,
         stage: params.stage,
         progress: params.progress,
+        errorCode: params.errorCode ?? null,
         errorMessage: params.errorMessage ?? null,
       },
     });

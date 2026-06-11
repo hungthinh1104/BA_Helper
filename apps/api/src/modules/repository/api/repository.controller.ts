@@ -1,13 +1,15 @@
-import { Body, Controller, Param, Post, Get } from '@nestjs/common';
+import { Body, Controller, Param, Post, Get, Query, BadRequestException } from '@nestjs/common';
 import {
   repositoryCreateRequestSchema,
   repositoryCreateResponseSchema,
   repositoryListResponseSchema,
   repositoryDetailResponseSchema,
+  paginationQuerySchema,
 } from '@ba-helper/contracts';
 import { CreateRepositoryUseCase } from '../application/create-repository.usecase';
 import { ListRepositoriesUseCase } from '../application/list-repositories.usecase';
 import { GetRepositoryUseCase } from '../application/get-repository.usecase';
+import { Roles } from '../../auth/api/roles.decorator';
 
 @Controller('/api/v1/projects/:projectId/repositories')
 export class RepositoryController {
@@ -17,7 +19,49 @@ export class RepositoryController {
     private readonly getRepository: GetRepositoryUseCase,
   ) {}
 
+  private mapRepository(r: any) {
+    const latestScanJob = r.scanJobs?.[0];
+    const latestSnapshot = r.snapshots?.[0];
+    const latestTarget = r.targets?.[0];
+    return {
+      id: r.id,
+      canonicalUrl: r.canonicalUrl,
+      displayName: r.canonicalUrl.split('/').pop() || r.canonicalUrl,
+      lastObservedAt: latestTarget?.lastObservedAt?.toISOString(),
+      isConnected: true,
+      latestTarget: latestTarget ? {
+        id: latestTarget.id,
+        requestedRef: latestTarget.requestedRef,
+        resolvedCommitSha: latestTarget.latestObservedCommitSha ?? undefined,
+      } : undefined,
+      latestScanJob: latestScanJob ? {
+        id: latestScanJob.id,
+        status: latestScanJob.status,
+        stage: latestScanJob.stage,
+        progress: latestScanJob.progress,
+        canCancel: latestScanJob.status === 'QUEUED' || latestScanJob.status === 'RUNNING',
+        diagnostics: latestScanJob.diagnostics ?? undefined,
+        error: latestScanJob.errorCode
+          ? {
+              code: latestScanJob.errorCode,
+              message: latestScanJob.errorMessage ?? '',
+            }
+          : null,
+      } : undefined,
+      latestSnapshot: latestSnapshot ? {
+        id: latestSnapshot.id,
+        commitSha: latestSnapshot.commitSha,
+        analyzerVersion: latestSnapshot.analyzerVersion,
+        coverageStatus: latestSnapshot.coverageStatus,
+        indexStatus: latestSnapshot.indexStatus,
+        diagnostics: latestSnapshot.diagnostics ?? undefined,
+      } : undefined,
+      createdAt: r.createdAt.toISOString(),
+    };
+  }
+
   @Post()
+  @Roles('ADMIN')
   async create(@Param('projectId') projectId: string, @Body() body: unknown) {
     const input = repositoryCreateRequestSchema.parse(body);
     const repository = await this.createRepository.execute({
@@ -36,23 +80,16 @@ export class RepositoryController {
   }
 
   @Get()
-  async list(@Param('projectId') projectId: string) {
-    const repositories = await this.listRepositories.execute({ projectId });
+  async list(@Param('projectId') projectId: string, @Query() query: unknown) {
+    const parsedQuery = paginationQuerySchema.safeParse(query);
+    if (!parsedQuery.success) {
+      throw new BadRequestException(parsedQuery.error.errors);
+    }
+    const { limit, offset } = parsedQuery.data;
+
+    const repositories = await this.listRepositories.execute({ projectId, limit, offset });
     return repositoryListResponseSchema.parse({
-      items: repositories.map((r) => ({
-        id: r.id,
-        canonicalUrl: r.canonicalUrl,
-        lastObservedAt: r.targets[0]?.lastObservedAt?.toISOString(),
-        isConnected: true,
-        targets: r.targets.map((t) => ({
-          id: t.id,
-          targetKey: t.targetKey,
-          resolvedRefType: t.resolvedRefType,
-          latestObservedCommitSha: t.latestObservedCommitSha,
-          lastObservedAt: t.lastObservedAt.toISOString(),
-        })),
-        createdAt: r.createdAt.toISOString(),
-      })),
+      items: repositories.map((r) => this.mapRepository(r)),
     });
   }
 
@@ -62,19 +99,15 @@ export class RepositoryController {
     @Param('repositoryId') repositoryId: string,
   ) {
     const r = await this.getRepository.execute({ repositoryId });
+    const artifacts = (r as any).snapshots?.[0]?.artifacts || [];
+    const controllers = artifacts.filter((a: any) => a.artifactType === 'CONTROLLER').length;
+    const services = artifacts.filter((a: any) => a.artifactType === 'SERVICE').length;
+    const entities = artifacts.filter((a: any) => a.artifactType === 'ENTITY').length;
+    const tests = artifacts.filter((a: any) => a.artifactType === 'TEST').length;
+
     return repositoryDetailResponseSchema.parse({
-      id: r.id,
-      canonicalUrl: r.canonicalUrl,
-      lastObservedAt: r.targets[0]?.lastObservedAt?.toISOString(),
-      isConnected: true,
-      targets: r.targets.map((t) => ({
-        id: t.id,
-        targetKey: t.targetKey,
-        resolvedRefType: t.resolvedRefType,
-        latestObservedCommitSha: t.latestObservedCommitSha,
-        lastObservedAt: t.lastObservedAt.toISOString(),
-      })),
-      createdAt: r.createdAt.toISOString(),
+      ...this.mapRepository(r),
+      artifactStats: { controllers, services, entities, tests },
     });
   }
 }

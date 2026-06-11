@@ -1,0 +1,11 @@
+{
+  "error": "Scan job failed with status=FAILED code=CLONE_FAILED",
+  "partial": {
+    "apiUrl": "http://localhost:3001",
+    "manifest": "public-booking-demo",
+    "runbook": "/home/diphungthinh/Desktop/BA_helper_test/docs/runbooks/public-github-smoke-demo.md",
+    "repositoryId": "e480d4fd-9e80-44cd-8dbb-150b1d764efb",
+    "scanJobId": "c8e7ffdb-4216-443e-a68b-57a82c9b8ca8"
+  },
+  "status": "failed"
+}

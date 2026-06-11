@@ -15,7 +15,11 @@ export class QueueService {
     await this.impactQueue.add(
       'run',
       { analysisId },
-      { jobId: `impact-${analysisId}` },
+      { 
+        jobId: `impact-${analysisId}`,
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 2000 }
+      },
     );
   }
 
@@ -23,7 +27,7 @@ export class QueueService {
     await this.embeddingQueue.add(
       'embed_snapshot',
       { snapshotId },
-      { jobId: `embed-${snapshotId}` },
+      { jobId: `embed-${snapshotId}-${Date.now()}` },
     );
   }
 
@@ -33,5 +37,36 @@ export class QueueService {
       { jobId },
       { jobId: `scan-${jobId}` },
     );
+  }
+
+  async checkQueueHealth(): Promise<{ redis: boolean; queue: boolean }> {
+    try {
+      const client = (await this.scanJobQueue.client) as {
+        ping?: () => Promise<string>;
+      };
+      const redisStatus =
+        typeof client.ping === 'function'
+          ? (await client.ping()) === 'PONG'
+          : false;
+      await this.scanJobQueue.getJobCounts(
+        'active',
+        'completed',
+        'delayed',
+        'failed',
+        'paused',
+        'prioritized',
+        'waiting',
+      );
+
+      return {
+        queue: true,
+        redis: redisStatus,
+      };
+    } catch {
+      return {
+        queue: false,
+        redis: false,
+      };
+    }
   }
 }
