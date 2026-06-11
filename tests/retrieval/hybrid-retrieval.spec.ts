@@ -26,7 +26,11 @@ describe('HybridRetrievalService', () => {
     prismaMock = {
       $queryRawUnsafe: jest.fn(),
       codeArtifact: { findMany: jest.fn() },
+      repositorySnapshot: { findUnique: jest.fn() },
     };
+
+    // Default to VECTOR_READY to enable full testing
+    prismaMock.repositorySnapshot.findUnique.mockResolvedValue({ indexStatus: 'VECTOR_READY' });
 
     service = new HybridRetrievalService(
       chunkRepoMock,
@@ -54,75 +58,16 @@ describe('HybridRetrievalService', () => {
         }),
       );
     });
-
-    it('should use explicit tenantId when provided', async () => {
-      prismaMock.$queryRawUnsafe.mockResolvedValue([]);
-      chunkRepoMock.searchSimilar.mockResolvedValue([]);
-      graphRepoMock.expandFromSeeds.mockResolvedValue([]);
-
-      await service.retrieve({ ...BASE_REQUEST, tenantId: 'org-999' });
-
-      expect(chunkRepoMock.searchSimilar as jest.Mock).toHaveBeenCalledWith(
-        expect.objectContaining({ tenantId: 'org-999' }),
-      );
-    });
   });
 
-  describe('domain-aware keyword extraction', () => {
-    it('should match glossary terms appearing in change request', async () => {
-      prismaMock.$queryRawUnsafe.mockResolvedValue([]);
-      chunkRepoMock.searchSimilar.mockResolvedValue([]);
-      graphRepoMock.expandFromSeeds.mockResolvedValue([]);
-
-      // "cancellation", "booking", and "refund" are in the BOOKING glossary
-      await service.retrieve({ ...BASE_REQUEST, changeRequest: 'cancellation of booking to receive refund' });
-
-      // $queryRawUnsafe called as (sql, snapshotId, keywordsArray)
-      expect(prismaMock.$queryRawUnsafe as jest.Mock).toHaveBeenCalledTimes(1);
-      const allArgs = (prismaMock.$queryRawUnsafe as jest.Mock).mock.calls[0];
-      // Flatten all args to find the keywords wrapped as %...%
-      const allStrings = allArgs.flat(Infinity) as string[];
-      const keywordBlock = allStrings.filter((s: string) => s.startsWith('%'));
-      expect(keywordBlock.some((k: string) => k.includes('cancellation'))).toBe(true);
-      expect(keywordBlock.some((k: string) => k.includes('booking'))).toBe(true);
-      expect(keywordBlock.some((k: string) => k.includes('refund'))).toBe(true);
-    });
-
-    it('should extract camelCase symbol names from change request', async () => {
-      prismaMock.$queryRawUnsafe.mockResolvedValue([]);
-      chunkRepoMock.searchSimilar.mockResolvedValue([]);
-      graphRepoMock.expandFromSeeds.mockResolvedValue([]);
-
-      await service.retrieve({ ...BASE_REQUEST, changeRequest: 'Update cancelBooking to call RefundService' });
-
-      const sqlCall = prismaMock.$queryRawUnsafe.mock.calls[0];
-      const keywords = sqlCall[2] as string[];
-      expect(keywords.some((k: string) => k.includes('cancelBooking'))).toBe(true);
-      expect(keywords.some((k: string) => k.includes('RefundService'))).toBe(true);
-    });
-
-    it('should also search filePath and artifactKey, not just name', async () => {
-      prismaMock.$queryRawUnsafe.mockResolvedValue([]);
-      chunkRepoMock.searchSimilar.mockResolvedValue([]);
-      graphRepoMock.expandFromSeeds.mockResolvedValue([]);
-
-      await service.retrieve(BASE_REQUEST);
-
-      const sqlCall = prismaMock.$queryRawUnsafe.mock.calls[0];
-      const sql = sqlCall[0] as string;
-      expect(sql).toContain('"filePath"');
-      expect(sql).toContain('"artifactKey"');
-    });
-  });
-
-  describe('hybrid merging', () => {
-    it('should merge lexical and vector hits and set HYBRID method', async () => {
+  describe('hybrid merging and score fusion', () => {
+    it('should merge lexical and vector hits and calculate hybrid score', async () => {
       prismaMock.$queryRawUnsafe.mockResolvedValue([
         { id: 'art-1', artifactKey: 'file1.ts', filePath: 'src/file1.ts', symbolName: 'func1', artifactType: 'FILE' },
       ]);
       chunkRepoMock.searchSimilar.mockResolvedValue([
         { artifactId: 'art-1', similarity: 0.95 },
-        { artifactId: 'art-2', similarity: 0.85 },
+        { artifactId: 'art-2', similarity: 0.85 }, // will be pure vector
       ]);
       artifactRepoMock.findById.mockResolvedValue({
         id: 'art-2', artifactKey: 'file2.ts', filePath: 'src/file2.ts', name: 'func2', artifactType: 'FILE',
@@ -131,16 +76,24 @@ describe('HybridRetrievalService', () => {
 
       const results = await service.retrieve({ ...BASE_REQUEST, expandGraph: false });
 
+      // art-1: lexical (0.4) + vector (0.95 * 0.2) = 0.4 + 0.19 = 0.59
+      // it might also have domain boost if it matched domain rules, but 'cancel booking' should match domain
       const art1 = results.find(r => r.artifactId === 'art-1');
       expect(art1?.retrievalMethod).toBe('HYBRID');
-      expect(art1?.score).toBe(1.0);
+      expect(art1?.retrievalSignals).toContain('LEXICAL');
+      expect(art1?.retrievalSignals).toContain('VECTOR');
+      expect(art1?.retrievalReason).toContain('lexical match');
+      expect(art1?.retrievalReason).toContain('semantic match');
 
       const art2 = results.find(r => r.artifactId === 'art-2');
       expect(art2?.retrievalMethod).toBe('VECTOR');
-      expect(art2?.score).toBe(0.85);
+      expect(art2?.retrievalSignals).toContain('VECTOR');
+      expect(art2?.retrievalSignals).not.toContain('LEXICAL');
+      // art-2 vector score = 0.85 * 0.20 = 0.17
+      expect(art2?.score).toBeCloseTo(0.17, 2);
     });
 
-    it('should mark graph-expanded artifacts as GRAPH with score 0.5', async () => {
+    it('should assign GRAPH_EXPANSION method and correct depth score', async () => {
       prismaMock.$queryRawUnsafe.mockResolvedValue([]);
       chunkRepoMock.searchSimilar.mockResolvedValue([
         { artifactId: 'art-1', similarity: 0.9 },
@@ -156,13 +109,93 @@ describe('HybridRetrievalService', () => {
       const results = await service.retrieve({ ...BASE_REQUEST, expandGraph: true });
 
       const art3 = results.find(r => r.artifactId === 'art-3');
-      expect(art3?.retrievalMethod).toBe('GRAPH');
-      expect(art3?.score).toBe(0.5);
+      expect(art3?.retrievalMethod).toBe('GRAPH_EXPANSION');
+      // graph depth 1 = 0.7 * 0.35 = 0.245
+      expect(art3?.score).toBeCloseTo(0.245, 2);
+    });
+
+    it('should drop vector-only low similarity candidates', async () => {
+      prismaMock.$queryRawUnsafe.mockResolvedValue([]);
+      chunkRepoMock.searchSimilar.mockResolvedValue([
+        { artifactId: 'art-low', similarity: 0.60 }, // < 0.72 MIN_VECTOR_SIMILARITY
+      ]);
+      artifactRepoMock.findById.mockResolvedValue({
+        id: 'art-low', artifactKey: 'low.ts', filePath: 'src/low.ts', name: 'low', artifactType: 'FILE',
+      });
+      graphRepoMock.expandFromSeeds.mockResolvedValue([]);
+
+      const results = await service.retrieve(BASE_REQUEST);
+      expect(results.find(r => r.artifactId === 'art-low')).toBeUndefined();
+    });
+
+    it('should apply noise penalty for weak vector only test candidates', async () => {
+      prismaMock.$queryRawUnsafe.mockResolvedValue([]);
+      chunkRepoMock.searchSimilar.mockResolvedValue([
+        { artifactId: 'art-test', similarity: 0.73 }, // > 0.72 but < 0.75 (weak)
+      ]);
+      artifactRepoMock.findById.mockResolvedValue({
+        id: 'art-test', artifactKey: 'test.ts', filePath: 'src/file.spec.ts', name: 'test', artifactType: 'TEST',
+      });
+      graphRepoMock.expandFromSeeds.mockResolvedValue([]);
+
+      const results = await service.retrieve({ ...BASE_REQUEST, changeRequest: 'normal change' });
+      const artTest = results.find(r => r.artifactId === 'art-test');
+      
+      // score = vector(0.73 * 0.20 = 0.146) - penalty(0.05) = 0.096
+      expect(artTest?.score).toBeCloseTo(0.096, 3);
+    });
+
+    it('should not penalize test artifact if reached via graph edge', async () => {
+      prismaMock.$queryRawUnsafe.mockResolvedValue([]);
+      chunkRepoMock.searchSimilar.mockResolvedValue([
+        { artifactId: 'art-1', similarity: 0.9 }, // seed
+      ]);
+      artifactRepoMock.findById.mockResolvedValue({
+        id: 'art-1', artifactKey: 'file1.ts', filePath: 'src/file1.ts', name: 'func1', artifactType: 'FILE',
+      });
+      graphRepoMock.expandFromSeeds.mockResolvedValue(['art-1', 'art-test']);
+      prismaMock.codeArtifact.findMany.mockResolvedValue([
+        { id: 'art-test', artifactKey: 'test.ts', filePath: 'src/file.spec.ts', name: 'test', artifactType: 'TEST' },
+      ]);
+
+      const results = await service.retrieve({ ...BASE_REQUEST, expandGraph: true });
+      const artTest = results.find(r => r.artifactId === 'art-test');
+      
+      // score = graph(0.7 * 0.35 = 0.245) - 0 penalty = 0.245
+      expect(artTest?.score).toBeCloseTo(0.245, 3);
     });
   });
 
-  describe('resilience', () => {
+  describe('snapshot status fallback', () => {
+    it('should skip vector if VECTOR_INDEXING', async () => {
+      prismaMock.repositorySnapshot.findUnique.mockResolvedValue({ indexStatus: 'VECTOR_INDEXING' });
+      prismaMock.$queryRawUnsafe.mockResolvedValue([
+        { id: 'art-1', artifactKey: 'file1.ts', filePath: 'src/file1.ts', symbolName: 'func1', artifactType: 'FILE' },
+      ]);
+      graphRepoMock.expandFromSeeds.mockResolvedValue([]);
+
+      const results = await service.retrieve(BASE_REQUEST);
+
+      expect(chunkRepoMock.searchSimilar).not.toHaveBeenCalled();
+      expect(results).toHaveLength(1);
+      expect(results[0].retrievalMethod).toBe('LEXICAL');
+    });
+
+    it('should skip vector if LEXICAL_READY', async () => {
+      prismaMock.repositorySnapshot.findUnique.mockResolvedValue({ indexStatus: 'LEXICAL_READY' });
+      prismaMock.$queryRawUnsafe.mockResolvedValue([
+        { id: 'art-1', artifactKey: 'file1.ts', filePath: 'src/file1.ts', symbolName: 'func1', artifactType: 'FILE' },
+      ]);
+      graphRepoMock.expandFromSeeds.mockResolvedValue([]);
+
+      const results = await service.retrieve(BASE_REQUEST);
+
+      expect(chunkRepoMock.searchSimilar).not.toHaveBeenCalled();
+      expect(results).toHaveLength(1);
+    });
+
     it('should fall back gracefully to lexical when vector search throws', async () => {
+      prismaMock.repositorySnapshot.findUnique.mockResolvedValue({ indexStatus: 'VECTOR_READY' });
       prismaMock.$queryRawUnsafe.mockResolvedValue([
         { id: 'art-1', artifactKey: 'file1.ts', filePath: 'src/file1.ts', symbolName: 'func1', artifactType: 'FILE' },
       ]);

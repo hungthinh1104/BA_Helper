@@ -7,7 +7,7 @@ export interface EmbeddingResult {
   embeddings: number[][];
   model: string;
   dimensions: number;
-  tokenUsage: number;
+  tokenUsage?: number | null;
 }
 
 export abstract class EmbeddingProvider {

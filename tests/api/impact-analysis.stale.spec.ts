@@ -49,8 +49,16 @@ describe('FinalizeImpactAnalysisUseCase stale guard', () => {
   it('rejects when analysis is stale', async () => {
     const useCase = new FinalizeImpactAnalysisUseCase(
       new StubImpactRepo() as any,
-      new StubDocumentRepo() as any,
+      { listByAnalysis: async () => [] } as any,
+      { listByAnalysis: async () => [] } as any,
+      { listBySnapshot: async () => [] } as any,
+      { findByAnalysisId: () => Promise.resolve([]) } as any,
+      { listByAnalysisId: () => Promise.resolve([]) } as any,
+      { upsertApproved: () => Promise.resolve() } as any,
       new StubEventLog() as any,
+      { build: () => 'markdown' } as any,
+      { listByAnalysisId: async () => [] } as any,
+      { computeForAnalysis: async () => ({ computable: true, diff: {} }) } as any,
     );
 
     await expect(

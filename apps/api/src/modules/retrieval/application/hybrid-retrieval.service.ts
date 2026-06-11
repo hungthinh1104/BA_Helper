@@ -1,11 +1,34 @@
 import { Injectable } from '@nestjs/common';
 import { RetrievalRequest, RetrievedArtifact } from '../domain/retrieval.types';
+import { buildRetrievalSuggestion } from '../domain/retrieval-suggestion';
 import { EmbeddingChunkRepository } from '../../embedding/infrastructure/embedding-chunk.repository';
 import { EmbeddingProvider } from '../../embedding/domain/embedding-provider.interface';
 import { ArtifactRepository } from '../../artifact/infrastructure/artifact.repository';
 import { GraphRepository } from '../../graph/infrastructure/graph.repository';
 import { PrismaService } from '../../prisma/prisma.service';
 import { getDomainGlossary } from '../../domain-profile';
+
+const WEIGHTS = {
+  lexical: 0.40,
+  graph: 0.35,
+  vector: 0.20,
+  domain: 0.05,
+};
+
+const MIN_VECTOR_SIMILARITY = 0.72;
+const WEAK_VECTOR_THRESHOLD = 0.75;
+
+type Candidate = {
+  artifact: any;
+  lexicalScoreNorm: number;
+  graphScoreNorm: number;
+  vectorScoreNorm: number;
+  domainBoostNorm: number;
+  noisePenalty: number;
+  signals: Set<'LEXICAL' | 'GRAPH' | 'VECTOR' | 'DOMAIN'>;
+  graphDepth?: number;
+  lexicalReasons: string[];
+};
 
 @Injectable()
 export class HybridRetrievalService {
@@ -21,10 +44,36 @@ export class HybridRetrievalService {
     const maxResults = request.maxResults ?? 20;
     // MVP: tenantId = projectId. Future: pass organizationId.
     const tenantId = request.tenantId ?? request.projectId;
-    const resultsMap = new Map<string, RetrievedArtifact>();
+    
+    const snapshot = await this.prisma.repositorySnapshot.findUnique({
+      where: { id: request.snapshotId },
+    });
+    const indexStatus = snapshot?.indexStatus ?? 'NOT_INDEXED';
+
+    const candidates = new Map<string, Candidate>();
+
+    const getCandidate = (id: string, artifact: any): Candidate => {
+      let c = candidates.get(id);
+      if (!c) {
+        c = {
+          artifact,
+          lexicalScoreNorm: 0,
+          graphScoreNorm: 0,
+          vectorScoreNorm: 0,
+          domainBoostNorm: 0,
+          noisePenalty: 0,
+          signals: new Set(),
+          lexicalReasons: [],
+        };
+        candidates.set(id, c);
+      }
+      return c;
+    };
 
     // 1. Lexical search — domain-glossary-aware keyword extraction
-    const keywords = this.extractKeywords(request.changeRequest, request.domain);
+    const { glossaryMatches, symbolMatches } = this.extractKeywords(request.changeRequest, request.domain);
+    const keywords = [...glossaryMatches, ...symbolMatches];
+    
     if (keywords.length > 0) {
       const lexicalHits = await this.prisma.$queryRawUnsafe<any[]>(
         `SELECT id, "artifactKey", "filePath", name AS "symbolName", "artifactType"
@@ -40,66 +89,86 @@ export class HybridRetrievalService {
       );
 
       for (const hit of lexicalHits) {
-        resultsMap.set(hit.id, {
-          artifactId: hit.id,
-          artifactKey: hit.artifactKey,
-          filePath: hit.filePath,
-          symbolName: hit.symbolName,
-          artifactType: hit.artifactType,
-          score: 1.0,
-          retrievalMethod: 'LEXICAL',
-        });
+        const c = getCandidate(hit.id, hit);
+        c.lexicalScoreNorm = 1.0;
+        c.signals.add('LEXICAL');
+        
+        const hitLower = (hit.symbolName + ' ' + hit.filePath).toLowerCase();
+        const requestLower = request.changeRequest.toLowerCase();
+        
+        let hasStrongDomain = false;
+        let hasWeakDomain = false;
+        
+        for (const term of glossaryMatches) {
+          const termLower = term.toLowerCase();
+          if (hitLower.includes(termLower)) {
+            if (requestLower.includes(termLower)) {
+              hasStrongDomain = true;
+            } else {
+              hasWeakDomain = true;
+            }
+          }
+        }
+        
+        if (hasStrongDomain) {
+          c.domainBoostNorm = 1.0;
+          c.signals.add('DOMAIN');
+          c.lexicalReasons.push('strong domain match');
+        } else if (hasWeakDomain) {
+          c.domainBoostNorm = 0.5;
+          c.signals.add('DOMAIN');
+          c.lexicalReasons.push('weak domain match');
+        } else {
+          c.lexicalReasons.push('symbol match');
+        }
       }
     }
 
     // 2. Vector semantic search
-    try {
-      const vectorResponse = await this.embeddingProvider.embed({
-        texts: [request.changeRequest],
-      });
-      const queryEmbedding = vectorResponse.embeddings[0];
+    if (indexStatus === 'VECTOR_READY') {
+      try {
+        const vectorResponse = await this.embeddingProvider.embed({
+          texts: [request.changeRequest],
+        });
+        const queryEmbedding = vectorResponse.embeddings[0];
 
-      const vectorHits = await this.chunkRepo.searchSimilar({
-        tenantId,
-        projectId: request.projectId,
-        repositoryId: request.repositoryId,
-        snapshotId: request.snapshotId,
-        queryEmbedding,
-        limit: maxResults,
-      });
+        const vectorHits = await this.chunkRepo.searchSimilar({
+          tenantId,
+          projectId: request.projectId,
+          repositoryId: request.repositoryId,
+          snapshotId: request.snapshotId,
+          queryEmbedding,
+          limit: maxResults * 2, // fetch more to allow dropping
+        });
 
-      for (const hit of vectorHits) {
-        if (!hit.artifactId) continue;
-
-        const existing = resultsMap.get(hit.artifactId);
-        if (existing) {
-          existing.retrievalMethod = 'HYBRID';
-          existing.score = Math.max(existing.score, hit.similarity);
-        } else {
-          const artifact = await this.artifactRepo.findById(hit.artifactId);
-          if (artifact) {
-            resultsMap.set(hit.artifactId, {
-              artifactId: artifact.id,
-              artifactKey: artifact.artifactKey,
-              filePath: artifact.filePath,
-              symbolName: artifact.name,
-              artifactType: artifact.artifactType,
-              score: hit.similarity,
-              retrievalMethod: 'VECTOR',
-            });
+        for (const hit of vectorHits) {
+          if (!hit.artifactId) continue;
+          
+          let artifact = candidates.get(hit.artifactId)?.artifact;
+          if (!artifact) {
+            artifact = await this.artifactRepo.findById(hit.artifactId);
+            if (artifact) {
+               artifact.symbolName = artifact.name;
+            }
           }
+            
+          if (!artifact) continue;
+
+          const c = getCandidate(hit.artifactId, artifact);
+          c.vectorScoreNorm = Math.max(c.vectorScoreNorm, hit.similarity);
+          c.signals.add('VECTOR');
         }
+      } catch (error) {
+        console.warn('Vector search failed, falling back to lexical only', error);
       }
-    } catch (error) {
-      console.warn('Vector search failed, falling back to lexical only', error);
     }
 
     // 3. Graph expansion from current seed set
     if (request.expandGraph) {
-      const seedIds = Array.from(resultsMap.keys());
+      const seedIds = Array.from(candidates.keys());
       if (seedIds.length > 0) {
         const expandedIds = await this.graphRepo.expandFromSeeds(request.snapshotId, seedIds);
-        const newIds = expandedIds.filter(id => !resultsMap.has(id));
+        const newIds = expandedIds.filter(id => !candidates.has(id));
 
         if (newIds.length > 0) {
           const newArtifacts = await this.prisma.codeArtifact.findMany({
@@ -107,40 +176,119 @@ export class HybridRetrievalService {
           });
 
           for (const artifact of newArtifacts) {
-            resultsMap.set(artifact.id, {
-              artifactId: artifact.id,
-              artifactKey: artifact.artifactKey,
-              filePath: artifact.filePath,
-              symbolName: artifact.name,
-              artifactType: artifact.artifactType,
-              score: 0.5,
-              retrievalMethod: 'GRAPH',
-            });
+            const c = getCandidate(artifact.id, { ...artifact, symbolName: artifact.name });
+            c.graphScoreNorm = 0.7; // depth 1
+            c.graphDepth = 1;
+            c.signals.add('GRAPH');
+          }
+        }
+        
+        for (const id of seedIds) {
+          const c = candidates.get(id)!;
+          if (c.signals.has('LEXICAL') || c.signals.has('VECTOR')) {
+            c.graphScoreNorm = 1.0; // root
+            c.graphDepth = 0;
+            // Root node acts as strong graph seed
+            c.signals.add('GRAPH'); 
           }
         }
       }
     }
 
-    // 4. Rerank by score descending, cap at maxResults
-    const finalResults = Array.from(resultsMap.values());
+    // 4. Calculate final score, apply noise penalty, and filter
+    const finalResults: RetrievedArtifact[] = [];
+    const mentionsTest = request.changeRequest.toLowerCase().includes('test') || request.changeRequest.toLowerCase().includes('qa');
+    
+    for (const [id, c] of candidates.entries()) {
+      const artifact = c.artifact;
+      const artifactPath = artifact.filePath?.toLowerCase() || '';
+      
+      const isTest = artifact.artifactType === 'TEST' || artifactPath.includes('test') || artifactPath.includes('spec');
+      const isNoisySupport = ['notification', 'audit', 'logger', 'recommendation', 'discount'].some(n => artifactPath.includes(n));
+      const hasGraph = c.signals.has('GRAPH');
+      const hasLexical = c.signals.has('LEXICAL');
+      const hasVector = c.signals.has('VECTOR');
+      
+      const isWeakVector = hasVector && c.vectorScoreNorm < WEAK_VECTOR_THRESHOLD;
+      const isTooWeakToKeep = hasVector && c.vectorScoreNorm < MIN_VECTOR_SIMILARITY;
+      const isVectorOnly = hasVector && !hasLexical && !hasGraph;
+      
+      // Filter graph depth > 2
+      if (c.graphDepth !== undefined && c.graphDepth > 2) {
+         continue; 
+      }
+      
+      // Drop vector-only low similarity candidate
+      if (isVectorOnly && isTooWeakToKeep) {
+         continue; 
+      }
+      
+      // Apply noise penalties
+      if (isNoisySupport) {
+         c.noisePenalty = 0.15;
+      } else if (isWeakVector && isVectorOnly) {
+         // This block might not be hit if we drop them above, but keeps logic solid if threshold drops
+         if (isTest && !mentionsTest) {
+             c.noisePenalty = 0.05;
+         } else {
+             c.noisePenalty = 0.10;
+         }
+      }
+
+      const finalScore = 
+        (c.lexicalScoreNorm * WEIGHTS.lexical) + 
+        (c.graphScoreNorm * WEIGHTS.graph) + 
+        (c.vectorScoreNorm * WEIGHTS.vector) + 
+        (c.domainBoostNorm * WEIGHTS.domain) - 
+        c.noisePenalty;
+        
+      if (finalScore <= 0) continue;
+      
+      let method: 'LEXICAL' | 'VECTOR' | 'GRAPH_EXPANSION' | 'HYBRID' = 'HYBRID';
+      if (c.signals.size === 1 || (c.signals.size === 2 && c.signals.has('DOMAIN'))) {
+         if (c.signals.has('LEXICAL')) method = 'LEXICAL';
+         if (c.signals.has('VECTOR')) method = 'VECTOR';
+         if (c.signals.has('GRAPH')) method = 'GRAPH_EXPANSION';
+      }
+      
+      const reasons: string[] = [];
+      if (hasLexical) reasons.push(`lexical match (${Array.from(new Set(c.lexicalReasons)).join(', ')})`);
+      if (hasVector) reasons.push(`semantic match (${c.vectorScoreNorm.toFixed(2)})`);
+      if (hasGraph && c.graphDepth !== undefined && c.graphDepth > 0) reasons.push(`graph expansion (depth ${c.graphDepth})`);
+      else if (hasGraph && c.graphDepth === 0) reasons.push('graph seed');
+      
+      const retrievedArtifact: RetrievedArtifact = {
+        artifactId: artifact.id,
+        artifactKey: artifact.artifactKey,
+        filePath: artifact.filePath,
+        symbolName: artifact.symbolName ?? artifact.name,
+        artifactType: artifact.artifactType,
+        score: finalScore,
+        retrievalMethod: method,
+        retrievalSignals: Array.from(c.signals),
+        retrievalReason: reasons.join('; ') || 'unknown',
+        strategyVersion: 'hybrid-retrieval-v1',
+        lexicalScore: c.lexicalScoreNorm,
+        graphScore: c.graphScoreNorm,
+        vectorScore: c.vectorScoreNorm,
+        domainBoost: c.domainBoostNorm,
+        finalScore: finalScore,
+      };
+      
+      retrievedArtifact.suggestion = buildRetrievalSuggestion(retrievedArtifact);
+      finalResults.push(retrievedArtifact);
+    }
+
     finalResults.sort((a, b) => b.score - a.score);
     return finalResults.slice(0, maxResults);
   }
 
-  /**
-   * Extract keywords from the change request using domain glossary + symbol name heuristics.
-   * Glossary drives lexical search; not injected into prompts.
-   */
-  private extractKeywords(text: string, domain?: string): string[] {
+  private extractKeywords(text: string, domain?: string): { glossaryMatches: string[], symbolMatches: string[] } {
     const glossary = getDomainGlossary(domain ?? 'BOOKING');
     const lowerText = text.toLowerCase();
 
-    // 1. Glossary terms that appear in the text
-    const glossaryMatches = glossary.filter(term =>
-      lowerText.includes(term.toLowerCase()),
-    );
+    const glossaryMatches = glossary.filter(term => lowerText.includes(term.toLowerCase()));
 
-    // 2. CamelCase and snake_case symbol names from the text
     const symbolPattern = /\b([a-zA-Z][a-z]+(?:[A-Z][a-z]+)+|[a-z]+(?:_[a-z]+)+)\b/g;
     const symbolMatches: string[] = [];
     let match: RegExpExecArray | null;
@@ -148,8 +296,12 @@ export class HybridRetrievalService {
       symbolMatches.push(match[1]);
     }
 
-    // 3. Union and deduplicate, limit to 15 terms to avoid over-broad queries
-    const combined = Array.from(new Set([...glossaryMatches, ...symbolMatches]));
-    return combined.slice(0, 15);
+    // Deduplicate symbol matches and keep only top 15 total
+    const uniqueSymbols = Array.from(new Set(symbolMatches));
+    return { 
+      glossaryMatches: glossaryMatches.slice(0, 15), 
+      symbolMatches: uniqueSymbols.slice(0, 15) 
+    };
   }
 }
+

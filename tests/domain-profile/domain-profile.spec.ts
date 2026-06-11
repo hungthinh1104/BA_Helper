@@ -69,6 +69,7 @@ describe('HybridRetrievalService — domain-aware keyword extraction', () => {
     prismaMock = {
       $queryRawUnsafe: jest.fn<any>().mockResolvedValue([]),
       codeArtifact: { findMany: jest.fn<any>().mockResolvedValue([]) },
+      repositorySnapshot: { findUnique: jest.fn<any>().mockResolvedValue({ indexStatus: 'LEXICAL_READY' }) },
     };
     service = new HybridRetrievalService(
       chunkRepoMock as any,

@@ -17,29 +17,9 @@ import { EvidenceRepository } from '../../../api/src/modules/evidence/infrastruc
 @Module({
   imports: [PrismaModule, ScannerModule, EventLogModule, ArtifactModule, QueueModule, EvidenceModule],
   providers: [
-    {
-      provide: ScanJobRepository,
-      useFactory: (prisma: PrismaService) => new ScanJobRepository(prisma),
-      inject: [PrismaService],
-    },
-    {
-      provide: RunScanJobUseCase,
-      useFactory: (
-        scanRepo: ScanJobRepository,
-        artifactRepo: ArtifactRepository,
-        eventLog: EventLogService,
-        evidenceRepo: EvidenceRepository,
-        prisma: PrismaService,
-        queueService: QueueService,
-      ) => new RunScanJobUseCase(scanRepo, artifactRepo, eventLog, evidenceRepo, prisma, queueService),
-      inject: [ScanJobRepository, ArtifactRepository, EventLogService, EvidenceRepository, PrismaService, QueueService],
-    },
-    {
-      provide: ScanJobProcessor,
-      useFactory: (runScanJob: RunScanJobUseCase) =>
-        new ScanJobProcessor(runScanJob),
-      inject: [RunScanJobUseCase],
-    },
+    ScanJobRepository,
+    RunScanJobUseCase,
+    ScanJobProcessor,
   ],
 })
 export class ScanJobWorkerModule {}

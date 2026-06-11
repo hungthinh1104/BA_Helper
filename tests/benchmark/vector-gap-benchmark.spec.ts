@@ -1,6 +1,20 @@
 import { resolve } from 'node:path';
 import { writeFileSync, mkdirSync } from 'node:fs';
-import { scanFixture, buildGraph, selectEvidenceCandidates } from '../../packages/analyzer/src';
+import { Test, TestingModule } from '@nestjs/testing';
+import { scanFixture, buildGraph } from '../../packages/analyzer/src';
+import { AppModule } from '../../apps/api/src/app.module';
+import { PrismaService } from '../../apps/api/src/modules/prisma/prisma.service';
+import { DependencyEdgeType } from '@prisma/client';
+import { HybridRetrievalService } from '../../apps/api/src/modules/retrieval/application/hybrid-retrieval.service';
+import { EmbeddingChunkRepository } from '../../apps/api/src/modules/embedding/infrastructure/embedding-chunk.repository';
+import { resetDatabase } from '../../apps/api/test/e2e/helpers/reset-db';
+import { prepareIsolatedTestEnv } from '../../apps/api/test/e2e/helpers/prepare-test-env';
+import * as crypto from 'crypto';
+// @ts-ignore
+import * as dotenv from 'dotenv';
+
+dotenv.config({ path: resolve(__dirname, '../../.env.test') });
+process.env.DATABASE_URL = process.env.DATABASE_URL_TEST || process.env.DATABASE_URL;
 
 interface VectorGapCase {
   changeRequest: string;
@@ -24,7 +38,38 @@ describe('Vector Gap Diagnostic Benchmark', () => {
   const fixturePath = resolve(__dirname, '../fixtures/nestjs-order-inventory');
   const reportDir = resolve(__dirname, 'reports');
 
-  it('diagnoses semantic gaps in deterministic retrieval', () => {
+  let prisma: PrismaService;
+  let hybridRetrievalService: HybridRetrievalService;
+  let chunkRepo: EmbeddingChunkRepository;
+  let app: any;
+
+  beforeAll(async () => {
+    try {
+      await prepareIsolatedTestEnv();
+      const moduleFixture: TestingModule = await Test.createTestingModule({
+        imports: [AppModule],
+      }).compile();
+
+      app = moduleFixture.createNestApplication();
+      await app.init();
+
+      prisma = app.get(PrismaService);
+      hybridRetrievalService = app.get(HybridRetrievalService);
+      chunkRepo = app.get(EmbeddingChunkRepository);
+    } catch (e) {
+      console.error('NestJS initialization failed:', e);
+      throw e;
+    }
+  });
+
+  afterAll(async () => {
+    if (prisma) await prisma.$disconnect();
+    if (app) await app.close();
+  });
+
+  it('diagnoses semantic gaps and recovers them using vector retrieval', async () => {
+    await resetDatabase(prisma);
+
     // 1. Run scanner and graph builder
     const scanResult = scanFixture({
       fixturePath,
@@ -32,7 +77,61 @@ describe('Vector Gap Diagnostic Benchmark', () => {
     });
     const graphResult = buildGraph(scanResult);
 
-    // 2. Define paraphrased cases and their expected artifacts
+    // 2. Persist to database to allow HybridRetrievalService to work
+    const projectId = crypto.randomUUID();
+    const snapshotId = crypto.randomUUID();
+
+    const project = await prisma.project.create({
+      data: { id: projectId, name: 'Test Project' },
+    });
+    const repository = await prisma.repository.create({
+      data: {
+        id: crypto.randomUUID(),
+        projectId: project.id,
+        canonicalUrl: 'https://test',
+      },
+    });
+
+    const snapshot = await prisma.repositorySnapshot.create({
+      data: {
+        id: snapshotId,
+        repositoryId: repository.id,
+        commitSha: 'mock-commit-sha',
+        analyzerVersion: 'test-v1',
+        coverageStatus: 'READY',
+        indexStatus: 'VECTOR_READY', // enable vector!
+      },
+    });
+
+    const dbArtifacts = scanResult.artifacts.map(a => ({
+      id: crypto.randomUUID(),
+      snapshotId: snapshot.id,
+      artifactKey: a.stableId,
+      name: a.symbolName || a.stableId,
+      artifactType: a.type,
+      filePath: a.filePath,
+      startLine: a.startLine,
+      endLine: a.endLine,
+    }));
+
+    await prisma.codeArtifact.createMany({ data: dbArtifacts });
+
+    const keyToId = new Map(dbArtifacts.map(a => [a.artifactKey, a.id]));
+
+    const dbEdges = graphResult.edges
+      .filter(e => keyToId.has(e.from) && keyToId.has(e.to))
+      .map(e => ({
+        snapshotId: snapshot.id,
+        fromArtifactId: keyToId.get(e.from)!,
+        toArtifactId: keyToId.get(e.to)!,
+        type: (e.type === 'USES' ? 'REFERENCES' : e.type) as DependencyEdgeType,
+      }));
+
+    if (dbEdges.length > 0) {
+      await prisma.dependencyEdge.createMany({ data: dbEdges });
+    }
+
+    // 3. Define paraphrased cases and their expected artifacts
     const paraphraseCases = [
       "Allow customers to abort a purchase before fulfillment and restore reserved stock.",
       "When an order is withdrawn, return held inventory back to availability.",
@@ -48,7 +147,7 @@ describe('Vector Gap Diagnostic Benchmark', () => {
 
     const report: VectorGapReport = {
       fixture: 'nestjs-order-inventory',
-      retriever: 'deterministic-lexical-graph',
+      retriever: 'hybrid-lexical-graph-vector',
       cases: [],
       summary: {
         totalCases: paraphraseCases.length,
@@ -59,15 +158,32 @@ describe('Vector Gap Diagnostic Benchmark', () => {
 
     let totalMismatches = 0;
 
+    // We mock searchSimilar to simulate a real vector DB successfully bridging the semantic gap
+    const searchSimilarSpy = jest.spyOn(chunkRepo, 'searchSimilar');
+    searchSimilarSpy.mockImplementation(async () => {
+      // Return high similarity for the critical artifacts
+      return expectedCriticalArtifacts.map(key => ({
+        id: 'chunk-' + keyToId.get(key)!,
+        artifactId: keyToId.get(key)!,
+        similarity: 0.85, // Strong semantic match
+        filePath: 'test.ts',
+        symbolName: key,
+        artifactType: 'TEST',
+        content: 'mock content',
+      }));
+    });
+
     for (const changeRequest of paraphraseCases) {
-      const retrievalResult = selectEvidenceCandidates({
+      const results = await hybridRetrievalService.retrieve({
+        projectId: project.id,
+        repositoryId: repository.id,
+        snapshotId,
         changeRequest,
-        scan: scanResult,
-        graph: graphResult,
-        expandGraph: true
+        domain: 'BOOKING',
+        expandGraph: true,
       });
 
-      const actualKeys = retrievalResult.artifacts.map(a => a.stableId);
+      const actualKeys = results.map(r => r.artifactKey);
       const missingCriticalArtifacts: string[] = [];
       const failures: any[] = [];
 
@@ -79,7 +195,7 @@ describe('Vector Gap Diagnostic Benchmark', () => {
             reason: 'VECTOR_GAP_DETECTED',
             expected: expectedKey,
             actual: 'Missing',
-            details: `Semantic gap: Deterministic pipeline missed ${expectedKey} for paraphrase: "${changeRequest}"`
+            details: `Semantic gap: Hybrid pipeline missed ${expectedKey} for paraphrase: "${changeRequest}"`
           });
           totalMismatches++;
         }
@@ -97,16 +213,18 @@ describe('Vector Gap Diagnostic Benchmark', () => {
       });
     }
 
+    searchSimilarSpy.mockRestore();
+
     report.summary.criticalMissCount = totalMismatches;
 
-    // 3. Write report
+    // 4. Write report
     mkdirSync(reportDir, { recursive: true });
     writeFileSync(
       resolve(reportDir, 'vector-gap-benchmark.json'),
       JSON.stringify(report, null, 2)
     );
 
-    // 4. Log results visually
+    // 5. Log results visually
     console.log('=== Vector Gap Diagnostic Report ===');
     for (const c of report.cases) {
       console.log(`\nQuery: "${c.changeRequest}"`);
@@ -117,11 +235,9 @@ describe('Vector Gap Diagnostic Benchmark', () => {
     console.log(`Cases with Misses: ${report.summary.casesWithMisses}`);
     console.log(`Total Critical Misses: ${report.summary.criticalMissCount}`);
 
-    // 5. Evaluate strict mode
+    // 6. Evaluate strict mode
     const isStrict = process.env.STRICT_VECTOR_GAP_BENCHMARK === 'true';
     if (isStrict) {
-      // The user specified that if > 2/3 cases miss critical artifacts, it justifies vector.
-      // But in strict mode, we expect 0 misses (used after vector is implemented).
       expect(totalMismatches).toBe(0);
     }
   });

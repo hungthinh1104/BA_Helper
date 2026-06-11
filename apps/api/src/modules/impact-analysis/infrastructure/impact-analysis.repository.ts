@@ -1,6 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
+const IMPACT_ANALYSIS_INCLUDE = {
+  snapshot: {
+    include: {
+      repository: true,
+    },
+  },
+  sourceTarget: true,
+  requirementRevision: true,
+  insights: true,
+} as const;
+
 @Injectable()
 export class ImpactAnalysisRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -8,6 +19,50 @@ export class ImpactAnalysisRepository {
   async findById(id: string) {
     return this.prisma.impactAnalysis.findUnique({
       where: { id },
+      include: IMPACT_ANALYSIS_INCLUDE,
+    });
+  }
+
+  async findByReviewClarificationRequestId(reviewClarificationRequestId: string) {
+    return this.prisma.impactAnalysis.findFirst({
+      where: { reviewClarificationRequestId },
+      include: IMPACT_ANALYSIS_INCLUDE,
+    });
+  }
+
+  async updateTraceabilityLineage(
+    id: string,
+    data: { derivedFromAnalysisId: string; reviewClarificationRequestId: string }
+  ) {
+    return this.prisma.impactAnalysis.update({
+      where: { id },
+      data,
+      include: IMPACT_ANALYSIS_INCLUDE,
+    });
+  }
+
+  async findByProject(projectId: string, limit?: number, offset?: number) {
+    return this.prisma.impactAnalysis.findMany({
+      where: {
+        AND: [
+          {
+            requirementRevision: {
+              requirement: {
+                projectId,
+              },
+            },
+          },
+          {
+            snapshot: {
+              repository: {
+                projectId,
+              },
+            },
+          },
+        ],
+      },
+      take: limit,
+      skip: offset,
       include: {
         snapshot: {
           include: {
@@ -16,7 +71,9 @@ export class ImpactAnalysisRepository {
         },
         sourceTarget: true,
         requirementRevision: true,
-        insights: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
       },
     });
   }
@@ -61,6 +118,9 @@ export class ImpactAnalysisRepository {
     requestKey: string;
     acceptedPartialCoverage: boolean;
     coverageWarning?: string | null;
+    derivedFromAnalysisId?: string | null;
+    sourceClarificationId?: string | null;
+    reviewClarificationRequestId?: string | null;
   }) {
     return this.prisma.impactAnalysis.create({
       data: {
@@ -73,13 +133,11 @@ export class ImpactAnalysisRepository {
         progress: 0,
         acceptedPartialCoverage: params.acceptedPartialCoverage,
         coverageWarning: params.coverageWarning ?? null,
+        derivedFromAnalysisId: params.derivedFromAnalysisId,
+        sourceClarificationId: params.sourceClarificationId,
+        reviewClarificationRequestId: params.reviewClarificationRequestId,
       },
-      include: {
-        snapshot: true,
-        sourceTarget: true,
-        requirementRevision: true,
-        insights: true,
-      },
+      include: IMPACT_ANALYSIS_INCLUDE,
     });
   }
 
@@ -89,6 +147,7 @@ export class ImpactAnalysisRepository {
     stage: 'WAITING' | 'RETRIEVING_EVIDENCE' | 'EXPANDING_GRAPH' | 'RUNNING_AI_REASONING' | 'GENERATING_INSIGHTS' | 'GENERATING_DOCUMENTS' | 'DONE';
     progress: number;
     metadata?: import('../domain/impact-analysis.types').ImpactAnalysisMetadata;
+    error?: any;
   }) {
     return this.prisma.impactAnalysis.update({
       where: { id: params.id },
@@ -97,6 +156,7 @@ export class ImpactAnalysisRepository {
         stage: params.stage,
         progress: params.progress,
         ...(params.metadata ? { metadata: params.metadata as any } : {}),
+        ...(params.error ? { error: params.error as any } : {}),
       },
       include: {
         snapshot: true,

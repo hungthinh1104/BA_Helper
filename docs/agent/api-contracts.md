@@ -15,6 +15,8 @@ Keep contracts in `packages/contracts` after workspace scaffolding exists.
 
 ```http
 POST /api/v1/projects
+GET  /api/v1/workspace/current
+GET  /api/v1/system/health
 
 GET  /api/v1/projects/:projectId/repositories
 GET  /api/v1/repositories/:repositoryId
@@ -53,6 +55,47 @@ GET /api/v1/impact-analyses/:analysisId/diagrams
 ```
 
 ## Input Boundary Contracts
+
+Workspace resolution for the web client is backend-owned:
+
+```json
+{
+  "projectId": "uuid",
+  "name": "Default Project",
+  "mode": "dev-single-user"
+}
+```
+
+In the MVP deploy path, the backend decides the current workspace in
+`dev-single-user` mode and returns a stable project id for the session. The
+frontend must not invent or hardcode `"default-project"` as a fake project id.
+
+Runtime health for deploy/debug visibility uses:
+
+```json
+{
+  "status": "ok",
+  "serverTime": "2026-06-02T12:00:00.000Z",
+  "apiVersion": "0.1.0",
+  "workspaceMode": "dev-single-user"
+}
+```
+
+For separate web/API deployment:
+
+```text
+WEB:
+- NEXT_PUBLIC_API_URL
+
+API:
+- PORT
+- WORKSPACE_MODE
+- CORS_ALLOWED_ORIGINS
+```
+
+Production-like API deploys must configure an explicit comma-separated
+`CORS_ALLOWED_ORIGINS` allowlist. The web client requires an explicit
+`NEXT_PUBLIC_API_URL` in production and must not rely on localhost fallback.
 
 Repository creation accepts a normalized public GitHub source only:
 
@@ -203,6 +246,18 @@ or duplicate transition logic. `freshness.isStale` belongs to the analysis
 view against its selected target, not to immutable snapshot identity. If the
 analysis becomes known stale while waiting for review, `canReview` and
 `canFinalize` are false by default; the user reruns against a current snapshot.
+
+## Deploy Troubleshooting
+
+When separate web/API deployment fails, diagnose in this order:
+
+```text
+1. Wrong NEXT_PUBLIC_API_URL            -> frontend bootstrap shows API URL / unreachable error
+2. Missing or invalid CORS allowlist    -> browser network error, API reachable outside browser
+3. Backend unavailable                   -> /api/v1/system/health fails
+4. Unsupported WORKSPACE_MODE           -> typed WORKSPACE_MODE_UNSUPPORTED from /workspace/current
+5. Contract mismatch                    -> frontend shows bootstrap contract mismatch error
+```
 
 Creating an impact analysis from a `PARTIAL` snapshot requires explicit caller
 acknowledgement:

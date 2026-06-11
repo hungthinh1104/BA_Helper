@@ -225,6 +225,7 @@ Where a failure path is introduced, verify:
 ```text
 typed domain/application error maps to the expected stable API/job error code
 unsafe raw code, secret values, and unredacted provider payloads are absent from logs/errors
+repository detail surfaces the resulting blocker/partial diagnostics and stable scan error code
 ```
 
 ### Prompt injection handling test
@@ -251,6 +252,18 @@ Unconnected refund artifact exists:
 
 Conflicting cancellation rules exist:
   Opposing evidence produces a CONFLICTING insight with both evidence links.
+```
+
+### Hostile-input E2E coverage
+
+When secure public-repository ingestion changes, add API/app-level hostile-input
+coverage for at least:
+
+```text
+non-canonical GitHub URL rejected before repository creation
+unsafe repository ref rejected before scan queueing
+limit-triggered scan publishes PARTIAL diagnostics visible in repository detail
+unsupported framework or blocked scan exposes stable FAILED error code and blocker diagnostics
 ```
 
 ## Test Completion Gate

@@ -8,12 +8,16 @@ export class EventLogRepository {
     idempotencyKey: string;
     payload: Record<string, unknown>;
   }): Promise<void> {
-    await this.prisma.domainEvent.create({
-      data: {
+    await this.prisma.domainEvent.upsert({
+      where: {
+        idempotencyKey: params.idempotencyKey,
+      },
+      create: {
         eventType: params.eventType,
         idempotencyKey: params.idempotencyKey,
-        payload: params.payload as any,
+        payload: params.payload as import('@prisma/client').Prisma.InputJsonValue,
       },
+      update: {},
     });
   }
 }

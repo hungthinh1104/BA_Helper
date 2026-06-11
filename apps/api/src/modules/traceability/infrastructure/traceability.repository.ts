@@ -10,6 +10,7 @@ export class TraceabilityRepository {
       where: { impactAnalysisId },
       include: {
         evidenceLinks: { include: { evidence: true } },
+        artifact: true,
       },
     });
   }
@@ -70,6 +71,7 @@ export class TraceabilityRepository {
       linkBasis: 'EVIDENCED' | 'INFERRED';
       reviewStatus: 'NEEDS_REVIEW' | 'CONFIRMED' | 'REJECTED';
       confidence: number | null;
+      retrievalMetadata?: any;
     }>,
   ) {
     if (items.length === 0) {
@@ -84,6 +86,7 @@ export class TraceabilityRepository {
         linkBasis: item.linkBasis,
         reviewStatus: item.reviewStatus,
         confidence: item.confidence,
+        retrievalMetadata: item.retrievalMetadata ?? undefined,
       })),
       skipDuplicates: true,
     });

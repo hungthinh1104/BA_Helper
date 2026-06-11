@@ -1,3 +1,4 @@
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 
@@ -11,6 +12,7 @@ export type SimilarChunk = {
   similarity: number;
 };
 
+@Injectable()
 export class EmbeddingChunkRepository {
   constructor(private readonly prisma: PrismaService) {}
 
@@ -85,10 +87,10 @@ export class EmbeddingChunkRepository {
         SELECT id, "artifactId", "filePath", "symbolName", "artifactType",
                content, 1 - (embedding <=> ${vectorStr}::vector) AS similarity
         FROM "EmbeddingChunk"
-        WHERE "tenantId"     = ${params.tenantId}::uuid
-          AND "projectId"    = ${params.projectId}::uuid
-          AND "repositoryId" = ${params.repositoryId}::uuid
-          AND "snapshotId"   = ${params.snapshotId}::uuid
+        WHERE "tenantId"     = ${params.tenantId}
+          AND "projectId"    = ${params.projectId}
+          AND "repositoryId" = ${params.repositoryId}
+          AND "snapshotId"   = ${params.snapshotId}
           AND "artifactType" = ANY(${params.artifactTypes})
         ORDER BY embedding <=> ${vectorStr}::vector
         LIMIT ${limit}
@@ -99,10 +101,10 @@ export class EmbeddingChunkRepository {
       SELECT id, "artifactId", "filePath", "symbolName", "artifactType",
              content, 1 - (embedding <=> ${vectorStr}::vector) AS similarity
       FROM "EmbeddingChunk"
-      WHERE "tenantId"     = ${params.tenantId}::uuid
-        AND "projectId"    = ${params.projectId}::uuid
-        AND "repositoryId" = ${params.repositoryId}::uuid
-        AND "snapshotId"   = ${params.snapshotId}::uuid
+      WHERE "tenantId"     = ${params.tenantId}
+        AND "projectId"    = ${params.projectId}
+        AND "repositoryId" = ${params.repositoryId}
+        AND "snapshotId"   = ${params.snapshotId}
       ORDER BY embedding <=> ${vectorStr}::vector
       LIMIT ${limit}
     `;

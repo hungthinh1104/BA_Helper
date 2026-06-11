@@ -5,14 +5,30 @@ import { DocumentRepository } from '../../document/infrastructure/document.repos
 import { EventLogService } from '../../event-log/application/event-log.service';
 import { AppError } from '../../../shared/app-error';
 
-
+import { ReviewPolicy } from '../../review/domain/review.policy';
+import { MarkdownImpactReportBuilder } from '../../document/application/markdown-impact-report.builder';
+import { InsightRepository } from '../../insight/infrastructure/insight.repository';
+import { TraceabilityRepository } from '../../traceability/infrastructure/traceability.repository';
+import { GraphRepository } from '../../graph/infrastructure/graph.repository';
+import { ReviewNoteRepository } from '../infrastructure/review-note.repository';
+import { ReviewDecisionRepository } from '../infrastructure/review-decision.repository';
+import { GetImpactDiffUseCase } from './get-impact-diff.usecase';
+import { ClarificationRepository } from '../../clarification/infrastructure/clarification.repository';
 
 @Injectable()
 export class FinalizeImpactAnalysisUseCase {
   constructor(
     private readonly impactRepo: ImpactAnalysisRepository,
+    private readonly insightRepo: InsightRepository,
+    private readonly traceabilityRepo: TraceabilityRepository,
+    private readonly graphRepo: GraphRepository,
+    private readonly reviewNoteRepo: ReviewNoteRepository,
+    private readonly clarificationRepo: ClarificationRepository,
     private readonly documentRepo: DocumentRepository,
     private readonly eventLog: EventLogService,
+    private readonly reportBuilder: MarkdownImpactReportBuilder,
+    private readonly decisionRepo: ReviewDecisionRepository,
+    private readonly getDiffUseCase: GetImpactDiffUseCase,
   ) {}
 
   async execute(params: { analysisId: string; acknowledgeUnreviewed: boolean }) {
@@ -24,34 +40,19 @@ export class FinalizeImpactAnalysisUseCase {
       );
     }
 
-    const isPinnedCommit = analysis.sourceTarget.resolvedRefType === 'COMMIT';
-    const isStale =
-      !isPinnedCommit &&
-      analysis.sourceTarget.latestObservedCommitSha !==
-        analysis.snapshot.commitSha;
-
-    if (isStale) {
-      throw new AppError('ANALYSIS_STALE', 'Analysis is stale.');
-    }
-
-    if (analysis.status !== 'WAITING_FOR_REVIEW') {
-      throw new AppError(
-        'INVALID_STATE_TRANSITION',
-        'Analysis is not ready for finalization.',
-      );
-    }
-
     const hasUnreviewed = analysis.insights?.some(
       (insight: { reviewStatus: string }) =>
         insight.reviewStatus === 'NEEDS_REVIEW',
     );
 
-    if (hasUnreviewed && !params.acknowledgeUnreviewed) {
-      throw new AppError(
-        'FINALIZE_REQUIRES_REVIEW_ACK',
-        'Unreviewed insights require acknowledgement before finalization.',
-      );
-    }
+    let unreviewedItemsCount = 0;
+    if (hasUnreviewed) unreviewedItemsCount++;
+
+    ReviewPolicy.assertCanFinalize(
+      analysis,
+      unreviewedItemsCount,
+      params.acknowledgeUnreviewed
+    );
 
     const finalizeResult = await this.impactRepo.finalizeIfCurrent({
       analysisId: analysis.id,
@@ -70,7 +71,7 @@ export class FinalizeImpactAnalysisUseCase {
       );
     }
 
-    const updated = await this.impactRepo.findById(analysis.id);
+    const updated = (await this.impactRepo.findById(analysis.id)) as any;
     if (!updated) {
       throw new AppError(
         'IMPACT_ANALYSIS_NOT_FOUND',
@@ -78,7 +79,32 @@ export class FinalizeImpactAnalysisUseCase {
       );
     }
 
-    const markdown = this.generateMarkdownReport(updated);
+    const insights = await this.insightRepo.listByAnalysis(analysis.id);
+    const traceabilityLinks = await this.traceabilityRepo.listByAnalysis(analysis.id);
+    const reviewNotes = await this.reviewNoteRepo.findByAnalysisId(analysis.id);
+    const dependencyEdges = await this.graphRepo.listBySnapshot(analysis.snapshot.id);
+    const clarifications = await this.clarificationRepo.listByAnalysisId(analysis.id);
+    const reviewDecisions = await this.decisionRepo.listByAnalysisId(analysis.id);
+
+    let diff: any = undefined;
+    if (analysis.derivedFromAnalysisId) {
+      const diffResult = await this.getDiffUseCase.computeForAnalysis(analysis.id);
+      if (diffResult.computable) {
+        diff = diffResult.diff;
+      }
+    }
+
+    const markdown = this.reportBuilder.build({
+      analysis: updated,
+      insights,
+      traceabilityLinks: traceabilityLinks as any[],
+      reviewNotes,
+      hasUnreviewedItems: hasUnreviewed,
+      dependencyEdges: dependencyEdges as any[],
+      clarifications: clarifications as any[],
+      reviewDecisions,
+      diff,
+    });
 
     await this.documentRepo.upsertApproved({
       impactAnalysisId: analysis.id,
@@ -92,39 +118,5 @@ export class FinalizeImpactAnalysisUseCase {
     });
 
     return updated;
-  }
-
-  private generateMarkdownReport(analysis: any): string {
-    const lines = [];
-    lines.push(`# Impact Report: ${analysis.requirementRevision.title}`);
-    lines.push('');
-    lines.push('## Overview');
-    lines.push(analysis.requirementRevision.rawText);
-    lines.push('');
-    
-    if (analysis.insights && analysis.insights.length > 0) {
-      const approvedInsights = analysis.insights.filter(
-        (insight: any) => insight.reviewStatus !== 'REJECTED',
-      );
-
-      if (approvedInsights.length > 0) {
-        lines.push('## Insights');
-        lines.push('');
-        for (const insight of approvedInsights) {
-          lines.push(`### [${insight.insightType}] ${insight.title}`);
-          if (insight.description && insight.description !== insight.title) {
-            lines.push(`**Description**: ${insight.description}`);
-          }
-          lines.push(`- **Certainty**: ${insight.certainty}`);
-          lines.push(`- **Review Status**: ${insight.reviewStatus}`);
-          if (insight.reasoning) {
-            lines.push(`- **Reasoning**: ${insight.reasoning}`);
-          }
-          lines.push('');
-        }
-      }
-    }
-    
-    return lines.join('\n');
   }
 }

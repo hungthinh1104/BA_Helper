@@ -87,13 +87,19 @@ Once workspace scripts exist, run relevant checks before finishing:
 
 ```bash
 pnpm typecheck
-pnpm test
 pnpm lint
+pnpm test
+pnpm test:e2e
 ```
 
 - [ ] Typed/stable application error codes and safe structured logs were used
       for changed failure paths.
 - [ ] Logs do not expose raw source, secrets, or unredacted AI inputs/outputs.
+- [ ] Security/limit diagnostics changed in backend are visible in the
+      repository detail UI and covered by hostile-input tests when applicable.
+- [ ] Separate web/API deploy changes keep `NEXT_PUBLIC_API_URL`,
+      `CORS_ALLOWED_ORIGINS`, and workspace bootstrap behavior explicit and
+      documented.
 
 When applicable:
 

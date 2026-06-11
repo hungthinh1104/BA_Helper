@@ -29,5 +29,6 @@ import { EventLogService } from '../event-log/application/event-log.service';
       inject: [InsightRepository, EventLogService],
     },
   ],
+  exports: [InsightRepository],
 })
 export class InsightModule {}

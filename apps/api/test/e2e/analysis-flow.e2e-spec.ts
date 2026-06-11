@@ -1,5 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import { JwtService } from '@nestjs/jwt';
 import { createTestApp } from './helpers/test-app';
 import { resetDatabase } from './helpers/reset-db';
 import { PrismaService } from '../../src/modules/prisma/prisma.service';
@@ -21,10 +22,13 @@ import {
 describe('Analysis Flow (E2E)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
+  let jwtService: JwtService;
+  let adminToken: string;
 
   beforeAll(async () => {
     app = await createTestApp();
     prisma = app.get(PrismaService);
+    jwtService = app.get(JwtService);
   });
 
   afterAll(async () => {
@@ -34,12 +38,22 @@ describe('Analysis Flow (E2E)', () => {
 
   beforeEach(async () => {
     await resetDatabase(prisma);
+    const user = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        email: 'admin@ba-helper.local',
+        name: 'John Doe',
+        role: 'ADMIN',
+      },
+    });
+    adminToken = jwtService.sign({ sub: user.id, email: user.email, role: user.role });
   });
 
   it('completes the entire UC01-UC08 lifecycle successfully', async () => {
     // Step 1: POST /api/v1/projects
     const createProjectRes = await request(app.getHttpServer())
       .post('/api/v1/projects')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ name: 'E2E Project' })
       .expect(201);
     
@@ -50,6 +64,7 @@ describe('Analysis Flow (E2E)', () => {
     // Step 2: POST /api/v1/projects/:projectId/repositories
     const createRepoRes = await request(app.getHttpServer())
       .post(`/api/v1/projects/${projectId}/repositories`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ url: 'https://github.com/mock/repo' })
       .expect(201);
     
@@ -61,6 +76,7 @@ describe('Analysis Flow (E2E)', () => {
     const scanRequestKey = crypto.randomUUID();
     const createScanJobRes = await request(app.getHttpServer())
       .post(`/api/v1/repositories/${repositoryId}/scan-jobs`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         requestKey: scanRequestKey,
         requestedRef: 'main',
@@ -77,6 +93,7 @@ describe('Analysis Flow (E2E)', () => {
     // Step 5: POST /api/v1/projects/:projectId/requirements
     const createReqRes = await request(app.getHttpServer())
       .post(`/api/v1/projects/${projectId}/requirements`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         title: 'Refund API',
         rawText: 'Allow users to cancel and refund bookings.',
@@ -91,6 +108,7 @@ describe('Analysis Flow (E2E)', () => {
     // Step 6: POST /api/v1/requirements/:requirementId/revisions (to qualify/READY)
     const createRevRes = await request(app.getHttpServer())
       .post(`/api/v1/requirements/${requirementId}/revisions`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         title: 'Refund API (Final)',
         rawText: 'Allow users to cancel and refund bookings.',
@@ -112,6 +130,7 @@ describe('Analysis Flow (E2E)', () => {
 
     const createAnalysisRes = await request(app.getHttpServer())
       .post(`/api/v1/requirement-revisions/${readyRevisionId}/impact-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send(payload)
       .expect(201);
 
@@ -122,6 +141,7 @@ describe('Analysis Flow (E2E)', () => {
     // Step 7.1: Idempotency check - same requestKey and payload reuses analysis
     const retryAnalysisRes = await request(app.getHttpServer())
       .post(`/api/v1/requirement-revisions/${readyRevisionId}/impact-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send(payload)
       .expect(201);
     expect(retryAnalysisRes.body.id).toBe(analysisId); // Must return the same ID
@@ -140,6 +160,7 @@ describe('Analysis Flow (E2E)', () => {
 
     await request(app.getHttpServer())
       .post(`/api/v1/requirement-revisions/${readyRevisionId}/impact-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         ...payload,
         sourceTargetId: fakeTarget.id, // Different payload triggering mismatch
@@ -151,7 +172,8 @@ describe('Analysis Flow (E2E)', () => {
 
     // Step 9: POST /api/v1/insights/:insightId/review
     const reviewRes = await request(app.getHttpServer())
-      .post(`/api/v1/insights/${insightId}/review`)
+      .post(`/api/v1/insights/${insightId}/confirm`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ reviewStatus: 'CONFIRMED' })
       .expect(201);
 
@@ -160,7 +182,8 @@ describe('Analysis Flow (E2E)', () => {
     // Step 10: POST /api/v1/impact-analyses/:id/finalize
     const finalizeRes = await request(app.getHttpServer())
       .post(`/api/v1/impact-analyses/${analysisId}/finalize`)
-      .send({ acknowledgeUnreviewed: false });
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ acknowledgeUnreviewed: true });
     
     if (finalizeRes.status !== 201) {
       console.error(finalizeRes.body);
@@ -171,8 +194,14 @@ describe('Analysis Flow (E2E)', () => {
     expect(finalizeRes.body.status).toBe('COMPLETED');
 
     // Step 11: GET /api/v1/impact-analyses/:id/approved-report
+    const exportRes = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/approved-report/export.md`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
     const reportRes = await request(app.getHttpServer())
       .get(`/api/v1/impact-analyses/${analysisId}/approved-report`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
 
     const reportDto = approvedImpactReportResponseSchema.parse(reportRes.body);

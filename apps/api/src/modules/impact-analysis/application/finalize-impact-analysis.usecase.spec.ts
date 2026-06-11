@@ -1,16 +1,33 @@
 import { Injectable } from "@nestjs/common";
 
 import { FinalizeImpactAnalysisUseCase } from './finalize-impact-analysis.usecase';
+import { ReviewNoteRepository } from '../infrastructure/review-note.repository';
 import { ImpactAnalysisRepository } from '../infrastructure/impact-analysis.repository';
 import { DocumentRepository } from '../../document/infrastructure/document.repository';
 import { EventLogService } from '../../event-log/application/event-log.service';
 import { AppError } from '../../../shared/app-error';
+import { InsightRepository } from '../../insight/infrastructure/insight.repository';
+import { TraceabilityRepository } from '../../traceability/infrastructure/traceability.repository';
+import { GraphRepository } from '../../graph/infrastructure/graph.repository';
+import { MarkdownImpactReportBuilder } from '../../document/application/markdown-impact-report.builder';
+import { MermaidImpactDiagramBuilder } from '../../document/application/mermaid-impact-diagram.builder';
+import { ClarificationRepository } from '../../clarification/infrastructure/clarification.repository';
+import { ReviewDecisionRepository } from '../infrastructure/review-decision.repository';
+import { GetImpactDiffUseCase } from './get-impact-diff.usecase';
 
 describe('FinalizeImpactAnalysisUseCase', () => {
   let useCase: FinalizeImpactAnalysisUseCase;
   let impactRepo: jest.Mocked<ImpactAnalysisRepository>;
   let documentRepo: jest.Mocked<DocumentRepository>;
+  let insightRepo: jest.Mocked<InsightRepository>;
+  let traceabilityRepo: jest.Mocked<TraceabilityRepository>;
+  let graphRepo: jest.Mocked<GraphRepository>;
+  let reviewNoteRepo: jest.Mocked<ReviewNoteRepository>;
+  let clarificationRepo: jest.Mocked<ClarificationRepository>;
+  let decisionRepo: jest.Mocked<ReviewDecisionRepository>;
+  let getDiffUseCase: jest.Mocked<GetImpactDiffUseCase>;
   let eventLog: jest.Mocked<EventLogService>;
+  let reportBuilder: MarkdownImpactReportBuilder;
 
   beforeEach(() => {
     impactRepo = {
@@ -26,7 +43,53 @@ describe('FinalizeImpactAnalysisUseCase', () => {
       recordEvent: jest.fn(),
     } as unknown as jest.Mocked<EventLogService>;
 
-    useCase = new FinalizeImpactAnalysisUseCase(impactRepo, documentRepo, eventLog);
+    insightRepo = {
+      listByAnalysis: jest.fn().mockResolvedValue([]),
+    } as unknown as jest.Mocked<InsightRepository>;
+
+    traceabilityRepo = {
+      listByAnalysis: jest.fn().mockResolvedValue([]),
+    } as unknown as jest.Mocked<TraceabilityRepository>;
+
+    graphRepo = {
+      listBySnapshot: jest.fn().mockResolvedValue([]),
+    } as unknown as jest.Mocked<GraphRepository>;
+
+    reviewNoteRepo = {
+      findByAnalysisId: jest.fn().mockResolvedValue([]),
+    } as unknown as jest.Mocked<ReviewNoteRepository>;
+
+    clarificationRepo = {
+      listByAnalysisId: jest.fn().mockResolvedValue([]),
+    } as unknown as jest.Mocked<ClarificationRepository>;
+
+    decisionRepo = {
+      listByAnalysisId: jest.fn().mockResolvedValue([]),
+    } as unknown as jest.Mocked<ReviewDecisionRepository>;
+
+    getDiffUseCase = {
+      computeForAnalysis: jest.fn().mockResolvedValue({ computable: false }),
+    } as unknown as jest.Mocked<GetImpactDiffUseCase>;
+
+    const mermaidBuilder = {
+      build: jest.fn().mockReturnValue({ mermaid: '```mermaid\nflowchart TD\n```', isTruncated: false }),
+    } as unknown as jest.Mocked<MermaidImpactDiagramBuilder>;
+
+    reportBuilder = new MarkdownImpactReportBuilder(mermaidBuilder);
+
+    useCase = new FinalizeImpactAnalysisUseCase(
+      impactRepo,
+      insightRepo,
+      traceabilityRepo,
+      graphRepo,
+      reviewNoteRepo,
+      clarificationRepo,
+      documentRepo,
+      eventLog,
+      reportBuilder,
+      decisionRepo,
+      getDiffUseCase,
+    );
   });
 
   const validParams = {
@@ -34,7 +97,7 @@ describe('FinalizeImpactAnalysisUseCase', () => {
     acknowledgeUnreviewed: false,
   };
 
-  const mockValidState = (overrides = {}) => {
+  const mockValidState = (overrides: Record<string, unknown> = {}) => {
     impactRepo.findById.mockResolvedValue({
       id: 'analysis-1',
       status: 'WAITING_FOR_REVIEW',
@@ -42,7 +105,10 @@ describe('FinalizeImpactAnalysisUseCase', () => {
         title: 'Test Requirement',
         rawText: 'Test requirement raw text',
       },
-      snapshot: { commitSha: 'abc1234' },
+      snapshot: { 
+        commitSha: 'abc1234',
+        repository: { canonicalUrl: 'https://github.com/test' },
+      },
       sourceTarget: {
         resolvedRefType: 'BRANCH',
         latestObservedCommitSha: 'abc1234',
@@ -53,10 +119,22 @@ describe('FinalizeImpactAnalysisUseCase', () => {
           title: 'Insight 1',
           certainty: 'EVIDENCED',
           reviewStatus: 'CONFIRMED',
+          evidenceLinks: [],
         },
       ],
       ...overrides,
     } as any);
+
+    insightRepo.listByAnalysis.mockResolvedValue(overrides.insights || [
+      {
+        insightType: 'CLAIM',
+        title: 'Insight 1',
+        description: 'Insight 1',
+        certainty: 'EVIDENCED',
+        reviewStatus: 'CONFIRMED',
+        evidenceLinks: [],
+      }
+    ] as any);
   };
 
   it('UC07-A: Valid finalize creates COMPLETED status, approved markdown, and emits event', async () => {
@@ -92,16 +170,18 @@ describe('FinalizeImpactAnalysisUseCase', () => {
           title: 'Confirmed Insight',
           certainty: 'EVIDENCED',
           reviewStatus: 'CONFIRMED',
+          evidenceLinks: [],
         },
         {
           insightType: 'CLAIM',
           title: 'Rejected Insight',
           certainty: 'INFERRED',
           reviewStatus: 'REJECTED',
+          evidenceLinks: [],
         },
       ],
     });
-    impactRepo.finalizeIfCurrent.mockResolvedValue({ count: 1 } as any);
+    impactRepo.finalizeIfCurrent.mockResolvedValue({ count: 1 });
 
     await useCase.execute(validParams);
 
@@ -164,10 +244,11 @@ describe('FinalizeImpactAnalysisUseCase', () => {
           title: 'Unreviewed Insight',
           certainty: 'INFERRED',
           reviewStatus: 'NEEDS_REVIEW',
+          evidenceLinks: [],
         },
       ],
     });
-    impactRepo.finalizeIfCurrent.mockResolvedValue({ count: 1 } as any);
+    impactRepo.finalizeIfCurrent.mockResolvedValue({ count: 1 });
 
     await useCase.execute({ analysisId: 'analysis-1', acknowledgeUnreviewed: true });
 
@@ -177,7 +258,7 @@ describe('FinalizeImpactAnalysisUseCase', () => {
     });
     expect(documentRepo.upsertApproved).toHaveBeenCalledWith({
       impactAnalysisId: 'analysis-1',
-      content: expect.stringContaining('NEEDS_REVIEW'),
+      content: expect.stringContaining('This report was finalized with unreviewed items acknowledged.'),
     });
     expect(impactRepo.finalizeIfCurrent).toHaveBeenCalled();
   });

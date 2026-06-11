@@ -9,5 +9,9 @@ export type RetrievalInput = {
 };
 
 export type RetrievalResult = {
-  artifacts: (ScanArtifact & { retrievalReason?: string })[];
+  artifacts: (ScanArtifact & { 
+    retrievalReason?: string;
+    retrievalMethod?: 'LEXICAL' | 'VECTOR' | 'GRAPH_EXPANSION' | 'HYBRID';
+    retrievalSignals?: string[];
+  })[];
 };

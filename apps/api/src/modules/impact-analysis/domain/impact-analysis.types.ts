@@ -4,15 +4,17 @@ export type ImpactAnalysisMetadata = {
     model: string;
     promptVersion: string;
     parseMode?: 'raw' | 'extracted';
-    inputTokens?: number;
-    outputTokens?: number;
-    rawLength?: number;
-    jsonLength?: number;
-    generatedAt: string;
+    inputTokens?: number | null;
+    outputTokens?: number | null;
+    estimatedCostUsd?: number | null;
+    evidenceItems?: number;
+    evidenceChars?: number;
+    evidenceTruncated?: boolean;
   };
   retrieval?: {
     strategy: string;
     maxArtifacts: number;
     artifactCount: number;
+    vectorSignalCount?: number;
   };
 };

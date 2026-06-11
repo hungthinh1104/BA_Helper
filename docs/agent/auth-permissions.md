@@ -18,6 +18,22 @@ Stage 3: private repos, GitHub App/OAuth, encrypted credentials, retention and r
 
 Do not implement private repository access in the core MVP.
 
+## Deploy Bootstrap Boundary
+
+Before auth exists, deployed MVP environments still run in
+`dev-single-user` mode. This is a deployment/runtime boundary only, not a fake
+auth system:
+
+```text
+- backend owns workspace/current resolution
+- frontend consumes workspace/current + system/health
+- separate web/API deploy uses explicit NEXT_PUBLIC_API_URL + CORS allowlist
+```
+
+Auth-readiness in this phase means new workspace modes can be introduced behind
+the resolver boundary later. It does not mean login/session/permissions are
+partially implemented now.
+
 ## Role Model
 
 Once multi-user access exists:

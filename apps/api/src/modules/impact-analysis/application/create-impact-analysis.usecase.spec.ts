@@ -31,6 +31,7 @@ describe('CreateImpactAnalysisUseCase', () => {
       requirement: { findUnique: jest.fn() },
       repositorySnapshot: { findUnique: jest.fn() },
       repositoryTarget: { findUnique: jest.fn() },
+      clarificationItem: { findUnique: jest.fn() },
     } as unknown as jest.Mocked<PrismaService>;
     
     eventLog = {
@@ -194,6 +195,150 @@ describe('CreateImpactAnalysisUseCase', () => {
 
     await expect(useCase.execute(validParams)).rejects.toMatchObject({
       code: 'REQUEST_KEY_MISMATCH',
+    });
+  });
+
+  describe('Lineage Validation', () => {
+    const lineageParams = {
+      ...validParams,
+      derivedFromAnalysisId: 'old-analysis-1',
+      sourceClarificationId: 'clarification-1',
+    };
+
+    const mockValidClarification = () => {
+      mockValidState();
+      (prisma.clarificationItem.findUnique as jest.Mock).mockResolvedValue({
+        id: 'clarification-1',
+        impactAnalysisId: 'old-analysis-1',
+        status: 'CONVERTED_TO_REVISION',
+        convertedRequirementRevisionId: 'rev-1',
+        impactAnalysis: {
+          snapshot: {
+            repository: { projectId: 'proj-1' },
+          },
+        },
+      });
+    };
+
+    it('creates QUEUED analysis with valid lineage', async () => {
+      mockValidClarification();
+
+      const result = await useCase.execute(lineageParams);
+
+      expect(result.id).toBe('analysis-1');
+      expect(impactRepo.createQueued).toHaveBeenCalledWith(
+        expect.objectContaining({
+          derivedFromAnalysisId: 'old-analysis-1',
+          sourceClarificationId: 'clarification-1',
+        })
+      );
+    });
+
+    it('rejects sourceClarificationId without derivedFromAnalysisId', async () => {
+      mockValidState();
+      await expect(
+        useCase.execute({ ...lineageParams, derivedFromAnalysisId: undefined })
+      ).rejects.toMatchObject({
+        code: 'INVALID_LINEAGE',
+      });
+    });
+
+    it('rejects derivedFromAnalysisId without sourceClarificationId', async () => {
+      mockValidState();
+      await expect(
+        useCase.execute({ ...lineageParams, sourceClarificationId: undefined })
+      ).rejects.toMatchObject({
+        code: 'INVALID_LINEAGE',
+      });
+    });
+
+    it('rejects missing source clarification', async () => {
+      mockValidClarification();
+      (prisma.clarificationItem.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(useCase.execute(lineageParams)).rejects.toMatchObject({
+        code: 'CLARIFICATION_NOT_FOUND',
+      });
+    });
+
+    it('rejects clarification that does not belong to derived analysis', async () => {
+      mockValidClarification();
+      (prisma.clarificationItem.findUnique as jest.Mock).mockResolvedValue({
+        id: 'clarification-1',
+        impactAnalysisId: 'different-old-analysis',
+        status: 'CONVERTED_TO_REVISION',
+        convertedRequirementRevisionId: 'rev-1',
+        impactAnalysis: {
+          snapshot: {
+            repository: { projectId: 'proj-1' },
+          },
+        },
+      });
+
+      await expect(useCase.execute(lineageParams)).rejects.toMatchObject({
+        code: 'INVALID_LINEAGE',
+        message: 'Clarification does not belong to the derived analysis.',
+      });
+    });
+
+    it('rejects clarification not CONVERTED_TO_REVISION', async () => {
+      mockValidClarification();
+      (prisma.clarificationItem.findUnique as jest.Mock).mockResolvedValue({
+        id: 'clarification-1',
+        impactAnalysisId: 'old-analysis-1',
+        status: 'ANSWERED',
+        convertedRequirementRevisionId: 'rev-1',
+        impactAnalysis: {
+          snapshot: {
+            repository: { projectId: 'proj-1' },
+          },
+        },
+      });
+
+      await expect(useCase.execute(lineageParams)).rejects.toMatchObject({
+        code: 'INVALID_LINEAGE',
+        message: 'Clarification must be CONVERTED_TO_REVISION to spawn a new analysis.',
+      });
+    });
+
+    it('rejects requested revision not equal to converted revision', async () => {
+      mockValidClarification();
+      (prisma.clarificationItem.findUnique as jest.Mock).mockResolvedValue({
+        id: 'clarification-1',
+        impactAnalysisId: 'old-analysis-1',
+        status: 'CONVERTED_TO_REVISION',
+        convertedRequirementRevisionId: 'different-rev',
+        impactAnalysis: {
+          snapshot: {
+            repository: { projectId: 'proj-1' },
+          },
+        },
+      });
+
+      await expect(useCase.execute(lineageParams)).rejects.toMatchObject({
+        code: 'INVALID_LINEAGE',
+        message: 'Requested requirement revision does not match the clarification converted revision.',
+      });
+    });
+
+    it('rejects new analysis project different from old analysis project', async () => {
+      mockValidClarification();
+      (prisma.clarificationItem.findUnique as jest.Mock).mockResolvedValue({
+        id: 'clarification-1',
+        impactAnalysisId: 'old-analysis-1',
+        status: 'CONVERTED_TO_REVISION',
+        convertedRequirementRevisionId: 'rev-1',
+        impactAnalysis: {
+          snapshot: {
+            repository: { projectId: 'different-proj' },
+          },
+        },
+      });
+
+      await expect(useCase.execute(lineageParams)).rejects.toMatchObject({
+        code: 'INVALID_LINEAGE',
+        message: 'New analysis project does not match old analysis project.',
+      });
     });
   });
 });

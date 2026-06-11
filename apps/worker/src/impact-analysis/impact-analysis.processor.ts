@@ -1,6 +1,7 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Job } from 'bullmq';
+import { Job, UnrecoverableError } from 'bullmq';
 import { RunImpactAnalysisUseCase } from '../../../api/src/modules/impact-analysis/application/run-impact-analysis.usecase';
+import { AiOutputError } from '../../../api/src/modules/ai/domain/ai.errors';
 
 @Processor('impact-analysis')
 export class ImpactAnalysisProcessor extends WorkerHost {
@@ -16,6 +17,20 @@ export class ImpactAnalysisProcessor extends WorkerHost {
       });
     } catch (e: any) {
       console.error(`ImpactAnalysisProcessor failed for job ${job.id}:`, e);
+
+      if (e instanceof AiOutputError) {
+        if (e.code === 'AI_JSON_PARSE_FAILED' || e.code === 'AI_OUTPUT_SCHEMA_INVALID') {
+          if (job.attemptsMade >= 1) {
+            throw new UnrecoverableError(`Unrecoverable Schema Error: ${e.message}`);
+          }
+        }
+      } else {
+        const msg = (e.message || '').toLowerCase();
+        if (msg.includes('auth') || msg.includes('key') || msg.includes('quota') || msg.includes('not found') || msg.includes('forbidden')) {
+          throw new UnrecoverableError(`Unrecoverable Provider Error: ${e.message}`);
+        }
+      }
+
       throw e;
     }
   }

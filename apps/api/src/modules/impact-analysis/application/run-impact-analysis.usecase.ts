@@ -37,6 +37,7 @@ type ScanArtifact = {
 type EvidenceRecord = {
   id: string;
   artifactId: string | null;
+  excerpt: string;
 };
 
 type InsightRecord = {
@@ -220,17 +221,35 @@ export class RunImpactAnalysisUseCase {
 
       const affectedLinks = retrievedArtifacts
         .filter((retrieved: any) => retrieved.retrievalMethod !== 'GRAPH')
-        .map((retrieved: any) => artifactByKey.get(retrieved.artifactKey))
-        .filter((artifact: any): artifact is any => Boolean(artifact));
+        .map((retrieved: any) => {
+          const artifact = artifactByKey.get(retrieved.artifactKey);
+          if (!artifact) return null;
+          return { artifact, retrieved };
+        })
+        .filter((pair: any): pair is any => Boolean(pair));
 
       const traceabilityLinks = await this.traceabilityRepo.upsertMany(
-        affectedLinks.map((artifact: any) => ({
+        affectedLinks.map(({ artifact, retrieved }: any) => ({
           impactAnalysisId: analysis.id,
           artifactId: artifact.id,
           linkType: 'AFFECTED',
           linkBasis: 'EVIDENCED',
           reviewStatus: 'NEEDS_REVIEW',
           confidence: 1,
+          retrievalMetadata: {
+            method: retrieved.retrievalMethod,
+            signals: retrieved.retrievalSignals ?? [],
+            reason: retrieved.retrievalReason,
+            strategyVersion: retrieved.strategyVersion,
+            score: {
+              final: retrieved.score ?? retrieved.finalScore ?? 0,
+              lexical: retrieved.lexicalScore,
+              graph: retrieved.graphScore,
+              vector: retrieved.vectorScore,
+              domain: retrieved.domainBoost,
+            },
+            suggestion: retrieved.suggestion,
+          },
         })),
       );
 
@@ -254,22 +273,46 @@ export class RunImpactAnalysisUseCase {
         progress: 60,
       });
 
-      const evidenceCandidates = retrievedArtifacts
-        .map((retrieved: any) => {
-          const persistedArtifact = artifactByKey.get(retrieved.artifactKey);
-          if (!persistedArtifact) return null;
-          
-          return {
-            artifactKey: persistedArtifact.artifactKey,
-            symbolName: persistedArtifact.name,
-            filePath: persistedArtifact.filePath,
-            artifactType: persistedArtifact.artifactType,
-            excerpt: evidenceInputs.find((e: any) => e.artifactId === persistedArtifact.id)?.excerpt || '',
-            retrievalMethod: retrieved.retrievalMethod,
-            retrievalReason: `Score: ${retrieved.score}`,
-          };
-        })
-        .filter((c: any) => c !== null) as unknown as EvidenceCandidate[];
+      const MAX_EVIDENCE_ITEMS_FOR_LLM = 12;
+      const MAX_TOTAL_EVIDENCE_CHARS = 30000;
+      let evidenceTruncated = false;
+      let totalEvidenceChars = 0;
+
+      const evidenceCandidates: EvidenceCandidate[] = [];
+
+      for (const retrieved of retrievedArtifacts) {
+        if (evidenceCandidates.length >= MAX_EVIDENCE_ITEMS_FOR_LLM) {
+          break;
+        }
+
+        const persistedArtifact = artifactByKey.get(retrieved.artifactKey);
+        if (!persistedArtifact) continue;
+        
+        const evidenceRecord = evidenceByArtifactId.get(persistedArtifact.id);
+        let excerpt = evidenceRecord?.excerpt || '';
+
+        if (totalEvidenceChars + excerpt.length > MAX_TOTAL_EVIDENCE_CHARS) {
+          const remainingSpace = MAX_TOTAL_EVIDENCE_CHARS - totalEvidenceChars;
+          if (remainingSpace > 500) {
+            excerpt = excerpt.substring(0, remainingSpace) + '\n... [TRUNCATED DUE TO TOKEN LIMITS]';
+            evidenceTruncated = true;
+          } else {
+            break;
+          }
+        }
+
+        totalEvidenceChars += excerpt.length;
+
+        evidenceCandidates.push({
+          artifactKey: persistedArtifact.artifactKey,
+          symbolName: persistedArtifact.name,
+          filePath: persistedArtifact.filePath,
+          artifactType: persistedArtifact.artifactType,
+          excerpt,
+          retrievalMethod: retrieved.retrievalMethod,
+          retrievalReason: `Score: ${retrieved.score}`,
+        } as unknown as EvidenceCandidate);
+      }
 
       const { systemPrompt, userPrompt, version } = renderPrompt('IMPACT_ANALYSIS', {
         changeRequest: analysis.requirementRevision.rawText,
@@ -279,7 +322,7 @@ export class RunImpactAnalysisUseCase {
       });
 
       const { data: llmResponse, metadata } = await this.llmProvider.generateStructured(
-        { systemPrompt, userPrompt },
+        { systemPrompt, userPrompt, options: { promptVersion: version } },
         impactAnalysisAiSchema,
       );
 
@@ -371,31 +414,43 @@ export class RunImpactAnalysisUseCase {
         stage: 'DONE',
         progress: 100,
         metadata: {
-          llm: {
-            provider: metadata?.provider || 'unknown',
-            model: metadata?.model || 'unknown',
-            promptVersion: version,
-            parseMode: metadata?.parseMode,
-            inputTokens: metadata?.inputTokens,
-            outputTokens: metadata?.outputTokens,
-            rawLength: metadata?.rawLength,
-            jsonLength: metadata?.jsonLength,
-            generatedAt: new Date().toISOString(),
-          },
           retrieval: {
             strategy: 'hybrid',
             maxArtifacts: 20,
             artifactCount: evidenceInputs.length,
+            vectorSignalCount: retrievedArtifacts.filter((r: any) => r.retrievalSignals?.includes('VECTOR') || r.retrievalSignals?.has?.('VECTOR')).length,
+          },
+          llm: {
+            provider: metadata?.provider || 'unknown',
+            model: metadata?.model || 'unknown',
+            promptVersion: version,
+            parseMode: metadata?.parseMode || 'raw',
+            inputTokens: metadata?.inputTokens || null,
+            outputTokens: metadata?.outputTokens || null,
+            estimatedCostUsd: null,
+            evidenceItems: evidenceCandidates.length,
+            evidenceChars: totalEvidenceChars,
+            evidenceTruncated,
           }
         },
       });
     } catch (e: any) {
       console.error(`RunImpactAnalysisUseCase execution failed:`, e);
+      
+      const errorCode = e instanceof AppError ? e.code : 'UNKNOWN_ANALYSIS_ERROR';
+      const errorMessage = e instanceof Error ? e.message : String(e);
+
       await this.impactRepo.updateStatus({
         id: analysis.id,
         status: 'FAILED',
         stage: analysis.stage,
         progress: analysis.progress,
+        error: {
+          code: errorCode,
+          message: errorMessage,
+          stage: analysis.stage,
+          retryable: true,
+        }
       });
       throw e;
     }

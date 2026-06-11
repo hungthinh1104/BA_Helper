@@ -5,7 +5,16 @@ export interface RetrievedArtifact {
   symbolName: string | null;
   artifactType: string;
   score: number;
-  retrievalMethod: 'LEXICAL' | 'VECTOR' | 'GRAPH' | 'HYBRID';
+  retrievalMethod: 'LEXICAL' | 'VECTOR' | 'GRAPH_EXPANSION' | 'HYBRID';
+  retrievalSignals: Array<'LEXICAL' | 'GRAPH' | 'VECTOR' | 'DOMAIN'>;
+  retrievalReason: string;
+  strategyVersion?: string;
+  lexicalScore?: number;
+  graphScore?: number;
+  vectorScore?: number;
+  domainBoost?: number;
+  finalScore?: number;
+  suggestion?: import('./retrieval-suggestion').RetrievalSuggestion;
 }
 
 export interface RetrievalRequest {

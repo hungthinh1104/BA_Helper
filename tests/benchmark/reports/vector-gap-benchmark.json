@@ -1,52 +1,37 @@
 {
   "fixture": "nestjs-order-inventory",
-  "retriever": "deterministic-lexical-graph",
+  "retriever": "hybrid-lexical-graph-vector",
   "cases": [
     {
       "changeRequest": "Allow customers to abort a purchase before fulfillment and restore reserved stock.",
       "retrievedArtifactKeys": [
+        "service-method:order.service.cancelOrder",
+        "service-method:inventory.service.releaseReservation",
         "entity:stockreservation",
+        "entity:order",
+        "service-method:order.service.shipOrder",
         "service-method:inventory.service.reserveStock",
         "service-method:inventory.service.consumeReservation",
-        "service-method:inventory.service.releaseReservation",
-        "test:src.inventory.inventory-reservation.spec.ts"
+        "test:src.order.order-cancel.spec.ts",
+        "api:order.controller.cancelOrder"
       ],
-      "missingCriticalArtifacts": [
-        "service-method:order.service.cancelOrder",
-        "entity:order"
-      ],
-      "failures": [
-        {
-          "failureClass": "RETRIEVAL_MISS",
-          "reason": "VECTOR_GAP_DETECTED",
-          "expected": "service-method:order.service.cancelOrder",
-          "actual": "Missing",
-          "details": "Semantic gap: Deterministic pipeline missed service-method:order.service.cancelOrder for paraphrase: \"Allow customers to abort a purchase before fulfillment and restore reserved stock.\""
-        },
-        {
-          "failureClass": "RETRIEVAL_MISS",
-          "reason": "VECTOR_GAP_DETECTED",
-          "expected": "entity:order",
-          "actual": "Missing",
-          "details": "Semantic gap: Deterministic pipeline missed entity:order for paraphrase: \"Allow customers to abort a purchase before fulfillment and restore reserved stock.\""
-        }
-      ]
+      "missingCriticalArtifacts": [],
+      "failures": []
     },
     {
       "changeRequest": "When an order is withdrawn, return held inventory back to availability.",
       "retrievedArtifactKeys": [
-        "entity:stockreservation",
-        "service-method:inventory.service.consumeReservation",
-        "service-method:inventory.service.releaseReservation",
-        "service-method:inventory.service.reserveStock",
-        "test:src.inventory.inventory-reservation.spec.ts",
-        "entity:order",
+        "service-method:product.service.checkAvailability",
         "service-method:order.service.cancelOrder",
+        "service-method:inventory.service.releaseReservation",
+        "entity:stockreservation",
+        "entity:order",
+        "entity:product",
         "service-method:order.service.shipOrder",
-        "api:order.controller.cancelOrder",
-        "api:order.controller.shipOrder",
-        "entity:orderitem",
-        "service-method:discount.service.applyDiscountToOrder"
+        "service-method:inventory.service.reserveStock",
+        "service-method:inventory.service.consumeReservation",
+        "test:src.order.order-cancel.spec.ts",
+        "api:order.controller.cancelOrder"
       ],
       "missingCriticalArtifacts": [],
       "failures": []
@@ -55,16 +40,15 @@
       "changeRequest": "Prevent shipment and rollback stock reservation when cancellation happens.",
       "retrievedArtifactKeys": [
         "entity:stockreservation",
-        "entity:shipment",
         "service-method:inventory.service.releaseReservation",
-        "service-method:inventory.service.reserveStock",
         "service-method:inventory.service.consumeReservation",
-        "service-method:shipment.service.createShipment",
         "test:src.inventory.inventory-reservation.spec.ts",
         "service-method:order.service.cancelOrder",
-        "api:order.controller.cancelOrder",
+        "entity:order",
+        "service-method:order.service.shipOrder",
+        "service-method:inventory.service.reserveStock",
         "test:src.order.order-cancel.spec.ts",
-        "entity:order"
+        "api:order.controller.cancelOrder"
       ],
       "missingCriticalArtifacts": [],
       "failures": []
@@ -72,7 +56,7 @@
   ],
   "summary": {
     "totalCases": 3,
-    "casesWithMisses": 1,
-    "criticalMissCount": 2
+    "casesWithMisses": 0,
+    "criticalMissCount": 0
   }
 }

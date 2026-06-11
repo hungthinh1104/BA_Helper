@@ -2,6 +2,8 @@ import { TraceabilityRepository } from '../infrastructure/traceability.repositor
 import { EventLogService } from '../../event-log/application/event-log.service';
 import { AppError } from '../../../shared/app-error';
 
+import { ReviewPolicy } from '../../review/domain/review.policy';
+
 export class ReviewTraceabilityUseCase {
   constructor(
     private readonly repository: TraceabilityRepository,
@@ -18,18 +20,7 @@ export class ReviewTraceabilityUseCase {
     }
 
     const analysis = link.impactAnalysis;
-    const isPinnedCommit = analysis.sourceTarget.resolvedRefType === 'COMMIT';
-    const isStale =
-      !isPinnedCommit &&
-      analysis.sourceTarget.latestObservedCommitSha !==
-        analysis.snapshot.commitSha;
-
-    if (analysis.status !== 'WAITING_FOR_REVIEW' || isStale) {
-      throw new AppError(
-        'REVIEW_NOT_ALLOWED',
-        'Review is not allowed for this analysis state.',
-      );
-    }
+    ReviewPolicy.assertCanReview(analysis);
 
     if (link.reviewStatus === params.reviewStatus) {
       return link;

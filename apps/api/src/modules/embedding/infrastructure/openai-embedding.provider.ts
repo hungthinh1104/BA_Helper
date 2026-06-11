@@ -35,7 +35,7 @@ export class OpenAiEmbeddingProvider extends EmbeddingProvider {
       embeddings: response.data.map((d) => d.embedding),
       model,
       dimensions: DIMENSIONS,
-      tokenUsage: response.usage?.total_tokens ?? 0,
+      tokenUsage: response.usage?.total_tokens ?? undefined,
     };
   }
 }

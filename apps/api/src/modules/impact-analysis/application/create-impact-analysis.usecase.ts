@@ -24,6 +24,9 @@ export class CreateImpactAnalysisUseCase {
     sourceTargetId: string;
     requestKey: string;
     allowPartialSnapshot: boolean;
+    derivedFromAnalysisId?: string;
+    sourceClarificationId?: string;
+    reviewClarificationRequestId?: string;
   }) {
     const revision = await this.requirementRepo.findRevisionById(
       params.requirementRevisionId,
@@ -60,6 +63,58 @@ export class CreateImpactAnalysisUseCase {
         'INPUT_PROJECT_MISMATCH',
         'Requirement and repository belong to different projects.',
       );
+    }
+
+    if (params.derivedFromAnalysisId || params.sourceClarificationId || params.reviewClarificationRequestId) {
+      if (!params.derivedFromAnalysisId) {
+        throw new AppError('INVALID_LINEAGE', 'derivedFromAnalysisId must be provided.');
+      }
+      if (!params.sourceClarificationId && !params.reviewClarificationRequestId) {
+        throw new AppError('INVALID_LINEAGE', 'Either sourceClarificationId or reviewClarificationRequestId must be provided.');
+      }
+      
+      if (params.sourceClarificationId) {
+        const clarification = await this.prisma.clarificationItem.findUnique({
+          where: { id: params.sourceClarificationId },
+          include: { impactAnalysis: { include: { snapshot: { include: { repository: true } } } } }
+        });
+
+        if (!clarification) {
+          throw new AppError('CLARIFICATION_NOT_FOUND', 'Source clarification not found.');
+        }
+        if (clarification.impactAnalysisId !== params.derivedFromAnalysisId) {
+          throw new AppError('INVALID_LINEAGE', 'Clarification does not belong to the derived analysis.');
+        }
+        if (clarification.status !== 'CONVERTED_TO_REVISION') {
+          throw new AppError('INVALID_LINEAGE', 'Clarification must be CONVERTED_TO_REVISION to spawn a new analysis.');
+        }
+        if (clarification.convertedRequirementRevisionId !== params.requirementRevisionId) {
+          throw new AppError('INVALID_LINEAGE', 'Requested requirement revision does not match the clarification converted revision.');
+        }
+        if (clarification.impactAnalysis.snapshot.repository.projectId !== snapshot.repository.projectId) {
+          throw new AppError('INVALID_LINEAGE', 'New analysis project does not match old analysis project.');
+        }
+      }
+
+      if (params.reviewClarificationRequestId) {
+        const reviewClarification = await this.prisma.reviewClarificationRequest.findUnique({
+          where: { id: params.reviewClarificationRequestId },
+          include: { analysis: { include: { snapshot: { include: { repository: true } } } } }
+        });
+
+        if (!reviewClarification) {
+          throw new AppError('CLARIFICATION_NOT_FOUND', 'Review clarification not found.');
+        }
+        if (reviewClarification.analysisId !== params.derivedFromAnalysisId) {
+          throw new AppError('INVALID_LINEAGE', 'Review clarification does not belong to the derived analysis.');
+        }
+        if (reviewClarification.status !== 'ANSWERED') {
+          throw new AppError('INVALID_LINEAGE', 'Review clarification must be ANSWERED to spawn a new analysis.');
+        }
+        if (reviewClarification.analysis.snapshot.repository.projectId !== snapshot.repository.projectId) {
+          throw new AppError('INVALID_LINEAGE', 'New analysis project does not match old analysis project.');
+        }
+      }
     }
 
     const sourceTarget = await this.prisma.repositoryTarget.findUnique({
@@ -130,6 +185,9 @@ export class CreateImpactAnalysisUseCase {
       acceptedPartialCoverage:
         snapshot.coverageStatus === 'PARTIAL' && params.allowPartialSnapshot,
       coverageWarning,
+      derivedFromAnalysisId: params.derivedFromAnalysisId,
+      sourceClarificationId: params.sourceClarificationId,
+      reviewClarificationRequestId: params.reviewClarificationRequestId,
     });
 
     await this.eventLog.recordEvent({

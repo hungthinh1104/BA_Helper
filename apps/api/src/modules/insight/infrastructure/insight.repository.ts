@@ -6,7 +6,7 @@ export class InsightRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async listByAnalysis(impactAnalysisId: string) {
-    return this.prisma.baInsight.findMany({
+    const insights = await this.prisma.baInsight.findMany({
       where: { impactAnalysisId },
       include: {
         evidenceLinks: {
@@ -14,6 +14,31 @@ export class InsightRepository {
         },
       },
     });
+
+    const traceabilityLinks = await this.prisma.traceabilityLink.findMany({
+      where: { impactAnalysisId },
+      select: { artifactId: true, retrievalMetadata: true },
+    });
+    
+    const retrievalMap = new Map(
+      traceabilityLinks.map((link) => [link.artifactId, link.retrievalMetadata])
+    );
+
+    return insights.map((insight) => ({
+      ...insight,
+      evidenceLinks: insight.evidenceLinks.map((link) => {
+        const metadata = link.evidence.artifactId
+          ? retrievalMap.get(link.evidence.artifactId)
+          : undefined;
+        return {
+          ...link,
+          evidence: {
+            ...link.evidence,
+            retrievalMetadata: metadata ?? undefined,
+          },
+        };
+      }),
+    }));
   }
 
   async findById(insightId: string) {

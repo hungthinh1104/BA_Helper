@@ -8,6 +8,7 @@ export class PrismaService extends PrismaClient {
   private readonly pool: Pool;
 
   constructor() {
+    console.log('DATABASE_URL is:', process.env.DATABASE_URL);
     const pool = new Pool({
       connectionString: process.env.DATABASE_URL ?? 'postgresql://localhost/ba_helper',
     });
