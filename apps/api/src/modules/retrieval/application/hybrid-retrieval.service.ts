@@ -87,6 +87,12 @@ export class HybridRetrievalService {
     const wantsData = /(database|save|persist|data|model|schema|table)/i.test(lowerReq);
     const wantsTest = /(test|qa|regression|verify|spec)/i.test(lowerReq);
     
+    const matchedIntentLabels: Array<'API' | 'SERVICE' | 'DATA' | 'TEST'> = [];
+    if (wantsApi) matchedIntentLabels.push('API');
+    if (wantsService) matchedIntentLabels.push('SERVICE');
+    if (wantsData) matchedIntentLabels.push('DATA');
+    if (wantsTest) matchedIntentLabels.push('TEST');
+    
     if (keywords.length > 0) {
       const lexicalPatterns = keywords.map((keyword) => Prisma.sql`${`%${keyword}%`}`);
       const lexicalHits = await this.prisma.$queryRaw<any[]>(Prisma.sql`
@@ -296,6 +302,22 @@ export class HybridRetrievalService {
         domainBoost: c.domainBoostNorm,
         kindBoost: c.kindBoostNorm,
         finalScore: finalScore,
+        retrievalDiagnostics: {
+          version: 'retrieval-diagnostics@0.1.0',
+          lexicalScoreNorm: c.lexicalScoreNorm,
+          vectorScoreNorm: c.vectorScoreNorm,
+          graphBoostNorm: c.graphScoreNorm,
+          kindBoostNorm: c.kindBoostNorm,
+          domainBoostNorm: c.domainBoostNorm,
+          matchedIntentLabels,
+          universalKind: artifact.universalKind ?? null,
+          repositoryProfile: snapshot?.profile ? {
+            domain: snapshot.profile.domain,
+            framework: snapshot.profile.framework,
+            language: snapshot.profile.language,
+          } : null,
+          finalScore,
+        }
       };
       
       retrievedArtifact.suggestion = buildRetrievalSuggestion(retrievedArtifact);

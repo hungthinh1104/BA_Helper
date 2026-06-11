@@ -248,6 +248,7 @@ export class RunImpactAnalysisUseCase {
               vector: retrieved.vectorScore,
               domain: retrieved.domainBoost,
             },
+            diagnostics: retrieved.retrievalDiagnostics,
             suggestion: retrieved.suggestion,
           },
         })),

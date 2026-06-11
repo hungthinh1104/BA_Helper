@@ -1,3 +1,20 @@
+export interface RetrievalDiagnostics {
+  version: 'retrieval-diagnostics@0.1.0';
+  lexicalScoreNorm: number;
+  vectorScoreNorm: number;
+  graphBoostNorm: number;
+  kindBoostNorm: number;
+  domainBoostNorm: number;
+  matchedIntentLabels: Array<'API' | 'SERVICE' | 'DATA' | 'TEST'>;
+  universalKind: string | null;
+  repositoryProfile: {
+    domain?: string | null;
+    framework?: string | null;
+    language?: string | null;
+  } | null;
+  finalScore: number;
+}
+
 export interface RetrievedArtifact {
   artifactId: string;
   artifactKey: string;
@@ -16,6 +33,7 @@ export interface RetrievedArtifact {
   kindBoost?: number;
   finalScore?: number;
   suggestion?: import('./retrieval-suggestion').RetrievalSuggestion;
+  retrievalDiagnostics?: RetrievalDiagnostics;
 }
 
 export interface RetrievalRequest {

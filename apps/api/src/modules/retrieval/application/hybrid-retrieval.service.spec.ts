@@ -142,6 +142,19 @@ describe('HybridRetrievalService', () => {
       // Expect boosted to be strictly higher than unrelated
       expect(apiResult!.score).toBeGreaterThan(unrelatedResult!.score);
       expect(serviceResult!.score).toBeGreaterThan(unrelatedResult!.score);
+
+      // Verify retrievalDiagnostics
+      expect(apiResult!.retrievalDiagnostics).toBeDefined();
+      expect(apiResult!.retrievalDiagnostics?.version).toBe('retrieval-diagnostics@0.1.0');
+      expect(apiResult!.retrievalDiagnostics?.matchedIntentLabels).toContain('API');
+      expect(apiResult!.retrievalDiagnostics?.matchedIntentLabels).toContain('SERVICE');
+      expect(apiResult!.retrievalDiagnostics?.kindBoostNorm).toBe(1.0);
+      expect(apiResult!.retrievalDiagnostics?.universalKind).toBe('API_ENDPOINT');
+      expect(apiResult!.retrievalDiagnostics?.repositoryProfile?.domain).toBe('BOOKING');
+
+      // Verify unrelated has no kindBoost
+      expect(unrelatedResult!.retrievalDiagnostics?.kindBoostNorm).toBe(0);
+      expect(unrelatedResult!.retrievalDiagnostics?.universalKind).toBe('UNKNOWN');
     });
 
     it('falls back when profile is missing', async () => {
