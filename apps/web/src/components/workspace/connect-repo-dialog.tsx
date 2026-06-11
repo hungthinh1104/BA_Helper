@@ -3,49 +3,95 @@
 import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { repositoryCreateRequestSchema } from "@ba-helper/contracts"
+import { repositoryCreateRequestSchema, scanJobCreateRequestSchema, scanJobResponseSchema } from "@ba-helper/contracts"
 import { useCreateRepository } from "@/hooks/api/use-repositories"
 import { X, GitBranch, AlertCircle, Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
+import { apiPost } from "@/lib/api-client"
+import { ApiError } from "@/lib/api-error"
 
 interface ConnectRepoDialogProps {
   children: React.ReactNode
 }
 
-const GITHUB_URL_RE = /^https?:\/\/github\.com\/[\w.-]+\/[\w.-]+\/?$/i
+const GITHUB_URL_RE = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/?$/i
+const TESTED_DEMO_REPO_URL = "https://github.com/ndmen/booking"
+const TESTED_DEMO_REPO_REF = "main"
 
 export function ConnectRepoDialog({ children }: ConnectRepoDialogProps) {
-  const { mutateAsync: connectRepo, isPending: loading } = useCreateRepository("default-project")
+  const { mutateAsync: connectRepo, isPending: loading } = useCreateRepository()
   const [open, setOpen] = useState(false)
   const [url, setUrl] = useState("")
   const [ref, setRef] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const router = useRouter()
 
   const urlError = url.length > 0 && !GITHUB_URL_RE.test(url.trim())
-  const canSubmit = url.trim().length > 0 && GITHUB_URL_RE.test(url.trim()) && !loading
+  const canSubmit = url.trim().length > 0 && GITHUB_URL_RE.test(url.trim()) && !loading && !isSubmitting
 
   const reset = () => {
     setUrl("")
     setRef("")
   }
 
+  const applyTestedDemoRepo = () => {
+    setUrl(TESTED_DEMO_REPO_URL)
+    setRef(TESTED_DEMO_REPO_REF)
+  }
+
+  const handleScanQueueFailure = (repositoryId: string, err: unknown) => {
+    const code = err instanceof ApiError ? err.code : "SCAN_QUEUE_FAILED"
+    const message = err instanceof Error ? err.message : "The scan job could not be queued."
+
+    toast.warning("Repository connected, but scan could not start", {
+      description: `${code}: ${message}`,
+    })
+
+    setOpen(false)
+    reset()
+    router.push(`/repositories/${repositoryId}`)
+  }
+
   const handleSubmit = async () => {
     if (!GITHUB_URL_RE.test(url.trim())) return
     const parseResult = repositoryCreateRequestSchema.safeParse({ url: url.trim() })
     if (!parseResult.success) return
-    
+
+    setIsSubmitting(true)
     try {
-      await connectRepo({
+      const repo = await connectRepo({
         url: url.trim().replace(/\/$/, ""),
       })
+
+      const scanInput = scanJobCreateRequestSchema.parse({
+        requestKey: crypto.randomUUID(),
+        ref: ref.trim() ? ref.trim() : undefined,
+      })
+
+      try {
+        await apiPost(
+          `/api/v1/repositories/${repo.repositoryId}/scan-jobs`,
+          scanInput,
+          scanJobResponseSchema,
+        )
+      } catch (err) {
+        handleScanQueueFailure(repo.repositoryId, err)
+        return
+      }
+
       toast.success("Repository connected", {
-        description: `Scan job started for ${url.trim().split("/").slice(-2).join("/")}.`,
+        description: `Scan job queued for ${url.trim().split("/").slice(-2).join("/")}.`,
       })
       setOpen(false)
       reset()
+      router.push(`/repositories/${repo.repositoryId}`)
     } catch (err: unknown) {
       toast.error("Failed to connect repository", {
         description: err instanceof Error ? err.message : "Please try again.",
       })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -98,15 +144,31 @@ export function ConnectRepoDialog({ children }: ConnectRepoDialogProps) {
             />
           </div>
 
-          <div className="p-3 bg-surface-muted/50 border border-border/60 rounded-lg text-[12px] text-muted-foreground leading-relaxed">
-            Only public GitHub repositories are supported in MVP. A scan job will start automatically after connecting.
+          <div className="rounded-lg border border-border/60 bg-surface-muted/50 p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="text-[12px] text-muted-foreground leading-relaxed">
+                Only public GitHub repositories are supported in MVP. A scan job will start automatically after connecting.
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 shrink-0 shadow-none"
+                onClick={applyTestedDemoRepo}
+              >
+                Use Tested Demo Repo
+              </Button>
+            </div>
+            <div className="mt-2 rounded-md border border-border/50 bg-background/60 px-2 py-1.5 text-[11px] font-mono text-foreground/80">
+              {TESTED_DEMO_REPO_URL} · ref: {TESTED_DEMO_REPO_REF}
+            </div>
           </div>
 
           <div className="-mx-6 px-6 py-4 border-t border-border/60 bg-surface-muted/30 flex justify-end gap-2">
             <DialogClose render={<Button variant="outline" size="sm" className="h-8 shadow-none">Cancel</Button>} />
             <Button size="sm" className="h-8 shadow-none" disabled={!canSubmit} onClick={handleSubmit}>
-              {loading && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
-              {loading ? "Connecting..." : "Connect & Scan"}
+              {(loading || isSubmitting) && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+              {loading || isSubmitting ? "Connecting..." : "Connect & Scan"}
             </Button>
           </div>
         </div>

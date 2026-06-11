@@ -2,43 +2,79 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Workflow } from "lucide-react"
+import { Workflow, PanelLeftClose, PanelLeftOpen, Database, FileText, Activity, BarChart2, User } from "lucide-react"
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  isCollapsed?: boolean
+  onToggle?: () => void
+}
+
+export function AppSidebar({ isCollapsed, onToggle }: AppSidebarProps) {
   const pathname = usePathname()
   const active = (prefix: string) => pathname?.startsWith(prefix) ? "true" : undefined
 
   return (
-    <aside className="app-sidebar">
-      <div className="flex items-center gap-2 px-2 mb-8">
-        <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
+    <aside className="app-sidebar h-full flex flex-col transition-all duration-300 overflow-hidden">
+      <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-2 px-2"} mb-8 relative`}>
+        <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center shrink-0">
           <Workflow className="w-3.5 h-3.5 text-primary-foreground" />
         </div>
-        <span className="font-semibold text-sm">BA Helper</span>
+        {!isCollapsed && <span className="font-semibold text-sm whitespace-nowrap">BA Helper</span>}
+        
+        {onToggle && (
+          <button 
+            onClick={onToggle}
+            className={`absolute right-1 w-6 h-6 rounded-md hover:bg-surface-soft flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors ${isCollapsed ? 'hidden' : ''}`}
+            title="Collapse Sidebar"
+          >
+            <PanelLeftClose className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
-      <nav className="nav-section">
-        <div className="nav-label">Workspace</div>
-        <Link href="/app/repositories" className="nav-item" data-active={active("/app/repositories")}>
-          Repositories
+      <nav className={`nav-section ${isCollapsed ? "items-center" : ""}`}>
+        {!isCollapsed && <div className="nav-label">Workspace</div>}
+        <Link href="/" className={`nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={pathname === "/" ? "true" : undefined} title="Dashboard">
+          <Workflow className="w-4 h-4 shrink-0" />
+          {!isCollapsed && <span>Dashboard</span>}
         </Link>
-        <Link href="/app/requirements" className="nav-item" data-active={active("/app/requirements")}>
-          Requirements
+        <Link href="/repositories" className={`nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/repositories")} title="Repositories">
+          <Database className="w-4 h-4 shrink-0" />
+          {!isCollapsed && <span>Repositories</span>}
         </Link>
-        <Link href="/app/analyses" className="nav-item" data-active={active("/app/analyses")}>
-          Impact Analyses
+        <Link href="/requirements" className={`nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/requirements")} title="Requirements">
+          <FileText className="w-4 h-4 shrink-0" />
+          {!isCollapsed && <span>Requirements</span>}
         </Link>
-        <Link href="/app/reports" className="nav-item" data-active={active("/app/reports")}>
-          Reports
+        <Link href="/analyses" className={`nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/analyses")} title="Impact Analyses">
+          <Activity className="w-4 h-4 shrink-0" />
+          {!isCollapsed && <span>Impact Analyses</span>}
+        </Link>
+        <Link href="/reports" className={`nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/reports")} title="Reports">
+          <BarChart2 className="w-4 h-4 shrink-0" />
+          {!isCollapsed && <span>Reports</span>}
         </Link>
       </nav>
 
-      <nav className="nav-section mt-8">
-        <div className="nav-label">Settings</div>
-        <Link href="/app/settings/profile" className="nav-item" data-active={active("/app/settings")}>
-          Profile
+      <nav className={`nav-section mt-8 ${isCollapsed ? "items-center" : ""}`}>
+        {!isCollapsed && <div className="nav-label">Settings</div>}
+        <Link href="/settings/profile" className={`nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/settings")} title="Profile">
+          <User className="w-4 h-4 shrink-0" />
+          {!isCollapsed && <span>Profile</span>}
         </Link>
       </nav>
+      
+      {isCollapsed && onToggle && (
+        <div className="mt-auto flex justify-center pb-4">
+          <button 
+            onClick={onToggle}
+            className="w-8 h-8 rounded-md hover:bg-surface-soft flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            title="Expand Sidebar"
+          >
+            <PanelLeftOpen className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </aside>
   )
 }

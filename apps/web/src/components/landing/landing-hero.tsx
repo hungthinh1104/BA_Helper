@@ -23,14 +23,14 @@ export function LandingHero() {
           <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
           Now available for NestJS
         </div>
-        <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-foreground mb-6" style={{ background: "linear-gradient(to right, #1e3a8a, #3b82f6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+        <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-foreground mb-6" style={{ background: "var(--hero-gradient)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
           Requirement-to-Code<br />Impact Analyzer
         </h1>
         <p className="hero-subtitle text-lg md:text-xl text-muted-foreground mx-auto">
           Not just another AI Copilot. We map business requirements to exact codebase artifacts with verifiable evidence—no hallucinations.
         </p>
         <div className="hero-actions">
-          <Link href="/app/analyses/mock-analysis-123">
+          <Link href="/analyses/mock-analysis-123">
             <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 text-md px-8 h-12">
               Try the Demo
             </Button>
@@ -92,14 +92,14 @@ export function LandingHero() {
               <div className="h-8 w-64 bg-border rounded"></div>
               <div className="h-4 w-48 bg-border/50 rounded mb-8"></div>
               
-              <div className={`h-24 w-full rounded-lg border flex flex-col justify-center px-6 transition-all duration-500 ${demoState === 'results' ? 'bg-primary/10 border-primary/30 shadow-[0_0_15px_rgba(37,151,208,0.15)]' : 'bg-border/30 border-border'}`}>
+              <div className={`h-24 w-full rounded-lg border flex flex-col justify-center px-6 transition-all duration-500 ${demoState === 'results' ? 'bg-primary/10 border-primary/30 shadow-[0_0_15px_var(--info-soft)]' : 'bg-border/30 border-border'}`}>
                 {demoState === 'results' && (
                   <div className="animate-fade-in font-mono text-sm text-primary font-semibold">
                     BookingController.cancel
                   </div>
                 )}
               </div>
-              <div className={`h-24 w-full rounded-lg border flex flex-col justify-center px-6 transition-all duration-500 delay-150 ${demoState === 'results' ? 'bg-primary/10 border-primary/30 shadow-[0_0_15px_rgba(37,151,208,0.15)]' : 'bg-border/30 border-border'}`}>
+              <div className={`h-24 w-full rounded-lg border flex flex-col justify-center px-6 transition-all duration-500 delay-150 ${demoState === 'results' ? 'bg-primary/10 border-primary/30 shadow-[0_0_15px_var(--info-soft)]' : 'bg-border/30 border-border'}`}>
                 {demoState === 'results' && (
                   <div className="animate-fade-in font-mono text-sm text-primary font-semibold">
                     PaymentService.refund()

@@ -1,11 +1,13 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
+import { useRouter } from "next/navigation"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { useRequirements } from "@/hooks/api/use-requirements"
 import { useRepositories } from "@/hooks/api/use-repositories"
 import { useCreateAnalysis } from "@/hooks/api/use-analyses"
+import { useAuth } from "@/hooks/use-auth"
 import { RequirementListItemResponse, RepositoryListItemResponse } from "@ba-helper/contracts"
 import { X, ChevronRight, AlertTriangle, Loader2, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
@@ -14,20 +16,35 @@ interface NewAnalysisDialogProps {
   children: React.ReactNode
   preselectedRepoId?: string
   preselectedReqId?: string
+  preselectedReqRevisionId?: string
+  derivedFromAnalysisId?: string
+  sourceClarificationId?: string
+  oldAnalysisSnapshotCommit?: string
 }
 
 type Step = 1 | 2 | 3
 
-export function NewAnalysisDialog({ children, preselectedRepoId, preselectedReqId }: NewAnalysisDialogProps) {
-  const { data: reqData, isLoading: reqsLoading, error: reqsError } = useRequirements("default-project")
-  const { data: repoData, isLoading: reposLoading, error: reposError } = useRepositories("default-project")
-  const { mutateAsync: createAnalysis, isPending: loading } = useCreateAnalysis("default-project")
+export function NewAnalysisDialog({ 
+  children, 
+  preselectedRepoId, 
+  preselectedReqId,
+  preselectedReqRevisionId,
+  derivedFromAnalysisId,
+  sourceClarificationId,
+  oldAnalysisSnapshotCommit
+}: NewAnalysisDialogProps) {
+  const router = useRouter()
+  const { data: reqData, isLoading: reqsLoading, error: reqsError } = useRequirements()
+  const { data: repoData, isLoading: reposLoading, error: reposError } = useRepositories()
+  const { mutateAsync: createAnalysis, isPending: loading } = useCreateAnalysis()
 
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState<Step>(1)
   const [selectedReq, setSelectedReq] = useState<RequirementListItemResponse | null>(null)
   const [selectedRepo, setSelectedRepo] = useState<RepositoryListItemResponse | null>(null)
   const [acknowledgePartial, setAcknowledgePartial] = useState(false)
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'ADMIN'
 
   const readyRepos = useMemo(() => repoData?.items.filter(r =>
     r.latestScanJob?.status === "COMPLETED" && r.latestSnapshot?.id
@@ -73,16 +90,30 @@ export function NewAnalysisDialog({ children, preselectedRepoId, preselectedReqI
 
   const handleSubmit = async () => {
     if (!selectedReq || !selectedRepo) return
+    const sourceTargetId = selectedRepo.latestTarget?.id
+    if (!sourceTargetId) {
+      toast.error("Cannot start analysis", {
+        description: "Repository has no resolved target. Run a scan first.",
+      })
+      return
+    }
+    const effectiveRevisionId = preselectedReqRevisionId ?? selectedReq.latestRevision.id
     try {
-      await createAnalysis({
-        snapshotId: selectedRepo.latestSnapshot!.id,
-        sourceTargetId: "dummy-target-id", // Currently missing target map in mock
-        requestKey: crypto.randomUUID(),
-        allowPartialSnapshot: acknowledgePartial,
+      const newAnalysis = await createAnalysis({
+        revisionId: effectiveRevisionId,
+        data: {
+          snapshotId: selectedRepo.latestSnapshot!.id,
+          sourceTargetId,
+          requestKey: crypto.randomUUID(),
+          allowPartialSnapshot: acknowledgePartial,
+          derivedFromAnalysisId,
+          sourceClarificationId,
+        }
       })
       toast.success("Analysis started successfully")
       setOpen(false)
       reset()
+      router.push(`/analyses/${newAnalysis.id}`)
     } catch (err: unknown) {
       toast.error("Failed to start analysis", {
         description: err instanceof Error ? err.message : "Please try again.",
@@ -237,11 +268,19 @@ export function NewAnalysisDialog({ children, preselectedRepoId, preselectedReqI
               {/* Summary table */}
               <div className="flex flex-col divide-y divide-border/60 border border-border/60 rounded-lg overflow-hidden bg-surface-muted/30">
                 <SummaryRow label="Requirement" value={selectedReq.latestRevision.title} mono={false} />
-                <SummaryRow label="Revision ID" value={selectedReq.latestRevision.id} />
+                <SummaryRow label="Revision ID" value={preselectedReqRevisionId ?? selectedReq.latestRevision.id} />
                 <SummaryRow label="Repository" value={selectedRepo.displayName} mono={false} />
                 <SummaryRow label="Snapshot" value={selectedRepo.latestSnapshot?.id ?? "—"} />
                 <SummaryRow label="Commit" value={selectedRepo.latestSnapshot?.commitSha ?? "—"} />
                 <SummaryRow label="Coverage" value={selectedRepo.latestSnapshot?.coverageStatus ?? "—"} />
+                {oldAnalysisSnapshotCommit && selectedRepo.latestSnapshot?.commitSha !== oldAnalysisSnapshotCommit && (
+                  <div className="px-4 py-3 flex gap-2 items-start bg-blue-500/10 text-blue-500/90 text-[12px] leading-snug">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <p>
+                      This analysis will use a newer repository snapshot (<strong>{selectedRepo.latestSnapshot?.commitSha.slice(0, 7)}</strong>) than the original analysis (<strong>{oldAnalysisSnapshotCommit.slice(0, 7)}</strong>).
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Partial acknowledgement */}
@@ -267,7 +306,7 @@ export function NewAnalysisDialog({ children, preselectedRepoId, preselectedReqI
             </div>
             <div className="-mx-0 px-6 py-4 border-t border-border/60 bg-surface-muted/30 flex justify-between gap-2">
               <Button variant="outline" size="sm" className="h-8 shadow-none" onClick={() => setStep(preselectedRepoId ? 1 : 2)}>← Back</Button>
-              <Button size="sm" className="h-8 shadow-none" disabled={!canProceedStep3 || loading} onClick={handleSubmit}>
+              <Button size="sm" className="h-8 shadow-none" disabled={!canProceedStep3 || loading || !isAdmin} onClick={handleSubmit} title={!isAdmin ? "Admin role required to run analyses." : undefined}>
                 {loading ? "Starting..." : "Run Analysis"}
               </Button>
             </div>

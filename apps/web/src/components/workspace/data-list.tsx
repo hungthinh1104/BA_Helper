@@ -45,7 +45,7 @@ export function DataListRow({
       <Link 
         href={href}
         className={cn(
-          "grid items-center gap-4 px-6 py-4 transition-colors group relative border-b border-border/40 last:border-0 hover:bg-surface-soft/80 cursor-pointer", 
+          "grid items-center gap-4 px-6 py-3 transition-colors group relative border-b border-border/40 last:border-0 hover:bg-surface-soft/80 cursor-pointer", 
           className
         )}
         style={{ gridTemplateColumns: gridCols }}
@@ -58,7 +58,7 @@ export function DataListRow({
   return (
     <div 
       className={cn(
-        "grid items-center gap-4 px-6 py-4 transition-colors group relative border-b border-border/40 last:border-0 hover:bg-surface-soft/40", 
+        "grid items-center gap-4 px-6 py-3 transition-colors group relative border-b border-border/40 last:border-0 hover:bg-surface-soft/40", 
         className
       )}
       style={{ gridTemplateColumns: gridCols }}

@@ -22,7 +22,7 @@ export function NewRequirementDialog({ children, existingRequirement }: NewRequi
     ? [...existingRequirement.revisions].sort((a, b) => b.versionNumber - a.versionNumber)[0] 
     : null
 
-  const { mutateAsync: createReq, isPending: loading } = useCreateRequirement("default-project")
+  const { mutateAsync: createReq, isPending: loading } = useCreateRequirement()
 
   const [open, setOpen] = useState(false)
   const [state, setState] = useState<DialogState>("form")

@@ -12,25 +12,34 @@ import {
 } from "@ba-helper/contracts"
 
 import { canPollRepositoryDetail } from "@/lib/status-helpers"
+import { useOptionalProjectId } from "@/lib/project-context"
 
-export function useRepositories(projectId: string = "default-project") {
+export function useRepositories(params?: { projectId?: string; limit?: number; offset?: number }) {
+  const activeProjectId = useOptionalProjectId()
+  const effectiveProjectId = params?.projectId ?? activeProjectId
+  const projectQueryKey = effectiveProjectId ?? "__workspace-pending__"
   return useQuery({
-    queryKey: queryKeys.repositories.list(projectId),
+    queryKey: queryKeys.repositories.list(projectQueryKey, { limit: params?.limit, offset: params?.offset }),
     queryFn: async () => {
-      return apiGet<RepositoryListResponse>(`/api/v1/projects/${projectId}/repositories`, repositoryListResponseSchema)
+      const url = new URL(`/api/v1/projects/${effectiveProjectId}/repositories`, window.location.origin)
+      if (params?.limit) url.searchParams.set('limit', params.limit.toString())
+      if (params?.offset) url.searchParams.set('offset', params.offset.toString())
+      return apiGet<RepositoryListResponse>(url.pathname + url.search, repositoryListResponseSchema)
     },
-    enabled: Boolean(projectId),
+    enabled: Boolean(effectiveProjectId),
     refetchOnWindowFocus: true,
   })
 }
 
-export function useRepositoryDetail(projectId: string = "default-project", repositoryId: string) {
+export function useRepositoryDetail(projectId: string | undefined, repositoryId: string) {
+  const activeProjectId = useOptionalProjectId()
+  const effectiveProjectId = projectId ?? activeProjectId
   return useQuery({
     queryKey: queryKeys.repositories.detail(repositoryId),
     queryFn: async () => {
-      return apiGet<RepositoryDetailResponse>(`/api/v1/projects/${projectId}/repositories/${repositoryId}`, repositoryDetailResponseSchema)
+      return apiGet<RepositoryDetailResponse>(`/api/v1/projects/${effectiveProjectId}/repositories/${repositoryId}`, repositoryDetailResponseSchema)
     },
-    enabled: Boolean(repositoryId),
+    enabled: Boolean(repositoryId && effectiveProjectId),
     refetchOnWindowFocus: true,
     refetchInterval: (query) => {
       const data = query.state.data;
@@ -39,16 +48,22 @@ export function useRepositoryDetail(projectId: string = "default-project", repos
   })
 }
 
-export function useCreateRepository(projectId: string = "default-project") {
+export function useCreateRepository(projectId?: string) {
+  const activeProjectId = useOptionalProjectId()
+  const effectiveProjectId = projectId ?? activeProjectId
+  const projectQueryKey = effectiveProjectId ?? "__workspace-pending__"
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (input: RepositoryCreateRequest) => {
-      return apiPost<RepositoryCreateResponse>(`/api/v1/projects/${projectId}/repositories`, input, repositoryCreateResponseSchema)
+      if (!effectiveProjectId) {
+        throw new Error("Workspace project is not ready.")
+      }
+      return apiPost<RepositoryCreateResponse>(`/api/v1/projects/${effectiveProjectId}/repositories`, input, repositoryCreateResponseSchema)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.repositories.list(projectId),
+        queryKey: queryKeys.repositories.list(projectQueryKey),
       })
     },
   })

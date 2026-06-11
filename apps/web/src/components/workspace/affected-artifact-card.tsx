@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge"
 import { TraceabilityLinkListResponse } from "@ba-helper/contracts"
+import { RetrievalSignalBadge } from "./retrieval-signals"
 
 type TraceabilityLink = TraceabilityLinkListResponse["items"][number]
 
@@ -49,6 +50,7 @@ export function AffectedArtifactCard({ link, isSelected, onClick }: AffectedArti
             <span className="text-muted-foreground/60">{fileDir}/</span>{fileName}
           </p>
           <div className="shrink-0 flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
+            {link.retrieval && <RetrievalSignalBadge retrieval={link.retrieval} />}
             {getBasisBadge(link.linkBasis)}
           </div>
         </div>

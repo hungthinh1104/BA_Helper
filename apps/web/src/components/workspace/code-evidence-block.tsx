@@ -3,6 +3,45 @@
 import { useState, useCallback } from "react"
 import { Code2, Copy, Check } from "lucide-react"
 
+import { RetrievalSignalBadge, RetrievalReason, RetrievalDebugPanel } from "./retrieval-signals"
+import { RetrievalSuggestion } from "./retrieval-suggestion"
+import { RetrievalMetadata } from "@ba-helper/contracts"
+
+// Basic syntax highlighting for TS/JS
+function highlightLine(line: string) {
+  if (!line.trim()) return line;
+  
+  // Very basic regex-based highlighting
+  let html = line
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  // Comments
+  if (html.includes('//')) {
+    const parts = html.split('//');
+    html = `${parts[0]}<span class="text-muted-foreground italic">//${parts.slice(1).join('//')}</span>`;
+    return html; // Return early so we don't highlight inside comments
+  }
+
+  // Strings (single and double quotes)
+  html = html.replace(/("[^"]*")/g, '<span class="text-success-text">$1</span>');
+  html = html.replace(/('[^']*')/g, '<span class="text-success-text">$1</span>');
+  html = html.replace(/(`[^`]*`)/g, '<span class="text-success-text">$1</span>');
+
+  // Keywords
+  const keywords = ['import', 'from', 'export', 'class', 'interface', 'type', 'const', 'let', 'var', 'function', 'async', 'await', 'return', 'if', 'else', 'for', 'while', 'switch', 'case', 'break', 'try', 'catch', 'throw', 'new', 'this', 'super'];
+  const keywordRegex = new RegExp(`\\b(${keywords.join('|')})\\b`, 'g');
+  html = html.replace(keywordRegex, '<span class="text-primary font-medium">$1</span>');
+
+  // Numbers
+  html = html.replace(/\b(\d+)\b/g, '<span class="text-warning-text">$1</span>');
+
+  // Types / PascalCase (heuristic for classes/interfaces)
+  html = html.replace(/\b([A-Z][a-zA-Z0-9_]*)\b/g, '<span class="text-info-text">$1</span>');
+
+  return html;
+}
+
 interface CodeEvidenceBlockProps {
   evidence: {
     id: string
@@ -11,6 +50,7 @@ interface CodeEvidenceBlockProps {
     startLine: number | null
     endLine: number | null
     excerpt: string
+    retrieval?: RetrievalMetadata
   }
   index?: number
   total?: number
@@ -78,21 +118,33 @@ export function CodeEvidenceBlock({ evidence, index, total }: CodeEvidenceBlockP
         </div>
       </div>
 
-      {/* ── Source type badge ── */}
-      {evidence.sourceType && (
-        <div className="px-3 py-1.5 border-b border-border/40 bg-surface-muted/40">
-          <span className="badge badge-neutral text-[9px] uppercase tracking-wider px-1.5 opacity-60">
-            {evidence.sourceType}
-          </span>
+      {/* ── Retrieval Signals & Source type badge ── */}
+      <div className="px-3 py-2 border-b border-border bg-surface flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          {evidence.sourceType && (
+            <span className="badge badge-neutral text-[9px] uppercase tracking-wider px-1.5 opacity-60">
+              {evidence.sourceType}
+            </span>
+          )}
+          {evidence.retrieval && (
+            <RetrievalSignalBadge retrieval={evidence.retrieval} />
+          )}
         </div>
-      )}
+        {evidence.retrieval && (
+          <>
+            <RetrievalReason retrieval={evidence.retrieval} />
+            <RetrievalSuggestion retrieval={evidence.retrieval} />
+            <RetrievalDebugPanel retrieval={evidence.retrieval} />
+          </>
+        )}
+      </div>
 
       {/* ── Code block ── */}
-      <pre className="code-block">
+      <pre className="code-block relative group/code bg-surface-muted/30">
         {lines.map((line, i) => (
-          <div key={i} className="code-line">
-            <div className="code-line-number opacity-30 select-none text-right w-8">{startLine + i}</div>
-            <div className="whitespace-pre">{line}</div>
+          <div key={i} className="code-line hover:bg-foreground/[0.02] transition-colors rounded-sm">
+            <div className="code-line-number opacity-40 select-none text-right w-8 text-[11px] font-mono">{startLine + i}</div>
+            <div className="whitespace-pre text-[12px] font-mono" dangerouslySetInnerHTML={{ __html: highlightLine(line) }} />
           </div>
         ))}
       </pre>

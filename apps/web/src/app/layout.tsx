@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AppToaster } from "@/components/app-toaster";
 import { QueryProvider } from "@/components/query-provider";
+import { AuthProvider } from "@/components/auth/AuthProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,12 +40,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <QueryProvider>
-            <TooltipProvider>
-              {children}
-              <AppToaster />
-            </TooltipProvider>
-          </QueryProvider>
+          <AuthProvider>
+            <QueryProvider>
+              <TooltipProvider>
+                {children}
+                <AppToaster />
+              </TooltipProvider>
+            </QueryProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

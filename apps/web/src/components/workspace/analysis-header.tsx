@@ -5,9 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ImpactAnalysisResponse } from "@ba-helper/contracts"
 import { WorkspacePageHeader } from "./page-header"
-import { FinalizeDialog } from "./finalize-dialog"
-import { CheckCircle2 } from "lucide-react"
-import { useFinalizeAnalysis } from "@/hooks/api/use-analyses"
+import { CheckCircle2, Loader2, Download } from "lucide-react"
 import { toast } from "sonner"
 
 interface AnalysisHeaderProps {
@@ -24,26 +22,65 @@ interface AnalysisHeaderProps {
 
 export function AnalysisHeader({ analysis, stats }: AnalysisHeaderProps) {
   const isStale = analysis.freshness.isStale
-  const [finalized, setFinalized] = useState(false)
-  const [canExport, setCanExport] = useState(analysis.capabilities.canExport)
+  const finalized = analysis.status === "COMPLETED"
+  const canExport = analysis.capabilities.canExport || finalized
+  const [isExporting, setIsExporting] = useState(false)
 
-  const { mutateAsync: finalizeAnalysis } = useFinalizeAnalysis("default-project", analysis.id)
-
-  const handleFinalize = async () => {
+  const handleExport = async () => {
+    setIsExporting(true)
     try {
-      await finalizeAnalysis()
-      toast.success("Analysis finalized successfully")
-      setFinalized(true)
-      setCanExport(true)
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+      const res = await fetch(`${baseUrl}/api/v1/impact-analyses/${analysis.id}/approved-report/export.md`)
+      
+      if (!res.ok) {
+        if (res.status === 404) {
+          throw new Error("Approved report not found. Please ensure the analysis is completed and finalized.")
+        }
+        throw new Error("Failed to export report.")
+      }
+
+      // Check if stale header was set
+      const isReportStale = res.headers.get("X-Report-Stale") === "true"
+
+      const blob = await res.blob()
+      
+      // Extract filename from Content-Disposition if present
+      const contentDisposition = res.headers.get("Content-Disposition")
+      let filename = "impact-report.md"
+      if (contentDisposition && contentDisposition.includes("filename=")) {
+        const match = contentDisposition.match(/filename="?([^"]+)"?/)
+        if (match && match[1]) {
+          filename = match[1]
+        }
+      }
+
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+
+      if (isReportStale) {
+        toast.warning("Report Exported", {
+          description: "This report may be stale because the repository snapshot has changed.",
+        })
+      } else {
+        toast.success("Report Exported Successfully", {
+          description: filename,
+        })
+      }
     } catch (err: unknown) {
-      toast.error("Failed to finalize analysis", {
-        description: err instanceof Error ? err.message : "Please try again.",
+      const error = err instanceof Error ? err : new Error(String(err));
+      toast.error("Export Failed", {
+        description: error.message || "An unexpected error occurred while exporting.",
       })
-      throw err
+    } finally {
+      setIsExporting(false)
     }
   }
-
-  const canFinalize = analysis.capabilities.canFinalize && !finalized
 
   return (
     <div>
@@ -64,30 +101,21 @@ export function AnalysisHeader({ analysis, stats }: AnalysisHeaderProps) {
       <WorkspacePageHeader
         title={analysis.requirement.revisionTitle}
         description={`Commit: ${analysis.snapshot.commitSha.substring(0, 7)} · Target: ${analysis.sourceTarget.requestedRef}`}
-        className="mb-4"
+        className="mb-2.5"
       >
-        <Button variant="outline" size="sm" className="h-8 shadow-none bg-surface" disabled={!canExport}>
-          Export Report
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="h-8 shadow-none bg-surface" 
+          disabled={!canExport || isExporting}
+          onClick={handleExport}
+        >
+          {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+          Download .md
         </Button>
-        {canFinalize && (
-          <FinalizeDialog
-            summary={{
-              total: stats.total,
-              confirmed: stats.confirmed,
-              rejected: stats.rejected,
-              unreviewed: stats.needsReview,
-            }}
-            onFinalize={handleFinalize}
-          >
-            <Button size="sm" className="h-8 shadow-none">Finalize Analysis</Button>
-          </FinalizeDialog>
-        )}
-        {finalized && (
-          <Button size="sm" className="h-8 shadow-none" disabled>Finalized</Button>
-        )}
       </WorkspacePageHeader>
 
-      <div className="flex items-center gap-4 text-[13px] font-medium mb-4">
+      <div className="flex items-center gap-4 text-[13px] font-medium mb-2.5">
         <Badge variant="outline" className={`bg-surface font-semibold rounded-md uppercase tracking-wider text-[10px] ${
           finalized ? "text-success border-success/30" : "text-muted-foreground"
         }`}>
