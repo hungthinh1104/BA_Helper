@@ -1,73 +1,67 @@
-import { DocumentRepository } from '../infrastructure/document.repository';
-import { PrismaService } from '../../prisma/prisma.service';
+import { Injectable } from '@nestjs/common';
+import { RequestUser } from '@ba-helper/contracts';
 import { AppError } from '../../../shared/app-error';
-import { sanitizeReportFilename } from '../domain/sanitize-filename.util';
-import { DocumentExportedEventPayload } from '../domain/document.events';
-import * as crypto from 'crypto';
+import { EventLogService } from '../../event-log/application/event-log.service';
+import { DocumentRepository } from '../infrastructure/document.repository';
+import { ApprovedReportProjectionService } from './approved-report-projection.service';
+import { ExportFormat, RenderedExport } from './document-export.renderer';
+import { MarkdownExportRenderer } from './markdown-export.renderer';
+import { PdfExportRenderer } from './pdf-export.renderer';
 
+@Injectable()
 export class ExportApprovedReportUseCase {
   constructor(
     private readonly documentRepository: DocumentRepository,
-    private readonly prisma: PrismaService,
+    private readonly projectionService: ApprovedReportProjectionService,
+    private readonly eventLog: EventLogService,
+    private readonly markdownRenderer: MarkdownExportRenderer,
+    private readonly pdfRenderer: PdfExportRenderer,
   ) {}
 
-  async execute(analysisId: string, actorId: string = 'dev-single-user') {
-    const report = await this.documentRepository.findApprovedReportByAnalysisId(analysisId);
+  async execute(params: {
+    analysisId: string;
+    actor: RequestUser;
+    format: ExportFormat;
+  }): Promise<RenderedExport> {
+    const report = await this.documentRepository.findApprovedReportByAnalysisId(params.analysisId);
 
     if (!report) {
       throw new AppError('APPROVED_REPORT_NOT_FOUND', 'Approved impact report not found.');
     }
 
-    const analysis = report.impactAnalysis;
-    const isPinnedCommit = analysis.sourceTarget.resolvedRefType === 'COMMIT';
+    const projection = await this.projectionService.project(report);
 
-    let isStale =
-      !isPinnedCommit &&
-      !!analysis.sourceTarget.latestObservedCommitSha &&
-      analysis.sourceTarget.latestObservedCommitSha !== analysis.snapshot.commitSha;
+    if (projection.isStale) {
+      throw new AppError(
+        'REPORT_EXPORT_BLOCKED_STALE',
+        projection.staleReason ?? 'Approved report is stale and cannot be exported.',
+      );
+    }
 
-    const latestDecision = await this.prisma.analysisReviewDecision.findFirst({
-      where: { analysisId },
-      orderBy: { createdAt: 'desc' },
+    const renderer = params.format === 'pdf' ? this.pdfRenderer : this.markdownRenderer;
+    const rendered = await renderer.render({
+      markdown: projection.report.content,
+      metadata: projection.metadata,
     });
 
-    if (latestDecision && report.updatedAt < latestDecision.createdAt) {
-      isStale = true;
-    }
-
-    const filename = sanitizeReportFilename(analysis.requirementRevision.title);
-
-    const eventPayload: DocumentExportedEventPayload = {
+    await this.eventLog.recordEvent({
       eventType: 'DOCUMENT_EXPORTED',
-      impactAnalysisId: analysis.id,
-      documentId: report.id,
-      repositoryId: analysis.snapshot.repositoryId,
-      snapshotId: analysis.snapshot.id,
-      commitSha: analysis.snapshot.commitSha,
-      format: 'markdown',
-      exportedAt: new Date().toISOString(),
-      filename,
-      isStale,
-      actorId,
-    };
+      idempotencyKey: `document:${projection.metadata.generatedDocumentId}:export:${params.format}:${Date.now()}`,
+      actorUserId: params.actor.id,
+      payload: {
+        format: params.format,
+        analysisId: projection.metadata.analysisId,
+        generatedDocumentId: projection.metadata.generatedDocumentId,
+        projectId: projection.metadata.projectId,
+        repositoryId: projection.metadata.repositoryId,
+        snapshotId: projection.metadata.snapshotId,
+        commitSha: projection.metadata.commitSha,
+        actorType: params.actor.role,
+        exportedAt: new Date().toISOString(),
+        filename: rendered.filename,
+      },
+    });
 
-    try {
-      await this.prisma.domainEvent.create({
-        data: {
-          eventType: eventPayload.eventType,
-          idempotencyKey: crypto.randomUUID(), // Generic uuid since exports can happen multiple times
-          payload: eventPayload as any,
-        },
-      });
-    } catch (err) {
-      // Do not block export if event insertion fails, but log it
-      console.warn('Failed to record DOCUMENT_EXPORTED audit event:', err);
-    }
-
-    return {
-      markdown: report.content,
-      filename,
-      isStale,
-    };
+    return rendered;
   }
 }

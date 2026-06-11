@@ -38,6 +38,11 @@ describe('FinalizeImpactAnalysisUseCase', () => {
     documentRepo = {
       upsertApproved: jest.fn(),
     } as unknown as jest.Mocked<DocumentRepository>;
+    documentRepo.upsertApproved.mockResolvedValue({
+      id: 'document-1',
+      createdAt: new Date('2026-06-06T00:00:00.000Z'),
+      updatedAt: new Date('2026-06-06T00:00:00.000Z'),
+    } as any);
 
     eventLog = {
       recordEvent: jest.fn(),
@@ -107,11 +112,18 @@ describe('FinalizeImpactAnalysisUseCase', () => {
       },
       snapshot: { 
         commitSha: 'abc1234',
-        repository: { canonicalUrl: 'https://github.com/test' },
+        id: 'snapshot-1',
+        analyzerVersion: '1.0.0',
+        repositoryId: 'repo-1',
+        repository: {
+          canonicalUrl: 'https://github.com/test',
+          projectId: 'project-1',
+        },
       },
       sourceTarget: {
         resolvedRefType: 'BRANCH',
         latestObservedCommitSha: 'abc1234',
+        requestedRef: 'main',
       },
       insights: [
         {

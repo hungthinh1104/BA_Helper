@@ -27,6 +27,7 @@ type TraceabilityLinkWithArtifact = Prisma.TraceabilityLinkGetPayload<{
 
 import { MermaidImpactDiagramBuilder, ReportDependencyEdge } from './mermaid-impact-diagram.builder';
 import { ClarificationItemDto } from '@ba-helper/contracts';
+import { ApprovedReportMetadata } from '../domain/approved-report-metadata';
 
 @Injectable()
 export class MarkdownImpactReportBuilder {
@@ -42,6 +43,7 @@ export class MarkdownImpactReportBuilder {
     clarifications?: ClarificationItemDto[];
     reviewDecisions?: any[];
     diff?: any;
+    metadata?: ApprovedReportMetadata;
   }): string {
     const {
       analysis,
@@ -53,6 +55,7 @@ export class MarkdownImpactReportBuilder {
       clarifications = [],
       reviewDecisions = [],
       diff,
+      metadata,
     } = params;
     
     const lines: string[] = [];
@@ -65,7 +68,7 @@ export class MarkdownImpactReportBuilder {
     lines.push(`**Snapshot Commit:** \`${analysis.snapshot.commitSha}\`  `);
     lines.push(`**Repository:** \`${analysis.snapshot.repository.canonicalUrl}\`  `);
     lines.push(`**Target Ref:** \`${analysis.sourceTarget.requestedRef}\`  `);
-    lines.push(`**Generated At:** ${new Date().toISOString().split('T')[0]}  `);
+    lines.push(`**Generated At:** ${(metadata?.generatedAt ?? new Date().toISOString()).split('T')[0]}  `);
     lines.push('');
 
     // 2. Requirement
@@ -73,6 +76,21 @@ export class MarkdownImpactReportBuilder {
     lines.push('');
     lines.push(`> ${analysis.requirementRevision.rawText.split('\n').join('\n> ')}`);
     lines.push('');
+
+    if (metadata) {
+      lines.push('## Provenance');
+      lines.push('');
+      lines.push(`- Analysis ID: \`${metadata.analysisId}\``);
+      lines.push(`- Generated Document ID: \`${metadata.generatedDocumentId}\``);
+      lines.push(`- Project ID: \`${metadata.projectId}\``);
+      lines.push(`- Repository ID: \`${metadata.repositoryId}\``);
+      lines.push(`- Snapshot ID: \`${metadata.snapshotId}\``);
+      lines.push(`- Target Ref: \`${metadata.targetRef}\``);
+      lines.push(`- Commit SHA: \`${metadata.commitSha}\``);
+      lines.push(`- Analyzer Version: \`${metadata.analyzerVersion}\``);
+      lines.push(`- Finalized At: ${metadata.finalizedAt ?? metadata.generatedAt}`);
+      lines.push('');
+    }
 
     // Filter approved insights
     const approvedInsights = insights.filter((i) => i.reviewStatus !== 'REJECTED');

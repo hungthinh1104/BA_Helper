@@ -94,6 +94,11 @@ export class FinalizeImpactAnalysisUseCase {
       }
     }
 
+    const persistedReport = await this.documentRepo.upsertApproved({
+      impactAnalysisId: analysis.id,
+      content: '# Pending approved report generation',
+    });
+
     const markdown = this.reportBuilder.build({
       analysis: updated,
       insights,
@@ -104,6 +109,20 @@ export class FinalizeImpactAnalysisUseCase {
       clarifications: clarifications as any[],
       reviewDecisions,
       diff,
+      metadata: {
+        analysisId: updated.id,
+        title: updated.requirementRevision.title,
+        projectId: updated.snapshot.repository.projectId,
+        repositoryId: updated.snapshot.repositoryId,
+        targetRef: updated.sourceTarget.requestedRef,
+        commitSha: updated.snapshot.commitSha,
+        snapshotId: updated.snapshot.id,
+        analyzerVersion: updated.snapshot.analyzerVersion,
+        generatedDocumentId: persistedReport.id,
+        generatedAt: persistedReport.createdAt.toISOString(),
+        finalizedAt: persistedReport.updatedAt.toISOString(),
+        staleStatusAtReadTime: false,
+      },
     });
 
     await this.documentRepo.upsertApproved({

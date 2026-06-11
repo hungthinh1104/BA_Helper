@@ -16,6 +16,7 @@ import { DismissClarificationUseCase } from '../application/dismiss-clarificatio
 import { ListClarificationsUseCase } from '../application/list-clarifications.usecase';
 import { ConvertClarificationToRevisionUseCase } from '../application/convert-clarification-to-revision.usecase';
 import { ClarificationMapper } from './clarification.mapper';
+import { Roles } from '../../auth/api/roles.decorator';
 
 @Controller('/api/v1')
 export class ClarificationController {
@@ -36,6 +37,7 @@ export class ClarificationController {
   }
 
   @Post('/impact-analyses/:analysisId/clarifications')
+  @Roles('ADMIN', 'REVIEWER')
   async create(
     @Param('analysisId') analysisId: string,
     @Body() body: unknown,
@@ -46,6 +48,7 @@ export class ClarificationController {
   }
 
   @Patch('/clarifications/:id/answer')
+  @Roles('ADMIN', 'REVIEWER')
   async answer(
     @Param('id') id: string,
     @Body() body: unknown,
@@ -56,6 +59,7 @@ export class ClarificationController {
   }
 
   @Patch('/clarifications/:id/dismiss')
+  @Roles('ADMIN', 'REVIEWER')
   async dismiss(
     @Param('id') id: string,
     @Body() body: unknown,
@@ -66,6 +70,7 @@ export class ClarificationController {
   }
 
   @Post('/clarifications/:id/convert-to-revision')
+  @Roles('ADMIN')
   async convertToRevision(@Param('id') id: string) {
     const result = await this.convertUseCase.execute(id);
     return ConvertClarificationResponseSchema.parse(result);

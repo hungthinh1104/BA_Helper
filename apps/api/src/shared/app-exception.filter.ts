@@ -38,13 +38,17 @@ export class AppExceptionFilter implements ExceptionFilter {
       case 'REQUIREMENT_REVISION_NOT_READY':
       case 'UNSUPPORTED_DOMAIN':
       case 'UNSUPPORTED_FRAMEWORK':
+      case 'REPORT_NOT_EXPORTABLE':
         return HttpStatus.BAD_REQUEST;
       case 'REPO_LIMIT_EXCEEDED':
         return HttpStatus.PAYLOAD_TOO_LARGE;
       case 'CLONE_FAILED':
         return HttpStatus.BAD_GATEWAY;
       case 'SECURITY_RISK_BLOCKED':
+      case 'DOCUMENT_EXPORT_FORBIDDEN':
         return HttpStatus.FORBIDDEN;
+      case 'DOCUMENT_EXPORT_UNAUTHENTICATED':
+        return HttpStatus.UNAUTHORIZED;
       case 'PROJECT_NOT_FOUND':
       case 'REPOSITORY_NOT_FOUND':
       case 'SCAN_JOB_NOT_FOUND':
@@ -58,7 +62,10 @@ export class AppExceptionFilter implements ExceptionFilter {
       case 'REQUEST_KEY_MISMATCH':
       case 'INVALID_STATE_TRANSITION':
       case 'ANALYSIS_STALE':
+      case 'REPORT_EXPORT_BLOCKED_STALE':
         return HttpStatus.CONFLICT;
+      case 'PDF_RENDER_FAILED':
+        return HttpStatus.BAD_GATEWAY;
       default:
         return HttpStatus.BAD_REQUEST;
     }

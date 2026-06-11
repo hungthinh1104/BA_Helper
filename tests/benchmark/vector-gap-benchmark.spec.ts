@@ -114,7 +114,9 @@ describe('Vector Gap Diagnostic Benchmark', () => {
       endLine: a.endLine,
     }));
 
-    await prisma.codeArtifact.createMany({ data: dbArtifacts });
+    for (const artifact of dbArtifacts) {
+      await prisma.codeArtifact.create({ data: artifact });
+    }
 
     const keyToId = new Map(dbArtifacts.map(a => [a.artifactKey, a.id]));
 

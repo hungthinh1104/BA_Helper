@@ -6,14 +6,21 @@ import { ExportApprovedReportUseCase } from './application/export-approved-repor
 import { DocumentRepository } from './infrastructure/document.repository';
 import { MarkdownImpactReportBuilder } from './application/markdown-impact-report.builder';
 import { MermaidImpactDiagramBuilder } from './application/mermaid-impact-diagram.builder';
+import { ApprovedReportProjectionService } from './application/approved-report-projection.service';
+import { MarkdownExportRenderer } from './application/markdown-export.renderer';
+import { PdfExportRenderer } from './application/pdf-export.renderer';
 import { PrismaModule } from '../prisma/prisma.module';
-import { PrismaService } from '../prisma/prisma.service';
+import { EventLogModule } from '../event-log/event-log.module';
+import { EventLogService } from '../event-log/application/event-log.service';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, EventLogModule],
   controllers: [DocumentController],
   providers: [
     DocumentRepository,
+    ApprovedReportProjectionService,
+    MarkdownExportRenderer,
+    PdfExportRenderer,
     {
       provide: ListDocumentsUseCase,
       useFactory: (repo: DocumentRepository) => new ListDocumentsUseCase(repo),
@@ -21,13 +28,33 @@ import { PrismaService } from '../prisma/prisma.service';
     },
     {
       provide: GetApprovedReportUseCase,
-      useFactory: (repo: DocumentRepository) => new GetApprovedReportUseCase(repo),
-      inject: [DocumentRepository],
+      useFactory: (repo: DocumentRepository, projection: ApprovedReportProjectionService) =>
+        new GetApprovedReportUseCase(repo, projection),
+      inject: [DocumentRepository, ApprovedReportProjectionService],
     },
     {
       provide: ExportApprovedReportUseCase,
-      useFactory: (repo: DocumentRepository, prisma: PrismaService) => new ExportApprovedReportUseCase(repo, prisma),
-      inject: [DocumentRepository, PrismaService],
+      useFactory: (
+        repo: DocumentRepository,
+        projection: ApprovedReportProjectionService,
+        eventLog: EventLogService,
+        markdownRenderer: MarkdownExportRenderer,
+        pdfRenderer: PdfExportRenderer,
+      ) =>
+        new ExportApprovedReportUseCase(
+          repo,
+          projection,
+          eventLog,
+          markdownRenderer,
+          pdfRenderer,
+        ),
+      inject: [
+        DocumentRepository,
+        ApprovedReportProjectionService,
+        EventLogService,
+        MarkdownExportRenderer,
+        PdfExportRenderer,
+      ],
     },
     MermaidImpactDiagramBuilder,
     MarkdownImpactReportBuilder,

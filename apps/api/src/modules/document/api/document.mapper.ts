@@ -1,10 +1,10 @@
 import { ApprovedImpactReportResponse } from '@ba-helper/contracts';
+import { ApprovedReportMetadata } from '../domain/approved-report-metadata';
 
 export class DocumentMapper {
   static toApprovedReportResponse(
     report: any,
-    isStale: boolean,
-    staleReason?: string,
+    metadata: ApprovedReportMetadata,
   ): ApprovedImpactReportResponse {
     const analysis = report.impactAnalysis;
     const revision = analysis.requirementRevision;
@@ -20,13 +20,20 @@ export class DocumentMapper {
       format: 'MARKDOWN',
       title: revision.title,
       markdown: report.content,
-      isStale,
-      staleReason,
+      isStale: metadata.staleStatusAtReadTime,
+      staleReason: metadata.staleReason,
       provenance: {
-        commitSha: analysis.snapshot.commitSha,
-        analyzerVersion: analysis.snapshot.analyzerVersion,
-        generatedAt: report.createdAt.toISOString(),
-        finalizedAt: report.updatedAt.toISOString(),
+        analysisId: metadata.analysisId,
+        projectId: metadata.projectId,
+        repositoryId: metadata.repositoryId,
+        targetRef: metadata.targetRef,
+        commitSha: metadata.commitSha,
+        snapshotId: metadata.snapshotId,
+        analyzerVersion: metadata.analyzerVersion,
+        generatedDocumentId: metadata.generatedDocumentId,
+        generatedAt: metadata.generatedAt,
+        finalizedAt: metadata.finalizedAt,
+        staleStatusAtReadTime: metadata.staleStatusAtReadTime,
       },
     };
   }

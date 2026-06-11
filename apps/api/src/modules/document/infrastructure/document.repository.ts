@@ -55,9 +55,17 @@ export class DocumentRepository {
       include: {
         impactAnalysis: {
           include: {
-            snapshot: true,
+            snapshot: {
+              include: {
+                repository: true,
+              },
+            },
             sourceTarget: true,
-            requirementRevision: true,
+            requirementRevision: {
+              include: {
+                requirement: true,
+              },
+            },
           },
         },
       },

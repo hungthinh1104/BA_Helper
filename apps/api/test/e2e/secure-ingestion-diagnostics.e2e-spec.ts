@@ -97,7 +97,7 @@ describe('Secure Ingestion Diagnostics (E2E)', () => {
   it('rejects a non-canonical GitHub URL before repository creation', async () => {
     const project = await request(app.getHttpServer())
       .post('/api/v1/projects')
-      
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ name: 'Security Project' })
       .expect(201);
 
@@ -105,7 +105,7 @@ describe('Secure Ingestion Diagnostics (E2E)', () => {
 
     const response = await request(app.getHttpServer())
       .post(`/api/v1/projects/${projectId}/repositories`)
-      
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ url: 'https://github.com/owner/repo/tree/main' })
       .expect(400);
 
@@ -125,8 +125,7 @@ describe('Secure Ingestion Diagnostics (E2E)', () => {
 
     const response = await request(app.getHttpServer())
       .post(`/api/v1/repositories/${repository.id}/scan-jobs`)
-      
-      
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         requestKey: crypto.randomUUID(),
         ref: 'main..evil',
@@ -179,8 +178,7 @@ describe('Secure Ingestion Diagnostics (E2E)', () => {
 
     const createJobRes = await request(app.getHttpServer())
       .post(`/api/v1/repositories/${repositoryId}/scan-jobs`)
-      
-      
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         requestKey: crypto.randomUUID(),
         ref: 'main',
@@ -192,8 +190,7 @@ describe('Secure Ingestion Diagnostics (E2E)', () => {
 
     const detailRes = await request(app.getHttpServer())
       .get(`/api/v1/projects/${projectId}/repositories/${repositoryId}`)
-      
-      
+      .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
     const detail = repositoryDetailResponseSchema.parse(detailRes.body);
 
@@ -254,8 +251,7 @@ describe('Secure Ingestion Diagnostics (E2E)', () => {
 
     const createJobRes = await request(app.getHttpServer())
       .post(`/api/v1/repositories/${repository.id}/scan-jobs`)
-      
-      
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         requestKey: crypto.randomUUID(),
         ref: 'main',
@@ -269,8 +265,7 @@ describe('Secure Ingestion Diagnostics (E2E)', () => {
       (
         await request(app.getHttpServer())
           .get(`/api/v1/repositories/${repository.id}/scan-jobs/${scanJob.id}`)
-      
-      
+          .set('Authorization', `Bearer ${adminToken}`)
           .expect(200)
       ).body,
     );
@@ -281,8 +276,7 @@ describe('Secure Ingestion Diagnostics (E2E)', () => {
         (
           await request(app.getHttpServer())
             .get(`/api/v1/repositories/${repository.id}/scan-jobs/${scanJob.id}`)
-      
-      
+            .set('Authorization', `Bearer ${adminToken}`)
             .expect(200)
         ).body,
       );
@@ -305,8 +299,7 @@ describe('Secure Ingestion Diagnostics (E2E)', () => {
 
     const detailRes = await request(app.getHttpServer())
       .get(`/api/v1/projects/${project.id}/repositories/${repository.id}`)
-      
-      
+      .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
     const detail = repositoryDetailResponseSchema.parse(detailRes.body);
 

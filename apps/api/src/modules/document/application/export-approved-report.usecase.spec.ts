@@ -1,113 +1,189 @@
-import { ExportApprovedReportUseCase } from './export-approved-report.usecase';
+import { RequestUser } from '@ba-helper/contracts';
+import { EventLogService } from '../../event-log/application/event-log.service';
 import { DocumentRepository } from '../infrastructure/document.repository';
-import { PrismaService } from '../../prisma/prisma.service';
 import { AppError } from '../../../shared/app-error';
+import { ApprovedReportProjectionService } from './approved-report-projection.service';
+import { ExportApprovedReportUseCase } from './export-approved-report.usecase';
+import { MarkdownExportRenderer } from './markdown-export.renderer';
+import { PdfExportRenderer } from './pdf-export.renderer';
 
 describe('ExportApprovedReportUseCase', () => {
   let useCase: ExportApprovedReportUseCase;
   let documentRepo: jest.Mocked<DocumentRepository>;
-  let prismaService: jest.Mocked<PrismaService>;
+  let projectionService: jest.Mocked<ApprovedReportProjectionService>;
+  let eventLog: jest.Mocked<EventLogService>;
+  let markdownRenderer: jest.Mocked<MarkdownExportRenderer>;
+  let pdfRenderer: jest.Mocked<PdfExportRenderer>;
+
+  const actor: RequestUser = {
+    id: 'user-1',
+    email: 'viewer@ba-helper.local',
+    role: 'VIEWER',
+    name: 'Viewer',
+  };
 
   beforeEach(() => {
     documentRepo = {
       findApprovedReportByAnalysisId: jest.fn(),
     } as unknown as jest.Mocked<DocumentRepository>;
 
-    prismaService = {
-      domainEvent: {
-        create: jest.fn(),
-      },
-      analysisReviewDecision: {
-        findFirst: jest.fn(),
-      },
-    } as unknown as jest.Mocked<PrismaService>;
+    projectionService = {
+      project: jest.fn(),
+    } as unknown as jest.Mocked<ApprovedReportProjectionService>;
 
-    useCase = new ExportApprovedReportUseCase(documentRepo, prismaService);
+    eventLog = {
+      recordEvent: jest.fn(),
+    } as unknown as jest.Mocked<EventLogService>;
+
+    markdownRenderer = {
+      render: jest.fn(),
+    } as unknown as jest.Mocked<MarkdownExportRenderer>;
+
+    pdfRenderer = {
+      render: jest.fn(),
+    } as unknown as jest.Mocked<PdfExportRenderer>;
+
+    useCase = new ExportApprovedReportUseCase(
+      documentRepo,
+      projectionService,
+      eventLog,
+      markdownRenderer,
+      pdfRenderer,
+    );
   });
 
-  it('should throw APPROVED_REPORT_NOT_FOUND if report is missing', async () => {
+  const mockReport = {
+    id: 'doc-1',
+    impactAnalysis: {
+      id: 'analysis-1',
+    },
+    content: '# Approved report',
+  };
+
+  const mockProjection = {
+    report: mockReport,
+    isStale: false,
+    metadata: {
+      analysisId: 'analysis-1',
+      title: 'Refund paid bookings',
+      projectId: 'project-1',
+      repositoryId: 'repo-1',
+      targetRef: 'main',
+      commitSha: 'abc1234',
+      snapshotId: 'snapshot-1',
+      analyzerVersion: '1.0.0',
+      generatedDocumentId: 'doc-1',
+      generatedAt: '2026-06-06T00:00:00.000Z',
+      finalizedAt: '2026-06-06T00:00:00.000Z',
+      staleStatusAtReadTime: false,
+    },
+  };
+
+  it('throws APPROVED_REPORT_NOT_FOUND if report is missing', async () => {
     documentRepo.findApprovedReportByAnalysisId.mockResolvedValue(null);
 
-    await expect(useCase.execute('analysis-1')).rejects.toThrow(AppError);
-    await expect(useCase.execute('analysis-1')).rejects.toMatchObject({
+    await expect(
+      useCase.execute({ analysisId: 'analysis-1', actor, format: 'markdown' }),
+    ).rejects.toMatchObject({
       code: 'APPROVED_REPORT_NOT_FOUND',
     });
   });
 
-  it('should return markdown and safe filename, and record event', async () => {
-    const mockReport = {
-      id: 'doc-1',
-      content: '# Test Content',
-      impactAnalysis: {
-        id: 'analysis-1',
-        requirementRevision: {
-          title: 'Special! @Title',
-        },
-        sourceTarget: {
-          resolvedRefType: 'BRANCH',
-          latestObservedCommitSha: 'sha1',
-        },
-        snapshot: {
-          id: 'snapshot-1',
-          repositoryId: 'repo-1',
-          commitSha: 'sha1', // Not stale
-        },
-      },
-    };
-
+  it('blocks stale report export', async () => {
     documentRepo.findApprovedReportByAnalysisId.mockResolvedValue(mockReport as any);
+    projectionService.project.mockResolvedValue({
+      ...mockProjection,
+      isStale: true,
+      metadata: {
+        ...mockProjection.metadata,
+        staleStatusAtReadTime: true,
+        staleReason: 'Source target advanced.',
+      },
+      staleReason: 'Source target advanced.',
+    });
 
-    const result = await useCase.execute('analysis-1', 'test-actor');
+    await expect(
+      useCase.execute({ analysisId: 'analysis-1', actor, format: 'markdown' }),
+    ).rejects.toMatchObject({
+      code: 'REPORT_EXPORT_BLOCKED_STALE',
+    });
+    expect(eventLog.recordEvent).not.toHaveBeenCalled();
+  });
 
-    expect(result.markdown).toBe('# Test Content');
-    expect(result.filename).toBe('special-title-impact-report.md');
-    expect(result.isStale).toBe(false);
+  it('renders markdown export and records audit event', async () => {
+    documentRepo.findApprovedReportByAnalysisId.mockResolvedValue(mockReport as any);
+    projectionService.project.mockResolvedValue(mockProjection as any);
+    markdownRenderer.render.mockResolvedValue({
+      contentType: 'text/markdown; charset=utf-8',
+      filename: 'refund-paid-bookings-impact-report.md',
+      buffer: Buffer.from('# Approved report'),
+    });
 
-    expect(prismaService.domainEvent.create).toHaveBeenCalledWith(
+    const result = await useCase.execute({
+      analysisId: 'analysis-1',
+      actor,
+      format: 'markdown',
+    });
+
+    expect(result.filename).toBe('refund-paid-bookings-impact-report.md');
+    expect(result.contentType).toContain('text/markdown');
+    expect(markdownRenderer.render).toHaveBeenCalledWith({
+      markdown: '# Approved report',
+      metadata: mockProjection.metadata,
+    });
+    expect(eventLog.recordEvent).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({
-          eventType: 'DOCUMENT_EXPORTED',
-          payload: expect.objectContaining({
-            eventType: 'DOCUMENT_EXPORTED',
-            documentId: 'doc-1',
-            impactAnalysisId: 'analysis-1',
-            filename: 'special-title-impact-report.md',
-            actorId: 'test-actor',
-            isStale: false,
-          }),
+        eventType: 'DOCUMENT_EXPORTED',
+        actorUserId: actor.id,
+        payload: expect.objectContaining({
+          format: 'markdown',
+          generatedDocumentId: 'doc-1',
+          projectId: 'project-1',
+          repositoryId: 'repo-1',
+          actorType: 'VIEWER',
         }),
-      })
+      }),
     );
   });
 
-  it('should not throw if domain event insertion fails', async () => {
-    const mockReport = {
-      id: 'doc-1',
-      content: '# Test Content',
-      impactAnalysis: {
-        id: 'analysis-1',
-        requirementRevision: {
-          title: 'Title',
-        },
-        sourceTarget: {
-          resolvedRefType: 'BRANCH',
-          latestObservedCommitSha: 'sha1',
-        },
-        snapshot: {
-          id: 'snapshot-1',
-          repositoryId: 'repo-1',
-          commitSha: 'sha1', // Not stale
-        },
-      },
-    };
-
+  it('renders pdf export and records audit after successful render only', async () => {
     documentRepo.findApprovedReportByAnalysisId.mockResolvedValue(mockReport as any);
-    
-    // Simulate DB error
-    (prismaService.domainEvent.create as jest.Mock).mockRejectedValue(new Error('DB Error'));
+    projectionService.project.mockResolvedValue(mockProjection as any);
+    pdfRenderer.render.mockResolvedValue({
+      contentType: 'application/pdf',
+      filename: 'refund-paid-bookings-impact-report.pdf',
+      buffer: Buffer.from('pdf'),
+    });
 
-    // Should not throw, should just warn and return the markdown
-    const result = await useCase.execute('analysis-1');
-    expect(result.markdown).toBe('# Test Content');
+    const result = await useCase.execute({
+      analysisId: 'analysis-1',
+      actor,
+      format: 'pdf',
+    });
+
+    expect(result.contentType).toBe('application/pdf');
+    expect(pdfRenderer.render).toHaveBeenCalled();
+    expect(eventLog.recordEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          format: 'pdf',
+        }),
+      }),
+    );
+  });
+
+  it('does not emit DOCUMENT_EXPORTED when renderer fails', async () => {
+    documentRepo.findApprovedReportByAnalysisId.mockResolvedValue(mockReport as any);
+    projectionService.project.mockResolvedValue(mockProjection as any);
+    pdfRenderer.render.mockRejectedValue(
+      new AppError('PDF_RENDER_FAILED', 'render failed'),
+    );
+
+    await expect(
+      useCase.execute({ analysisId: 'analysis-1', actor, format: 'pdf' }),
+    ).rejects.toMatchObject({
+      code: 'PDF_RENDER_FAILED',
+    });
+    expect(eventLog.recordEvent).not.toHaveBeenCalled();
   });
 });

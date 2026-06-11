@@ -61,6 +61,11 @@ describe('CreateAnalysisReviewDecisionUseCase', () => {
     documentRepo = {
       upsertApproved: jest.fn(),
     } as unknown as jest.Mocked<DocumentRepository>;
+    documentRepo.upsertApproved.mockResolvedValue({
+      id: 'document-1',
+      createdAt: new Date('2026-06-06T00:00:00.000Z'),
+      updatedAt: new Date('2026-06-06T00:00:00.000Z'),
+    } as any);
 
     reportBuilder = {
       build: jest.fn().mockReturnValue('mock markdown report'),
@@ -87,6 +92,29 @@ describe('CreateAnalysisReviewDecisionUseCase', () => {
     actor: { id: 'admin-id', email: 'admin@example.com', role: 'ADMIN' as const },
   };
 
+  const makeCompletedAnalysis = (overrides: Record<string, unknown> = {}) => ({
+    id: 'analysis-1',
+    status: 'COMPLETED',
+    derivedFromAnalysisId: null,
+    requirementRevision: {
+      title: 'Refund paid bookings',
+    },
+    snapshot: {
+      id: 'snap-1',
+      commitSha: 'abc1234',
+      analyzerVersion: '1.0.0',
+      repositoryId: 'repo-1',
+      repository: {
+        projectId: 'project-1',
+      },
+    },
+    sourceTarget: {
+      requestedRef: 'main',
+    },
+    insights: [],
+    ...overrides,
+  });
+
   it('should throw if analysis does not exist', async () => {
     impactRepo.findById.mockResolvedValue(null);
 
@@ -107,10 +135,7 @@ describe('CreateAnalysisReviewDecisionUseCase', () => {
 
   it('should allow reviewing a baseline analysis (no derivedFromAnalysisId) without diff computability check', async () => {
     impactRepo.findById.mockResolvedValue({
-      id: 'analysis-1',
-      status: 'COMPLETED',
-      derivedFromAnalysisId: null,
-      snapshot: { id: 'snap-1' },
+      ...makeCompletedAnalysis(),
     } as any);
 
     decisionRepo.create.mockResolvedValue({
@@ -131,10 +156,7 @@ describe('CreateAnalysisReviewDecisionUseCase', () => {
 
   it('should check computability and accept derived analysis if diff is computable', async () => {
     impactRepo.findById.mockResolvedValue({
-      id: 'analysis-1',
-      status: 'COMPLETED',
-      derivedFromAnalysisId: 'baseline-1',
-      snapshot: { id: 'snap-1' },
+      ...makeCompletedAnalysis({ derivedFromAnalysisId: 'baseline-1' }),
     } as any);
 
     getDiffUseCase.computeForAnalysis.mockResolvedValue({
@@ -160,10 +182,7 @@ describe('CreateAnalysisReviewDecisionUseCase', () => {
 
   it('should throw if derived analysis is ACCEPTED and diff is not computable', async () => {
     impactRepo.findById.mockResolvedValue({
-      id: 'analysis-1',
-      status: 'COMPLETED',
-      derivedFromAnalysisId: 'baseline-1',
-      snapshot: { id: 'snap-1' },
+      ...makeCompletedAnalysis({ derivedFromAnalysisId: 'baseline-1' }),
     } as any);
 
     getDiffUseCase.computeForAnalysis.mockResolvedValue({
@@ -179,10 +198,7 @@ describe('CreateAnalysisReviewDecisionUseCase', () => {
 
   it('should allow REJECTED or NEEDS_MORE_CLARIFICATION decisions even if diff is not computable', async () => {
     impactRepo.findById.mockResolvedValue({
-      id: 'analysis-1',
-      status: 'COMPLETED',
-      derivedFromAnalysisId: 'baseline-1',
-      snapshot: { id: 'snap-1' },
+      ...makeCompletedAnalysis({ derivedFromAnalysisId: 'baseline-1' }),
     } as any);
 
     getDiffUseCase.computeForAnalysis.mockResolvedValue({
@@ -211,10 +227,7 @@ describe('CreateAnalysisReviewDecisionUseCase', () => {
 
   it('should continue and save decision even if report regeneration fails', async () => {
     impactRepo.findById.mockResolvedValue({
-      id: 'analysis-1',
-      status: 'COMPLETED',
-      derivedFromAnalysisId: null,
-      snapshot: { id: 'snap-1' },
+      ...makeCompletedAnalysis(),
     } as any);
 
     decisionRepo.create.mockResolvedValue({

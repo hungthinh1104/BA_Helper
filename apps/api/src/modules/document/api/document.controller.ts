@@ -3,9 +3,10 @@ import { documentListResponseSchema } from '@ba-helper/contracts';
 import { ListDocumentsUseCase } from '../application/list-documents.usecase';
 import { GetApprovedReportUseCase } from '../application/get-approved-report.usecase';
 import { ExportApprovedReportUseCase } from '../application/export-approved-report.usecase';
-import { approvedImpactReportResponseSchema } from '@ba-helper/contracts';
+import { approvedImpactReportResponseSchema, RequestUser } from '@ba-helper/contracts';
 import { DocumentMapper } from './document.mapper';
 import { Res } from '@nestjs/common';
+import { CurrentUser } from '../../auth/api/current-user.decorator';
 
 @Controller('/api/v1')
 export class DocumentController {
@@ -46,12 +47,8 @@ export class DocumentController {
   @Get('/impact-analyses/:analysisId/approved-report')
   async getApprovedReportEndpoint(@Param('analysisId') analysisId: string) {
     const result = await this.getApprovedReport.execute(analysisId);
-    
-    const mapped = DocumentMapper.toApprovedReportResponse(
-      result.report,
-      result.isStale,
-      result.staleReason,
-    );
+
+    const mapped = DocumentMapper.toApprovedReportResponse(result.report, result.metadata);
 
     return approvedImpactReportResponseSchema.parse(mapped);
   }
@@ -59,19 +56,34 @@ export class DocumentController {
   @Get('/impact-analyses/:analysisId/approved-report/export.md')
   async exportApprovedReportEndpoint(
     @Param('analysisId') analysisId: string,
+    @CurrentUser() actor: RequestUser,
     @Res() res: any,
   ) {
-    // Pass actorId as 'dev-single-user' for MVP since we have no auth
-    const result = await this.exportApprovedReport.execute(analysisId, 'dev-single-user');
+    const result = await this.exportApprovedReport.execute({
+      analysisId,
+      actor,
+      format: 'markdown',
+    });
 
-    res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+    res.setHeader('Content-Type', result.contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
-    
-    // If we wanted to add a stale header metadata, we could do it here
-    if (result.isStale) {
-      res.setHeader('X-Report-Stale', 'true');
-    }
+    res.send(result.buffer);
+  }
 
-    res.send(result.markdown);
+  @Get('/impact-analyses/:analysisId/approved-report/export.pdf')
+  async exportApprovedReportPdfEndpoint(
+    @Param('analysisId') analysisId: string,
+    @CurrentUser() actor: RequestUser,
+    @Res() res: any,
+  ) {
+    const result = await this.exportApprovedReport.execute({
+      analysisId,
+      actor,
+      format: 'pdf',
+    });
+
+    res.setHeader('Content-Type', result.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.send(result.buffer);
   }
 }

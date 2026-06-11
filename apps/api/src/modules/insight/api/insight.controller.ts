@@ -6,6 +6,7 @@ import {
 import { ListInsightsUseCase } from '../application/list-insights.usecase';
 import { ReviewInsightUseCase } from '../application/review-insight.usecase';
 import { mapInsightList } from './insight.mapper';
+import { Roles } from '../../auth/api/roles.decorator';
 
 @Controller('/api/v1')
 export class InsightController {
@@ -21,18 +22,21 @@ export class InsightController {
   }
 
   @Post('/insights/:insightId/confirm')
+  @Roles('ADMIN', 'REVIEWER')
   async confirm(@Param('insightId') insightId: string) {
     await this.reviewInsight.execute({ insightId, reviewStatus: 'CONFIRMED' });
     return { ok: true };
   }
 
   @Post('/insights/:insightId/reject')
+  @Roles('ADMIN', 'REVIEWER')
   async reject(@Param('insightId') insightId: string) {
     await this.reviewInsight.execute({ insightId, reviewStatus: 'REJECTED' });
     return { ok: true };
   }
 
   @Post('/insights/:insightId/review')
+  @Roles('ADMIN', 'REVIEWER')
   async review(@Param('insightId') insightId: string, @Body() body: unknown) {
     const input = insightReviewRequestSchema.parse(body);
     await this.reviewInsight.execute({

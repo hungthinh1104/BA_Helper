@@ -199,6 +199,11 @@ describe('Analysis Flow (E2E)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
 
+    const pdfExportRes = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/approved-report/export.pdf`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
     const reportRes = await request(app.getHttpServer())
       .get(`/api/v1/impact-analyses/${analysisId}/approved-report`)
       .set('Authorization', `Bearer ${adminToken}`)
@@ -207,5 +212,9 @@ describe('Analysis Flow (E2E)', () => {
     const reportDto = approvedImpactReportResponseSchema.parse(reportRes.body);
     expect(reportDto.status).toBe('APPROVED');
     expect(reportDto.isStale).toBe(false);
+    expect(exportRes.headers['content-disposition']).toContain('.md');
+    expect(pdfExportRes.headers['content-disposition']).toContain('.pdf');
+    expect(pdfExportRes.headers['content-type']).toContain('application/pdf');
+    expect(reportDto.provenance.generatedDocumentId).toEqual(expect.any(String));
   });
 });

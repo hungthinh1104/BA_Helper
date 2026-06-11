@@ -1,6 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ReviewClarificationStatus } from '@prisma/client';
+import { Prisma, ReviewClarificationStatus } from '@prisma/client';
+
+const reviewClarificationInclude = {
+  createdByUser: true,
+  answeredByUser: true,
+  derivedAnalyses: {
+    select: { id: true },
+  },
+} satisfies Prisma.ReviewClarificationRequestInclude;
 
 @Injectable()
 export class ReviewClarificationRepository {
@@ -20,6 +28,7 @@ export class ReviewClarificationRepository {
         createdByUserId: data.createdByUserId,
         status: 'OPEN',
       },
+      include: reviewClarificationInclude,
     });
   }
 
@@ -27,6 +36,7 @@ export class ReviewClarificationRepository {
     return this.prisma.reviewClarificationRequest.findUnique({
       where: { id },
       include: {
+        ...reviewClarificationInclude,
         reviewDecision: true,
       },
     });
@@ -45,11 +55,7 @@ export class ReviewClarificationRepository {
     return this.prisma.reviewClarificationRequest.findMany({
       where: { analysisId },
       orderBy: { createdAt: 'desc' },
-      include: {
-        derivedAnalyses: {
-          select: { id: true },
-        },
-      },
+      include: reviewClarificationInclude,
     });
   }
 
@@ -62,6 +68,7 @@ export class ReviewClarificationRepository {
         answeredAt: new Date(),
         status: 'ANSWERED',
       },
+      include: reviewClarificationInclude,
     });
   }
 }

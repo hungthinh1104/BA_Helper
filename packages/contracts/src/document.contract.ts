@@ -30,10 +30,17 @@ export const approvedImpactReportResponseSchema = z.object({
 	isStale: z.boolean(),
 	staleReason: z.string().optional(),
 	provenance: z.object({
+		analysisId: z.string().uuid(),
+		projectId: z.string().uuid(),
+		repositoryId: z.string().uuid(),
+		targetRef: z.string(),
 		commitSha: z.string(),
+		snapshotId: z.string().uuid(),
 		analyzerVersion: z.string(),
+		generatedDocumentId: z.string().uuid(),
 		generatedAt: z.string(),
 		finalizedAt: z.string().optional(),
+		staleStatusAtReadTime: z.boolean(),
 	}),
 });
 

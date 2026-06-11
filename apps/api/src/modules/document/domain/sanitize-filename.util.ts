@@ -5,11 +5,11 @@
  * - Collapses multiple hyphens into a single hyphen
  * - Trims hyphens from the start and end
  * - Enforces a maximum length of 80 characters
- * - Appends '-impact-report.md' (or a fallback if empty)
+ * - Returns a safe basename that can be suffixed by the caller with a format extension
  */
-export function sanitizeReportFilename(title: string): string {
+export function sanitizeReportBasename(title: string): string {
   if (!title || typeof title !== 'string') {
-    return 'impact-report.md';
+    return 'impact-report';
   }
 
   // Basic diacritics removal
@@ -30,8 +30,15 @@ export function sanitizeReportFilename(title: string): string {
   }
 
   if (!safe) {
-    return 'impact-report.md';
+    return 'impact-report';
   }
 
-  return `${safe}-impact-report.md`;
+  return `${safe}-impact-report`;
+}
+
+export function sanitizeReportFilename(
+  title: string,
+  extension: 'md' | 'pdf' = 'md',
+): string {
+  return `${sanitizeReportBasename(title)}.${extension}`;
 }

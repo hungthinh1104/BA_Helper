@@ -23,8 +23,9 @@ import { ListReviewClarificationsUseCase } from '../application/list-review-clar
 import { AnswerReviewClarificationUseCase } from '../application/answer-review-clarification.usecase';
 import { CreateDerivedAnalysisFromClarificationUseCase } from '../application/create-derived-analysis-from-clarification.usecase';
 import { mapImpactAnalysisResponse } from '../infrastructure/impact-analysis.mapper';
+import { mapReviewClarificationRequest } from './review-clarification.mapper';
 
-@Controller('v1')
+@Controller('/api/v1')
 export class ReviewClarificationController {
   constructor(
     private readonly createClarification: CreateReviewClarificationRequestUseCase,
@@ -44,7 +45,7 @@ export class ReviewClarificationController {
 
     const result = await this.createClarification.execute(analysisId, input, actor);
 
-    return reviewClarificationRequestSchema.parse(result);
+    return reviewClarificationRequestSchema.parse(mapReviewClarificationRequest(result));
   }
 
   @Get('/impact-analyses/:analysisId/review-clarifications')
@@ -53,7 +54,7 @@ export class ReviewClarificationController {
   ) {
     const result = await this.listClarifications.execute(analysisId);
     return reviewClarificationListResponseSchema.parse({
-      items: result.items,
+      items: result.items.map(mapReviewClarificationRequest),
     });
   }
 
@@ -68,7 +69,7 @@ export class ReviewClarificationController {
 
     const result = await this.answerClarification.execute(clarificationId, input.answer, actor);
 
-    return reviewClarificationRequestSchema.parse(result);
+    return reviewClarificationRequestSchema.parse(mapReviewClarificationRequest(result));
   }
 
   @Post('/review-clarifications/:clarificationId/derived-analyses')

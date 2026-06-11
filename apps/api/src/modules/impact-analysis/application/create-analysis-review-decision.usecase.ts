@@ -102,6 +102,11 @@ export class CreateAnalysisReviewDecisionUseCase {
           insight.reviewStatus === 'NEEDS_REVIEW',
       );
 
+      const persistedReport = await this.documentRepo.upsertApproved({
+        impactAnalysisId: analysisId,
+        content: '# Pending approved report regeneration',
+      });
+
       const markdown = this.reportBuilder.build({
         analysis: analysis as any,
         insights,
@@ -112,6 +117,20 @@ export class CreateAnalysisReviewDecisionUseCase {
         clarifications: clarifications as any[],
         reviewDecisions,
         diff,
+        metadata: {
+          analysisId: analysis.id,
+          title: analysis.requirementRevision.title,
+          projectId: analysis.snapshot.repository.projectId,
+          repositoryId: analysis.snapshot.repositoryId,
+          targetRef: analysis.sourceTarget.requestedRef,
+          commitSha: analysis.snapshot.commitSha,
+          snapshotId: analysis.snapshot.id,
+          analyzerVersion: analysis.snapshot.analyzerVersion,
+          generatedDocumentId: persistedReport.id,
+          generatedAt: persistedReport.createdAt.toISOString(),
+          finalizedAt: persistedReport.updatedAt.toISOString(),
+          staleStatusAtReadTime: false,
+        },
       });
 
       await this.documentRepo.upsertApproved({

@@ -183,4 +183,33 @@ describe('MarkdownImpactReportBuilder', () => {
 
     expect(report).toContain('> This report was finalized with unreviewed items acknowledged.');
   });
+
+  it('includes a provenance block when metadata is provided', () => {
+    const report = builder.build({
+      analysis: mockAnalysis,
+      insights: [],
+      traceabilityLinks: [],
+      hasUnreviewedItems: false,
+      metadata: {
+        analysisId: 'analysis-1',
+        title: 'Paid booking cancellation refund',
+        projectId: 'project-1',
+        repositoryId: 'repo-1',
+        targetRef: 'main',
+        commitSha: 'f26cd56837cd10a1c00bb89d74d97519abc6f732',
+        snapshotId: 'snapshot-1',
+        analyzerVersion: '1.0.0',
+        generatedDocumentId: 'document-1',
+        generatedAt: '2026-06-06T00:00:00.000Z',
+        finalizedAt: '2026-06-06T00:00:00.000Z',
+        staleStatusAtReadTime: false,
+      },
+    });
+
+    expect(report).toContain('## Provenance');
+    expect(report).toContain('Generated Document ID: `document-1`');
+    expect(report).toContain('Project ID: `project-1`');
+    expect(report).toContain('Snapshot ID: `snapshot-1`');
+    expect(report).toContain('Analyzer Version: `1.0.0`');
+  });
 });
