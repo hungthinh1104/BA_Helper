@@ -100,6 +100,7 @@ export class InsightRepository {
       title: string;
       description: string;
       reasoning?: string | null;
+      metadata?: Record<string, unknown> | null;
     }>,
   ) {
     if (items.length === 0) {
@@ -117,6 +118,7 @@ export class InsightRepository {
         title: item.title,
         description: item.description,
         reasoning: item.reasoning ?? null,
+        metadata: item.metadata ? (item.metadata as any) : undefined,
       })),
       skipDuplicates: true,
     });

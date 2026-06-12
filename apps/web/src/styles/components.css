@@ -71,21 +71,36 @@
 .card {
   background: var(--surface);
   border: 1px solid var(--border-subtle);
-  border-radius: 24px;
+  border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
+  transition:
+    border-color 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .card-soft {
   background: var(--surface-muted);
-  border-radius: 48px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   padding: 40px;
 }
 
 .card-inner {
   background: var(--surface);
   border: 1px solid var(--border-subtle);
-  border-radius: 18px;
+  border-radius: var(--radius-sm);
   padding: 20px;
+}
+
+.card-interactive {
+  cursor: pointer;
+}
+
+.card-interactive:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-dropdown);
 }
 
 .dark .card,
@@ -95,8 +110,7 @@
 
 .dark .card-soft {
   background: var(--surface);
-  border-radius: 12px;
-  border: 1px solid var(--border);
+  border-color: var(--border);
 }
 
 /* =========================================================
@@ -156,7 +170,7 @@
 .select {
   width: 100%;
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--text-primary);
   padding: 12px 16px;
@@ -170,7 +184,6 @@
 .dark .input,
 .dark .textarea,
 .dark .select {
-  border-radius: 6px;
   background: var(--surface-muted);
 }
 

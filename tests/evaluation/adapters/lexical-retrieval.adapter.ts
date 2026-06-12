@@ -1,7 +1,7 @@
 import * as path from 'node:path';
 import { EvaluationAdapter } from '../evaluation-runner';
 import { EvaluationCase, NormalizedEvaluationResult } from '../evaluation-types';
-import { SafeFileEnumerator } from '../../../packages/analyzer/src/scanner/safe-file-enumerator';
+import { SafeFileEnumerator } from '../../../packages/analyzer/src/scanner/core/safe-file-enumerator';
 import { scanProject } from '../../../packages/analyzer/src/scanner/scanner';
 import type { ScanArtifact } from '../../../packages/analyzer/src/scanner/scanner.types';
 

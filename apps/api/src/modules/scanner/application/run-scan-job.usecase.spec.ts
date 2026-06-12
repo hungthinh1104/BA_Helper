@@ -8,10 +8,11 @@ jest.mock('node:fs/promises', () => ({
   rm: jest.fn(),
 }));
 
-jest.mock('@ba-helper/analyzer', () => ({
-  GitHubUrlValidator: {
-    validate: jest.fn(),
-  },
+jest.mock('@ba-helper/analyzer', () => {
+  return {
+    GitHubUrlValidator: {
+      validate: jest.fn(),
+    },
   GitRepositoryFetcher: {
     fetch: jest.fn(),
   },
@@ -47,9 +48,66 @@ jest.mock('@ba-helper/analyzer', () => ({
       return this.items;
     }
   },
+  ScannerAdapterRegistry: class {
+    getAdapter(lang: string, fw: string) {
+      if (lang === 'UNKNOWN' || lang === 'python') {
+        throw new Error('No scanner adapter found');
+      }
+      return {
+        adapterVersion: '0.2.0',
+        scan: async (input: any) => {
+          const analyzerMock = require('@ba-helper/analyzer');
+          let capability: any = { adapterVersion: '0.2.0' };
+          let capabilityDiagnostic: any = { code: 'SCANNER_CAPABILITY_SUMMARY', severity: 'INFO' };
+          let result: any;
+
+          if (lang === 'java') {
+            result = analyzerMock.scanJavaSpringProject(input);
+            capability = {
+              language: 'java',
+              framework: 'spring',
+              status: 'PARTIAL',
+              confidence: 'MEDIUM',
+              adapterVersion: '0.2.0',
+            };
+            capabilityDiagnostic = {
+              code: 'SCANNER_CAPABILITY_SUMMARY',
+              severity: 'INFO',
+              payload: { ...capability }
+            };
+          } else if (lang === 'go') {
+            result = analyzerMock.scanGoHttpProject(input);
+            capability = {
+              language: 'go',
+              framework: fw,
+              status: 'EXPERIMENTAL',
+              confidence: 'MEDIUM',
+              adapterVersion: '0.2.0',
+            };
+            capabilityDiagnostic = {
+              code: 'SCANNER_CAPABILITY_SUMMARY',
+              severity: 'INFO',
+              payload: { ...capability }
+            };
+          } else {
+            result = analyzerMock.scanProject(input);
+          }
+          return {
+            artifacts: result?.artifacts || [],
+            dependencyEdges: [],
+            diagnostics: result?.diagnostics ? [...result.diagnostics, capabilityDiagnostic] : [capabilityDiagnostic],
+            capability
+          };
+        }
+      };
+    }
+  },
   scanProject: jest.fn(),
+  scanJavaSpringProject: jest.fn(),
+  scanGoHttpProject: jest.fn(),
   scanFixture: jest.fn(),
-}));
+  };
+});
 
 const analyzer = jest.requireMock('@ba-helper/analyzer') as {
   GitHubUrlValidator: { validate: jest.Mock };
@@ -58,6 +116,8 @@ const analyzer = jest.requireMock('@ba-helper/analyzer') as {
   RepositoryProfileDetector: { detect: jest.Mock };
   SafeFileEnumerator: jest.Mock;
   scanProject: jest.Mock;
+  scanJavaSpringProject: jest.Mock;
+  scanGoHttpProject: jest.Mock;
 };
 
 describe('RunScanJobUseCase', () => {
@@ -218,9 +278,9 @@ describe('RunScanJobUseCase', () => {
           repositoryId: 'repo-1',
           commitSha: '0123456789abcdef0123456789abcdef01234567',
           diagnostics: expect.objectContaining({
-            // SCAN_HEALTH + INCREMENTAL_SCAN_SUMMARY + EMBEDDING_REUSE_PLAN
-            total: 3,
-            bySeverity: { BLOCKER: 0, ERROR: 0, WARN: 0, INFO: 3 },
+            // SCAN_HEALTH + SCANNER_CAPABILITY_SUMMARY + INCREMENTAL_SCAN_SUMMARY + EMBEDDING_REUSE_PLAN
+            total: 4,
+            bySeverity: { BLOCKER: 0, ERROR: 0, WARN: 0, INFO: 4 },
           }),
         }),
       }),
@@ -280,7 +340,7 @@ describe('RunScanJobUseCase', () => {
     analyzer.GitHubUrlValidator.validate.mockReturnValue({ isValid: true });
     analyzer.GitRepositoryFetcher.fetch.mockResolvedValue({ commitSha: 'new-commit' });
     analyzer.FrameworkDetector.detect.mockResolvedValue({ isSupported: true });
-    analyzer.RepositoryProfileDetector.detect.mockResolvedValue({ domain: 'BOOKING', framework: 'NESTJS' });
+    analyzer.RepositoryProfileDetector.detect.mockResolvedValue({ domain: 'BOOKING', language: 'TYPESCRIPT', framework: 'NESTJS' });
     analyzer.SafeFileEnumerator.mockImplementation(() => ({
       enumerate: jest.fn().mockResolvedValue({ tsFiles: [], allFiles: [], diagnostics: [], isPartial: false }),
     }));
@@ -341,13 +401,13 @@ describe('RunScanJobUseCase', () => {
     expect(removedSample).not.toHaveProperty('excerpt');
   });
 
-  it('persists all three required diagnostics: SCAN_HEALTH, INCREMENTAL_SCAN_SUMMARY, EMBEDDING_REUSE_PLAN', async () => {
+  it('persists all four required diagnostics: SCAN_HEALTH, SCANNER_CAPABILITY_SUMMARY, INCREMENTAL_SCAN_SUMMARY, EMBEDDING_REUSE_PLAN', async () => {
     (fs.mkdtemp as jest.Mock).mockResolvedValue('/tmp/ba-scan-required-diag');
     (fs.rm as jest.Mock).mockResolvedValue(undefined);
     analyzer.GitHubUrlValidator.validate.mockReturnValue({ isValid: true });
     analyzer.GitRepositoryFetcher.fetch.mockResolvedValue({ commitSha: 'req-commit' });
     analyzer.FrameworkDetector.detect.mockResolvedValue({ isSupported: true });
-    analyzer.RepositoryProfileDetector.detect.mockResolvedValue({ domain: 'BOOKING', framework: 'NESTJS' });
+    analyzer.RepositoryProfileDetector.detect.mockResolvedValue({ domain: 'BOOKING', language: 'TYPESCRIPT', framework: 'NESTJS' });
     analyzer.SafeFileEnumerator.mockImplementation(() => ({
       enumerate: jest.fn().mockResolvedValue({ tsFiles: [], allFiles: [], diagnostics: [], isPartial: false }),
     }));
@@ -363,8 +423,105 @@ describe('RunScanJobUseCase', () => {
     const diagnosticCodes: string[] = updateCall.data.diagnostics.map((d: any) => d.code);
 
     expect(diagnosticCodes).toContain('SCAN_HEALTH');
+    expect(diagnosticCodes).toContain('SCANNER_CAPABILITY_SUMMARY');
     expect(diagnosticCodes).toContain('INCREMENTAL_SCAN_SUMMARY');
     expect(diagnosticCodes).toContain('EMBEDDING_REUSE_PLAN');
+  });
+
+  it('fails with controlled error if unknown language/framework is provided, does not fallback to TypeScript', async () => {
+    (fs.mkdtemp as jest.Mock).mockResolvedValue('/tmp/ba-scan-unknown-lang');
+    (fs.rm as jest.Mock).mockResolvedValue(undefined);
+    analyzer.GitHubUrlValidator.validate.mockReturnValue({ isValid: true });
+    analyzer.GitRepositoryFetcher.fetch.mockResolvedValue({ commitSha: 'unknown-commit' });
+    analyzer.FrameworkDetector.detect.mockResolvedValue({ isSupported: true });
+    
+    // Simulate an unsupported language detected
+    analyzer.RepositoryProfileDetector.detect.mockResolvedValue({ 
+      domain: 'UNKNOWN', 
+      language: 'python', 
+      framework: 'django',
+      architectureStyle: 'UNKNOWN',
+      sourceRoots: [],
+      testRoots: [],
+      profileVersion: 'repo-profile@0.1.0'
+    });
+    
+    analyzer.SafeFileEnumerator.mockImplementation(() => ({
+      enumerate: jest.fn().mockResolvedValue({ tsFiles: [], allFiles: [], diagnostics: [], isPartial: false }),
+    }));
+
+    await expect(useCase.execute({ jobId: 'job-1' })).rejects.toThrow('No scanner adapter found');
+
+    // Should not call scanProject (TypeScript default)
+    expect(analyzer.scanProject).not.toHaveBeenCalled();
+    expect(analyzer.scanJavaSpringProject).not.toHaveBeenCalled();
+
+    // Job must be marked FAILED
+    const finalState = scanJobRepository.updateState.mock.calls.at(-1)?.[0];
+    expect(finalState?.status).toBe(ScanJobStatus.FAILED);
+    expect(finalState?.errorCode).toBe('UNSUPPORTED_FRAMEWORK');
+
+    // No SCAN_JOB_COMPLETED event emitted
+    const completedCall = eventLogService.recordEvent.mock.calls.find(
+      (c: any[]) => c[0]?.eventType === 'SCAN_JOB_COMPLETED',
+    );
+    expect(completedCall).toBeUndefined();
+
+    // Snapshot is not successfully updated to have LEXICAL_READY or diagnostics
+    expect(prisma.repositorySnapshot.update).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ indexStatus: 'LEXICAL_READY' })
+      })
+    );
+  });
+
+  it('persists Java/Spring SCANNER_CAPABILITY_SUMMARY showing PARTIAL/MEDIUM, without source or vectors', async () => {
+    (fs.mkdtemp as jest.Mock).mockResolvedValue('/tmp/ba-scan-java-spring');
+    (fs.rm as jest.Mock).mockResolvedValue(undefined);
+    analyzer.GitHubUrlValidator.validate.mockReturnValue({ isValid: true });
+    analyzer.GitRepositoryFetcher.fetch.mockResolvedValue({ commitSha: 'java-commit' });
+    analyzer.FrameworkDetector.detect.mockResolvedValue({ isSupported: true });
+    analyzer.RepositoryProfileDetector.detect.mockResolvedValue({ 
+      domain: 'BOOKING', 
+      language: 'java', 
+      framework: 'spring',
+      architectureStyle: 'MODULAR_MONOLITH',
+      sourceRoots: ['src/main/java'],
+      testRoots: ['src/test/java'],
+      profileVersion: 'repo-profile@0.1.0'
+    });
+    analyzer.SafeFileEnumerator.mockImplementation(() => ({
+      enumerate: jest.fn().mockResolvedValue({ tsFiles: [], javaFiles: ['src/main/java/Controller.java'], allFiles: [], diagnostics: [], isPartial: false }),
+    }));
+    analyzer.scanJavaSpringProject.mockReturnValue({
+      analyzerVersion: '0.2.0',
+      artifacts: [],
+      coverage: { status: 'PARTIAL', skippedSummary: {} },
+    });
+
+    await useCase.execute({ jobId: 'job-1' });
+
+    expect(analyzer.scanJavaSpringProject).toHaveBeenCalled();
+    expect(analyzer.scanProject).not.toHaveBeenCalled();
+
+    const updateCall = prisma.repositorySnapshot.update.mock.calls[0][0];
+    const capabilityDiag = updateCall.data.diagnostics.find((d: any) => d.code === 'SCANNER_CAPABILITY_SUMMARY');
+    
+    expect(capabilityDiag).toBeDefined();
+    expect(capabilityDiag.payload).toMatchObject({
+      language: 'java',
+      framework: 'spring',
+      status: 'PARTIAL',
+      confidence: 'MEDIUM'
+    });
+
+    // Ensure it doesn't contain source code, vectors, embeddings, prompt text, or absolute local paths
+    const payloadStr = JSON.stringify(capabilityDiag.payload);
+    expect(payloadStr).not.toMatch(/sourceCode/i);
+    expect(payloadStr).not.toMatch(/vector/i);
+    expect(payloadStr).not.toMatch(/embedding/i);
+    expect(payloadStr).not.toMatch(/prompt/i);
+    expect(payloadStr).not.toMatch(/\/tmp\/ba-scan-java-spring/);
   });
 
   it('fails the job explicitly when diagnostics update throws — no silent success', async () => {
@@ -373,7 +530,7 @@ describe('RunScanJobUseCase', () => {
     analyzer.GitHubUrlValidator.validate.mockReturnValue({ isValid: true });
     analyzer.GitRepositoryFetcher.fetch.mockResolvedValue({ commitSha: 'diag-fail-commit' });
     analyzer.FrameworkDetector.detect.mockResolvedValue({ isSupported: true });
-    analyzer.RepositoryProfileDetector.detect.mockResolvedValue({ domain: 'BOOKING', framework: 'NESTJS' });
+    analyzer.RepositoryProfileDetector.detect.mockResolvedValue({ domain: 'BOOKING', language: 'TYPESCRIPT', framework: 'NESTJS' });
     analyzer.SafeFileEnumerator.mockImplementation(() => ({
       enumerate: jest.fn().mockResolvedValue({ tsFiles: [], allFiles: [], diagnostics: [], isPartial: false }),
     }));

@@ -1,4 +1,4 @@
-import { RunImpactAnalysisUseCase } from '../../apps/api/src/modules/impact-analysis/application/run-impact-analysis.usecase';
+import { RunImpactAnalysisUseCase } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/run-impact-analysis.usecase';
 import { AppError } from '../../apps/api/src/shared/app-error';
 import { FakeLlmProvider } from '../../apps/api/src/modules/ai/infrastructure/fake-ai.provider';
 import { DomainPackRegistry } from '../../apps/api/src/modules/domain-pack/application/domain-pack.registry';

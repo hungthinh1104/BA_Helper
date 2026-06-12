@@ -45,14 +45,14 @@ export function ScanDiagnosticsPanel({ diagnostics }: { diagnostics: DiagnosticI
   )
 
   return (
-    <div className="flex flex-col gap-3 p-5 rounded-xl border border-border/40 bg-surface/50 backdrop-blur-xl shadow-sm">
+    <div className="flex flex-col gap-3 p-5 rounded-xl border border-border bg-surface/50 backdrop-blur-xl shadow-sm">
       <div className="flex items-center justify-between">
-        <h3 className="text-[13px] font-semibold text-foreground flex items-center gap-2">
+        <h3 className="text-[16px] font-bold tracking-tight text-foreground flex items-center gap-2">
           <ShieldAlert className="w-4 h-4 text-muted-foreground" />
           Scan Diagnostics
         </h3>
       </div>
-      <p className="text-[12px] text-muted-foreground -mt-1 mb-2">
+      <p className="text-[13px] text-muted-foreground/90 -mt-1 mb-2">
         Information about skipped files, redacted secrets, and framework limitations.
       </p>
 
@@ -65,12 +65,12 @@ export function ScanDiagnosticsPanel({ diagnostics }: { diagnostics: DiagnosticI
 
       <div className="flex flex-col gap-2">
         {sorted.map((diag) => (
-          <div key={diag.code} className="flex flex-col border border-border/40 rounded-lg overflow-hidden bg-surface-soft/30">
+          <div key={diag.code} className="flex flex-col border border-border rounded-lg overflow-hidden bg-surface-soft/30">
             <button
               onClick={() => toggle(diag.code)}
               className={cn(
                 "flex items-center justify-between w-full p-3 text-left transition-colors hover:bg-surface-soft/60",
-                expanded[diag.code] && "bg-surface-soft/60 border-b border-border/40"
+                expanded[diag.code] && "bg-surface-soft/60 border-b border-border"
               )}
             >
               <div className="flex items-center gap-3">
@@ -83,7 +83,7 @@ export function ScanDiagnosticsPanel({ diagnostics }: { diagnostics: DiagnosticI
                     </span>
                   )}
                   {diag.category && (
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border border-border/60 text-muted-foreground uppercase tracking-wider">
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border border-border text-muted-foreground uppercase tracking-wider">
                       {diag.category}
                     </span>
                   )}
@@ -110,7 +110,7 @@ export function ScanDiagnosticsPanel({ diagnostics }: { diagnostics: DiagnosticI
                     <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Sample Paths</span>
                     <ul className="flex flex-col gap-1">
                       {diag.samplePaths.map((path, idx) => (
-                        <li key={idx} className="text-[12px] font-mono text-muted-foreground bg-surface-hover/50 px-2 py-1 rounded w-fit border border-border/50">
+                        <li key={idx} className="text-[12px] font-mono text-muted-foreground bg-surface-hover/50 px-2 py-1 rounded w-fit border border-border">
                           {path}
                         </li>
                       ))}

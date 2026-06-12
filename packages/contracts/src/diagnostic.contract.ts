@@ -141,3 +141,22 @@ export const domainPackAppliedDiagnosticPayloadSchema = z.object({
 export type DomainPackAppliedDiagnosticPayload = z.infer<
   typeof domainPackAppliedDiagnosticPayloadSchema
 >;
+
+// ── Phase 37A: Scanner Capability Diagnostic ─────────────────────────────────────────
+
+export const scannerCapabilitySummaryPayloadSchema = z.object({
+  adapterId: z.string(),
+  adapterVersion: z.string(),
+  language: z.enum(['typescript', 'java']),
+  framework: z.enum(['nestjs', 'spring']).optional(),
+  status: z.enum(['STABLE', 'PARTIAL', 'EXPERIMENTAL']),
+  confidence: z.enum(['HIGH', 'MEDIUM', 'LOW']),
+  supportedArtifactKindCount: z.number().int().nonnegative(),
+  supportedPatternCount: z.number().int().nonnegative(),
+  partialPatternCount: z.number().int().nonnegative(),
+  unsupportedPatternCount: z.number().int().nonnegative(),
+});
+
+export type ScannerCapabilitySummaryPayload = z.infer<
+  typeof scannerCapabilitySummaryPayloadSchema
+>;

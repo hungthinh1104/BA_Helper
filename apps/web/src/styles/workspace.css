@@ -35,7 +35,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 18px;
+  padding: 0 var(--spacing-workspace);
   border-bottom: 1px solid var(--border);
   background: var(--background);
 }
@@ -60,7 +60,7 @@
   min-height: 0;
   height: 100%;
   overflow-y: auto;
-  padding: 18px;
+  padding: var(--spacing-workspace);
 }
 
 .app-inspector {
@@ -68,7 +68,7 @@
   min-height: 0;
   height: 100%;
   overflow-y: auto;
-  padding: 18px;
+  padding: var(--spacing-workspace);
   border-left: 1px solid var(--border);
   background: var(--inspector-bg);
 }
@@ -77,7 +77,7 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 18px;
+  padding: var(--spacing-workspace);
 }
 
 
@@ -86,7 +86,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin-top: 18px;
+  margin-top: var(--spacing-workspace);
 }
 
 .nav-label {
@@ -124,15 +124,15 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 18px;
+  margin-bottom: var(--spacing-workspace);
 }
 
 .analysis-sticky-header {
   position: sticky;
   top: 0;
   z-index: 20;
-  margin: -18px -18px 18px;
-  padding: 18px 18px 12px;
+  margin: calc(-1 * var(--spacing-workspace)) calc(-1 * var(--spacing-workspace)) var(--spacing-workspace);
+  padding: var(--spacing-workspace) var(--spacing-workspace) 12px;
   background: color-mix(in srgb, var(--background) 92%, transparent);
   backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);

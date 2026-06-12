@@ -18,7 +18,7 @@
   --radius-lg: 18px;
   --radius-xl: 24px;
   --radius-2xl: 32px;
-  --radius-card: 48px;
+  --radius-card: var(--radius-card);
   --radius-pill: 9999px;
 
   /* Spacing base */
@@ -51,6 +51,12 @@
   --color-warning: var(--warning);
   --color-danger: var(--danger);
   --color-info: var(--info);
+
+  /* Shadows */
+  --shadow-card: var(--shadow-card);
+  --shadow-dropdown: var(--shadow-dropdown);
+  --shadow-toast: var(--shadow-toast);
+  --shadow-xl: var(--shadow-xl);
 }
 
 /* =========================================================
@@ -70,8 +76,8 @@
   --surface-soft: #eef8ff;
   --surface-blue: #c0eaff;
 
-  --border: #99a0ae;
-  --border-subtle: #e4e7eb;
+  --border: rgba(0, 0, 0, 0.08);
+  --border-subtle: rgba(0, 0, 0, 0.04);
 
   --text-primary: #000000;
   --text-secondary: #60606c;
@@ -105,11 +111,16 @@
   );
 
   /* Shadows */
-  --shadow-card: rgba(23, 107, 197, 0.08) 0px 1px 1px 0px,
-    rgba(23, 107, 197, 0.07) 0px 3px 3px 0px;
-  --shadow-xl: rgba(16, 55, 132, 0.03) 0px 17px 37px 0px,
-    rgba(16, 55, 132, 0.03) 0px 67px 67px 0px,
-    rgba(16, 55, 132, 0.02) 0px 150px 90px 0px;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.02);
+  --shadow-dropdown: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-toast: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.12);
+
+  /* Spacing */
+  --spacing-workspace: 24px;
+
+  /* Radius Override */
+  --radius-card: 8px;
 
   /* App-specific */
   --evidence-bg: #f5f5f5;
@@ -131,7 +142,7 @@
   --destructive: var(--danger);
   --destructive-foreground: #ffffff;
   --ring: var(--accent-soft);
-  --radius: 12px;
+  --radius: 8px;
 }
 
 /* =========================================================
@@ -140,8 +151,8 @@
    ========================================================= */
 
 html:not(.dark) .app-shell {
-  --border: #6b7280;
-  --border-subtle: #d1d5db;
+  --border: rgba(0, 0, 0, 0.08);
+  --border-subtle: rgba(0, 0, 0, 0.04);
   --evidence-bg: #f3f4f6;
   --code-bg: #f8fafc;
   --code-text: #0f172a;
@@ -165,8 +176,8 @@ html:not(.dark) .app-shell {
   --surface-soft: #2A2D35;
   --surface-blue: #111827;
 
-  --border: #2A2D35;
-  --border-subtle: #3A3D45;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-subtle: rgba(255, 255, 255, 0.04);
 
   --text-primary: #f7f8f8;
   --text-secondary: #d0d6e0;
@@ -195,8 +206,16 @@ html:not(.dark) .app-shell {
   --hero-gradient: linear-gradient(180deg, #08090a 0%, #0f1011 100%);
 
   /* Shadows */
-  --shadow-card: rgba(0, 0, 0, 0.4) 0px 2px 4px 0px;
-  --shadow-xl: rgba(8, 9, 10, 0.6) 0px 4px 32px 0px;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-dropdown: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-toast: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.6);
+
+  /* Spacing */
+  --spacing-workspace: 24px;
+
+  /* Radius Override */
+  --radius-card: 8px;
 
   /* App-specific */
   --evidence-bg: #181A1F;
@@ -218,4 +237,5 @@ html:not(.dark) .app-shell {
   --destructive: var(--danger);
   --destructive-foreground: #ffffff;
   --ring: var(--accent-soft);
+  --radius: 8px;
 }

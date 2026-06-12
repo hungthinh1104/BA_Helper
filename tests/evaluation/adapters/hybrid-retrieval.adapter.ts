@@ -2,7 +2,7 @@ import * as path from 'node:path';
 import * as crypto from 'crypto';
 import { EvaluationAdapter } from '../evaluation-runner';
 import { EvaluationCase, NormalizedEvaluationResult } from '../evaluation-types';
-import { SafeFileEnumerator } from '../../../packages/analyzer/src/scanner/safe-file-enumerator';
+import { SafeFileEnumerator } from '../../../packages/analyzer/src/scanner/core/safe-file-enumerator';
 import { scanProject } from '../../../packages/analyzer/src/scanner/scanner';
 import { PrismaService } from '../../../apps/api/src/modules/prisma/prisma.service';
 import { HybridRetrievalService } from '../../../apps/api/src/modules/retrieval/application/hybrid-retrieval.service';

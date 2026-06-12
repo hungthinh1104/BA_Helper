@@ -15,7 +15,8 @@ import {
   DiagnosticCollector,
   scanJavaSpringProject,
   GitHubUrlValidator,
-  GitRepositoryFetcher
+  GitRepositoryFetcher,
+  ScannerAdapterRegistry
 } from '@ba-helper/analyzer';
 import { PrismaService } from '../../prisma/prisma.service';
 import { QueueService } from '../../queue/queue.service';
@@ -36,6 +37,7 @@ import { IncrementalScanClassifier } from './incremental-scan-classifier';
  */
 const REQUIRED_SCAN_DIAGNOSTIC_CODES = [
   'SCAN_HEALTH',
+  'SCANNER_CAPABILITY_SUMMARY',
   'INCREMENTAL_SCAN_SUMMARY',
   'EMBEDDING_REUSE_PLAN',
 ] as const;
@@ -66,6 +68,8 @@ const safeRm = async (targetDir?: string): Promise<void> => {
 @Injectable()
 export class RunScanJobUseCase {
   private readonly logger = new Logger(RunScanJobUseCase.name);
+
+  private readonly scannerAdapterRegistry = new ScannerAdapterRegistry();
 
   constructor(
     private readonly scanJobRepository: ScanJobRepository,
@@ -175,26 +179,41 @@ export class RunScanJobUseCase {
 
         currentStage = ScanJobStage.EXTRACTING_ARTIFACTS;
         
-        if (repositoryProfile?.framework === 'SPRING_BOOT') {
-          scanResult = await scanJavaSpringProject({
-            fixturePath: tempDir,
-            analyzerVersion: '0.1.0',
-            javaFiles: enumResult.javaFiles,
-            coverage: scanCoverage,
-          });
+        let adapter;
+        try {
+          adapter = this.scannerAdapterRegistry.getAdapter(
+            repositoryProfile?.language || 'UNKNOWN',
+            repositoryProfile?.framework || 'UNKNOWN'
+          );
+        } catch (e) {
           collector.add({
-            code: 'SPRING_BOOT_PILOT_ADAPTER',
-            severity: 'WARN',
-            message: 'Spring Boot pilot adapter uses lightweight annotation extraction only.',
-            category: 'FRAMEWORK',
+            code: 'UNSUPPORTED_SCANNER_ADAPTER',
+            severity: 'BLOCKER',
+            message: e instanceof Error ? e.message : 'No scanner adapter found',
+            category: 'SCANNER',
           });
-        } else {
-          scanResult = scanProject({
-            fixturePath: tempDir,
-            analyzerVersion: '0.2.0',
-            tsFiles: enumResult.tsFiles,
-            coverage: scanCoverage,
-          });
+          throw new AppError('UNSUPPORTED_FRAMEWORK', e instanceof Error ? e.message : 'No scanner adapter found');
+        }
+
+        const adapterResult = await adapter.scan({
+          rootDir: tempDir,
+          repositoryId: job.repositoryId,
+          projectId: job.repository.projectId,
+          fixturePath: tempDir,
+          tsFiles: enumResult.tsFiles,
+          javaFiles: enumResult.javaFiles,
+          coverage: scanCoverage,
+        });
+
+        scanResult = {
+          analyzerVersion: adapter.adapterVersion,
+          artifacts: adapterResult.artifacts,
+          coverage: scanCoverage,
+          sourceRoot: tempDir,
+        };
+
+        for (const diagnostic of adapterResult.diagnostics) {
+          collector.add(diagnostic);
         }
       } else {
         commitSha = 'mock-commit-sha';

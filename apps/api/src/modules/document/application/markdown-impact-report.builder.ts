@@ -99,6 +99,33 @@ export class MarkdownImpactReportBuilder {
       lines.push('');
     }
 
+    const diagnostics = (analysis.snapshot.diagnostics as any as any[]) || [];
+    const capabilitySummary = diagnostics.find(d => d.code === 'SCANNER_CAPABILITY_SUMMARY');
+    const unsupportedDiagnostics = diagnostics.filter(d => 
+      d.code !== 'SCANNER_CAPABILITY_SUMMARY' && 
+      (d.code.includes('UNSUPPORTED') || d.severity === 'WARNING' || d.severity === 'ERROR')
+    );
+
+    if (capabilitySummary?.payload) {
+      lines.push('## Scanner Capability Profile');
+      lines.push('');
+      const p = capabilitySummary.payload;
+      lines.push(`- **Language:** ${p.language}`);
+      if (p.framework) lines.push(`- **Framework:** ${p.framework}`);
+      lines.push(`- **Maturity Status:** ${p.status}`);
+      lines.push(`- **Confidence Level:** ${p.confidence}`);
+      lines.push('');
+    }
+
+    if (unsupportedDiagnostics.length > 0) {
+      lines.push('## Scanner Diagnostics & Risks');
+      lines.push('');
+      for (const diag of unsupportedDiagnostics) {
+        lines.push(`- **${diag.code}**: ${diag.message}`);
+      }
+      lines.push('');
+    }
+
     // Filter approved insights
     const approvedInsights = insights.filter((i) => i.reviewStatus !== 'REJECTED');
     const rejectedCount = insights.length - approvedInsights.length;
@@ -158,7 +185,23 @@ export class MarkdownImpactReportBuilder {
       const sortedLinks = [...traceabilityLinks].sort((a, b) => a.reviewStatus.localeCompare(b.reviewStatus));
       for (const link of sortedLinks) {
         const type = this.resolveArtifactDisplayType(link.artifact);
-        const name = link.artifact?.name ? `\`${link.artifact.name}\`` : 'Unknown';
+        const nameRaw = link.artifact?.name ? `\`${link.artifact.name}\`` : 'Unknown';
+        let maturityLabel = '';
+        if (capabilitySummary?.payload) {
+          const p = capabilitySummary.payload;
+          if (p.status && p.status !== 'STABLE') {
+            maturityLabel = ` (${p.status})`;
+          }
+        } else if (link.artifact?.artifactKey?.startsWith('go_') || link.artifact?.artifactKey?.startsWith('java_')) {
+          maturityLabel = link.artifact.artifactKey.startsWith('go_') ? ' (EXPERIMENTAL)' : ' (PARTIAL)';
+        }
+        
+        let methodLabel = '';
+        if (link.artifact?.name?.includes('UNKNOWN')) {
+          methodLabel = ' **[Method: UNKNOWN]**';
+        }
+
+        const name = nameRaw + maturityLabel + methodLabel;
         const file = link.artifact?.filePath ? `\`${link.artifact.filePath}\`` : 'Unknown';
         const status = link.reviewStatus === 'CONFIRMED' ? 'Confirmed' : link.reviewStatus === 'NEEDS_REVIEW' ? 'Needs Review' : link.reviewStatus;
         lines.push(`| ${type} | ${name} | ${file} | ${status} |`);
@@ -258,6 +301,11 @@ export class MarkdownImpactReportBuilder {
         }
         if (q.reasoning) {
           lines.push(`**Why this matters:** ${q.reasoning}`);
+          lines.push('');
+        }
+        
+        if (q.metadata && typeof q.metadata === 'object' && (q.metadata as any).origin === 'SCANNER_DIAGNOSTIC') {
+          lines.push(`_Derived from scanner diagnostic_`);
           lines.push('');
         }
       }

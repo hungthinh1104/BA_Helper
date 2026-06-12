@@ -1,4 +1,4 @@
-import { CreateImpactAnalysisUseCase } from '../../apps/api/src/modules/impact-analysis/application/create-impact-analysis.usecase';
+import { CreateImpactAnalysisUseCase } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/create-impact-analysis.usecase';
 
 class StubImpactRepo {
   created: Array<{ coverageWarning?: string | null; acceptedPartialCoverage: boolean }> = [];

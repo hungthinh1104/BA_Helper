@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { RunImpactAnalysisUseCase } from '../../apps/api/src/modules/impact-analysis/application/run-impact-analysis.usecase';
+import { RunImpactAnalysisUseCase } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/run-impact-analysis.usecase';
 import { FakeLlmProvider } from '../../apps/api/src/modules/ai/infrastructure/fake-ai.provider';
 import { DomainPackRegistry } from '../../apps/api/src/modules/domain-pack/application/domain-pack.registry';
 

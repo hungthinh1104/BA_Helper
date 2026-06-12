@@ -157,7 +157,7 @@ export function ReviewQueuePanel({ queueData, onSelect, selectedQueueItemId }: R
                 key={item.id}
                 onClick={() => handleSelect(idx)}
                 className={`
-                  w-full text-left px-3 py-2.5 border-b border-border/40 last:border-0 text-sm transition-colors
+                  w-full text-left px-3 py-2.5 border-b border-border last:border-0 text-sm transition-colors
                   ${isActive ? "bg-surface-soft" : "hover:bg-surface-muted/60"}
                   ${isCompleted ? "opacity-50" : ""}
                 `}
@@ -204,12 +204,12 @@ export function ReviewQueuePanel({ queueData, onSelect, selectedQueueItemId }: R
             </div>
 
             {/* Title */}
-            <h1 className="text-[15px] font-semibold text-foreground mb-4 leading-snug">{activeItem.title}</h1>
+            <h1 className="text-[16px] font-bold tracking-tight text-foreground mb-4 leading-snug">{activeItem.title}</h1>
 
             {/* Why it matters */}
-            <div className="bg-surface-muted/50 border border-border/60 rounded-lg p-3 mb-3">
+            <div className="bg-surface-muted/50 border border-border rounded-lg p-3 mb-3">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Why it matters</p>
-              <p className="text-[13px] text-foreground leading-relaxed">{activeItem.reason}</p>
+              <p className="text-[13px] text-muted-foreground/90 leading-relaxed">{activeItem.reason}</p>
               {activeItem.priorityReason && (
                 <p className="text-[11px] text-muted-foreground mt-2 flex items-center gap-1.5">
                   <Activity className="w-3 h-3" /> {activeItem.priorityReason}

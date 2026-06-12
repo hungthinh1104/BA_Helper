@@ -4,7 +4,7 @@ import Link from "next/link"
 
 export function DataList({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("flex flex-col border border-border/40 rounded-xl overflow-hidden bg-surface/50 backdrop-blur-xl shadow-lg ring-1 ring-black/5 dark:ring-white/5", className)}>
+    <div className={cn("flex flex-col border border-border rounded-xl overflow-hidden bg-surface/50 backdrop-blur-xl shadow-lg ring-1 ring-black/5 dark:ring-white/5", className)}>
       {children}
     </div>
   )
@@ -21,7 +21,7 @@ export function DataListHeader({
 }) {
   return (
     <div 
-      className={cn("grid items-center gap-4 px-6 py-3 bg-surface-muted/30 text-[11px] font-medium tracking-wider uppercase text-muted-foreground border-b border-border/60", className)}
+      className={cn("grid items-center gap-4 px-6 py-3 bg-surface-muted/30 text-[11px] font-medium tracking-wider uppercase text-muted-foreground border-b border-border", className)}
       style={{ gridTemplateColumns: gridCols }}
     >
       {children}
@@ -45,7 +45,7 @@ export function DataListRow({
       <Link 
         href={href}
         className={cn(
-          "grid items-center gap-4 px-6 py-3 transition-colors group relative border-b border-border/40 last:border-0 hover:bg-surface-soft/80 cursor-pointer", 
+          "grid items-center gap-4 px-6 py-3 transition-colors group relative border-b border-border last:border-0 hover:bg-surface-soft/80 cursor-pointer", 
           className
         )}
         style={{ gridTemplateColumns: gridCols }}
@@ -58,7 +58,7 @@ export function DataListRow({
   return (
     <div 
       className={cn(
-        "grid items-center gap-4 px-6 py-3 transition-colors group relative border-b border-border/40 last:border-0 hover:bg-surface-soft/40", 
+        "grid items-center gap-4 px-6 py-3 transition-colors group relative border-b border-border last:border-0 hover:bg-surface-soft/40", 
         className
       )}
       style={{ gridTemplateColumns: gridCols }}

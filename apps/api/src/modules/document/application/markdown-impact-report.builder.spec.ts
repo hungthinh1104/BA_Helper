@@ -236,4 +236,131 @@ describe('MarkdownImpactReportBuilder', () => {
     expect(report).toContain('Snapshot ID: `snapshot-1`');
     expect(report).toContain('Analyzer Version: `1.0.0`');
   });
+
+  describe('Scanner Capability Profile & Diagnostics', () => {
+    it('renders capability profile and diagnostics when present', () => {
+      const goAnalysis = {
+        ...mockAnalysis,
+        snapshot: {
+          ...mockAnalysis.snapshot,
+          diagnostics: [
+            {
+              code: 'SCANNER_CAPABILITY_SUMMARY',
+              message: 'Scanner capability profile injected',
+              severity: 'INFO',
+              category: 'SCANNER',
+              payload: {
+                language: 'go',
+                status: 'EXPERIMENTAL',
+                confidence: 'LOW',
+              },
+            },
+            {
+              code: 'GO_DYNAMIC_ROUTE_UNSUPPORTED',
+              message: 'Dynamic route variables are not supported',
+              severity: 'WARNING',
+              category: 'SCANNER',
+            },
+          ] as unknown as import('@prisma/client').Prisma.JsonValue,
+        },
+      } as unknown as any;
+
+      const report = builder.build({
+        analysis: goAnalysis,
+        insights: [],
+        traceabilityLinks: [
+          {
+            id: 'link-1',
+            reviewStatus: 'CONFIRMED',
+            artifact: {
+              id: 'artifact-1',
+              name: 'UNKNOWN /api/v1/payment -> updatePaymentHandler',
+              artifactType: 'HTTP_ENDPOINT',
+              universalKind: 'HTTP_ENDPOINT',
+              filePath: 'src/main.go',
+              stableId: 'go_http_endpoint__net_http__UNKNOWN__route_hash__handler',
+            },
+          },
+        ] as unknown as any[],
+        hasUnreviewedItems: false,
+      });
+
+      // Assert section headers
+      expect(report).toContain('## Scanner Capability Profile');
+      expect(report).toContain('## Scanner Diagnostics & Risks');
+
+      // Assert Capability details
+      expect(report).toContain('- **Language:** go');
+      expect(report).toContain('- **Maturity Status:** EXPERIMENTAL');
+      expect(report).toContain('- **Confidence Level:** LOW');
+
+      // Assert Diagnostics details
+      expect(report).toContain('- **GO_DYNAMIC_ROUTE_UNSUPPORTED**: Dynamic route variables are not supported');
+
+      // Assert Artifact labels
+      // 1. EXPERIMENTAL flag (derived from capability summary payload)
+      // 2. [Method: UNKNOWN] flag
+      expect(report).toContain('`UNKNOWN /api/v1/payment -> updatePaymentHandler` (EXPERIMENTAL) **[Method: UNKNOWN]**');
+    });
+
+    it('renders diagnostic-derived UNKNOWN risks in Open Questions and not in Impacted Artifacts', () => {
+      const insights = [
+        {
+          insightType: 'UNKNOWN',
+          title: 'Unsupported Scanner Pattern in main.go',
+          description: 'Unsupported Router Group',
+          certainty: 'UNKNOWN',
+          reviewStatus: 'CONFIRMED',
+          evidenceLinks: [],
+          metadata: {
+            origin: 'SCANNER_DIAGNOSTIC',
+            evidenceMode: 'DIAGNOSTIC_ONLY',
+            diagnosticPayload: {
+              relativePath: 'main.go',
+              candidateTerms: ['refunds'],
+            },
+          },
+        },
+      ] as unknown as any[];
+
+      const report = builder.build({
+        analysis: mockAnalysis,
+        insights,
+        traceabilityLinks: [],
+        hasUnreviewedItems: false,
+      });
+
+      // It should be in Open Questions / Unknowns
+      expect(report).toContain('## Open Questions / Unknowns');
+      expect(report).toContain('Unsupported Scanner Pattern in main.go');
+      expect(report).toContain('Unsupported Router Group');
+      expect(report).toContain('_Derived from scanner diagnostic_');
+
+      // It should NOT be in Impacted Artifacts
+      expect(report).not.toContain('## Impacted Artifacts');
+    });
+
+    it('does not crash when insight metadata is null', () => {
+      const insights = [
+        {
+          insightType: 'UNKNOWN',
+          title: 'Old unknown insight',
+          description: 'No metadata available',
+          certainty: 'UNKNOWN',
+          reviewStatus: 'CONFIRMED',
+          evidenceLinks: [],
+          metadata: null,
+        },
+      ] as unknown as any[];
+
+      expect(() => {
+        builder.build({
+          analysis: mockAnalysis,
+          insights,
+          traceabilityLinks: [],
+          hasUnreviewedItems: false,
+        });
+      }).not.toThrow();
+    });
+  });
 });

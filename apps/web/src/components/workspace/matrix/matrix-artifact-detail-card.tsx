@@ -26,7 +26,7 @@ export function MatrixArtifactDetailCard({
   const artifactQa = qaScenarios.filter((qa) => artifact.relatedQaScenarios.includes(qa.insightId))
 
   return (
-    <Card className="flex flex-col overflow-hidden bg-surface mb-3 border-border/50">
+    <Card className="flex flex-col overflow-hidden bg-surface mb-3 border-border">
       <div className="flex flex-col gap-2 p-3 pb-2 border-b bg-muted/20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -127,13 +127,13 @@ export function MatrixArtifactDetailCard({
         )}
 
         {artifact.retrievalDiagnostics && (
-          <details className="group border-b-0 px-3 py-1 border-t border-border/40 open:pb-3">
+          <details className="group border-b-0 px-3 py-1 border-t border-border open:pb-3">
             <summary className="text-[11px] font-medium py-2 text-muted-foreground cursor-pointer list-none flex items-center justify-between hover:text-foreground">
               Why selected?
               <span className="text-muted-foreground/50 text-[10px] group-open:rotate-180 transition-transform">▼</span>
             </summary>
             <div className="pt-1">
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[11px] font-mono bg-muted/30 p-2 rounded border border-border/50">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[11px] font-mono bg-muted/30 p-2 rounded border border-border">
                 {Object.entries(artifact.retrievalDiagnostics)
                   .filter(([, v]) => typeof v === "number" || typeof v === "string")
                   .map(([k, v]) => (
