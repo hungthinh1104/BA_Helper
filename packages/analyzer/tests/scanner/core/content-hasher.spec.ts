@@ -1,4 +1,4 @@
-import { computeArtifactContentHash } from '../../src/scanner/content-hasher';
+import { computeArtifactContentHash } from '../../../src/scanner/core/content-hasher';
 
 describe('computeArtifactContentHash', () => {
   it('returns null for empty or entirely blank content', () => {

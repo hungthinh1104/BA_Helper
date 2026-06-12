@@ -1,14 +1,14 @@
 import * as fs from 'node:fs/promises';
 import { relative } from 'node:path';
-import { ANALYZER_VERSION } from './scanner.types';
-import type { ScanInput, ScanResult, ScanArtifact } from './scanner.types';
-import { computeArtifactContentHash } from './content-hasher';
+import { ANALYZER_VERSION } from '../scanner.types';
+import type { ScanInput, ScanResult, ScanArtifact } from '../scanner.types';
+import { computeArtifactContentHash } from '../core/content-hasher';
 
 export const scanJavaSpringProject = async (
-  input: ScanInput & { javaFiles: string[], coverage?: import('./scanner.types').ScanCoverage },
+  input: ScanInput & { javaFiles: string[], coverage?: import('../scanner.types').ScanCoverage },
 ): Promise<ScanResult> => {
   const artifacts: ScanArtifact[] = [];
-  const diagnostics: { code: string, message: string }[] = [];
+  const diagnostics: import('../core/diagnostic-collector').DiagnosticItem[] = [];
 
   const normalizePath = (base: string, methodPath: string) => {
     let fullPath = `${base}/${methodPath}`;
@@ -103,7 +103,7 @@ export const scanJavaSpringProject = async (
             classBasePath = classRequestMappingMatch[1];
           }
 
-          const methodPattern = /@(GetMapping|PostMapping|PutMapping|DeleteMapping|PatchMapping|RequestMapping)(?:\s*\(([^)]*)\))?[\s\S]*?public\s+(?:[\w<>[\]?]+\s+)+(\w+)\s*\(/g;
+          const methodPattern = /@(\w*Mapping)(?:\s*\(([^)]*)\))?[\s\S]*?public\s+(?:[\w<>[\]?]+\s+)+(\w+)\s*\(/g;
           let methodMatch;
 
           while ((methodMatch = methodPattern.exec(classContent)) !== null) {
@@ -111,6 +111,47 @@ export const scanJavaSpringProject = async (
             const params = methodMatch[2] || '';
             const methodName = methodMatch[3];
             
+            const standardMappings = ['GetMapping', 'PostMapping', 'PutMapping', 'DeleteMapping', 'PatchMapping', 'RequestMapping'];
+            if (!standardMappings.includes(annotationType)) {
+                diagnostics.push({ code: 'SPRING_COMPOSED_MAPPING_UNSUPPORTED', severity: 'WARN', category: 'SCANNER', message: `Composed mapping ${annotationType} unsupported at ${className}.${methodName}` });
+                continue;
+            }
+
+            if (params.includes('+')) {
+                diagnostics.push({
+                  code: 'SPRING_DYNAMIC_ROUTE_UNSUPPORTED',
+                  severity: 'WARN',
+                  category: 'SCANNER',
+                  message: `Dynamic route unsupported at ${className}.${methodName}`,
+                  payload: {
+                    language: 'java',
+                    framework: 'spring',
+                    relativePath: normalizedFilePath,
+                    unsupportedPattern: 'dynamic_route',
+                    candidateTerms: [methodName, className],
+                  }
+                });
+                continue;
+            }
+
+            if (params.match(/\{.*,.*\}/)) {
+                diagnostics.push({ code: 'SPRING_MULTI_ROUTE_MAPPING_UNSUPPORTED', severity: 'WARN', category: 'SCANNER', message: `Multi-route mapping unsupported at ${className}.${methodName}` });
+                continue;
+            }
+
+            if (annotationType === 'RequestMapping' && params.includes(',')) {
+                // allow simple method and value/path forms
+                const stripped = params
+                  .replace(/method\s*=\s*RequestMethod\.[A-Z]+/, '')
+                  .replace(/(?:value|path)\s*=\s*["'][^"']*["']/, '')
+                  .trim();
+                
+                if (stripped !== ',' && stripped !== '') {
+                  diagnostics.push({ code: 'SPRING_REQUEST_MAPPING_FORM_UNSUPPORTED', severity: 'WARN', category: 'SCANNER', message: `Complex RequestMapping form unsupported at ${className}.${methodName}` });
+                  continue;
+                }
+            }
+
             let httpMethod = 'UNKNOWN';
             let methodPath = '';
 
@@ -131,11 +172,8 @@ export const scanJavaSpringProject = async (
             
             // Handle specific UNKNOWN logic per requirements
             if (httpMethod === 'UNKNOWN' && annotationType === 'RequestMapping') {
-              diagnostics.push({ code: 'SPRING_HTTP_METHOD_UNKNOWN', message: `Unknown HTTP method for ${className}.${methodName}` });
-            }
-            if (params.includes('{') && !params.includes('"{')) {
-               // A very complex annotation that we didn't parse properly
-               diagnostics.push({ code: 'SPRING_UNSUPPORTED_COMPLEX_ANNOTATION', message: `Complex annotation skipped at ${className}.${methodName}` });
+              diagnostics.push({ code: 'SPRING_HTTP_METHOD_UNKNOWN', severity: 'WARN', category: 'SCANNER', message: `Unknown HTTP method for ${className}.${methodName}` });
+              continue;
             }
 
             const methodStartLine = startLine + classContent.substring(0, methodMatch.index).split('\n').length - 1;
@@ -186,13 +224,13 @@ export const scanJavaSpringProject = async (
         }
 
         if (methodsExtracted === 0) {
-          diagnostics.push({ code: 'SPRING_EXTRACTION_INCOMPLETE', message: `No methods extracted for stereotypic class ${className}` });
+          diagnostics.push({ code: 'SPRING_EXTRACTION_INCOMPLETE', severity: 'WARN', category: 'SCANNER', message: `No methods extracted for stereotypic class ${className}` });
         }
       }
     }
   }
 
-  const defaultCoverage: import('./scanner.types').ScanCoverage = {
+  const defaultCoverage: import('../scanner.types').ScanCoverage = {
     status: 'PARTIAL',
     skippedFiles: [],
     skippedSummary: {
@@ -222,7 +260,6 @@ export const scanJavaSpringProject = async (
     artifacts,
     coverage,
     sourceRoot: input.fixturePath,
-    // Note: Diagnostics should ideally be passed back through a dedicated channel or diagnostic array if the ScanResult schema allows it.
-    // For now, these are internal warnings generated by the parser. If the system supports it, they should be attached to ScanHealthDiagnostics.
+    diagnostics,
   };
 };

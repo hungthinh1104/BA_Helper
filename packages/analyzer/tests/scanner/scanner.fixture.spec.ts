@@ -1,8 +1,8 @@
 import * as path from 'node:path';
-import { SafeFileEnumerator } from './safe-file-enumerator';
-import { scanProject } from './scanner';
-import { scanJavaSpringProject } from './java-spring-scanner';
-import { ScanLimitsPolicy } from './limits';
+import { SafeFileEnumerator } from '../../src/scanner/core/safe-file-enumerator';
+import { scanProject } from '../../src/scanner/scanner';
+import { scanJavaSpringProject } from '../../src/scanner/extractors/java-spring-scanner';
+import { ScanLimitsPolicy } from '../../src/scanner/core/limits';
 
 describe('Scanner Golden Fixtures', () => {
   const rootDir = path.join(__dirname, '../../../../');

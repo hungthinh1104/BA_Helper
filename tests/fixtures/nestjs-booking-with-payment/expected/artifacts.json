@@ -1,44 +1,34 @@
 {
   "artifacts": [
     {
+      "stableId": "service-method:refund-report.service.generateReport",
+      "type": "SERVICE_METHOD",
+      "filePath": "src/admin/refund-report.service.ts",
+      "symbolName": "AdminRefundReportService.generateReport",
+      "startLine": 5,
+      "endLine": 7,
+      "excerpt": "generateReport() {\n    return 'refund report ready';\n  }",
+      "contentHash": "sha256:08b8fc7e944eefd38a078dcd35ac2a9e3c79cee519cab81ed02b1b4ae909239d"
+    },
+    {
+      "stableId": "test:src.booking.booking-cancel.spec.ts",
+      "type": "TEST",
+      "filePath": "src/booking/booking-cancel.spec.ts",
+      "symbolName": "booking-cancel.spec.ts",
+      "startLine": 1,
+      "endLine": 16,
+      "excerpt": "import { BookingService } from './booking.service';\nimport { BookingStatus } from './booking.entity';\n\ndescribe('BookingService.cancelBooking', () => {\n  it('sets status to CANCELLED', async () => {\n    const service = new BookingService(\n      { refund: async () => undefined } as any,\n      { releaseSlot: async () => undefined } as any,\n      { notifyOwner: async () => undefined } as any,\n    );\n\n    const booking = await service.cancelBooking('b1');\n    expect(booking.status).toBe(BookingStatus.CANCELLED);\n  });\n});\n",
+      "contentHash": "sha256:51f479ea240245ccf16f0d84c61a0d68423973a4a4f0299218122c3aa2ba4394"
+    },
+    {
       "stableId": "api:booking.controller.cancel",
       "type": "API_ROUTE",
       "filePath": "src/booking/booking.controller.ts",
       "symbolName": "BookingController.cancel",
       "startLine": 8,
-      "endLine": 11
-    },
-    {
-      "stableId": "service-method:booking.service.cancelBooking",
-      "type": "SERVICE_METHOD",
-      "filePath": "src/booking/booking.service.ts",
-      "symbolName": "BookingService.cancelBooking",
-      "startLine": 15,
-      "endLine": 24
-    },
-    {
-      "stableId": "service-method:payment.service.refund",
-      "type": "SERVICE_METHOD",
-      "filePath": "src/payment/payment.service.ts",
-      "symbolName": "PaymentService.refund",
-      "startLine": 6,
-      "endLine": 10
-    },
-    {
-      "stableId": "service-method:slot.service.releaseSlot",
-      "type": "SERVICE_METHOD",
-      "filePath": "src/slot/slot.service.ts",
-      "symbolName": "SlotService.releaseSlot",
-      "startLine": 5,
-      "endLine": 7
-    },
-    {
-      "stableId": "service-method:notification.service.notifyOwner",
-      "type": "SERVICE_METHOD",
-      "filePath": "src/notification/notification.service.ts",
-      "symbolName": "NotificationService.notifyOwner",
-      "startLine": 5,
-      "endLine": 7
+      "endLine": 11,
+      "excerpt": "@Post(':id/cancel')\n  async cancel(@Param('id') id: string) {\n    return this.bookingService.cancelBooking(id);\n  }",
+      "contentHash": "sha256:be685ff9401df0a393c78f32efe3fd93f0618f7707fbb12b6951c97c093fe949"
     },
     {
       "stableId": "entity:booking",
@@ -46,23 +36,59 @@
       "filePath": "src/booking/booking.entity.ts",
       "symbolName": "Booking",
       "startLine": 6,
-      "endLine": 19
+      "endLine": 19,
+      "excerpt": "export class Booking {\n  constructor(\n    public readonly id: string,\n    public status: BookingStatus,\n  ) {}\n\n  get slotId(): string {\n    return `slot-${this.id}`;\n  }\n\n  get ownerId(): string {\n    return `owner-${this.id}`;\n  }\n}",
+      "contentHash": "sha256:7cf12e4cf9d4c8cbfc4c52e70d9001f94c821ec60bdb67e334a821b1e09f6a38"
     },
     {
-      "stableId": "entity:paymentTransaction",
+      "stableId": "service-method:booking.service.cancelBooking",
+      "type": "SERVICE_METHOD",
+      "filePath": "src/booking/booking.service.ts",
+      "symbolName": "BookingService.cancelBooking",
+      "startLine": 15,
+      "endLine": 24,
+      "excerpt": "async cancelBooking(bookingId: string): Promise<Booking> {\n    const booking = new Booking(bookingId, BookingStatus.PAID);\n    booking.status = BookingStatus.CANCELLED;\n\n    await this.paymentService.refund(bookingId);\n    await this.slotService.releaseSlot(booking.slotId);\n    await this.notificationService.notifyOwner(booking.ownerId, bookingId);\n\n    return booking;\n  }",
+      "contentHash": "sha256:4d21909df3a6305fdcbde057fe440c89ea1f52862b4610e458e349ddde138a64"
+    },
+    {
+      "stableId": "service-method:notification.service.notifyOwner",
+      "type": "SERVICE_METHOD",
+      "filePath": "src/notification/notification.service.ts",
+      "symbolName": "NotificationService.notifyOwner",
+      "startLine": 5,
+      "endLine": 7,
+      "excerpt": "async notifyOwner(ownerId: string, bookingId: string): Promise<void> {\n    return;\n  }",
+      "contentHash": "sha256:821829a72ac1f1ea1d7c568f6e35bb07326945aaef8b30175b694cad616d81f9"
+    },
+    {
+      "stableId": "entity:paymenttransaction",
       "type": "ENTITY",
       "filePath": "src/payment/payment.entity.ts",
       "symbolName": "PaymentTransaction",
       "startLine": 6,
-      "endLine": 11
+      "endLine": 11,
+      "excerpt": "export class PaymentTransaction {\n  constructor(\n    public readonly bookingId: string,\n    public status: PaymentStatus,\n  ) {}\n}",
+      "contentHash": "sha256:5849d784b7b805c2171d86fd175c075649dc8e766fc04efbe3f4e8dbd12b8214"
     },
     {
-      "stableId": "test:booking.cancel.spec",
-      "type": "TEST",
-      "filePath": "src/booking/booking-cancel.spec.ts",
-      "symbolName": "BookingService.cancelBooking.spec",
-      "startLine": 1,
-      "endLine": 16
+      "stableId": "service-method:payment.service.refund",
+      "type": "SERVICE_METHOD",
+      "filePath": "src/payment/payment.service.ts",
+      "symbolName": "PaymentService.refund",
+      "startLine": 6,
+      "endLine": 10,
+      "excerpt": "async refund(bookingId: string): Promise<PaymentTransaction> {\n    const transaction = new PaymentTransaction(bookingId, PaymentStatus.PAID);\n    transaction.status = PaymentStatus.REFUNDED;\n    return transaction;\n  }",
+      "contentHash": "sha256:3e02a46cbde6104eaea9da7302bec6c86210c78c631bfd53e3c05a9ee851c19e"
+    },
+    {
+      "stableId": "service-method:slot.service.releaseSlot",
+      "type": "SERVICE_METHOD",
+      "filePath": "src/slot/slot.service.ts",
+      "symbolName": "SlotService.releaseSlot",
+      "startLine": 5,
+      "endLine": 7,
+      "excerpt": "async releaseSlot(slotId: string): Promise<void> {\n    return;\n  }",
+      "contentHash": "sha256:04db001483b579a2c5fd36bbe118c97d81223e50c80b15e720f54a8826ab1508"
     }
   ]
 }

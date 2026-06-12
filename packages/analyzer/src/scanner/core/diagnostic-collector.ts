@@ -7,7 +7,16 @@ export interface DiagnosticItem {
   category?: 'SECURITY' | 'LIMIT' | 'FRAMEWORK' | 'FILE_SYSTEM' | 'GIT' | 'SCANNER';
   count?: number;
   samplePaths?: string[];
-  payload?: Record<string, unknown>;
+  payload?: {
+    candidateTerms?: string[];
+    language?: string;
+    framework?: string;
+    relativePath?: string;
+    unsupportedPattern?: string;
+    candidateText?: string;
+    evidenceKind?: string;
+    [key: string]: unknown;
+  };
 }
 
 export class DiagnosticCollector {

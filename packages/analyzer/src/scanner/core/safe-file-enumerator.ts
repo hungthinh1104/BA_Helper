@@ -2,7 +2,7 @@ import type { Dirent } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { ScanLimitsPolicy } from './limits';
-import type { ScanSkipReason } from './scanner.types';
+import type { ScanSkipReason } from '../scanner.types';
 
 export interface FileDiagnostic {
   code:
@@ -20,6 +20,11 @@ export interface FileDiagnostic {
 export interface EnumeratorResult {
   tsFiles: string[];
   javaFiles: string[];
+  goFiles: string[];
+  pyFiles: string[];
+  csFiles: string[];
+  phpFiles: string[];
+  rbFiles: string[];
   allFiles: string[];
   diagnostics: FileDiagnostic[];
   isPartial: boolean;
@@ -113,6 +118,11 @@ export class SafeFileEnumerator {
   async enumerate(): Promise<EnumeratorResult> {
     const tsFiles: string[] = [];
     const javaFiles: string[] = [];
+    const goFiles: string[] = [];
+    const pyFiles: string[] = [];
+    const csFiles: string[] = [];
+    const phpFiles: string[] = [];
+    const rbFiles: string[] = [];
     const allFiles: string[] = [];
     const diagnostics: FileDiagnostic[] = [];
     
@@ -248,6 +258,16 @@ export class SafeFileEnumerator {
             tsFiles.push(fullPath.split(path.sep).join('/'));
           } else if (ext === '.java') {
             javaFiles.push(fullPath.split(path.sep).join('/'));
+          } else if (ext === '.go') {
+            goFiles.push(fullPath.split(path.sep).join('/'));
+          } else if (ext === '.py') {
+            pyFiles.push(fullPath.split(path.sep).join('/'));
+          } else if (ext === '.cs') {
+            csFiles.push(fullPath.split(path.sep).join('/'));
+          } else if (ext === '.php') {
+            phpFiles.push(fullPath.split(path.sep).join('/'));
+          } else if (ext === '.rb') {
+            rbFiles.push(fullPath.split(path.sep).join('/'));
           }
         }
       }
@@ -260,6 +280,11 @@ export class SafeFileEnumerator {
     return {
       tsFiles,
       javaFiles,
+      goFiles,
+      pyFiles,
+      csFiles,
+      phpFiles,
+      rbFiles,
       allFiles,
       diagnostics,
       isPartial,

@@ -1,4 +1,4 @@
-import { SecretRedactor } from '../../src/scanner/secret-redactor';
+import { SecretRedactor } from '../../../src/scanner/core/secret-redactor';
 
 describe('SecretRedactor', () => {
   it('redacts AWS access key', () => {

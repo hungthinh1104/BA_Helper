@@ -1,31 +1,52 @@
 {
   "edges": [
     {
-      "stableId": "edge:booking.controller.cancel->booking.service.cancelBooking",
-      "type": "CALLS",
+      "stableId": "edge:test:src.booking.booking-cancel.spec.ts->service-method:booking.service.cancelBooking",
+      "from": "test:src.booking.booking-cancel.spec.ts",
+      "to": "service-method:booking.service.cancelBooking",
+      "type": "TESTS",
+      "confidence": 1
+    },
+    {
+      "stableId": "edge:api:booking.controller.cancel->service-method:booking.service.cancelBooking",
       "from": "api:booking.controller.cancel",
       "to": "service-method:booking.service.cancelBooking",
+      "type": "CALLS",
       "confidence": 1
     },
     {
-      "stableId": "edge:booking.service.cancelBooking->payment.service.refund",
-      "type": "CALLS",
+      "stableId": "edge:service-method:booking.service.cancelBooking->service-method:payment.service.refund",
       "from": "service-method:booking.service.cancelBooking",
       "to": "service-method:payment.service.refund",
+      "type": "CALLS",
       "confidence": 1
     },
     {
-      "stableId": "edge:booking.service.cancelBooking->slot.service.releaseSlot",
-      "type": "CALLS",
+      "stableId": "edge:service-method:booking.service.cancelBooking->service-method:slot.service.releaseSlot",
       "from": "service-method:booking.service.cancelBooking",
       "to": "service-method:slot.service.releaseSlot",
+      "type": "CALLS",
       "confidence": 1
     },
     {
-      "stableId": "edge:booking.service.cancelBooking->notification.service.notifyOwner",
-      "type": "CALLS",
+      "stableId": "edge:service-method:booking.service.cancelBooking->service-method:notification.service.notifyOwner",
       "from": "service-method:booking.service.cancelBooking",
       "to": "service-method:notification.service.notifyOwner",
+      "type": "CALLS",
+      "confidence": 1
+    },
+    {
+      "stableId": "edge:service-method:booking.service.cancelBooking->entity:booking",
+      "from": "service-method:booking.service.cancelBooking",
+      "to": "entity:booking",
+      "type": "USES",
+      "confidence": 1
+    },
+    {
+      "stableId": "edge:service-method:payment.service.refund->entity:paymenttransaction",
+      "from": "service-method:payment.service.refund",
+      "to": "entity:paymenttransaction",
+      "type": "USES",
       "confidence": 1
     }
   ]

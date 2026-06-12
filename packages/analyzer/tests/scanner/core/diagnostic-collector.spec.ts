@@ -1,4 +1,4 @@
-import { DiagnosticCollector } from '../../src/scanner/diagnostic-collector';
+import { DiagnosticCollector } from '../../../src/scanner/core/diagnostic-collector';
 
 describe('DiagnosticCollector', () => {
   it('groups multiple diagnostics by code and counts them', () => {

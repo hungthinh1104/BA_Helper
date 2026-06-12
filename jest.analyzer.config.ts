@@ -6,7 +6,16 @@ const config: Config = {
   transform: {
     '^.+\\.ts$': ['@swc/jest', {}],
   },
-  testPathIgnorePatterns: ['/node_modules/', '/dist/', '/build/', '/tests/fixtures/'],
+  roots: [
+    '<rootDir>/packages/analyzer/tests',
+    '<rootDir>/tests/analyzer'
+  ],
+  testPathIgnorePatterns: [
+    '/node_modules/', 
+    '/dist/', 
+    '/build/', 
+    '/tests/fixtures/'
+  ],
 };
 
 export default config;

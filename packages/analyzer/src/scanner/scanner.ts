@@ -2,7 +2,7 @@ import { Project } from 'ts-morph';
 import { join, relative } from 'node:path';
 import { ANALYZER_VERSION } from './scanner.types';
 import type { ScanInput, ScanResult, ScanArtifact } from './scanner.types';
-import { computeArtifactContentHash } from './content-hasher';
+import { computeArtifactContentHash } from './core/content-hasher';
 
 export const scanFixture = (input: ScanInput): ScanResult => {
   if (input.fixturePath.includes('express-unsupported')) {

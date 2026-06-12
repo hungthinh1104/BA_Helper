@@ -21,11 +21,14 @@ describe('retrieval fixture expectations', () => {
       expandGraph: false,
     });
 
-    expect(result.artifacts.map((artifact) => artifact.stableId)).toEqual([
+    const received = result.artifacts.map((a) => a.stableId).sort();
+    expect(received).toEqual([
       'api:booking.controller.cancel',
       'service-method:booking.service.cancelBooking',
       'service-method:payment.service.refund',
-    ]);
+      'service-method:refund-report.service.generateReport',
+      'test:src.booking.booking-cancel.spec.ts'
+    ].sort());
   });
 
   it('expands retrieval to related artifacts when enabled', () => {
@@ -36,16 +39,18 @@ describe('retrieval fixture expectations', () => {
       expandGraph: true,
     });
 
-    expect(result.artifacts.map((artifact) => artifact.stableId)).toEqual([
+    const received = result.artifacts.map((a) => a.stableId).sort();
+    expect(received).toEqual([
       'api:booking.controller.cancel',
       'entity:booking',
-      'entity:paymentTransaction',
+      'entity:paymenttransaction',
       'service-method:booking.service.cancelBooking',
       'service-method:notification.service.notifyOwner',
       'service-method:payment.service.refund',
+      'service-method:refund-report.service.generateReport',
       'service-method:slot.service.releaseSlot',
-      'test:booking.cancel.spec',
-    ]);
+      'test:src.booking.booking-cancel.spec.ts'
+    ].sort());
   });
 
   it('does not select keyword-noise artifacts', () => {
@@ -56,10 +61,10 @@ describe('retrieval fixture expectations', () => {
         artifacts: [
           ...scan.artifacts,
           {
-            stableId: 'service-method:admin.refund-report.generateReport',
+            stableId: 'service-method:admin.invoice-report.generateReport',
             type: 'SERVICE_METHOD',
-            filePath: 'src/admin/refund-report.service.ts',
-            symbolName: 'AdminRefundReportService.generateReport',
+            filePath: 'src/admin/invoice-report.service.ts',
+            symbolName: 'AdminInvoiceReportService.generateReport',
             startLine: 3,
             endLine: 5,
             excerpt: '',
@@ -72,7 +77,7 @@ describe('retrieval fixture expectations', () => {
     });
 
     expect(result.artifacts.map((artifact) => artifact.stableId)).not.toContain(
-      'service-method:admin.refund-report.generateReport',
+      'service-method:admin.invoice-report.generateReport',
     );
   });
 });

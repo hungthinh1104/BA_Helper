@@ -113,4 +113,76 @@ export type ScanResult = {
   artifacts: ScanArtifact[];
   coverage: ScanCoverage;
   sourceRoot?: string;
+  diagnostics?: DiagnosticItem[];
 };
+
+// ── Phase 37A: Scanner Adapter Contract ────────────────────────────────────────
+
+import { DiagnosticItem } from './core/diagnostic-collector';
+
+export type SupportedLanguage = 'typescript' | 'java' | 'go' | 'python' | 'csharp' | 'php' | 'ruby';
+export type SupportedFramework = 'nestjs' | 'spring' | 'gin' | 'net/http' | 'fastapi' | 'aspnetcore' | 'laravel' | 'rails';
+
+export type ScannerCapabilityStatus = 'STABLE' | 'PARTIAL' | 'EXPERIMENTAL';
+export type ScannerCapabilityConfidence = 'HIGH' | 'MEDIUM' | 'LOW';
+
+export type UniversalArtifactKind = 
+  | 'API_ENDPOINT'
+  | 'DOMAIN_SERVICE'
+  | 'DATA_MODEL'
+  | 'TEST_CASE'
+  | 'UNKNOWN';
+
+export type ScannerCapabilityProfile = {
+  language: SupportedLanguage;
+  framework?: SupportedFramework;
+  status: ScannerCapabilityStatus;
+  supportedArtifactKinds: UniversalArtifactKind[];
+  supportedPatterns: string[];
+  partialPatterns: string[];
+  unsupportedPatterns: string[];
+  confidence: ScannerCapabilityConfidence;
+  notes?: string[];
+};
+
+export type ScanAdapterInput = {
+  rootDir: string;
+  repositoryId?: string;
+  projectId?: string;
+  snapshotId?: string;
+  // internal fields to pass through from old ScanInput
+  fixturePath?: string;
+  tsFiles?: string[];
+  javaFiles?: string[];
+  goFiles?: string[];
+  pyFiles?: string[];
+  csFiles?: string[];
+  phpFiles?: string[];
+  rbFiles?: string[];
+  coverage?: ScanCoverage;
+};
+
+export type DependencyEdge = {
+  fromArtifactId: string;
+  toArtifactId: string;
+  type: string;
+};
+
+export type ScanAdapterResult = {
+  artifacts: ScanArtifact[];
+  dependencyEdges: DependencyEdge[];
+  diagnostics: DiagnosticItem[];
+  capability: ScannerCapabilityProfile;
+};
+
+export type ScannerAdapter = {
+  adapterId: string;
+  adapterVersion: string;
+  language: SupportedLanguage;
+  framework?: SupportedFramework;
+  capability: ScannerCapabilityProfile;
+
+  canScan(input: ScanAdapterInput): boolean;
+  scan(input: ScanAdapterInput): Promise<ScanAdapterResult>;
+};
+

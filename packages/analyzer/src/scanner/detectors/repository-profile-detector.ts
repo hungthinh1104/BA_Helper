@@ -7,7 +7,7 @@ import type {
   RepositoryProfileDomain,
   RepositoryProfileFramework,
   RepositoryProfileLanguage,
-} from './scanner.types';
+} from '../scanner.types';
 
 const PROFILE_VERSION = 'repo-profile@0.1.0';
 const MAX_ROOTS = 20;

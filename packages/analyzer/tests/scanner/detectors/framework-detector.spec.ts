@@ -1,9 +1,9 @@
 import { join } from 'node:path';
-import { FrameworkDetector } from './framework-detector';
+import { FrameworkDetector } from '../../../src/scanner/detectors/framework-detector';
 
 describe('FrameworkDetector', () => {
   it('detects Java Spring Boot from the pilot fixture', async () => {
-    const fixturePath = join(__dirname, '../../../../tests/fixtures/java-spring-basic');
+    const fixturePath = join(__dirname, '../../../../../tests/fixtures/java-spring-basic');
     const result = await FrameworkDetector.detect(fixturePath);
 
     expect(result.isSupported).toBe(true);
