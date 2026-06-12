@@ -1,3 +1,5 @@
+export * from './scanner/scanner.types';
+export * from './scanner/scanner-adapter.registry';
 export * from './fixture/fixture-analyzer';
 export * from './scanner/scanner';
 export * from './scanner/extractors/java-spring-scanner';
@@ -6,7 +8,6 @@ export * from './scanner/extractors/python-scanner';
 export * from './scanner/extractors/csharp-scanner';
 export * from './scanner/extractors/php-laravel-scanner';
 export * from './scanner/extractors/ruby-rails-scanner';
-export * from './scanner/scanner.types';
 export * from './graph/graph';
 export * from './graph/graph.types';
 export * from './retrieval/retrieval';
@@ -19,4 +20,3 @@ export * from './scanner/core/secret-redactor';
 export * from './scanner/detectors/framework-detector';
 export * from './scanner/core/diagnostic-collector';
 export * from './scanner/detectors/repository-profile-detector';
-export * from './scanner/scanner-adapter.registry';

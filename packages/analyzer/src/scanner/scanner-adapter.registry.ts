@@ -15,9 +15,7 @@ export class ScannerAdapterRegistry {
     this.registerAdapter(new JavaSpringAdapter());
     this.registerAdapter(new GoAdapter('gin'));
     this.registerAdapter(new GoAdapter('net/http'));
-    this.registerAdapter(new GoAdapter());
     this.registerAdapter(new PythonAdapter('fastapi'));
-    this.registerAdapter(new PythonAdapter());
     this.registerAdapter(new CSharpAdapter('aspnetcore'));
     this.registerAdapter(new PhpLaravelAdapter());
     this.registerAdapter(new RubyRailsAdapter());
@@ -29,7 +27,7 @@ export class ScannerAdapterRegistry {
 
   tryGetAdapter(language: string, framework?: string): ScannerAdapter | null {
     const lang = language.toLowerCase();
-    const fw = framework?.toLowerCase();
+    const fw = this.normalizeFramework(framework);
 
     for (const adapter of this.adapters) {
       if (adapter.language !== lang) continue;
@@ -46,6 +44,12 @@ export class ScannerAdapterRegistry {
     }
 
     return null;
+  }
+
+  private normalizeFramework(framework?: string): string | undefined {
+    const normalized = framework?.toLowerCase();
+    if (normalized === 'spring') return 'spring_boot';
+    return normalized;
   }
 
   getAdapter(language: string, framework?: string): ScannerAdapter {

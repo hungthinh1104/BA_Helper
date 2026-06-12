@@ -11,7 +11,7 @@ describe('ScannerAdapterRegistry', () => {
   describe('Capability Profiles', () => {
     it('returns deterministic capabilities', () => {
       const capabilities = registry.listCapabilities();
-      expect(capabilities.length).toBe(10);
+      expect(capabilities.length).toBe(8);
 
       const tsCap = capabilities.find(c => c.language === 'typescript');
       expect(tsCap).toBeDefined();
@@ -69,7 +69,7 @@ describe('ScannerAdapterRegistry', () => {
       const adapter = registry.getAdapter('java', 'spring');
       expect(adapter).toBeDefined();
       expect(adapter.language).toBe('java');
-      expect(adapter.framework).toBe('spring');
+      expect(adapter.framework).toBe('spring_boot');
     });
 
     it('selects Go adapter', () => {

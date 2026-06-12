@@ -9,13 +9,13 @@ describe('Go HTTP Impact Analysis Smoke Evaluation', () => {
   it('runs a deterministic scan-to-impact evaluation for Go HTTP endpoints', async () => {
     // 1. Profile Detection Simulation
     const language = 'go';
-    // Registry now has separate gin and net/http adapters plus a generic one. Let's select generic.
-    // Wait, the generic go adapter captures both net/http and gin in our current regex based implementation.
+    const framework = 'net/http';
     
     // 2. Ensure adapter is selected correctly
-    const adapter = registry.getAdapter(language);
+    const adapter = registry.getAdapter(language, framework);
     expect(adapter).toBeDefined();
     expect(adapter.language).toBe('go');
+    expect(adapter.framework).toBe('net/http');
 
     // 3. Enumerate & Scan
     const enumerator = new SafeFileEnumerator(fixturePath);

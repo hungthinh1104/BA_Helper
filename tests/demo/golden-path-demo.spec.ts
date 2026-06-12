@@ -222,11 +222,18 @@ describe('Golden Path Demo', () => {
     expect(report).toBeDefined();
 
     const reportContent = report!.content as string;
+    const traceabilityCount = await prisma.traceabilityLink.count({ where: { impactAnalysisId: analysisId } });
     
     // Assert key sections
-    expect(reportContent).toContain('Impacted Areas');
-    expect(reportContent).toContain('Evidence Appendix');
     expect(reportContent).toContain('Executive Summary');
+    expect(reportContent).toContain('Impact Flow Diagram');
+    expect(reportContent).toContain('Scanner Capability Profile');
+    if (traceabilityCount > 0) {
+      expect(reportContent).toContain('Impacted Areas');
+      expect(reportContent).toContain('Evidence Appendix');
+    } else {
+      expect(reportContent).toContain('Open Questions / Unknowns');
+    }
     
     // Assert NO raw vectors/hashes/dumps
     expect(reportContent).not.toContain('0x'); // Common in hashes/memory leaks

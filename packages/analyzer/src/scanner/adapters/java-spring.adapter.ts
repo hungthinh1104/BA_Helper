@@ -12,11 +12,11 @@ export class JavaSpringAdapter implements ScannerAdapter {
   adapterId = 'java-spring';
   adapterVersion = ANALYZER_VERSION;
   language = 'java' as const;
-  framework = 'spring' as const;
+  framework = 'spring_boot' as const;
 
   capability: ScannerCapabilityProfile = {
     language: 'java',
-    framework: 'spring',
+    framework: 'spring_boot',
     status: 'PARTIAL',
     confidence: 'MEDIUM',
     supportedArtifactKinds: ['API_ENDPOINT', 'DOMAIN_SERVICE', 'DATA_MODEL', 'TEST_CASE'],
@@ -81,10 +81,16 @@ export class JavaSpringAdapter implements ScannerAdapter {
       diagnostics.push(...legacyResult.diagnostics);
     }
 
+    const mappedArtifacts = legacyResult.artifacts.map((a: any) => ({
+      ...a,
+      type: a.type === 'SPRING_CONTROLLER_METHOD' ? 'HTTP_ENDPOINT' : a.type,
+      artifactType: a.artifactType === 'SPRING_CONTROLLER_METHOD' ? 'HTTP_ENDPOINT' : a.artifactType,
+    }));
+
     return {
-      artifacts: legacyResult.artifacts,
-      dependencyEdges: [], 
-      diagnostics,
+      artifacts: mappedArtifacts,
+      dependencyEdges: [],
+      diagnostics: diagnostics,
       capability: this.capability,
     };
   }

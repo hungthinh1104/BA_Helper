@@ -48,6 +48,14 @@ jest.mock('@ba-helper/analyzer', () => {
       return this.items;
     }
   },
+  scanProject: jest.fn(),
+  scanJavaSpringProject: jest.fn(),
+  scanGoHttpProject: jest.fn(),
+  scanFixture: jest.fn(),
+  };
+});
+
+jest.mock('@ba-helper/analyzer/src/scanner/scanner-adapter.registry', () => ({
   ScannerAdapterRegistry: class {
     getAdapter(lang: string, fw: string) {
       if (lang === 'UNKNOWN' || lang === 'python') {
@@ -102,12 +110,7 @@ jest.mock('@ba-helper/analyzer', () => {
       };
     }
   },
-  scanProject: jest.fn(),
-  scanJavaSpringProject: jest.fn(),
-  scanGoHttpProject: jest.fn(),
-  scanFixture: jest.fn(),
-  };
-});
+}));
 
 const analyzer = jest.requireMock('@ba-helper/analyzer') as {
   GitHubUrlValidator: { validate: jest.Mock };
@@ -204,7 +207,7 @@ describe('RunScanJobUseCase', () => {
     analyzer.GitRepositoryFetcher.fetch.mockResolvedValue({
       commitSha: '0123456789abcdef0123456789abcdef01234567',
     });
-    analyzer.FrameworkDetector.detect.mockResolvedValue({ isSupported: true });
+    analyzer.FrameworkDetector.detect.mockResolvedValue({ isSupported: true, language: 'typescript', framework: 'nestjs' });
     analyzer.RepositoryProfileDetector.detect.mockResolvedValue({
       domain: 'BOOKING',
       language: 'TYPESCRIPT',
@@ -339,7 +342,7 @@ describe('RunScanJobUseCase', () => {
     (fs.rm as jest.Mock).mockResolvedValue(undefined);
     analyzer.GitHubUrlValidator.validate.mockReturnValue({ isValid: true });
     analyzer.GitRepositoryFetcher.fetch.mockResolvedValue({ commitSha: 'new-commit' });
-    analyzer.FrameworkDetector.detect.mockResolvedValue({ isSupported: true });
+    analyzer.FrameworkDetector.detect.mockResolvedValue({ isSupported: true, language: 'typescript', framework: 'nestjs' });
     analyzer.RepositoryProfileDetector.detect.mockResolvedValue({ domain: 'BOOKING', language: 'TYPESCRIPT', framework: 'NESTJS' });
     analyzer.SafeFileEnumerator.mockImplementation(() => ({
       enumerate: jest.fn().mockResolvedValue({ tsFiles: [], allFiles: [], diagnostics: [], isPartial: false }),
@@ -406,7 +409,7 @@ describe('RunScanJobUseCase', () => {
     (fs.rm as jest.Mock).mockResolvedValue(undefined);
     analyzer.GitHubUrlValidator.validate.mockReturnValue({ isValid: true });
     analyzer.GitRepositoryFetcher.fetch.mockResolvedValue({ commitSha: 'req-commit' });
-    analyzer.FrameworkDetector.detect.mockResolvedValue({ isSupported: true });
+    analyzer.FrameworkDetector.detect.mockResolvedValue({ isSupported: true, language: 'typescript', framework: 'nestjs' });
     analyzer.RepositoryProfileDetector.detect.mockResolvedValue({ domain: 'BOOKING', language: 'TYPESCRIPT', framework: 'NESTJS' });
     analyzer.SafeFileEnumerator.mockImplementation(() => ({
       enumerate: jest.fn().mockResolvedValue({ tsFiles: [], allFiles: [], diagnostics: [], isPartial: false }),
@@ -433,7 +436,7 @@ describe('RunScanJobUseCase', () => {
     (fs.rm as jest.Mock).mockResolvedValue(undefined);
     analyzer.GitHubUrlValidator.validate.mockReturnValue({ isValid: true });
     analyzer.GitRepositoryFetcher.fetch.mockResolvedValue({ commitSha: 'unknown-commit' });
-    analyzer.FrameworkDetector.detect.mockResolvedValue({ isSupported: true });
+    analyzer.FrameworkDetector.detect.mockResolvedValue({ isSupported: true, language: 'python', framework: 'django' });
     
     // Simulate an unsupported language detected
     analyzer.RepositoryProfileDetector.detect.mockResolvedValue({ 
@@ -480,11 +483,11 @@ describe('RunScanJobUseCase', () => {
     (fs.rm as jest.Mock).mockResolvedValue(undefined);
     analyzer.GitHubUrlValidator.validate.mockReturnValue({ isValid: true });
     analyzer.GitRepositoryFetcher.fetch.mockResolvedValue({ commitSha: 'java-commit' });
-    analyzer.FrameworkDetector.detect.mockResolvedValue({ isSupported: true });
+    analyzer.FrameworkDetector.detect.mockResolvedValue({ isSupported: true, language: 'java', framework: 'spring_boot' });
     analyzer.RepositoryProfileDetector.detect.mockResolvedValue({ 
       domain: 'BOOKING', 
-      language: 'java', 
-      framework: 'spring',
+      language: 'JAVA', 
+      framework: 'SPRING_BOOT',
       architectureStyle: 'MODULAR_MONOLITH',
       sourceRoots: ['src/main/java'],
       testRoots: ['src/test/java'],
@@ -529,7 +532,7 @@ describe('RunScanJobUseCase', () => {
     (fs.rm as jest.Mock).mockResolvedValue(undefined);
     analyzer.GitHubUrlValidator.validate.mockReturnValue({ isValid: true });
     analyzer.GitRepositoryFetcher.fetch.mockResolvedValue({ commitSha: 'diag-fail-commit' });
-    analyzer.FrameworkDetector.detect.mockResolvedValue({ isSupported: true });
+    analyzer.FrameworkDetector.detect.mockResolvedValue({ isSupported: true, language: 'typescript', framework: 'nestjs' });
     analyzer.RepositoryProfileDetector.detect.mockResolvedValue({ domain: 'BOOKING', language: 'TYPESCRIPT', framework: 'NESTJS' });
     analyzer.SafeFileEnumerator.mockImplementation(() => ({
       enumerate: jest.fn().mockResolvedValue({ tsFiles: [], allFiles: [], diagnostics: [], isPartial: false }),

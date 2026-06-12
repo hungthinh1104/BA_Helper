@@ -2,6 +2,7 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { FrameworkDetector, RepositoryProfileDetector } from '../../packages/analyzer/src';
+import type { DetectedRepositoryProfile } from '../../packages/analyzer/src';
 
 const writeJson = async (filePath: string, value: unknown) => {
   await fs.mkdir(dirname(filePath), { recursive: true });
@@ -12,6 +13,13 @@ const safeRm = async (targetPath: string) => {
   await fs.rm(targetPath, { recursive: true, force: true });
 };
 
+const toProfileFrameworkHint = (framework?: string): DetectedRepositoryProfile['framework'] | undefined => {
+  if (framework === 'nestjs') return 'NESTJS';
+  if (framework === 'spring_boot') return 'SPRING_BOOT';
+  if (framework === 'generic_typescript') return 'GENERIC_TYPESCRIPT';
+  return undefined;
+};
+
 describe('RepositoryProfileDetector', () => {
   it('detects a NestJS fixture profile with bounded roots', async () => {
     const fixturePath = resolve(__dirname, '../fixtures/nestjs-booking-with-payment');
@@ -19,7 +27,7 @@ describe('RepositoryProfileDetector', () => {
     const framework = await FrameworkDetector.detect(fixturePath);
     const profile = await RepositoryProfileDetector.detect({
       rootDir: fixturePath,
-      frameworkHint: framework.framework,
+      frameworkHint: toProfileFrameworkHint(framework.framework),
     });
 
     expect(profile.language).toBe('TYPESCRIPT');
@@ -55,12 +63,12 @@ describe('RepositoryProfileDetector', () => {
       const framework = await FrameworkDetector.detect(tempDir);
       const profile = await RepositoryProfileDetector.detect({
         rootDir: tempDir,
-        frameworkHint: framework.framework,
+        frameworkHint: toProfileFrameworkHint(framework.framework),
         unsupportedReason: framework.reason,
       });
 
       expect(framework.isSupported).toBe(false);
-      expect(framework.framework).toBe('GENERIC_TYPESCRIPT');
+      expect(framework.framework).toBe('generic_typescript');
       expect(profile.language).toBe('TYPESCRIPT');
       expect(profile.framework).toBe('GENERIC_TYPESCRIPT');
       expect(profile.sourceRoots).toContain('src');
@@ -95,7 +103,7 @@ describe('RepositoryProfileDetector', () => {
       const framework = await FrameworkDetector.detect(tempDir);
       const profile = await RepositoryProfileDetector.detect({
         rootDir: tempDir,
-        frameworkHint: framework.framework,
+        frameworkHint: toProfileFrameworkHint(framework.framework),
       });
 
       expect(profile.domain).toBe('UNKNOWN');
@@ -110,11 +118,11 @@ describe('RepositoryProfileDetector', () => {
 
     const first = await RepositoryProfileDetector.detect({
       rootDir: fixturePath,
-      frameworkHint: framework.framework,
+      frameworkHint: toProfileFrameworkHint(framework.framework),
     });
     const second = await RepositoryProfileDetector.detect({
       rootDir: fixturePath,
-      frameworkHint: framework.framework,
+      frameworkHint: toProfileFrameworkHint(framework.framework),
     });
 
     expect(second).toEqual(first);

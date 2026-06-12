@@ -121,7 +121,7 @@ export type ScanResult = {
 import { DiagnosticItem } from './core/diagnostic-collector';
 
 export type SupportedLanguage = 'typescript' | 'java' | 'go' | 'python' | 'csharp' | 'php' | 'ruby';
-export type SupportedFramework = 'nestjs' | 'spring' | 'gin' | 'net/http' | 'fastapi' | 'aspnetcore' | 'laravel' | 'rails';
+export type SupportedFramework = 'nestjs' | 'spring_boot' | 'gin' | 'net/http' | 'fastapi' | 'aspnetcore' | 'laravel' | 'rails';
 
 export type ScannerCapabilityStatus = 'STABLE' | 'PARTIAL' | 'EXPERIMENTAL';
 export type ScannerCapabilityConfidence = 'HIGH' | 'MEDIUM' | 'LOW';

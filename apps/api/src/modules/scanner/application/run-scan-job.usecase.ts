@@ -15,9 +15,9 @@ import {
   DiagnosticCollector,
   scanJavaSpringProject,
   GitHubUrlValidator,
-  GitRepositoryFetcher,
-  ScannerAdapterRegistry
+  GitRepositoryFetcher
 } from '@ba-helper/analyzer';
+import { ScannerAdapterRegistry } from '@ba-helper/analyzer/src/scanner/scanner-adapter.registry';
 import { PrismaService } from '../../prisma/prisma.service';
 import { QueueService } from '../../queue/queue.service';
 import { EvidenceRepository } from '../../evidence/infrastructure/evidence.repository';
@@ -65,6 +65,13 @@ const safeRm = async (targetDir?: string): Promise<void> => {
   }
 };
 
+const toProfileFrameworkHint = (framework?: string): DetectedRepositoryProfile['framework'] | undefined => {
+  if (framework === 'nestjs') return 'NESTJS';
+  if (framework === 'spring_boot') return 'SPRING_BOOT';
+  if (framework === 'generic_typescript') return 'GENERIC_TYPESCRIPT';
+  return undefined;
+};
+
 @Injectable()
 export class RunScanJobUseCase {
   private readonly logger = new Logger(RunScanJobUseCase.name);
@@ -108,7 +115,11 @@ export class RunScanJobUseCase {
       let coverageStatus: 'READY' | 'PARTIAL' = 'READY';
       
       const sourceRoot = job.repository.canonicalUrl;
-      const urlValidation = GitHubUrlValidator.validate(sourceRoot);
+      const isLocalFixtureSource =
+        process.env.NODE_ENV === 'test' && (sourceRoot.startsWith('/') || sourceRoot.startsWith('file://'));
+      const urlValidation = isLocalFixtureSource
+        ? { isValid: true }
+        : GitHubUrlValidator.validate(sourceRoot);
 
       if (urlValidation.isValid) {
         currentStage = ScanJobStage.CLONING_REPO;
@@ -142,7 +153,7 @@ export class RunScanJobUseCase {
         const frameworkResult = await FrameworkDetector.detect(tempDir);
         repositoryProfile = await RepositoryProfileDetector.detect({
           rootDir: tempDir,
-          frameworkHint: frameworkResult.framework,
+          frameworkHint: toProfileFrameworkHint(frameworkResult.framework),
           unsupportedReason: frameworkResult.isSupported ? undefined : frameworkResult.reason,
         });
         if (!frameworkResult.isSupported) {
@@ -182,8 +193,8 @@ export class RunScanJobUseCase {
         let adapter;
         try {
           adapter = this.scannerAdapterRegistry.getAdapter(
-            repositoryProfile?.language || 'UNKNOWN',
-            repositoryProfile?.framework || 'UNKNOWN'
+            frameworkResult?.language || 'UNKNOWN',
+            frameworkResult?.framework || 'UNKNOWN'
           );
         } catch (e) {
           collector.add({
@@ -202,6 +213,11 @@ export class RunScanJobUseCase {
           fixturePath: tempDir,
           tsFiles: enumResult.tsFiles,
           javaFiles: enumResult.javaFiles,
+          goFiles: enumResult.goFiles,
+          pyFiles: enumResult.pyFiles,
+          csFiles: enumResult.csFiles,
+          phpFiles: enumResult.phpFiles,
+          rbFiles: enumResult.rbFiles,
           coverage: scanCoverage,
         });
 
@@ -344,13 +360,17 @@ export class RunScanJobUseCase {
       });
 
       if (repositoryProfile) {
+        const fwUpperCase = repositoryProfile.framework.toUpperCase();
+        const validFramework = ['NESTJS', 'SPRING_BOOT', 'GENERIC_TYPESCRIPT'].includes(fwUpperCase) ? fwUpperCase : 'UNKNOWN';
+        const validLanguage = ['TYPESCRIPT', 'JAVA'].includes(repositoryProfile.language.toUpperCase()) ? repositoryProfile.language.toUpperCase() : 'UNKNOWN';
+
         await this.prisma.repositoryProfile.upsert({
           where: { snapshotId: snapshot.id },
           create: {
             snapshotId: snapshot.id,
             domain: repositoryProfile.domain,
-            language: repositoryProfile.language,
-            framework: repositoryProfile.framework,
+            language: validLanguage as any,
+            framework: validFramework as any,
             architectureStyle: repositoryProfile.architectureStyle,
             sourceRoots:
               repositoryProfile.sourceRoots as unknown as import('@prisma/client').Prisma.InputJsonValue,
@@ -363,8 +383,8 @@ export class RunScanJobUseCase {
           },
           update: {
             domain: repositoryProfile.domain,
-            language: repositoryProfile.language,
-            framework: repositoryProfile.framework,
+            language: validLanguage as any,
+            framework: validFramework as any,
             architectureStyle: repositoryProfile.architectureStyle,
             sourceRoots:
               repositoryProfile.sourceRoots as unknown as import('@prisma/client').Prisma.InputJsonValue,

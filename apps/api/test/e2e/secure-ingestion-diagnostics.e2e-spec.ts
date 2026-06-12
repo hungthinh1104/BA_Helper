@@ -154,7 +154,11 @@ describe('Secure Ingestion Diagnostics (E2E)', () => {
     analyzer.GitRepositoryFetcher.fetch.mockResolvedValue({
       commitSha: '0123456789abcdef0123456789abcdef01234567',
     });
-    analyzer.FrameworkDetector.detect.mockResolvedValue({ isSupported: true, framework: 'NESTJS' });
+    analyzer.FrameworkDetector.detect.mockResolvedValue({
+      isSupported: true,
+      language: 'typescript',
+      framework: 'nestjs',
+    });
     analyzer.RepositoryProfileDetector.detect.mockResolvedValue({
       domain: 'BOOKING',
       language: 'TYPESCRIPT',
@@ -294,7 +298,8 @@ describe('Secure Ingestion Diagnostics (E2E)', () => {
     });
     analyzer.FrameworkDetector.detect.mockResolvedValue({
       isSupported: false,
-      framework: 'GENERIC_TYPESCRIPT',
+      language: 'typescript',
+      framework: 'generic_typescript',
       reason: 'Express repositories are not supported in the MVP.',
     });
     analyzer.RepositoryProfileDetector.detect.mockResolvedValue({

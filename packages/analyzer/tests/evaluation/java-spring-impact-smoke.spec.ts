@@ -9,13 +9,13 @@ describe('Java/Spring Impact Analysis Smoke Evaluation', () => {
   it('runs a deterministic scan-to-impact evaluation for Java/Spring', async () => {
     // 1. Profile Detection Simulation
     const language = 'java';
-    const framework = 'spring';
+    const framework = 'spring_boot';
 
     // 2. Ensure adapter is selected correctly
     const adapter = registry.getAdapter(language, framework);
     expect(adapter).toBeDefined();
     expect(adapter.language).toBe('java');
-    expect(adapter.framework).toBe('spring');
+    expect(adapter.framework).toBe('spring_boot');
 
     // 3. Enumerate & Scan
     const enumerator = new SafeFileEnumerator(fixturePath);
@@ -40,7 +40,7 @@ describe('Java/Spring Impact Analysis Smoke Evaluation', () => {
     expect(capabilityCode).toBeDefined();
     expect(capabilityCode?.payload).toMatchObject({
       language: 'java',
-      framework: 'spring',
+      framework: 'spring_boot',
       status: 'PARTIAL',
       confidence: 'MEDIUM',
     });

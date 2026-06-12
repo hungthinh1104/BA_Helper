@@ -6,7 +6,7 @@ describe('Scanner Capability Matrix & Regression Lockdown', () => {
   describe('Explicit Adapter Resolution', () => {
     const supportedPairs = [
       { lang: 'typescript', fw: 'nestjs', expectedStatus: 'STABLE', expectedConfidence: 'HIGH' },
-      { lang: 'java', fw: 'spring', expectedStatus: 'PARTIAL', expectedConfidence: 'MEDIUM' },
+      { lang: 'java', fw: 'spring_boot', expectedStatus: 'PARTIAL', expectedConfidence: 'MEDIUM' },
       { lang: 'go', fw: 'net/http', expectedStatus: 'EXPERIMENTAL', expectedConfidence: 'LOW' },
       { lang: 'go', fw: 'gin', expectedStatus: 'EXPERIMENTAL', expectedConfidence: 'LOW' },
       { lang: 'python', fw: 'fastapi', expectedStatus: 'EXPERIMENTAL', expectedConfidence: 'LOW' },
@@ -52,7 +52,7 @@ describe('Scanner Capability Matrix & Regression Lockdown', () => {
 
   describe('Artifact Integrity & Diagnostic Emission', () => {
     const testCases = [
-      { lang: 'java', fw: 'spring', fileField: 'javaFiles', files: ['Test.java'] },
+      { lang: 'java', fw: 'spring_boot', fileField: 'javaFiles', files: ['Test.java'] },
       { lang: 'go', fw: 'gin', fileField: 'goFiles', files: ['main.go'] },
       { lang: 'python', fw: 'fastapi', fileField: 'pyFiles', files: ['main.py'] },
       { lang: 'csharp', fw: 'aspnetcore', fileField: 'csFiles', files: ['Controller.cs'] },

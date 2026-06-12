@@ -7,7 +7,7 @@ describe('FrameworkDetector', () => {
     const result = await FrameworkDetector.detect(fixturePath);
 
     expect(result.isSupported).toBe(true);
-    expect(result.language).toBe('JAVA');
-    expect(result.framework).toBe('SPRING_BOOT');
+    expect(result.language).toBe('java');
+    expect(result.framework).toBe('spring_boot');
   });
 });
