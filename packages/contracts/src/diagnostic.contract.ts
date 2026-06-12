@@ -147,8 +147,8 @@ export type DomainPackAppliedDiagnosticPayload = z.infer<
 export const scannerCapabilitySummaryPayloadSchema = z.object({
   adapterId: z.string(),
   adapterVersion: z.string(),
-  language: z.enum(['typescript', 'java']),
-  framework: z.enum(['nestjs', 'spring']).optional(),
+  language: z.enum(['typescript', 'java', 'go', 'python', 'csharp', 'php', 'ruby']),
+  framework: z.enum(['nestjs', 'spring_boot', 'gin', 'net/http', 'fastapi', 'aspnetcore', 'laravel', 'rails']).optional(),
   status: z.enum(['STABLE', 'PARTIAL', 'EXPERIMENTAL']),
   confidence: z.enum(['HIGH', 'MEDIUM', 'LOW']),
   supportedArtifactKindCount: z.number().int().nonnegative(),

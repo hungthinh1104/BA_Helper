@@ -18,6 +18,15 @@ export interface FrameworkDetectionResult {
   reason?: string;
 }
 
+const candidateLabel = (candidate: FrameworkDetectionResult): string =>
+  `${candidate.language ?? 'UNKNOWN'}:${candidate.framework ?? 'UNKNOWN'}`;
+
+const isPrimaryFrameworkCandidate = (candidate: FrameworkDetectionResult): boolean => {
+  if (candidate.isSupported) return true;
+  if (candidate.framework && !['UNKNOWN', 'generic_typescript'].includes(candidate.framework)) return true;
+  return /Django|Flask|Symfony|Echo|Sinatra/.test(candidate.reason ?? '');
+};
+
 const IGNORED_DIRS = new Set([
   '.git',
   'node_modules',
@@ -87,25 +96,33 @@ const hasJavaMarkers = async (rootDir: string): Promise<boolean> => {
 export class FrameworkDetector {
   static async detect(rootDir: string): Promise<FrameworkDetectionResult> {
     try {
-      const javaResult = await this.detectJava(rootDir);
-      if (javaResult) return javaResult;
+      const candidates = [
+        await this.detectJava(rootDir),
+        await this.detectPython(rootDir),
+        await this.detectGo(rootDir),
+        await this.detectPhp(rootDir),
+        await this.detectRuby(rootDir),
+        await this.detectCSharp(rootDir),
+        await this.detectTypeScript(rootDir),
+      ].filter((candidate): candidate is FrameworkDetectionResult => candidate !== null);
 
-      const pythonResult = await this.detectPython(rootDir);
-      if (pythonResult) return pythonResult;
+      const primaryCandidates = candidates.filter(isPrimaryFrameworkCandidate);
+      const primaryLanguages = new Set(primaryCandidates.map((candidate) => candidate.language));
+      if (primaryLanguages.size > 1) {
+        return {
+          isSupported: false,
+          language: 'UNKNOWN',
+          framework: 'UNKNOWN',
+          reason: `Ambiguous polyglot repository markers detected: ${primaryCandidates.map(candidateLabel).join(', ')}`,
+        };
+      }
 
-      const goResult = await this.detectGo(rootDir);
-      if (goResult) return goResult;
-
-      const phpResult = await this.detectPhp(rootDir);
-      if (phpResult) return phpResult;
-
-      const rubyResult = await this.detectRuby(rootDir);
-      if (rubyResult) return rubyResult;
-
-      const csharpResult = await this.detectCSharp(rootDir);
-      if (csharpResult) return csharpResult;
-
-      return await this.detectTypeScript(rootDir);
+      return primaryCandidates[0] ?? candidates.find((candidate) => candidate.language && candidate.language !== 'UNKNOWN') ?? candidates[0] ?? {
+        isSupported: false,
+        language: 'UNKNOWN',
+        framework: 'UNKNOWN',
+        reason: 'Supported project markers were not detected.',
+      };
     } catch (e) {
       return {
         isSupported: false,

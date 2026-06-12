@@ -52,6 +52,11 @@ enum RepositoryProfileDomain {
 enum RepositoryProfileLanguage {
   TYPESCRIPT
   JAVA
+  GO
+  PYTHON
+  CSHARP
+  PHP
+  RUBY
   UNKNOWN
 }
 
@@ -59,6 +64,12 @@ enum RepositoryProfileFramework {
   NESTJS
   SPRING_BOOT
   GENERIC_TYPESCRIPT
+  NET_HTTP
+  GIN
+  FASTAPI
+  ASPNETCORE
+  LARAVEL
+  RAILS
   UNKNOWN
 }
 

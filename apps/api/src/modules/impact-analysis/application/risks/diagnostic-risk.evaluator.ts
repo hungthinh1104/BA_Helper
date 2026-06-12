@@ -1,4 +1,58 @@
 export class DiagnosticRiskEvaluator {
+  static getPropagationMode(diagnostic: {
+    code: string;
+    severity?: string;
+    category?: string;
+    payload?: { candidateTerms?: string[]; [key: string]: unknown };
+  }): 'NONE' | 'LEXICAL' | 'CONTEXT' {
+    if (diagnostic.code === 'SCANNER_CAPABILITY_SUMMARY' || diagnostic.severity === 'INFO') {
+      return 'NONE';
+    }
+
+    const code = diagnostic.code;
+    if (
+      code.includes('_NOT_EXTRACTED') ||
+      code.includes('_BOUNDARY') ||
+      code.includes('_RESOLUTION_BOUNDARY') ||
+      code.includes('DI_BOUNDARY') ||
+      diagnostic.category === 'LIMIT' ||
+      diagnostic.category === 'FILE_SYSTEM' ||
+      diagnostic.category === 'SECURITY' ||
+      code.includes('FILE_LIMIT') ||
+      code.includes('REPO_LIMIT') ||
+      code.includes('TOO_LARGE') ||
+      code.includes('SKIPPED')
+    ) {
+      return 'CONTEXT';
+    }
+
+    if (
+      diagnostic.payload?.candidateTerms?.length &&
+      (
+        code.includes('UNKNOWN_ROUTER_PATTERN') ||
+        code.includes('ROUTE_UNSUPPORTED') ||
+        code.includes('DYNAMIC_ROUTE_UNSUPPORTED') ||
+        code.includes('RESOURCE_ROUTE_UNSUPPORTED') ||
+        code.includes('UNSUPPORTED')
+      )
+    ) {
+      return 'LEXICAL';
+    }
+
+    return 'NONE';
+  }
+
+  static buildStructuredInsightKey(diagnostic: {
+    code: string;
+    payload?: { candidateTerms?: string[]; relativePath?: string; unsupportedPattern?: string; [key: string]: unknown };
+    samplePaths?: string[];
+  }): string {
+    const candidateTerms = [...(diagnostic.payload?.candidateTerms ?? [])].sort().join(',');
+    const filePath = diagnostic.payload?.relativePath || diagnostic.samplePaths?.[0] || 'unknown';
+    const unsupportedPattern = diagnostic.payload?.unsupportedPattern || 'unknown';
+    return `${diagnostic.code}::${filePath}::${unsupportedPattern}::${candidateTerms}`;
+  }
+
   /**
    * Deterministically evaluates if any of the candidate terms derived from an unsupported
    * scanner diagnostic match the normalized requirement text.

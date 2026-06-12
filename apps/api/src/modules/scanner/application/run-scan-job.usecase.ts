@@ -69,6 +69,23 @@ const toProfileFrameworkHint = (framework?: string): DetectedRepositoryProfile['
   if (framework === 'nestjs') return 'NESTJS';
   if (framework === 'spring_boot') return 'SPRING_BOOT';
   if (framework === 'generic_typescript') return 'GENERIC_TYPESCRIPT';
+  if (framework === 'net/http') return 'NET_HTTP';
+  if (framework === 'gin') return 'GIN';
+  if (framework === 'fastapi') return 'FASTAPI';
+  if (framework === 'aspnetcore') return 'ASPNETCORE';
+  if (framework === 'laravel') return 'LARAVEL';
+  if (framework === 'rails') return 'RAILS';
+  return undefined;
+};
+
+const toProfileLanguageHint = (language?: string): DetectedRepositoryProfile['language'] | undefined => {
+  if (language === 'typescript') return 'TYPESCRIPT';
+  if (language === 'java') return 'JAVA';
+  if (language === 'go') return 'GO';
+  if (language === 'python') return 'PYTHON';
+  if (language === 'csharp') return 'CSHARP';
+  if (language === 'php') return 'PHP';
+  if (language === 'ruby') return 'RUBY';
   return undefined;
 };
 
@@ -153,6 +170,7 @@ export class RunScanJobUseCase {
         const frameworkResult = await FrameworkDetector.detect(tempDir);
         repositoryProfile = await RepositoryProfileDetector.detect({
           rootDir: tempDir,
+          languageHint: toProfileLanguageHint(frameworkResult.language),
           frameworkHint: toProfileFrameworkHint(frameworkResult.framework),
           unsupportedReason: frameworkResult.isSupported ? undefined : frameworkResult.reason,
         });
@@ -360,17 +378,13 @@ export class RunScanJobUseCase {
       });
 
       if (repositoryProfile) {
-        const fwUpperCase = repositoryProfile.framework.toUpperCase();
-        const validFramework = ['NESTJS', 'SPRING_BOOT', 'GENERIC_TYPESCRIPT'].includes(fwUpperCase) ? fwUpperCase : 'UNKNOWN';
-        const validLanguage = ['TYPESCRIPT', 'JAVA'].includes(repositoryProfile.language.toUpperCase()) ? repositoryProfile.language.toUpperCase() : 'UNKNOWN';
-
         await this.prisma.repositoryProfile.upsert({
           where: { snapshotId: snapshot.id },
           create: {
             snapshotId: snapshot.id,
             domain: repositoryProfile.domain,
-            language: validLanguage as any,
-            framework: validFramework as any,
+            language: repositoryProfile.language,
+            framework: repositoryProfile.framework,
             architectureStyle: repositoryProfile.architectureStyle,
             sourceRoots:
               repositoryProfile.sourceRoots as unknown as import('@prisma/client').Prisma.InputJsonValue,
@@ -383,8 +397,8 @@ export class RunScanJobUseCase {
           },
           update: {
             domain: repositoryProfile.domain,
-            language: validLanguage as any,
-            framework: validFramework as any,
+            language: repositoryProfile.language,
+            framework: repositoryProfile.framework,
             architectureStyle: repositoryProfile.architectureStyle,
             sourceRoots:
               repositoryProfile.sourceRoots as unknown as import('@prisma/client').Prisma.InputJsonValue,

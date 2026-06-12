@@ -35,12 +35,25 @@ export const repositoryProfileDomainSchema = z.enum([
 
 export const repositoryProfileLanguageSchema = z.enum([
 	'TYPESCRIPT',
+	'JAVA',
+	'GO',
+	'PYTHON',
+	'CSHARP',
+	'PHP',
+	'RUBY',
 	'UNKNOWN',
 ]);
 
 export const repositoryProfileFrameworkSchema = z.enum([
 	'NESTJS',
+	'SPRING_BOOT',
 	'GENERIC_TYPESCRIPT',
+	'NET_HTTP',
+	'GIN',
+	'FASTAPI',
+	'ASPNETCORE',
+	'LARAVEL',
+	'RAILS',
 	'UNKNOWN',
 ]);
 

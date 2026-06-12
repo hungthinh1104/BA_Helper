@@ -17,6 +17,23 @@ const toProfileFrameworkHint = (framework?: string): DetectedRepositoryProfile['
   if (framework === 'nestjs') return 'NESTJS';
   if (framework === 'spring_boot') return 'SPRING_BOOT';
   if (framework === 'generic_typescript') return 'GENERIC_TYPESCRIPT';
+  if (framework === 'net/http') return 'NET_HTTP';
+  if (framework === 'gin') return 'GIN';
+  if (framework === 'fastapi') return 'FASTAPI';
+  if (framework === 'aspnetcore') return 'ASPNETCORE';
+  if (framework === 'laravel') return 'LARAVEL';
+  if (framework === 'rails') return 'RAILS';
+  return undefined;
+};
+
+const toProfileLanguageHint = (language?: string): DetectedRepositoryProfile['language'] | undefined => {
+  if (language === 'typescript') return 'TYPESCRIPT';
+  if (language === 'java') return 'JAVA';
+  if (language === 'go') return 'GO';
+  if (language === 'python') return 'PYTHON';
+  if (language === 'csharp') return 'CSHARP';
+  if (language === 'php') return 'PHP';
+  if (language === 'ruby') return 'RUBY';
   return undefined;
 };
 
@@ -27,6 +44,7 @@ describe('RepositoryProfileDetector', () => {
     const framework = await FrameworkDetector.detect(fixturePath);
     const profile = await RepositoryProfileDetector.detect({
       rootDir: fixturePath,
+      languageHint: toProfileLanguageHint(framework.language),
       frameworkHint: toProfileFrameworkHint(framework.framework),
     });
 
@@ -63,6 +81,7 @@ describe('RepositoryProfileDetector', () => {
       const framework = await FrameworkDetector.detect(tempDir);
       const profile = await RepositoryProfileDetector.detect({
         rootDir: tempDir,
+        languageHint: toProfileLanguageHint(framework.language),
         frameworkHint: toProfileFrameworkHint(framework.framework),
         unsupportedReason: framework.reason,
       });
@@ -77,6 +96,45 @@ describe('RepositoryProfileDetector', () => {
     } finally {
       await safeRm(tempDir);
     }
+  });
+
+  it('aligns a Java Spring detector result to a persisted repository profile shape', async () => {
+    const fixturePath = resolve(__dirname, '../fixtures/java-spring-basic');
+
+    const framework = await FrameworkDetector.detect(fixturePath);
+    const profile = await RepositoryProfileDetector.detect({
+      rootDir: fixturePath,
+      languageHint: toProfileLanguageHint(framework.language),
+      frameworkHint: toProfileFrameworkHint(framework.framework),
+    });
+
+    expect(framework).toMatchObject({
+      isSupported: true,
+      language: 'java',
+      framework: 'spring_boot',
+    });
+    expect(profile.language).toBe('JAVA');
+    expect(profile.framework).toBe('SPRING_BOOT');
+    expect(profile.sourceRoots).toContain('src');
+  });
+
+  it('aligns FastAPI detector hints to non-TypeScript profile values', async () => {
+    const fixturePath = resolve(__dirname, '../fixtures/python-fastapi-basic');
+
+    const framework = await FrameworkDetector.detect(fixturePath);
+    const profile = await RepositoryProfileDetector.detect({
+      rootDir: fixturePath,
+      languageHint: toProfileLanguageHint(framework.language),
+      frameworkHint: toProfileFrameworkHint(framework.framework),
+    });
+
+    expect(framework).toMatchObject({
+      isSupported: true,
+      language: 'python',
+      framework: 'fastapi',
+    });
+    expect(profile.language).toBe('PYTHON');
+    expect(profile.framework).toBe('FASTAPI');
   });
 
   it('keeps weak domain evidence as UNKNOWN', async () => {
@@ -103,6 +161,7 @@ describe('RepositoryProfileDetector', () => {
       const framework = await FrameworkDetector.detect(tempDir);
       const profile = await RepositoryProfileDetector.detect({
         rootDir: tempDir,
+        languageHint: toProfileLanguageHint(framework.language),
         frameworkHint: toProfileFrameworkHint(framework.framework),
       });
 
@@ -118,10 +177,12 @@ describe('RepositoryProfileDetector', () => {
 
     const first = await RepositoryProfileDetector.detect({
       rootDir: fixturePath,
+      languageHint: toProfileLanguageHint(framework.language),
       frameworkHint: toProfileFrameworkHint(framework.framework),
     });
     const second = await RepositoryProfileDetector.detect({
       rootDir: fixturePath,
+      languageHint: toProfileLanguageHint(framework.language),
       frameworkHint: toProfileFrameworkHint(framework.framework),
     });
 

@@ -258,7 +258,7 @@ describe('MarkdownImpactReportBuilder', () => {
             {
               code: 'GO_DYNAMIC_ROUTE_UNSUPPORTED',
               message: 'Dynamic route variables are not supported',
-              severity: 'WARNING',
+              severity: 'WARN',
               category: 'SCANNER',
             },
           ] as unknown as import('@prisma/client').Prisma.JsonValue,

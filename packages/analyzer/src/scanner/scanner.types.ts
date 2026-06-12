@@ -78,12 +78,26 @@ export type RepositoryProfileDomain =
   | 'CUSTOM'
   | 'UNKNOWN';
 
-export type RepositoryProfileLanguage = 'TYPESCRIPT' | 'UNKNOWN';
+export type RepositoryProfileLanguage =
+  | 'TYPESCRIPT'
+  | 'JAVA'
+  | 'GO'
+  | 'PYTHON'
+  | 'CSHARP'
+  | 'PHP'
+  | 'RUBY'
+  | 'UNKNOWN';
 
 export type RepositoryProfileFramework =
   | 'NESTJS'
   | 'SPRING_BOOT'
   | 'GENERIC_TYPESCRIPT'
+  | 'NET_HTTP'
+  | 'GIN'
+  | 'FASTAPI'
+  | 'ASPNETCORE'
+  | 'LARAVEL'
+  | 'RAILS'
   | 'UNKNOWN';
 
 export type RepositoryProfileArchitectureStyle =
@@ -185,4 +199,3 @@ export type ScannerAdapter = {
   canScan(input: ScanAdapterInput): boolean;
   scan(input: ScanAdapterInput): Promise<ScanAdapterResult>;
 };
-

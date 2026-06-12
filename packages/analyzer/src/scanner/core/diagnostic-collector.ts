@@ -22,8 +22,19 @@ export interface DiagnosticItem {
 export class DiagnosticCollector {
   private diagnostics = new Map<string, DiagnosticItem>();
 
+  private buildKey(diagnostic: DiagnosticItem): string {
+    const payload = diagnostic.payload;
+    const candidateTerms = [...(payload?.candidateTerms ?? [])].sort().join(',');
+    return [
+      diagnostic.code,
+      payload?.relativePath ?? '',
+      payload?.unsupportedPattern ?? '',
+      candidateTerms,
+    ].join('::');
+  }
+
   add(diagnostic: DiagnosticItem) {
-    const key = diagnostic.code;
+    const key = this.buildKey(diagnostic);
     const existing = this.diagnostics.get(key);
 
     if (existing) {

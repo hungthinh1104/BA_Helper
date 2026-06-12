@@ -28,6 +28,7 @@ const TEST_SEGMENTS = new Set(['test', 'tests', '__tests__']);
 
 type DetectParams = {
   rootDir: string;
+  languageHint?: RepositoryProfileLanguage;
   frameworkHint?: RepositoryProfileFramework;
   unsupportedReason?: string;
 };
@@ -44,7 +45,7 @@ const pushUnique = (items: string[], value: string): void => {
   items.push(value);
 };
 
-const getTsRoot = (rootDir: string, filePath: string, isTestFile: boolean): string => {
+const getProfileRoot = (rootDir: string, filePath: string, isTestFile: boolean): string => {
   const relativeFile = normalizeRelative(rootDir, filePath);
   const segments = relativeFile.split('/');
   const srcIndex = segments.findIndex((segment) => segment === 'src');
@@ -60,7 +61,9 @@ const getTsRoot = (rootDir: string, filePath: string, isTestFile: boolean): stri
   return isTestFile ? path.posix.dirname(relativeFile) || '.' : path.posix.dirname(relativeFile) || '.';
 };
 
-const collectTypeScriptFiles = async (rootDir: string): Promise<string[]> => {
+const PROFILE_EXTENSIONS = ['.ts', '.tsx', '.java', '.go', '.py', '.cs', '.php', '.rb'];
+
+const collectProfileFiles = async (rootDir: string): Promise<string[]> => {
   const files: string[] = [];
   const queue: string[] = [rootDir];
 
@@ -86,7 +89,7 @@ const collectTypeScriptFiles = async (rootDir: string): Promise<string[]> => {
         continue;
       }
 
-      if (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx')) {
+      if (PROFILE_EXTENSIONS.some((extension) => entry.name.endsWith(extension))) {
         files.push(fullPath);
       }
     }
@@ -97,13 +100,13 @@ const collectTypeScriptFiles = async (rootDir: string): Promise<string[]> => {
 
 const detectArchitectureStyle = (
   rootDir: string,
-  tsFiles: string[],
+  sourceFiles: string[],
 ): {
   architectureStyle: RepositoryProfileArchitectureStyle;
   detectedMarkers: string[];
   confidence: number;
 } => {
-  const lowerPaths = tsFiles.map((filePath) => normalizeRelative(rootDir, filePath).toLowerCase());
+  const lowerPaths = sourceFiles.map((filePath) => normalizeRelative(rootDir, filePath).toLowerCase());
   const sourcePaths = lowerPaths.filter((filePath) => !filePath.includes('.spec.') && !filePath.includes('.test.'));
   const hasLayeredRoots = ['controllers/', 'services/', 'repositories/'].filter((segment) =>
     sourcePaths.some((filePath) => filePath.startsWith(segment) || filePath.includes(`/${segment}`)),
@@ -151,7 +154,7 @@ const DOMAIN_KEYWORDS: Array<{
 
 const detectDomain = async (
   rootDir: string,
-  tsFiles: string[],
+  sourceFiles: string[],
 ): Promise<{
   domain: RepositoryProfileDomain;
   detectedMarkers: string[];
@@ -159,7 +162,7 @@ const detectDomain = async (
 }> => {
   const keywordMatches = new Map<RepositoryProfileDomain, Set<string>>();
 
-  for (const filePath of tsFiles.slice(0, 200)) {
+  for (const filePath of sourceFiles.slice(0, 200)) {
     const relativeFile = normalizeRelative(rootDir, filePath).toLowerCase();
     for (const candidate of DOMAIN_KEYWORDS) {
       for (const term of candidate.terms) {
@@ -193,6 +196,18 @@ const detectDomain = async (
     detectedMarkers: Array.from(topMatches).slice(0, MAX_MARKERS),
     confidence: Math.min(0.9, 0.5 + topMatches.size * 0.1),
   };
+};
+
+const inferLanguageFromFiles = (sourceFiles: string[]): RepositoryProfileLanguage => {
+  const extensions = new Set(sourceFiles.map((filePath) => path.extname(filePath).toLowerCase()));
+  if (extensions.has('.ts') || extensions.has('.tsx')) return 'TYPESCRIPT';
+  if (extensions.has('.java')) return 'JAVA';
+  if (extensions.has('.go')) return 'GO';
+  if (extensions.has('.py')) return 'PYTHON';
+  if (extensions.has('.cs')) return 'CSHARP';
+  if (extensions.has('.php')) return 'PHP';
+  if (extensions.has('.rb')) return 'RUBY';
+  return 'UNKNOWN';
 };
 
 const buildDiagnostics = (params: {
@@ -229,20 +244,21 @@ const buildDiagnostics = (params: {
 
 export class RepositoryProfileDetector {
   static async detect(params: DetectParams): Promise<DetectedRepositoryProfile> {
-    const tsFiles = await collectTypeScriptFiles(params.rootDir);
-    const language: RepositoryProfileLanguage = tsFiles.length > 0 ? 'TYPESCRIPT' : 'UNKNOWN';
+    const sourceFiles = await collectProfileFiles(params.rootDir);
+    const language: RepositoryProfileLanguage = params.languageHint ?? inferLanguageFromFiles(sourceFiles);
     const framework = params.frameworkHint ?? (language === 'TYPESCRIPT' ? 'GENERIC_TYPESCRIPT' : 'UNKNOWN');
 
     const sourceRoots: string[] = [];
     const testRoots: string[] = [];
 
-    for (const filePath of tsFiles) {
+    for (const filePath of sourceFiles) {
       const relativeFile = normalizeRelative(params.rootDir, filePath).toLowerCase();
       const isTestFile =
         relativeFile.includes('.spec.') ||
         relativeFile.includes('.test.') ||
+        relativeFile.includes('_test.') ||
         relativeFile.split('/').some((segment) => TEST_SEGMENTS.has(segment));
-      const root = getTsRoot(params.rootDir, filePath, isTestFile);
+      const root = getProfileRoot(params.rootDir, filePath, isTestFile);
       if (isTestFile) {
         pushUnique(testRoots, root);
       } else {
@@ -250,8 +266,8 @@ export class RepositoryProfileDetector {
       }
     }
 
-    const architecture = detectArchitectureStyle(params.rootDir, tsFiles);
-    const domain = await detectDomain(params.rootDir, tsFiles);
+    const architecture = detectArchitectureStyle(params.rootDir, sourceFiles);
+    const domain = await detectDomain(params.rootDir, sourceFiles);
 
     return {
       domain: domain.domain,

@@ -103,7 +103,7 @@ export class MarkdownImpactReportBuilder {
     const capabilitySummary = diagnostics.find(d => d.code === 'SCANNER_CAPABILITY_SUMMARY');
     const unsupportedDiagnostics = diagnostics.filter(d => 
       d.code !== 'SCANNER_CAPABILITY_SUMMARY' && 
-      (d.code.includes('UNSUPPORTED') || d.severity === 'WARNING' || d.severity === 'ERROR')
+      (d.code.includes('UNSUPPORTED') || d.severity === 'WARN' || d.severity === 'ERROR')
     );
 
     if (capabilitySummary?.payload) {

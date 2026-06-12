@@ -93,14 +93,14 @@ func getRefunds(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) }`
     });
 
     return [
-      { name: 'typescript + nestjs', path: join(baseDir, 'nestjs-booking-with-payment') },
-      { name: 'java + spring', path: join(baseDir, 'java-spring-basic') },
-      { name: 'go + net-http', path: join(baseDir, 'go-http-basic') },
-      { name: 'go + gin', path: goGinDir },
-      { name: 'python + fastapi', path: join(baseDir, 'python-fastapi-basic') },
-      { name: 'csharp + aspnetcore', path: join(baseDir, 'csharp-aspnetcore-basic') },
-      { name: 'php + laravel', path: join(baseDir, 'php-laravel-basic') },
-      { name: 'ruby + rails', path: join(baseDir, 'ruby-rails-basic') },
+      { name: 'typescript + nestjs', path: join(baseDir, 'nestjs-booking-with-payment'), profile: { language: 'TYPESCRIPT', framework: 'NESTJS' } },
+      { name: 'java + spring', path: join(baseDir, 'java-spring-basic'), profile: { language: 'JAVA', framework: 'SPRING_BOOT' } },
+      { name: 'go + net-http', path: join(baseDir, 'go-http-basic'), profile: { language: 'GO', framework: 'NET_HTTP' } },
+      { name: 'go + gin', path: goGinDir, profile: { language: 'GO', framework: 'GIN' } },
+      { name: 'python + fastapi', path: join(baseDir, 'python-fastapi-basic'), profile: { language: 'PYTHON', framework: 'FASTAPI' } },
+      { name: 'csharp + aspnetcore', path: join(baseDir, 'csharp-aspnetcore-basic'), profile: { language: 'CSHARP', framework: 'ASPNETCORE' } },
+      { name: 'php + laravel', path: join(baseDir, 'php-laravel-basic'), profile: { language: 'PHP', framework: 'LARAVEL' } },
+      { name: 'ruby + rails', path: join(baseDir, 'ruby-rails-basic'), profile: { language: 'RUBY', framework: 'RAILS' } },
     ];
   };
 
@@ -159,11 +159,21 @@ func getRefunds(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) }`
           'main.js': `const { Controller } = require('@nestjs/common');`,
         })
       },
+      {
+        name: 'polyglot java spring + typescript nestjs',
+        dir: await generateTempDir({
+          'pom.xml': `<project><parent><groupId>org.springframework.boot</groupId></parent></project>`,
+          'src/main/java/com/example/App.java': `package com.example; class App {}`,
+          'package.json': `{"dependencies":{"@nestjs/common":"10.0.0","typescript":"5.0.0"}}`,
+          'tsconfig.json': `{}`,
+          'src/app.controller.ts': `import { Controller } from '@nestjs/common'; @Controller() class AppController {}`,
+        })
+      },
     ];
   };
 
   describe('Supported Pairs Determinism & Assertions', () => {
-    let supportedFixtures: { name: string, path: string }[] = [];
+    let supportedFixtures: { name: string, path: string, profile: { language: string, framework: string } }[] = [];
 
     beforeAll(async () => {
       supportedFixtures = await getSupportedFixtures();
@@ -236,11 +246,19 @@ func getRefunds(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) }`
       await finalizeImpactAnalysis.execute({ analysisId: analysis.id, acknowledgeUnreviewed: true });
 
       const snapshot = await prisma.repositorySnapshot.findUniqueOrThrow({ where: { id: snapshotId } });
+      const profile = await prisma.repositoryProfile.findUniqueOrThrow({ where: { snapshotId } });
       const artifacts = await prisma.codeArtifact.findMany({ where: { snapshotId } });
       const insights = await prisma.baInsight.findMany({ where: { impactAnalysisId: analysis.id } });
       const documents = await prisma.generatedDocument.findMany({ where: { impactAnalysisId: analysis.id } });
 
-      return { snapshot, artifacts, insights, documents };
+      return { snapshot, profile, artifacts, insights, documents };
+    };
+
+    const sectionBetween = (content: string, start: string, end: string): string => {
+      const startIndex = content.indexOf(start);
+      if (startIndex < 0) return '';
+      const endIndex = content.indexOf(end, startIndex + start.length);
+      return endIndex < 0 ? content.slice(startIndex) : content.slice(startIndex, endIndex);
     };
 
     const extractCanonicalOutput = (result: any) => {
@@ -263,7 +281,15 @@ func getRefunds(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) }`
         // Assertions for Supported Pair
         // 1. Adapter resolves explicitly and SCANNER_CAPABILITY_SUMMARY exists
         const diagnostics = run1.snapshot.diagnostics as any[];
-        expect(diagnostics.some(d => d.code === 'SCANNER_CAPABILITY_SUMMARY')).toBe(true);
+        const capabilitySummary = diagnostics.find(d => d.code === 'SCANNER_CAPABILITY_SUMMARY');
+        expect(capabilitySummary).toBeDefined();
+        expect(capabilitySummary.payload).toMatchObject({
+          language: expect.any(String),
+          framework: expect.any(String),
+          status: expect.any(String),
+          confidence: expect.any(String),
+        });
+        expect(run1.profile).toMatchObject(pair.profile);
 
         // 2. Endpoint artifacts are evidence-backed and typed correctly
         for (const artifact of run1.artifacts) {
@@ -276,7 +302,10 @@ func getRefunds(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) }`
         const derivedRisks = run1.insights.filter(i => (i.metadata as any)?.origin === 'SCANNER_DIAGNOSTIC');
         for (const risk of derivedRisks) {
           expect(risk.certainty).not.toBe('EVIDENCED');
+          expect((risk.metadata as any)?.evidenceMode).toBe('DIAGNOSTIC_ONLY');
+          expect((risk.metadata as any)?.diagnosticPayload).toBeDefined();
         }
+        expect(derivedRisks.some(i => i.title.includes('SCANNER_CAPABILITY_SUMMARY'))).toBe(false);
         const hasEndpoint = run1.artifacts.some(
           (a: any) => a.artifactType === 'HTTP_ENDPOINT' || a.artifactType === 'API_ROUTE'
         );
@@ -288,6 +317,10 @@ func getRefunds(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) }`
         const reportContent = report!.content as string;
         expect(reportContent).toContain('Scanner Capability Profile');
         expect(reportContent).toContain('Open Questions / Unknowns');
+        const impactedSection = sectionBetween(reportContent, '## Impacted Areas', '## Open Questions / Unknowns');
+        for (const risk of derivedRisks) {
+          expect(impactedSection).not.toContain(risk.title);
+        }
 
         // Run second pass for determinism
         const run2 = await runDeterministicGate(path);

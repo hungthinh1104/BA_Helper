@@ -44,4 +44,36 @@ describe('DiagnosticCollector', () => {
     expect(items[0].count).toBe(10);
     expect(items[0].samplePaths?.length).toBe(5);
   });
+
+  it('keeps same-code route diagnostics separate when candidate terms differ', () => {
+    const collector = new DiagnosticCollector();
+
+    collector.add({
+      code: 'RB_RESOURCE_ROUTE_UNSUPPORTED',
+      severity: 'WARN',
+      message: 'Rails resources route is not fully expanded.',
+      category: 'SCANNER',
+      payload: {
+        relativePath: 'config/routes.rb',
+        unsupportedPattern: 'resources',
+        candidateTerms: ['refunds'],
+      },
+    });
+
+    collector.add({
+      code: 'RB_RESOURCE_ROUTE_UNSUPPORTED',
+      severity: 'WARN',
+      message: 'Rails resources route is not fully expanded.',
+      category: 'SCANNER',
+      payload: {
+        relativePath: 'config/routes.rb',
+        unsupportedPattern: 'resources',
+        candidateTerms: ['users'],
+      },
+    });
+
+    const items = collector.getItems();
+    expect(items).toHaveLength(2);
+    expect(items.map((item) => item.payload?.candidateTerms?.[0]).sort()).toEqual(['refunds', 'users']);
+  });
 });

@@ -91,4 +91,58 @@ describe('DiagnosticRiskEvaluator', () => {
     const isRelevant = DiagnosticRiskEvaluator.isRelevant('Update booking', []);
     expect(isRelevant).toBe(false);
   });
+
+  it('never propagates scanner capability context diagnostics', () => {
+    expect(DiagnosticRiskEvaluator.getPropagationMode({
+      code: 'SCANNER_CAPABILITY_SUMMARY',
+      severity: 'INFO',
+      payload: { candidateTerms: ['refunds'] },
+    })).toBe('NONE');
+  });
+
+  it('routes boundary and not-extracted diagnostics through artifact context only', () => {
+    expect(DiagnosticRiskEvaluator.getPropagationMode({
+      code: 'GO_ROUTE_GROUP_BOUNDARY',
+      severity: 'WARN',
+      payload: { candidateTerms: ['refunds'] },
+    })).toBe('CONTEXT');
+
+    expect(DiagnosticRiskEvaluator.getPropagationMode({
+      code: 'METHOD_NOT_EXTRACTED',
+      severity: 'WARN',
+      payload: { candidateTerms: ['refunds'] },
+    })).toBe('CONTEXT');
+  });
+
+  it('uses lexical propagation only for unsupported route diagnostics with candidate terms', () => {
+    expect(DiagnosticRiskEvaluator.getPropagationMode({
+      code: 'RB_RESOURCE_ROUTE_UNSUPPORTED',
+      severity: 'WARN',
+      payload: { candidateTerms: ['refunds'] },
+    })).toBe('LEXICAL');
+
+    expect(DiagnosticRiskEvaluator.getPropagationMode({
+      code: 'RB_RESOURCE_ROUTE_UNSUPPORTED',
+      severity: 'WARN',
+      payload: {},
+    })).toBe('NONE');
+  });
+
+  it('builds deterministic structured keys from code, file, pattern, and candidate terms', () => {
+    const base = {
+      code: 'RB_RESOURCE_ROUTE_UNSUPPORTED',
+      payload: {
+        relativePath: 'config/routes.rb',
+        unsupportedPattern: 'resources',
+      },
+    };
+
+    expect(DiagnosticRiskEvaluator.buildStructuredInsightKey({
+      ...base,
+      payload: { ...base.payload, candidateTerms: ['refunds'] },
+    })).not.toBe(DiagnosticRiskEvaluator.buildStructuredInsightKey({
+      ...base,
+      payload: { ...base.payload, candidateTerms: ['users'] },
+    }));
+  });
 });

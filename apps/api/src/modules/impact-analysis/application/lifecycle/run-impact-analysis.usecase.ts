@@ -383,15 +383,22 @@ export class RunImpactAnalysisUseCase {
       const retrievedFilePaths = new Set(retrievedArtifacts.map((r: any) => artifactByKey.get(r.artifactKey)?.filePath).filter(Boolean));
 
       const diagnosticRisks = snapshotDiagnostics
-        .filter((d: any) => d.code !== 'SCANNER_CAPABILITY_SUMMARY' && (d.severity === 'WARN' || d.severity === 'ERROR'))
+        .filter((d: any) => d.severity === 'WARN' || d.severity === 'ERROR')
         .filter((d: any) => {
-          // 1. Lexical matching on candidate terms
-          if (d.payload?.candidateTerms && DiagnosticRiskEvaluator.isRelevant(requirementText, d.payload.candidateTerms)) {
+          const propagationMode = DiagnosticRiskEvaluator.getPropagationMode(d);
+          if (propagationMode === 'NONE') {
+            return false;
+          }
+
+          if (
+            propagationMode === 'LEXICAL' &&
+            d.payload?.candidateTerms &&
+            DiagnosticRiskEvaluator.isRelevant(requirementText, d.payload.candidateTerms)
+          ) {
             return true;
           }
-          // 2. Artifact context matching for boundary/not extracted diagnostics
-          const isContextDiagnostic = d.code.includes('_NOT_EXTRACTED') || d.code.includes('_BOUNDARY') || d.code.includes('DI_BOUNDARY') || d.code.includes('_RESOLUTION_BOUNDARY');
-          if (isContextDiagnostic) {
+
+          if (propagationMode === 'CONTEXT') {
             const filePath = d.payload?.relativePath || (d.samplePaths && d.samplePaths[0]);
             if (filePath && retrievedFilePaths.has(filePath)) {
               return true;
@@ -402,17 +409,17 @@ export class RunImpactAnalysisUseCase {
 
       const uniqueDiagnosticRisks = new Map<string, any>();
       for (const diag of diagnosticRisks) {
-        const filePath = diag.payload?.relativePath || (diag.samplePaths && diag.samplePaths[0]) || 'unknown';
-        const key = `${diag.code}::${filePath}::${diag.payload?.unsupportedPattern || 'unknown'}`;
+        const key = DiagnosticRiskEvaluator.buildStructuredInsightKey(diag);
         if (!uniqueDiagnosticRisks.has(key)) {
           uniqueDiagnosticRisks.set(key, diag);
         }
       }
 
       for (const diag of uniqueDiagnosticRisks.values()) {
+        const structuredKey = DiagnosticRiskEvaluator.buildStructuredInsightKey(diag);
         insightInputs.push({
           impactAnalysisId: analysis.id,
-          insightKey: `diag_risk_${diag.code.toLowerCase()}_${createHash('sha256').update(diag.message).digest('hex').substring(0, 8)}`,
+          insightKey: `diag_risk_${diag.code.toLowerCase()}_${createHash('sha256').update(structuredKey).digest('hex').substring(0, 8)}`,
           insightType: 'UNKNOWN',
           certainty: 'UNKNOWN',
           reviewStatus: 'NEEDS_REVIEW',
@@ -423,6 +430,7 @@ export class RunImpactAnalysisUseCase {
           metadata: {
             origin: 'SCANNER_DIAGNOSTIC',
             evidenceMode: 'DIAGNOSTIC_ONLY',
+            diagnosticRiskCategory: DiagnosticRiskEvaluator.getPropagationMode(diag),
             diagnosticPayload: diag.payload || {},
           } as any
         });

@@ -191,6 +191,7 @@ describe('Diagnostic Risk Propagation', () => {
     expect(savedInsights[0].metadata).toEqual({
       origin: 'SCANNER_DIAGNOSTIC',
       evidenceMode: 'DIAGNOSTIC_ONLY',
+      diagnosticRiskCategory: 'LEXICAL',
       diagnosticPayload: expect.any(Object),
     });
   });
@@ -242,6 +243,32 @@ describe('Diagnostic Risk Propagation', () => {
         payload: {
           candidateTerms: ['refunds'], // Even if it contains relevant terms
         },
+      },
+    ]);
+
+    await useCase.execute({ analysisId: 'analysis-123' });
+
+    expect(mockInsightRepo.upsertMany).toHaveBeenCalledWith([]);
+  });
+
+  it('does not propagate context-only diagnostics without artifact context', async () => {
+    setupMockSnapshot([
+      {
+        code: 'GO_ROUTE_GROUP_BOUNDARY',
+        severity: 'WARN',
+        message: 'Route group boundary was not expanded',
+        category: 'SCANNER',
+        payload: {
+          candidateTerms: ['refunds'],
+          relativePath: 'src/other.go',
+        },
+      },
+      {
+        code: 'REPO_LIMIT_EXCEEDED',
+        severity: 'WARN',
+        message: 'Repository exceeded scan limits',
+        category: 'LIMIT',
+        samplePaths: ['src/other.go'],
       },
     ]);
 
