@@ -1,7 +1,7 @@
 # Golden Path Demo
 
 ## What this demo proves
-This demo serves as the definitive automated integration test that proves the core MVP Requirement-to-Code Impact Analyzer flow works end-to-end. It validates:
+This demo is the definitive automated integration test for the focused TypeScript/NestJS Requirement-to-Code Impact Analyzer path. It validates:
 
 ```text
 scan → impact analysis → evidence → review → report → drift visibility
@@ -28,11 +28,12 @@ pnpm test tests/demo/golden-path-demo.spec.ts
 ## Expected Outputs & Diagnostics
 When the test runs successfully, it asserts that the system properly generates:
 - **Expected Diagnostics**: `SCAN_HEALTH`, `INCREMENTAL_SCAN_SUMMARY`, `EMBEDDING_REUSE_PLAN`, and `DOMAIN_PACK_APPLIED`.
-- **Expected Report Sections**: `Impacted Areas`, `Executive Summary`, and `Evidence Appendix`.
+- **Expected Report Sections**: `Executive Summary`, `Impact Flow Diagram`, `Impacted Areas` when evidenced impacts exist, `Open Questions / Unknowns`, and `Evidence Appendix` when evidence exists.
 
 ## Fixture Used
 - **Fixture Repository**: `nestjs-booking-with-payment`
 - **Domain Pack**: `booking@0.1.0`
+- **Scanner Maturity**: `STABLE` TypeScript/NestJS path
 
 ## Mocked Systems
 For deterministic CI, we deliberately use mock providers:
@@ -43,7 +44,9 @@ For deterministic CI, we deliberately use mock providers:
 ## Public Limitations
 Please be aware of the following:
 - TypeScript/NestJS is the strongest scanner path.
-- Java Spring support is partial/pilot.
+- Java Spring support is `PARTIAL`; Go, Python, C#, PHP, and Ruby adapters are `EXPERIMENTAL` capability proofs.
+- Pilot adapters are bounded static extractors, not full compiler-level semantic analyzers.
+- Unsupported scanner patterns become diagnostics, `UNKNOWN`, or `RISK` items requiring review.
 - Domain packs are hints, not evidence.
 - Evaluation metrics are internal quality signals, not public benchmarks.
 - Golden path uses fake providers for deterministic CI.

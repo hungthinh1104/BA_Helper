@@ -24,9 +24,10 @@ Domain Packs (like `booking@0.1.0`) are curated dictionaries of domain-specific 
 Decoupling the AI output from the source of truth. It was tempting to let the LLM generate the final markdown reports directly. However, we realized that machine output must be treated as volatile. The hardest and best decision was enforcing a strict state machine where the LLM only outputs structured JSON insights, which must then pass through a mandatory database storage and human confirmation gate (`ReviewInsightUseCase`) before any final report can be generated.
 
 ### 8. What are current limitations?
-- **Extraction Depth:** While TypeScript/NestJS enjoys deep AST extraction, our Java Spring adapter is currently in a pilot, regex-based state.
+- **Extraction Depth:** TypeScript/NestJS is the strongest scanner path. Java/Spring Boot is `PARTIAL`; Go, Python, C#, PHP, and Ruby adapters are `EXPERIMENTAL` capability proofs with bounded extraction.
+- **Unsupported Patterns:** Unsupported routes, scan blind spots, and dependency boundaries become `UNKNOWN`/`RISK` diagnostics for human review.
 - **Metrics:** Our evaluation metrics (precision/recall) are internal quality signals tuned to our specific fixtures, not universal LLM benchmarks.
-- **SaaS Readiness:** Core analysis works perfectly locally, but multi-tenant SaaS features (OAuth, Stripe billing, GitHub App integration) are currently incomplete.
+- **SaaS Readiness:** The deterministic local demo path is implemented, but multi-tenant SaaS features (OAuth, Stripe billing, GitHub App integration) are currently incomplete.
 
 ### 9. How would you productionize it?
 I would implement strict tenant isolation at the database level using Row-Level Security (RLS) in PostgreSQL. I would replace the `FakeLlmProvider` with a robust external provider adapter featuring rate-limiting and circuit breakers. Finally, I would integrate native GitHub App webhooks so that the analysis triggers automatically upon PR creation, and the finalized report posts directly back as a PR comment.

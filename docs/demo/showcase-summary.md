@@ -2,16 +2,16 @@
 
 _Draft for social media (LinkedIn / GitHub Discussions / Portfolio)_
 
-🚀 **Public Beta Release: BA Helper - A Requirement-to-Code Impact Analyzer** 🚀
+**Public Beta Release: BA Helper - A Requirement-to-Code Impact Analyzer**
 
-We are incredibly excited to announce the Public Beta of our Requirement-to-Code Impact Analyzer designed specifically for backend teams!
+BA Helper is a Requirement-to-Code Impact Analyzer designed specifically for backend teams.
 
 Have you ever asked yourself: _"If this business requirement changes, which backend code paths are impacted, what evidence supports that, and what should QA verify?"_
 
 Generic AI chatbots often fail here because they lack repository-wide context and hallucinate claims without evidence. We set out to fix that by building a deterministic pipeline constrained by a strict **evidence hierarchy**.
 
 **Here's what it actually does:**
-1. Secures a static AST snapshot of your repository (TypeScript/NestJS).
+1. Secures a static snapshot of your repository. TypeScript/NestJS is the primary stable demo path.
 2. Performs hybrid semantic retrieval using our curated Domain Packs (like `booking@0.1.0`) as contextual hints.
 3. Maps requirement changes to explicitly impacted artifacts.
 4. **The Catch:** Every single `EVIDENCED` impact MUST link directly to extracted code. No code excerpt? No claim. It's flagged as an `UNKNOWN` or a `RISK`.
@@ -22,6 +22,13 @@ Generic AI chatbots often fail here because they lack repository-wide context an
 - We do not autonomously finalize reports (human review is a mandatory gate).
 
 This is a developer-focused tool meant to act as a rigorous impact audit for complex backend systems. 
+
+**Scanner maturity is explicit:**
+- `STABLE`: TypeScript/NestJS
+- `PARTIAL`: Java/Spring Boot pilot
+- `EXPERIMENTAL`: bounded Go, Python, C#, PHP, and Ruby pilot adapters
+
+Unsupported patterns become diagnostics, `UNKNOWN`, or `RISK` items for manual review.
 
 **Want to try it out?** 
 The entire Golden Path demo is reproducible locally using a fake deterministic LLM/embedding provider—meaning you don't even need an API key to verify the pipeline runs end-to-end.

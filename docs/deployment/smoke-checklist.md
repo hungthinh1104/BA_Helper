@@ -63,9 +63,19 @@ Use this checklist before a demo, handoff, or release candidate tag.
 ## Test hygiene
 
 - `pnpm typecheck`
+- `pnpm run test:analyzer`
 - `pnpm lint`
 - `pnpm test`
 - `pnpm test:e2e`
+- `pnpm demo:golden-path`
+
+## Public demo story
+
+- TypeScript/NestJS is the primary demo stack
+- multi-language adapters are framed as bounded capability proof
+- `STABLE`, `PARTIAL`, and `EXPERIMENTAL` scanner maturity is explained
+- unsupported patterns are shown as diagnostics, `UNKNOWN`, or `RISK`
+- report finalization is described as a human review action
 
 ## Known baseline note
 

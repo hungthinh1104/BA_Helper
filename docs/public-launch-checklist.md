@@ -22,6 +22,8 @@ Before launching the repository publicly on GitHub or Product Hunt, ensure the f
 
 ## 2. Documentation & Assets
 - [ ] **README.md**: Verify that all 13 required sections are present and accurately describe the MVP.
+- [ ] **Public Demo Checklist**: Review `docs/demo/public-demo-checklist.md` before recording or presenting the project.
+- [ ] **Claims Audit**: Confirm experimental scanner adapters are not described as production-grade multi-language support.
 - [ ] **Screenshots/GIFs**: Replace all `TODO` placeholders in the README with actual high-quality screenshots or compressed GIFs of the working application.
   - Requirement Input UI
   - Impact Matrix

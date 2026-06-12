@@ -7,7 +7,7 @@ This document contains text-based and Mermaid visual artifacts to help reviewers
 ```mermaid
 graph TD
     A[Requirement Change] --> B(Repository Snapshot & Scan Health)
-    B --> C{Impact Analysis}
+    B --> C{Evidence-first Impact Analysis}
     C -->|Domain Pack Hints| D[Evidence-backed Impacted Artifacts]
     C -->|Missing Code| E[Unknowns / Risks / QA Scenarios]
     D --> F[Human Review Gate]
@@ -56,9 +56,9 @@ graph LR
 The following visual assets should be captured when the UI is finalized. **(Currently TODO Placeholders)**
 
 - [ ] `README / project overview`: High-level dashboard showing scanned repos.
-- [ ] `golden path test output`: Terminal screenshot showing `pnpm demo:golden-path` running in under 3 seconds.
+- [ ] `golden path test output`: Terminal screenshot showing `pnpm demo:golden-path` passing locally.
 - [ ] `impact analysis screen`: UI showing requirement mapped to code artifacts.
 - [ ] `evidence appendix/report`: Detailed view of specific code lines cited by the LLM.
 - [ ] `drift warning`: UI alert showing `STALE_ARTIFACTS` when a commit is pushed during review.
-- [ ] `scan health panel`: Component displaying `PARTIAL` vs `FULL` extraction constraints.
+- [ ] `scan health panel`: Component displaying `READY` vs `PARTIAL` extraction constraints and scanner maturity.
 - [ ] `domain pack evaluation summary`: Terminal or UI showing precision/recall internal quality metrics.

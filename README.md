@@ -1,6 +1,6 @@
 # Requirement-to-Code Impact Analyzer
 
-Map requirement changes to impacted backend code, evidence, QA risks, review coverage, and immutable reports.
+Map requirement changes to impacted backend code, evidence, unknowns/risks, QA scenarios, review coverage, and traceability reports.
 
 **BA Helper** is a requirement-to-code impact analyzer for backend teams.
 
@@ -26,27 +26,28 @@ Given a requirement change, the system securely scans backend repositories and p
 ## Why It Is Trustworthy
 Our analysis is strictly constrained to prevent hallucinations and fabricated claims:
 - **Evidence-backed impacts:** Every claim links to extracted code.
-- **Scan health:** Explicit PARTIAL/FULL scan limits prevent silent omissions.
+- **Scan health:** Explicit READY/PARTIAL scan limits prevent silent omissions.
 - **Review coverage:** Human review gating ensures humans are accountable for finalization.
-- **Snapshot drift:** Analyzes frozen commits and provides clear staleness warnings if code changes.]
+- **Snapshot drift:** Analyzes frozen commits and provides clear staleness warnings if code changes.
 - **Bounded diagnostics:** Output size and structure are strictly bounded.
 - **Domain packs as hints only:** Domain packs influence retrieval but do not generate un-evidenced claims.
 - **No evidence fabrication:** Only explicit parser-derived code excerpts can be cited as evidence.
 
 ## Golden Path Demo
-Run the definitive automated integration test that proves the core MVP Requirement-to-Code Impact Analyzer flow works end-to-end:
+Run the definitive automated integration test for the focused TypeScript/NestJS demo path:
 
 ```bash
-pnpm test tests/demo/golden-path-demo.spec.ts
+pnpm demo:golden-path
 ```
 
-This demo validates the entire pipeline:
+This demo validates the core evidence-first pipeline:
 `scan → impact analysis → evidence → review → report → drift visibility`
 
 **Demo Details:**
 - **Fixture:** `nestjs-booking-with-payment`
 - **Domain Pack:** `booking@0.1.0`
 - **External Dependencies:** External LLM/embedding calls are mocked/fake for deterministic CI runs.
+- **Scanner maturity:** TypeScript/NestJS is the primary `STABLE` demo stack; other adapters are capability proof, not the main demo story.
 - **Drift:** The drift check is at a smoke-level.
 
 ## Sample Requirement
@@ -62,7 +63,7 @@ When a paid booking is cancelled, the system must refund the tenant, prevent dou
 ```mermaid
 graph TD
     A[Requirement Change] --> B(Repository Snapshot & Scan Health)
-    B --> C{Impact Analysis}
+    B --> C{Evidence-first Impact Analysis}
     C -->|Domain Pack Hints| D[Evidence-backed Impacted Artifacts]
     C -->|Missing Code| E[Unknowns / Risks / QA Scenarios]
     D --> F[Human Review Gate]
@@ -83,7 +84,7 @@ graph BT
 ### 3. Screenshot Capture Checklist (TODO)
 When UI development is finalized, the following screenshots will be captured to replace these text placeholders:
 - [ ] `Dashboard`: High-level project overview showing scanned repos.
-- [ ] `Terminal`: `pnpm demo:golden-path` running in under 3 seconds.
+- [ ] `Terminal`: `pnpm demo:golden-path` passing locally.
 - [ ] `Impact Analysis`: UI mapping requirement to code artifacts.
 - [ ] `Evidence Appendix`: Detailed view of specific code lines cited by the LLM.
 - [ ] `Review Coverage`: Human-in-the-loop sign-off gate.
@@ -191,29 +192,33 @@ Built as a TypeScript modular monolith to balance speed of development with even
 - **apps/web**: Next.js App Router frontend (React, Tailwind, Shadcn).
 - **apps/api**: NestJS HTTP API serving frontend requests.
 - **apps/worker**: NestJS BullMQ background processors for heavy analysis and extraction.
-- **packages/analyzer**: Headless TypeScript and Java Spring code extraction utilities.
+- **packages/analyzer**: Headless static extraction utilities with explicit scanner capability metadata.
 - **packages/contracts**: Shared Zod API schemas bounding the frontend and backend.
 - **Persistence**: PostgreSQL (Prisma) for relational state and pgvector for embeddings. Redis for job queues.
 
 *For more details, see [Architecture Documentation](docs/agent/architecture.md).*
 
 ## Current Capabilities
-- **Languages/Frameworks**: Deep AST extraction for **TypeScript/NestJS**.
-- **Java Spring (Pilot)**: Regex-based extraction for Java Spring Boot. *Note: Spring support is currently marked as a pilot adapter and will always yield `PARTIAL` scan coverage.*
-- **Output Generation**: Impact Matrices, QA Scenarios, Unknown Area tracking, and Markdown Exports.
+- **Primary demo stack:** TypeScript/NestJS is the strongest and `STABLE` scanner path.
+- **Pilot scanner adapters:** Java/Spring Boot is `PARTIAL`; Go `net/http`, Go/Gin, Python/FastAPI, C#/ASP.NET Core, PHP/Laravel, and Ruby/Rails are `EXPERIMENTAL` capability proofs.
+- **Capability metadata:** Every scan exposes `SCANNER_CAPABILITY_SUMMARY` so reviewers can see whether a result came from a `STABLE`, `PARTIAL`, or `EXPERIMENTAL` adapter.
+- **Output generation:** Impact matrices, QA scenarios, unknown/risk tracking, human review, Markdown/PDF exports, and drift-aware traceability reports.
 
-## Public Limitations
+## Known Limits
 - TypeScript/NestJS is the strongest scanner path.
-- Java Spring support is partial/pilot.
+- Multi-language adapters are bounded pilots. They demonstrate deterministic extraction contracts, not full compiler-level semantic analysis.
+- Unsupported route patterns, file scan blind spots, artifact uncertainty, and dependency boundaries become diagnostics, `UNKNOWN`, or `RISK` items requiring review.
+- Experimental scanners must not be presented as production-grade language support.
 - Domain packs are hints, not evidence.
+- LLM output is constrained by extracted evidence and human review; it is not allowed to finalize reports by itself.
 - Evaluation metrics are internal quality signals, not public benchmarks.
 - Golden path uses fake providers for deterministic CI.
 - Production SaaS concerns such as GitHub App auth, billing, and hosted multi-tenant deployment are not complete.
 
 ## Roadmap
-1. Harden Java Spring pilot extraction while keeping scan coverage explicitly PARTIAL until parser confidence improves.
-2. Introduce Mermaid.js architectural graph generation.
-3. Harden multi-user workspace flows, invite/onboarding, and project administration.
+1. Keep TypeScript/NestJS as the primary public demo story.
+2. Harden pilot scanner adapters while keeping capability status explicit.
+3. Improve visual review and traceability flows without weakening the evidence hierarchy.
 4. Native OAuth and GitHub App integrations.
 
 ## Documentation & Assets
@@ -221,6 +226,7 @@ Built as a TypeScript modular monolith to balance speed of development with even
 - **[Sample Requirement Change](docs/demo/sample-requirement-change.md)**
 - **[Public Beta Release Note](docs/demo/public-beta-release-note.md)**
 - **[Portfolio Proof Pack](docs/demo/portfolio-proof-pack.md)**
+- **[Public Demo Checklist](docs/demo/public-demo-checklist.md)**
 - **[Impact Evaluation Docs](docs/evaluation/impact-evaluation.md)**
 - **[Domain Pack Architecture](docs/agent/domain-pack-architecture.md)**
 - **[Security Policy](SECURITY.md)**

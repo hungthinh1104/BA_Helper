@@ -2,6 +2,10 @@
 
 This walkthrough is the current demo-safe path for `BA_Helper`.
 
+The recommended public demo story is the single-repo TypeScript/NestJS booking
+flow. Multi-repo and multi-language screens are useful proof points, but they
+should be framed as bounded capabilities rather than the main product story.
+
 ## Local setup
 
 ```bash
@@ -40,13 +44,29 @@ cp apps/web/.env.example apps/web/.env.local
 
 ## Single-repo baseline
 
-1. Create or scan a repository
-2. Create a requirement revision
+Use this as the primary 3-5 minute walkthrough:
+
+1. Create or scan the TypeScript/NestJS booking fixture or equivalent public demo repository
+2. Create a requirement revision:
+   - "When a paid booking is cancelled, the system must refund the tenant, prevent double refunds, update booking/payment state, and notify relevant parties."
 3. Create one impact analysis
-4. Review and finalize it
-5. Open the approved report
+4. Show impacted backend artifacts with evidence
+5. Show unknowns/risks and QA scenarios
+6. Review and finalize it
+7. Open the approved traceability report
+8. Explain drift/freshness as a snapshot safety check
+
+## Scanner maturity explanation
+
+- `STABLE`: strongest path; TypeScript/NestJS is the primary public demo stack
+- `PARTIAL`: bounded extraction with explicit known limitations, currently Java/Spring Boot
+- `EXPERIMENTAL`: deterministic pilot adapters for capability proof; do not present as production-grade language support
+
+Unsupported patterns should appear as diagnostics, `UNKNOWN`, or `RISK`, not as fabricated impacted artifacts.
 
 ## Multi-repo happy path
+
+Use this only after the single-repo baseline is understood.
 
 1. Open `Impact Analyses`
 2. Click `New Analysis`
@@ -85,3 +105,11 @@ cp apps/web/.env.example apps/web/.env.local
    - read access works
    - export buttons follow backend capability rules
    - review submission stays unavailable in the UI
+
+## Known limits to state during demo
+
+- Pilot scanners are bounded static extractors, not full compiler-level semantic analyzers
+- Unsupported route patterns and dependency boundaries require manual review
+- Domain packs guide retrieval but do not create evidence
+- LLM output is constrained by extracted evidence and review gates
+- Public demo uses fake providers for deterministic local validation

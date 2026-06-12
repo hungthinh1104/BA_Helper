@@ -72,6 +72,7 @@ Read:
 
 Read:
 - `../demo/walkthrough.md`
+- `../demo/public-demo-checklist.md`
 - `../deployment/smoke-checklist.md`
 - `current-state.md`
 

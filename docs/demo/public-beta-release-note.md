@@ -25,7 +25,9 @@ We utilize strict internal telemetry (`tests/evaluation/impact-evaluation.spec.t
 ## 6. Current Limitations
 We are committed to honest capabilities. As of this Public Beta:
 - **TypeScript/NestJS** is the strongest extraction path.
-- **Java Spring** support is partial/pilot.
+- **Java Spring** support is `PARTIAL`; Go, Python, C#, PHP, and Ruby adapters are `EXPERIMENTAL` capability proofs.
+- **Pilot adapters** are bounded static extractors, not full compiler-level semantic analyzers.
+- **Unsupported patterns** become diagnostics, `UNKNOWN`, or `RISK` items requiring manual review.
 - **Domain packs are hints, not evidence.** They guide retrieval but cannot bypass the evidence hierarchy.
 - **Golden path uses fake providers** (`FakeLlmProvider`, `FakeEmbeddingProvider`) for deterministic local testing.
 - **Production SaaS features** (such as GitHub App auth, billing, and hosted multi-tenant deployment) are incomplete.
@@ -49,4 +51,4 @@ pnpm demo:golden-path
 For more detailed setup, see the [Golden Path Docs](golden-path.md) and [Sample Requirement](sample-requirement-change.md).
 
 ## 8. Next Roadmap
-Our immediate focus involves hardening the Java Spring pilot extraction, introducing Mermaid.js architectural graph generation for better visual impact analysis, and securing multi-user workspace flows in preparation for SaaS deployments.
+Our immediate focus is hardening pilot scanner adapters while keeping maturity labels explicit, improving visual review flows, and securing multi-user workspace flows in preparation for SaaS deployments.
