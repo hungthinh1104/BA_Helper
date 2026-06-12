@@ -6,7 +6,7 @@ import { ArtifactRepository } from '../../../api/src/modules/artifact/infrastruc
 import { EvidenceRepository } from '../../../api/src/modules/evidence/infrastructure/evidence.repository';
 import { InsightRepository } from '../../../api/src/modules/insight/infrastructure/insight.repository';
 import { TraceabilityRepository } from '../../../api/src/modules/traceability/infrastructure/traceability.repository';
-import { RunImpactAnalysisUseCase } from '../../../api/src/modules/impact-analysis/application/run-impact-analysis.usecase';
+import { RunImpactAnalysisUseCase } from '../../../api/src/modules/impact-analysis/application/lifecycle/run-impact-analysis.usecase';
 import { ImpactAnalysisProcessor } from './impact-analysis.processor';
 import { AiModule } from '../../../api/src/modules/ai/ai.module';
 import { LlmProvider } from '../../../api/src/modules/ai/domain/llm-provider.interface';

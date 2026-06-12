@@ -3,8 +3,8 @@ import {
   createReviewNoteRequestSchema,
   RequestUser,
 } from '@ba-helper/contracts';
-import { SaveReviewNoteUseCase } from '../application/save-review-note.usecase';
-import { GetReviewNotesUseCase } from '../application/get-review-notes.usecase';
+import { SaveReviewNoteUseCase } from '../application/review/save-review-note.usecase';
+import { GetReviewNotesUseCase } from '../application/review/get-review-notes.usecase';
 import { Roles } from '../../auth/api/roles.decorator';
 import { CurrentUser } from '../../auth/api/current-user.decorator';
 import { ProjectPermissionService } from '../../project/application/project-permission.service';

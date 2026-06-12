@@ -5,6 +5,7 @@ export const normalizeArtifactKind = (
 ): UniversalArtifactKind => {
   switch (artifactType) {
     case 'API_ROUTE':
+    case 'HTTP_ENDPOINT':
       return 'API_ENDPOINT';
     case 'SERVICE_METHOD':
       return 'DOMAIN_SERVICE';

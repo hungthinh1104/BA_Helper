@@ -1,6 +1,6 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job, UnrecoverableError } from 'bullmq';
-import { RunImpactAnalysisUseCase } from '../../../api/src/modules/impact-analysis/application/run-impact-analysis.usecase';
+import { RunImpactAnalysisUseCase } from '../../../api/src/modules/impact-analysis/application/lifecycle/run-impact-analysis.usecase';
 import { AiOutputError } from '../../../api/src/modules/ai/domain/ai.errors';
 
 @Processor('impact-analysis')

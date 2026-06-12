@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ImpactAnalysisController } from './impact-analysis.controller';
 import { ProjectPermissionService } from '../../project/application/project-permission.service';
-import { GetAnalysisDriftFreshnessUseCase } from '../application/get-analysis-drift-freshness.usecase';
+import { GetAnalysisDriftFreshnessUseCase } from '../application/queries/get-analysis-drift-freshness.usecase';
 import { UnauthorizedException, NotFoundException } from '@nestjs/common';
 import { RequestUser } from '@ba-helper/contracts';
 

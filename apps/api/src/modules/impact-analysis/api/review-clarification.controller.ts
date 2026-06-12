@@ -15,10 +15,10 @@ import {
 } from '@ba-helper/contracts';
 import { Roles } from '../../auth/api/roles.decorator';
 import { CurrentUser } from '../../auth/api/current-user.decorator';
-import { CreateReviewClarificationRequestUseCase } from '../application/create-review-clarification.usecase';
-import { ListReviewClarificationsUseCase } from '../application/list-review-clarifications.usecase';
-import { AnswerReviewClarificationUseCase } from '../application/answer-review-clarification.usecase';
-import { CreateDerivedAnalysisFromClarificationUseCase } from '../application/create-derived-analysis-from-clarification.usecase';
+import { CreateReviewClarificationRequestUseCase } from '../application/review/create-review-clarification.usecase';
+import { ListReviewClarificationsUseCase } from '../application/review/list-review-clarifications.usecase';
+import { AnswerReviewClarificationUseCase } from '../application/review/answer-review-clarification.usecase';
+import { CreateDerivedAnalysisFromClarificationUseCase } from '../application/lifecycle/create-derived-analysis-from-clarification.usecase';
 import { mapImpactAnalysisResponse } from '../infrastructure/impact-analysis.mapper';
 import { mapReviewClarificationRequest } from './review-clarification.mapper';
 import { ProjectPermissionService } from '../../project/application/project-permission.service';

@@ -524,6 +524,7 @@ model BaInsight {
   title            String
   description      String
   reasoning        String?
+  metadata         Json?
   impactAnalysis   ImpactAnalysis     @relation(fields: [impactAnalysisId], references: [id])
   evidenceLinks    InsightEvidence[]
   createdAt        DateTime           @default(now())
@@ -704,9 +705,9 @@ model EmbeddingChunk {
   symbolName   String?
   artifactType String
 
-  content     String
-  contentHash String
-  tokenCount  Int
+  content        String
+  contentHash    String
+  tokenCount     Int
   chunkerVersion String?
 
   embeddingModel String

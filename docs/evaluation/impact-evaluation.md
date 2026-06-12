@@ -94,3 +94,15 @@ These metrics are **internal quality signals**, NOT public benchmark claims. The
 
 ## How Scoring Works
 Scoring uses normalized string matching (lowercased, stripped of punctuation, and collapsed whitespace) to check if the generated concepts semantically align with expected concepts. It explicitly handles division by zero to ensure metrics remain robust even when no artifacts are expected or found.
+
+## Java/Spring Smoke Evaluation (Phase 37E)
+In Phase 37E, we introduced a bounded smoke evaluation for Java/Spring (`java-spring-impact-smoke.spec.ts`). This guarantees that artifacts produced by the `JavaSpringAdapter` can successfully flow into the impact analysis pipeline in a deterministic manner.
+
+### What it asserts
+- **Capability:** The `SCANNER_CAPABILITY_SUMMARY` strictly persists as `PARTIAL` status and `MEDIUM` confidence.
+- **Extraction:** Valid Java artifacts are generated without fabricating code references or triggering TypeScript fallbacks.
+- **Deterministic Impact:** Java controller endpoints and service methods are matched effectively against requirements using offline lexical retrieval.
+- **Constraints:** Unknowns and risks are allowed for unsupported Spring patterns, and no external API/LLM calls are made.
+
+### What it does NOT assert
+- **Full Java Support:** It explicitly does **not** claim production-grade Java analysis or full Spring support. It serves only as a bounded validation that the `JavaSpringAdapter` integrates correctly with the downstream impact pipeline.

@@ -4,7 +4,7 @@ import type {
   MultiRepoAnalysisRunDetailResponse,
   MultiRepoAnalysisRunListItemResponse,
 } from '@ba-helper/contracts';
-import { deriveMultiRepoRunAggregates } from '../application/multi-repo-run-readiness';
+import { deriveMultiRepoRunAggregates } from '../application/multi-repo/multi-repo-run-readiness';
 
 type BaseAnalysis = Prisma.ImpactAnalysisGetPayload<Record<string, never>>;
 type AnalysisSourceTarget = {
