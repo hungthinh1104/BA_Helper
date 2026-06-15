@@ -11,9 +11,10 @@ import {
   systemHealthResponseSchema,
   impactAnalysisResponseSchema,
   ReviewQueueResponse,
+  loginResponseSchema,
 } from '@ba-helper/contracts';
 import * as process from 'node:process';
-import { writeFile } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import * as path from 'node:path';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -28,20 +29,29 @@ import {
   countTempScanWorkspaces,
   formatFailureSummary,
   getPollDeadline,
+  getSmokeDiagnosticsDir,
   getRunbookPath,
   normalizeApiBaseUrl,
   wait,
 } from './smoke/public-github-smoke.helpers';
 import { publicGitHubSmokeManifest } from './smoke/public-github-smoke.manifest';
+import { resolveSmokeAuthTokenWithPolicy } from './smoke/public-github-smoke.auth';
 
 const API_URL = normalizeApiBaseUrl(
   process.env.SMOKE_API_URL ??
     process.env.NEXT_PUBLIC_API_URL ??
     `http://localhost:${process.env.PORT ?? '3001'}`,
 );
-const SMOKE_BEARER_TOKEN = process.env.SMOKE_BEARER_TOKEN?.trim();
+const SUPPLIED_SMOKE_BEARER_TOKEN = process.env.SMOKE_BEARER_TOKEN?.trim();
+const ENABLE_DEV_LOGIN = process.env.ENABLE_DEV_LOGIN === 'true';
+const SMOKE_ALLOW_DEV_LOGIN_FALLBACK =
+  process.env.SMOKE_ALLOW_DEV_LOGIN_FALLBACK === 'true';
+const SMOKE_DEV_LOGIN_EMAIL =
+  process.env.SMOKE_DEV_LOGIN_EMAIL?.trim() || 'smoke-admin@ba-helper.local';
+const SMOKE_DEV_LOGIN_ROLE = process.env.SMOKE_DEV_LOGIN_ROLE?.trim() || 'ADMIN';
 const POLL_INTERVAL_MS = Number(process.env.SMOKE_POLL_INTERVAL_MS ?? '2000');
 const REQUEST_TIMEOUT_MS = Number(process.env.SMOKE_REQUEST_TIMEOUT_MS ?? '15000');
+let smokeBearerToken: string | undefined;
 
 async function main() {
   const tempDirsBefore = await countTempScanWorkspaces();
@@ -62,6 +72,12 @@ async function main() {
         await wait(2000);
       }
     }
+    const authBootstrap = await resolveSmokeAuthToken();
+    partial = {
+      ...partial,
+      authMode: authBootstrap.mode,
+      smokeActorEmail: authBootstrap.email,
+    };
     const workspace = await apiGet(
       '/api/v1/workspace/current',
       currentWorkspaceResponseSchema,
@@ -242,7 +258,10 @@ async function main() {
     });
     assertTempWorkspaceCleanup(summary);
 
-    if (process.env.REAL_PATH_SMOKE === 'true') {
+    const isRealPathSmoke = process.env.REAL_PATH_SMOKE === 'true';
+    const isRealLlmSmoke = process.env.REAL_LLM_SMOKE === 'true';
+
+    if (isRealPathSmoke) {
       if (vectorInfo.indexStatus !== 'VECTOR_READY') {
         throw new Error(`Expected VECTOR_READY, got ${vectorInfo.indexStatus}`);
       }
@@ -252,46 +271,48 @@ async function main() {
       if (vectorInfo.vectorSignalCount <= 0 && vectorInfo.hybridSignalCount <= 0) {
         throw new Error('Expected vectorSignalCount or hybridSignalCount > 0');
       }
+    }
 
-      // Phase 6A: Real LLM provider assertions
-      const aiProvider = process.env.AI_PROVIDER ?? 'fake';
-      if (aiProvider !== 'fake') {
-        if (llmInfo.provider === 'fake' || llmInfo.provider === 'unknown') {
-          throw new Error(`Expected real LLM provider in metadata, got: ${llmInfo.provider}`);
-        }
-        if (!llmInfo.model.includes('gemini') && !llmInfo.model.includes('gpt') && !llmInfo.model.includes('claude')) {
-          throw new Error(`Expected recognizable real model, got: ${llmInfo.model}`);
-        }
-        if (llmInfo.parseMode !== 'raw') {
-          throw new Error(`Expected parseMode=raw from structured output provider, got: ${llmInfo.parseMode}. Investigate Gemini response format.`);
-        }
-        if (!llmInfo.promptVersion || llmInfo.promptVersion === 'unknown' || llmInfo.promptVersion === '') {
-          throw new Error('Expected promptVersion to be set. Check promptVersion propagation from renderPrompt().');
-        }
-        if ((llmInfo.inputTokens ?? 0) <= 0) {
-          throw new Error('Expected inputTokens > 0 from real provider. Check usageMetadata.');
-        }
-        // Validate combo: real vector retrieval + real LLM reasoning
-        if (vectorInfo.indexStatus !== 'VECTOR_READY') {
-          throw new Error(`Expected VECTOR_READY snapshot for real LLM smoke, got: ${vectorInfo.indexStatus}`);
-        }
-        console.log(
-          `\n✅ Phase 6A LLM Assertions Passed:\n` +
-          `   provider=${llmInfo.provider} | model=${llmInfo.model}\n` +
-          `   promptVersion=${llmInfo.promptVersion} | parseMode=${llmInfo.parseMode}\n` +
-          `   inputTokens=${llmInfo.inputTokens} | outputTokens=${llmInfo.outputTokens}\n`,
-        );
+    if (isRealLlmSmoke || isRealPathSmoke) {
+      const aiProvider = (process.env.AI_PROVIDER ?? 'fake').trim().toLowerCase();
+      if (aiProvider === 'fake') {
+        throw new Error('Expected real AI_PROVIDER for real LLM smoke, got fake.');
       }
+      if (llmInfo.provider === 'fake' || llmInfo.provider === 'unknown') {
+        throw new Error(`Expected real LLM provider in metadata, got: ${llmInfo.provider}`);
+      }
+      if (isRealLlmSmoke && llmInfo.provider !== 'google') {
+        throw new Error(`Expected Gemini/google provider for REAL_LLM_SMOKE, got: ${llmInfo.provider}`);
+      }
+      if (!llmInfo.model.includes('gemini') && !llmInfo.model.includes('gpt') && !llmInfo.model.includes('claude')) {
+        throw new Error(`Expected recognizable real model, got: ${llmInfo.model}`);
+      }
+      if (llmInfo.parseMode !== 'raw' && llmInfo.parseMode !== 'extracted') {
+        throw new Error(`Expected parseMode to be raw or extracted, got: ${llmInfo.parseMode}. Investigate Gemini response format.`);
+      }
+      if (!llmInfo.promptVersion || llmInfo.promptVersion === 'unknown' || llmInfo.promptVersion === '') {
+        throw new Error('Expected promptVersion to be set. Check promptVersion propagation from renderPrompt().');
+      }
+      if ((llmInfo.inputTokens ?? 0) <= 0) {
+        throw new Error('Expected inputTokens > 0 from real provider. Check usageMetadata.');
+      }
+      console.log(
+        `\n✅ Phase 6A LLM Assertions Passed:\n` +
+        `   provider=${llmInfo.provider} | model=${llmInfo.model}\n` +
+        `   promptVersion=${llmInfo.promptVersion} | parseMode=${llmInfo.parseMode}\n` +
+        `   inputTokens=${llmInfo.inputTokens} | outputTokens=${llmInfo.outputTokens}\n`,
+      );
     }
 
     const outStr = JSON.stringify({ status: 'ok', summary }, null, 2);
     process.stdout.write(`${outStr}\n`);
-    
-    const runbookDir = path.dirname(getRunbookPath());
+
+    const diagnosticsDir = getSmokeDiagnosticsDir();
+    await mkdir(diagnosticsDir, { recursive: true });
     const isRealPath = process.env.REAL_PATH_SMOKE === 'true';
     const isRealLlm = process.env.REAL_LLM_SMOKE === 'true';
     const summaryFileName = isRealPath ? 'public-github-smoke-real-path-output.json' : (isRealLlm ? 'public-github-smoke-real-llm-output.json' : 'public-github-smoke-summary.json');
-    await writeFile(path.join(runbookDir, summaryFileName), outStr);
+    await writeFile(path.join(diagnosticsDir, summaryFileName), outStr);
     
   } catch (error) {
     const errorSummary = formatFailureSummary(error, {
@@ -303,11 +324,12 @@ async function main() {
     process.stderr.write(`${errorSummary}\n`);
     
     try {
-      const runbookDir = path.dirname(getRunbookPath());
+      const diagnosticsDir = getSmokeDiagnosticsDir();
+      await mkdir(diagnosticsDir, { recursive: true });
       const isRealPath = process.env.REAL_PATH_SMOKE === 'true';
       const isRealLlm = process.env.REAL_LLM_SMOKE === 'true';
       const failedFileName = isRealPath ? 'public-github-smoke-real-path-failed.json' : (isRealLlm ? 'public-github-smoke-real-llm-failed.json' : 'public-github-smoke-last-failed.json');
-      await writeFile(path.join(runbookDir, failedFileName), errorSummary);
+      await writeFile(path.join(diagnosticsDir, failedFileName), errorSummary);
     } catch {}
     
     process.exit(1);
@@ -362,7 +384,9 @@ async function pollAnalysis(analysisId: string, timeoutMs: number) {
     }
 
     if (analysis.status === 'FAILED' || analysis.status === 'CANCELLED') {
-      throw new Error(`Impact analysis failed with status=${analysis.status}`);
+      throw new Error(
+        `Impact analysis failed with status=${analysis.status} code=${analysis.error?.code ?? 'UNKNOWN'} message=${analysis.error?.message ?? 'unknown'}`,
+      );
     }
 
     if (Date.now() >= deadline) {
@@ -447,13 +471,64 @@ async function parseJson(response: Response): Promise<unknown> {
   return response.json().catch(() => null);
 }
 
+async function resolveSmokeAuthToken(): Promise<{
+  mode: 'supplied-token' | 'dev-login';
+  email: string | null;
+}> {
+  const result = await resolveSmokeAuthTokenWithPolicy({
+    suppliedToken: SUPPLIED_SMOKE_BEARER_TOKEN,
+    enableDevLogin: ENABLE_DEV_LOGIN,
+    allowDevLoginFallback: SMOKE_ALLOW_DEV_LOGIN_FALLBACK,
+    devLoginEmail: SMOKE_DEV_LOGIN_EMAIL,
+    devLoginRole: SMOKE_DEV_LOGIN_ROLE,
+    validateToken: async (token) => {
+      smokeBearerToken = token;
+      return apiGet('/api/v1/auth/me', {
+        parse: (input: unknown) =>
+          input as { email?: string | null; id: string; role: string },
+      });
+    },
+    devLogin: async ({ email, role }) => {
+      const response = await fetchWithTimeout(`${API_URL}/api/v1/auth/dev-login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, role }),
+      });
+      const payload = await parseJson(response);
+
+      if (!response.ok) {
+        throw new Error(
+          `AUTH_DEV_LOGIN_FAILED: POST /api/v1/auth/dev-login failed with ${response.status}: ${getApiErrorMessage(payload)}`,
+        );
+      }
+
+      return loginResponseSchema.parse(payload);
+    },
+    onLog: (message) => {
+      if (message.includes('falling back')) {
+        console.warn(message);
+      } else {
+        console.log(message);
+      }
+    },
+  });
+
+  smokeBearerToken = result.token;
+  return {
+    mode: result.mode,
+    email: result.email,
+  };
+}
+
 function buildHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
 
-  if (SMOKE_BEARER_TOKEN) {
-    headers.Authorization = `Bearer ${SMOKE_BEARER_TOKEN}`;
+  if (smokeBearerToken) {
+    headers.Authorization = `Bearer ${smokeBearerToken}`;
   }
 
   return headers;

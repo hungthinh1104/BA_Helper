@@ -6,22 +6,76 @@ name: ci
   pull_request:
 
 jobs:
-  build-test:
+  quality-and-tests:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: ba_helper_test
+          POSTGRES_USER: ba_helper
+          POSTGRES_PASSWORD: ba_helper
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ba_helper -d ba_helper_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 3s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://ba_helper:ba_helper@localhost:5432/ba_helper_test
+      DATABASE_URL_TEST: postgresql://ba_helper:ba_helper@localhost:5432/ba_helper_test
+      REDIS_URL: redis://localhost:6379
+      REDIS_URL_TEST: redis://localhost:6379
+      WORKSPACE_MODE: dev-single-user
+      ENABLE_DEV_LOGIN: "true"
+      JWT_SECRET: ci-jwt-secret-not-for-production
+      AI_PROVIDER: fake
+      EMBEDDING_PROVIDER: fake
     steps:
       - uses: actions/checkout@v4
+
       - uses: pnpm/action-setup@v4
         with:
-          version: 11.3.0
+          version: 11.5.1
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: "pnpm"
+
       - name: Install deps
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --dir apps/api exec prisma generate
+
+      - name: Apply Prisma migrations
+        run: pnpm --dir apps/api exec prisma migrate deploy --schema prisma/schema.prisma
+
       - name: Lint
         run: pnpm lint
+
       - name: Typecheck
         run: pnpm typecheck
-      - name: Test
+
+      - name: Analyzer tests
+        run: pnpm test:analyzer
+
+      - name: Unit and integration tests
         run: pnpm test
+
+      - name: E2E tests
+        run: pnpm test:e2e
+
+      - name: Golden path demo
+        run: pnpm demo:golden-path

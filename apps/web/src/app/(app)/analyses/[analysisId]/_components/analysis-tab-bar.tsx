@@ -8,7 +8,7 @@ import { AnalysisHeader } from "@/components/workspace/analysis/analysis-header"
 import { E2ETimeline } from "@/components/workspace/analysis/e2e-timeline"
 import type { ImpactAnalysisResponse } from "@ba-helper/contracts"
 
-type TabValue = "insights" | "graph" | "qa-coverage" | "review-queue" | "diff" | "lineage"
+type TabValue = "insights" | "graph" | "traceability-matrix" | "qa-coverage" | "review-queue" | "diff" | "lineage"
 
 interface AnalysisStats {
   confirmed: number
@@ -77,6 +77,9 @@ export function AnalysisTabBar({
           </button>
           <button role="tab" aria-selected={activeTab === "graph"} onClick={() => onTabChange("graph")} className={tabClass("graph")}>
             Graph
+          </button>
+          <button role="tab" aria-selected={activeTab === "traceability-matrix"} onClick={() => onTabChange("traceability-matrix")} className={tabClass("traceability-matrix")}>
+            Traceability Matrix
           </button>
           <button role="tab" aria-selected={activeTab === "qa-coverage"} onClick={() => onTabChange("qa-coverage")} className={tabClass("qa-coverage")}>
             QA Coverage

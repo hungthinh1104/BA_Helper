@@ -30,6 +30,14 @@ describe('Structured Output Parser', () => {
     expect(result.jsonLength).toBe(jsonText.length);
   });
 
+  it('extracts fenced JSON payloads', () => {
+    const rawText = '```json\n{"success":true,"message":"Fenced"}\n```';
+    const result = parseStructuredLlmOutput({ rawText, schema, allowJsonExtraction: true });
+
+    expect(result.data).toEqual({ success: true, message: 'Fenced' });
+    expect(result.parseMode).toBe('raw');
+  });
+
   it('throws AI_EMPTY_RESPONSE for empty string', () => {
     expect(() => parseStructuredLlmOutput({ rawText: '   ', schema }))
       .toThrow(AiOutputError);
@@ -63,14 +71,20 @@ describe('Structured Output Parser', () => {
     }
   });
 
-  it('throws AI_OUTPUT_SCHEMA_INVALID if JSON is valid but does not match schema', () => {
+  it('throws AI_OUTPUT_SCHEMA_VALIDATION_FAILED if JSON is valid but does not match schema', () => {
     const rawText = JSON.stringify({ unknownField: 'test' });
     try {
       parseStructuredLlmOutput({ rawText, schema, allowJsonExtraction: true });
       fail('Expected to throw');
     } catch (e: any) {
-      expect(e.code).toBe('AI_OUTPUT_SCHEMA_INVALID');
-      expect(e.details?.errors).toBeDefined();
+      expect(e.code).toBe('AI_OUTPUT_SCHEMA_VALIDATION_FAILED');
+      expect(e.details?.errors).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            path: 'success',
+          }),
+        ]),
+      );
     }
   });
 });

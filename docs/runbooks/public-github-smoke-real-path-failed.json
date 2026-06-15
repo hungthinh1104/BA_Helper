@@ -1,9 +1,0 @@
-{
-  "error": "Cannot reach API at http://localhost:3001: fetch failed",
-  "partial": {
-    "apiUrl": "http://localhost:3001",
-    "manifest": "public-booking-demo",
-    "runbook": "/home/diphungthinh/Desktop/BA_Helper/docs/runbooks/public-github-smoke-demo.md"
-  },
-  "status": "failed"
-}

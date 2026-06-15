@@ -9,22 +9,10 @@ interface ScanJobProgressProps {
   snapshot?: RepositoryListItemResponse["latestSnapshot"]
 }
 
-const STATUS_CONFIG = {
-  QUEUED:      { dot: "bg-border animate-pulse", label: "Queued", textClass: "text-muted-foreground" },
-  RUNNING:     { dot: "bg-primary animate-pulse", label: "Scanning", textClass: "text-primary" },
-  COMPLETED:   { dot: "bg-success", label: "Indexed", textClass: "text-success" },
-  FAILED:      { dot: "bg-danger", label: "Failed", textClass: "text-danger" },
-  CANCELLED:   { dot: "bg-muted-foreground", label: "Cancelled", textClass: "text-muted-foreground" },
-}
+import { ScanStatusBadge } from "@/components/workspace/shared/status-badges"
 
 export function ScanJobStatus({ job }: { job: ScanJob }) {
-  const cfg = STATUS_CONFIG[job.status] || STATUS_CONFIG.QUEUED
-  return (
-    <div className="flex items-center gap-1.5">
-      <span className={`w-2 h-2 rounded-full shrink-0 ${cfg.dot}`} />
-      <span className={`text-[12px] font-medium ${cfg.textClass}`}>{cfg.label}</span>
-    </div>
-  )
+  return <ScanStatusBadge status={job.status} />
 }
 
 export function ScanJobProgress({ job, snapshot }: ScanJobProgressProps) {

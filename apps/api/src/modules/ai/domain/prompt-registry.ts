@@ -41,19 +41,28 @@ Include happy paths, negative paths (e.g. failure conditions like inventory rele
 
 OUTPUT CONTRACT
 Return JSON only.
-WARNING: Use exactly "title" for insights. Use exactly "insightKey" for unknowns (insightKey should be a readable title with spaces). Use exactly "scenarioKey" for qaScenarios (scenarioKey should be a readable title with spaces). DO NOT mix them up.
 Must match this exact structure:
 {
   "insights": [
-    { "certainty": "EVIDENCED", "title": "...", "description": "...", "evidenceKeys": ["..."] }
+    {
+      "insightKey": "...",
+      "insightType": "CLAIM" | "UNKNOWN" | "QUESTION" | "ACCEPTANCE_CRITERIA" | "QA_SCENARIO",
+      "certainty": "EVIDENCED" | "INFERRED" | "UNKNOWN" | "CONFLICTING",
+      "confidence": 0.0,
+      "title": "...",
+      "description": "...",
+      "reasoning": "...",
+      "evidenceKeys": ["artifactKey"]
+    }
   ],
   "unknowns": [
     { "insightKey": "...", "description": "...", "reasoning": "..." }
-  ],
-  "qaScenarios": [
-    { "scenarioKey": "...", "description": "..." }
   ]
 }
+Represent QA scenarios inside "insights" with "insightType": "QA_SCENARIO".
+Represent open stakeholder questions inside "insights" with "insightType": "QUESTION".
+Every insight must include insightKey, insightType, certainty, confidence, title, and description.
+Use confidence=null only when confidence cannot be estimated.
 For EVIDENCED items, evidenceKeys must be non-empty and exactly match artifactKey values.
 If the change request mentions or implies a behavior that is not proven by evidence, create an UNKNOWN item.
 UNKNOWN items should explain what evidence is missing.`,

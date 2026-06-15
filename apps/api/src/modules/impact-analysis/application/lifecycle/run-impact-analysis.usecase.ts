@@ -16,6 +16,7 @@ import { HybridRetrievalService } from '../../../retrieval/application/hybrid-re
 import { EvidencePackFormatter, EvidenceCandidate } from '../../../ai/application/evidence-pack.formatter';
 import { DomainPackRegistry } from '../../../domain-pack/application/domain-pack.registry';
 import { z } from 'zod';
+import { AiOutputError } from '../../../ai/domain/ai.errors';
 
 type PersistedArtifact = {
   id: string;
@@ -534,9 +535,20 @@ export class RunImpactAnalysisUseCase {
       });
     } catch (e: any) {
       console.error(`RunImpactAnalysisUseCase execution failed:`, e);
-      
-      const errorCode = e instanceof AppError ? e.code : 'UNKNOWN_ANALYSIS_ERROR';
+
+      const errorCode =
+        e instanceof AppError
+          ? e.code
+          : e instanceof AiOutputError
+            ? e.code
+            : 'UNKNOWN_ANALYSIS_ERROR';
       const errorMessage = e instanceof Error ? e.message : String(e);
+      const errorDetails =
+        e instanceof AiOutputError
+          ? e.details
+          : e instanceof AppError && 'details' in e
+            ? (e as any).details
+            : undefined;
 
       await this.impactRepo.updateStatus({
         id: analysis.id,
@@ -548,6 +560,7 @@ export class RunImpactAnalysisUseCase {
           message: errorMessage,
           stage: analysis.stage,
           retryable: true,
+          ...(errorDetails ? { details: errorDetails } : {}),
         }
       });
       throw e;

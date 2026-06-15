@@ -1,6 +1,7 @@
 import { CheckCircle2, AlertCircle, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ConfirmationStepProps } from "./new-analysis-types"
+import type { RepositoryListItemResponse } from "@ba-helper/contracts"
 
 function SummaryRow({ label, value, mono = true }: { label: string; value: string; mono?: boolean }) {
   return (
@@ -11,6 +12,21 @@ function SummaryRow({ label, value, mono = true }: { label: string; value: strin
       <span className={`text-[12px] text-foreground/90 ${mono ? "font-mono" : ""}`}>{value}</span>
     </div>
   )
+}
+
+function scannerMaturity(repo: RepositoryListItemResponse) {
+  const profile = repo.latestSnapshot?.profile
+  if (!profile) return "—"
+  if (profile.language === "TYPESCRIPT" && profile.framework === "NESTJS") return "STABLE"
+  if (profile.language === "JAVA" && profile.framework === "SPRING_BOOT") return "PARTIAL"
+  if (profile.framework !== "UNKNOWN") return "EXPERIMENTAL"
+  return "UNKNOWN"
+}
+
+function scannerProfileLabel(repo: RepositoryListItemResponse) {
+  const profile = repo.latestSnapshot?.profile
+  if (!profile) return "—"
+  return `${profile.language} / ${profile.framework}`
 }
 
 export function ConfirmationStep({
@@ -100,6 +116,8 @@ export function ConfirmationStep({
                 label="Coverage"
                 value={selectedRepos[0].latestSnapshot?.coverageStatus ?? "—"}
               />
+              <SummaryRow label="Scanner" value={scannerProfileLabel(selectedRepos[0])} mono={false} />
+              <SummaryRow label="Maturity" value={scannerMaturity(selectedRepos[0])} mono={false} />
             </>
           ) : (
             <div className="px-4 py-3">
@@ -113,6 +131,9 @@ export function ConfirmationStep({
                       <p className="text-[12px] text-foreground">{repo.displayName}</p>
                       <p className="text-[11px] font-mono text-muted-foreground truncate">
                         {repo.latestSnapshot?.commitSha ?? "—"}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground truncate">
+                        {scannerProfileLabel(repo)} · {scannerMaturity(repo)}
                       </p>
                     </div>
                     <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase border bg-surface text-muted-foreground border-border">

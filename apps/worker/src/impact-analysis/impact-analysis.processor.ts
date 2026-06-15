@@ -19,7 +19,12 @@ export class ImpactAnalysisProcessor extends WorkerHost {
       console.error(`ImpactAnalysisProcessor failed for job ${job.id}:`, e);
 
       if (e instanceof AiOutputError) {
-        if (e.code === 'AI_JSON_PARSE_FAILED' || e.code === 'AI_OUTPUT_SCHEMA_INVALID') {
+        if (
+          e.code === 'AI_JSON_PARSE_FAILED' ||
+          e.code === 'AI_OUTPUT_SCHEMA_INVALID' ||
+          e.code === 'AI_OUTPUT_SCHEMA_VALIDATION_FAILED' ||
+          e.code === 'AI_OUTPUT_TRUNCATED'
+        ) {
           if (job.attemptsMade >= 1) {
             throw new UnrecoverableError(`Unrecoverable Schema Error: ${e.message}`);
           }

@@ -86,6 +86,14 @@ export interface SmokeSummary {
   };
 }
 
+export type SmokeFailureStage =
+  | 'AUTH_BOOTSTRAP'
+  | 'SCAN'
+  | 'EMBEDDING_VECTOR_READINESS'
+  | 'IMPACT_ANALYSIS_AI_OUTPUT'
+  | 'REPORT_FINALIZATION'
+  | 'UNKNOWN';
+
 const TEMP_DIR_PREFIX = 'ba-scan-';
 
 export function assertPreflight(
@@ -330,9 +338,11 @@ export function formatFailureSummary(
   error: unknown,
   partial?: Record<string, unknown>,
 ): string {
+  const message = error instanceof Error ? error.message : String(error);
   return JSON.stringify(
     {
-      error: error instanceof Error ? error.message : String(error),
+      error: message,
+      stage: classifySmokeFailureStage(message),
       partial,
       status: 'failed',
     },
@@ -348,4 +358,63 @@ export function getRunbookPath(): string {
     : cwd;
 
   return path.resolve(repoRoot, 'docs/runbooks/public-github-smoke-demo.md');
+}
+
+export function getSmokeDiagnosticsDir(): string {
+  return path.resolve(path.dirname(getRunbookPath()), 'diagnostics');
+}
+
+export function classifySmokeFailureStage(message: string): SmokeFailureStage {
+  const normalized = message.toLowerCase();
+
+  if (
+    normalized.includes('auth_supplied_token_failed') ||
+    normalized.includes('dev login') ||
+    normalized.includes('/auth/dev-login') ||
+    normalized.includes('/auth/me') ||
+    normalized.includes('unauthorized') ||
+    normalized.includes('forbidden')
+  ) {
+    return 'AUTH_BOOTSTRAP';
+  }
+
+  if (
+    normalized.includes('scan job') ||
+    normalized.includes('vector_failed') ||
+    normalized.includes('unsupported_framework') ||
+    normalized.includes('worker_not_processing: scan')
+  ) {
+    return 'SCAN';
+  }
+
+  if (
+    normalized.includes('vector_ready') ||
+    normalized.includes('embedding') ||
+    normalized.includes('chunk') ||
+    normalized.includes('vector')
+  ) {
+    return 'EMBEDDING_VECTOR_READINESS';
+  }
+
+  if (
+    normalized.includes('ai_json_parse_failed') ||
+    normalized.includes('ai_output_schema') ||
+    normalized.includes('ai_output_truncated') ||
+    normalized.includes('impact analysis failed') ||
+    normalized.includes('runimpactanalysisusecase') ||
+    normalized.includes('google llm output')
+  ) {
+    return 'IMPACT_ANALYSIS_AI_OUTPUT';
+  }
+
+  if (
+    normalized.includes('approved report') ||
+    normalized.includes('finalize') ||
+    normalized.includes('reviewable') ||
+    normalized.includes('review queue')
+  ) {
+    return 'REPORT_FINALIZATION';
+  }
+
+  return 'UNKNOWN';
 }

@@ -9,54 +9,7 @@ jest.mock('node:fs/promises', () => ({
 }));
 
 jest.mock('@ba-helper/analyzer', () => {
-  return {
-    GitHubUrlValidator: {
-      validate: jest.fn(),
-    },
-  GitRepositoryFetcher: {
-    fetch: jest.fn(),
-  },
-  FrameworkDetector: {
-    detect: jest.fn(),
-  },
-  RepositoryProfileDetector: {
-    detect: jest.fn(),
-  },
-  SafeFileEnumerator: jest.fn(),
-  SecretRedactor: {
-    redact: jest.fn((content: string) => ({
-      redactedContent: content,
-      foundSecrets: false,
-    })),
-  },
-  DiagnosticCollector: class {
-    private readonly items: any[] = [];
-
-    add(item: any) {
-      this.items.push(item);
-    }
-
-    addFromFileDiagnostic(item: any) {
-      this.items.push(item);
-    }
-
-    addSecretRedacted(relativePath: string) {
-      this.items.push({ code: 'SECRET_REDACTED', samplePaths: [relativePath] });
-    }
-
-    getItems() {
-      return this.items;
-    }
-  },
-  scanProject: jest.fn(),
-  scanJavaSpringProject: jest.fn(),
-  scanGoHttpProject: jest.fn(),
-  scanFixture: jest.fn(),
-  };
-});
-
-jest.mock('@ba-helper/analyzer/src/scanner/scanner-adapter.registry', () => ({
-  ScannerAdapterRegistry: class {
+  class ScannerAdapterRegistry {
     getAdapter(lang: string, fw: string) {
       if (lang === 'UNKNOWN' || lang === 'python') {
         throw new Error('No scanner adapter found');
@@ -109,8 +62,54 @@ jest.mock('@ba-helper/analyzer/src/scanner/scanner-adapter.registry', () => ({
         }
       };
     }
+  }
+
+  return {
+    GitHubUrlValidator: {
+      validate: jest.fn(),
+    },
+  GitRepositoryFetcher: {
+    fetch: jest.fn(),
   },
-}));
+  FrameworkDetector: {
+    detect: jest.fn(),
+  },
+  RepositoryProfileDetector: {
+    detect: jest.fn(),
+  },
+  SafeFileEnumerator: jest.fn(),
+  SecretRedactor: {
+    redact: jest.fn((content: string) => ({
+      redactedContent: content,
+      foundSecrets: false,
+    })),
+  },
+  DiagnosticCollector: class {
+    private readonly items: any[] = [];
+
+    add(item: any) {
+      this.items.push(item);
+    }
+
+    addFromFileDiagnostic(item: any) {
+      this.items.push(item);
+    }
+
+    addSecretRedacted(relativePath: string) {
+      this.items.push({ code: 'SECRET_REDACTED', samplePaths: [relativePath] });
+    }
+
+    getItems() {
+      return this.items;
+    }
+  },
+  scanProject: jest.fn(),
+  scanJavaSpringProject: jest.fn(),
+  scanGoHttpProject: jest.fn(),
+  scanFixture: jest.fn(),
+  ScannerAdapterRegistry,
+  };
+});
 
 const analyzer = jest.requireMock('@ba-helper/analyzer') as {
   GitHubUrlValidator: { validate: jest.Mock };

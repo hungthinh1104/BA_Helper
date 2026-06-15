@@ -10,7 +10,7 @@ export function HowItWorks() {
     {
       icon: <GitMerge className="w-8 h-8 text-primary" />,
       title: "2. Analyze Impact",
-      description: "Submit a new Change Request. Our AI engine traverses the graph to accurately identify which files, APIs, and functions will be affected.",
+      description: "Submit a change request. The backend combines scanner evidence, retrieval signals, and bounded AI output to propose affected files, APIs, and functions for review.",
     },
     {
       icon: <FileCheck2 className="w-8 h-8 text-primary" />,

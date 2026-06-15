@@ -8,7 +8,9 @@ dist
 .env
 .env.*
 !.env.example
+!.env.*.example
 !**/.env.example
+!**/.env.*.example
 .DS_Store
 .vscode/
 .idea/
@@ -20,3 +22,4 @@ temp/
 apps/web/.env.local
 tests/fixtures/huge-repo/
 tests/benchmark/reports/generated/
+docs/runbooks/diagnostics/

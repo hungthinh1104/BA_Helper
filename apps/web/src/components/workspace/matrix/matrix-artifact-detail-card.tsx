@@ -1,20 +1,13 @@
 import React from "react"
 import { MatrixRowArtifactDetail, MatrixRowInsightRef } from "@ba-helper/contracts"
 import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { CertaintyBadge, ArtifactKindBadge } from "@/components/workspace/shared/status-badges"
 import { MatrixEvidenceList } from "./matrix-evidence-list"
 
 interface MatrixArtifactDetailCardProps {
   artifact: MatrixRowArtifactDetail
   risks: MatrixRowInsightRef[]
   qaScenarios: MatrixRowInsightRef[]
-}
-
-const CERTAINTY_COLORS: Record<string, string> = {
-  EVIDENCED: "bg-success/10 text-success border-success/20",
-  INFERRED: "bg-warning/10 text-warning border-warning/20",
-  UNKNOWN: "bg-destructive/10 text-destructive border-destructive/20",
-  CONFLICTING: "bg-destructive/10 text-destructive border-destructive/20",
 }
 
 export function MatrixArtifactDetailCard({
@@ -30,9 +23,7 @@ export function MatrixArtifactDetailCard({
       <div className="flex flex-col gap-2 p-3 pb-2 border-b bg-muted/20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="text-[10px] font-mono rounded-sm">
-              {artifact.universalKind || artifact.rawArtifactType}
-            </Badge>
+            <ArtifactKindBadge kind={artifact.universalKind || artifact.rawArtifactType} />
             <span className="text-[13px] font-medium text-foreground">{artifact.displayName}</span>
           </div>
           <div className="flex items-center gap-2 text-[11px]">
@@ -76,12 +67,7 @@ export function MatrixArtifactDetailCard({
                   <div className="flex items-start justify-between gap-2 mb-1">
                     <span className="text-[12px] font-medium text-foreground">{risk.title}</span>
                     {risk.certainty && (
-                      <Badge
-                        variant="outline"
-                        className={`text-[9px] uppercase ${CERTAINTY_COLORS[risk.certainty] || ""}`}
-                      >
-                        {risk.certainty}
-                      </Badge>
+                      <CertaintyBadge certainty={risk.certainty} />
                     )}
                   </div>
                   {risk.description && (
@@ -107,12 +93,7 @@ export function MatrixArtifactDetailCard({
                   <div className="flex items-start justify-between gap-2 mb-1">
                     <span className="text-[12px] font-medium text-foreground">{qa.title}</span>
                     {qa.certainty && (
-                      <Badge
-                        variant="outline"
-                        className={`text-[9px] uppercase ${CERTAINTY_COLORS[qa.certainty] || ""}`}
-                      >
-                        {qa.certainty}
-                      </Badge>
+                      <CertaintyBadge certainty={qa.certainty} />
                     )}
                   </div>
                   {qa.description && (

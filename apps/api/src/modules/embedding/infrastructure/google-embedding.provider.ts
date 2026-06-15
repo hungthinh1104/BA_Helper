@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { EmbeddingProvider, EmbeddingRequest, EmbeddingResult } from '../domain/embedding-provider.interface';
 import { AppError } from '../../../shared/app-error';
+import { resolveGoogleProviderApiKey } from '../../ai/infrastructure/google-provider-env';
 
 const DEFAULT_MODEL = 'gemini-embedding-001';
 const EXPECTED_DIMENSIONS = 1536;
@@ -15,9 +16,12 @@ export class GoogleEmbeddingProvider extends EmbeddingProvider {
 
   constructor() {
     super();
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY;
+    const apiKey = resolveGoogleProviderApiKey();
     if (!apiKey) {
-      throw new AppError('AI_PROVIDER_CONFIG_INVALID', 'Missing Gemini API key');
+      throw new AppError(
+        'AI_PROVIDER_CONFIG_INVALID',
+        'Google embedding provider requires GOOGLE_API_KEY, GEMINI_API_KEY, or GOOGLE_AI_API_KEY.',
+      );
     }
     this.client = new GoogleGenerativeAI(apiKey);
   }

@@ -16,11 +16,7 @@ function getReviewIcon(status: TraceabilityLink["reviewStatus"]) {
   return <div className="w-3.5 h-3.5 rounded-full border-2 border-warning border-dashed"></div>
 }
 
-function getBasisBadge(basis: TraceabilityLink["linkBasis"]) {
-  if (basis === "EVIDENCED") return <Badge className="badge-confirmed px-1.5 py-0 text-[10px] h-5">Evidenced</Badge>
-  if (basis === "INFERRED") return <Badge className="badge-inferred px-1.5 py-0 text-[10px] h-5">Inferred</Badge>
-  return <Badge className="badge-neutral px-1.5 py-0 text-[10px] h-5">{basis}</Badge>
-}
+import { CertaintyBadge, ArtifactKindBadge } from "@/components/workspace/shared/status-badges"
 
 export function AffectedArtifactCard({ link, isSelected, onClick }: AffectedArtifactCardProps) {
   const filePath = link.evidence[0]?.filePath ?? "Unknown File"
@@ -51,13 +47,11 @@ export function AffectedArtifactCard({ link, isSelected, onClick }: AffectedArti
           </p>
           <div className="shrink-0 flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
             {link.retrieval && <RetrievalSignalBadge retrieval={link.retrieval} />}
-            {getBasisBadge(link.linkBasis)}
+            <CertaintyBadge certainty={link.linkBasis} />
           </div>
         </div>
         <div className="mt-1.5 flex items-center gap-2">
-          <Badge variant="secondary" className="text-[10px] h-4 px-1.5 uppercase bg-surface-muted border-0 text-muted-foreground">
-            {link.linkType}
-          </Badge>
+          <ArtifactKindBadge kind={link.linkType} />
           <span className="text-[11px] font-mono text-muted-foreground/50 truncate">{filePath}</span>
         </div>
       </div>

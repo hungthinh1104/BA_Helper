@@ -76,8 +76,10 @@ export function ReportViewer({ analysisId, commitSha, generatedAt }: ReportViewe
     return (
       <div className="flex flex-col items-center justify-center p-12 text-muted-foreground border rounded-xl bg-surface-muted/30 m-8">
         <AlertCircle className="w-8 h-8 text-destructive mb-3" />
-        <p className="font-medium text-foreground">Failed to load report</p>
-        <p className="text-[13px]">The approved report for this analysis could not be retrieved or has not been generated.</p>
+        <p className="font-medium text-foreground">Approved report is not available</p>
+        <p className="max-w-md text-center text-[13px]">
+          Finalize the analysis after human review to generate the approved traceability report. Draft or unreviewed analysis output is not exported as an approved report.
+        </p>
       </div>
     )
   }
@@ -125,6 +127,9 @@ export function ReportViewer({ analysisId, commitSha, generatedAt }: ReportViewe
               <span className="font-semibold text-[13px] uppercase tracking-wider">Stale Report Warning</span>
               <span className="text-[13px] text-warning/80">
                 {report.staleReason || "The repository has progressed past the snapshot used for this report. The findings may no longer be accurate."}
+              </span>
+              <span className="text-[12px] text-warning/75">
+                Reading remains allowed for traceability, but export is blocked until the analysis is rerun and finalized against the current snapshot.
               </span>
             </div>
           </div>

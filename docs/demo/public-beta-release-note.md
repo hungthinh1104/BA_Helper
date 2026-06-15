@@ -29,11 +29,11 @@ We are committed to honest capabilities. As of this Public Beta:
 - **Pilot adapters** are bounded static extractors, not full compiler-level semantic analyzers.
 - **Unsupported patterns** become diagnostics, `UNKNOWN`, or `RISK` items requiring manual review.
 - **Domain packs are hints, not evidence.** They guide retrieval but cannot bypass the evidence hierarchy.
-- **Golden path uses fake providers** (`FakeLlmProvider`, `FakeEmbeddingProvider`) for deterministic local testing.
+- **Manual UI demo uses Gemini real LLM** when `AI_PROVIDER=google` and a Gemini API key are configured. Automated CI golden-path tests still use fake providers for deterministic, no-network validation.
 - **Production SaaS features** (such as GitHub App auth, billing, and hosted multi-tenant deployment) are incomplete.
 
 ## 7. How to Run Locally
-We designed the setup to be highly reproducible. You can verify the entire pipeline without an external LLM API key.
+We designed the setup to be reproducible while supporting real-provider demos. Automated tests can verify the pipeline without an external LLM key; manual UI demos should use Gemini for real LLM output.
 
 ```bash
 # Clone the repo and install dependencies

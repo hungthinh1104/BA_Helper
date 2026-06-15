@@ -131,7 +131,7 @@ export function AnalysisEvidenceInspector({
             </div>
             <h4 className="text-[14px] font-semibold text-foreground mb-1">No Code Evidence Linked</h4>
             <p className="text-[12px] text-muted-foreground max-w-[240px] leading-relaxed">
-              This insight was inferred without direct references to specific lines of code in the current snapshot.
+              This item is not a confirmed code impact. Treat it as a diagnostic, risk, or clarification prompt until review links it to evidence.
             </p>
           </div>
         ) : (

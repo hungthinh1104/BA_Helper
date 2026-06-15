@@ -26,10 +26,12 @@ import { AnalysisTabBar } from "./_components/analysis-tab-bar"
 import { AnalysisInsightsTab } from "./_components/analysis-insights-tab"
 import { AnalysisDiffTab } from "./_components/analysis-diff-tab"
 import { AnalysisEvidenceInspector } from "./_components/analysis-evidence-inspector"
+import { AnalysisTraceabilityMatrixTab } from "./_components/analysis-traceability-matrix-tab"
 import { Network } from "lucide-react"
 
 import { AnalysisLineageTab } from "./_components/analysis-lineage-tab"
 import { AnalysisDriftWarning } from "./_components/analysis-drift-warning"
+import { CertaintyBadge } from "@/components/workspace/shared/status-badges"
 
 // Dynamic import so React Flow CSS loads correctly in Next.js app router
 const ImpactGraphView = dynamic(
@@ -39,7 +41,7 @@ const ImpactGraphView = dynamic(
 
 type Insight = InsightListResponse["items"][number]
 type TraceabilityLink = TraceabilityLinkListResponse["items"][number]
-type TabValue = "insights" | "graph" | "qa-coverage" | "review-queue" | "diff" | "lineage"
+type TabValue = "insights" | "graph" | "traceability-matrix" | "qa-coverage" | "review-queue" | "diff" | "lineage"
 
 type WorkspaceSelection =
   | { type: "INSIGHT"; insightId: string }
@@ -250,6 +252,9 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
     return (
       <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center">
         <h2 className="text-lg font-semibold text-foreground mb-4">Analyzing Impact</h2>
+        <p className="mb-5 max-w-md text-[13px] text-muted-foreground">
+          The backend is matching the requirement revision against persisted snapshot evidence. This does not edit code or generate implementation changes.
+        </p>
         <AnalysisProgress analysis={analysis} />
       </div>
     )
@@ -275,6 +280,9 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
         <p className="text-[13px] text-muted-foreground mb-6 max-w-md">
           {analysis.error?.message || "The impact analysis could not be completed. Please check the logs or try again."}
         </p>
+        <p className="mb-6 max-w-md text-[12px] text-muted-foreground">
+          Common fixes: confirm the selected snapshot is READY or explicitly accepted as PARTIAL, then rerun the analysis from the same requirement revision.
+        </p>
         <Button onClick={handleRetryAnalysis} disabled={isRetrying}>
           {isRetrying ? "Retrying..." : "Rerun Analysis"}
         </Button>
@@ -282,7 +290,7 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
     )
   }
 
-  const isFullHeightTab = activeTab === "graph" || activeTab === "review-queue" || activeTab === "diff"
+  const isFullHeightTab = activeTab === "graph" || activeTab === "review-queue" || activeTab === "diff" || activeTab === "lineage" || activeTab === "traceability-matrix"
 
   return (
     <ImpactAnalysisWorkspace
@@ -301,12 +309,7 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
       inspectorCategory={isFullHeightTab ? undefined : selectedInsight?.category}
       inspectorCertaintyBadge={
         isFullHeightTab || !selectedInsight ? undefined : (
-          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider border ${
-            selectedInsight.certainty === "EVIDENCED" ? "bg-success/10 text-success border-success/30" :
-            selectedInsight.certainty === "INFERRED"  ? "bg-info/10 text-info border-info/30" :
-            selectedInsight.certainty === "CONFLICTING" ? "bg-danger/10 text-danger border-danger/30" :
-            "bg-unknown/10 text-muted-foreground border-border/60"
-          }`}>{selectedInsight.certainty}</span>
+          <CertaintyBadge certainty={selectedInsight.certainty} />
         )
       }
       inspectorContent={inspectorContent}
@@ -345,7 +348,6 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
             </div>
           )}
 
-          {/* QA Coverage tab */}
           {activeTab === "qa-coverage" && (
             <div className="mt-4 pb-12">
               <QaCoveragePanel
@@ -354,6 +356,20 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
                   const node = graphData?.nodes.find(n => n.id === `artifact-${artifactId}`)
                   if (node) handleGraphNodeSelect(node)
                 }}
+              />
+            </div>
+          )}
+
+          {/* Traceability Matrix tab */}
+          {activeTab === "traceability-matrix" && (
+            <div className="absolute inset-0 bg-surface">
+              <AnalysisTraceabilityMatrixTab 
+                analysis={analysis}
+                insights={insights}
+                links={links}
+                graphNodes={graphData?.nodes}
+                onSelectLink={handleSelectLink}
+                onSelectInsight={handleSelectInsight}
               />
             </div>
           )}

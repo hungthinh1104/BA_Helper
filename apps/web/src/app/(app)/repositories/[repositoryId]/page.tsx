@@ -21,6 +21,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { DiagnosticItem } from "@ba-helper/contracts"
 import { Skeleton } from "@/components/ui/skeleton"
 import { v4 as uuidv4 } from "uuid"
+import type { RepositoryProfileResponse } from "@ba-helper/contracts"
 
 interface PageProps {
   params: Promise<{ repositoryId: string }>
@@ -41,6 +42,16 @@ function getFailureGuidance(errorCode?: string, message?: string) {
 
   return "Check the diagnostics below, fix the runtime or repository issue, and rerun the scan."
 }
+
+function getScannerMaturity(profile?: RepositoryProfileResponse) {
+  if (!profile) return null
+  if (profile.language === "TYPESCRIPT" && profile.framework === "NESTJS") return "STABLE"
+  if (profile.language === "JAVA" && profile.framework === "SPRING_BOOT") return "PARTIAL"
+  if (profile.framework !== "UNKNOWN") return "EXPERIMENTAL"
+  return "UNKNOWN"
+}
+
+import { MaturityBadge } from "@/components/workspace/shared/status-badges"
 
 export default function RepositoryDetailsPage({ params }: PageProps) {
   // Since Next.js 15, params is a Promise that needs to be unwrapped with React.use
@@ -122,6 +133,8 @@ export default function RepositoryDetailsPage({ params }: PageProps) {
 
   const scanHealthDiag = diagnostics.find(d => d.code === "SCAN_HEALTH")
   const regularDiagnostics = diagnostics.filter(d => d.code !== "SCAN_HEALTH")
+  const profile = repo.latestSnapshot?.profile
+  const scannerMaturity = getScannerMaturity(profile)
 
   const handleRetryScan = async () => {
     try {
@@ -244,6 +257,37 @@ export default function RepositoryDetailsPage({ params }: PageProps) {
             )}
           </div>
 
+          {profile && (
+            <div className="flex flex-col gap-3 p-5 rounded-xl border border-border/40 bg-surface/50 backdrop-blur-xl shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-[14px] font-semibold text-foreground flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-muted-foreground" />
+                    Detected Scanner Profile
+                  </h2>
+                  <p className="mt-1 text-[12px] text-muted-foreground">
+                    Profile is persisted on the published snapshot and only describes scanner capability, not production-grade language coverage.
+                  </p>
+                </div>
+                {scannerMaturity && (
+                  <MaturityBadge maturity={scannerMaturity} className="text-[11px] px-2 py-1" />
+                )}
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <ProfileStat label="Language" value={profile.language} />
+                <ProfileStat label="Framework" value={profile.framework} />
+                <ProfileStat label="Architecture" value={profile.architectureStyle} />
+                <ProfileStat label="Domain" value={profile.domain} />
+              </div>
+              {(profile.sourceRoots.length > 0 || profile.testRoots.length > 0) && (
+                <p className="text-[11px] text-muted-foreground">
+                  Source roots: {profile.sourceRoots.length > 0 ? profile.sourceRoots.join(", ") : "—"} · Test roots:{" "}
+                  {profile.testRoots.length > 0 ? profile.testRoots.join(", ") : "—"}
+                </p>
+              )}
+            </div>
+          )}
+
           {scanHealthDiag && (
             <ScanHealthCard payload={scanHealthDiag.payload} />
           )}
@@ -279,25 +323,11 @@ export default function RepositoryDetailsPage({ params }: PageProps) {
               <Layers className="w-4 h-4 text-muted-foreground" />
               Artifact Analytics
             </h2>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <ArtifactStatCard icon={<Server />} label="Controllers" count={repo.artifactStats?.controllers || 0} />
               <ArtifactStatCard icon={<Box />} label="Services" count={repo.artifactStats?.services || 0} />
               <ArtifactStatCard icon={<Database />} label="Entities" count={repo.artifactStats?.entities || 0} />
               <ArtifactStatCard icon={<Beaker />} label="Tests" count={repo.artifactStats?.tests || 0} />
-              <ArtifactStatCard icon={<Activity />} label="Data Access" count={0} />
-            </div>
-          </div>
-
-            {/* Graph Explorer Preview */}
-          <div className="flex flex-col gap-4">
-            <h2 className="text-[14px] font-semibold text-foreground flex items-center gap-2">
-              <Activity className="w-4 h-4 text-muted-foreground" />
-              Graph Preview
-            </h2>
-            <div className="flex flex-col border border-border/40 rounded-xl bg-surface/50 backdrop-blur-xl shadow-lg ring-1 ring-black/5 dark:ring-white/5 py-12 items-center text-center">
-              <Activity className="w-8 h-8 text-muted-foreground mb-4" />
-              <p className="text-[13px] font-medium text-foreground">Graph Explorer Coming Soon</p>
-              <p className="text-[12px] text-muted-foreground mt-1">Detailed endpoint and entity visualization will be available in a future update.</p>
             </div>
           </div>
 
@@ -317,6 +347,15 @@ function ArtifactStatCard({ label, count, icon }: { label: string; count: number
         <span className="text-xl font-bold text-foreground">{count}</span>
       </div>
       <span className="text-[12px] font-medium text-muted-foreground">{label}</span>
+    </div>
+  )
+}
+
+function ProfileStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border/40 bg-surface-soft/40 p-3">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="mt-1 truncate text-[12px] font-mono text-foreground">{value}</p>
     </div>
   )
 }

@@ -1,45 +1,68 @@
-jest.mock('@ba-helper/analyzer', () => ({
-  GitHubUrlValidator: {
-    validate: jest.fn(),
-  },
-  GitRepositoryFetcher: {
-    fetch: jest.fn(),
-  },
-  FrameworkDetector: {
-    detect: jest.fn(),
-  },
-  RepositoryProfileDetector: {
-    detect: jest.fn(),
-  },
-  SafeFileEnumerator: jest.fn(),
-  SecretRedactor: {
-    redact: jest.fn((content: string) => ({
-      redactedContent: content,
-      foundSecrets: false,
-    })),
-  },
-  DiagnosticCollector: class {
-    private readonly items: any[] = [];
+jest.mock('@ba-helper/analyzer', () => {
+  const scanProject = jest.fn();
 
-    add(item: any) {
-      this.items.push(item);
-    }
+  return {
+    GitHubUrlValidator: {
+      validate: jest.fn(),
+    },
+    GitRepositoryFetcher: {
+      fetch: jest.fn(),
+    },
+    FrameworkDetector: {
+      detect: jest.fn(),
+    },
+    RepositoryProfileDetector: {
+      detect: jest.fn(),
+    },
+    SafeFileEnumerator: jest.fn(),
+    SecretRedactor: {
+      redact: jest.fn((content: string) => ({
+        redactedContent: content,
+        foundSecrets: false,
+      })),
+    },
+    DiagnosticCollector: class {
+      private readonly items: any[] = [];
 
-    addFromFileDiagnostic(item: any) {
-      this.items.push(item);
-    }
+      add(item: any) {
+        this.items.push(item);
+      }
 
-    addSecretRedacted(relativePath: string) {
-      this.items.push({ code: 'SECRET_REDACTED', samplePaths: [relativePath] });
-    }
+      addFromFileDiagnostic(item: any) {
+        this.items.push(item);
+      }
 
-    getItems() {
-      return this.items;
-    }
-  },
-  scanProject: jest.fn(),
-  scanFixture: jest.fn(),
-}));
+      addSecretRedacted(relativePath: string) {
+        this.items.push({ code: 'SECRET_REDACTED', samplePaths: [relativePath] });
+      }
+
+      getItems() {
+        return this.items;
+      }
+    },
+    ScannerAdapterRegistry: class {
+      tryGetAdapter() {
+        return {
+          adapterVersion: '0.2.0',
+          scan: scanProject,
+        };
+      }
+
+      getAdapter() {
+        return {
+          adapterVersion: '0.2.0',
+          scan: scanProject,
+        };
+      }
+
+      listCapabilities() {
+        return [];
+      }
+    },
+    scanProject,
+    scanFixture: jest.fn(),
+  };
+});
 
 import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';

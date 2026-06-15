@@ -25,10 +25,25 @@ services:
       timeout: 3s
       retries: 5
     restart: unless-stopped
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: >
+      sh -lc "cd /app/apps/api &&
+      /app/apps/api/node_modules/.bin/prisma migrate deploy --config prisma.config.ts --schema prisma/schema.prisma"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://ba_helper:ba_helper@postgres:5432/ba_helper
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+    command: ["node", "/app/apps/api/dist/apps/api/src/main.js"]
     environment:
       NODE_ENV: development
       PORT: 3001
@@ -40,8 +55,10 @@ services:
       REDIS_URL: redis://redis:6379
       AI_PROVIDER: ${AI_PROVIDER:-fake}
       EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-fake}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GOOGLE_AI_API_KEY: ${GOOGLE_AI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
       GOOGLE_MODEL: ${GOOGLE_MODEL:-gemini-2.5-flash}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     depends_on:
@@ -49,6 +66,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     ports:
       - "3001:3001"
     restart: unless-stopped
@@ -56,6 +75,7 @@ services:
     build:
       context: .
       dockerfile: apps/worker/Dockerfile
+    command: ["node", "/app/apps/worker/dist/apps/worker/src/main.js"]
     environment:
       NODE_ENV: development
       WORKSPACE_MODE: dev-single-user
@@ -63,8 +83,10 @@ services:
       REDIS_URL: redis://redis:6379
       AI_PROVIDER: ${AI_PROVIDER:-fake}
       EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-fake}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GOOGLE_AI_API_KEY: ${GOOGLE_AI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
       GOOGLE_MODEL: ${GOOGLE_MODEL:-gemini-2.5-flash}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     depends_on:
@@ -72,6 +94,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     restart: unless-stopped
 volumes:
   postgres-data:

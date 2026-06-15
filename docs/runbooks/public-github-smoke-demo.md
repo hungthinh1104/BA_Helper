@@ -18,6 +18,8 @@ workspace bootstrap
 
 It is an operator/demo command, not a CI gate.
 
+CI stays on fake providers. Real Gemini smoke is explicit and manual.
+
 ## Pinned Demo Scenario
 
 ```text
@@ -43,12 +45,15 @@ Redis
 Required environment:
 
 ```env
-AI_PROVIDER=fake
+AI_PROVIDER=google
+GEMINI_API_KEY=<your-gemini-key>
+AI_MAX_TOKENS=8192
 EMBEDDING_PROVIDER=fake
+GOOGLE_EMBEDDING_MODEL=gemini-embedding-001
 DATABASE_URL=postgresql://ba_helper:ba_helper@localhost:5432/ba_helper
 REDIS_URL=redis://localhost:6379
-PUBLIC_GITHUB_SMOKE_REPO=https://github.com/ndmen/booking
-PUBLIC_GITHUB_SMOKE_REF=main
+ENABLE_DEV_LOGIN=true
+SMOKE_ALLOW_DEV_LOGIN_FALLBACK=false
 ```
 
 ## Command
@@ -56,9 +61,7 @@ PUBLIC_GITHUB_SMOKE_REF=main
 From repo root:
 
 ```bash
-pnpm infra:up
-pnpm dev:api
-pnpm dev:worker
+docker compose up -d --build migrate api worker
 pnpm smoke:public-github
 ```
 
@@ -68,6 +71,18 @@ Or directly:
 pnpm --dir apps/api dev
 pnpm --dir apps/worker dev
 pnpm --dir apps/api smoke:public-github
+```
+
+For the real LLM assertion path, use:
+
+```bash
+pnpm --dir apps/api smoke:public-github:real-llm
+```
+
+For the full real path with Google embeddings:
+
+```bash
+AI_PROVIDER=google EMBEDDING_PROVIDER=google pnpm --dir apps/api smoke:public-github:real-path
 ```
 
 ## Success Markers
@@ -94,6 +109,12 @@ The most recent successful local runtime output is captured in:
 docs/runbooks/public-github-smoke-last-known-good.json
 ```
 
+Transient smoke outputs and failures are written to:
+
+```text
+docs/runbooks/diagnostics/
+```
+
 Minimum acceptable behavior:
 
 ```text
@@ -118,13 +139,14 @@ Typical failure causes:
 
 ```text
 API health down
-workspace bootstrap failure
+auth/bootstrap failure
 unsupported workspace mode
 public repo drifted away from supported NestJS shape
 scan job stays QUEUED too long -> WORKER_NOT_PROCESSING
 scan timed out or failed before publishing snapshotId
+embedding/vector readiness failure
 analysis job stays QUEUED too long -> WORKER_NOT_PROCESSING
-analysis timed out or failed before reviewable state
+analysis AI parse/schema failure
 report finalization/fetch failed
 temp workspace cleanup leak detected
 ```

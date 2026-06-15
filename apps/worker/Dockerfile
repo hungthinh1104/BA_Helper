@@ -38,6 +38,9 @@ WORKDIR /app
 COPY --from=build /app/node_modules /app/node_modules
 COPY --from=build /app/apps/api/node_modules /app/apps/api/node_modules
 COPY --from=build /app/apps/worker/node_modules /app/apps/worker/node_modules
+COPY --from=build /app/packages/analyzer/node_modules /app/packages/analyzer/node_modules
+COPY --from=build /app/apps/api/prisma /app/apps/api/prisma
+COPY --from=build /app/apps/api/prisma.config.ts /app/apps/api/prisma.config.ts
 COPY --from=build /app/packages /app/packages
 COPY --from=build /app/apps/worker/dist /app/apps/worker/dist
 COPY --from=build /app/apps/api/node_modules /app/apps/worker/dist/apps/api/node_modules

@@ -100,7 +100,7 @@ export function AnalysisInsightsTab({
         )}
         {unknowns.length > 0 && (
           <InsightList
-            title="Unknowns & Missing Implementations"
+            title="UNKNOWN / RISK Diagnostics"
             insights={unknowns}
             selectedInsightId={selectedInsight?.id}
             onSelect={onSelectInsight}
@@ -125,7 +125,12 @@ export function AnalysisInsightsTab({
 
         {links.length > 0 && filter === "ALL" && (
           <div className="flex flex-col gap-3">
-            <h3 className="text-sm font-semibold mb-1 px-1">Affected Artifacts</h3>
+            <div className="px-1">
+              <h3 className="text-sm font-semibold mb-1">Evidence-backed Impacted Artifacts</h3>
+              <p className="text-[12px] text-muted-foreground">
+                These rows are backend traceability links backed by persisted code evidence from the selected snapshot.
+              </p>
+            </div>
             {links.map((link) => (
               <AffectedArtifactCard
                 key={link.id}

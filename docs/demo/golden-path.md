@@ -36,10 +36,12 @@ When the test runs successfully, it asserts that the system properly generates:
 - **Scanner Maturity**: `STABLE` TypeScript/NestJS path
 
 ## Mocked Systems
-For deterministic CI, we deliberately use mock providers:
+For deterministic CI, this automated command deliberately uses mock providers:
 - **LLM Provider:** `FakeLlmProvider` is used to prevent real, non-deterministic token usage and external API calls.
 - **Embedding Provider:** Fake embeddings generated locally to bypass external semantic search costs.
 - **Drift Check:** To prevent heavy load in CI, full snapshot rescans are partially mocked via a smoke-level drift check rather than doing a full duplicate `git clone`.
+
+The manual UI demo is different: it should run with `AI_PROVIDER=google` and a Gemini API key so generated insights come from the real provider while still remaining constrained by persisted evidence and human review.
 
 ## Public Limitations
 Please be aware of the following:
@@ -49,7 +51,7 @@ Please be aware of the following:
 - Unsupported scanner patterns become diagnostics, `UNKNOWN`, or `RISK` items requiring review.
 - Domain packs are hints, not evidence.
 - Evaluation metrics are internal quality signals, not public benchmarks.
-- Golden path uses fake providers for deterministic CI.
+- Automated CI golden path uses fake providers; manual UI demo uses Gemini real LLM when configured.
 - Production SaaS concerns such as GitHub App auth, billing, and hosted multi-tenant deployment are not complete.
 
 ## Next manual UI reproduction path

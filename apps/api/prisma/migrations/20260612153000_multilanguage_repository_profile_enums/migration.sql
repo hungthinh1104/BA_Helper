@@ -12,3 +12,8 @@ ALTER TYPE "RepositoryProfileFramework" ADD VALUE IF NOT EXISTS 'FASTAPI';
 ALTER TYPE "RepositoryProfileFramework" ADD VALUE IF NOT EXISTS 'ASPNETCORE';
 ALTER TYPE "RepositoryProfileFramework" ADD VALUE IF NOT EXISTS 'LARAVEL';
 ALTER TYPE "RepositoryProfileFramework" ADD VALUE IF NOT EXISTS 'RAILS';
+
+-- Backfill schema drift introduced before BaInsight.metadata was added to the
+-- Prisma datamodel. This keeps real demo/runtime databases aligned with the
+-- current API contract before impact analysis writes insight metadata.
+ALTER TABLE "BaInsight" ADD COLUMN IF NOT EXISTS "metadata" JSONB;

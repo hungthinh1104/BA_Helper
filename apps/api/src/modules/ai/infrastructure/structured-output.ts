@@ -14,6 +14,87 @@ export interface ParseStructuredLlmOutputResult<T> {
   jsonLength: number;
 }
 
+const MARKDOWN_JSON_FENCE = /^```(?:json)?\s*([\s\S]*?)\s*```$/i;
+
+function stripMarkdownJsonFence(rawText: string): string {
+  const fenced = rawText.trim().match(MARKDOWN_JSON_FENCE);
+  return fenced ? fenced[1].trim() : rawText;
+}
+
+function findMatchingClosingIndex(
+  input: string,
+  startIndex: number,
+  opening: '{' | '[',
+  closing: '}' | ']',
+): number {
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = startIndex; index < input.length; index += 1) {
+    const char = input[index];
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      escaped = true;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (inString) {
+      continue;
+    }
+
+    if (char === opening) {
+      depth += 1;
+      continue;
+    }
+
+    if (char === closing) {
+      depth -= 1;
+      if (depth === 0) {
+        return index;
+      }
+    }
+  }
+
+  return -1;
+}
+
+function extractTopLevelJson(rawText: string): string | null {
+  const normalized = stripMarkdownJsonFence(rawText).trim();
+  const objectIndex = normalized.indexOf('{');
+  const arrayIndex = normalized.indexOf('[');
+
+  if (objectIndex === -1 && arrayIndex === -1) {
+    return null;
+  }
+
+  const startIndex =
+    objectIndex === -1
+      ? arrayIndex
+      : arrayIndex === -1
+        ? objectIndex
+        : Math.min(objectIndex, arrayIndex);
+  const opening = normalized[startIndex] as '{' | '[';
+  const closing = opening === '{' ? '}' : ']';
+  const endIndex = findMatchingClosingIndex(normalized, startIndex, opening, closing);
+
+  if (endIndex === -1) {
+    return null;
+  }
+
+  return normalized.slice(startIndex, endIndex + 1).trim();
+}
+
 export function parseStructuredLlmOutput<T>({
   rawText,
   schema,
@@ -24,44 +105,55 @@ export function parseStructuredLlmOutput<T>({
   }
 
   const rawLength = rawText.length;
-  let jsonString = rawText;
+  const normalizedRaw = stripMarkdownJsonFence(rawText).trim();
+  let jsonString = normalizedRaw;
   let parseMode: 'raw' | 'extracted' = 'raw';
-  let rawJsonObj: any;
+  let rawJsonObj: unknown;
 
-  // 1. Try parsing raw
   try {
     rawJsonObj = JSON.parse(jsonString);
-  } catch (e) {
-    // 2. Fallback to extraction if allowed
-    if (allowJsonExtraction) {
-      const firstBrace = rawText.indexOf('{');
-      const lastBrace = rawText.lastIndexOf('}');
-      
-      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace >= firstBrace) {
-        jsonString = rawText.substring(firstBrace, lastBrace + 1);
-        try {
-          rawJsonObj = JSON.parse(jsonString);
-          parseMode = 'extracted';
-        } catch (e2) {
-          throw new AiOutputError('AI_JSON_PARSE_FAILED', 'Failed to parse JSON even after extraction', { rawText, extractedText: jsonString });
-        }
-      } else {
-        throw new AiOutputError('AI_JSON_PARSE_FAILED', 'Failed to parse JSON and could not extract JSON braces', { rawText });
-      }
-    } else {
-      throw new AiOutputError('AI_JSON_PARSE_FAILED', 'Failed to parse JSON and extraction is disabled', { rawText });
+  } catch {
+    if (!allowJsonExtraction) {
+      throw new AiOutputError('AI_JSON_PARSE_FAILED', 'Failed to parse JSON and extraction is disabled.', {
+        rawText,
+      });
+    }
+
+    const extractedJson = extractTopLevelJson(rawText);
+    if (!extractedJson) {
+      throw new AiOutputError('AI_JSON_PARSE_FAILED', 'Failed to parse JSON and could not extract a complete top-level JSON payload.', {
+        rawText,
+      });
+    }
+
+    jsonString = extractedJson;
+    try {
+      rawJsonObj = JSON.parse(jsonString);
+      parseMode = 'extracted';
+    } catch {
+      throw new AiOutputError('AI_JSON_PARSE_FAILED', 'Failed to parse extracted JSON payload.', {
+        rawText,
+        extractedText: jsonString,
+      });
     }
   }
 
-  // 3. Zod Validate
   const jsonLength = jsonString.length;
   const parsed = schema.safeParse(rawJsonObj);
 
   if (!parsed.success) {
-    throw new AiOutputError('AI_OUTPUT_SCHEMA_INVALID', 'AI output does not match expected schema', {
-      errors: parsed.error.format(),
-      rawJsonObj
-    });
+    throw new AiOutputError(
+      'AI_OUTPUT_SCHEMA_VALIDATION_FAILED',
+      'AI output does not match expected schema.',
+      {
+        errors: parsed.error.issues.map((issue) => ({
+          path: issue.path.join('.'),
+          code: issue.code,
+          message: issue.message,
+        })),
+        rawJsonObj,
+      },
+    );
   }
 
   return {

@@ -6,6 +6,8 @@ import { AiConfig, AI_CONFIG_TOKEN } from '../domain/ai-config';
 import { AiPolicy } from '../domain/ai.policy';
 import { parseStructuredLlmOutput } from './structured-output';
 import { AppError } from '../../../shared/app-error';
+import { resolveGoogleProviderApiKey } from './google-provider-env';
+import { AiOutputError } from '../domain/ai.errors';
 
 @Injectable()
 export class GoogleLlmProvider extends LlmProvider {
@@ -14,11 +16,7 @@ export class GoogleLlmProvider extends LlmProvider {
 
   constructor(@Inject(AI_CONFIG_TOKEN) private config: AiConfig) {
     super();
-    // Priority: GOOGLE_API_KEY > GEMINI_API_KEY > GOOGLE_AI_API_KEY
-    const apiKey =
-      process.env.GOOGLE_API_KEY ??
-      process.env.GEMINI_API_KEY ??
-      process.env.GOOGLE_AI_API_KEY;
+    const apiKey = resolveGoogleProviderApiKey();
 
     if (!apiKey) {
       throw new AppError(
@@ -61,10 +59,25 @@ export class GoogleLlmProvider extends LlmProvider {
       console.warn(`[GoogleLlmProvider] Unexpected finishReason: ${finishReason}`);
     }
 
+    if (finishReason === 'MAX_TOKENS') {
+      throw new AiOutputError(
+        'AI_OUTPUT_TRUNCATED',
+        'Google LLM output was truncated before a complete structured response was produced.',
+        {
+          provider: 'google',
+          model,
+          finishReason,
+          parseMode: 'raw',
+          maxTokens: request.options?.maxTokens ?? this.config.maxTokens,
+          temperature: request.options?.temperature ?? this.config.temperature,
+        },
+      );
+    }
+
     const { data, parseMode, rawLength, jsonLength } = parseStructuredLlmOutput({
       rawText,
       schema,
-      allowJsonExtraction: false, // Gemini guarantees JSON via responseMimeType
+      allowJsonExtraction: true,
     });
 
     return {

@@ -11,21 +11,7 @@ interface InsightCardProps {
   onClick?: (insight: Insight) => void
 }
 
-function getCertaintyBadge(certainty: Insight["certainty"]) {
-  switch (certainty) {
-    case "EVIDENCED":
-      return <Badge className="badge-confirmed px-1.5 py-0 text-[10px] h-5">Evidenced</Badge>
-    case "INFERRED":
-      return <Badge className="badge-inferred px-1.5 py-0 text-[10px] h-5">Inferred</Badge>
-    case "UNKNOWN":
-      return <Badge className="badge-unknown px-1.5 py-0 text-[10px] h-5">Unknown</Badge>
-    case "CONFLICTING":
-      return <Badge className="badge-conflict px-1.5 py-0 text-[10px] h-5">Conflict</Badge>
-    default:
-      return <Badge className="badge-neutral px-1.5 py-0 text-[10px] h-5">{certainty}</Badge>
-  }
-}
-
+import { CertaintyBadge } from "@/components/workspace/shared/status-badges"
 function getReviewIcon(status: Insight["reviewStatus"]) {
   if (status === "CONFIRMED") return <div className="w-3.5 h-3.5 rounded-full border-2 border-success flex items-center justify-center bg-success/10"><span className="w-1.5 h-1.5 bg-success rounded-full"></span></div>
   if (status === "REJECTED") return <div className="w-3.5 h-3.5 rounded-full border-2 border-danger flex items-center justify-center bg-danger/10"><span className="w-1.5 h-1.5 bg-danger rounded-full"></span></div>
@@ -79,7 +65,7 @@ export function InsightCard({ insight, isSelected, onClick }: InsightCardProps) 
             {insight.statement}
           </p>
           <div className="shrink-0 flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
-            {getCertaintyBadge(insight.certainty)}
+            <CertaintyBadge certainty={insight.certainty} />
           </div>
         </div>
 

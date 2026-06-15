@@ -1,17 +1,10 @@
-import { Badge } from "@/components/ui/badge"
 import { MatrixRowInsightRef } from "@ba-helper/contracts"
+import { CertaintyBadge } from "@/components/workspace/shared/status-badges"
 
 interface MatrixInsightListProps {
   insights: MatrixRowInsightRef[]
   emptyMessage: string
   type: "risk" | "qa"
-}
-
-const CERTAINTY_COLORS: Record<string, string> = {
-  EVIDENCED: "bg-success/10 text-success border-success/20",
-  INFERRED: "bg-warning/10 text-warning border-warning/20",
-  UNKNOWN: "bg-destructive/10 text-destructive border-destructive/20",
-  CONFLICTING: "bg-destructive/10 text-destructive border-destructive/20",
 }
 
 export function MatrixInsightList({ insights, emptyMessage, type }: MatrixInsightListProps) {
@@ -31,11 +24,16 @@ export function MatrixInsightList({ insights, emptyMessage, type }: MatrixInsigh
         <div key={insight.insightId} className={`rounded border p-4 ${borderClass}`}>
           <div className="flex items-start justify-between gap-2 mb-2">
             <h4 className="text-[13px] font-medium text-foreground">{insight.title}</h4>
-            {insight.certainty && (
-              <Badge variant="outline" className={`text-[10px] uppercase ${CERTAINTY_COLORS[insight.certainty] || ""}`}>
-                {insight.certainty}
-              </Badge>
-            )}
+            <div className="flex items-center gap-1.5">
+              {insight.relatedEvidenceIds.length === 0 && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border bg-warning/10 text-warning border-warning/30">
+                  Diagnostic-only
+                </span>
+              )}
+              {insight.certainty && (
+                <CertaintyBadge certainty={insight.certainty} />
+              )}
+            </div>
           </div>
           {insight.description && (
             <p className="text-[13px] text-muted-foreground leading-relaxed mb-3">
@@ -43,7 +41,9 @@ export function MatrixInsightList({ insights, emptyMessage, type }: MatrixInsigh
             </p>
           )}
           <div className="text-[11px] text-muted-foreground">
-            {insight.relatedEvidenceIds.length} evidence references
+            {insight.relatedEvidenceIds.length > 0
+              ? `${insight.relatedEvidenceIds.length} evidence references`
+              : "No code evidence linked. Treat as scanner diagnostic or review prompt, not confirmed impact."}
           </div>
         </div>
       ))}

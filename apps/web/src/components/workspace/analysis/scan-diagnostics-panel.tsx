@@ -1,7 +1,9 @@
 import { useState } from "react"
 import { AlertTriangle, ChevronDown, ChevronRight, Info, ShieldAlert, XCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { DiagnosticItem } from "@ba-helper/contracts"
+import { DiagnosticItem, scannerCapabilitySummaryPayloadSchema } from "@ba-helper/contracts"
+
+import { DiagnosticRiskBadge } from "@/components/workspace/shared/status-badges"
 
 export function ScanDiagnosticsPanel({ diagnostics }: { diagnostics: DiagnosticItem[] }) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
@@ -22,19 +24,14 @@ export function ScanDiagnosticsPanel({ diagnostics }: { diagnostics: DiagnosticI
     }
   }
 
-  const getColorClass = (severity: string) => {
-    switch (severity) {
-      case 'BLOCKER': return "bg-danger/10 border-danger/20 text-danger"
-      case 'ERROR': return "bg-danger/5 border-danger/20 text-danger"
-      case 'WARN': return "bg-warning/10 border-warning/20 text-warning"
-      case 'INFO': return "bg-primary/5 border-primary/20 text-primary"
-      default: return "bg-surface border-border text-foreground"
-    }
-  }
-
   // Sort by severity
   const severityOrder = { BLOCKER: 0, ERROR: 1, WARN: 2, INFO: 3 }
   const sorted = [...diagnostics].sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity])
+  const capabilityDiagnostic = diagnostics.find((diag) => diag.code === "SCANNER_CAPABILITY_SUMMARY")
+  const capability = capabilityDiagnostic?.payload
+    ? scannerCapabilitySummaryPayloadSchema.safeParse(capabilityDiagnostic.payload)
+    : null
+  const scannerDiagnostics = sorted.filter((diag) => diag.code !== "SCANNER_CAPABILITY_SUMMARY")
   const summary = diagnostics.reduce(
     (acc, diagnostic) => {
       const count = diagnostic.count ?? 1
@@ -53,8 +50,32 @@ export function ScanDiagnosticsPanel({ diagnostics }: { diagnostics: DiagnosticI
         </h3>
       </div>
       <p className="text-[13px] text-muted-foreground/90 -mt-1 mb-2">
-        Information about skipped files, redacted secrets, and framework limitations.
+        Scanner diagnostics explain skipped coverage, unsupported patterns, and capability limits. They are not confirmed code impacts by themselves.
       </p>
+
+      {capability?.success && (
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-primary">
+              Scanner capability
+            </span>
+            <span className="rounded border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+              {capability.data.status}
+            </span>
+            <span className="text-[11px] font-mono text-muted-foreground">
+              {capability.data.language}
+              {capability.data.framework ? ` / ${capability.data.framework}` : ""}
+            </span>
+            <span className="text-[11px] text-muted-foreground">
+              {capability.data.confidence} confidence
+            </span>
+          </div>
+          <p className="mt-2 text-[12px] text-muted-foreground">
+            Supported patterns: {capability.data.supportedPatternCount}. Partial patterns:{" "}
+            {capability.data.partialPatternCount}. Unsupported patterns: {capability.data.unsupportedPatternCount}.
+          </p>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2">
         {summary.BLOCKER > 0 && <SummaryBadge label="Blockers" value={summary.BLOCKER} tone="danger" />}
@@ -64,7 +85,7 @@ export function ScanDiagnosticsPanel({ diagnostics }: { diagnostics: DiagnosticI
       </div>
 
       <div className="flex flex-col gap-2">
-        {sorted.map((diag) => (
+        {scannerDiagnostics.map((diag) => (
           <div key={diag.code} className="flex flex-col border border-border rounded-lg overflow-hidden bg-surface-soft/30">
             <button
               onClick={() => toggle(diag.code)}
@@ -90,9 +111,7 @@ export function ScanDiagnosticsPanel({ diagnostics }: { diagnostics: DiagnosticI
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <span className={cn("text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border", getColorClass(diag.severity))}>
-                  {diag.severity}
-                </span>
+                <DiagnosticRiskBadge severity={diag.severity} />
                 {expanded[diag.code] ? (
                   <ChevronDown className="w-4 h-4 text-muted-foreground" />
                 ) : (

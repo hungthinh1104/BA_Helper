@@ -14,14 +14,14 @@ export function CtaBanner() {
           Ready to bridge the gap between requirements and code?
         </h2>
         <p className="text-lg text-muted-foreground mb-10 max-w-2xl mx-auto">
-          Stop guessing the impact of new features. Let BA Helper automatically map your business logic to technical implementation and generate verifiable evidence.
+          Connect a real repository, submit a real requirement change, and review the evidence-backed impact output before approval.
         </p>
         <div className="flex items-center justify-center gap-4">
           <Link 
             href="/login?next=/analyses" 
             className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-foreground text-background font-semibold rounded-full hover:bg-foreground/90 transition-all hover:scale-105 active:scale-95"
           >
-            Try the Interactive Demo
+            Open Real Demo Workspace
             <ArrowRight className="w-4 h-4" />
           </Link>
           <Link 

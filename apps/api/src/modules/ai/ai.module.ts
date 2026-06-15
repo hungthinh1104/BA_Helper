@@ -7,10 +7,20 @@ import { AnthropicLlmProvider } from './infrastructure/anthropic.provider';
 import { GoogleLlmProvider } from './infrastructure/google.provider';
 import { DeepseekLlmProvider } from './infrastructure/deepseek.provider';
 
+const AI_PROVIDERS = ['fake', 'openai', 'anthropic', 'google', 'deepseek'] as const;
+
+export function resolveAiProvider(rawProvider?: string): AiConfig['provider'] {
+  const provider = (rawProvider ?? 'fake').trim().toLowerCase();
+  if ((AI_PROVIDERS as readonly string[]).includes(provider)) {
+    return provider as AiConfig['provider'];
+  }
+  throw new Error(`Unsupported AI_PROVIDER "${rawProvider}". Expected one of: ${AI_PROVIDERS.join(', ')}.`);
+}
+
 @Module({})
 export class AiModule {
   static forRoot(config?: Partial<AiConfig>): DynamicModule {
-    const provider = (process.env.AI_PROVIDER as AiConfig['provider']) ?? config?.provider ?? 'fake';
+    const provider = resolveAiProvider(process.env.AI_PROVIDER ?? config?.provider);
 
     if (process.env.NODE_ENV === 'production' && provider === 'fake') {
       throw new Error('FakeLlmProvider is forbidden in production. Please set AI_PROVIDER.');
@@ -31,7 +41,7 @@ export class AiModule {
       provider,
       defaultModel,
       temperature: Number(process.env.AI_TEMPERATURE ?? config?.temperature ?? 0.2),
-      maxTokens: Number(process.env.AI_MAX_TOKENS ?? config?.maxTokens ?? 4096),
+      maxTokens: Number(process.env.AI_MAX_TOKENS ?? config?.maxTokens ?? 8192),
       redactSecrets: process.env.NODE_ENV !== 'test',
     };
 

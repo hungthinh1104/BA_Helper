@@ -49,7 +49,7 @@ We are transparent about the project's current maturity:
 - **Scanner Limits:** Pilot adapters are bounded static extractors, not full semantic compiler-level analyzers.
 - **Unsupported Patterns:** Unsupported route patterns, scan blind spots, and dependency boundaries become `UNKNOWN`/`RISK` diagnostics that require manual review.
 - **Manual Review Required:** LLM output is constrained by evidence and human review; it is not a standalone source of truth.
-- **Mocked Execution:** The golden path uses fake providers (`FakeLlmProvider`) for fast, deterministic CI execution without real API costs.
+- **Provider Boundary:** Automated CI uses fake providers for deterministic no-network checks; the manual demo runs Gemini real LLM and still requires persisted evidence plus human review before approval.
 - **Internal Metrics:** Evaluation metrics are internal quality signals tuned to our specific fixtures, not universal public benchmark claims.
 - **SaaS Features:** Production SaaS requirements such as GitHub App auth, Stripe billing, and hosted multi-tenant deployment isolation remain incomplete.
 

@@ -137,8 +137,8 @@ docker compose up -d postgres redis
 ### 5. Run Migrations
 Apply the Prisma schema to your local Postgres database:
 ```bash
-pnpm --dir apps/api prisma generate
-pnpm --dir apps/api prisma migrate dev
+pnpm --dir apps/api exec prisma generate
+pnpm --dir apps/api exec prisma migrate deploy --schema prisma/schema.prisma
 ```
 
 ### 6. Run Golden-Path Demo (Automated)
@@ -148,7 +148,7 @@ Run the automated integration test to verify the deterministic, end-to-end impac
 pnpm demo:golden-path
 # Or explicitly: pnpm test tests/demo/golden-path-demo.spec.ts
 ```
-*Note: This command runs entirely locally using `FakeLlmProvider` and `FakeEmbeddingProvider`. No network API keys are required.*
+*Note: This automated command runs entirely locally using `FakeLlmProvider` and `FakeEmbeddingProvider` so CI stays deterministic. The manual UI demo uses Gemini when `AI_PROVIDER=google` and `GEMINI_API_KEY` or `GOOGLE_API_KEY` is set.*
 
 ### 7. Run Evaluation Tests (Optional)
 If you wish to test the retrieval and domain matching logic explicitly:
@@ -169,6 +169,26 @@ pnpm dev:worker
 pnpm dev:web
 ```
 Open `http://localhost:3000/login` and sign in using the dev-login bypass.
+
+### 9. Real Runtime Smoke Lanes
+The default CI and golden path stay on fake providers. Real-provider smoke is explicit and manual:
+
+```bash
+# Deterministic local smoke
+pnpm --dir apps/api smoke:public-github
+
+# Real Gemini LLM + fake embeddings
+AI_PROVIDER=google EMBEDDING_PROVIDER=fake pnpm --dir apps/api smoke:public-github:real-llm
+
+# Real Gemini LLM + Google embeddings
+AI_PROVIDER=google EMBEDDING_PROVIDER=google pnpm --dir apps/api smoke:public-github:real-path
+```
+
+When running the containerized stack, use the dedicated migration owner first:
+
+```bash
+docker compose up -d --build migrate api worker
+```
 
 ## Troubleshooting
 
@@ -212,7 +232,7 @@ Built as a TypeScript modular monolith to balance speed of development with even
 - Domain packs are hints, not evidence.
 - LLM output is constrained by extracted evidence and human review; it is not allowed to finalize reports by itself.
 - Evaluation metrics are internal quality signals, not public benchmarks.
-- Golden path uses fake providers for deterministic CI.
+- Automated CI golden path uses fake providers; manual UI demo runs with Gemini real LLM when configured.
 - Production SaaS concerns such as GitHub App auth, billing, and hosted multi-tenant deployment are not complete.
 
 ## Roadmap

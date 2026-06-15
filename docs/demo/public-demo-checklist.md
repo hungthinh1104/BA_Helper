@@ -54,7 +54,7 @@ parallel.
 - Unsupported patterns become diagnostics, `UNKNOWN`, or `RISK`.
 - There is no claim of full semantic compiler-level analysis.
 - LLM output is constrained by extracted evidence and human review.
-- The deterministic public demo uses fake providers, not external AI keys.
+- Automated CI verification uses fake providers; the manual public demo uses Gemini real LLM with a configured API key.
 
 ## Phase 48A Freeze Result
 

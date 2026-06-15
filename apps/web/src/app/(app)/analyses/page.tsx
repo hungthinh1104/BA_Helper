@@ -9,14 +9,7 @@ import { useAnalyses } from "@/hooks/api/use-analyses"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Plus, AlertCircle, Activity } from "lucide-react"
 
-const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  QUEUED:             { label: "Queued",       className: "bg-border text-muted-foreground border-border/50" },
-  RUNNING:            { label: "Running",      className: "bg-primary/10 text-primary border-primary/50" },
-  WAITING_FOR_REVIEW: { label: "Needs Review", className: "bg-warning/10 text-warning border-warning/50" },
-  COMPLETED:          { label: "Completed",    className: "bg-success/10 text-success border-success/50" },
-  FAILED:             { label: "Failed",       className: "bg-destructive/10 text-destructive border-destructive/50" },
-  CANCELLED:          { label: "Cancelled",    className: "bg-muted text-muted-foreground border-border/50" },
-}
+import { AnalysisStatusBadge } from "@/components/workspace/shared/status-badges"
 
 const gridCols = "minmax(200px, 2.5fr) minmax(150px, 1.5fr) 130px 90px"
 
@@ -91,9 +84,6 @@ export default function AnalysesPage() {
           )}
 
           {data?.items.map(analysis => {
-            const badge = STATUS_BADGE[analysis.status] ?? STATUS_BADGE.QUEUED
-            const isRunning = analysis.status === "RUNNING"
-
             return (
               <DataListRow
                 key={analysis.id}
@@ -108,10 +98,7 @@ export default function AnalysesPage() {
                   <span className="text-[13px] font-mono text-muted-foreground">{analysis.repositoryDisplayName}</span>
                 </DataListCell>
                 <DataListCell>
-                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 border rounded-md text-[10px] font-semibold tracking-wide uppercase ${badge.className}`}>
-                    {isRunning && <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />}
-                    {badge.label}
-                  </span>
+                  <AnalysisStatusBadge status={analysis.status} />
                 </DataListCell>
                 <DataListCell>
                   <span className="text-[12px] text-muted-foreground">{formatDate(analysis.createdAt)}</span>

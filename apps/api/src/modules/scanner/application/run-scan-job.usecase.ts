@@ -15,9 +15,9 @@ import {
   DiagnosticCollector,
   scanJavaSpringProject,
   GitHubUrlValidator,
-  GitRepositoryFetcher
+  GitRepositoryFetcher,
+  ScannerAdapterRegistry,
 } from '@ba-helper/analyzer';
-import { ScannerAdapterRegistry } from '@ba-helper/analyzer/src/scanner/scanner-adapter.registry';
 import { PrismaService } from '../../prisma/prisma.service';
 import { QueueService } from '../../queue/queue.service';
 import { EvidenceRepository } from '../../evidence/infrastructure/evidence.repository';

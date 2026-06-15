@@ -112,4 +112,4 @@ Use this only after the single-repo baseline is understood.
 - Unsupported route patterns and dependency boundaries require manual review
 - Domain packs guide retrieval but do not create evidence
 - LLM output is constrained by extracted evidence and review gates
-- Public demo uses fake providers for deterministic local validation
+- Manual public demo uses Gemini real LLM when `AI_PROVIDER=google` and a Gemini API key are configured
