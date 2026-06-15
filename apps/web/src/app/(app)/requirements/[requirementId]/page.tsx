@@ -75,12 +75,10 @@ export default function RequirementDetailsPage({ params }: { params: Promise<{ r
             <NewAnalysisDialog preselectedReqId={req.id}>
               <TooltipProvider>
                 <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="inline-block">
-                      <Button size="sm" className="h-8 shadow-none gap-1.5 pointer-events-auto" disabled={!isReady || !isAdmin}>
-                        <Play className="w-3.5 h-3.5" /> Run Analysis
-                      </Button>
-                    </span>
+                  <TooltipTrigger render={<span className="inline-block" />}>
+                    <Button size="sm" className="h-8 shadow-none gap-1.5 pointer-events-auto" disabled={!isReady || !isAdmin}>
+                      <Play className="w-3.5 h-3.5" /> Run Analysis
+                    </Button>
                   </TooltipTrigger>
                   {(!isReady || !isAdmin) && (
                     <TooltipContent>

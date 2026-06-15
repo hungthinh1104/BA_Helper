@@ -45,8 +45,8 @@ function getFailureGuidance(errorCode?: string, message?: string) {
 
 function getScannerMaturity(profile?: RepositoryProfileResponse) {
   if (!profile) return null
-  if (profile.language === "TYPESCRIPT" && profile.framework === "NESTJS") return "STABLE"
-  if (profile.language === "JAVA" && profile.framework === "SPRING_BOOT") return "PARTIAL"
+  if ((profile.language as string) === "TYPESCRIPT" && (profile.framework as string) === "NESTJS") return "STABLE"
+  if ((profile.language as string) === "JAVA" && (profile.framework as string) === "SPRING_BOOT") return "PARTIAL"
   if (profile.framework !== "UNKNOWN") return "EXPERIMENTAL"
   return "UNKNOWN"
 }

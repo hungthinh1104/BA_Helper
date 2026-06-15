@@ -276,7 +276,7 @@ export function ReviewQueuePanel({ queueData, onSelect, selectedQueueItemId }: R
                     )}
                     <TooltipProvider>
                       <Tooltip>
-                        <TooltipTrigger asChild>
+                        <TooltipTrigger render={<span className="inline-block" />}>
                           <Button
                             onClick={handleSkip}
                             size="sm"

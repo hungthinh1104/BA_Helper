@@ -2,11 +2,9 @@
 
 import { useMemo, useState } from "react"
 import { Search } from "lucide-react"
-import { TraceType } from "@/lib/constants/trace-types"
 import { classifyInsight } from "./analysis-traceability-matrix.util"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CertaintyBadge, ArtifactKindBadge } from "@/components/workspace/shared/status-badges"
 import type { InsightListResponse, TraceabilityLinkListResponse, ImpactGraphNode, ImpactAnalysisResponse } from "@ba-helper/contracts"
 
@@ -56,7 +54,7 @@ export function AnalysisTraceabilityMatrixTab({
   const [artifactKindFilter, setArtifactKindFilter] = useState<string>("ALL")
 
   const rows = useMemo(() => {
-    const requirementLabel = analysis.requirement.revisionTitle || analysis.requirement.title || "Requirement Change"
+    const requirementLabel = analysis.requirement.revisionTitle || "Requirement Change"
     const generatedRows: MatrixRow[] = []
 
     // 1. Process Links (EVIDENCED and INFERRED Impacts)
@@ -162,7 +160,7 @@ export function AnalysisTraceabilityMatrixTab({
       if (searchTerm) {
         const lowerSearch = searchTerm.toLowerCase()
         const meta = (r.originalInsight as unknown as Record<string, unknown>)?.metadata as Record<string, unknown> | undefined
-        const diagCode = meta?.diagnostic?.code || meta?.diagnosticCode || ""
+        const diagCode = (meta?.diagnostic as any)?.code || meta?.diagnosticCode || ""
         return (
           r.originalName.toLowerCase().includes(lowerSearch) ||
           r.filePath.toLowerCase().includes(lowerSearch) ||
@@ -227,53 +225,49 @@ export function AnalysisTraceabilityMatrixTab({
           />
         </div>
         
-        <Select value={traceTypeFilter} onValueChange={setTraceTypeFilter}>
-          <SelectTrigger className="w-[180px] h-9">
-            <SelectValue placeholder="Trace Type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All Trace Types</SelectItem>
-            {uniqueTraceTypes.map(t => (
-              <SelectItem key={t} value={t}>{traceTypeDisplay(t as TraceType)}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <select 
+          value={traceTypeFilter} 
+          onChange={(e) => setTraceTypeFilter(e.target.value)}
+          className="h-9 w-[180px] rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          <option value="ALL">All Trace Types</option>
+          {uniqueTraceTypes.map(t => (
+            <option key={t} value={t}>{traceTypeDisplay(t as TraceType)}</option>
+          ))}
+        </select>
 
-        <Select value={certaintyFilter} onValueChange={setCertaintyFilter}>
-          <SelectTrigger className="w-[140px] h-9">
-            <SelectValue placeholder="Certainty" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All Certainty</SelectItem>
-            {uniqueCertainties.map(c => (
-              <SelectItem key={c} value={c}>{c}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <select 
+          value={certaintyFilter} 
+          onChange={(e) => setCertaintyFilter(e.target.value)}
+          className="h-9 w-[140px] rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          <option value="ALL">All Certainty</option>
+          {uniqueCertainties.map(c => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
 
-        <Select value={reviewStatusFilter} onValueChange={setReviewStatusFilter}>
-          <SelectTrigger className="w-[150px] h-9">
-            <SelectValue placeholder="Review Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All Reviews</SelectItem>
-            {uniqueReviewStatuses.map(s => (
-              <SelectItem key={s} value={s}>{s.replace('_', ' ')}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <select 
+          value={reviewStatusFilter} 
+          onChange={(e) => setReviewStatusFilter(e.target.value)}
+          className="h-9 w-[150px] rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          <option value="ALL">All Reviews</option>
+          {uniqueReviewStatuses.map(s => (
+            <option key={s} value={s}>{s.replace('_', ' ')}</option>
+          ))}
+        </select>
         
-        <Select value={artifactKindFilter} onValueChange={setArtifactKindFilter}>
-          <SelectTrigger className="w-[150px] h-9">
-            <SelectValue placeholder="Artifact Kind" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All Kinds</SelectItem>
-            {uniqueKinds.map(k => (
-              <SelectItem key={k} value={k}>{k}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <select 
+          value={artifactKindFilter} 
+          onChange={(e) => setArtifactKindFilter(e.target.value)}
+          className="h-9 w-[150px] rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          <option value="ALL">All Kinds</option>
+          {uniqueKinds.map(k => (
+            <option key={k} value={k}>{k}</option>
+          ))}
+        </select>
       </div>
 
       <div className="flex-1 overflow-auto">
@@ -293,7 +287,7 @@ export function AnalysisTraceabilityMatrixTab({
             {filteredRows.length > 0 && (
               <TableRow className="bg-muted/30 hover:bg-muted/30">
                 <TableCell colSpan={7} className="font-semibold text-xs text-muted-foreground uppercase tracking-wider py-2">
-                  Requirement: {analysis.requirement.revisionTitle || analysis.requirement.title || "Requirement Change"} 
+                  Requirement: {analysis.requirement.revisionTitle || "Requirement Change"} 
                   <span className="ml-2 font-normal lowercase">({filteredRows.length} rows)</span>
                 </TableCell>
               </TableRow>

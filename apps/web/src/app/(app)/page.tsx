@@ -30,7 +30,7 @@ export default function DashboardPage() {
   const readyReqs = reqs.filter(r => r.latestRevision?.readinessStatus === "READY_FOR_ANALYSIS")
 
   const { role } = useAuth()
-  const canEdit = role === "ADMIN" || role === "EDITOR"
+  const canEdit = role === "ADMIN" || role === "REVIEWER"
 
   // Determine Next Best Action
   let nextAction = null
