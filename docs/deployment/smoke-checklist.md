@@ -68,6 +68,8 @@ Use this checklist before a demo, handoff, or release candidate tag.
 - `pnpm test`
 - `pnpm test:e2e`
 - `pnpm demo:golden-path`
+- `pnpm --dir apps/api smoke:public-github:real-llm` (explicit manual run)
+- `pnpm --dir apps/api smoke:public-github:real-path` (explicit manual run)
 
 ## Public demo story
 
