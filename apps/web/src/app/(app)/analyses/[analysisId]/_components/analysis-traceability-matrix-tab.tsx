@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { Search } from "lucide-react"
-import { TraceType, traceTypeDisplay } from "@/lib/constants/trace-types"
+import { TraceType } from "@/lib/constants/trace-types"
 import { classifyInsight } from "./analysis-traceability-matrix.util"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -38,6 +38,7 @@ interface MatrixRow {
   reviewStatus: string
   originalLink?: TraceabilityLink
   originalInsight?: Insight
+  originalName: string
 }
 export function AnalysisTraceabilityMatrixTab({
   analysis,
@@ -48,6 +49,7 @@ export function AnalysisTraceabilityMatrixTab({
   onSelectInsight,
 }: AnalysisTraceabilityMatrixTabProps) {
   const [searchTerm, setSearchTerm] = useState("")
+  const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
   const [traceTypeFilter, setTraceTypeFilter] = useState<string>("ALL")
   const [certaintyFilter, setCertaintyFilter] = useState<string>("ALL")
   const [reviewStatusFilter, setReviewStatusFilter] = useState<string>("ALL")
@@ -78,9 +80,10 @@ export function AnalysisTraceabilityMatrixTab({
         filePath,
         traceType: isEvidenced ? "EVIDENCE_BACKED_IMPACT" : "INFERRED_IMPACT",
         certainty: isEvidenced ? "EVIDENCED" : "INFERRED",
-        evidenceLabel: link.evidence.length > 0 ? `${link.evidence.length} items` : "—",
+        evidenceLabel: link.evidence.length > 0 ? `${link.evidence.length} excerpt${link.evidence.length > 1 ? "s" : ""}` : "—",
         reviewStatus: link.reviewStatus,
         originalLink: link,
+        originalName: node?.label ?? link.evidence[0]?.artifactKey ?? "Unknown Artifact",
       })
     }
 
@@ -101,6 +104,13 @@ export function AnalysisTraceabilityMatrixTab({
         artifactName = artifactName.substring(0, 60) + "..."
       }
 
+      let evidenceLabel = "—"
+      if (insight.evidence.length > 0) {
+        if (traceType === "QA_COVERAGE") evidenceLabel = `${insight.evidence.length} step${insight.evidence.length > 1 ? "s" : ""}`
+        else if (traceType === "OPEN_QUESTION" || traceType === "DIAGNOSTIC_DERIVED_RISK") evidenceLabel = `${insight.evidence.length} context item${insight.evidence.length > 1 ? "s" : ""}`
+        else evidenceLabel = `${insight.evidence.length} excerpt${insight.evidence.length > 1 ? "s" : ""}`
+      }
+
       generatedRows.push({
         id: insight.id,
         sourceKind,
@@ -110,9 +120,10 @@ export function AnalysisTraceabilityMatrixTab({
         filePath,
         traceType,
         certainty: insight.certainty,
-        evidenceLabel: insight.evidence.length > 0 ? `${insight.evidence.length} items` : "—",
+        evidenceLabel,
         reviewStatus: insight.reviewStatus,
         originalInsight: insight,
+        originalName: insight.statement,
       })
     }
 
@@ -153,7 +164,7 @@ export function AnalysisTraceabilityMatrixTab({
         const meta = (r.originalInsight as unknown as Record<string, unknown>)?.metadata as Record<string, unknown> | undefined
         const diagCode = meta?.diagnostic?.code || meta?.diagnosticCode || ""
         return (
-          r.artifactName.toLowerCase().includes(lowerSearch) ||
+          r.originalName.toLowerCase().includes(lowerSearch) ||
           r.filePath.toLowerCase().includes(lowerSearch) ||
           r.traceType.toLowerCase().includes(lowerSearch) ||
           diagCode.toLowerCase().includes(lowerSearch)
@@ -164,6 +175,7 @@ export function AnalysisTraceabilityMatrixTab({
   }, [rows, searchTerm, traceTypeFilter, certaintyFilter, reviewStatusFilter, artifactKindFilter])
 
   const handleRowClick = (row: MatrixRow) => {
+    setSelectedRowId(row.id)
     if (row.originalLink) {
       onSelectLink(row.originalLink)
     } else if (row.originalInsight) {
@@ -193,8 +205,11 @@ export function AnalysisTraceabilityMatrixTab({
 
   if (rows.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
-        <p>No traceability data available for this analysis.</p>
+      <div className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground h-full">
+        <p>No traceability data available.</p>
+        <p className="text-sm mt-2 opacity-70">
+          This matrix will populate once the impact analysis is complete.
+        </p>
       </div>
     )
   }
@@ -265,20 +280,28 @@ export function AnalysisTraceabilityMatrixTab({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[200px]">Requirement</TableHead>
-              <TableHead className="w-[250px]">Artifact / Item</TableHead>
+              <TableHead className="w-[300px]">Artifact / Item</TableHead>
               <TableHead className="w-[100px]">Kind</TableHead>
               <TableHead>Path</TableHead>
               <TableHead className="w-[150px]">Trace Type</TableHead>
               <TableHead className="w-[120px]">Certainty</TableHead>
-              <TableHead className="w-[100px]">Evidence</TableHead>
+              <TableHead className="w-[120px]">Evidence</TableHead>
               <TableHead className="w-[120px]">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
+            {filteredRows.length > 0 && (
+              <TableRow className="bg-muted/30 hover:bg-muted/30">
+                <TableCell colSpan={7} className="font-semibold text-xs text-muted-foreground uppercase tracking-wider py-2">
+                  Requirement: {analysis.requirement.revisionTitle || analysis.requirement.title || "Requirement Change"} 
+                  <span className="ml-2 font-normal lowercase">({filteredRows.length} rows)</span>
+                </TableCell>
+              </TableRow>
+            )}
+
             {filteredRows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                   No matching rows found.
                 </TableCell>
               </TableRow>
@@ -287,14 +310,11 @@ export function AnalysisTraceabilityMatrixTab({
                   <TableRow 
                     key={row.id} 
                     className={`cursor-pointer transition-colors hover:bg-muted/50 ${
-                      row.sourceKind === "diagnostic_risk" ? "bg-warning-soft" : ""
+                      row.id === selectedRowId ? "bg-primary/10 border-primary" : row.sourceKind === "diagnostic_risk" ? "bg-warning-soft" : ""
                     }`}
                     onClick={() => handleRowClick(row)}
                   >
-                  <TableCell className="font-medium text-xs text-muted-foreground truncate max-w-[200px]" title={row.requirementLabel}>
-                    {row.requirementLabel}
-                  </TableCell>
-                  <TableCell className="font-mono text-sm max-w-[250px] truncate" title={row.artifactName}>
+                  <TableCell className="font-mono text-sm max-w-[300px] truncate" title={row.originalName}>
                     {row.artifactName}
                   </TableCell>
                   <TableCell>

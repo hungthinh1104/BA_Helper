@@ -45,15 +45,15 @@ describe('AnalysisTraceabilityMatrixUtil', () => {
       });
     });
 
-    it('should classify CLAIM with diagnostic metadata as DIAGNOSTIC_DERIVED_RISK', () => {
+    it('should NOT map CLAIM with diagnostic metadata as DIAGNOSTIC_DERIVED_RISK', () => {
       const insight = { 
         category: 'CLAIM', 
         certainty: 'INFERRED',
         metadata: { diagnosticCode: 'SOME_CODE' }
       } as unknown as Insight;
       expect(classifyInsight(insight)).toEqual({
-        traceType: 'DIAGNOSTIC_DERIVED_RISK',
-        sourceKind: 'diagnostic_risk',
+        traceType: 'INFERRED_IMPACT',
+        sourceKind: 'insight',
       });
     });
 

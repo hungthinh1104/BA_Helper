@@ -362,7 +362,7 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
 
           {/* Traceability Matrix tab */}
           {activeTab === "traceability-matrix" && (
-            <div className="absolute inset-0 bg-surface">
+            <div className="mt-4 h-[calc(100vh-280px)] min-h-[500px] border border-border/40 rounded-lg overflow-hidden flex flex-col bg-surface">
               <AnalysisTraceabilityMatrixTab 
                 analysis={analysis}
                 insights={insights}
