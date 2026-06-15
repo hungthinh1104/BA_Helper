@@ -81,17 +81,8 @@ graph BT
 ```
 *Note: EVIDENCED impacts require Scanned Code Evidence. Domain Packs and LLM Suggestions cannot fabricate evidence.*
 
-### 3. Screenshot Capture Checklist (TODO)
-When UI development is finalized, the following screenshots will be captured to replace these text placeholders:
-- [ ] `Dashboard`: High-level project overview showing scanned repos.
-- [ ] `Terminal`: `pnpm demo:golden-path` passing locally.
-- [ ] `Impact Analysis`: UI mapping requirement to code artifacts.
-- [ ] `Evidence Appendix`: Detailed view of specific code lines cited by the LLM.
-- [ ] `Review Coverage`: Human-in-the-loop sign-off gate.
-- [ ] `Drift Warning`: UI alert showing `STALE_ARTIFACTS`.
-- [ ] `Final Report`: The generated Markdown/PDF traceability report.
-
-- [View a sample Markdown report](docs/sample-report.md)
+### 3. Visual Proof
+UI development has progressed to a stable point. Please see the [Visual Proof Pack](docs/demo/visual-proof-pack.md) for actual screenshots of the live system validating the core flows above.
 
 ## Quickstart & Reproducibility
 
@@ -111,12 +102,12 @@ Fresh clone validation:
 ### 1. Prerequisites
 - Docker & Docker Compose (for Postgres/pgvector and Redis)
 - Node.js (v20+)
-- pnpm (v9+)
+- pnpm (v11+)
 
 ### 2. Install
 ```bash
-git clone https://github.com/your-org/requirement-impact-analyzer.git
-cd requirement-impact-analyzer
+git clone https://github.com/diphungthinh/ba-helper.git
+cd ba-helper
 pnpm install
 ```
 

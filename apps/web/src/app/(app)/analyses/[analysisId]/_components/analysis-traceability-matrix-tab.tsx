@@ -160,7 +160,7 @@ export function AnalysisTraceabilityMatrixTab({
       if (searchTerm) {
         const lowerSearch = searchTerm.toLowerCase()
         const meta = (r.originalInsight as unknown as Record<string, unknown>)?.metadata as Record<string, unknown> | undefined
-        const diagCode = (meta?.diagnostic as any)?.code || meta?.diagnosticCode || ""
+        const diagCode = ((meta?.diagnostic as Record<string, unknown>)?.code as string | undefined) || meta?.diagnosticCode || ""
         return (
           r.originalName.toLowerCase().includes(lowerSearch) ||
           r.filePath.toLowerCase().includes(lowerSearch) ||
@@ -304,7 +304,7 @@ export function AnalysisTraceabilityMatrixTab({
                   <TableRow 
                     key={row.id} 
                     className={`cursor-pointer transition-colors hover:bg-muted/50 ${
-                      row.id === selectedRowId ? "bg-primary/10 border-primary" : row.sourceKind === "diagnostic_risk" ? "bg-warning-soft" : ""
+                      row.id === selectedRowId ? "bg-primary/10 border-primary" : row.sourceKind === "diagnostic_risk" ? "bg-warning/10" : ""
                     }`}
                     onClick={() => handleRowClick(row)}
                   >

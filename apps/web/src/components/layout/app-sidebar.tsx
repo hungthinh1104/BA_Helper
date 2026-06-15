@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Workflow, PanelLeftClose, PanelLeftOpen, Database, FileText, Activity, BarChart2, User, Users } from "lucide-react"
+import { Workflow, PanelLeftClose, PanelLeftOpen, Database, FileText, Activity, BarChart2, Users } from "lucide-react"
 
 interface AppSidebarProps {
   isCollapsed?: boolean
@@ -58,9 +58,9 @@ export function AppSidebar({ isCollapsed, onToggle }: AppSidebarProps) {
 
       <nav className={`nav-section mt-8 ${isCollapsed ? "items-center" : ""}`}>
         {!isCollapsed && <div className="nav-label">Settings</div>}
-        <Link href="/settings/profile" className={`nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={pathname === "/settings/profile" ? "true" : undefined} title="Profile">
-          <User className="w-4 h-4 shrink-0" />
-          {!isCollapsed && <span>Profile</span>}
+        <Link href="/settings/profile" className={`nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={pathname === "/settings/profile" ? "true" : undefined} title="Diagnostics">
+          <Activity className="w-4 h-4 shrink-0" />
+          {!isCollapsed && <span>Diagnostics</span>}
         </Link>
         <Link href="/settings/members" className={`nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={pathname === "/settings/members" ? "true" : undefined} title="Members">
           <Users className="w-4 h-4 shrink-0" />

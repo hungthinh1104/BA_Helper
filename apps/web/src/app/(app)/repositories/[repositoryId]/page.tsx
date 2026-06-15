@@ -33,7 +33,7 @@ function getFailureGuidance(errorCode?: string, message?: string) {
   }
 
   if (errorCode === "UNSUPPORTED_FRAMEWORK") {
-    return "This repository uses an unsupported language or framework. The analyzer currently supports TypeScript/NestJS (STABLE) and Java/Spring Boot (PARTIAL)."
+    return "This repository uses an unsupported language or framework. The analyzer currently supports TypeScript/NestJS (STABLE) and Java/Spring Boot (PARTIAL). Other frameworks are considered EXPERIMENTAL capability proofs."
   }
 
   if (errorCode === "SECURITY_RISK_BLOCKED") {

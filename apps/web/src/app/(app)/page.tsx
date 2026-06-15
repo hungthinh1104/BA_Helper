@@ -202,9 +202,11 @@ export default function DashboardPage() {
                   <Activity className="w-8 h-8 text-muted-foreground/50 mb-3" />
                   <p className="text-[13px] font-medium text-foreground">No analyses run yet</p>
                   <p className="text-[12px] text-muted-foreground mb-4">Run an impact analysis to see results here.</p>
-                  <NewAnalysisDialog>
-                    <Button size="sm" variant="outline" className="shadow-none">Start Analysis</Button>
-                  </NewAnalysisDialog>
+                  {canEdit && (
+                    <NewAnalysisDialog>
+                      <Button size="sm" variant="outline" className="shadow-none">Start Analysis</Button>
+                    </NewAnalysisDialog>
+                  )}
                 </div>
               ) : (
                 <div className="flex flex-col divide-y divide-border/40">
@@ -237,7 +239,7 @@ export default function DashboardPage() {
                               </Button>
                             </Link>
                           ) : isCompleted ? (
-                            <Link href={`/reports/${analysis.id}`}>
+                            <Link href={`/reports?analysisId=${analysis.id}`}>
                               <Button size="sm" variant="outline" className="h-7 text-[11px] px-2.5 bg-success/10 text-success hover:bg-success/20 border border-success/20 shadow-none">
                                 <FileText className="w-3 h-3 mr-1" /> Report
                               </Button>
