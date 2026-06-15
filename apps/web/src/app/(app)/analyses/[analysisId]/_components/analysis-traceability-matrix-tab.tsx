@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react"
 import { Search } from "lucide-react"
+import { TraceType, traceTypeDisplay } from "@/lib/constants/trace-types"
+import { classifyInsight } from "./analysis-traceability-matrix.util"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -37,7 +39,6 @@ interface MatrixRow {
   originalLink?: TraceabilityLink
   originalInsight?: Insight
 }
-
 export function AnalysisTraceabilityMatrixTab({
   analysis,
   insights,
@@ -53,7 +54,7 @@ export function AnalysisTraceabilityMatrixTab({
   const [artifactKindFilter, setArtifactKindFilter] = useState<string>("ALL")
 
   const rows = useMemo(() => {
-    const requirementLabel = analysis.requirement.revisionTitle
+    const requirementLabel = analysis.requirement.revisionTitle || analysis.requirement.title || "Requirement Change"
     const generatedRows: MatrixRow[] = []
 
     // 1. Process Links (EVIDENCED and INFERRED Impacts)
@@ -85,20 +86,10 @@ export function AnalysisTraceabilityMatrixTab({
 
     // 2. Process Insights (UNKNOWN/RISK, QA, QUESTIONS)
     for (const insight of insights) {
-      let traceType: TraceType
-      let sourceKind: RowKind
-      if (insight.category === "QA_SCENARIO") {
-        traceType = "QA_COVERAGE"
-        sourceKind = "qa_scenario"
-      } else if (insight.category === "QUESTION") {
-        traceType = "OPEN_QUESTION"
-        sourceKind = "open_question"
-      } else if (insight.category === "UNKNOWN" || insight.category === "CLAIM") {
-        traceType = "DIAGNOSTIC_DERIVED_RISK"
-        sourceKind = "diagnostic_risk"
-      } else {
-        continue // Skip acceptance criteria or others not relevant to matrix MVP
-      }
+      const classification = classifyInsight(insight)
+      if (!classification) continue
+
+      const { traceType, sourceKind } = classification
 
       let filePath = "—"
       if (insight.evidence.length > 0 && insight.evidence[0].filePath) {
@@ -146,6 +137,9 @@ export function AnalysisTraceabilityMatrixTab({
 
   // Get unique artifact kinds for filter
   const uniqueKinds = useMemo(() => Array.from(new Set(rows.map(r => r.artifactKind))).sort(), [rows])
+  const uniqueTraceTypes = useMemo(() => Array.from(new Set(rows.map(r => r.traceType))).sort(), [rows])
+  const uniqueCertainties = useMemo(() => Array.from(new Set(rows.map(r => r.certainty))).sort(), [rows])
+  const uniqueReviewStatuses = useMemo(() => Array.from(new Set(rows.map(r => r.reviewStatus))).sort(), [rows])
 
   const filteredRows = useMemo(() => {
     return rows.filter(r => {
@@ -156,10 +150,13 @@ export function AnalysisTraceabilityMatrixTab({
 
       if (searchTerm) {
         const lowerSearch = searchTerm.toLowerCase()
+        const meta = (r.originalInsight as unknown as Record<string, unknown>)?.metadata as Record<string, unknown> | undefined
+        const diagCode = meta?.diagnostic?.code || meta?.diagnosticCode || ""
         return (
           r.artifactName.toLowerCase().includes(lowerSearch) ||
           r.filePath.toLowerCase().includes(lowerSearch) ||
-          r.traceType.toLowerCase().includes(lowerSearch)
+          r.traceType.toLowerCase().includes(lowerSearch) ||
+          diagCode.toLowerCase().includes(lowerSearch)
         )
       }
       return true
@@ -221,10 +218,9 @@ export function AnalysisTraceabilityMatrixTab({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All Trace Types</SelectItem>
-            <SelectItem value="EVIDENCE_BACKED_IMPACT">Evidence Impact</SelectItem>
-            <SelectItem value="INFERRED_IMPACT">Inferred Impact</SelectItem>
-            <SelectItem value="DIAGNOSTIC_DERIVED_RISK">Risk / Unknown</SelectItem>
-            <SelectItem value="QA_COVERAGE">QA Scenario</SelectItem>
+            {uniqueTraceTypes.map(t => (
+              <SelectItem key={t} value={t}>{traceTypeDisplay(t as TraceType)}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
@@ -234,9 +230,9 @@ export function AnalysisTraceabilityMatrixTab({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All Certainty</SelectItem>
-            <SelectItem value="EVIDENCED">EVIDENCED</SelectItem>
-            <SelectItem value="INFERRED">INFERRED</SelectItem>
-            <SelectItem value="UNKNOWN">UNKNOWN</SelectItem>
+            {uniqueCertainties.map(c => (
+              <SelectItem key={c} value={c}>{c}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
@@ -246,9 +242,9 @@ export function AnalysisTraceabilityMatrixTab({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All Reviews</SelectItem>
-            <SelectItem value="NEEDS_REVIEW">Needs Review</SelectItem>
-            <SelectItem value="CONFIRMED">Confirmed</SelectItem>
-            <SelectItem value="REJECTED">Rejected</SelectItem>
+            {uniqueReviewStatuses.map(s => (
+              <SelectItem key={s} value={s}>{s.replace('_', ' ')}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
         

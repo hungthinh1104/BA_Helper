@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge"
 import { InsightListResponse } from "@ba-helper/contracts"
 import { MouseEvent } from "react"
 import { GitCommitHorizontal } from "lucide-react"

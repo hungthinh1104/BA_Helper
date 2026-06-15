@@ -53,7 +53,7 @@ graph LR
 
 ## 4. Screenshot Capture Checklist
 
-The following visual assets should be captured when the UI is finalized. **(Currently TODO Placeholders)**
+The following visual assets demonstrate the finalized UI flows and capabilities:
 
 - **README / project overview**: High-level dashboard showing scanned repos.
   *(See Demo Repositories screenshot below)*
