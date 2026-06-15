@@ -162,7 +162,7 @@ export function AppTopbar() {
         </Button>
         {isAnalysisDetail && (
           <>
-            <Button variant="ghost" size="sm" className="h-8 shadow-none text-muted-foreground">Share</Button>
+
             <Link href={analysisId ? `/reports?analysisId=${analysisId}` : "/reports"}>
               <Button size="sm" className="h-8 shadow-none">Export Report</Button>
             </Link>

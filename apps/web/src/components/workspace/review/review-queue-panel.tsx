@@ -6,6 +6,7 @@ import { CheckCircle, XCircle, SkipForward, AlertCircle, Activity, LayoutList } 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useReviewInsight, useReviewTraceabilityLink } from "@/hooks/api/use-analyses"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { DecisionNoteForm } from "@/components/workspace/review/decision-note-form"
 
 interface ReviewQueuePanelProps {
@@ -273,14 +274,23 @@ export function ReviewQueuePanel({ queueData, onSelect, selectedQueueItemId }: R
                         </Button>
                       </>
                     )}
-                    <Button
-                      onClick={handleSkip}
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 text-muted-foreground hover:text-foreground"
-                    >
-                      <SkipForward className="w-3.5 h-3.5 mr-1.5" /> Skip for now
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            onClick={handleSkip}
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 text-muted-foreground hover:text-foreground"
+                          >
+                            <SkipForward className="w-3.5 h-3.5 mr-1.5" /> Skip for now
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Moves to the next item but leaves this item as Needs Review.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </div>
               )}

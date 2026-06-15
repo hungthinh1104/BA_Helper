@@ -11,6 +11,7 @@ import Link from "next/link"
 import { ConnectRepoDialog } from "@/components/workspace/repository/connect-repo-dialog"
 import { NewRequirementDialog } from "@/components/workspace/requirement/new-requirement-dialog"
 import { NewAnalysisDialog } from "@/components/workspace/analysis/new-analysis/new-analysis-dialog"
+import { useAuth } from "@/hooks/use-auth"
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
@@ -28,27 +29,54 @@ export default function DashboardPage() {
   const readyRepos = repos.filter(r => r.latestScanJob?.status === "COMPLETED" && r.latestSnapshot?.id)
   const readyReqs = reqs.filter(r => r.latestRevision?.readinessStatus === "READY_FOR_ANALYSIS")
 
+  const { role } = useAuth()
+  const canEdit = role === "ADMIN" || role === "EDITOR"
+
   // Determine Next Best Action
   let nextAction = null
   if (reposLoading || analysesLoading || reqsLoading) {
     nextAction = null
   } else if (repos.length === 0) {
-    nextAction = {
-      title: "Connect a Repository",
-      description: "Start by connecting a GitHub repository to build the evidence index.",
-      action: <ConnectRepoDialog><Button size="sm" className="shadow-none">Connect Repository</Button></ConnectRepoDialog>
+    if (canEdit) {
+      nextAction = {
+        title: "Connect a Repository",
+        description: "Start by connecting a GitHub repository to build the evidence index.",
+        action: <ConnectRepoDialog><Button size="sm" className="shadow-none">Connect Repository</Button></ConnectRepoDialog>
+      }
+    } else {
+      nextAction = {
+        title: "No Repository Connected",
+        description: "An administrator needs to connect a repository to get started.",
+        action: null
+      }
     }
   } else if (reqs.length === 0) {
-    nextAction = {
-      title: "Create a Requirement",
-      description: "Define a change request to analyze against your repository.",
-      action: <NewRequirementDialog><Button size="sm" className="shadow-none">New Requirement</Button></NewRequirementDialog>
+    if (canEdit) {
+      nextAction = {
+        title: "Create a Requirement",
+        description: "Define a change request to analyze against your repository.",
+        action: <NewRequirementDialog><Button size="sm" className="shadow-none">New Requirement</Button></NewRequirementDialog>
+      }
+    } else {
+      nextAction = {
+        title: "No Requirements",
+        description: "Wait for an editor or admin to create a requirement.",
+        action: null
+      }
     }
   } else if (analyses.length === 0 && readyRepos.length > 0 && readyReqs.length > 0) {
-    nextAction = {
-      title: "Run Impact Analysis",
-      description: "You have a ready repository and requirement. Run your first analysis.",
-      action: <NewAnalysisDialog><Button size="sm" className="shadow-none">Start Analysis</Button></NewAnalysisDialog>
+    if (canEdit) {
+      nextAction = {
+        title: "Run Impact Analysis",
+        description: "You have a ready repository and requirement. Run your first analysis.",
+        action: <NewAnalysisDialog><Button size="sm" className="shadow-none">Start Analysis</Button></NewAnalysisDialog>
+      }
+    } else {
+      nextAction = {
+        title: "Ready for Analysis",
+        description: "A workspace editor needs to start the first analysis.",
+        action: null
+      }
     }
   } else if (analyses.some(a => a.status === "WAITING_FOR_REVIEW")) {
     const analysis = analyses.find(a => a.status === "WAITING_FOR_REVIEW")

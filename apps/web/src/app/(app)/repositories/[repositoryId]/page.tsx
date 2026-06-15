@@ -33,7 +33,7 @@ function getFailureGuidance(errorCode?: string, message?: string) {
   }
 
   if (errorCode === "UNSUPPORTED_FRAMEWORK") {
-    return "This repository is outside the current MVP support boundary. The analyzer currently targets public TypeScript NestJS repositories only."
+    return "This repository uses an unsupported language or framework. The analyzer currently supports TypeScript/NestJS (STABLE) and Java/Spring Boot (PARTIAL)."
   }
 
   if (errorCode === "SECURITY_RISK_BLOCKED") {

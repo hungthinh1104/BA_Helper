@@ -47,15 +47,27 @@ function ReportsPageContent() {
         <div className="max-w-4xl mx-auto w-full py-4">
         <WorkspacePageHeader 
           title="Traceability Reports" 
-          description="Generated evidence and matrix documents for final review and export."
+          description="Generated evidence and matrix documents for finalized analyses."
         />
+
+        {urlAnalysisId && !completedAnalyses.some(a => a.id === urlAnalysisId) && !isLoading && (
+          <div className="mb-6 flex items-start gap-3 p-4 bg-warning/10 border border-warning/20 rounded-xl">
+            <AlertTriangle className="w-5 h-5 text-warning shrink-0 mt-0.5" />
+            <div className="flex flex-col gap-1">
+              <h3 className="text-[13px] font-semibold text-warning">Report Unavailable</h3>
+              <p className="text-[12px] text-warning/80">
+                The requested report is not available. The impact analysis must be finalized before a report can be viewed.
+              </p>
+            </div>
+          </div>
+        )}
 
         <DataList>
           <DataListHeader gridCols={gridCols}>
-            <DataListCell>Report Name</DataListCell>
+            <DataListCell>Requirement</DataListCell>
             <DataListCell>Type</DataListCell>
             <DataListCell>Status</DataListCell>
-            <DataListCell>Generated</DataListCell>
+            <DataListCell>Analyzed On</DataListCell>
             <DataListCell className="text-right">Actions</DataListCell>
           </DataListHeader>
           

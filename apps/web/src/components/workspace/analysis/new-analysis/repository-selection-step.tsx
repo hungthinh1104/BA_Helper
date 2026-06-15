@@ -1,5 +1,6 @@
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ConnectRepoDialog } from "@/components/workspace/repository/connect-repo-dialog"
 import { RepositorySelectionStepProps } from "./new-analysis-types"
 
 export function RepositorySelectionStep({
@@ -26,8 +27,11 @@ export function RepositorySelectionStep({
             <span className="text-[13px]">Failed to load repositories.</span>
           </div>
         ) : readyRepos.length === 0 ? (
-          <div className="py-8 text-center text-[13px] text-muted-foreground">
-            No indexed repositories. Connect a repository and wait for the scan to complete.
+          <div className="py-8 flex flex-col items-center gap-3 text-center text-[13px] text-muted-foreground">
+            <p>No indexed repositories. Connect a repository and wait for the scan to complete.</p>
+            <ConnectRepoDialog>
+              <Button size="sm" variant="outline" className="shadow-none">Connect Repository</Button>
+            </ConnectRepoDialog>
           </div>
         ) : (
           readyRepos.map((repo) => {

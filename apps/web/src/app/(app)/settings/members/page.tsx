@@ -139,49 +139,70 @@ export default function ProjectMembersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {members.data?.items.map((member) => (
-                  <TableRow key={member.userId}>
-                    <TableCell>{member.name ?? "Unknown user"}</TableCell>
-                    <TableCell>{member.email}</TableCell>
-                    <TableCell>
-                      <select
-                        value={member.role}
-                        onChange={(event) =>
-                          void handleRoleChange(
-                            member.userId,
-                            event.target.value as ProjectRole,
-                          )
-                        }
-                        disabled={!canManage || updateMember.isPending}
-                        className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50"
-                      >
-                        {ROLE_OPTIONS.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </TableCell>
-                    <TableCell>{new Date(member.createdAt).toLocaleDateString()}</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => void handleRemove(member.userId)}
-                        disabled={!canManage || removeMember.isPending}
-                      >
-                        Remove
-                      </Button>
+                {members.isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8">
+                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                        <span className="text-[13px]">Loading members...</span>
+                      </div>
                     </TableCell>
                   </TableRow>
-                ))}
-                {members.data?.items.length === 0 ? (
+                ) : members.isError ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center py-8">
+                      <div className="flex flex-col items-center gap-2 text-danger">
+                        <span className="text-[13px]">Failed to load members.</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : members.data?.items.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                       No members found for this project.
                     </TableCell>
                   </TableRow>
-                ) : null}
+                ) : (
+                  members.data?.items.map((member) => (
+                    <TableRow key={member.userId}>
+                      <TableCell>{member.name ?? "Unknown user"}</TableCell>
+                      <TableCell>{member.email}</TableCell>
+                      <TableCell>
+                        <select
+                          value={member.role}
+                          onChange={(event) =>
+                            void handleRoleChange(
+                              member.userId,
+                              event.target.value as ProjectRole,
+                            )
+                          }
+                          disabled={!canManage || updateMember.isPending}
+                          className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50"
+                        >
+                          {ROLE_OPTIONS.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </TableCell>
+                      <TableCell>{new Date(member.createdAt).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (window.confirm("Are you sure you want to remove this member?")) {
+                              void handleRemove(member.userId)
+                            }
+                          }}
+                          disabled={!canManage || removeMember.isPending}
+                        >
+                          Remove
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>

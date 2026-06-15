@@ -1,5 +1,6 @@
 import { Loader2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { NewRequirementDialog } from "@/components/workspace/requirement/new-requirement-dialog"
 import { RequirementSelectionStepProps } from "./new-analysis-types"
 
 export function RequirementSelectionStep({
@@ -24,8 +25,11 @@ export function RequirementSelectionStep({
             <span className="text-[13px]">Failed to load requirements.</span>
           </div>
         ) : readyReqs.length === 0 ? (
-          <div className="py-8 text-center text-[13px] text-muted-foreground">
-            No READY requirements. Create and qualify a requirement first.
+          <div className="py-8 flex flex-col items-center gap-3 text-center text-[13px] text-muted-foreground">
+            <p>No READY requirements. Create and qualify a requirement first.</p>
+            <NewRequirementDialog>
+              <Button size="sm" variant="outline" className="shadow-none">Create Requirement</Button>
+            </NewRequirementDialog>
           </div>
         ) : (
           readyReqs.map((req) => (

@@ -11,6 +11,7 @@ import { BackButton } from "@/components/workspace/shared/back-button"
 import { useRequirementDetail } from "@/hooks/api/use-requirements"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/hooks/use-auth"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 export default function RequirementDetailsPage({ params }: { params: Promise<{ requirementId: string }> }) {
   const { requirementId } = use(params)
@@ -72,9 +73,22 @@ export default function RequirementDetailsPage({ params }: { params: Promise<{ r
               </Button>
             </NewRequirementDialog> */}
             <NewAnalysisDialog preselectedReqId={req.id}>
-              <Button size="sm" className="h-8 shadow-none gap-1.5" disabled={!isReady || !isAdmin} title={!isAdmin ? "Admin role required to run analyses." : undefined}>
-                <Play className="w-3.5 h-3.5" /> Run Analysis
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-block">
+                      <Button size="sm" className="h-8 shadow-none gap-1.5 pointer-events-auto" disabled={!isReady || !isAdmin}>
+                        <Play className="w-3.5 h-3.5" /> Run Analysis
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {(!isReady || !isAdmin) && (
+                    <TooltipContent>
+                      {!isReady ? "Requirement is not ready for analysis. Wait for processing to complete." : "Only admins and editors can start analyses."}
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </NewAnalysisDialog>
           </div>
         </WorkspacePageHeader>
