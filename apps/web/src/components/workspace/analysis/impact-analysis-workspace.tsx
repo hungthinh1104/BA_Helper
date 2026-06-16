@@ -15,7 +15,7 @@ interface ImpactAnalysisWorkspaceProps {
 
 export function ImpactAnalysisWorkspace({ 
   children, 
-  inspectorTitle = "Select an item to view evidence", 
+  inspectorTitle = "Select an item to inspect evidence", 
   inspectorSubtitle,
   inspectorCategory,
   inspectorCertaintyBadge,
@@ -45,21 +45,13 @@ export function ImpactAnalysisWorkspace({
           </EvidenceInspector>
         ) : (
           <aside className="flex flex-col items-center justify-center h-full p-4">
-            <div
-              className="flex flex-col items-center text-center px-8 w-full max-w-sm"
-              style={{
-                backgroundImage: "radial-gradient(circle, var(--border) 1px, transparent 1px)",
-                backgroundSize: "20px 20px",
-                borderRadius: "12px",
-                padding: "40px 32px",
-              }}
-            >
-              <div className="w-12 h-12 rounded-xl bg-surface border border-border/60 flex items-center justify-center mb-4 shadow-sm">
+            <div className="flex w-full max-w-sm flex-col items-center rounded-2xl border border-dashed border-border/60 bg-surface-muted/20 px-8 py-10 text-center">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-border/60 bg-surface shadow-sm">
                 <MousePointerClick className="w-5 h-5 text-muted-foreground/60" />
               </div>
-              <p className="text-[13px] font-medium text-foreground mb-1.5">No insight selected</p>
-              <p className="text-[11px] text-muted-foreground/70 leading-relaxed">
-                Click any item in the list<br />to view its evidence
+              <p className="mb-1.5 text-sm font-medium text-foreground">Nothing selected yet</p>
+              <p className="text-sm leading-6 text-muted-foreground">
+                Select evidence, insight, link, or graph node to inspect supporting context and review actions.
               </p>
             </div>
           </aside>

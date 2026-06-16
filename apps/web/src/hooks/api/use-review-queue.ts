@@ -3,7 +3,7 @@ import { apiGet } from '@/lib/api-client'
 import { queryKeys } from '@/lib/api/query-keys'
 import { ReviewQueueResponse, reviewQueueResponseSchema } from '@ba-helper/contracts'
 
-export function useReviewQueue(analysisId: string | undefined) {
+export function useReviewQueue(analysisId: string | undefined, options?: { enabled?: boolean }) {
   return useQuery<ReviewQueueResponse>({
     queryKey: queryKeys.analyses.reviewQueue(analysisId ?? ''),
     queryFn: () =>
@@ -11,6 +11,6 @@ export function useReviewQueue(analysisId: string | undefined) {
         `/api/v1/impact-analyses/${analysisId}/review-queue`,
         reviewQueueResponseSchema,
       ),
-    enabled: Boolean(analysisId),
+    enabled: Boolean(analysisId) && (options?.enabled ?? true),
   })
 }

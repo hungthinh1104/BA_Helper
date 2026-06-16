@@ -14,7 +14,7 @@ export function WorkspacePageHeader({ title, description, children, className }:
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
         {description && (
-          <div className="text-[13px] text-muted-foreground mt-1.5">{description}</div>
+          <div className="mt-1.5 text-sm leading-6 text-muted-foreground">{description}</div>
         )}
       </div>
       {children && (

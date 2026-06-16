@@ -3,7 +3,7 @@ import { QaCoverageResponse, qaCoverageResponseSchema } from '@ba-helper/contrac
 import { apiGet } from '@/lib/api-client'
 import { queryKeys } from '@/lib/api/query-keys'
 
-export function useQaCoverage(analysisId: string | undefined) {
+export function useQaCoverage(analysisId: string | undefined, options?: { enabled?: boolean }) {
   return useQuery<QaCoverageResponse>({
     queryKey: queryKeys.analyses.qaCoverage(analysisId ?? ''),
     queryFn: () =>
@@ -11,6 +11,6 @@ export function useQaCoverage(analysisId: string | undefined) {
         `/api/v1/impact-analyses/${analysisId}/qa-coverage`,
         qaCoverageResponseSchema,
       ),
-    enabled: Boolean(analysisId),
+    enabled: Boolean(analysisId) && (options?.enabled ?? true),
   })
 }

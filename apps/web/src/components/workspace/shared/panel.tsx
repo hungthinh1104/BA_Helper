@@ -27,7 +27,7 @@ export function WorkspacePanelSection({
       <div className={cn("p-6 sm:p-8", className)}>
         <div className="mb-8">
           <h2 className="text-sm font-semibold text-foreground tracking-tight">{title}</h2>
-          {description && <p className="text-[13px] text-muted-foreground mt-1">{description}</p>}
+          {description && <p className="mt-1 text-sm leading-6 text-muted-foreground">{description}</p>}
         </div>
         <div className="flex flex-col gap-6">
           {children}
@@ -52,8 +52,8 @@ export function WorkspaceProperty({
   return (
     <div className={cn("grid grid-cols-1 sm:grid-cols-[240px_1fr] items-start sm:items-center gap-4 sm:gap-8", className)}>
       <div>
-        <label className="text-[13px] font-medium text-foreground/90 block">{label}</label>
-        {description && <span className="text-[11px] text-muted-foreground mt-1.5 block leading-relaxed">{description}</span>}
+        <label className="block text-sm font-medium text-foreground/90">{label}</label>
+        {description && <span className="mt-1.5 block text-sm leading-6 text-muted-foreground">{description}</span>}
       </div>
       <div className="flex items-center min-w-0">
         {children}

@@ -41,7 +41,7 @@ export function AnalysisTabBar({
   const router = useRouter()
 
   const tabClass = (tab: TabValue) =>
-    `px-3 py-2 text-[12px] font-medium border-b-2 transition-colors -mb-px flex items-center gap-1.5
+    `min-h-10 shrink-0 px-3 py-2 text-sm font-medium border-b-2 transition-colors -mb-px flex items-center gap-1.5 whitespace-nowrap
      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-t ${
       activeTab === tab
         ? "border-primary text-foreground"
@@ -51,16 +51,21 @@ export function AnalysisTabBar({
   return (
     <div className="flex flex-col">
       <div className="mb-4">
-        <AnalysisHeader analysis={analysis} canExport={canExport} stats={stats} />
+        <AnalysisHeader
+          analysis={analysis}
+          canExport={canExport}
+          blockingRemaining={blockingRemaining}
+          stats={stats}
+        />
       </div>
 
-      <div className="w-full max-w-4xl mx-auto mb-6 px-2">
+      <div className="mb-6 rounded-xl border border-border/60 bg-surface px-4 py-3 shadow-sm">
         <details className="group">
-          <summary className="flex items-center gap-2 text-xs font-medium text-muted-foreground cursor-pointer hover:text-foreground transition-colors mb-2 select-none">
+          <summary className="mb-2 flex cursor-pointer items-center gap-2 select-none text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
             <span className="group-open:rotate-90 transition-transform">▶</span>
             Analysis Timeline
           </summary>
-          <div className="pt-2 pb-4">
+          <div className="pb-1 pt-2">
             <E2ETimeline
               repoConnected={true}
               scanJobStatus={analysis.snapshot.coverageStatus ? "COMPLETED" : "RUNNING"}
@@ -75,26 +80,15 @@ export function AnalysisTabBar({
 
       <div className="analysis-sticky-header">
         {/* Tab bar */}
-        <div role="tablist" className="flex items-center gap-0 border-b border-border/40">
+        <div role="tablist" className="flex items-center gap-0 overflow-x-auto border-b border-border/40 pb-1">
           <button role="tab" aria-selected={activeTab === "insights"} onClick={() => onTabChange("insights")} className={tabClass("insights")}>
-            Impact Summary
-          </button>
-          <button role="tab" aria-selected={activeTab === "graph"} onClick={() => onTabChange("graph")} className={tabClass("graph")}>
-            Graph
+            Evidence & Insights
           </button>
           <button role="tab" aria-selected={activeTab === "traceability-matrix"} onClick={() => onTabChange("traceability-matrix")} className={tabClass("traceability-matrix")}>
-            Traceability Matrix
+            Traceability
           </button>
           <button role="tab" aria-selected={activeTab === "qa-coverage"} onClick={() => onTabChange("qa-coverage")} className={tabClass("qa-coverage")}>
-            QA Coverage
-          </button>
-          {analysis.derivedFromAnalysisId && (
-            <button role="tab" aria-selected={activeTab === "diff"} onClick={() => onTabChange("diff")} className={tabClass("diff")}>
-              Impact Diff
-            </button>
-          )}
-          <button role="tab" aria-selected={activeTab === "lineage"} onClick={() => onTabChange("lineage")} className={tabClass("lineage")}>
-            Lineage
+            QA & Unknowns
           </button>
           <button role="tab" aria-selected={activeTab === "review-queue"} onClick={() => onTabChange("review-queue")} className={tabClass("review-queue")}>
             Review Queue
@@ -103,6 +97,17 @@ export function AnalysisTabBar({
                 {blockingRemaining}
               </span>
             )}
+          </button>
+          <button role="tab" aria-selected={activeTab === "graph"} onClick={() => onTabChange("graph")} className={tabClass("graph")}>
+            Graph
+          </button>
+          {analysis.derivedFromAnalysisId && (
+            <button role="tab" aria-selected={activeTab === "diff"} onClick={() => onTabChange("diff")} className={tabClass("diff")}>
+              Impact Diff
+            </button>
+          )}
+          <button role="tab" aria-selected={activeTab === "lineage"} onClick={() => onTabChange("lineage")} className={tabClass("lineage")}>
+            Lineage
           </button>
         </div>
 

@@ -3,7 +3,7 @@ import { apiGet } from "@/lib/api-client"
 import { queryKeys } from "@/lib/api/query-keys"
 import { impactGraphResponseSchema, ImpactGraphResponse } from "@ba-helper/contracts"
 
-export function useImpactGraph(analysisId: string | undefined) {
+export function useImpactGraph(analysisId: string | undefined, options?: { enabled?: boolean }) {
   return useQuery<ImpactGraphResponse>({
     queryKey: queryKeys.analyses.graph(analysisId ?? ""),
     queryFn: () =>
@@ -11,7 +11,7 @@ export function useImpactGraph(analysisId: string | undefined) {
         `/api/v1/impact-analyses/${analysisId}/graph`,
         impactGraphResponseSchema,
       ),
-    enabled: Boolean(analysisId),
+    enabled: Boolean(analysisId) && (options?.enabled ?? true),
     staleTime: 30_000,
   })
 }

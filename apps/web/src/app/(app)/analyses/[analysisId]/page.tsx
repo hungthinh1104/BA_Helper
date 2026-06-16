@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useMemo, useEffect, use } from "react"
+import { useMemo, useState, use } from "react"
 import { ImpactAnalysisWorkspace } from "@/components/workspace/analysis/impact-analysis-workspace"
 import { ReviewActionPanel } from "@/components/workspace/review/review-action-panel"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { notFound } from "next/navigation"
+import { notFound, usePathname, useRouter, useSearchParams } from "next/navigation"
 import { AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 import { AnalysisProgress } from "@/components/workspace/analysis/analysis-progress"
@@ -39,6 +39,8 @@ import {
   canRunAnalysis,
   canViewReviewQueue,
 } from "@/lib/permissions"
+import { useQueryClient } from "@tanstack/react-query"
+import { queryKeys } from "@/lib/api/query-keys"
 
 // Dynamic import so React Flow CSS loads correctly in Next.js app router
 const ImpactGraphView = dynamic(
@@ -56,17 +58,37 @@ type WorkspaceSelection =
   | { type: "GRAPH_NODE"; nodeId: string; node: ImpactGraphNode }
   | null
 
+function normalizeTabValue(value: string | string[] | undefined): TabValue {
+  const candidate = Array.isArray(value) ? value[0] : value
+  switch (candidate) {
+    case "graph":
+    case "traceability-matrix":
+    case "qa-coverage":
+    case "review-queue":
+    case "diff":
+    case "lineage":
+      return candidate
+    default:
+      return "insights"
+  }
+}
 
-export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{ analysisId: string }> }) {
+export default function ImpactAnalysisDetailPage({
+  params,
+}: {
+  params: Promise<{ analysisId: string }>
+}) {
   const { analysisId } = use(params)
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const queryClient = useQueryClient()
+  const requestedTab = normalizeTabValue(searchParams?.get("tab") ?? undefined)
   const activeProjectId = useOptionalProjectId()
   const workspace = useCurrentWorkspace()
   const { data: analysis, isLoading: analysisLoading, error: analysisError } = useAnalysisDetail(analysisId)
   const { data: insightsData, isLoading: insightsLoading } = useAnalysisInsights(analysisId)
   const { data: linksData, isLoading: linksLoading } = useAnalysisTraceability(analysisId)
-  const { data: graphData, isLoading: graphLoading } = useImpactGraph(analysisId)
-  const { data: qaCoverageResponse } = useQaCoverage(analysisId)
-  const { data: reviewQueueResponse, isLoading: reviewQueueLoading } = useReviewQueue(analysisId)
   const { mutateAsync: reviewInsight } = useReviewInsight(undefined, analysisId)
   const { mutateAsync: reviewLink } = useReviewTraceabilityLink(activeProjectId, analysisId)
   const { mutateAsync: retryAnalysis, isPending: isRetrying } = useCreateAnalysis()
@@ -74,23 +96,41 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
   // Watch for analysis job completion/failure to show toast notifications
   useAnalysisStatusWatcher(undefined, analysisId)
 
-  const [activeTab, setActiveTab] = useState<TabValue>("insights")
+  const role = workspace?.membershipRole ?? null
+  const canViewQueue = canViewReviewQueue(role)
   const [selection, setSelection] = useState<WorkspaceSelection>(null)
-  const [insights, setInsights] = useState<Insight[]>([])
-  const [links, setLinks] = useState<TraceabilityLink[]>([])
   const [filter, setFilter] = useState<InsightFilterValue>("ALL")
+  const currentTab = requestedTab === "review-queue" && !canViewQueue ? "insights" : requestedTab
+  const insights = useMemo(() => insightsData?.items ?? [], [insightsData])
+  const links = useMemo(() => linksData?.items ?? [], [linksData])
+
+  const shouldFetchGraph = currentTab === "graph" || selection?.type === "GRAPH_NODE"
+  const shouldFetchQa = currentTab === "qa-coverage"
+  const shouldFetchReviewQueue = canViewQueue && currentTab === "review-queue"
+
+  const { data: graphData, isLoading: graphLoading } = useImpactGraph(analysisId, { enabled: shouldFetchGraph })
+  const { data: qaCoverageResponse } = useQaCoverage(analysisId, { enabled: shouldFetchQa })
+  const { data: reviewQueueResponse, isLoading: reviewQueueLoading } = useReviewQueue(analysisId, { enabled: shouldFetchReviewQueue })
 
   const selectedInsight = selection?.type === "INSIGHT" ? insights.find(i => i.id === selection.insightId) ?? null : null
   const selectedLink = selection?.type === "TRACEABILITY_LINK" ? links.find(l => l.id === selection.linkId) ?? null : null
   const selectedGraphNode = selection?.type === "GRAPH_NODE" ? selection.node : null
   const qaCoverageData = qaCoverageResponse?.items ?? []
 
-  // eslint-disable-next-line
-  useEffect(() => { if (insightsData) setInsights(insightsData.items) }, [insightsData])
-  // eslint-disable-next-line
-  useEffect(() => { if (linksData) setLinks(linksData.items) }, [linksData])
-
   const needsReviewInsights = useMemo(() => insights.filter(i => i.reviewStatus === "NEEDS_REVIEW"), [insights])
+
+  const setTab = (tab: TabValue) => {
+    const nextTab = tab === "review-queue" && !canViewQueue ? "insights" : tab
+    const params = new URLSearchParams(searchParams?.toString() ?? "")
+    if (nextTab === "insights") {
+      params.delete("tab")
+    } else {
+      params.set("tab", nextTab)
+    }
+    const nextQuery = params.toString()
+    const basePath = pathname ?? `/analyses/${analysisId}`
+    router.replace(nextQuery ? `${basePath}?${nextQuery}` : basePath, { scroll: false })
+  }
 
   const handleSelectInsight = (insight: Insight) => setSelection({ type: "INSIGHT", insightId: insight.id })
   const handleSelectLink = (link: TraceabilityLink) => setSelection({ type: "TRACEABILITY_LINK", linkId: link.id, artifactId: link.artifactId })
@@ -128,7 +168,15 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
       }
     }
     const updated = { ...selectedInsight, reviewStatus: status }
-    setInsights(prev => prev.map(i => i.id === selectedInsight.id ? updated : i))
+    queryClient.setQueryData<InsightListResponse | undefined>(
+      [...queryKeys.analyses.detail(analysisId), "insights"],
+      previous => previous
+        ? {
+            ...previous,
+            items: previous.items.map(i => (i.id === selectedInsight.id ? updated : i)),
+          }
+        : previous,
+    )
     if (status !== "NEEDS_REVIEW") {
       const next = needsReviewInsights.find(i => i.id !== selectedInsight.id)
       if (next) handleSelectInsight(next)
@@ -148,7 +196,15 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
       }
     }
     const updated = { ...selectedLink, reviewStatus: status }
-    setLinks(prev => prev.map(l => l.id === selectedLink.id ? updated : l))
+    queryClient.setQueryData<TraceabilityLinkListResponse | undefined>(
+      [...queryKeys.analyses.detail(analysisId), "traceability"],
+      previous => previous
+        ? {
+            ...previous,
+            items: previous.items.map(l => (l.id === selectedLink.id ? updated : l)),
+          }
+        : previous,
+    )
     handleSelectLink(updated)
   }
 
@@ -190,13 +246,11 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
     needsReview: needsReviewInsights.length + links.filter(l => l.reviewStatus === "NEEDS_REVIEW").length,
   }), [insights, needsReviewInsights, links])
 
-  const blockingRemaining = reviewQueueResponse?.summary.blockingRemaining ?? 0
-  const role = workspace?.membershipRole ?? null
+  const blockingRemaining = analysisStats.needsReview
   const canRerun = Boolean(analysis?.capabilities.canRerun) && canRunAnalysis(role)
   const canReview = Boolean(analysis?.capabilities.canReview) && canReviewPermission(role)
   const canFinalize = Boolean(analysis?.capabilities.canFinalize) && canFinalizeAnalysis(role)
   const canExport = Boolean(analysis?.capabilities.canExport) && canExportReport(role)
-  const canViewQueue = canViewReviewQueue(role)
 
   const linkedInsights = useMemo(() => {
     if (!selectedLink) return []
@@ -225,7 +279,7 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
     />
   )
 
-  const inspectorFooter = selectedInsight ? (
+  const inspectorFooter = !canReview ? undefined : selectedInsight ? (
     <ReviewActionPanel
       status={selectedInsight.reviewStatus}
       canReview={canReview}
@@ -305,6 +359,10 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
         <p className="mb-6 max-w-md text-[12px] text-muted-foreground">
           {analysis.error?.code === "AI_PROVIDER_UNAVAILABLE" || analysis.error?.code === "LLM_PROVIDER_OVERLOADED"
             ? "Common fixes: wait a few minutes before retrying, or configure a different AI provider/model in settings."
+            : analysis.error?.code === "AI_PROVIDER_RATE_LIMITED"
+            ? "Common fixes: check your AI provider billing/quota, or wait before retrying."
+            : analysis.error?.code === "AI_PROVIDER_TIMEOUT"
+            ? "Common fixes: the model took too long to respond. You can retry the analysis, or switch to a faster model."
             : "Common fixes: confirm the selected snapshot is READY or explicitly accepted as PARTIAL, then rerun the analysis from the same requirement revision."}
         </p>
         {canRerun ? (
@@ -320,7 +378,7 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
     )
   }
 
-  const isFullHeightTab = activeTab === "graph" || activeTab === "review-queue" || activeTab === "diff" || activeTab === "lineage" || activeTab === "traceability-matrix"
+  const isFullHeightTab = currentTab === "graph" || currentTab === "review-queue" || currentTab === "diff" || currentTab === "lineage" || currentTab === "traceability-matrix"
 
   return (
     <ImpactAnalysisWorkspace
@@ -343,7 +401,7 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
         )
       }
       inspectorContent={inspectorContent}
-      inspectorFooter={activeTab === "review-queue" ? undefined : inspectorFooter}
+      inspectorFooter={currentTab === "review-queue" ? undefined : inspectorFooter}
     >
       {/* app-page-scroll owns 18px padding — matches .analysis-sticky-header bleed math */}
       <div className={`app-page-scroll flex flex-col gap-3 ${isFullHeightTab ? "overflow-hidden" : ""}`}>
@@ -354,13 +412,13 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
             canExport={canExport}
             canFinalize={canFinalize}
             stats={analysisStats}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
+            activeTab={currentTab}
+            onTabChange={setTab}
             blockingRemaining={blockingRemaining}
           />
 
           {/* Graph tab */}
-          {activeTab === "graph" && (
+          {currentTab === "graph" && (
             <div className="w-full flex-1 min-h-0 relative mt-2">
               {graphLoading ? (
                 <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Loading graph…</div>
@@ -380,7 +438,7 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
             </div>
           )}
 
-          {activeTab === "qa-coverage" && (
+          {currentTab === "qa-coverage" && (
             <div className="mt-4 pb-12">
               <QaCoveragePanel
                 coverageItems={qaCoverageData}
@@ -393,7 +451,7 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
           )}
 
           {/* Traceability Matrix tab */}
-          {activeTab === "traceability-matrix" && (
+          {currentTab === "traceability-matrix" && (
             <div className="mt-4 h-[calc(100vh-280px)] min-h-[500px] border border-border/40 rounded-lg overflow-hidden flex flex-col bg-surface">
               <AnalysisTraceabilityMatrixTab 
                 analysis={analysis}
@@ -407,7 +465,7 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
           )}
 
           {/* Review Queue tab — bleeds to panel edges */}
-          {activeTab === "review-queue" && (
+          {currentTab === "review-queue" && (
             <div className="flex-1 w-full h-full min-h-0 relative -mx-[18px] mt-1" style={{ height: "calc(100vh - var(--topbar-h, 56px) - 120px)" }}>
               {reviewQueueLoading ? (
                 <div className="w-full h-full p-4 flex gap-4">
@@ -439,17 +497,17 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
           )}
 
           {/* Diff tab */}
-          {activeTab === "diff" && (
+          {currentTab === "diff" && (
             <AnalysisDiffTab analysisId={analysisId} analysis={analysis} />
           )}
 
           {/* Lineage tab */}
-          {activeTab === "lineage" && (
+          {currentTab === "lineage" && (
             <AnalysisLineageTab analysisId={analysisId} />
           )}
 
           {/* Insights tab */}
-          {activeTab === "insights" && (
+          {currentTab === "insights" && (
             <AnalysisInsightsTab
               claims={claims}
               ac={ac}
@@ -468,7 +526,7 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
               onSelectInsight={handleSelectInsight}
               onSelectLink={handleSelectLink}
               onFilterChange={setFilter}
-              onGoToReviewQueue={() => setActiveTab("review-queue")}
+              onGoToReviewQueue={() => setTab("review-queue")}
             />
           )}
 
