@@ -5,7 +5,9 @@ import { use } from "react"
 import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
 
 import { Button } from "@/components/ui/button"
-import { Play, GitBranch, AlertTriangle, Layers, Server, Box, Beaker, Database, Activity, AlertCircle, ShieldAlert } from "lucide-react"
+import { FileWarning, ChevronRight, GitBranch, GitCommit, FileText, CheckCircle2, Clock, PlayCircle, Loader2, Play, AlertTriangle, Layers, Server, Box, Beaker, Database, Activity, AlertCircle, ShieldAlert } from "lucide-react"
+import { useCurrentWorkspace, useOptionalProjectId } from "@/lib/project-context"
+import { canRunScan } from "@/lib/permissions"
 import { ScanJobProgress } from "@/components/workspace/repository/scan-job-progress"
 import { NewAnalysisDialog } from "@/components/workspace/analysis/new-analysis/new-analysis-dialog"
 import { ScanDiagnosticsPanel } from "@/components/workspace/analysis/scan-diagnostics-panel"
@@ -63,7 +65,8 @@ export default function RepositoryDetailsPage({ params }: PageProps) {
   const { mutateAsync: retryScan, isPending: isRetrying } = useCreateScanJob(activeProjectId, repositoryId)
 
   const { user } = useAuth()
-  const isAdmin = user?.role === 'ADMIN'
+  const workspace = useCurrentWorkspace()
+  const canScan = workspace ? canRunScan(workspace.membershipRole) : false
 
   // Watch for scan job completion/failure to show toast notifications
   useRepositoryStatusWatcher(undefined, repositoryId)
@@ -235,10 +238,10 @@ export default function RepositoryDetailsPage({ params }: PageProps) {
                 <Button 
                   size="sm" 
                   variant="outline" 
-                  className={`h-8 border-danger/20 ${!isAdmin ? 'opacity-50 cursor-not-allowed text-danger' : 'hover:bg-danger/10 hover:text-danger text-danger'}`}
-                  onClick={() => isAdmin && handleRetryScan()}
-                  disabled={isRetrying || !isAdmin}
-                  title={!isAdmin ? "Admin role required to run scans." : undefined}
+                  className={`h-8 border-danger/20 ${!canScan ? 'opacity-50 cursor-not-allowed text-danger' : 'hover:bg-danger/10 hover:text-danger text-danger'}`}
+                  onClick={() => canScan && handleRetryScan()}
+                  disabled={isRetrying || !canScan}
+                  title={!canScan ? "Maintainer role required to run scans." : undefined}
                 >
                   {isRetrying ? "Retrying..." : "Rerun Scan"}
                 </Button>
@@ -311,7 +314,7 @@ export default function RepositoryDetailsPage({ params }: PageProps) {
               <p className="text-[12px] text-muted-foreground mb-4">
                 Start a scan to build the snapshot, artifact graph, and analysis-ready evidence.
               </p>
-              <Button size="sm" className="h-8 shadow-none" onClick={() => isAdmin && handleRetryScan()} disabled={isRetrying || !isAdmin} title={!isAdmin ? "Admin role required to run scans." : undefined}>
+              <Button size="sm" className="h-8 shadow-none" onClick={() => canScan && handleRetryScan()} disabled={isRetrying || !canScan} title={!canScan ? "Maintainer role required to run scans." : undefined}>
                 {isRetrying ? "Starting..." : "Start Scan"}
               </Button>
             </div>

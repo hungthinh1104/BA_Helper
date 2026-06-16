@@ -7,7 +7,6 @@ import { CreateScanJobUseCase } from '../application/create-scan-job.usecase';
 import { ScanJobRepository } from '../infrastructure/scan-job.repository';
 import { AppError } from '../../../shared/app-error';
 
-import { Roles } from '../../auth/api/roles.decorator';
 import { CurrentUser } from '../../auth/api/current-user.decorator';
 import { RequestUser } from '@ba-helper/contracts';
 import { ProjectPermissionService } from '../../project/application/project-permission.service';
@@ -58,7 +57,6 @@ export class ScanJobController {
   }
 
   @Post()
-  @Roles('ADMIN')
   async create(
     @Param('repositoryId') repositoryId: string,
     @Body() body: unknown,

@@ -41,7 +41,7 @@ export function ConfirmationStep({
   batchError,
   canProceed,
   loading,
-  isAdmin,
+  canRun,
   handleBack,
   handleSubmit,
   handleOpenRun,
@@ -169,8 +169,7 @@ export function ConfirmationStep({
             <div className="flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
               <p className="text-[12px] text-foreground/80 leading-relaxed">
-                At least one selected repository uses a <strong className="text-warning">PARTIAL</strong>{" "}
-                snapshot. Analysis results may be incomplete.
+                At least one selected repository uses a framework with <strong className="text-warning">PARTIAL</strong> or <strong className="text-warning">EXPERIMENTAL</strong> support, or has a partial snapshot. Analysis results may be incomplete.
               </p>
             </div>
             <label className="flex items-center gap-2.5 cursor-pointer">
@@ -199,9 +198,9 @@ export function ConfirmationStep({
         <Button
           size="sm"
           className="h-8 shadow-none"
-          disabled={!canProceed || loading || !isAdmin}
+          disabled={!canProceed || loading || !canRun}
           onClick={handleSubmit}
-          title={!isAdmin ? "Admin role required to run analyses." : undefined}
+          title={!canRun ? "Analyst role required to run analyses." : undefined}
         >
           {loading
             ? "Starting..."

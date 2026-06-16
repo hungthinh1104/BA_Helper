@@ -46,7 +46,7 @@ function ReportsPageContent() {
       <div className="app-page-scroll">
         <div className="max-w-4xl mx-auto w-full py-4">
         <WorkspacePageHeader 
-          title="Traceability Reports" 
+          title="Finalized Analyses" 
           description="Generated evidence and matrix documents for finalized analyses."
         />
 

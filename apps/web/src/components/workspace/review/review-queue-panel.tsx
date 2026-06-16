@@ -75,18 +75,18 @@ export function ReviewQueuePanel({ queueData, onSelect, selectedQueueItemId }: R
   const handleConfirm = () => {
     if (!activeItem?.requiresDecision) return
     if (activeItem.type === "INSIGHT" || activeItem.type === "UNKNOWN") {
-      reviewInsight.mutate({ insightId: activeItem.id, data: { reviewStatus: "CONFIRMED" } })
+      reviewInsight.mutate({ insightId: activeItem.id, data: { reviewStatus: "CONFIRMED" } }, { onSuccess: handleNext })
     } else if (activeItem.type === "TRACEABILITY_LINK" && activeItem.linkedTraceabilityLinkId) {
-      reviewLink.mutate({ traceabilityLinkId: activeItem.linkedTraceabilityLinkId, data: { reviewStatus: "CONFIRMED" } })
+      reviewLink.mutate({ traceabilityLinkId: activeItem.linkedTraceabilityLinkId, data: { reviewStatus: "CONFIRMED" } }, { onSuccess: handleNext })
     }
   }
 
   const handleReject = () => {
     if (!activeItem?.requiresDecision) return
     if (activeItem.type === "INSIGHT" || activeItem.type === "UNKNOWN") {
-      reviewInsight.mutate({ insightId: activeItem.id, data: { reviewStatus: "REJECTED" } })
+      reviewInsight.mutate({ insightId: activeItem.id, data: { reviewStatus: "REJECTED" } }, { onSuccess: handleNext })
     } else if (activeItem.type === "TRACEABILITY_LINK" && activeItem.linkedTraceabilityLinkId) {
-      reviewLink.mutate({ traceabilityLinkId: activeItem.linkedTraceabilityLinkId, data: { reviewStatus: "REJECTED" } })
+      reviewLink.mutate({ traceabilityLinkId: activeItem.linkedTraceabilityLinkId, data: { reviewStatus: "REJECTED" } }, { onSuccess: handleNext })
     }
   }
 
@@ -228,6 +228,7 @@ export function ReviewQueuePanel({ queueData, onSelect, selectedQueueItemId }: R
 
             {/* Review actions */}
             <div className="mt-6 pt-4 border-t border-border">
+              <h4 className="text-[12px] font-semibold text-foreground mb-3">Reviewer Action</h4>
               {activeItem.reviewStatus === "CONFIRMED" || activeItem.reviewStatus === "REJECTED" ? (
                 <div className="flex items-center gap-2.5 p-3 rounded-lg border border-success/30 bg-success-soft text-success">
                   <CheckCircle className="w-4 h-4 shrink-0" />
@@ -283,11 +284,11 @@ export function ReviewQueuePanel({ queueData, onSelect, selectedQueueItemId }: R
                             variant="ghost"
                             className="h-8 text-muted-foreground hover:text-foreground"
                           >
-                            <SkipForward className="w-3.5 h-3.5 mr-1.5" /> Skip for now
+                            <SkipForward className="w-3.5 h-3.5 mr-1.5" /> Skip navigation only
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Moves to the next item but leaves this item as Needs Review.</p>
+                          <p>This does not change review status.</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>

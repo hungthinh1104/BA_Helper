@@ -1,7 +1,8 @@
 import { useState } from "react"
 import { HelpCircle, CornerDownRight, CheckCircle2, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useAuth } from "@/hooks/use-auth"
+import { useCurrentWorkspace } from "@/lib/project-context"
+import { canWriteClarification } from "@/lib/permissions"
 import { useReviewClarifications, useCreateReviewClarification, useAnswerReviewClarification, useCreateDerivedAnalysisFromClarification } from "@/hooks/api/use-clarifications"
 import { ReviewDecisionResponse } from "@ba-helper/contracts"
 import { toast } from "sonner"
@@ -19,7 +20,8 @@ export function AnalysisClarificationBlock({ analysisId, latestDecision }: Analy
   const answerClarification = useAnswerReviewClarification(analysisId)
   const createDerivedAnalysis = useCreateDerivedAnalysisFromClarification(analysisId)
 
-  const isViewer = user?.role === "VIEWER"
+  const workspace = useCurrentWorkspace()
+  const canWrite = workspace ? canWriteClarification(workspace.membershipRole) : false
 
   const [question, setQuestion] = useState("")
   const [answer, setAnswer] = useState("")
@@ -120,20 +122,20 @@ export function AnalysisClarificationBlock({ analysisId, latestDecision }: Analy
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
               <CornerDownRight className="w-3.5 h-3.5" /> Stakeholder Answer
             </span>
-            <textarea
+            <textarea 
               value={answer}
-              onChange={e => setAnswer(e.target.value)}
-              disabled={isViewer}
-              placeholder={isViewer ? "Answering clarifications is disabled for view-only users." : "Enter stakeholder answer here..."}
-              className={`w-full min-h-[80px] p-3 rounded-lg bg-surface border border-border/60 text-[13px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary resize-y ${isViewer ? 'opacity-50 cursor-not-allowed bg-surface-muted' : ''}`}
-              title={isViewer ? "You have view-only access. Reviewer or Admin role required." : undefined}
+              onChange={(e) => setAnswer(e.target.value)}
+              disabled={!canWrite}
+              placeholder={!canWrite ? "Answering clarifications is disabled for view-only users." : "Enter stakeholder answer here..."}
+              className={`w-full min-h-[80px] p-3 rounded-lg bg-surface border border-border/60 text-[13px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary resize-y ${!canWrite ? 'opacity-50 cursor-not-allowed bg-surface-muted' : ''}`}
+              title={!canWrite ? "You have view-only access. Reviewer or Analyst role required." : undefined}
             />
             <div className="flex justify-end mt-1">
               <Button 
                 onClick={() => handleAnswerClarification(activeClarification.id)} 
-                disabled={!answer.trim() || answerClarification.isPending || isViewer}
+                disabled={!answer.trim() || answerClarification.isPending || !canWrite}
                 className="h-8 text-xs shadow-none"
-                title={isViewer ? "You have view-only access. Reviewer or Admin role required." : undefined}
+                title={!canWrite ? "You have view-only access. Reviewer or Admin role required." : undefined}
               >
                 Submit Answer
               </Button>

@@ -1,6 +1,8 @@
 "use client"
 
 import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
+import { useCurrentWorkspace } from "@/lib/project-context"
+import { canCreateRequirement } from "@/lib/permissions"
 import { DataList, DataListHeader, DataListRow, DataListCell } from "@/components/workspace/shared/data-list"
 import { NewRequirementDialog, ReadinessStatusBadge } from "@/components/workspace/requirement/new-requirement-dialog"
 import { Button } from "@/components/ui/button"
@@ -15,7 +17,8 @@ const gridCols = "minmax(200px, 2.5fr) minmax(100px, 1fr) 180px 110px"
 export default function RequirementsPage() {
   const { data, isLoading, error } = useRequirements()
   const { user } = useAuth()
-  const isAdmin = user?.role === 'ADMIN'
+  const workspace = useCurrentWorkspace()
+  const canCreateReq = workspace ? canCreateRequirement(workspace.membershipRole) : false
 
   return (
       <div className="app-page-scroll">
@@ -25,7 +28,7 @@ export default function RequirementsPage() {
           description="Manage change request revisions and their readiness status before running impact analysis."
         >
           <NewRequirementDialog>
-            <Button size="sm" className="h-8 shadow-none gap-1.5" disabled={!isAdmin} title={!isAdmin ? "Admin role required to create requirements." : undefined}>
+            <Button size="sm" className="h-8 shadow-none gap-1.5" disabled={!canCreateReq} title={!canCreateReq ? "Analyst role required to create requirements." : undefined}>
               <Plus className="w-3.5 h-3.5" /> New Requirement
             </Button>
           </NewRequirementDialog>
@@ -68,7 +71,7 @@ export default function RequirementsPage() {
               <p className="text-[13px] font-medium text-foreground mb-1">No requirements yet.</p>
               <p className="text-[12px] mb-4">Create a requirement change request to analyze backend impact.</p>
               <NewRequirementDialog>
-                <Button size="sm" variant="outline" className="h-8 shadow-none gap-1.5" disabled={!isAdmin} title={!isAdmin ? "Admin role required to create requirements." : undefined}>
+                <Button size="sm" variant="outline" className="h-8 shadow-none gap-1.5" disabled={!canCreateReq} title={!canCreateReq ? "Analyst role required to create requirements." : undefined}>
                   <Plus className="w-3.5 h-3.5" /> New Requirement
                 </Button>
               </NewRequirementDialog>

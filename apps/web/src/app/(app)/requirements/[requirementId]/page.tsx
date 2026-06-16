@@ -12,13 +12,16 @@ import { useRequirementDetail } from "@/hooks/api/use-requirements"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/hooks/use-auth"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useCurrentWorkspace } from "@/lib/project-context"
+import { canRunAnalysis } from "@/lib/permissions"
 
 export default function RequirementDetailsPage({ params }: { params: Promise<{ requirementId: string }> }) {
   const { requirementId } = use(params)
   
   const { data: req, isLoading, error } = useRequirementDetail(undefined, requirementId)
   const { user } = useAuth()
-  const isAdmin = user?.role === 'ADMIN'
+  const workspace = useCurrentWorkspace()
+  const canRun = workspace ? canRunAnalysis(workspace.membershipRole) : false
 
   if (isLoading) {
     return (
@@ -76,13 +79,13 @@ export default function RequirementDetailsPage({ params }: { params: Promise<{ r
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger render={<span className="inline-block" />}>
-                    <Button size="sm" className="h-8 shadow-none gap-1.5 pointer-events-auto" disabled={!isReady || !isAdmin}>
+                    <Button size="sm" className="h-8 shadow-none gap-1.5 pointer-events-auto" disabled={!isReady || !canRun}>
                       <Play className="w-3.5 h-3.5" /> Run Analysis
                     </Button>
                   </TooltipTrigger>
-                  {(!isReady || !isAdmin) && (
+                  {(!isReady || !canRun) && (
                     <TooltipContent>
-                      {!isReady ? "Requirement is not ready for analysis. Wait for processing to complete." : "Only admins and editors can start analyses."}
+                      {!isReady ? "Requirement is not ready for analysis. Wait for processing to complete." : "Only analysts and admins can start analyses."}
                     </TooltipContent>
                   )}
                 </Tooltip>

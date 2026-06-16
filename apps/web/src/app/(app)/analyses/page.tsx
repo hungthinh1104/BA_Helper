@@ -28,9 +28,6 @@ export default function AnalysesPage() {
           description="Manage and view requirement impact analyses linked to repository snapshots."
         >
           <div className="flex items-center gap-2">
-            <Link href="/analyses/runs" className="text-[12px] text-muted-foreground hover:text-foreground">
-              Multi-repo Runs
-            </Link>
             <NewAnalysisDialog>
               <Button size="sm" className="h-8 shadow-none gap-1.5">
                 <Plus className="w-3.5 h-3.5" /> New Analysis

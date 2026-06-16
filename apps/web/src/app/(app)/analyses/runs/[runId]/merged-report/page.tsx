@@ -15,6 +15,8 @@ import { useApprovedMultiRepoReport, useCreateMergedMultiRepoReportReviewDecisio
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import { apiGetFile } from "@/lib/api-client"
+import { canFinalizeAnalysis, canReview as canReviewPermission } from "@/lib/permissions"
+import { useCurrentWorkspace } from "@/lib/project-context"
 import { useState } from "react"
 
 export default function ApprovedMultiRepoReportPage({
@@ -30,6 +32,7 @@ export default function ApprovedMultiRepoReportPage({
   const finalizeReport = useFinalizeMultiRepoReport(runId)
   const createReviewDecision = useCreateMergedMultiRepoReportReviewDecision(runId)
   const { role } = useAuth()
+  const workspace = useCurrentWorkspace()
   const [exportingFormat, setExportingFormat] = useState<"md" | "pdf" | null>(null)
   const [decision, setDecision] = useState<"ACCEPTED" | "REJECTED" | "NEEDS_MORE_CLARIFICATION" | null>(null)
   const [note, setNote] = useState("")
@@ -42,10 +45,9 @@ export default function ApprovedMultiRepoReportPage({
     notFound()
   }
 
-  const canFinalize =
-    role === "ADMIN" && Boolean(runDetail?.runReadiness.canStartMergedReport)
+  const canFinalize = workspace ? canFinalizeAnalysis(workspace.membershipRole) && Boolean(runDetail?.runReadiness.canStartMergedReport) : false
   const canExport = Boolean(role) && Boolean(data) && !data?.isStale
-  const canReview = (role === "ADMIN" || role === "REVIEWER") && Boolean(data) && !data?.isStale
+  const canReview = workspace ? canReviewPermission(workspace.membershipRole) && Boolean(data) && !data?.isStale : false
   const reviewDecisions = reviewDecisionsData?.items ?? []
   const latestReviewedDecision = latestDecisionCode === "MERGED_MULTI_REPO_REPORT_NOT_FOUND" ? null : latestDecision
 
@@ -336,8 +338,8 @@ export default function ApprovedMultiRepoReportPage({
                   <span className="text-[12px] text-muted-foreground">
                     {canReview
                       ? "Review decisions are append-only. Existing entries are preserved."
-                      : role === "VIEWER"
-                        ? "Viewer cannot review merged reports."
+                      : !canReviewPermission(workspace?.membershipRole ?? null)
+                        ? "You have view-only access. Reviewer or Analyst role required."
                         : "Only admin/reviewer review posture can submit merged report decisions in the current UI."}
                   </span>
                   <Button

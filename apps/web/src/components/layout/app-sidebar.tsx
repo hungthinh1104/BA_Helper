@@ -50,14 +50,22 @@ export function AppSidebar({ isCollapsed, onToggle }: AppSidebarProps) {
           <Activity className="w-4 h-4 shrink-0" />
           {!isCollapsed && <span>Impact Analyses</span>}
         </Link>
-        <Link href="/reports" className={`nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/reports")} title="Reports">
+        <Link href="/reports" className={`nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/reports")} title="Finalized Analyses">
           <BarChart2 className="w-4 h-4 shrink-0" />
-          {!isCollapsed && <span>Reports</span>}
+          {!isCollapsed && <span>Finalized Analyses</span>}
         </Link>
       </nav>
 
       <nav className={`nav-section mt-8 ${isCollapsed ? "items-center" : ""}`}>
-        {!isCollapsed && <div className="nav-label">Settings</div>}
+        {!isCollapsed && <div className="nav-label">Advanced / Experimental</div>}
+        <Link href="/analyses/runs" className={`nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/analyses/runs")} title="Multi-repo Runs">
+          <Database className="w-4 h-4 shrink-0" />
+          {!isCollapsed && <span>Multi-repo Runs</span>}
+        </Link>
+      </nav>
+
+      <nav className={`nav-section mt-8 ${isCollapsed ? "items-center" : ""}`}>
+        {!isCollapsed && <div className="nav-label">Settings & Diagnostics</div>}
         <Link href="/settings/profile" className={`nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={pathname === "/settings/profile" ? "true" : undefined} title="Diagnostics">
           <Activity className="w-4 h-4 shrink-0" />
           {!isCollapsed && <span>Diagnostics</span>}

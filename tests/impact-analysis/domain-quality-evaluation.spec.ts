@@ -44,8 +44,11 @@ describe('Domain Quality Evaluation Safety Guards', () => {
         new HybridRetrievalEvaluationAdapter(prisma, hybridRetrievalService, domainPackRegistry),
         domainPackRegistry
       );
-    } catch (e) {
+    } catch (e: any) {
       console.error('NestJS initialization failed:', e);
+      if (e && typeof e === 'object' && 'errors' in e && Array.isArray(e.errors)) {
+        console.error('AggregateError causes:', e.errors);
+      }
       throw e;
     }
   });

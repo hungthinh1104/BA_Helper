@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, Fragment } from "react"
 import { Search } from "lucide-react"
 import { classifyInsight } from "./analysis-traceability-matrix.util"
 import { Input } from "@/components/ui/input"
@@ -78,7 +78,7 @@ export function AnalysisTraceabilityMatrixTab({
         filePath,
         traceType: isEvidenced ? "EVIDENCE_BACKED_IMPACT" : "INFERRED_IMPACT",
         certainty: isEvidenced ? "EVIDENCED" : "INFERRED",
-        evidenceLabel: link.evidence.length > 0 ? `${link.evidence.length} excerpt${link.evidence.length > 1 ? "s" : ""}` : "—",
+        evidenceLabel: link.evidence.length > 0 ? `${link.evidence.length} reference${link.evidence.length > 1 ? "s" : ""}` : "—",
         reviewStatus: link.reviewStatus,
         originalLink: link,
         originalName: node?.label ?? link.evidence[0]?.artifactKey ?? "Unknown Artifact",
@@ -106,7 +106,7 @@ export function AnalysisTraceabilityMatrixTab({
       if (insight.evidence.length > 0) {
         if (traceType === "QA_COVERAGE") evidenceLabel = `${insight.evidence.length} step${insight.evidence.length > 1 ? "s" : ""}`
         else if (traceType === "OPEN_QUESTION" || traceType === "DIAGNOSTIC_DERIVED_RISK") evidenceLabel = `${insight.evidence.length} context item${insight.evidence.length > 1 ? "s" : ""}`
-        else evidenceLabel = `${insight.evidence.length} excerpt${insight.evidence.length > 1 ? "s" : ""}`
+        else evidenceLabel = `${insight.evidence.length} reference${insight.evidence.length > 1 ? "s" : ""}`
       }
 
       generatedRows.push({
@@ -160,12 +160,15 @@ export function AnalysisTraceabilityMatrixTab({
       if (searchTerm) {
         const lowerSearch = searchTerm.toLowerCase()
         const meta = (r.originalInsight as unknown as Record<string, unknown>)?.metadata as Record<string, unknown> | undefined
-        const diagCode = ((meta?.diagnostic as Record<string, unknown>)?.code as string | undefined) || meta?.diagnosticCode || ""
+        const diagCode = ((meta?.diagnostic as Record<string, unknown>)?.code as string | undefined) || (meta?.diagnosticCode as string | undefined) || ""
+        const statement = (r.originalInsight as unknown as Record<string, unknown>)?.statement as string | undefined || ""
+        
         return (
           r.originalName.toLowerCase().includes(lowerSearch) ||
           r.filePath.toLowerCase().includes(lowerSearch) ||
           r.traceType.toLowerCase().includes(lowerSearch) ||
-          diagCode.toLowerCase().includes(lowerSearch)
+          diagCode.toLowerCase().includes(lowerSearch) ||
+          statement.toLowerCase().includes(lowerSearch)
         )
       }
       return true
@@ -218,7 +221,7 @@ export function AnalysisTraceabilityMatrixTab({
         <div className="relative w-64 shrink-0">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search artifacts, paths..."
+            placeholder="Search artifacts, paths, insight text, diagnostic codes..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             className="pl-9 h-9"
@@ -287,7 +290,7 @@ export function AnalysisTraceabilityMatrixTab({
             {filteredRows.length > 0 && (
               <TableRow className="bg-muted/30 hover:bg-muted/30">
                 <TableCell colSpan={7} className="font-semibold text-xs text-muted-foreground uppercase tracking-wider py-2">
-                  Requirement: {analysis.requirement.revisionTitle || "Requirement Change"} 
+                  Requirement: {analysis.requirement.revisionTitle || analysis.requirement.id || "Current requirement change"} 
                   <span className="ml-2 font-normal lowercase">({filteredRows.length} rows)</span>
                 </TableCell>
               </TableRow>
@@ -300,46 +303,72 @@ export function AnalysisTraceabilityMatrixTab({
                 </TableCell>
               </TableRow>
             ) : (
-              filteredRows.map((row) => (
-                  <TableRow 
-                    key={row.id} 
-                    className={`cursor-pointer transition-colors hover:bg-muted/50 ${
-                      row.id === selectedRowId ? "bg-primary/10 border-primary" : row.sourceKind === "diagnostic_risk" ? "bg-warning/10" : ""
-                    }`}
-                    onClick={() => handleRowClick(row)}
-                  >
-                  <TableCell className="font-mono text-sm max-w-[300px] truncate" title={row.originalName}>
-                    {row.artifactName}
-                  </TableCell>
-                  <TableCell>
-                    {row.artifactKind !== "INSIGHT" ? (
-                      <ArtifactKindBadge kind={row.artifactKind as Parameters<typeof ArtifactKindBadge>[0]["kind"]} />
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground truncate max-w-[200px]" title={row.filePath}>
-                    {row.filePath}
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-xs font-medium text-muted-foreground">
-                      {traceTypeDisplay(row.traceType)}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <CertaintyBadge certainty={row.certainty as Parameters<typeof CertaintyBadge>[0]["certainty"]} />
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {row.evidenceLabel}
-                  </TableCell>
-                  <TableCell>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide ${reviewStatusColor(row.reviewStatus)}`}>
-                      {row.reviewStatus.replace('_', ' ')}
-                    </span>
-                  </TableCell>
-                </TableRow>
-              ))
+              [
+                { label: "Evidence-backed impacts", type: "EVIDENCE_BACKED_IMPACT" },
+                { label: "Inferred impacts", type: "INFERRED_IMPACT" },
+                { label: "Diagnostic risks / unknowns", type: "DIAGNOSTIC_DERIVED_RISK" },
+                { label: "QA scenarios", type: "QA_COVERAGE" },
+                { label: "Open questions", type: "OPEN_QUESTION" },
+                { label: "Other", type: "OTHER" }
+              ].map(({ label, type }) => {
+                const rowsInGroup = type === "OTHER" 
+                  ? filteredRows.filter(r => !["EVIDENCE_BACKED_IMPACT", "INFERRED_IMPACT", "DIAGNOSTIC_DERIVED_RISK", "QA_COVERAGE", "OPEN_QUESTION"].includes(r.traceType))
+                  : filteredRows.filter(r => r.traceType === type);
+
+                if (rowsInGroup.length === 0) return null;
+
+                return (
+                  <Fragment key={type}>
+                    <TableRow className="bg-surface-muted/30 hover:bg-surface-muted/30">
+                      <TableCell colSpan={7} className="font-semibold text-[11px] text-foreground/70 uppercase tracking-wider py-1 border-t">
+                        {label} <span className="ml-1 opacity-70">({rowsInGroup.length})</span>
+                      </TableCell>
+                    </TableRow>
+                    {rowsInGroup.map((row) => (
+                      <TableRow 
+                        key={row.id} 
+                        className={`cursor-pointer transition-colors hover:bg-muted/50 ${
+                          row.id === selectedRowId ? "bg-primary/10 border-primary" : row.sourceKind === "diagnostic_risk" ? "bg-warning/5" : ""
+                        }`}
+                        onClick={() => handleRowClick(row)}
+                      >
+                        <TableCell className="font-mono text-sm max-w-[300px] truncate" title={row.originalName}>
+                          {row.artifactName}
+                        </TableCell>
+                        <TableCell>
+                          {row.artifactKind !== "INSIGHT" ? (
+                            <ArtifactKindBadge kind={row.artifactKind as Parameters<typeof ArtifactKindBadge>[0]["kind"]} />
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground truncate max-w-[200px]" title={row.filePath}>
+                          {row.filePath}
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {traceTypeDisplay(row.traceType)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <CertaintyBadge certainty={row.certainty as Parameters<typeof CertaintyBadge>[0]["certainty"]} />
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {row.evidenceLabel}
+                        </TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide ${reviewStatusColor(row.reviewStatus)}`}>
+                            {row.reviewStatus.replace('_', ' ')}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </Fragment>
+                );
+              })
             )}
+
+
           </TableBody>
         </Table>
       </div>

@@ -7,6 +7,8 @@ import { notFound } from "next/navigation"
 import { AlertCircle, GitBranch } from "lucide-react"
 import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
 import { DataList, DataListCell, DataListHeader, DataListRow } from "@/components/workspace/shared/data-list"
+import { canFinalizeAnalysis } from "@/lib/permissions"
+import { useCurrentWorkspace } from "@/lib/project-context"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { useApprovedMultiRepoReport, useMultiRepoAnalysisRunDetail, useFinalizeMultiRepoReport } from "@/hooks/api/use-analyses"
@@ -95,7 +97,7 @@ export default function MultiRepoAnalysisRunDetailPage({
   }
 
   const canFinalizeMergedReport =
-    role === "ADMIN" && Boolean(data?.runReadiness.canStartMergedReport)
+    workspace ? canFinalizeAnalysis(workspace.membershipRole) && Boolean(data?.runReadiness.canStartMergedReport) : false
   const hasApprovedMergedReport =
     Boolean(approvedReport) ||
     (approvedReportError as { code?: string } | undefined)?.code !== "MERGED_MULTI_REPO_REPORT_NOT_FOUND"

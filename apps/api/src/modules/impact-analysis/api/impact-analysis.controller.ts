@@ -63,7 +63,6 @@ import {
   mapReviewDecision,
 } from '../infrastructure/impact-analysis.mapper';
 
-import { Roles } from '../../auth/api/roles.decorator';
 import { ProjectPermissionService } from '../../project/application/project-permission.service';
 
 @Controller('/api/v1')
@@ -99,7 +98,6 @@ export class ImpactAnalysisController {
   ) {}
 
   @Post('/requirement-revisions/:revisionId/impact-analyses')
-  @Roles('ADMIN')
   async create(
     @Param('revisionId') revisionId: string,
     @Body() body: unknown,
@@ -127,7 +125,6 @@ export class ImpactAnalysisController {
   }
 
   @Post('/projects/:projectId/multi-repo-analyses')
-  @Roles('ADMIN')
   async createMultiRepo(
     @Param('projectId') projectId: string,
     @Body() body: unknown,
@@ -208,7 +205,6 @@ export class ImpactAnalysisController {
   }
 
   @Post('/multi-repo-runs/:runId/merged-report/finalize')
-  @Roles('ADMIN')
   async finalizeMergedMultiRepoReportEndpoint(
     @Param('runId') runId: string,
     @CurrentUser() actor: RequestUser,
@@ -233,7 +229,6 @@ export class ImpactAnalysisController {
   }
 
   @Post('/multi-repo-runs/:runId/merged-report/review-decisions')
-  @Roles('ADMIN', 'REVIEWER')
   async createMergedMultiRepoReportReviewDecisionEndpoint(
     @Param('runId') runId: string,
     @Body() body: unknown,
@@ -386,7 +381,6 @@ export class ImpactAnalysisController {
   }
 
   @Post('/impact-analyses/:analysisId/finalize')
-  @Roles('ADMIN')
   async finalize(
     @Param('analysisId') analysisId: string,
     @Body() body: unknown,
@@ -459,7 +453,6 @@ export class ImpactAnalysisController {
   }
 
   @Post('/impact-analyses/:analysisId/review-decisions')
-  @Roles('ADMIN', 'REVIEWER')
   async createReviewDecisionEndpoint(
     @Param('analysisId') analysisId: string,
     @Body() body: unknown,

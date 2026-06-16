@@ -39,6 +39,7 @@ const ROLE_PERMISSIONS: Record<ProjectRole, readonly ProjectPermission[]> = {
     'analysis:create',
     'analysis:create-derived',
     'analysis:finalize',
+    'clarification:write',
     'report:export',
   ],
   REVIEWER: [

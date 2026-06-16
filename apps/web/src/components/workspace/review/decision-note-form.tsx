@@ -3,7 +3,8 @@
 import { useState } from "react"
 import { useReviewNotes, useSaveReviewNote } from "@/hooks/api/use-review-notes"
 import { Button } from "@/components/ui/button"
-import { useAuth } from "@/hooks/use-auth"
+import { useCurrentWorkspace } from "@/lib/project-context"
+import { canReview } from "@/lib/permissions"
 
 interface DecisionNoteFormProps {
   analysisId: string
@@ -14,7 +15,7 @@ interface DecisionNoteFormProps {
 export function DecisionNoteForm({ analysisId, insightId, traceabilityLinkId }: DecisionNoteFormProps) {
   const { data: notesData, isLoading } = useReviewNotes(analysisId)
   const saveNoteMutation = useSaveReviewNote(analysisId)
-  const { user } = useAuth()
+  const workspace = useCurrentWorkspace()
 
   const existingNote = notesData?.items.find(
     (n) => (insightId && n.insightId === insightId) || (traceabilityLinkId && n.traceabilityLinkId === traceabilityLinkId)
@@ -30,10 +31,10 @@ export function DecisionNoteForm({ analysisId, insightId, traceabilityLinkId }: 
   }
 
   const isChanged = body !== (existingNote?.body || "")
-  const isViewer = user?.role === "VIEWER"
+  const canRev = workspace ? canReview(workspace.membershipRole) : false
 
   const handleSave = () => {
-    if (!body.trim() || isViewer) return
+    if (!body.trim() || !canRev) return
     saveNoteMutation.mutate({
       insightId: insightId || undefined,
       traceabilityLinkId: traceabilityLinkId || undefined,
@@ -47,8 +48,9 @@ export function DecisionNoteForm({ analysisId, insightId, traceabilityLinkId }: 
 
   return (
     <div className="mt-6 pt-4 border-t border-border">
+      <h4 className="text-[12px] font-semibold text-foreground mb-3">Analyst / Context Notes</h4>
       <div className="flex items-center justify-between mb-2">
-        <label htmlFor="decision-note" className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <label htmlFor="decision-note" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           Decision Note
         </label>
         <span className={`text-[10px] ${body.length > 2000 ? "text-danger" : "text-muted-foreground"}`}>
@@ -65,10 +67,10 @@ export function DecisionNoteForm({ analysisId, insightId, traceabilityLinkId }: 
         value={body}
         onChange={(e) => setBody(e.target.value)}
         maxLength={2000}
-        disabled={isViewer}
-        placeholder={isViewer ? "Decision notes are disabled for view-only users." : "Type your decision note here..."}
-        className={`w-full min-h-[100px] p-3 rounded-md bg-surface-muted border border-border/60 text-[13px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary resize-y ${isViewer ? "opacity-50 cursor-not-allowed" : ""}`}
-        title={isViewer ? "You have view-only access. Reviewer or Admin role required." : undefined}
+        disabled={!canRev}
+        placeholder={!canRev ? "Decision notes require Reviewer or Owner role." : "Type your decision note here..."}
+        className={`w-full min-h-[100px] p-3 rounded-md bg-surface-muted border border-border/60 text-[13px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary resize-y ${!canRev ? "opacity-50 cursor-not-allowed" : ""}`}
+        title={!canRev ? "Reviewer or Owner role required." : undefined}
       />
 
       <div className="flex items-center justify-between mt-3">
@@ -82,9 +84,9 @@ export function DecisionNoteForm({ analysisId, insightId, traceabilityLinkId }: 
         <Button
           size="sm"
           onClick={handleSave}
-          disabled={!isChanged || body.trim().length === 0 || saveNoteMutation.isPending || isViewer}
+          disabled={!isChanged || body.trim().length === 0 || saveNoteMutation.isPending || !canRev}
           className="h-7 text-[11px] bg-primary-action text-primary-action-text"
-          title={isViewer ? "You have view-only access. Reviewer or Admin role required." : undefined}
+          title={!canRev ? "Reviewer or Owner role required." : undefined}
         >
           {saveNoteMutation.isPending ? "Saving..." : "Save Note"}
         </Button>

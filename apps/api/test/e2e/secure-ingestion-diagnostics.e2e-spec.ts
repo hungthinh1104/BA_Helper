@@ -233,6 +233,15 @@ describe('Secure Ingestion Diagnostics (E2E)', () => {
         limitHits: { fileLimitHit: false, repoSizeLimitHit: true }
       },
       sourceRoot: '/tmp/ba-scan-partial',
+      diagnostics: [
+        {
+          code: 'SCANNER_CAPABILITY_SUMMARY',
+          severity: 'INFO',
+          message: 'Mock capability',
+          category: 'SCANNER',
+          payload: {},
+        }
+      ],
     });
 
     const project = await prisma.project.create({ data: { name: 'Partial Scan Project' } });

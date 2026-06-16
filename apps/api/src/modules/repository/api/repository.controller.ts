@@ -10,7 +10,6 @@ import {
 import { CreateRepositoryUseCase } from '../application/create-repository.usecase';
 import { ListRepositoriesUseCase } from '../application/list-repositories.usecase';
 import { GetRepositoryUseCase } from '../application/get-repository.usecase';
-import { Roles } from '../../auth/api/roles.decorator';
 import { CurrentUser } from '../../auth/api/current-user.decorator';
 import { ProjectPermissionService } from '../../project/application/project-permission.service';
 
@@ -93,7 +92,6 @@ export class RepositoryController {
   }
 
   @Post()
-  @Roles('ADMIN')
   async create(
     @Param('projectId') projectId: string,
     @Body() body: unknown,

@@ -15,7 +15,14 @@ export function classifyInsight(insight: Insight): { traceType: TraceType; sourc
   } else if (insight.category === "QUESTION") {
     return { traceType: "OPEN_QUESTION", sourceKind: "open_question" }
   } else if (insight.category === "UNKNOWN") {
-    return { traceType: "DIAGNOSTIC_DERIVED_RISK", sourceKind: "diagnostic_risk" }
+    const meta = (insight as unknown as Record<string, unknown>)?.metadata as Record<string, unknown> | undefined
+    const hasDiagnostic = !!meta?.diagnostic || !!meta?.diagnosticCode
+    
+    if (hasDiagnostic) {
+      return { traceType: "DIAGNOSTIC_DERIVED_RISK", sourceKind: "diagnostic_risk" }
+    } else {
+      return { traceType: "INFERRED_IMPACT", sourceKind: "insight" }
+    }
   } else if (insight.category === "CLAIM") {
     const traceType: TraceType = insight.certainty === "EVIDENCED" ? "EVIDENCE_BACKED_IMPACT" : "INFERRED_IMPACT"
     const sourceKind: RowKind = "insight"

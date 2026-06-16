@@ -4,7 +4,7 @@ import Link from "next/link"
 
 export function DataList({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("flex flex-col border border-border rounded-xl overflow-hidden bg-surface/50 backdrop-blur-xl shadow-lg ring-1 ring-black/5 dark:ring-white/5", className)}>
+    <div className={cn("flex flex-col border border-border/60 rounded-xl overflow-hidden bg-surface shadow-sm", className)}>
       {children}
     </div>
   )

@@ -21,8 +21,16 @@ describe('AnalysisTraceabilityMatrixUtil', () => {
       });
     });
 
-    it('should classify UNKNOWN as DIAGNOSTIC_DERIVED_RISK', () => {
+    it('should classify UNKNOWN without metadata as INFERRED_IMPACT', () => {
       const insight = { category: 'UNKNOWN', certainty: 'UNKNOWN' } as Insight;
+      expect(classifyInsight(insight)).toEqual({
+        traceType: 'INFERRED_IMPACT',
+        sourceKind: 'insight',
+      });
+    });
+
+    it('should classify UNKNOWN with diagnostic metadata as DIAGNOSTIC_DERIVED_RISK', () => {
+      const insight = { category: 'UNKNOWN', certainty: 'UNKNOWN', metadata: { diagnosticCode: 'test' } } as unknown as Insight;
       expect(classifyInsight(insight)).toEqual({
         traceType: 'DIAGNOSTIC_DERIVED_RISK',
         sourceKind: 'diagnostic_risk',

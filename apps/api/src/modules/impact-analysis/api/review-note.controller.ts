@@ -5,7 +5,6 @@ import {
 } from '@ba-helper/contracts';
 import { SaveReviewNoteUseCase } from '../application/review/save-review-note.usecase';
 import { GetReviewNotesUseCase } from '../application/review/get-review-notes.usecase';
-import { Roles } from '../../auth/api/roles.decorator';
 import { CurrentUser } from '../../auth/api/current-user.decorator';
 import { ProjectPermissionService } from '../../project/application/project-permission.service';
 
@@ -28,7 +27,6 @@ export class ReviewNoteController {
 
   @Post()
   @HttpCode(HttpStatus.OK)
-  @Roles('ADMIN', 'REVIEWER')
   async saveNote(
     @Param('analysisId') analysisId: string,
     @Body() body: unknown,

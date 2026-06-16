@@ -255,6 +255,20 @@ export class RunScanJobUseCase {
           fixturePath: sourceRoot,
           analyzerVersion: '0.2.0',
         });
+        collector.add({
+          code: 'SCANNER_CAPABILITY_SUMMARY',
+          severity: 'INFO',
+          message: 'Fixture scanner capability summary',
+          category: 'SCANNER',
+          payload: {
+            features: {
+              routes: 'FULL',
+              services: 'FULL',
+              dataModels: 'FULL',
+              events: 'NONE',
+            },
+          },
+        });
       }
 
       // FULL maps to READY because Prisma enum predates scan-health terminology.

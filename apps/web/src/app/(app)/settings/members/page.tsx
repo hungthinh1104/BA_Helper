@@ -13,6 +13,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
 import {
   useProjectMembers,
@@ -187,18 +198,27 @@ export default function ProjectMembersPage() {
                       </TableCell>
                       <TableCell>{new Date(member.createdAt).toLocaleDateString()}</TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            if (window.confirm("Are you sure you want to remove this member?")) {
-                              void handleRemove(member.userId)
-                            }
-                          }}
-                          disabled={!canManage || removeMember.isPending}
-                        >
-                          Remove
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="outline" size="sm" disabled={!canManage || removeMember.isPending}>
+                              Remove
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Remove member?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to remove {member.email} from the project? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => void handleRemove(member.userId)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                Remove
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </TableCell>
                     </TableRow>
                   ))

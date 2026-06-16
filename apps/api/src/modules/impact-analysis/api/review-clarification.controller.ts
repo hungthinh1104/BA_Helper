@@ -13,7 +13,6 @@ import {
   impactAnalysisResponseSchema,
   RequestUser,
 } from '@ba-helper/contracts';
-import { Roles } from '../../auth/api/roles.decorator';
 import { CurrentUser } from '../../auth/api/current-user.decorator';
 import { CreateReviewClarificationRequestUseCase } from '../application/review/create-review-clarification.usecase';
 import { ListReviewClarificationsUseCase } from '../application/review/list-review-clarifications.usecase';
@@ -34,7 +33,6 @@ export class ReviewClarificationController {
   ) {}
 
   @Post('/impact-analyses/:analysisId/review-clarifications')
-  @Roles('ADMIN', 'REVIEWER')
   async create(
     @Param('analysisId') analysisId: string,
     @Body() body: unknown,
@@ -65,7 +63,6 @@ export class ReviewClarificationController {
   }
 
   @Post('/review-clarifications/:clarificationId/answer')
-  @Roles('ADMIN', 'REVIEWER')
   async answer(
     @Param('clarificationId') clarificationId: string,
     @Body() body: unknown,
@@ -84,7 +81,6 @@ export class ReviewClarificationController {
   }
 
   @Post('/review-clarifications/:clarificationId/derived-analyses')
-  @Roles('ADMIN', 'REVIEWER')
   async createDerivedAnalysisFromClarification(
     @Param('clarificationId') clarificationId: string,
     @CurrentUser() actor: RequestUser,

@@ -7,7 +7,6 @@ import {
 import { ListTraceabilityUseCase } from '../application/list-traceability.usecase';
 import { ReviewTraceabilityUseCase } from '../application/review-traceability.usecase';
 import { mapTraceabilityList } from './traceability.mapper';
-import { Roles } from '../../auth/api/roles.decorator';
 import { CurrentUser } from '../../auth/api/current-user.decorator';
 import { ProjectPermissionService } from '../../project/application/project-permission.service';
 
@@ -32,7 +31,6 @@ export class TraceabilityController {
   }
 
   @Post('/traceability-links/:linkId/confirm')
-  @Roles('ADMIN', 'REVIEWER')
   async confirm(
     @Param('linkId') linkId: string,
     @CurrentUser() actor: RequestUser,
@@ -47,7 +45,6 @@ export class TraceabilityController {
   }
 
   @Post('/traceability-links/:linkId/reject')
-  @Roles('ADMIN', 'REVIEWER')
   async reject(
     @Param('linkId') linkId: string,
     @CurrentUser() actor: RequestUser,
@@ -62,7 +59,6 @@ export class TraceabilityController {
   }
 
   @Post('/traceability-links/:linkId/review')
-  @Roles('ADMIN', 'REVIEWER')
   async review(
     @Param('linkId') linkId: string,
     @Body() body: unknown,

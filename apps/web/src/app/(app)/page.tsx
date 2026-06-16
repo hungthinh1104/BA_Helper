@@ -11,7 +11,8 @@ import Link from "next/link"
 import { ConnectRepoDialog } from "@/components/workspace/repository/connect-repo-dialog"
 import { NewRequirementDialog } from "@/components/workspace/requirement/new-requirement-dialog"
 import { NewAnalysisDialog } from "@/components/workspace/analysis/new-analysis/new-analysis-dialog"
-import { useAuth } from "@/hooks/use-auth"
+import { useCurrentWorkspace } from "@/lib/project-context"
+import { canManageRepository, canCreateRequirement, canRunAnalysis, canReview } from "@/lib/permissions"
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
@@ -21,6 +22,7 @@ export default function DashboardPage() {
   const { data: reposData, isLoading: reposLoading } = useRepositories({ limit: 3 })
   const { data: analysesData, isLoading: analysesLoading } = useAnalyses({ limit: 3 })
   const { data: reqsData, isLoading: reqsLoading } = useRequirements()
+  const workspace = useCurrentWorkspace()
 
   const repos = reposData?.items || []
   const analyses = analysesData?.items || []
@@ -29,15 +31,17 @@ export default function DashboardPage() {
   const readyRepos = repos.filter(r => r.latestScanJob?.status === "COMPLETED" && r.latestSnapshot?.id)
   const readyReqs = reqs.filter(r => r.latestRevision?.readinessStatus === "READY_FOR_ANALYSIS")
 
-  const { role } = useAuth()
-  const canEdit = role === "ADMIN" || role === "REVIEWER"
+  const canManageRepo = workspace ? canManageRepository(workspace.membershipRole) : false
+  const canCreateReq = workspace ? canCreateRequirement(workspace.membershipRole) : false
+  const canRun = workspace ? canRunAnalysis(workspace.membershipRole) : false
+  const canRev = workspace ? canReview(workspace.membershipRole) : false
 
   // Determine Next Best Action
   let nextAction = null
   if (reposLoading || analysesLoading || reqsLoading) {
     nextAction = null
   } else if (repos.length === 0) {
-    if (canEdit) {
+    if (canManageRepo) {
       nextAction = {
         title: "Connect a Repository",
         description: "Start by connecting a GitHub repository to build the evidence index.",
@@ -46,12 +50,12 @@ export default function DashboardPage() {
     } else {
       nextAction = {
         title: "No Repository Connected",
-        description: "An administrator needs to connect a repository to get started.",
+        description: "A Maintainer or Owner needs to connect a repository to get started.",
         action: null
       }
     }
   } else if (reqs.length === 0) {
-    if (canEdit) {
+    if (canCreateReq) {
       nextAction = {
         title: "Create a Requirement",
         description: "Define a change request to analyze against your repository.",
@@ -60,12 +64,12 @@ export default function DashboardPage() {
     } else {
       nextAction = {
         title: "No Requirements",
-        description: "Wait for an editor or admin to create a requirement.",
+        description: "Wait for an Analyst or Owner to create a requirement.",
         action: null
       }
     }
   } else if (analyses.length === 0 && readyRepos.length > 0 && readyReqs.length > 0) {
-    if (canEdit) {
+    if (canRun) {
       nextAction = {
         title: "Run Impact Analysis",
         description: "You have a ready repository and requirement. Run your first analysis.",
@@ -74,11 +78,11 @@ export default function DashboardPage() {
     } else {
       nextAction = {
         title: "Ready for Analysis",
-        description: "A workspace editor needs to start the first analysis.",
+        description: "An Analyst or Owner needs to start the first analysis.",
         action: null
       }
     }
-  } else if (analyses.some(a => a.status === "WAITING_FOR_REVIEW")) {
+  } else if (analyses.some(a => a.status === "WAITING_FOR_REVIEW") && canRev) {
     const analysis = analyses.find(a => a.status === "WAITING_FOR_REVIEW")
     nextAction = {
       title: "Review Insights",
@@ -97,6 +101,48 @@ export default function DashboardPage() {
           description="Overview of your current workspace, recent activities, and impact analyses."
           className="mb-0"
         />
+
+        {/* Workflow Progress Rail */}
+        <div className="flex items-center justify-between px-6 py-4 bg-surface-muted/30 border border-border/40 rounded-xl overflow-x-auto gap-4">
+          <div className="flex flex-col items-center gap-1 min-w-[80px]">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${repos.length > 0 ? 'bg-success/10 text-success ring-1 ring-success/30' : 'bg-surface text-muted-foreground ring-1 ring-border'}`}>
+              <Database className="w-4 h-4" />
+            </div>
+            <span className={`text-[10px] font-medium uppercase tracking-wider ${repos.length > 0 ? 'text-success' : 'text-muted-foreground'}`}>Repository</span>
+          </div>
+          <div className={`h-px flex-1 ${repos.length > 0 ? 'bg-success/30' : 'bg-border'}`} />
+          
+          <div className="flex flex-col items-center gap-1 min-w-[80px]">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${reqs.length > 0 ? 'bg-success/10 text-success ring-1 ring-success/30' : 'bg-surface text-muted-foreground ring-1 ring-border'}`}>
+              <FileText className="w-4 h-4" />
+            </div>
+            <span className={`text-[10px] font-medium uppercase tracking-wider ${reqs.length > 0 ? 'text-success' : 'text-muted-foreground'}`}>Requirement</span>
+          </div>
+          <div className={`h-px flex-1 ${reqs.length > 0 ? 'bg-success/30' : 'bg-border'}`} />
+          
+          <div className="flex flex-col items-center gap-1 min-w-[80px]">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${analyses.length > 0 ? 'bg-success/10 text-success ring-1 ring-success/30' : 'bg-surface text-muted-foreground ring-1 ring-border'}`}>
+              <Activity className="w-4 h-4" />
+            </div>
+            <span className={`text-[10px] font-medium uppercase tracking-wider ${analyses.length > 0 ? 'text-success' : 'text-muted-foreground'}`}>Analysis</span>
+          </div>
+          <div className={`h-px flex-1 ${analyses.length > 0 ? 'bg-success/30' : 'bg-border'}`} />
+
+          <div className="flex flex-col items-center gap-1 min-w-[80px]">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${analyses.some(a => a.status === 'COMPLETED' || a.status === 'WAITING_FOR_REVIEW') ? 'bg-success/10 text-success ring-1 ring-success/30' : 'bg-surface text-muted-foreground ring-1 ring-border'}`}>
+              <GitBranch className="w-4 h-4" />
+            </div>
+            <span className={`text-[10px] font-medium uppercase tracking-wider ${analyses.some(a => a.status === 'COMPLETED' || a.status === 'WAITING_FOR_REVIEW') ? 'text-success' : 'text-muted-foreground'}`}>Review</span>
+          </div>
+          <div className={`h-px flex-1 ${analyses.some(a => a.status === 'COMPLETED') ? 'bg-success/30' : 'bg-border'}`} />
+
+          <div className="flex flex-col items-center gap-1 min-w-[80px]">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${analyses.some(a => a.status === 'COMPLETED') ? 'bg-success/10 text-success ring-1 ring-success/30' : 'bg-surface text-muted-foreground ring-1 ring-border'}`}>
+              <FileText className="w-4 h-4" />
+            </div>
+            <span className={`text-[10px] font-medium uppercase tracking-wider ${analyses.some(a => a.status === 'COMPLETED') ? 'text-success' : 'text-muted-foreground'}`}>Report</span>
+          </div>
+        </div>
 
         {/* Next Best Action */}
         {nextAction && (
@@ -135,9 +181,11 @@ export default function DashboardPage() {
                   <Database className="w-8 h-8 text-muted-foreground/50 mb-3" />
                   <p className="text-[13px] font-medium text-foreground">No repositories connected</p>
                   <p className="text-[12px] text-muted-foreground mb-4">Connect a public GitHub repo to get started.</p>
-                  <ConnectRepoDialog>
-                    <Button size="sm" variant="outline" className="shadow-none">Connect Repository</Button>
-                  </ConnectRepoDialog>
+                  {canManageRepo && (
+                    <ConnectRepoDialog>
+                      <Button size="sm" variant="outline" className="shadow-none">Connect Repository</Button>
+                    </ConnectRepoDialog>
+                  )}
                 </div>
               ) : (
                 <div className="flex flex-col divide-y divide-border/40">
@@ -202,7 +250,7 @@ export default function DashboardPage() {
                   <Activity className="w-8 h-8 text-muted-foreground/50 mb-3" />
                   <p className="text-[13px] font-medium text-foreground">No analyses run yet</p>
                   <p className="text-[12px] text-muted-foreground mb-4">Run an impact analysis to see results here.</p>
-                  {canEdit && (
+                  {canRun && (
                     <NewAnalysisDialog>
                       <Button size="sm" variant="outline" className="shadow-none">Start Analysis</Button>
                     </NewAnalysisDialog>

@@ -81,8 +81,7 @@ graph BT
 ```
 *Note: EVIDENCED impacts require Scanned Code Evidence. Domain Packs and LLM Suggestions cannot fabricate evidence.*
 
-### 3. Visual Proof
-UI development has progressed to a stable point. Please see the [Visual Proof Pack](docs/demo/visual-proof-pack.md) for actual screenshots of the live system validating the core flows above.
+
 
 ## Quickstart & Reproducibility
 
@@ -102,11 +101,11 @@ Fresh clone validation:
 ### 1. Prerequisites
 - Docker & Docker Compose (for Postgres/pgvector and Redis)
 - Node.js (v20+)
-- pnpm (v11+)
+- pnpm (v9+)
 
 ### 2. Install
 ```bash
-git clone https://github.com/diphungthinh/ba-helper.git
+git clone https://github.com/hungthinh1104/BA_Helper.git
 cd ba-helper
 pnpm install
 ```

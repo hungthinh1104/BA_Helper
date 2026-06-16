@@ -7,7 +7,6 @@ import {
 import { ListInsightsUseCase } from '../application/list-insights.usecase';
 import { ReviewInsightUseCase } from '../application/review-insight.usecase';
 import { mapInsightList } from './insight.mapper';
-import { Roles } from '../../auth/api/roles.decorator';
 import { CurrentUser } from '../../auth/api/current-user.decorator';
 import { ProjectPermissionService } from '../../project/application/project-permission.service';
 
@@ -30,7 +29,6 @@ export class InsightController {
   }
 
   @Post('/insights/:insightId/confirm')
-  @Roles('ADMIN', 'REVIEWER')
   async confirm(
     @Param('insightId') insightId: string,
     @CurrentUser() actor: RequestUser,
@@ -45,7 +43,6 @@ export class InsightController {
   }
 
   @Post('/insights/:insightId/reject')
-  @Roles('ADMIN', 'REVIEWER')
   async reject(
     @Param('insightId') insightId: string,
     @CurrentUser() actor: RequestUser,
@@ -60,7 +57,6 @@ export class InsightController {
   }
 
   @Post('/insights/:insightId/review')
-  @Roles('ADMIN', 'REVIEWER')
   async review(
     @Param('insightId') insightId: string,
     @Body() body: unknown,

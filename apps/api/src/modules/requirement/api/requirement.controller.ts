@@ -15,7 +15,6 @@ import { QualifyRequirementRevisionUseCase } from '../application/qualify-revisi
 import { ListRequirementsUseCase } from '../application/list-requirements.usecase';
 import { GetRequirementUseCase } from '../application/get-requirement.usecase';
 
-import { Roles } from '../../auth/api/roles.decorator';
 import { CurrentUser } from '../../auth/api/current-user.decorator';
 import { ProjectPermissionService } from '../../project/application/project-permission.service';
 
@@ -31,7 +30,6 @@ export class RequirementController {
   ) {}
 
   @Post('/projects/:projectId/requirements')
-  @Roles('ADMIN')
   async createRequirementEndpoint(
     @Param('projectId') projectId: string,
     @Body() body: unknown,
@@ -61,7 +59,6 @@ export class RequirementController {
   }
 
   @Post('/requirements/:requirementId/revisions')
-  @Roles('ADMIN')
   async createRevisionEndpoint(
     @Param('requirementId') requirementId: string,
     @Body() body: unknown,
@@ -90,7 +87,6 @@ export class RequirementController {
   }
 
   @Post('/requirement-revisions/:revisionId/qualify')
-  @Roles('ADMIN')
   async qualifyRevisionEndpoint(
     @Param('revisionId') revisionId: string,
     @CurrentUser() actor: RequestUser,

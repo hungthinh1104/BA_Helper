@@ -44,7 +44,7 @@ export interface ConfirmationStepProps {
   batchError: string | null
   canProceed: boolean
   loading: boolean
-  isAdmin: boolean
+  canRun: boolean
   handleBack: () => void
   handleSubmit: () => void
   handleOpenRun: () => void

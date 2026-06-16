@@ -2,6 +2,8 @@
 
 
 import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
+import { useCurrentWorkspace } from "@/lib/project-context"
+import { canManageRepository, canRunScan } from "@/lib/permissions"
 import { DataList, DataListHeader, DataListRow, DataListCell } from "@/components/workspace/shared/data-list"
 import { ConnectRepoDialog } from "@/components/workspace/repository/connect-repo-dialog"
 import { ScanJobProgress, ScanJobStatus } from "@/components/workspace/repository/scan-job-progress"
@@ -20,7 +22,9 @@ export default function RepositoriesPage() {
   const { data, isLoading, error } = useRepositories()
   const { mutateAsync: createScanJob, isPending: isRescanning } = useCreateScanJob(undefined)
   const { user } = useAuth()
-  const isAdmin = user?.role === 'ADMIN'
+  const workspace = useCurrentWorkspace()
+  const canManageRepo = workspace ? canManageRepository(workspace.membershipRole) : false
+  const canScan = workspace ? canRunScan(workspace.membershipRole) : false
 
   const handleRescan = async (repoId: string) => {
     try {
@@ -46,7 +50,7 @@ export default function RepositoriesPage() {
           description="Connect public GitHub repositories to scan their codebase for impact analysis."
         >
           <ConnectRepoDialog>
-            <Button size="sm" className="h-8 shadow-none gap-1.5" disabled={!isAdmin} title={!isAdmin ? "Admin role required to connect repositories." : undefined}>
+            <Button size="sm" className="h-8 shadow-none gap-1.5" disabled={!canManageRepo} title={!canManageRepo ? "Maintainer role required to connect repositories." : undefined}>
               <Plus className="w-3.5 h-3.5" /> Connect Repository
             </Button>
           </ConnectRepoDialog>
@@ -91,7 +95,7 @@ export default function RepositoriesPage() {
               <p className="text-[13px] font-medium text-foreground mb-1">No repositories connected yet.</p>
               <p className="text-[12px] mb-4">Connect a public GitHub repository to start scanning backend code.</p>
               <ConnectRepoDialog>
-                <Button size="sm" variant="outline" className="h-8 shadow-none gap-1.5" disabled={!isAdmin} title={!isAdmin ? "Admin role required to connect repositories." : undefined}>
+                <Button size="sm" variant="outline" className="h-8 shadow-none gap-1.5" disabled={!canManageRepo} title={!canManageRepo ? "Maintainer role required to connect repositories." : undefined}>
                   <Plus className="w-3.5 h-3.5" /> Connect Repository
                 </Button>
               </ConnectRepoDialog>
@@ -154,16 +158,16 @@ export default function RepositoriesPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className={`h-7 px-2 text-[11px] shadow-none gap-1 ${!isAdmin ? 'opacity-40 cursor-not-allowed' : 'text-muted-foreground hover:text-foreground'}`}
+                      className={`h-7 px-2 text-[11px] shadow-none gap-1 ${!canScan ? 'opacity-40 cursor-not-allowed' : 'text-muted-foreground hover:text-foreground'}`}
                       onClick={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
-                        if (isAdmin) {
+                        if (canScan) {
                           void handleRescan(repo.id)
                         }
                       }}
-                      disabled={isRescanning || !isAdmin}
-                      title={!isAdmin ? "Admin role required to run scans." : undefined}
+                      disabled={isRescanning || !canScan}
+                      title={!canScan ? "Maintainer role required to run scans." : undefined}
                     >
                       <RefreshCw className="w-3 h-3" /> {isRescanning ? "Queuing..." : "Re-scan"}
                     </Button>

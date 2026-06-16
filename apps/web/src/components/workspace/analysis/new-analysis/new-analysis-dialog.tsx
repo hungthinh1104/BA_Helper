@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
+import { useCurrentWorkspace } from "@/lib/project-context"
+import { canRunAnalysis } from "@/lib/permissions"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog"
 import { useRequirements } from "@/hooks/api/use-requirements"
 import { useRepositories } from "@/hooks/api/use-repositories"
@@ -39,7 +41,8 @@ export function NewAnalysisDialog({
   const [batchSuccess, setBatchSuccess] = useState<MultiRepoImpactAnalysisCreateResponse | null>(null)
   const [batchError, setBatchError] = useState<string | null>(null)
   const { user } = useAuth()
-  const isAdmin = user?.role === "ADMIN"
+  const workspace = useCurrentWorkspace()
+  const canRun = workspace ? canRunAnalysis(workspace.membershipRole) : false
 
   const loading = singleLoading || multiLoading
 
@@ -81,9 +84,15 @@ export function NewAnalysisDialog({
 
   const hasPreselectedRepo = Boolean(preselectedRepoId)
   const hasPreselectedReq = Boolean(preselectedReqId)
-  const hasPartialRepo = selectedRepos.some(
-    (repo) => repo.latestSnapshot?.coverageStatus === "PARTIAL",
-  )
+  const hasPartialRepo = selectedRepos.some((repo) => {
+    const profile = repo.latestSnapshot?.profile
+    const maturity = profile 
+      ? (profile.language === "TYPESCRIPT" && profile.framework === "NESTJS" ? "STABLE" 
+        : profile.language === "JAVA" && profile.framework === "SPRING_BOOT" ? "PARTIAL" 
+        : profile.framework !== "UNKNOWN" ? "EXPERIMENTAL" : "UNKNOWN")
+      : "—"
+    return repo.latestSnapshot?.coverageStatus === "PARTIAL" || maturity === "PARTIAL" || maturity === "EXPERIMENTAL"
+  })
   const canProceedStep3 =
     selectedRepos.length > 0 && (!hasPartialRepo || acknowledgePartial)
 
@@ -280,7 +289,7 @@ export function NewAnalysisDialog({
             batchError={batchError}
             canProceed={canProceedStep3}
             loading={loading}
-            isAdmin={isAdmin}
+            canRun={canRun}
             handleBack={() => setStep(hasPreselectedRepo ? 1 : 2)}
             handleSubmit={handleSubmit}
             handleOpenRun={handleOpenRun}

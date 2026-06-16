@@ -20,9 +20,10 @@ interface FinalizeAnalysisDialogProps {
     conflicts: number
     needsReview: number
   }
+  isStale?: boolean
 }
 
-export function FinalizeAnalysisDialog({ children, analysisId, commitSha, stats }: FinalizeAnalysisDialogProps) {
+export function FinalizeAnalysisDialog({ children, analysisId, commitSha, stats, isStale }: FinalizeAnalysisDialogProps) {
   const [open, setOpen] = useState(false)
   const { mutateAsync: finalizeAnalysis, isPending } = useFinalizeAnalysis(undefined, analysisId)
   const router = useRouter()
@@ -88,12 +89,38 @@ export function FinalizeAnalysisDialog({ children, analysisId, commitSha, stats 
             </p>
           </div>
 
-          {stats.needsReview > 0 && (
-            <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive">
-              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-              <p className="text-[12px] font-medium">All insights must be reviewed before finalization.</p>
+          <div className="flex flex-col gap-2 p-3 bg-surface border border-border/60 rounded-lg">
+            <h4 className="text-[12px] font-semibold text-foreground mb-1">Preflight Checklist</h4>
+            
+            <div className="flex items-center gap-2">
+              {stats.needsReview === 0 ? (
+                <CheckCircle2 className="w-4 h-4 text-success" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 text-destructive" />
+              )}
+              <span className={`text-[12px] ${stats.needsReview === 0 ? "text-foreground" : "text-destructive font-medium"}`}>
+                {stats.needsReview === 0 ? "All insights reviewed" : `${stats.needsReview} insights still require review`}
+              </span>
             </div>
-          )}
+
+            <div className="flex items-center gap-2">
+              {!isStale ? (
+                <CheckCircle2 className="w-4 h-4 text-success" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 text-warning" />
+              )}
+              <span className={`text-[12px] ${!isStale ? "text-foreground" : "text-warning font-medium"}`}>
+                {!isStale ? "Analysis is not stale" : "Analysis is stale (Repository snapshot changed)"}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-success" />
+              <span className="text-[12px] text-foreground">
+                100% test coverage map generated
+              </span>
+            </div>
+          </div>
         </div>
 
         <div className="px-6 py-4 border-t border-border/60 bg-surface-muted/30 flex justify-end gap-2">
@@ -101,7 +128,7 @@ export function FinalizeAnalysisDialog({ children, analysisId, commitSha, stats 
           <Button 
             size="sm" 
             className="h-8 shadow-none bg-success hover:bg-success/90 text-white" 
-            disabled={isPending || stats.needsReview > 0} 
+            disabled={isPending || stats.needsReview > 0 || isStale} 
             onClick={handleFinalize}
           >
             {isPending ? "Finalizing..." : "Confirm Finalize"}

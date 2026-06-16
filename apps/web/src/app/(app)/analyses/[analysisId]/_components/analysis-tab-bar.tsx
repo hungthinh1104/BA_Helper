@@ -156,6 +156,7 @@ export function AnalysisTabBar({
               analysisId={analysis.id}
               commitSha={analysis.snapshot.commitSha}
               stats={stats}
+              isStale={analysis.freshness.isStale}
             >
               <Button
                 size="sm"
