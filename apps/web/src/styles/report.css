@@ -1,12 +1,8 @@
 /* apps/web/src/styles/report.css */
 
-/* =========================================================
-   MARKDOWN / GENERATED REPORT
-   ========================================================= */
-
 .report {
   color: var(--text-primary);
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 .report h1,
@@ -14,46 +10,206 @@
 .report h3 {
   color: var(--text-primary);
   letter-spacing: -0.02em;
+  font-weight: 700;
 }
 
 .report h1 {
-  font-size: 32px;
-  line-height: 1.2;
-  margin: 0 0 24px;
+  margin: 0 0 1.5rem;
+  font-size: 2rem;
+  line-height: 1.15;
 }
 
 .report h2 {
-  font-size: 22px;
-  margin: 32px 0 12px;
+  margin: 2rem 0 0.875rem;
+  font-size: 1.375rem;
+  line-height: 1.25;
 }
 
 .report h3 {
-  font-size: 16px;
-  margin: 24px 0 8px;
+  margin: 1.5rem 0 0.625rem;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.report p,
+.report li,
+.report blockquote {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.75;
 }
 
 .report p {
-  color: var(--text-secondary);
+  margin: 0 0 1rem;
 }
 
 .report ul,
 .report ol {
-  color: var(--text-secondary);
-  padding-left: 20px;
+  margin: 0 0 1rem;
+  padding-left: 1.25rem;
+}
+
+.report li + li {
+  margin-top: 0.375rem;
+}
+
+.report strong {
+  color: var(--text-primary);
 }
 
 .report code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  border-radius: 0.375rem;
   background: var(--code-bg);
   color: var(--code-text);
-  padding: 2px 5px;
-  border-radius: 4px;
+  padding: 0.125rem 0.375rem;
   font-size: 0.92em;
 }
 
+.report-pre,
 .report pre {
-  background: var(--code-bg);
+  margin: 1rem 0;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px;
-  overflow: auto;
+  border-radius: 0.75rem;
+  background: var(--code-bg);
+  padding: 0.875rem 1rem;
+}
+
+.report pre code,
+.report-pre code {
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+}
+
+.report-table-wrap {
+  margin: 1rem 0;
+  overflow-x: auto;
+}
+
+.report table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.report th,
+.report td {
+  border: 1px solid var(--border);
+  padding: 0.625rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.report th {
+  color: var(--text-primary);
+  background: var(--surface-muted);
+  font-weight: 600;
+}
+
+.report blockquote {
+  margin: 1rem 0;
+  border-left: 3px solid var(--border);
+  padding-left: 1rem;
+}
+
+.report hr {
+  margin: 1.5rem 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+
+.report-mermaid-fallback {
+  display: none;
+}
+
+@media print {
+  @page {
+    margin: 14mm 12mm;
+  }
+
+  body {
+    background: white !important;
+  }
+
+  .report-print-root {
+    background: white !important;
+    color: black !important;
+  }
+
+  .report {
+    color: black !important;
+    font-size: 11pt;
+    line-height: 1.55;
+  }
+
+  .report h1,
+  .report h2,
+  .report h3,
+  .report p,
+  .report li,
+  .report th,
+  .report td,
+  .report code {
+    color: black !important;
+  }
+
+  .report h1 {
+    font-size: 20pt;
+    margin-bottom: 12pt;
+    page-break-after: avoid;
+  }
+
+  .report h2 {
+    font-size: 15pt;
+    margin: 18pt 0 8pt;
+    page-break-after: avoid;
+  }
+
+  .report h3 {
+    font-size: 12pt;
+    margin: 14pt 0 6pt;
+    page-break-after: avoid;
+  }
+
+  .report p,
+  .report li,
+  .report th,
+  .report td {
+    font-size: 10.5pt;
+  }
+
+  .report pre,
+  .report-pre,
+  .report table,
+  .report blockquote {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .report table {
+    width: 100% !important;
+    table-layout: auto;
+  }
+
+  .report-table-wrap {
+    overflow: visible !important;
+  }
+
+  .report-mermaid-preview {
+    display: none !important;
+  }
+
+  .report-mermaid-fallback {
+    display: block !important;
+  }
 }

@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { CheckCircle2, Download, GitBranch, Loader2, ShieldAlert } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { CheckCircle2, FileText, GitBranch, ShieldAlert } from "lucide-react"
 
 import type { ImpactAnalysisResponse } from "@ba-helper/contracts"
 
@@ -11,12 +11,9 @@ import {
   AnalysisStatusBadge,
   CoverageStatusBadge,
 } from "@/components/workspace/shared/status-badges"
-import { apiGetFile } from "@/lib/api-client"
-import { toast } from "sonner"
 
 interface AnalysisHeaderProps {
   analysis: ImpactAnalysisResponse
-  canExport: boolean
   blockingRemaining: number
   stats: {
     confirmed: number
@@ -43,44 +40,10 @@ function SummaryMetric({
   )
 }
 
-export function AnalysisHeader({ analysis, canExport, blockingRemaining, stats }: AnalysisHeaderProps) {
+export function AnalysisHeader({ analysis, blockingRemaining, stats }: AnalysisHeaderProps) {
+  const router = useRouter()
   const isStale = analysis.freshness.isStale
   const finalized = analysis.status === "COMPLETED"
-  const [exportingFormat, setExportingFormat] = useState<"md" | "pdf" | null>(null)
-
-  const handleExport = async (format: "md" | "pdf") => {
-    setExportingFormat(format)
-    try {
-      const file = await apiGetFile(
-        `/api/v1/impact-analyses/${analysis.id}/approved-report/export.${format}`,
-      )
-      const url = window.URL.createObjectURL(file.blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = file.filename
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-
-      toast.success("Report exported", {
-        description: file.filename,
-      })
-    } catch (err: unknown) {
-      const error = err instanceof Error ? err : new Error(String(err))
-      toast.error("Export failed", {
-        description: error.message || "An unexpected error occurred while exporting.",
-      })
-    } finally {
-      setExportingFormat(null)
-    }
-  }
-
-  const exportBlockedReason = !finalized
-    ? "Finalize analysis before export."
-    : isStale
-      ? "Approved report is stale. Re-run and finalize again before export."
-      : undefined
 
   return (
     <div className="space-y-4">
@@ -90,7 +53,7 @@ export function AnalysisHeader({ analysis, canExport, blockingRemaining, stats }
           <div className="space-y-1">
             <p className="font-medium">Snapshot is stale.</p>
             <p className="leading-6">
-              The tracked repository target has moved since this analysis was created. Review is still visible, but finalization and export stay blocked until a fresh analysis completes.
+              The tracked repository target has moved since this analysis was created. Review is still visible, but finalization stays blocked until a fresh analysis completes.
             </p>
           </div>
         </div>
@@ -102,7 +65,7 @@ export function AnalysisHeader({ analysis, canExport, blockingRemaining, stats }
           <div className="space-y-1">
             <p className="font-medium">Analysis finalized.</p>
             <p className="leading-6">
-              Read the approved report view for persisted report state, stale warnings, and merged export availability.
+              Read the approved report view for persisted report state, stale warnings, and export controls.
             </p>
           </div>
         </div>
@@ -121,41 +84,28 @@ export function AnalysisHeader({ analysis, canExport, blockingRemaining, stats }
         }
         className="mb-0"
       >
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-9 bg-surface shadow-none"
-          disabled={!canExport || exportingFormat !== null}
-          onClick={() => handleExport("md")}
-          title={exportBlockedReason}
-        >
-          {exportingFormat === "md" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-          Export Markdown
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-9 bg-surface shadow-none"
-          disabled={!canExport || exportingFormat !== null}
-          onClick={() => handleExport("pdf")}
-          title={exportBlockedReason}
-        >
-          {exportingFormat === "pdf" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-          Export PDF
-        </Button>
+        {finalized ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 bg-surface shadow-none"
+            onClick={() => router.push(`/reports?analysisId=${analysis.id}`)}
+          >
+            <FileText className="mr-2 h-4 w-4" />
+            View Report
+          </Button>
+        ) : null}
       </WorkspacePageHeader>
 
       <div className="flex flex-wrap items-center gap-2">
         <AnalysisStatusBadge status={analysis.status} />
-        <CoverageStatusBadge status={analysis.snapshot.coverageStatus ?? "UNKNOWN"} />
+        {!finalized ? <CoverageStatusBadge status={analysis.snapshot.coverageStatus ?? "UNKNOWN"} /> : null}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
-        <SummaryMetric label="Evidence Coverage" value={analysis.snapshot.coverageStatus ?? "Unknown"} />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <SummaryMetric label="Coverage" value={analysis.snapshot.coverageStatus ?? "Unknown"} />
         <SummaryMetric label="Review Remaining" value={`${blockingRemaining}`} />
-        <SummaryMetric label="Confirmed" value={`${stats.confirmed}`} />
-        <SummaryMetric label="Unknown / Risk" value={`${stats.unknowns + stats.conflicts}`} />
-        <SummaryMetric label="Rejected" value={`${stats.rejected}`} />
+        <SummaryMetric label="Risk / Unknown" value={`${stats.unknowns + stats.conflicts}`} />
       </div>
     </div>
   )

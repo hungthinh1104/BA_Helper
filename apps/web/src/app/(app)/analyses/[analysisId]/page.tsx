@@ -33,7 +33,6 @@ import { AnalysisLineageTab } from "./_components/analysis-lineage-tab"
 import { AnalysisDriftWarning } from "./_components/analysis-drift-warning"
 import { CertaintyBadge } from "@/components/workspace/shared/status-badges"
 import {
-  canExportReport,
   canFinalizeAnalysis,
   canReview as canReviewPermission,
   canRunAnalysis,
@@ -250,7 +249,6 @@ export default function ImpactAnalysisDetailPage({
   const canRerun = Boolean(analysis?.capabilities.canRerun) && canRunAnalysis(role)
   const canReview = Boolean(analysis?.capabilities.canReview) && canReviewPermission(role)
   const canFinalize = Boolean(analysis?.capabilities.canFinalize) && canFinalizeAnalysis(role)
-  const canExport = Boolean(analysis?.capabilities.canExport) && canExportReport(role)
 
   const linkedInsights = useMemo(() => {
     if (!selectedLink) return []
@@ -409,7 +407,6 @@ export default function ImpactAnalysisDetailPage({
 
           <AnalysisTabBar
             analysis={analysis}
-            canExport={canExport}
             canFinalize={canFinalize}
             stats={analysisStats}
             activeTab={currentTab}

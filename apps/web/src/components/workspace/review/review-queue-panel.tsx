@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { useReviewInsight, useReviewTraceabilityLink } from "@/hooks/api/use-analyses"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { DecisionNoteForm } from "@/components/workspace/review/decision-note-form"
+import { ReviewStatusBadge } from "@/components/workspace/shared/status-badges"
 
 interface ReviewQueuePanelProps {
   queueData: ReviewQueueResponse
@@ -23,12 +24,6 @@ function getPriorityBadgeClass(priority: string) {
     case "MEDIUM": return "badge-inferred"
     default:       return "badge-neutral"
   }
-}
-
-function getReviewStatusIcon(status: string) {
-  if (status === "CONFIRMED") return <div className="w-3 h-3 rounded-full border-2 border-success flex items-center justify-center bg-success/10"><span className="w-1.5 h-1.5 bg-success rounded-full" /></div>
-  if (status === "REJECTED")  return <div className="w-3 h-3 rounded-full border-2 border-danger flex items-center justify-center bg-danger/10"><span className="w-1.5 h-1.5 bg-danger rounded-full" /></div>
-  return <div className="w-3 h-3 rounded-full border-2 border-warning border-dashed" />
 }
 
 export function ReviewQueuePanel({
@@ -101,19 +96,6 @@ export function ReviewQueuePanel({
   const isMutating = reviewInsight.isPending || reviewLink.isPending
   const percentComplete = summary.total > 0 ? ((summary.total - summary.remaining) / summary.total) * 100 : 100
 
-  // ── Empty state ──
-  if (items.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-center p-8">
-        <div className="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center mb-3">
-          <CheckCircle className="w-6 h-6 text-success" />
-        </div>
-        <p className="text-[13px] font-medium text-foreground mb-1">Queue is clear</p>
-        <p className="text-[12px] text-muted-foreground">No items require your review. You can finalize the analysis.</p>
-      </div>
-    )
-  }
-
   if (!canViewReviewQueue) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-8">
@@ -122,6 +104,18 @@ export function ReviewQueuePanel({
         <p className="text-[12px] text-muted-foreground">
           Your current project role does not include review queue access.
         </p>
+      </div>
+    )
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center p-8">
+        <div className="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center mb-3">
+          <CheckCircle className="w-6 h-6 text-success" />
+        </div>
+        <p className="text-[13px] font-medium text-foreground mb-1">Queue is clear</p>
+        <p className="text-[12px] text-muted-foreground">No items require your review. You can finalize the analysis.</p>
       </div>
     )
   }
@@ -185,20 +179,20 @@ export function ReviewQueuePanel({
               >
                 {/* Accent line */}
                 <div className={`flex items-start gap-2`}>
-                  <div className="mt-0.5 shrink-0">
-                    {getReviewStatusIcon(item.reviewStatus ?? "NEEDS_REVIEW")}
-                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 mb-0.5">
-                      <Badge className={`${getPriorityBadgeClass(item.priority)} px-1.5 py-0 text-[9px] h-4`}>
+                      <Badge className={`${getPriorityBadgeClass(item.priority)} h-5 px-2 text-[11px]`}>
                         {item.priority}
                       </Badge>
                       {isSkipped && <SkipForward className="w-3 h-3 text-muted-foreground" />}
                     </div>
-                    <p className={`text-[12px] leading-snug line-clamp-2 ${isActive ? "text-foreground font-medium" : "text-foreground/80"}`}>
+                    <p className={`text-sm leading-snug line-clamp-2 ${isActive ? "text-foreground font-medium" : "text-foreground/80"}`}>
                       {item.title}
                     </p>
-                    <span className="text-[10px] text-muted-foreground capitalize">{item.type.replace(/_/g, " ").toLowerCase()}</span>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      <span className="text-xs text-muted-foreground capitalize">{item.type.replace(/_/g, " ").toLowerCase()}</span>
+                      <ReviewStatusBadge status={item.reviewStatus ?? "NEEDS_REVIEW"} />
+                    </div>
                   </div>
                 </div>
               </button>
@@ -299,14 +293,14 @@ export function ReviewQueuePanel({
                     )}
                     <TooltipProvider>
                       <Tooltip>
-                        <TooltipTrigger render={<span className="inline-block" />}>
+                      <TooltipTrigger render={<span className="inline-block" />}>
                           <Button
                             onClick={handleSkip}
                             size="sm"
                             variant="ghost"
-                            className="h-8 text-muted-foreground hover:text-foreground"
+                            className="h-9 text-muted-foreground hover:text-foreground"
                           >
-                            <SkipForward className="w-3.5 h-3.5 mr-1.5" /> Skip navigation only
+                            <SkipForward className="w-3.5 h-3.5 mr-1.5" /> Skip locally
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -320,7 +314,7 @@ export function ReviewQueuePanel({
             </div>
 
             {/* Decision Note Form */}
-            {activeItem.type === "INSIGHT" || activeItem.type === "UNKNOWN" || activeItem.type === "TRACEABILITY_LINK" ? (
+            {canReview && (activeItem.type === "INSIGHT" || activeItem.type === "UNKNOWN" || activeItem.type === "TRACEABILITY_LINK") ? (
               <DecisionNoteForm
                 analysisId={queueData.analysisId}
                 insightId={activeItem.type === "INSIGHT" || activeItem.type === "UNKNOWN" ? activeItem.id : undefined}
@@ -335,7 +329,7 @@ export function ReviewQueuePanel({
                 size="sm"
                 onClick={handlePrev}
                 disabled={activeItemIndex === 0}
-                className="h-7 text-[12px] text-muted-foreground px-2"
+                className="h-9 px-3 text-sm text-muted-foreground"
               >
                 ← Previous
               </Button>
@@ -344,7 +338,7 @@ export function ReviewQueuePanel({
                 size="sm"
                 onClick={handleNext}
                 disabled={activeItemIndex === items.length - 1}
-                className="h-7 text-[12px] text-muted-foreground px-2"
+                className="h-9 px-3 text-sm text-muted-foreground"
               >
                 Next →
               </Button>

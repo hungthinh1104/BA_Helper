@@ -81,7 +81,45 @@ export function AnalysisInsightsTab({
         )}
       </div>
 
-      <div className="flex flex-col gap-10 max-w-4xl pb-12">
+      <div className="mb-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <div className="rounded-lg border border-border/60 bg-surface-muted/40 px-3 py-2">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Evidence-backed claims</p>
+          <p className="mt-1 text-sm font-semibold text-foreground">{claims.length}</p>
+        </div>
+        <div className="rounded-lg border border-border/60 bg-surface-muted/40 px-3 py-2">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Unknowns / Risks</p>
+          <p className="mt-1 text-sm font-semibold text-foreground">{unknowns.length}</p>
+        </div>
+        <div className="rounded-lg border border-border/60 bg-surface-muted/40 px-3 py-2">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">QA scenarios</p>
+          <p className="mt-1 text-sm font-semibold text-foreground">{qaScenarios.length}</p>
+        </div>
+        <div className="rounded-lg border border-border/60 bg-surface-muted/40 px-3 py-2">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Review remaining</p>
+          <p className="mt-1 text-sm font-semibold text-foreground">{blockingRemaining}</p>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-7 max-w-4xl pb-12">
+        {links.length > 0 && filter === "ALL" && (
+          <div className="flex flex-col gap-3">
+            <div className="px-1">
+              <h3 className="text-sm font-semibold mb-1">Impacted Artifacts</h3>
+              <p className="text-[12px] text-muted-foreground">
+                These artifacts are linked to the current requirement through persisted snapshot evidence.
+              </p>
+            </div>
+            {links.map((link) => (
+              <AffectedArtifactCard
+                key={link.id}
+                link={link}
+                isSelected={selectedLink?.id === link.id}
+                onClick={onSelectLink}
+              />
+            ))}
+          </div>
+        )}
+
         {claims.length > 0 && (
           <InsightList
             title="Impact Claims"
@@ -100,7 +138,7 @@ export function AnalysisInsightsTab({
         )}
         {unknowns.length > 0 && (
           <InsightList
-            title="UNKNOWN / RISK Diagnostics"
+            title="Unknowns and Risk Signals"
             insights={unknowns}
             selectedInsightId={selectedInsight?.id}
             onSelect={onSelectInsight}
@@ -123,29 +161,10 @@ export function AnalysisInsightsTab({
           />
         )}
 
-        {links.length > 0 && filter === "ALL" && (
-          <div className="flex flex-col gap-3">
-            <div className="px-1">
-              <h3 className="text-sm font-semibold mb-1">Evidence-backed Impacted Artifacts</h3>
-              <p className="text-[12px] text-muted-foreground">
-                These rows are backend traceability links backed by persisted code evidence from the selected snapshot.
-              </p>
-            </div>
-            {links.map((link) => (
-              <AffectedArtifactCard
-                key={link.id}
-                link={link}
-                isSelected={selectedLink?.id === link.id}
-                onClick={onSelectLink}
-              />
-            ))}
-          </div>
-        )}
-
         {filteredInsights.length === 0 && filter !== "ALL" && (
           <div className="flex flex-col items-center text-center py-12 px-8 border border-dashed border-border/50 rounded-xl bg-surface-muted/20">
             <div className="w-10 h-10 rounded-lg bg-surface border border-border/50 flex items-center justify-center mb-3">
-              <span className="text-lg">🔎</span>
+              <span className="text-sm text-muted-foreground">No match</span>
             </div>
             <p className="text-[13px] font-medium text-foreground mb-1">No results</p>
             <p className="text-[12px] text-muted-foreground">

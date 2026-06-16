@@ -21,7 +21,6 @@ interface AnalysisStats {
 
 interface AnalysisTabBarProps {
   analysis: ImpactAnalysisResponse
-  canExport: boolean
   canFinalize: boolean
   stats: AnalysisStats
   activeTab: TabValue
@@ -31,7 +30,6 @@ interface AnalysisTabBarProps {
 
 export function AnalysisTabBar({
   analysis,
-  canExport,
   canFinalize,
   stats,
   activeTab,
@@ -53,15 +51,14 @@ export function AnalysisTabBar({
       <div className="mb-4">
         <AnalysisHeader
           analysis={analysis}
-          canExport={canExport}
           blockingRemaining={blockingRemaining}
           stats={stats}
         />
       </div>
 
-      <div className="mb-6 rounded-xl border border-border/60 bg-surface px-4 py-3 shadow-sm">
+      <div className="mb-4 rounded-lg border border-border/50 bg-surface px-4 py-2 shadow-sm">
         <details className="group">
-          <summary className="mb-2 flex cursor-pointer items-center gap-2 select-none text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+          <summary className="mb-1.5 flex cursor-pointer items-center gap-2 select-none text-xs font-medium text-muted-foreground transition-colors hover:text-foreground">
             <span className="group-open:rotate-90 transition-transform">▶</span>
             Analysis Timeline
           </summary>
@@ -106,9 +103,11 @@ export function AnalysisTabBar({
               Impact Diff
             </button>
           )}
-          <button role="tab" aria-selected={activeTab === "lineage"} onClick={() => onTabChange("lineage")} className={tabClass("lineage")}>
-            Lineage
-          </button>
+          {!analysis.derivedFromAnalysisId ? null : (
+            <button role="tab" aria-selected={activeTab === "lineage"} onClick={() => onTabChange("lineage")} className={tabClass("lineage")}>
+              Lineage
+            </button>
+          )}
         </div>
 
         {/* Global banners */}
@@ -152,7 +151,7 @@ export function AnalysisTabBar({
                   <div className="w-5 h-5 rounded-full bg-success/20 flex items-center justify-center shrink-0">
                     <span className="text-xs">✓</span>
                   </div>
-                  All required items have been reviewed. You can now finalize or export this analysis.
+                  All required items have been reviewed. You can now finalize this analysis.
                 </>
               ) : (
                 <>

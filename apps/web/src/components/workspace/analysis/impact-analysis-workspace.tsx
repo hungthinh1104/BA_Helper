@@ -23,16 +23,16 @@ export function ImpactAnalysisWorkspace({
   inspectorFooter,
 }: ImpactAnalysisWorkspaceProps) {
   return (
-    <Group orientation="horizontal" id="workspace-panels" className="h-full w-full">
+    <Group orientation="horizontal" id="workspace-panels" className="h-full w-full max-lg:flex-col">
       <Panel className="h-full flex flex-col min-h-0 relative bg-background">
         {children}
       </Panel>
       
-      <Separator className="w-4 flex items-center justify-center cursor-col-resize shrink-0 group outline-none hover:bg-transparent">
+      <Separator className="hidden w-4 shrink-0 cursor-col-resize items-center justify-center outline-none hover:bg-transparent lg:flex">
         <div className="h-10 w-1.5 rounded-full bg-border/40 group-hover:bg-accent/60 group-active:bg-accent transition-colors" />
       </Separator>
       
-      <Panel defaultSize="360px" minSize="260px" maxSize="800px" collapsible={true} collapsedSize="0px" className="h-full border-l border-border bg-inspector-bg">
+      <Panel defaultSize="420px" minSize="300px" maxSize="800px" collapsible={true} collapsedSize="0px" className="h-full border-l border-border bg-inspector-bg max-lg:h-auto max-lg:min-h-[320px] max-lg:border-l-0 max-lg:border-t">
         {inspectorContent ? (
           <EvidenceInspector
             title={inspectorTitle}

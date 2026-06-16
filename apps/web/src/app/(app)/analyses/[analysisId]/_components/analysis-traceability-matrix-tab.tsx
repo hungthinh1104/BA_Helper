@@ -1,12 +1,23 @@
 "use client"
 
-import { useMemo, useState, Fragment } from "react"
-import { Search } from "lucide-react"
-import { classifyInsight } from "./analysis-traceability-matrix.util"
+import { useEffect, useMemo, useState, Fragment } from "react"
+import { Search, X } from "lucide-react"
+
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { CertaintyBadge, ArtifactKindBadge } from "@/components/workspace/shared/status-badges"
-import type { InsightListResponse, TraceabilityLinkListResponse, ImpactGraphNode, ImpactAnalysisResponse } from "@ba-helper/contracts"
+import {
+  ArtifactKindBadge,
+  CertaintyBadge,
+  ReviewStatusBadge,
+} from "@/components/workspace/shared/status-badges"
+import { classifyInsight } from "./analysis-traceability-matrix.util"
+import type {
+  ImpactAnalysisResponse,
+  ImpactGraphNode,
+  InsightListResponse,
+  TraceabilityLinkListResponse,
+} from "@ba-helper/contracts"
 
 type Insight = InsightListResponse["items"][number]
 type TraceabilityLink = TraceabilityLinkListResponse["items"][number]
@@ -20,13 +31,18 @@ export interface AnalysisTraceabilityMatrixTabProps {
   onSelectInsight: (insight: Insight) => void
 }
 
-type TraceType = "EVIDENCE_BACKED_IMPACT" | "INFERRED_IMPACT" | "DIAGNOSTIC_DERIVED_RISK" | "QA_COVERAGE" | "OPEN_QUESTION"
+type TraceType =
+  | "EVIDENCE_BACKED_IMPACT"
+  | "INFERRED_IMPACT"
+  | "DIAGNOSTIC_DERIVED_RISK"
+  | "QA_COVERAGE"
+  | "OPEN_QUESTION"
+
 type RowKind = "traceability_link" | "insight" | "qa_scenario" | "diagnostic_risk" | "open_question"
 
 interface MatrixRow {
   id: string
   sourceKind: RowKind
-  requirementLabel: string
   artifactName: string
   artifactKind: string
   filePath: string
@@ -38,6 +54,34 @@ interface MatrixRow {
   originalInsight?: Insight
   originalName: string
 }
+
+const TRACE_TYPE_LABEL: Record<TraceType, string> = {
+  EVIDENCE_BACKED_IMPACT: "Evidence-backed Impact",
+  INFERRED_IMPACT: "Inferred Impact",
+  DIAGNOSTIC_DERIVED_RISK: "Unknown / Risk",
+  QA_COVERAGE: "QA Scenario",
+  OPEN_QUESTION: "Open Question",
+}
+
+const TRACE_GROUPS: Array<{ type: TraceType; label: string }> = [
+  { type: "EVIDENCE_BACKED_IMPACT", label: "Evidence-backed impacts" },
+  { type: "INFERRED_IMPACT", label: "Inferred impacts" },
+  { type: "DIAGNOSTIC_DERIVED_RISK", label: "Unknowns / risks" },
+  { type: "QA_COVERAGE", label: "QA scenarios" },
+  { type: "OPEN_QUESTION", label: "Open questions" },
+]
+
+function useDebouncedValue<T>(value: T, delay: number) {
+  const [debounced, setDebounced] = useState(value)
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebounced(value), delay)
+    return () => window.clearTimeout(timer)
+  }, [value, delay])
+
+  return debounced
+}
+
 export function AnalysisTraceabilityMatrixTab({
   analysis,
   insights,
@@ -51,72 +95,58 @@ export function AnalysisTraceabilityMatrixTab({
   const [traceTypeFilter, setTraceTypeFilter] = useState<string>("ALL")
   const [certaintyFilter, setCertaintyFilter] = useState<string>("ALL")
   const [reviewStatusFilter, setReviewStatusFilter] = useState<string>("ALL")
-  const [artifactKindFilter, setArtifactKindFilter] = useState<string>("ALL")
+  const debouncedSearch = useDebouncedValue(searchTerm, 150)
+
+  const graphNodeByArtifactId = useMemo(() => {
+    const map = new Map<string, ImpactGraphNode>()
+    for (const node of graphNodes) {
+      if (node.id.startsWith("artifact-")) {
+        map.set(node.id.replace("artifact-", ""), node)
+      }
+    }
+    return map
+  }, [graphNodes])
 
   const rows = useMemo(() => {
-    const requirementLabel = analysis.requirement.revisionTitle || "Requirement Change"
     const generatedRows: MatrixRow[] = []
 
-    // 1. Process Links (EVIDENCED and INFERRED Impacts)
     for (const link of links) {
-      const node = graphNodes.find(n => n.id === `artifact-${link.artifactId}`)
+      const node = graphNodeByArtifactId.get(link.artifactId)
       const isEvidenced = link.linkBasis === "EVIDENCED"
-      
-      let filePath = "—"
-      if (link.evidence.length > 0 && link.evidence[0].filePath) {
-        filePath = link.evidence[0].filePath
-      } else if (node?.filePath) {
-        filePath = node.filePath
-      }
+      const filePath = link.evidence[0]?.filePath ?? node?.filePath ?? "—"
 
       generatedRows.push({
         id: link.id,
         sourceKind: "traceability_link",
-        requirementLabel,
         artifactName: node?.label ?? link.evidence[0]?.artifactKey ?? "Unknown Artifact",
         artifactKind: node?.type ?? "UNKNOWN",
         filePath,
         traceType: isEvidenced ? "EVIDENCE_BACKED_IMPACT" : "INFERRED_IMPACT",
         certainty: isEvidenced ? "EVIDENCED" : "INFERRED",
-        evidenceLabel: link.evidence.length > 0 ? `${link.evidence.length} reference${link.evidence.length > 1 ? "s" : ""}` : "—",
+        evidenceLabel: `${link.evidence.length} evidence`,
         reviewStatus: link.reviewStatus,
         originalLink: link,
         originalName: node?.label ?? link.evidence[0]?.artifactKey ?? "Unknown Artifact",
       })
     }
 
-    // 2. Process Insights (UNKNOWN/RISK, QA, QUESTIONS)
     for (const insight of insights) {
       const classification = classifyInsight(insight)
       if (!classification) continue
 
-      const { traceType, sourceKind } = classification
-
-      let filePath = "—"
-      if (insight.evidence.length > 0 && insight.evidence[0].filePath) {
-        filePath = insight.evidence[0].filePath
-      }
-
-      let artifactName = insight.statement
-      if (artifactName.length > 60) {
-        artifactName = artifactName.substring(0, 60) + "..."
-      }
-
-      let evidenceLabel = "—"
-      if (insight.evidence.length > 0) {
-        if (traceType === "QA_COVERAGE") evidenceLabel = `${insight.evidence.length} step${insight.evidence.length > 1 ? "s" : ""}`
-        else if (traceType === "OPEN_QUESTION" || traceType === "DIAGNOSTIC_DERIVED_RISK") evidenceLabel = `${insight.evidence.length} context item${insight.evidence.length > 1 ? "s" : ""}`
-        else evidenceLabel = `${insight.evidence.length} reference${insight.evidence.length > 1 ? "s" : ""}`
-      }
+      const filePath = insight.evidence[0]?.filePath ?? "—"
+      const evidenceLabel =
+        insight.evidence.length > 0
+          ? `${insight.evidence.length} evidence`
+          : "No direct evidence"
 
       generatedRows.push({
         id: insight.id,
-        sourceKind,
-        requirementLabel,
-        artifactName,
+        sourceKind: classification.sourceKind,
+        artifactName: insight.statement,
         artifactKind: "INSIGHT",
         filePath,
-        traceType,
+        traceType: classification.traceType,
         certainty: insight.certainty,
         evidenceLabel,
         reviewStatus: insight.reviewStatus,
@@ -125,55 +155,54 @@ export function AnalysisTraceabilityMatrixTab({
       })
     }
 
-    // 3. Sort logic
-    const traceTypeOrder: Record<TraceType, number> = {
-      EVIDENCE_BACKED_IMPACT: 1,
-      INFERRED_IMPACT: 2,
-      DIAGNOSTIC_DERIVED_RISK: 3,
-      QA_COVERAGE: 4,
-      OPEN_QUESTION: 5,
-    }
-
-    generatedRows.sort((a, b) => {
-      // First by requirement (all same here), then traceType, then name
-      const orderDiff = traceTypeOrder[a.traceType] - traceTypeOrder[b.traceType]
-      if (orderDiff !== 0) return orderDiff
+    return generatedRows.sort((a, b) => {
+      const groupDiff =
+        TRACE_GROUPS.findIndex(group => group.type === a.traceType) -
+        TRACE_GROUPS.findIndex(group => group.type === b.traceType)
+      if (groupDiff !== 0) return groupDiff
       return a.artifactName.localeCompare(b.artifactName)
     })
-
-    return generatedRows
-  }, [analysis, insights, links, graphNodes])
-
-  // Get unique artifact kinds for filter
-  const uniqueKinds = useMemo(() => Array.from(new Set(rows.map(r => r.artifactKind))).sort(), [rows])
-  const uniqueTraceTypes = useMemo(() => Array.from(new Set(rows.map(r => r.traceType))).sort(), [rows])
-  const uniqueCertainties = useMemo(() => Array.from(new Set(rows.map(r => r.certainty))).sort(), [rows])
-  const uniqueReviewStatuses = useMemo(() => Array.from(new Set(rows.map(r => r.reviewStatus))).sort(), [rows])
+  }, [graphNodeByArtifactId, insights, links])
 
   const filteredRows = useMemo(() => {
-    return rows.filter(r => {
-      if (traceTypeFilter !== "ALL" && r.traceType !== traceTypeFilter) return false
-      if (certaintyFilter !== "ALL" && r.certainty !== certaintyFilter) return false
-      if (reviewStatusFilter !== "ALL" && r.reviewStatus !== reviewStatusFilter) return false
-      if (artifactKindFilter !== "ALL" && r.artifactKind !== artifactKindFilter) return false
+    const needle = debouncedSearch.trim().toLowerCase()
 
-      if (searchTerm) {
-        const lowerSearch = searchTerm.toLowerCase()
-        const meta = (r.originalInsight as unknown as Record<string, unknown>)?.metadata as Record<string, unknown> | undefined
-        const diagCode = ((meta?.diagnostic as Record<string, unknown>)?.code as string | undefined) || (meta?.diagnosticCode as string | undefined) || ""
-        const statement = (r.originalInsight as unknown as Record<string, unknown>)?.statement as string | undefined || ""
-        
-        return (
-          r.originalName.toLowerCase().includes(lowerSearch) ||
-          r.filePath.toLowerCase().includes(lowerSearch) ||
-          r.traceType.toLowerCase().includes(lowerSearch) ||
-          diagCode.toLowerCase().includes(lowerSearch) ||
-          statement.toLowerCase().includes(lowerSearch)
-        )
-      }
-      return true
+    return rows.filter(row => {
+      if (traceTypeFilter !== "ALL" && row.traceType !== traceTypeFilter) return false
+      if (certaintyFilter !== "ALL" && row.certainty !== certaintyFilter) return false
+      if (reviewStatusFilter !== "ALL" && row.reviewStatus !== reviewStatusFilter) return false
+
+      if (!needle) return true
+
+      const meta = (row.originalInsight as unknown as Record<string, unknown>)?.metadata as Record<string, unknown> | undefined
+      const diagnosticCode =
+        ((meta?.diagnostic as Record<string, unknown>)?.code as string | undefined) ||
+        (meta?.diagnosticCode as string | undefined) ||
+        ""
+
+      return [
+        row.originalName,
+        row.filePath,
+        TRACE_TYPE_LABEL[row.traceType],
+        diagnosticCode,
+      ].some(value => value.toLowerCase().includes(needle))
     })
-  }, [rows, searchTerm, traceTypeFilter, certaintyFilter, reviewStatusFilter, artifactKindFilter])
+  }, [rows, debouncedSearch, traceTypeFilter, certaintyFilter, reviewStatusFilter])
+
+  const summaryCounts = useMemo(() => {
+    return {
+      evidenceBacked: rows.filter(row => row.traceType === "EVIDENCE_BACKED_IMPACT").length,
+      unknownRisk: rows.filter(row => row.traceType === "DIAGNOSTIC_DERIVED_RISK").length,
+      qa: rows.filter(row => row.traceType === "QA_COVERAGE").length,
+      reviewRemaining: rows.filter(row => row.reviewStatus === "NEEDS_REVIEW").length,
+    }
+  }, [rows])
+
+  const hasActiveFilters =
+    traceTypeFilter !== "ALL" ||
+    certaintyFilter !== "ALL" ||
+    reviewStatusFilter !== "ALL" ||
+    searchTerm.trim().length > 0
 
   const handleRowClick = (row: MatrixRow) => {
     setSelectedRowId(row.id)
@@ -184,31 +213,18 @@ export function AnalysisTraceabilityMatrixTab({
     }
   }
 
-  const reviewStatusColor = (status: string) => {
-    switch (status) {
-      case "NEEDS_REVIEW": return "bg-warning/10 text-warning"
-      case "CONFIRMED": return "bg-success/10 text-success"
-      case "REJECTED": return "bg-danger/10 text-danger"
-      default: return "bg-surface-muted text-muted-foreground"
-    }
-  }
-
-  const traceTypeDisplay = (type: TraceType) => {
-    switch (type) {
-      case "EVIDENCE_BACKED_IMPACT": return "Evidence Impact"
-      case "INFERRED_IMPACT": return "Inferred Impact"
-      case "DIAGNOSTIC_DERIVED_RISK": return "Risk / Unknown"
-      case "QA_COVERAGE": return "QA Scenario"
-      case "OPEN_QUESTION": return "Open Question"
-      default: return type
-    }
+  const clearFilters = () => {
+    setSearchTerm("")
+    setTraceTypeFilter("ALL")
+    setCertaintyFilter("ALL")
+    setReviewStatusFilter("ALL")
   }
 
   if (rows.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground h-full">
-        <p>No traceability data available.</p>
-        <p className="text-sm mt-2 opacity-70">
+      <div className="flex h-full flex-col items-center justify-center p-12 text-center text-muted-foreground">
+        <p className="text-sm font-medium text-foreground">No traceability data available</p>
+        <p className="mt-2 text-sm opacity-70">
           This matrix will populate once the impact analysis is complete.
         </p>
       </div>
@@ -216,161 +232,182 @@ export function AnalysisTraceabilityMatrixTab({
   }
 
   return (
-    <div className="flex flex-col h-full bg-surface">
-      <div className="flex items-center gap-4 p-4 border-b border-border/40">
-        <div className="relative w-64 shrink-0">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search artifacts, paths, insight text, diagnostic codes..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="pl-9 h-9"
-          />
+    <div className="flex h-full flex-col bg-surface">
+      <div className="border-b border-border/40 p-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="rounded-lg border border-border/60 bg-surface-muted/40 px-3 py-2">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Evidence-backed</p>
+            <p className="mt-1 text-sm font-semibold text-foreground">{summaryCounts.evidenceBacked}</p>
+          </div>
+          <div className="rounded-lg border border-border/60 bg-surface-muted/40 px-3 py-2">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Unknown / Risk</p>
+            <p className="mt-1 text-sm font-semibold text-foreground">{summaryCounts.unknownRisk}</p>
+          </div>
+          <div className="rounded-lg border border-border/60 bg-surface-muted/40 px-3 py-2">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">QA Scenarios</p>
+            <p className="mt-1 text-sm font-semibold text-foreground">{summaryCounts.qa}</p>
+          </div>
+          <div className="rounded-lg border border-border/60 bg-surface-muted/40 px-3 py-2">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Needs Review</p>
+            <p className="mt-1 text-sm font-semibold text-foreground">{summaryCounts.reviewRemaining}</p>
+          </div>
         </div>
-        
-        <select 
-          value={traceTypeFilter} 
-          onChange={(e) => setTraceTypeFilter(e.target.value)}
-          className="h-9 w-[180px] rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        >
-          <option value="ALL">All Trace Types</option>
-          {uniqueTraceTypes.map(t => (
-            <option key={t} value={t}>{traceTypeDisplay(t as TraceType)}</option>
-          ))}
-        </select>
 
-        <select 
-          value={certaintyFilter} 
-          onChange={(e) => setCertaintyFilter(e.target.value)}
-          className="h-9 w-[140px] rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        >
-          <option value="ALL">All Certainty</option>
-          {uniqueCertainties.map(c => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
+        <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="relative w-full lg:max-w-xs">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search traceability..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="h-9 pl-9"
+            />
+          </div>
 
-        <select 
-          value={reviewStatusFilter} 
-          onChange={(e) => setReviewStatusFilter(e.target.value)}
-          className="h-9 w-[150px] rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        >
-          <option value="ALL">All Reviews</option>
-          {uniqueReviewStatuses.map(s => (
-            <option key={s} value={s}>{s.replace('_', ' ')}</option>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant={traceTypeFilter === "ALL" ? "default" : "outline"} className="h-9 shadow-none" onClick={() => setTraceTypeFilter("ALL")}>
+              All types
+            </Button>
+            {TRACE_GROUPS.map(group => (
+              <Button
+                key={group.type}
+                size="sm"
+                variant={traceTypeFilter === group.type ? "default" : "outline"}
+                className="h-9 shadow-none"
+                onClick={() => setTraceTypeFilter(group.type)}
+              >
+                {group.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {["ALL", "EVIDENCED", "INFERRED", "UNKNOWN", "CONFLICTING"].map(value => (
+            <Button
+              key={value}
+              size="sm"
+              variant={certaintyFilter === value ? "default" : "outline"}
+              className="h-8 shadow-none"
+              onClick={() => setCertaintyFilter(value)}
+            >
+              {value === "ALL" ? "All certainty" : value.replace(/_/g, " ")}
+            </Button>
           ))}
-        </select>
-        
-        <select 
-          value={artifactKindFilter} 
-          onChange={(e) => setArtifactKindFilter(e.target.value)}
-          className="h-9 w-[150px] rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        >
-          <option value="ALL">All Kinds</option>
-          {uniqueKinds.map(k => (
-            <option key={k} value={k}>{k}</option>
+          {["ALL", "NEEDS_REVIEW", "CONFIRMED", "REJECTED"].map(value => (
+            <Button
+              key={value}
+              size="sm"
+              variant={reviewStatusFilter === value ? "default" : "outline"}
+              className="h-8 shadow-none"
+              onClick={() => setReviewStatusFilter(value)}
+            >
+              {value === "ALL" ? "All reviews" : value.replace(/_/g, " ")}
+            </Button>
           ))}
-        </select>
+          {hasActiveFilters ? (
+            <Button size="sm" variant="ghost" className="h-8 shadow-none" onClick={clearFilters}>
+              <X className="mr-1.5 h-3.5 w-3.5" />
+              Clear filters
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[300px]">Artifact / Item</TableHead>
-              <TableHead className="w-[100px]">Kind</TableHead>
-              <TableHead>Path</TableHead>
-              <TableHead className="w-[150px]">Trace Type</TableHead>
-              <TableHead className="w-[120px]">Certainty</TableHead>
-              <TableHead className="w-[120px]">Evidence</TableHead>
-              <TableHead className="w-[120px]">Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredRows.length > 0 && (
-              <TableRow className="bg-muted/30 hover:bg-muted/30">
-                <TableCell colSpan={7} className="font-semibold text-xs text-muted-foreground uppercase tracking-wider py-2">
-                  Requirement: {analysis.requirement.revisionTitle || analysis.requirement.id || "Current requirement change"} 
-                  <span className="ml-2 font-normal lowercase">({filteredRows.length} rows)</span>
-                </TableCell>
-              </TableRow>
-            )}
-
-            {filteredRows.length === 0 ? (
+        <div className="min-w-[980px]">
+          <Table>
+            <TableHeader className="sticky top-0 z-10 bg-surface">
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                  No matching rows found.
-                </TableCell>
+                <TableHead className="w-[280px]">Artifact / Item</TableHead>
+                <TableHead className="w-[120px]">Kind</TableHead>
+                <TableHead className="w-[220px]">Path</TableHead>
+                <TableHead className="w-[170px]">Trace Type</TableHead>
+                <TableHead className="w-[120px]">Certainty</TableHead>
+                <TableHead className="w-[120px]">Evidence</TableHead>
+                <TableHead className="w-[130px]">Review</TableHead>
               </TableRow>
-            ) : (
-              [
-                { label: "Evidence-backed impacts", type: "EVIDENCE_BACKED_IMPACT" },
-                { label: "Inferred impacts", type: "INFERRED_IMPACT" },
-                { label: "Diagnostic risks / unknowns", type: "DIAGNOSTIC_DERIVED_RISK" },
-                { label: "QA scenarios", type: "QA_COVERAGE" },
-                { label: "Open questions", type: "OPEN_QUESTION" },
-                { label: "Other", type: "OTHER" }
-              ].map(({ label, type }) => {
-                const rowsInGroup = type === "OTHER" 
-                  ? filteredRows.filter(r => !["EVIDENCE_BACKED_IMPACT", "INFERRED_IMPACT", "DIAGNOSTIC_DERIVED_RISK", "QA_COVERAGE", "OPEN_QUESTION"].includes(r.traceType))
-                  : filteredRows.filter(r => r.traceType === type);
+            </TableHeader>
+            <TableBody>
+              {filteredRows.length > 0 && (
+                <TableRow className="bg-muted/30 hover:bg-muted/30">
+                  <TableCell colSpan={7} className="py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Requirement: {analysis.requirement.revisionTitle || analysis.requirement.id || "Current requirement change"}
+                    <span className="ml-2 font-normal lowercase">({filteredRows.length} rows)</span>
+                  </TableCell>
+                </TableRow>
+              )}
 
-                if (rowsInGroup.length === 0) return null;
+              {filteredRows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                    No matching rows found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                TRACE_GROUPS.map(group => {
+                  const rowsInGroup = filteredRows.filter(row => row.traceType === group.type)
+                  if (rowsInGroup.length === 0) return null
 
-                return (
-                  <Fragment key={type}>
-                    <TableRow className="bg-surface-muted/30 hover:bg-surface-muted/30">
-                      <TableCell colSpan={7} className="font-semibold text-[11px] text-foreground/70 uppercase tracking-wider py-1 border-t">
-                        {label} <span className="ml-1 opacity-70">({rowsInGroup.length})</span>
-                      </TableCell>
-                    </TableRow>
-                    {rowsInGroup.map((row) => (
-                      <TableRow 
-                        key={row.id} 
-                        className={`cursor-pointer transition-colors hover:bg-muted/50 ${
-                          row.id === selectedRowId ? "bg-primary/10 border-primary" : row.sourceKind === "diagnostic_risk" ? "bg-warning/5" : ""
-                        }`}
-                        onClick={() => handleRowClick(row)}
-                      >
-                        <TableCell className="font-mono text-sm max-w-[300px] truncate" title={row.originalName}>
-                          {row.artifactName}
-                        </TableCell>
-                        <TableCell>
-                          {row.artifactKind !== "INSIGHT" ? (
-                            <ArtifactKindBadge kind={row.artifactKind as Parameters<typeof ArtifactKindBadge>[0]["kind"]} />
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground truncate max-w-[200px]" title={row.filePath}>
-                          {row.filePath}
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-xs font-medium text-muted-foreground">
-                            {traceTypeDisplay(row.traceType)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <CertaintyBadge certainty={row.certainty as Parameters<typeof CertaintyBadge>[0]["certainty"]} />
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {row.evidenceLabel}
-                        </TableCell>
-                        <TableCell>
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide ${reviewStatusColor(row.reviewStatus)}`}>
-                            {row.reviewStatus.replace('_', ' ')}
-                          </span>
+                  return (
+                    <Fragment key={group.type}>
+                      <TableRow className="bg-surface-muted/30 hover:bg-surface-muted/30">
+                        <TableCell colSpan={7} className="border-t py-1 text-[11px] font-semibold uppercase tracking-wider text-foreground/70">
+                          {group.label} <span className="ml-1 opacity-70">({rowsInGroup.length})</span>
                         </TableCell>
                       </TableRow>
-                    ))}
-                  </Fragment>
-                );
-              })
-            )}
-
-
-          </TableBody>
-        </Table>
+                      {rowsInGroup.map(row => (
+                        <TableRow
+                          key={row.id}
+                          className={`cursor-pointer transition-colors hover:bg-muted/50 ${
+                            row.id === selectedRowId ? "bg-primary/10" : ""
+                          }`}
+                          onClick={() => handleRowClick(row)}
+                        >
+                          <TableCell className="max-w-[280px]">
+                            <div className="space-y-1">
+                              <p className="line-clamp-2 text-sm font-medium text-foreground">{row.artifactName}</p>
+                              {row.sourceKind !== "traceability_link" ? (
+                                <p className="text-xs text-muted-foreground">{row.originalInsight?.category.replace(/_/g, " ")}</p>
+                              ) : null}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {row.artifactKind !== "INSIGHT" ? <ArtifactKindBadge kind={row.artifactKind} /> : <span className="text-xs text-muted-foreground">Insight</span>}
+                          </TableCell>
+                          <TableCell title={row.filePath}>
+                            <span className="line-clamp-2 text-xs font-mono text-muted-foreground">{row.filePath}</span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-foreground">{TRACE_TYPE_LABEL[row.traceType]}</span>
+                          </TableCell>
+                          <TableCell>
+                            <CertaintyBadge certainty={row.certainty} />
+                          </TableCell>
+                          <TableCell>
+                            <button
+                              type="button"
+                              className="text-sm text-primary hover:underline"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                handleRowClick(row)
+                              }}
+                            >
+                              {row.evidenceLabel}
+                            </button>
+                          </TableCell>
+                          <TableCell>
+                            <ReviewStatusBadge status={row.reviewStatus} />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </Fragment>
+                  )
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
   )

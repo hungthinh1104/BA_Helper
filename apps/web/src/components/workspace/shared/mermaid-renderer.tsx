@@ -48,17 +48,22 @@ export function MermaidRenderer({ chart }: MermaidRendererProps) {
   if (hasError) {
     // Fallback to raw code block if mermaid fails to render
     return (
-      <pre className="p-4 rounded-md bg-muted text-muted-foreground overflow-x-auto text-sm my-4">
+      <pre className="report-pre my-4">
         <code className="language-mermaid">{chart}</code>
       </pre>
     )
   }
 
   return (
-    <div 
-      ref={containerRef}
-      className="flex justify-center my-6 py-4 bg-background border border-border/50 rounded-lg shadow-sm"
-      dangerouslySetInnerHTML={{ __html: svgContent }}
-    />
+    <div className="report-mermaid my-6">
+      <div
+        ref={containerRef}
+        className="report-mermaid-preview flex justify-center rounded-lg border border-border/50 bg-background px-4 py-4 shadow-sm"
+        dangerouslySetInnerHTML={{ __html: svgContent }}
+      />
+      <pre className="report-pre report-mermaid-fallback mt-3">
+        <code className="language-mermaid">{chart}</code>
+      </pre>
+    </div>
   )
 }
