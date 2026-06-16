@@ -10,7 +10,6 @@ import { ScanJobProgress, ScanJobStatus } from "@/components/workspace/repositor
 import { Button } from "@/components/ui/button"
 import { useRepositories } from "@/hooks/api/use-repositories"
 import { useCreateScanJob } from "@/hooks/api/use-scan-jobs"
-import { useAuth } from "@/hooks/use-auth"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Plus, RefreshCw, AlertCircle, GitBranch } from "lucide-react"
 import { toast } from "sonner"
@@ -21,7 +20,6 @@ const gridCols = "minmax(180px, 2fr) minmax(120px, 1.5fr) 80px minmax(180px, 2fr
 export default function RepositoriesPage() {
   const { data, isLoading, error } = useRepositories()
   const { mutateAsync: createScanJob, isPending: isRescanning } = useCreateScanJob(undefined)
-  const { user } = useAuth()
   const workspace = useCurrentWorkspace()
   const canManageRepo = workspace ? canManageRepository(workspace.membershipRole) : false
   const canScan = workspace ? canRunScan(workspace.membershipRole) : false

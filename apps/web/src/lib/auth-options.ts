@@ -55,6 +55,7 @@ export const authOptions: AuthOptions = {
 
           const apiBaseUrl = getApiBaseUrl({
             apiUrl: process.env.NEXT_PUBLIC_API_URL,
+            internalApiUrl: process.env.INTERNAL_API_URL,
             nodeEnv: process.env.NODE_ENV,
           })
 

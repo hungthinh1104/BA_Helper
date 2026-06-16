@@ -6,6 +6,16 @@ describe("runtime-config", () => {
     expect(getApiBaseUrl({ nodeEnv: "development" })).toBe("http://localhost:3000")
   })
 
+  it("prefers INTERNAL_API_URL when provided", () => {
+    expect(
+      getApiBaseUrl({
+        apiUrl: "http://localhost:3001",
+        internalApiUrl: "http://api:3001",
+        nodeEnv: "production",
+      }),
+    ).toBe("http://api:3001")
+  })
+
   it("requires explicit API URL in production", () => {
     expect(() => getApiBaseUrl({ nodeEnv: "production" })).toThrow(ApiError)
     expect(() => getApiBaseUrl({ nodeEnv: "production" })).toThrow(
@@ -19,4 +29,3 @@ describe("runtime-config", () => {
     ).toThrow("NEXT_PUBLIC_API_URL is invalid")
   })
 })
-

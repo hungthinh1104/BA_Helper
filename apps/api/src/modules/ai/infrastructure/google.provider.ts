@@ -43,15 +43,33 @@ export class GoogleLlmProvider extends LlmProvider {
 
     const genModel = this.client.getGenerativeModel({ model });
 
-    const result = await genModel.generateContent({
-      systemInstruction: request.systemPrompt,
-      contents: [{ role: 'user', parts: [{ text: safeUserPrompt }] }],
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: request.options?.temperature ?? this.config.temperature,
-        maxOutputTokens: request.options?.maxTokens ?? this.config.maxTokens,
-      },
-    });
+    let result;
+    try {
+      result = await genModel.generateContent({
+        systemInstruction: request.systemPrompt,
+        contents: [{ role: 'user', parts: [{ text: safeUserPrompt }] }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: request.options?.temperature ?? this.config.temperature,
+          maxOutputTokens: request.options?.maxTokens ?? this.config.maxTokens,
+        },
+      });
+    } catch (error: any) {
+      const msg = error?.message?.toLowerCase() || '';
+      if (
+        msg.includes('503') ||
+        msg.includes('500') ||
+        msg.includes('overload') ||
+        msg.includes('unavailable') ||
+        msg.includes('fetch failed')
+      ) {
+        throw new AppError(
+          'AI_PROVIDER_UNAVAILABLE',
+          'Gemini is temporarily unavailable or overloaded. Retry the analysis later or switch provider/model.'
+        );
+      }
+      throw error;
+    }
 
     const rawText = result.response.text();
     const finishReason = result.response.candidates?.[0]?.finishReason;

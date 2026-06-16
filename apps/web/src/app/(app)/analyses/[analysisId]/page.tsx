@@ -303,7 +303,9 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
           {analysis.error?.message || "The impact analysis could not be completed. Please check the logs or try again."}
         </p>
         <p className="mb-6 max-w-md text-[12px] text-muted-foreground">
-          Common fixes: confirm the selected snapshot is READY or explicitly accepted as PARTIAL, then rerun the analysis from the same requirement revision.
+          {analysis.error?.code === "AI_PROVIDER_UNAVAILABLE" || analysis.error?.code === "LLM_PROVIDER_OVERLOADED"
+            ? "Common fixes: wait a few minutes before retrying, or configure a different AI provider/model in settings."
+            : "Common fixes: confirm the selected snapshot is READY or explicitly accepted as PARTIAL, then rerun the analysis from the same requirement revision."}
         </p>
         {canRerun ? (
           <Button onClick={handleRetryAnalysis} disabled={isRetrying}>

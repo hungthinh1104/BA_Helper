@@ -10,13 +10,10 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useRequirements } from "@/hooks/api/use-requirements"
 import { Plus, AlertCircle } from "lucide-react"
 
-import { useAuth } from "@/hooks/use-auth"
-
 const gridCols = "minmax(200px, 2.5fr) minmax(100px, 1fr) 180px 110px"
 
 export default function RequirementsPage() {
   const { data, isLoading, error } = useRequirements()
-  const { user } = useAuth()
   const workspace = useCurrentWorkspace()
   const canCreateReq = workspace ? canCreateRequirement(workspace.membershipRole) : false
 

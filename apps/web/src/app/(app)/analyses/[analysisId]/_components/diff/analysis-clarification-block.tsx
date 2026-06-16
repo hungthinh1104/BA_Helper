@@ -14,7 +14,6 @@ interface AnalysisClarificationBlockProps {
 }
 
 export function AnalysisClarificationBlock({ analysisId, latestDecision }: AnalysisClarificationBlockProps) {
-  const { user } = useAuth()
   const { data: clarificationsData, isLoading } = useReviewClarifications(analysisId)
   const createClarification = useCreateReviewClarification(analysisId)
   const answerClarification = useAnswerReviewClarification(analysisId)
@@ -22,6 +21,7 @@ export function AnalysisClarificationBlock({ analysisId, latestDecision }: Analy
 
   const workspace = useCurrentWorkspace()
   const canWrite = workspace ? canWriteClarification(workspace.membershipRole) : false
+  const isViewer = !canWrite
 
   const [question, setQuestion] = useState("")
   const [answer, setAnswer] = useState("")

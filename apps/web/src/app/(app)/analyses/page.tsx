@@ -1,6 +1,5 @@
 "use client"
 
-import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
 import { DataList, DataListHeader, DataListRow, DataListCell } from "@/components/workspace/shared/data-list"

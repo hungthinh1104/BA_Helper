@@ -118,6 +118,10 @@ cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env.local
 ```
 
+For containerized web runtime, keep two URLs straight:
+- `NEXT_PUBLIC_API_URL`: browser-visible API origin, usually `http://localhost:3001`
+- `INTERNAL_API_URL`: server-side API origin inside the web container, usually `http://api:3001`
+
 ### 4. Start Local Services
 Launch the Postgres and Redis containers in the background:
 ```bash
@@ -177,8 +181,16 @@ AI_PROVIDER=google EMBEDDING_PROVIDER=google pnpm --dir apps/api smoke:public-gi
 When running the containerized stack, use the dedicated migration owner first:
 
 ```bash
-docker compose up -d --build migrate api worker
+docker compose up -d --build migrate api worker web
 ```
+
+This compose topology now matches the current project shape:
+- `migrate` owns schema deployment
+- `api` serves the backend on `3001`
+- `worker` handles queued jobs
+- `web` serves the Next.js frontend on `3000`
+
+Avoid `docker compose config` in shared logs when real provider keys are loaded in your shell, because Compose expands current environment values into the resolved output.
 
 ## Troubleshooting
 

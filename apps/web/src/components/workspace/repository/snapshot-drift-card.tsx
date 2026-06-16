@@ -210,8 +210,8 @@ function MetricCard({ label, value, isWarning }: { label: string; value: number;
 
 interface SampleItem {
   artifactKey: string
-  displayName?: string
-  symbolName?: string
+  displayName?: string | null
+  symbolName?: string | null
 }
 
 function SampleList({ title, count, items, isExpanded, onToggle }: { title: string, count: number, items: Array<SampleItem>, isExpanded: boolean, onToggle: () => void }) {

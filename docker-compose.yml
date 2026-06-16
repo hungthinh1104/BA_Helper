@@ -71,6 +71,23 @@ services:
     ports:
       - "3001:3001"
     restart: unless-stopped
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    command: ["sh", "-lc", "cd /app/apps/web && /app/apps/web/node_modules/.bin/next start -p 3000"]
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+      INTERNAL_API_URL: http://api:3001
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-dev-only-local-nextauth-secret}
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
   worker:
     build:
       context: .

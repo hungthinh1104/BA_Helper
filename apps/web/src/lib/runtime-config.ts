@@ -4,6 +4,7 @@ const DEFAULT_DEV_API_URL = "http://localhost:3000"
 
 interface RuntimeEnv {
   apiUrl?: string
+  internalApiUrl?: string
   nodeEnv?: string
 }
 
@@ -34,8 +35,14 @@ function validateApiUrl(value: string): string {
 
 export function getApiBaseUrl(env: RuntimeEnv = {
   apiUrl: process.env.NEXT_PUBLIC_API_URL,
+  internalApiUrl:
+    typeof window === "undefined" ? process.env.INTERNAL_API_URL : undefined,
   nodeEnv: process.env.NODE_ENV,
 }): string {
+  if (env.internalApiUrl?.trim()) {
+    return validateApiUrl(env.internalApiUrl.trim())
+  }
+
   if (env.apiUrl?.trim()) {
     return validateApiUrl(env.apiUrl.trim())
   }
@@ -50,4 +57,3 @@ export function getApiBaseUrl(env: RuntimeEnv = {
 
   return DEFAULT_DEV_API_URL
 }
-

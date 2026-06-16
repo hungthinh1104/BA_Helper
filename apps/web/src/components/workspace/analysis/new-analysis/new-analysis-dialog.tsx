@@ -8,7 +8,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { useRequirements } from "@/hooks/api/use-requirements"
 import { useRepositories } from "@/hooks/api/use-repositories"
 import { useCreateAnalysis, useCreateMultiRepoAnalyses } from "@/hooks/api/use-analyses"
-import { useAuth } from "@/hooks/use-auth"
 import { RequirementListItemResponse, RepositoryListItemResponse, MultiRepoImpactAnalysisCreateResponse } from "@ba-helper/contracts"
 import { X, ChevronRight } from "lucide-react"
 import { toast } from "sonner"
@@ -40,7 +39,6 @@ export function NewAnalysisDialog({
   const [acknowledgePartial, setAcknowledgePartial] = useState(false)
   const [batchSuccess, setBatchSuccess] = useState<MultiRepoImpactAnalysisCreateResponse | null>(null)
   const [batchError, setBatchError] = useState<string | null>(null)
-  const { user } = useAuth()
   const workspace = useCurrentWorkspace()
   const canRun = workspace ? canRunAnalysis(workspace.membershipRole) : false
 

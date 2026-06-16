@@ -12,7 +12,6 @@ import { useCurrentWorkspace } from "@/lib/project-context"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { useApprovedMultiRepoReport, useMultiRepoAnalysisRunDetail, useFinalizeMultiRepoReport } from "@/hooks/api/use-analyses"
-import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
@@ -88,7 +87,7 @@ export default function MultiRepoAnalysisRunDetailPage({
   const { data, isLoading, error } = useMultiRepoAnalysisRunDetail(runId)
   const { data: approvedReport, error: approvedReportError } = useApprovedMultiRepoReport(runId)
   const finalizeReport = useFinalizeMultiRepoReport(runId)
-  const { role } = useAuth()
+  const workspace = useCurrentWorkspace()
   const router = useRouter()
   const [selectedAnalysisId, setSelectedAnalysisId] = React.useState<string | null>(null)
 

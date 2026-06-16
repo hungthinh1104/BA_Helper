@@ -60,7 +60,7 @@ jobs:
         run: pnpm --dir apps/api exec prisma generate
 
       - name: Apply Prisma migrations
-        run: pnpm --dir apps/api exec prisma migrate deploy --schema prisma/schema.prisma
+        run: pnpm --dir apps/api exec prisma migrate deploy --config prisma.config.ts --schema prisma/schema.prisma
 
       - name: Lint
         run: pnpm lint
@@ -68,11 +68,14 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Web production build
+        run: pnpm --dir apps/web build
+
       - name: Analyzer tests
         run: pnpm test:analyzer
 
-      - name: Unit and integration tests
-        run: pnpm test
+      - name: App tests
+        run: pnpm test:ci
 
       - name: E2E tests
         run: pnpm test:e2e

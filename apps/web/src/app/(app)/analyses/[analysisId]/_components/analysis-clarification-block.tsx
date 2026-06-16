@@ -13,9 +13,9 @@ export function AnalysisClarificationBlock({ analysisId, latestDecision }: { ana
   const createClarification = useCreateReviewClarification(analysisId)
   const answerClarification = useAnswerReviewClarification(analysisId)
   const createDerivedAnalysis = useCreateDerivedAnalysisFromClarification(analysisId)
-  const { user } = useAuth()
   const workspace = useCurrentWorkspace()
   const canWrite = workspace ? canWriteClarification(workspace.membershipRole) : false
+  const isViewer = !canWrite
 
   const [question, setQuestion] = useState("")
   const [answer, setAnswer] = useState("")

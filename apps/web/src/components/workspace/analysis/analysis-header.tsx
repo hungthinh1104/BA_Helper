@@ -72,7 +72,7 @@ export function AnalysisHeader({ analysis, canExport, stats }: AnalysisHeaderPro
       )}
 
       <WorkspacePageHeader
-        title={analysis.requirement.revisionTitle || analysis.requirement.title || analysis.requirement.id || "Current requirement change"}
+        title={analysis.requirement.revisionTitle || analysis.requirement.id || "Current requirement change"}
         description={`Commit: ${analysis.snapshot.commitSha.substring(0, 7)} · Target: ${analysis.sourceTarget.requestedRef}`}
         className="mb-2.5"
       >

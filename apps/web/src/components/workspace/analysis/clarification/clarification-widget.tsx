@@ -21,7 +21,6 @@ export function ClarificationWidget({ analysisId, insightId }: ClarificationWidg
   const answerMut = useAnswerClarification(analysisId);
   const dismissMut = useDismissClarification(analysisId);
   const convertMut = useConvertClarification(analysisId);
-  const { user } = useAuth();
 
   const [answerText, setAnswerText] = useState('');
   const [dismissReason, setDismissReason] = useState('');
