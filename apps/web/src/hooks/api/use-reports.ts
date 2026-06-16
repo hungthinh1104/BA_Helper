@@ -66,8 +66,8 @@ export function useFinalizeAnalysis(projectId: string | undefined, analysisId: s
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async () => {
-      return apiPost(`/api/v1/impact-analyses/${analysisId}/finalize`, {})
+    mutationFn: async (data: { acknowledgeUnreviewed?: boolean }) => {
+      return apiPost(`/api/v1/impact-analyses/${analysisId}/finalize`, data)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({

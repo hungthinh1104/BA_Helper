@@ -19,9 +19,22 @@ export class DocumentRepository {
     });
   }
 
+  async findApprovedReportByAnalysisId(analysisId: string) {
+    return this.prisma.generatedDocument.findUnique({
+      where: {
+        impactAnalysisId_type_status: {
+          impactAnalysisId: analysisId,
+          type: 'IMPACT_REPORT',
+          status: 'APPROVED',
+        },
+      },
+    });
+  }
+
   async upsertApproved(params: {
     impactAnalysisId: string;
     content: string;
+    id?: string;
   }) {
     return this.prisma.generatedDocument.upsert({
       where: {
@@ -35,6 +48,7 @@ export class DocumentRepository {
         content: params.content,
       },
       create: {
+        id: params.id,
         impactAnalysisId: params.impactAnalysisId,
         type: 'IMPACT_REPORT',
         status: 'APPROVED',

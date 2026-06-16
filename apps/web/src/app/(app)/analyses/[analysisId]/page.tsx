@@ -179,8 +179,8 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
     unknowns:    insights.filter(i => i.certainty === "UNKNOWN").length,
     conflicts:   insights.filter(i => i.certainty === "CONFLICTING").length,
     total:       insights.length,
-    needsReview: needsReviewInsights.length,
-  }), [insights, needsReviewInsights])
+    needsReview: needsReviewInsights.length + links.filter(l => l.reviewStatus === "NEEDS_REVIEW").length,
+  }), [insights, needsReviewInsights, links])
 
   const blockingRemaining = reviewQueueResponse?.summary.blockingRemaining ?? 0
 

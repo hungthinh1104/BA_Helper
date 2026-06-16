@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { randomUUID } from "crypto";
 
 import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
 import { DocumentRepository } from '../../../document/infrastructure/document.repository';
@@ -40,13 +41,18 @@ export class FinalizeImpactAnalysisUseCase {
       );
     }
 
-    const hasUnreviewed = analysis.insights?.some(
-      (insight: { reviewStatus: string }) =>
-        insight.reviewStatus === 'NEEDS_REVIEW',
-    );
+    const traceabilityLinks = await this.traceabilityRepo.listByAnalysis(analysis.id);
 
-    let unreviewedItemsCount = 0;
-    if (hasUnreviewed) unreviewedItemsCount++;
+    const unreviewedInsightsCount = analysis.insights?.filter(
+      (insight: { reviewStatus: string }) => insight.reviewStatus === 'NEEDS_REVIEW'
+    ).length || 0;
+
+    const unreviewedTraceabilityLinksCount = traceabilityLinks.filter(
+      (link: { reviewStatus: string }) => link.reviewStatus === 'NEEDS_REVIEW'
+    ).length;
+
+    const unreviewedItemsCount = unreviewedInsightsCount + unreviewedTraceabilityLinksCount;
+    const hasUnreviewed = unreviewedItemsCount > 0;
 
     ReviewPolicy.assertCanFinalize(
       analysis,
@@ -80,7 +86,6 @@ export class FinalizeImpactAnalysisUseCase {
     }
 
     const insights = await this.insightRepo.listByAnalysis(analysis.id);
-    const traceabilityLinks = await this.traceabilityRepo.listByAnalysis(analysis.id);
     const reviewNotes = await this.reviewNoteRepo.findByAnalysisId(analysis.id);
     const dependencyEdges = await this.graphRepo.listBySnapshot(analysis.snapshot.id);
     const clarifications = await this.clarificationRepo.listByAnalysisId(analysis.id);
@@ -94,10 +99,9 @@ export class FinalizeImpactAnalysisUseCase {
       }
     }
 
-    const persistedReport = await this.documentRepo.upsertApproved({
-      impactAnalysisId: analysis.id,
-      content: '# Pending approved report generation',
-    });
+    const existingReport = await this.documentRepo.findApprovedReportByAnalysisId(analysis.id);
+    const generatedDocumentId = existingReport ? existingReport.id : randomUUID();
+    const generatedAt = existingReport ? existingReport.createdAt.toISOString() : new Date().toISOString();
 
     const markdown = this.reportBuilder.build({
       analysis: updated,
@@ -118,14 +122,15 @@ export class FinalizeImpactAnalysisUseCase {
         commitSha: updated.snapshot.commitSha,
         snapshotId: updated.snapshot.id,
         analyzerVersion: updated.snapshot.analyzerVersion,
-        generatedDocumentId: persistedReport.id,
-        generatedAt: persistedReport.createdAt.toISOString(),
-        finalizedAt: persistedReport.updatedAt.toISOString(),
+        generatedDocumentId,
+        generatedAt,
+        finalizedAt: new Date().toISOString(),
         staleStatusAtReadTime: false,
       },
     });
 
     await this.documentRepo.upsertApproved({
+      id: generatedDocumentId,
       impactAnalysisId: analysis.id,
       content: markdown,
     });

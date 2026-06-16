@@ -37,12 +37,14 @@ describe('FinalizeImpactAnalysisUseCase', () => {
 
     documentRepo = {
       upsertApproved: jest.fn(),
+      findApprovedReportByAnalysisId: jest.fn(),
     } as unknown as jest.Mocked<DocumentRepository>;
     documentRepo.upsertApproved.mockResolvedValue({
       id: 'document-1',
       createdAt: new Date('2026-06-06T00:00:00.000Z'),
       updatedAt: new Date('2026-06-06T00:00:00.000Z'),
     } as any);
+    documentRepo.findApprovedReportByAnalysisId.mockResolvedValue(null);
 
     eventLog = {
       recordEvent: jest.fn(),
@@ -166,6 +168,7 @@ describe('FinalizeImpactAnalysisUseCase', () => {
       expectedResolvedRefType: 'BRANCH',
     });
     expect(documentRepo.upsertApproved).toHaveBeenCalledWith({
+      id: expect.any(String),
       impactAnalysisId: 'analysis-1',
       content: expect.stringContaining('Insight 1'),
     });
@@ -193,15 +196,17 @@ describe('FinalizeImpactAnalysisUseCase', () => {
         },
       ],
     });
-    impactRepo.finalizeIfCurrent.mockResolvedValue({ count: 1 });
+    impactRepo.finalizeIfCurrent.mockResolvedValue({ count: 1 } as any);
 
     await useCase.execute(validParams);
 
     expect(documentRepo.upsertApproved).toHaveBeenCalledWith({
+      id: expect.any(String),
       impactAnalysisId: 'analysis-1',
       content: expect.stringMatching(/Confirmed Insight/),
     });
     expect(documentRepo.upsertApproved).toHaveBeenCalledWith({
+      id: expect.any(String),
       impactAnalysisId: 'analysis-1',
       content: expect.not.stringMatching(/Rejected Insight/),
     });
@@ -260,15 +265,17 @@ describe('FinalizeImpactAnalysisUseCase', () => {
         },
       ],
     });
-    impactRepo.finalizeIfCurrent.mockResolvedValue({ count: 1 });
+    impactRepo.finalizeIfCurrent.mockResolvedValue({ count: 1 } as any);
 
     await useCase.execute({ analysisId: 'analysis-1', acknowledgeUnreviewed: true });
 
     expect(documentRepo.upsertApproved).toHaveBeenCalledWith({
+      id: expect.any(String),
       impactAnalysisId: 'analysis-1',
       content: expect.stringContaining('Unreviewed Insight'),
     });
     expect(documentRepo.upsertApproved).toHaveBeenCalledWith({
+      id: expect.any(String),
       impactAnalysisId: 'analysis-1',
       content: expect.stringContaining('This report was finalized with unreviewed items acknowledged.'),
     });
