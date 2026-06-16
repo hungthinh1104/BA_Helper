@@ -19,18 +19,6 @@ export class DocumentRepository {
     });
   }
 
-  async findApprovedReportByAnalysisId(analysisId: string) {
-    return this.prisma.generatedDocument.findUnique({
-      where: {
-        impactAnalysisId_type_status: {
-          impactAnalysisId: analysisId,
-          type: 'IMPACT_REPORT',
-          status: 'APPROVED',
-        },
-      },
-    });
-  }
-
   async upsertApproved(params: {
     impactAnalysisId: string;
     content: string;

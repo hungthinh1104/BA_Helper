@@ -10,7 +10,13 @@ export class InsightRepository {
       where: { impactAnalysisId },
       include: {
         evidenceLinks: {
-          include: { evidence: true },
+          include: {
+            evidence: {
+              include: {
+                artifact: true,
+              },
+            },
+          },
         },
       },
     });

@@ -11,7 +11,7 @@ import {
   traceabilityLinkListResponseSchema,
 } from "@ba-helper/contracts"
 
-export function useAnalysisInsights(_projectId: string | undefined, analysisId: string) {
+export function useAnalysisInsights(analysisId: string) {
   return useQuery({
     queryKey: [...queryKeys.analyses.detail(analysisId), "insights"],
     queryFn: async () => {
@@ -21,7 +21,7 @@ export function useAnalysisInsights(_projectId: string | undefined, analysisId: 
   })
 }
 
-export function useAnalysisTraceability(_projectId: string | undefined, analysisId: string) {
+export function useAnalysisTraceability(analysisId: string) {
   return useQuery({
     queryKey: [...queryKeys.analyses.detail(analysisId), "traceability"],
     queryFn: async () => {
@@ -58,7 +58,20 @@ export function useReviewInsight(projectId: string | undefined, analysisId: stri
   })
 }
 
-export function useReviewTraceabilityLink() {
+export function traceabilityReviewInvalidationKeys(projectId: string, analysisId: string) {
+  return [
+    [...queryKeys.analyses.detail(analysisId), "traceability"],
+    queryKeys.analyses.reviewQueue(analysisId),
+    queryKeys.analyses.detail(analysisId),
+    queryKeys.analyses.list(projectId),
+    queryKeys.analyses.report(analysisId),
+  ] as const
+}
+
+export function useReviewTraceabilityLink(projectId: string | undefined, analysisId: string) {
+  const activeProjectId = useOptionalProjectId()
+  const effectiveProjectId = projectId ?? activeProjectId
+  const projectQueryKey = effectiveProjectId ?? "__workspace-pending__"
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -66,9 +79,9 @@ export function useReviewTraceabilityLink() {
       return apiPost(`/api/v1/traceability-links/${traceabilityLinkId}/review`, data)
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.analyses.all,
-      })
+      for (const queryKey of traceabilityReviewInvalidationKeys(projectQueryKey, analysisId)) {
+        queryClient.invalidateQueries({ queryKey })
+      }
     }
   })
 }

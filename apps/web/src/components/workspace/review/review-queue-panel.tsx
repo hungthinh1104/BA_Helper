@@ -13,6 +13,8 @@ interface ReviewQueuePanelProps {
   queueData: ReviewQueueResponse
   onSelect: (type: "INSIGHT" | "TRACEABILITY_LINK" | "GRAPH_NODE", id: string, artifactId?: string) => void
   selectedQueueItemId?: string | null
+  canReview: boolean
+  canViewReviewQueue: boolean
 }
 
 function getPriorityBadgeClass(priority: string) {
@@ -29,12 +31,18 @@ function getReviewStatusIcon(status: string) {
   return <div className="w-3 h-3 rounded-full border-2 border-warning border-dashed" />
 }
 
-export function ReviewQueuePanel({ queueData, onSelect, selectedQueueItemId }: ReviewQueuePanelProps) {
+export function ReviewQueuePanel({
+  queueData,
+  onSelect,
+  selectedQueueItemId,
+  canReview,
+  canViewReviewQueue,
+}: ReviewQueuePanelProps) {
   const { summary, items } = queueData
 
   const [skippedLocal, setSkippedLocal] = useState<Set<string>>(new Set())
   const reviewInsight = useReviewInsight(undefined, queueData.analysisId)
-  const reviewLink = useReviewTraceabilityLink()
+  const reviewLink = useReviewTraceabilityLink(undefined, queueData.analysisId)
 
   const activeItemIndex = useMemo(() => {
     if (selectedQueueItemId) {
@@ -73,7 +81,7 @@ export function ReviewQueuePanel({ queueData, onSelect, selectedQueueItemId }: R
   }
 
   const handleConfirm = () => {
-    if (!activeItem?.requiresDecision) return
+    if (!activeItem?.requiresDecision || !canReview) return
     if (activeItem.type === "INSIGHT" || activeItem.type === "UNKNOWN") {
       reviewInsight.mutate({ insightId: activeItem.id, data: { reviewStatus: "CONFIRMED" } }, { onSuccess: handleNext })
     } else if (activeItem.type === "TRACEABILITY_LINK" && activeItem.linkedTraceabilityLinkId) {
@@ -82,7 +90,7 @@ export function ReviewQueuePanel({ queueData, onSelect, selectedQueueItemId }: R
   }
 
   const handleReject = () => {
-    if (!activeItem?.requiresDecision) return
+    if (!activeItem?.requiresDecision || !canReview) return
     if (activeItem.type === "INSIGHT" || activeItem.type === "UNKNOWN") {
       reviewInsight.mutate({ insightId: activeItem.id, data: { reviewStatus: "REJECTED" } }, { onSuccess: handleNext })
     } else if (activeItem.type === "TRACEABILITY_LINK" && activeItem.linkedTraceabilityLinkId) {
@@ -102,6 +110,18 @@ export function ReviewQueuePanel({ queueData, onSelect, selectedQueueItemId }: R
         </div>
         <p className="text-[13px] font-medium text-foreground mb-1">Queue is clear</p>
         <p className="text-[12px] text-muted-foreground">No items require your review. You can finalize the analysis.</p>
+      </div>
+    )
+  }
+
+  if (!canViewReviewQueue) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center p-8">
+        <AlertCircle className="w-8 h-8 text-muted-foreground mb-3" />
+        <p className="text-[13px] font-medium text-foreground mb-1">Review queue unavailable</p>
+        <p className="text-[12px] text-muted-foreground">
+          Your current project role does not include review queue access.
+        </p>
       </div>
     )
   }
@@ -249,12 +269,14 @@ export function ReviewQueuePanel({ queueData, onSelect, selectedQueueItemId }: R
                   )}
                   {activeItem.requiresDecision && (
                     <p className="text-[12px] text-muted-foreground mb-3">
-                      Review the evidence in the inspector panel, then decide.
+                      {canReview
+                        ? "Review the evidence in the inspector panel, then decide."
+                        : "Review queue is read-only for your role. Reviewer or Owner required to submit evidence decisions."}
                     </p>
                   )}
 
                   <div className="flex items-center gap-2 flex-wrap">
-                    {activeItem.requiresDecision && (
+                    {activeItem.requiresDecision && canReview && (
                       <>
                         <Button
                           onClick={handleConfirm}

@@ -30,7 +30,7 @@ export function useAnalyses(params?: { projectId?: string; limit?: number; offse
   })
 }
 
-export function useAnalysisDetail(_projectId: string | undefined, analysisId: string) {
+export function useAnalysisDetail(analysisId: string) {
   return useQuery({
     queryKey: queryKeys.analyses.detail(analysisId),
     queryFn: async () => {

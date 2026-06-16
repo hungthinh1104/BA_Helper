@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { retrievalMetadataSchema } from './retrieval.contract';
 import { evidenceSchema } from './evidence.contract';
+import { universalArtifactKindSchema } from './artifact.contract';
 
 export const traceabilityReviewRequestSchema = z.object({
 	reviewStatus: z.enum(['CONFIRMED', 'REJECTED']),
@@ -9,6 +10,10 @@ export const traceabilityReviewRequestSchema = z.object({
 export const traceabilityLinkSchema = z.object({
 	id: z.string().uuid(),
 	artifactId: z.string().uuid(),
+	artifactName: z.string(),
+	artifactKey: z.string(),
+	filePath: z.string().nullable(),
+	universalKind: universalArtifactKindSchema,
 	linkType: z.enum(['AFFECTED', 'RELATED']),
 	linkBasis: z.enum(['EVIDENCED', 'INFERRED']),
 	reviewStatus: z.enum(['NEEDS_REVIEW', 'CONFIRMED', 'REJECTED']),

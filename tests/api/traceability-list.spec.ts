@@ -6,6 +6,12 @@ describe('Traceability list mapping', () => {
       {
         id: 'link-1',
         artifactId: 'a3',
+        artifact: {
+          name: 'PaymentService.refund',
+          artifactKey: 'service-method:payment.service.refund',
+          filePath: 'src/payment/payment.service.ts',
+          universalKind: 'DOMAIN_SERVICE',
+        },
         linkType: 'AFFECTED',
         linkBasis: 'EVIDENCED',
         reviewStatus: 'NEEDS_REVIEW',
@@ -20,6 +26,10 @@ describe('Traceability list mapping', () => {
               endLine: 10,
               excerpt:
                 'src/payment/payment.service.ts:6-10 (PaymentService.refund)',
+              artifactId: 'a3',
+              artifact: {
+                artifactKey: 'service-method:payment.service.refund',
+              },
             },
           },
         ],
@@ -30,6 +40,10 @@ describe('Traceability list mapping', () => {
       {
         id: 'link-1',
         artifactId: 'a3',
+        artifactName: 'PaymentService.refund',
+        artifactKey: 'service-method:payment.service.refund',
+        filePath: 'src/payment/payment.service.ts',
+        universalKind: 'DOMAIN_SERVICE',
         linkType: 'AFFECTED',
         linkBasis: 'EVIDENCED',
         reviewStatus: 'NEEDS_REVIEW',
@@ -42,6 +56,8 @@ describe('Traceability list mapping', () => {
             startLine: 6,
             endLine: 10,
             excerpt: 'src/payment/payment.service.ts:6-10 (PaymentService.refund)',
+            artifactId: 'a3',
+            artifactKey: 'service-method:payment.service.refund',
           },
         ],
       },

@@ -19,17 +19,7 @@ export class ScanJobController {
     private readonly permissions: ProjectPermissionService,
   ) {}
 
-  @Get('/:scanJobId')
-  async get(
-    @Param('scanJobId') scanJobId: string,
-    @CurrentUser() actor: RequestUser,
-  ) {
-    await this.permissions.assertCanReadScanJob(actor, scanJobId);
-    const job = await this.scanJobRepository.findById(scanJobId);
-    if (!job) {
-      throw new AppError('SCAN_JOB_NOT_FOUND', 'Scan job not found.');
-    }
-
+  private toResponse(job: any) {
     return scanJobResponseSchema.parse({
       id: job.id,
       status: job.status,
@@ -42,7 +32,7 @@ export class ScanJobController {
       result: {
         sourceTargetId: job.sourceTargetId,
         snapshotId: job.snapshotId,
-        snapshotCoverageStatus: null,
+        snapshotCoverageStatus: job.snapshot?.coverageStatus ?? null,
       },
       capabilities: {
         canCancel: job.status === 'QUEUED' || job.status === 'RUNNING',
@@ -54,6 +44,20 @@ export class ScanJobController {
       createdAt: job.createdAt.toISOString(),
       updatedAt: job.updatedAt.toISOString(),
     });
+  }
+
+  @Get('/:scanJobId')
+  async get(
+    @Param('scanJobId') scanJobId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadScanJob(actor, scanJobId);
+    const job = await this.scanJobRepository.findById(scanJobId);
+    if (!job) {
+      throw new AppError('SCAN_JOB_NOT_FOUND', 'Scan job not found.');
+    }
+
+    return this.toResponse(job);
   }
 
   @Post()
@@ -74,31 +78,6 @@ export class ScanJobController {
       requestedRef: input.ref,
     });
 
-    const response = scanJobResponseSchema.parse({
-      id: job.id,
-      status: job.status,
-      stage: job.stage,
-      progress: job.progress,
-      diagnostics: job.diagnostics ?? undefined,
-      error: job.errorCode
-        ? { code: job.errorCode, message: job.errorMessage ?? '' }
-        : null,
-      result: {
-        sourceTargetId: job.sourceTargetId,
-        snapshotId: job.snapshotId,
-        snapshotCoverageStatus: null,
-      },
-      capabilities: {
-        canCancel: job.status === 'QUEUED' || job.status === 'RUNNING',
-        canRerun:
-          job.status === 'FAILED' ||
-          job.status === 'CANCELLED' ||
-          job.status === 'COMPLETED',
-      },
-      createdAt: job.createdAt.toISOString(),
-      updatedAt: job.updatedAt.toISOString(),
-    });
-
-    return response;
+    return this.toResponse(job as any);
   }
 }

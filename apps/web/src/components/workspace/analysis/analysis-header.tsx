@@ -11,6 +11,7 @@ import { apiGetFile } from "@/lib/api-client"
 
 interface AnalysisHeaderProps {
   analysis: ImpactAnalysisResponse
+  canExport: boolean
   stats: {
     confirmed: number
     rejected: number
@@ -21,10 +22,9 @@ interface AnalysisHeaderProps {
   }
 }
 
-export function AnalysisHeader({ analysis, stats }: AnalysisHeaderProps) {
+export function AnalysisHeader({ analysis, canExport, stats }: AnalysisHeaderProps) {
   const isStale = analysis.freshness.isStale
   const finalized = analysis.status === "COMPLETED"
-  const canExport = analysis.capabilities.canExport && finalized && !isStale
   const [exportingFormat, setExportingFormat] = useState<"md" | "pdf" | null>(null)
 
   const handleExport = async (format: "md" | "pdf") => {
@@ -67,7 +67,7 @@ export function AnalysisHeader({ analysis, stats }: AnalysisHeaderProps) {
       {finalized && (
         <div className="mb-6 bg-success/10 border border-success/25 text-success px-4 py-3 rounded-lg text-sm font-medium flex items-center gap-3">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
-          Analysis finalized. The approved impact report is now available for export.
+          Analysis finalized. Open the report view to read the persisted approved report state and export availability.
         </div>
       )}
 

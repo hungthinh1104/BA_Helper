@@ -15,7 +15,7 @@ interface ClarificationWidgetProps {
 }
 
 export function ClarificationWidget({ analysisId, insightId }: ClarificationWidgetProps) {
-  const { data: analysis } = useAnalysisDetail(undefined, analysisId);
+  const { data: analysis } = useAnalysisDetail(analysisId);
   const { data: clarifications, isLoading } = useClarifications(analysisId);
   const ensureMut = useEnsureClarification(analysisId);
   const answerMut = useAnswerClarification(analysisId);

@@ -2,12 +2,13 @@ import type { Config } from 'jest';
 
 const config: Config = {
   testMatch: ['**/*.spec.ts'],
-  moduleFileExtensions: ['ts', 'js', 'json'],
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'json'],
   transform: {
-    '^.+\\.ts$': ['@swc/jest', {
+    '^.+\\.tsx?$': ['@swc/jest', {
       jsc: {
         parser: {
           syntax: 'typescript',
+          tsx: true,
           decorators: true,
         },
         transform: {
@@ -16,6 +17,12 @@ const config: Config = {
         },
       },
     }],
+  },
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/apps/web/src/$1',
+    '^@ba-helper/contracts$': '<rootDir>/packages/contracts/src/index.ts',
+    '^@ba-helper/shared$': '<rootDir>/packages/shared/src/index.ts',
+    '^@ba-helper/analyzer$': '<rootDir>/packages/analyzer/src/index.ts',
   },
   testPathIgnorePatterns: ['/node_modules/', '/dist/', '/build/', '/tests/fixtures/'],
 };

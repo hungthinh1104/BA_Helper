@@ -4,32 +4,39 @@ import { Check, X, RotateCcw } from "lucide-react"
 
 interface ReviewActionPanelProps {
   status: "NEEDS_REVIEW" | "CONFIRMED" | "REJECTED"
+  canReview: boolean
   onStatusChange: (status: "NEEDS_REVIEW" | "CONFIRMED" | "REJECTED") => void
 }
 
-export function ReviewActionPanel({ status, onStatusChange }: ReviewActionPanelProps) {
+export function ReviewActionPanel({ status, canReview, onStatusChange }: ReviewActionPanelProps) {
   if (status === "NEEDS_REVIEW") {
     return (
       <div className="px-5 py-4 bg-surface-muted/30">
         <p className="text-[11px] text-muted-foreground mb-3 font-medium uppercase tracking-wider">
           Is this impact accurate?
         </p>
-        <div className="flex gap-2">
-          <button
-            onClick={() => onStatusChange("CONFIRMED")}
-            className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg bg-success/10 hover:bg-success/20 text-success text-[13px] font-semibold border border-success/25 transition-all hover:border-success/40 active:scale-[0.97]"
-          >
-            <Check className="w-3.5 h-3.5" />
-            Confirm
-          </button>
-          <button
-            onClick={() => onStatusChange("REJECTED")}
-            className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg bg-danger/10 hover:bg-danger/20 text-danger text-[13px] font-semibold border border-danger/25 transition-all hover:border-danger/40 active:scale-[0.97]"
-          >
-            <X className="w-3.5 h-3.5" />
-            Reject
-          </button>
-        </div>
+        {canReview ? (
+          <div className="flex gap-2">
+            <button
+              onClick={() => onStatusChange("CONFIRMED")}
+              className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg bg-success/10 hover:bg-success/20 text-success text-[13px] font-semibold border border-success/25 transition-all hover:border-success/40 active:scale-[0.97]"
+            >
+              <Check className="w-3.5 h-3.5" />
+              Confirm
+            </button>
+            <button
+              onClick={() => onStatusChange("REJECTED")}
+              className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg bg-danger/10 hover:bg-danger/20 text-danger text-[13px] font-semibold border border-danger/25 transition-all hover:border-danger/40 active:scale-[0.97]"
+            >
+              <X className="w-3.5 h-3.5" />
+              Reject
+            </button>
+          </div>
+        ) : (
+          <p className="text-[12px] text-muted-foreground">
+            Reviewer or Owner required to submit evidence decisions.
+          </p>
+        )}
       </div>
     )
   }
@@ -47,13 +54,19 @@ export function ReviewActionPanel({ status, onStatusChange }: ReviewActionPanelP
         </span>
         <span>{isConfirmed ? "Impact Confirmed" : "Impact Rejected"}</span>
       </div>
-      <button
-        onClick={() => onStatusChange("NEEDS_REVIEW")}
-        className="flex items-center gap-1.5 text-[12px] text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <RotateCcw className="w-3 h-3" />
-        Undo
-      </button>
+      {canReview ? (
+        <button
+          onClick={() => onStatusChange("NEEDS_REVIEW")}
+          className="flex items-center gap-1.5 text-[12px] text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <RotateCcw className="w-3 h-3" />
+          Undo
+        </button>
+      ) : (
+        <span className="text-[12px] text-muted-foreground">
+          Reviewer or Owner required to change this decision.
+        </span>
+      )}
     </div>
   )
 }

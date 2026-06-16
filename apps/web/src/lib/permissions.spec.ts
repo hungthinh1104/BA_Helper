@@ -9,6 +9,9 @@ import {
   canManageMembers,
   canViewReports,
   canExportReport,
+  canViewMultiRepo,
+  canViewReviewQueue,
+  canViewClarification,
   canViewDiagnostics
 } from "./permissions"
 import type { ProjectRole } from "@ba-helper/contracts"
@@ -69,7 +72,19 @@ describe("Frontend Permission Helpers", () => {
     check(canExportReport, ["OWNER", "MAINTAINER", "ANALYST", "REVIEWER", "VIEWER"])
   })
 
-  it("canViewDiagnostics is allowed for OWNER, MAINTAINER", () => {
-    check(canViewDiagnostics, ["OWNER", "MAINTAINER"])
+  it("canViewReviewQueue is allowed for OWNER, ANALYST, REVIEWER, VIEWER", () => {
+    check(canViewReviewQueue, ["OWNER", "ANALYST", "REVIEWER", "VIEWER"])
+  })
+
+  it("canViewClarification is allowed for OWNER, ANALYST, REVIEWER, VIEWER", () => {
+    check(canViewClarification, ["OWNER", "ANALYST", "REVIEWER", "VIEWER"])
+  })
+
+  it("canViewMultiRepo is allowed for all roles", () => {
+    check(canViewMultiRepo, ["OWNER", "MAINTAINER", "ANALYST", "REVIEWER", "VIEWER"])
+  })
+
+  it("canViewDiagnostics is allowed for all roles", () => {
+    check(canViewDiagnostics, ["OWNER", "MAINTAINER", "ANALYST", "REVIEWER", "VIEWER"])
   })
 })

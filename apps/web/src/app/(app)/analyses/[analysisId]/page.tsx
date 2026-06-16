@@ -18,7 +18,7 @@ import { useAnalysisDetail, useAnalysisInsights, useAnalysisTraceability, useRev
 import { useImpactGraph } from "@/hooks/api/use-impact-graph"
 import { useQaCoverage } from "@/hooks/api/use-qa-coverage"
 import { useReviewQueue } from "@/hooks/api/use-review-queue"
-import { useOptionalProjectId } from "@/lib/project-context"
+import { useCurrentWorkspace, useOptionalProjectId } from "@/lib/project-context"
 import { useAnalysisStatusWatcher } from "@/hooks/ui/use-status-watcher"
 import { InsightListResponse, TraceabilityLinkListResponse, ImpactGraphNode } from "@ba-helper/contracts"
 import { type InsightFilterValue } from "@/components/workspace/shared/insight/insight-filter-bar"
@@ -32,6 +32,13 @@ import { Network } from "lucide-react"
 import { AnalysisLineageTab } from "./_components/analysis-lineage-tab"
 import { AnalysisDriftWarning } from "./_components/analysis-drift-warning"
 import { CertaintyBadge } from "@/components/workspace/shared/status-badges"
+import {
+  canExportReport,
+  canFinalizeAnalysis,
+  canReview as canReviewPermission,
+  canRunAnalysis,
+  canViewReviewQueue,
+} from "@/lib/permissions"
 
 // Dynamic import so React Flow CSS loads correctly in Next.js app router
 const ImpactGraphView = dynamic(
@@ -53,14 +60,15 @@ type WorkspaceSelection =
 export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{ analysisId: string }> }) {
   const { analysisId } = use(params)
   const activeProjectId = useOptionalProjectId()
-  const { data: analysis, isLoading: analysisLoading, error: analysisError } = useAnalysisDetail(activeProjectId, analysisId)
-  const { data: insightsData, isLoading: insightsLoading } = useAnalysisInsights(undefined, analysisId)
-  const { data: linksData, isLoading: linksLoading } = useAnalysisTraceability(undefined, analysisId)
+  const workspace = useCurrentWorkspace()
+  const { data: analysis, isLoading: analysisLoading, error: analysisError } = useAnalysisDetail(analysisId)
+  const { data: insightsData, isLoading: insightsLoading } = useAnalysisInsights(analysisId)
+  const { data: linksData, isLoading: linksLoading } = useAnalysisTraceability(analysisId)
   const { data: graphData, isLoading: graphLoading } = useImpactGraph(analysisId)
   const { data: qaCoverageResponse } = useQaCoverage(analysisId)
   const { data: reviewQueueResponse, isLoading: reviewQueueLoading } = useReviewQueue(analysisId)
   const { mutateAsync: reviewInsight } = useReviewInsight(undefined, analysisId)
-  const { mutateAsync: reviewLink } = useReviewTraceabilityLink()
+  const { mutateAsync: reviewLink } = useReviewTraceabilityLink(activeProjectId, analysisId)
   const { mutateAsync: retryAnalysis, isPending: isRetrying } = useCreateAnalysis()
 
   // Watch for analysis job completion/failure to show toast notifications
@@ -183,6 +191,12 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
   }), [insights, needsReviewInsights, links])
 
   const blockingRemaining = reviewQueueResponse?.summary.blockingRemaining ?? 0
+  const role = workspace?.membershipRole ?? null
+  const canRerun = Boolean(analysis?.capabilities.canRerun) && canRunAnalysis(role)
+  const canReview = Boolean(analysis?.capabilities.canReview) && canReviewPermission(role)
+  const canFinalize = Boolean(analysis?.capabilities.canFinalize) && canFinalizeAnalysis(role)
+  const canExport = Boolean(analysis?.capabilities.canExport) && canExportReport(role)
+  const canViewQueue = canViewReviewQueue(role)
 
   const linkedInsights = useMemo(() => {
     if (!selectedLink) return []
@@ -212,9 +226,17 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
   )
 
   const inspectorFooter = selectedInsight ? (
-    <ReviewActionPanel status={selectedInsight.reviewStatus} onStatusChange={handleInsightReviewChange} />
+    <ReviewActionPanel
+      status={selectedInsight.reviewStatus}
+      canReview={canReview}
+      onStatusChange={handleInsightReviewChange}
+    />
   ) : selectedLink ? (
-    <ReviewActionPanel status={selectedLink.reviewStatus} onStatusChange={handleLinkReviewChange} />
+    <ReviewActionPanel
+      status={selectedLink.reviewStatus}
+      canReview={canReview}
+      onStatusChange={handleLinkReviewChange}
+    />
   ) : undefined
 
   // ── Loading state ──
@@ -283,9 +305,15 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
         <p className="mb-6 max-w-md text-[12px] text-muted-foreground">
           Common fixes: confirm the selected snapshot is READY or explicitly accepted as PARTIAL, then rerun the analysis from the same requirement revision.
         </p>
-        <Button onClick={handleRetryAnalysis} disabled={isRetrying}>
-          {isRetrying ? "Retrying..." : "Rerun Analysis"}
-        </Button>
+        {canRerun ? (
+          <Button onClick={handleRetryAnalysis} disabled={isRetrying}>
+            {isRetrying ? "Retrying..." : "Rerun Analysis"}
+          </Button>
+        ) : (
+          <p className="text-[12px] text-muted-foreground">
+            An Analyst or Owner can rerun this analysis.
+          </p>
+        )}
       </div>
     )
   }
@@ -321,6 +349,8 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
 
           <AnalysisTabBar
             analysis={analysis}
+            canExport={canExport}
+            canFinalize={canFinalize}
             stats={analysisStats}
             activeTab={activeTab}
             onTabChange={setActiveTab}
@@ -385,6 +415,8 @@ export default function ImpactAnalysisDetailPage({ params }: { params: Promise<{
               ) : reviewQueueResponse ? (
                 <ReviewQueuePanel
                   queueData={reviewQueueResponse}
+                  canReview={canReview}
+                  canViewReviewQueue={canViewQueue}
                   onSelect={(type, id, artifactId) => {
                     if (type === "INSIGHT") handleSelectInsight(insights.find(i => i.id === id)!)
                     else if (type === "TRACEABILITY_LINK" && artifactId) setSelection({ type: "TRACEABILITY_LINK", linkId: id, artifactId })

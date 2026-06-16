@@ -199,11 +199,10 @@ export default function ProjectMembersPage() {
                       <TableCell>{new Date(member.createdAt).toLocaleDateString()}</TableCell>
                       <TableCell className="text-right">
                         <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm" disabled={!canManage || removeMember.isPending}>
-                              Remove
-                            </Button>
-                          </AlertDialogTrigger>
+                          <AlertDialogTrigger
+                            disabled={!canManage || removeMember.isPending}
+                            render={<Button variant="outline" size="sm">Remove</Button>}
+                          />
                           <AlertDialogContent>
                             <AlertDialogHeader>
                               <AlertDialogTitle>Remove member?</AlertDialogTitle>

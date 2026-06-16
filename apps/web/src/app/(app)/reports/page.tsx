@@ -46,8 +46,8 @@ function ReportsPageContent() {
       <div className="app-page-scroll">
         <div className="max-w-4xl mx-auto w-full py-4">
         <WorkspacePageHeader 
-          title="Finalized Analyses" 
-          description="Generated evidence and matrix documents for finalized analyses."
+          title="Reports from Finalized Analyses" 
+          description="Reports are generated from finalized analyses. If an approved report snapshot is missing, the viewer will show that state explicitly."
         />
 
         {urlAnalysisId && !completedAnalyses.some(a => a.id === urlAnalysisId) && !isLoading && (
@@ -56,7 +56,7 @@ function ReportsPageContent() {
             <div className="flex flex-col gap-1">
               <h3 className="text-[13px] font-semibold text-warning">Report Unavailable</h3>
               <p className="text-[12px] text-warning/80">
-                The requested report is not available. The impact analysis must be finalized before a report can be viewed.
+                The requested report is not available. Finalization is required before a report can exist, and some finalized analyses may still have no approved report snapshot available to read.
               </p>
             </div>
           </div>
@@ -119,7 +119,7 @@ function ReportsPageContent() {
                       </span>
                     </DataListCell>
                     <DataListCell>
-                      <DocumentStatusBadge status="APPROVED" isStale={doc.isStale} />
+                      <DocumentStatusBadge status="COMPLETED" isStale={doc.isStale} />
                     </DataListCell>
                     <DataListCell>
                       <span className="text-[12px] text-muted-foreground">
@@ -140,7 +140,7 @@ function ReportsPageContent() {
                       <span className="font-semibold text-sm text-foreground line-clamp-1">
                         {selectedDoc?.requirementRevisionTitle ?? "Report View"}
                       </span>
-                      {selectedDoc && <DocumentStatusPill status="APPROVED" isStale={selectedDoc.isStale} />}
+                      {selectedDoc && <DocumentStatusPill status="COMPLETED" isStale={selectedDoc.isStale} />}
                     </div>
                     <div className="flex items-center gap-4">
                       <Button size="sm" variant="outline" className="h-8 shadow-none gap-1.5 text-muted-foreground" onClick={() => window.print()}>
@@ -156,11 +156,7 @@ function ReportsPageContent() {
                   {/* Scrollable Content */}
                   <div className="flex-1 overflow-y-auto bg-surface/40">
                     {selectedDoc && (
-                      <ReportViewer 
-                        analysisId={selectedDoc.id}
-                        commitSha={selectedDoc.snapshotCommitSha}
-                        generatedAt={selectedDoc.createdAt}
-                      />
+                      <ReportViewer analysisId={selectedDoc.id} />
                     )}
                   </div>
                 </div>
@@ -191,10 +187,10 @@ function DocumentStatusBadge({ status, isStale }: { status: string; isStale: boo
       </span>
     )
   }
-  if (status === "APPROVED") {
+  if (status === "COMPLETED") {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border bg-success/10 text-success border-success/50 uppercase tracking-wider">
-        <CheckCircle2 className="w-3 h-3" /> Approved
+        <CheckCircle2 className="w-3 h-3" /> Finalized
       </span>
     )
   }
@@ -213,10 +209,10 @@ function DocumentStatusPill({ status, isStale }: { status: string; isStale: bool
       </span>
     )
   }
-  if (status === "APPROVED") {
+  if (status === "COMPLETED") {
     return (
       <span className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border bg-success/10 text-success border-success/30 uppercase tracking-wider">
-        <CheckCircle2 className="w-3 h-3" /> Approved
+        <CheckCircle2 className="w-3 h-3" /> Finalized
       </span>
     )
   }

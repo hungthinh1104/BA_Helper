@@ -14,12 +14,10 @@ import { toast } from "sonner"
 
 interface ReportViewerProps {
   analysisId: string;
-  commitSha: string;
-  generatedAt: string;
 }
 
-export function ReportViewer({ analysisId, commitSha, generatedAt }: ReportViewerProps) {
-  const { data: analysis, isLoading: analysisLoading } = useAnalysisDetail(undefined, analysisId)
+export function ReportViewer({ analysisId }: ReportViewerProps) {
+  const { data: analysis, isLoading: analysisLoading } = useAnalysisDetail(analysisId)
   const { data: report, isLoading: reportLoading, error } = useApprovedReport(analysisId, analysis?.status)
   const [copied, setCopied] = useState(false)
   const [exportingFormat, setExportingFormat] = useState<"md" | "pdf" | null>(null)
@@ -142,8 +140,8 @@ export function ReportViewer({ analysisId, commitSha, generatedAt }: ReportViewe
           {analysis?.snapshot.repositoryId && (
             <div><strong className="text-foreground/80 font-medium">Target Repository:</strong> <span className="ml-2">{analysis.snapshot.repositoryId}</span></div>
           )}
-          <div><strong className="text-foreground/80 font-medium">Target Commit:</strong> <span className="font-mono ml-2">{commitSha.substring(0, 7)}</span></div>
-          <div><strong className="text-foreground/80 font-medium">Generated At:</strong> <span className="ml-2">{new Date(generatedAt).toLocaleDateString()}</span></div>
+          <div><strong className="text-foreground/80 font-medium">Target Commit:</strong> <span className="font-mono ml-2">{report.provenance.commitSha.substring(0, 7)}</span></div>
+          <div><strong className="text-foreground/80 font-medium">Generated At:</strong> <span className="ml-2">{new Date(report.provenance.generatedAt).toLocaleDateString()}</span></div>
         </div>
         
         {analysis?.requirement.rawText && (

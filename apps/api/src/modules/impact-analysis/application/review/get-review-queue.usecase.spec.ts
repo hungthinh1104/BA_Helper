@@ -164,4 +164,47 @@ describe('GetReviewQueueUseCase', () => {
     expect(result.summary.total).toBe(1);
     expect(result.items[0].id).toBe('i3');
   });
+
+  it('does not set fake linkedInsightId for traceability items and uses artifact labels', async () => {
+    graphBuilder.buildGraph.mockResolvedValue({ nodes: [], edges: [], snapshotId: 'snap1' } as any);
+    qaDeriver.derive.mockReturnValue({
+      analysisId: 'a', snapshotId: 's', summary: {} as any, items: []
+    });
+    insightRepo.listByAnalysis.mockResolvedValue([]);
+    traceabilityRepo.listByAnalysis.mockResolvedValue([
+      {
+        id: 'link-1',
+        impactAnalysisId: 'analysis-1',
+        artifactId: 'artifact-1',
+        artifact: {
+          name: 'PaymentService.refund',
+          artifactKey: 'service-method:payment.service.refund',
+          filePath: 'src/payment/payment.service.ts',
+        },
+        linkType: 'AFFECTED',
+        reviewStatus: 'NEEDS_REVIEW',
+        evidenceLinks: [],
+        retrievalMetadata: {
+          suggestion: {
+            confidence: 'STRONG',
+          },
+        },
+      } as any,
+    ]);
+
+    const result = await useCase.execute('analysis-1');
+
+    expect(result.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'link-1',
+          linkedTraceabilityLinkId: 'link-1',
+          linkedArtifactId: 'artifact-1',
+          title: 'Review impact link: PaymentService.refund',
+          reason: 'Traced via AFFECTED to src/payment/payment.service.ts',
+        }),
+      ]),
+    );
+    expect(result.items[0]).not.toHaveProperty('linkedInsightId');
+  });
 });

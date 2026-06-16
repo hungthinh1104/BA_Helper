@@ -20,6 +20,13 @@ describe('Insight list mapping', () => {
               endLine: 10,
               excerpt:
                 'src/payment/payment.service.ts:6-10 (PaymentService.refund)',
+              artifactId: '8f7c3bb8-8b82-4c02-9904-4d1f0aa1e001',
+              artifact: {
+                artifactKey: 'service-method:payment.service.refund',
+              },
+              retrievalMetadata: {
+                method: 'HYBRID',
+              },
             },
           },
         ],
@@ -42,6 +49,11 @@ describe('Insight list mapping', () => {
             startLine: 6,
             endLine: 10,
             excerpt: 'src/payment/payment.service.ts:6-10 (PaymentService.refund)',
+            artifactId: '8f7c3bb8-8b82-4c02-9904-4d1f0aa1e001',
+            artifactKey: 'service-method:payment.service.refund',
+            retrieval: {
+              method: 'HYBRID',
+            },
           },
         ],
       },

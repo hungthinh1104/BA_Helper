@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const documentSchema = z.object({
 	id: z.string().uuid(),
 	type: z.enum(['IMPACT_REPORT']),
-	status: z.enum(['DRAFT', 'APPROVED']),
+	status: z.enum(['DRAFT', 'APPROVED', 'STALE']),
 	commitSha: z.string(),
 	isStale: z.boolean(),
 });

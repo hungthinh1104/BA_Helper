@@ -21,6 +21,8 @@ interface AnalysisStats {
 
 interface AnalysisTabBarProps {
   analysis: ImpactAnalysisResponse
+  canExport: boolean
+  canFinalize: boolean
   stats: AnalysisStats
   activeTab: TabValue
   onTabChange: (tab: TabValue) => void
@@ -29,6 +31,8 @@ interface AnalysisTabBarProps {
 
 export function AnalysisTabBar({
   analysis,
+  canExport,
+  canFinalize,
   stats,
   activeTab,
   onTabChange,
@@ -47,7 +51,7 @@ export function AnalysisTabBar({
   return (
     <div className="flex flex-col">
       <div className="mb-4">
-        <AnalysisHeader analysis={analysis} stats={stats} />
+        <AnalysisHeader analysis={analysis} canExport={canExport} stats={stats} />
       </div>
 
       <div className="w-full max-w-4xl mx-auto mb-6 px-2">
@@ -109,7 +113,7 @@ export function AnalysisTabBar({
               <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
                 <span className="text-xs">✓</span>
               </div>
-              This analysis has been finalized and an approved report was generated.
+              This analysis has been finalized. Open the report view to confirm approved-report availability and stale state.
             </div>
             <Button
               size="sm"
@@ -152,24 +156,30 @@ export function AnalysisTabBar({
                 </>
               )}
             </div>
-            <FinalizeAnalysisDialog
-              analysisId={analysis.id}
-              commitSha={analysis.snapshot.commitSha}
-              stats={stats}
-              isStale={analysis.freshness.isStale}
-            >
-              <Button
-                size="sm"
-                className={`h-8 border-none shadow-none ${
-                  blockingRemaining === 0
-                    ? "bg-success hover:bg-success/90 text-white"
-                    : "bg-surface-muted text-muted-foreground"
-                }`}
-                disabled={blockingRemaining > 0}
+            {canFinalize ? (
+              <FinalizeAnalysisDialog
+                analysisId={analysis.id}
+                commitSha={analysis.snapshot.commitSha}
+                stats={stats}
+                isStale={analysis.freshness.isStale}
               >
-                Finalize Analysis
-              </Button>
-            </FinalizeAnalysisDialog>
+                <Button
+                  size="sm"
+                  className={`h-8 border-none shadow-none ${
+                    blockingRemaining === 0
+                      ? "bg-success hover:bg-success/90 text-white"
+                      : "bg-surface-muted text-muted-foreground"
+                  }`}
+                  disabled={blockingRemaining > 0}
+                >
+                  Finalize Analysis
+                </Button>
+              </FinalizeAnalysisDialog>
+            ) : (
+              <span className="text-[12px] text-muted-foreground">
+                An Analyst or Owner can finalize this analysis.
+              </span>
+            )}
           </div>
         )}
       </div>

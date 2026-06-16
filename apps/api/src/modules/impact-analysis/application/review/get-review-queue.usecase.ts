@@ -110,19 +110,22 @@ export class GetReviewQueueUseCase {
         priorityReason = 'Moderate confidence retrieval';
       }
 
-      const artifactLabel = link.artifactId;
+      const artifactLabel =
+        link.artifact?.name ||
+        link.artifact?.artifactKey ||
+        link.artifact?.filePath ||
+        link.artifactId;
 
       const item: ReviewQueueItem = {
         id: link.id,
         type: 'TRACEABILITY_LINK',
         source: 'TRACEABILITY',
         priority,
-        title: `Link to ${artifactLabel}`,
-        reason: `Traced via ${link.linkType} to artifact ${link.artifactId}`,
+        title: `Review impact link: ${artifactLabel}`,
+        reason: `Traced via ${link.linkType} to ${link.artifact?.filePath || artifactLabel}`,
         rank,
         priorityReason,
         linkedTraceabilityLinkId: link.id,
-        linkedInsightId: link.impactAnalysisId,
         linkedArtifactId: link.artifactId,
         evidenceIds: link.evidenceLinks?.map(l => l.evidenceId) || [],
         suggestedAction: retrieval?.suggestion?.suggestedAction,

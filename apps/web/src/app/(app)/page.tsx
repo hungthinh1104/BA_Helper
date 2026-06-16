@@ -212,10 +212,14 @@ export default function DashboardPage() {
                             <span className="flex items-center gap-1 text-[11px] font-medium text-danger bg-danger/10 px-2 py-0.5 rounded border border-danger/20">
                               <AlertCircle className="w-3 h-3" /> Failed
                             </span>
-                          ) : isReady || isPartial ? (
+                          ) : (isReady || isPartial) && canRun ? (
                             <NewAnalysisDialog preselectedRepoId={repo.id}>
                               <Button size="sm" variant="outline" className="h-7 text-[11px] px-2.5">Analyze</Button>
                             </NewAnalysisDialog>
+                          ) : isReady || isPartial ? (
+                            <span className="text-[11px] text-muted-foreground">
+                              Analyst or Owner required
+                            </span>
                           ) : (
                             <span className="flex items-center gap-1 text-[11px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
                               <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" /> Scanning

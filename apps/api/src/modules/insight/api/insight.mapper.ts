@@ -7,16 +7,21 @@ export const mapInsightList = (items: Array<{
   certainty: string;
   reviewStatus: string;
   confidence: number | null;
-  evidenceLinks: Array<{
-    evidence: {
-      id: string;
-      sourceType: string;
-      sourcePath: string | null;
-      startLine: number | null;
-      endLine: number | null;
-      excerpt: string;
-    };
-  }>;
+    evidenceLinks: Array<{
+      evidence: {
+        id: string;
+        sourceType: string;
+        sourcePath: string | null;
+        startLine: number | null;
+        endLine: number | null;
+        excerpt: string;
+        retrievalMetadata?: unknown;
+        artifactId?: string | null;
+        artifact?: {
+          artifactKey?: string | null;
+        } | null;
+      };
+    }>;
 }>) =>
   items.map((insight) => ({
     id: insight.id,
@@ -41,6 +46,8 @@ export const mapInsightList = (items: Array<{
         startLine: link.evidence.startLine,
         endLine: link.evidence.endLine,
         excerpt: link.evidence.excerpt,
+        artifactId: link.evidence.artifactId ?? undefined,
+        artifactKey: (link.evidence as any).artifact?.artifactKey ?? undefined,
         retrieval,
       };
     }),

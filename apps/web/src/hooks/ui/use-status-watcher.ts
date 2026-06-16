@@ -46,7 +46,7 @@ export function useRepositoryStatusWatcher(projectId: string | undefined, reposi
 }
 
 export function useAnalysisStatusWatcher(projectId: string | undefined, analysisId: string) {
-  const { data } = useAnalysisDetail(projectId, analysisId)
+  const { data } = useAnalysisDetail(analysisId)
   const queryClient = useQueryClient()
   
   const prevStatusRef = useRef<string | undefined>(undefined)

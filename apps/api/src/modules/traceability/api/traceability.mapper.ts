@@ -3,21 +3,31 @@ import { retrievalMetadataSchema } from '@ba-helper/contracts';
 export const mapTraceabilityList = (items: Array<{
   id: string;
   artifactId: string;
+  artifact: {
+    name: string;
+    artifactKey: string;
+    filePath: string;
+    universalKind: string;
+  };
   linkType: string;
   linkBasis: string;
   reviewStatus: string;
   confidence: number | null;
   retrievalMetadata?: unknown;
-  evidenceLinks: Array<{
-    evidence: {
-      id: string;
-      sourceType: string;
-      sourcePath: string | null;
-      startLine: number | null;
-      endLine: number | null;
-      excerpt: string;
-    };
-  }>;
+    evidenceLinks: Array<{
+      evidence: {
+        id: string;
+        sourceType: string;
+        sourcePath: string | null;
+        startLine: number | null;
+        endLine: number | null;
+        excerpt: string;
+        artifactId?: string | null;
+        artifact?: {
+          artifactKey?: string | null;
+        } | null;
+      };
+    }>;
 }>) =>
   items.map((link) => {
     const rawRetrieval = link.retrievalMetadata;
@@ -31,6 +41,10 @@ export const mapTraceabilityList = (items: Array<{
     return {
       id: link.id,
       artifactId: link.artifactId,
+      artifactName: link.artifact.name,
+      artifactKey: link.artifact.artifactKey,
+      filePath: link.artifact.filePath,
+      universalKind: link.artifact.universalKind ?? 'UNKNOWN',
       linkType: link.linkType,
       linkBasis: link.linkBasis,
       reviewStatus: link.reviewStatus,
@@ -43,6 +57,8 @@ export const mapTraceabilityList = (items: Array<{
         startLine: evidenceLink.evidence.startLine,
         endLine: evidenceLink.evidence.endLine,
         excerpt: evidenceLink.evidence.excerpt,
+        artifactId: evidenceLink.evidence.artifactId ?? undefined,
+        artifactKey: (evidenceLink.evidence as any).artifact?.artifactKey ?? undefined,
         retrieval,
       })),
     };

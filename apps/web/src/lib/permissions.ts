@@ -53,9 +53,9 @@ export function canViewClarification(role: ProjectRole | null): boolean {
 }
 
 export function canViewMultiRepo(role: ProjectRole | null): boolean {
-  return role === "OWNER" || role === "MAINTAINER"
+  return !!role
 }
 
 export function canViewDiagnostics(role: ProjectRole | null): boolean {
-  return role === "OWNER" || role === "MAINTAINER"
+  return !!role
 }

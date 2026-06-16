@@ -9,7 +9,15 @@ export class TraceabilityRepository {
     return this.prisma.traceabilityLink.findMany({
       where: { impactAnalysisId },
       include: {
-        evidenceLinks: { include: { evidence: true } },
+        evidenceLinks: {
+          include: {
+            evidence: {
+              include: {
+                artifact: true,
+              },
+            },
+          },
+        },
         artifact: true,
       },
     });
