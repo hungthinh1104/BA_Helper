@@ -18,6 +18,8 @@ interface ReviewQueuePanelProps {
   canViewReviewQueue: boolean
 }
 
+const REVIEW_QUEUE_PAGE_SIZE = 50
+
 function getPriorityBadgeClass(priority: string) {
   switch (priority) {
     case "HIGH":   return "badge-risk"
@@ -36,6 +38,7 @@ export function ReviewQueuePanel({
   const { summary, items } = queueData
 
   const [skippedLocal, setSkippedLocal] = useState<Set<string>>(new Set())
+  const [page, setPage] = useState(1)
   const reviewInsight = useReviewInsight(undefined, queueData.analysisId)
   const reviewLink = useReviewTraceabilityLink(undefined, queueData.analysisId)
 
@@ -53,10 +56,19 @@ export function ReviewQueuePanel({
   }, [items, skippedLocal, selectedQueueItemId])
 
   const activeItem = items[activeItemIndex]
+  const totalPages = Math.max(1, Math.ceil(items.length / REVIEW_QUEUE_PAGE_SIZE))
+  const currentPage = Math.min(
+    selectedQueueItemId ? Math.floor(activeItemIndex / REVIEW_QUEUE_PAGE_SIZE) + 1 : page,
+    totalPages,
+  )
+  const pageStart = (currentPage - 1) * REVIEW_QUEUE_PAGE_SIZE
+  const pageEnd = Math.min(pageStart + REVIEW_QUEUE_PAGE_SIZE, items.length)
+  const pagedItems = items.slice(pageStart, pageEnd)
 
   const handleSelect = (idx: number) => {
     const item = items[idx]
     if (!item) return
+    setPage(Math.floor(idx / REVIEW_QUEUE_PAGE_SIZE) + 1)
     if (item.type === "INSIGHT" && item.linkedInsightId) {
       onSelect("INSIGHT", item.linkedInsightId)
     } else if (item.type === "TRACEABILITY_LINK" && item.linkedTraceabilityLinkId && item.linkedArtifactId) {
@@ -121,10 +133,10 @@ export function ReviewQueuePanel({
   }
 
   return (
-    <div className="flex h-full w-full overflow-hidden">
+    <div className="flex h-full w-full flex-col overflow-hidden lg:flex-row">
 
       {/* ── Left sidebar: queue list ── */}
-      <div className="w-72 shrink-0 flex flex-col border-r border-border bg-surface-muted/30">
+      <div className="flex w-full shrink-0 flex-col border-b border-border bg-surface-muted/30 lg:w-72 lg:border-b-0 lg:border-r">
 
         {/* Header */}
         <div className="px-3 py-3 border-b border-border">
@@ -155,22 +167,23 @@ export function ReviewQueuePanel({
 
           {skippedLocal.size > 0 && (
             <p className="text-[10px] text-muted-foreground mt-2">
-              {skippedLocal.size} skipped — won&apos;t block navigation but may block finalize.
+              {skippedLocal.size} skipped in this session. Review status is unchanged.
             </p>
           )}
         </div>
 
         {/* Queue items */}
         <div className="flex-1 overflow-y-auto py-1">
-          {items.map((item: ReviewQueueItem, idx: number) => {
-            const isActive    = idx === activeItemIndex
+          {pagedItems.map((item: ReviewQueueItem, idx: number) => {
+            const absoluteIndex = pageStart + idx
+            const isActive    = absoluteIndex === activeItemIndex
             const isCompleted = item.reviewStatus === "CONFIRMED" || item.reviewStatus === "REJECTED"
             const isSkipped   = skippedLocal.has(item.id)
 
             return (
               <button
                 key={item.id}
-                onClick={() => handleSelect(idx)}
+                onClick={() => handleSelect(absoluteIndex)}
                 className={`
                   w-full text-left px-3 py-2.5 border-b border-border last:border-0 text-sm transition-colors
                   ${isActive ? "bg-surface-soft" : "hover:bg-surface-muted/60"}
@@ -199,12 +212,42 @@ export function ReviewQueuePanel({
             )
           })}
         </div>
+
+        {items.length > REVIEW_QUEUE_PAGE_SIZE ? (
+          <div className="flex items-center justify-between border-t border-border px-3 py-2 text-xs text-muted-foreground">
+            <span>
+              Showing {pageStart + 1}-{pageEnd} of {items.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 px-2 text-xs"
+                onClick={() => setPage(currentPage - 1)}
+                disabled={currentPage <= 1}
+              >
+                Prev
+              </Button>
+              <span>{currentPage}/{totalPages}</span>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 px-2 text-xs"
+                onClick={() => setPage(currentPage + 1)}
+                disabled={currentPage >= totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {/* ── Right: active item detail ── */}
-      <div className="flex-1 flex flex-col min-w-0 bg-surface">
+      <div className="flex min-h-0 flex-1 flex-col bg-surface">
         {activeItem ? (
-          <div className="flex-1 overflow-y-auto p-6 max-w-2xl">
+          <div className="flex-1 overflow-y-auto p-4 lg:p-6">
+            <div className="mx-auto max-w-2xl">
 
             {/* Type + priority row */}
             <div className="flex items-center gap-2 mb-4">
@@ -293,18 +336,18 @@ export function ReviewQueuePanel({
                     )}
                     <TooltipProvider>
                       <Tooltip>
-                      <TooltipTrigger render={<span className="inline-block" />}>
+                        <TooltipTrigger render={<span className="inline-block" />}>
                           <Button
                             onClick={handleSkip}
                             size="sm"
                             variant="ghost"
                             className="h-9 text-muted-foreground hover:text-foreground"
                           >
-                            <SkipForward className="w-3.5 h-3.5 mr-1.5" /> Skip locally
+                            <SkipForward className="w-3.5 h-3.5 mr-1.5" /> Skip in this session
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>This does not change review status.</p>
+                          <p>This does not change persisted review status.</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -342,6 +385,7 @@ export function ReviewQueuePanel({
               >
                 Next →
               </Button>
+            </div>
             </div>
           </div>
         ) : (

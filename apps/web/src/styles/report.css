@@ -137,13 +137,28 @@
     margin: 14mm 12mm;
   }
 
+  body * {
+    visibility: hidden !important;
+  }
+
   body {
     background: white !important;
   }
 
+  .report-print-root,
+  .report-print-root * {
+    visibility: visible !important;
+  }
+
   .report-print-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
     background: white !important;
     color: black !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
   .report {
@@ -203,6 +218,10 @@
 
   .report-table-wrap {
     overflow: visible !important;
+  }
+
+  .report-print-root .print\:hidden {
+    display: none !important;
   }
 
   .report-mermaid-preview {

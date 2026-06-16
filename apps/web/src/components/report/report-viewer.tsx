@@ -25,15 +25,18 @@ export function ReportViewer({ analysisId }: ReportViewerProps) {
   const printRootId = `report-print-root-${analysisId}`
 
   const handleCopy = async () => {
-    if (!report?.markdown) return;
+    if (!report?.markdown) return
     try {
-      await navigator.clipboard.writeText(report.markdown);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy text: ', err);
+      await navigator.clipboard.writeText(report.markdown)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Copy is unavailable in this browser."
+      toast.error("Copy failed", {
+        description: message,
+      })
     }
-  };
+  }
 
   const handleDownload = async (format: "md" | "pdf") => {
     if (!report || report.isStale) return;

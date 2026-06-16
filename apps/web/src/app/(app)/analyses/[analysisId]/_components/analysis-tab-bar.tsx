@@ -1,6 +1,5 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import { AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { FinalizeAnalysisDialog } from "@/components/workspace/analysis/finalize-analysis-dialog"
@@ -36,8 +35,6 @@ export function AnalysisTabBar({
   onTabChange,
   blockingRemaining,
 }: AnalysisTabBarProps) {
-  const router = useRouter()
-
   const tabClass = (tab: TabValue) =>
     `min-h-10 shrink-0 px-3 py-2 text-sm font-medium border-b-2 transition-colors -mb-px flex items-center gap-1.5 whitespace-nowrap
      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-t ${
@@ -112,21 +109,13 @@ export function AnalysisTabBar({
 
         {/* Global banners */}
         {analysis.status === "COMPLETED" && (
-          <div className="mt-3 flex items-center justify-between gap-3 px-4 py-2.5 bg-primary/10 border border-primary/25 rounded-lg text-sm text-primary font-medium">
+          <div className="mt-3 flex items-center gap-3 rounded-lg border border-primary/25 bg-primary/10 px-4 py-2.5 text-sm font-medium text-primary">
             <div className="flex items-center gap-3">
               <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
                 <span className="text-xs">✓</span>
               </div>
               This analysis has been finalized. Open the report view to confirm approved-report availability and stale state.
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 bg-surface shadow-none"
-              onClick={() => router.push(`/reports?analysisId=${analysis.id}`)}
-            >
-              View Report
-            </Button>
           </div>
         )}
 

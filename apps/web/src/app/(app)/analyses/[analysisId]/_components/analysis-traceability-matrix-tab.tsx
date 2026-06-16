@@ -31,6 +31,8 @@ export interface AnalysisTraceabilityMatrixTabProps {
   onSelectInsight: (insight: Insight) => void
 }
 
+const ROWS_PER_PAGE = 50
+
 type TraceType =
   | "EVIDENCE_BACKED_IMPACT"
   | "INFERRED_IMPACT"
@@ -95,6 +97,7 @@ export function AnalysisTraceabilityMatrixTab({
   const [traceTypeFilter, setTraceTypeFilter] = useState<string>("ALL")
   const [certaintyFilter, setCertaintyFilter] = useState<string>("ALL")
   const [reviewStatusFilter, setReviewStatusFilter] = useState<string>("ALL")
+  const [page, setPage] = useState(1)
   const debouncedSearch = useDebouncedValue(searchTerm, 150)
 
   const graphNodeByArtifactId = useMemo(() => {
@@ -204,6 +207,13 @@ export function AnalysisTraceabilityMatrixTab({
     reviewStatusFilter !== "ALL" ||
     searchTerm.trim().length > 0
 
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / ROWS_PER_PAGE))
+  const currentPage = Math.min(page, totalPages)
+  const pageStart = filteredRows.length === 0 ? 0 : (currentPage - 1) * ROWS_PER_PAGE
+  const pageEnd = Math.min(pageStart + ROWS_PER_PAGE, filteredRows.length)
+  const visibleStart = filteredRows.length === 0 ? 0 : pageStart + 1
+  const pagedRows = filteredRows.slice(pageStart, pageEnd)
+
   const handleRowClick = (row: MatrixRow) => {
     setSelectedRowId(row.id)
     if (row.originalLink) {
@@ -218,6 +228,7 @@ export function AnalysisTraceabilityMatrixTab({
     setTraceTypeFilter("ALL")
     setCertaintyFilter("ALL")
     setReviewStatusFilter("ALL")
+    setPage(1)
   }
 
   if (rows.length === 0) {
@@ -259,13 +270,19 @@ export function AnalysisTraceabilityMatrixTab({
             <Input
               placeholder="Search traceability..."
               value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+              onChange={e => {
+                setSearchTerm(e.target.value)
+                setPage(1)
+              }}
               className="h-9 pl-9"
             />
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant={traceTypeFilter === "ALL" ? "default" : "outline"} className="h-9 shadow-none" onClick={() => setTraceTypeFilter("ALL")}>
+            <Button size="sm" variant={traceTypeFilter === "ALL" ? "default" : "outline"} className="h-9 shadow-none" onClick={() => {
+              setTraceTypeFilter("ALL")
+              setPage(1)
+            }}>
               All types
             </Button>
             {TRACE_GROUPS.map(group => (
@@ -274,7 +291,10 @@ export function AnalysisTraceabilityMatrixTab({
                 size="sm"
                 variant={traceTypeFilter === group.type ? "default" : "outline"}
                 className="h-9 shadow-none"
-                onClick={() => setTraceTypeFilter(group.type)}
+                onClick={() => {
+                  setTraceTypeFilter(group.type)
+                  setPage(1)
+                }}
               >
                 {group.label}
               </Button>
@@ -289,7 +309,10 @@ export function AnalysisTraceabilityMatrixTab({
               size="sm"
               variant={certaintyFilter === value ? "default" : "outline"}
               className="h-8 shadow-none"
-              onClick={() => setCertaintyFilter(value)}
+              onClick={() => {
+                setCertaintyFilter(value)
+                setPage(1)
+              }}
             >
               {value === "ALL" ? "All certainty" : value.replace(/_/g, " ")}
             </Button>
@@ -300,7 +323,10 @@ export function AnalysisTraceabilityMatrixTab({
               size="sm"
               variant={reviewStatusFilter === value ? "default" : "outline"}
               className="h-8 shadow-none"
-              onClick={() => setReviewStatusFilter(value)}
+              onClick={() => {
+                setReviewStatusFilter(value)
+                setPage(1)
+              }}
             >
               {value === "ALL" ? "All reviews" : value.replace(/_/g, " ")}
             </Button>
@@ -330,7 +356,7 @@ export function AnalysisTraceabilityMatrixTab({
             </TableHeader>
             <TableBody>
               {filteredRows.length > 0 && (
-                <TableRow className="bg-muted/30 hover:bg-muted/30">
+              <TableRow className="bg-muted/30 hover:bg-muted/30">
                   <TableCell colSpan={7} className="py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Requirement: {analysis.requirement.revisionTitle || analysis.requirement.id || "Current requirement change"}
                     <span className="ml-2 font-normal lowercase">({filteredRows.length} rows)</span>
@@ -346,7 +372,7 @@ export function AnalysisTraceabilityMatrixTab({
                 </TableRow>
               ) : (
                 TRACE_GROUPS.map(group => {
-                  const rowsInGroup = filteredRows.filter(row => row.traceType === group.type)
+                  const rowsInGroup = pagedRows.filter(row => row.traceType === group.type)
                   if (rowsInGroup.length === 0) return null
 
                   return (
@@ -407,6 +433,37 @@ export function AnalysisTraceabilityMatrixTab({
               )}
             </TableBody>
           </Table>
+        </div>
+      </div>
+
+      <div className="border-t border-border/40 px-4 py-3">
+        <div className="flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <span>
+            Showing {visibleStart}-{pageEnd} of {filteredRows.length}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 shadow-none"
+              onClick={() => setPage(currentPage - 1)}
+              disabled={currentPage <= 1}
+            >
+              Previous
+            </Button>
+            <span className="min-w-[88px] text-center text-xs">
+              Page {currentPage} / {totalPages}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 shadow-none"
+              onClick={() => setPage(currentPage + 1)}
+              disabled={currentPage >= totalPages}
+            >
+              Next
+            </Button>
+          </div>
         </div>
       </div>
     </div>
