@@ -1,4 +1,5 @@
 import { retrievalMetadataSchema } from '@ba-helper/contracts';
+import { Logger } from '@nestjs/common';
 
 export const mapTraceabilityList = (items: Array<{
   id: string;
@@ -35,7 +36,7 @@ export const mapTraceabilityList = (items: Array<{
     const retrieval = parsedRetrieval?.success ? parsedRetrieval.data : undefined;
     
     if (parsedRetrieval && !parsedRetrieval.success) {
-      console.warn('INVALID_RETRIEVAL_METADATA_SHAPE', parsedRetrieval.error);
+      new Logger('TraceabilityMapper').warn(`INVALID_RETRIEVAL_METADATA_SHAPE: ${parsedRetrieval.error.message}`);
     }
 
     return {

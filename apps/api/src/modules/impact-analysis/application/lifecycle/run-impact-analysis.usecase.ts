@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 
 import { createHash } from 'node:crypto';
 import { AppError } from '../../../../shared/app-error';
@@ -119,6 +119,8 @@ const buildExcerpt = (artifact: ScanArtifact) =>
 
 @Injectable()
 export class RunImpactAnalysisUseCase {
+  private readonly logger = new Logger(RunImpactAnalysisUseCase.name);
+
   constructor(
     private readonly impactRepo: ImpactAnalysisRepository,
     private readonly artifactRepo: ArtifactRepository,
@@ -472,7 +474,7 @@ export class RunImpactAnalysisUseCase {
               .filter((id): id is string => Boolean(id));
 
             if (evidenceIds.length === 0) {
-              console.warn(`Could not resolve any evidence IDs for insight ${insight.insightKey}`);
+              this.logger.warn(`Could not resolve any evidence IDs for insight ${insight.insightKey}`);
               // Future: Downgrade insight certainty or mark validation issue here
               return Promise.resolve([]);
             }
@@ -534,7 +536,13 @@ export class RunImpactAnalysisUseCase {
         },
       });
     } catch (e: any) {
-      console.error(`RunImpactAnalysisUseCase execution failed:`, e);
+      const safeError = {
+        message: e instanceof Error ? e.message : String(e),
+        code: (e as any).code,
+        name: e instanceof Error ? e.name : 'UnknownError',
+        stack: e instanceof Error ? e.stack : undefined,
+      };
+      this.logger.error(`RunImpactAnalysisUseCase execution failed: ${safeError.message}`, safeError.stack);
 
       const errorCode =
         e instanceof AppError

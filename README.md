@@ -202,6 +202,7 @@ Avoid `docker compose config` in shared logs when real provider keys are loaded 
 ## Trust & Security Model
 We prioritize keeping your proprietary code safe without overclaiming formal security certifications:
 - **No Remote Code Execution**: The scanner performs static regex and AST-based extraction. It never executes your repository code.
+- **Production Failsafe**: The application is hardened to fail fast if critical environment variables are missing or set to weak development defaults in production.
 - **No Raw Vectors**: No raw embedding vectors are dumped in diagnostics or reports.
 - **Bounded Diagnostics**: Scans are bounded by file size and count limits to prevent OOM errors.
 - **Evidence Hierarchy**: Strict constraints to prevent orphaned AI claims.

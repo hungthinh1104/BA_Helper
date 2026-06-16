@@ -4,12 +4,13 @@ import { ImpactAnalysisWorkerModule } from './impact-analysis/impact-analysis.wo
 import { ScanJobWorkerModule } from './scan-job/scan-job.worker.module';
 import { EmbeddingWorkerModule } from './embedding/embedding.worker.module';
 import { AiModule } from '../../api/src/modules/ai/ai.module';
+import { requireEnv } from '../../api/src/bootstrap/runtime-config';
 
 @Module({
   imports: [
     BullModule.forRoot({
       connection: {
-        url: process.env.REDIS_URL ?? 'redis://localhost:6379',
+        url: requireEnv('REDIS_URL', 'redis://localhost:6379'),
       },
     }),
     BullModule.registerQueue({ name: 'impact-analysis' }),

@@ -14,6 +14,7 @@ import {
   loginResponseSchema,
 } from '@ba-helper/contracts';
 import * as process from 'node:process';
+import { requireEnv } from './bootstrap/runtime-config';
 import { mkdir, writeFile } from 'node:fs/promises';
 import * as path from 'node:path';
 import { PrismaClient } from '@prisma/client';
@@ -39,7 +40,7 @@ import { resolveSmokeAuthTokenWithPolicy } from './smoke/public-github-smoke.aut
 
 const API_URL = normalizeApiBaseUrl(
   process.env.SMOKE_API_URL ??
-    process.env.NEXT_PUBLIC_API_URL ??
+    process.env.E2E_API_BASE_URL ??
     `http://localhost:${process.env.PORT ?? '3001'}`,
 );
 const SUPPLIED_SMOKE_BEARER_TOKEN = process.env.SMOKE_BEARER_TOKEN?.trim();
@@ -57,7 +58,7 @@ async function main() {
   const tempDirsBefore = await countTempScanWorkspaces();
   let partial: Record<string, unknown> = {};
 
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL ?? 'postgresql://ba_helper:ba_helper@localhost/ba_helper' });
+  const pool = new Pool({ connectionString: requireEnv('DATABASE_URL', 'postgresql://ba_helper:ba_helper@localhost/ba_helper') });
   const adapter = new PrismaPg(pool);
   const prisma = new PrismaClient({ adapter } as any);
 

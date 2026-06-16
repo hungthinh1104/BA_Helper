@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { z } from 'zod';
 import { LlmProvider, LlmRequest, LlmResult } from '../domain/llm-provider.interface';
@@ -56,12 +56,18 @@ export class GoogleLlmProvider extends LlmProvider {
       });
     } catch (error: any) {
       const msg = error?.message?.toLowerCase() || '';
+      if (msg.includes('429') || msg.includes('rate limit') || msg.includes('quota')) {
+        throw new AppError('AI_PROVIDER_RATE_LIMITED', 'You have exceeded your AI provider rate limits. Please try again later or check your API quota.');
+      }
+      if (msg.includes('timeout') || msg.includes('abort') || msg.includes('network error') || msg.includes('fetch failed')) {
+        throw new AppError('AI_PROVIDER_TIMEOUT', 'The AI provider timed out. Try analyzing again.');
+      }
       if (
         msg.includes('503') ||
         msg.includes('500') ||
+        msg.includes('502') ||
         msg.includes('overload') ||
-        msg.includes('unavailable') ||
-        msg.includes('fetch failed')
+        msg.includes('unavailable')
       ) {
         throw new AppError(
           'AI_PROVIDER_UNAVAILABLE',
@@ -74,7 +80,7 @@ export class GoogleLlmProvider extends LlmProvider {
     const rawText = result.response.text();
     const finishReason = result.response.candidates?.[0]?.finishReason;
     if (finishReason && finishReason !== 'STOP') {
-      console.warn(`[GoogleLlmProvider] Unexpected finishReason: ${finishReason}`);
+      new Logger('GoogleLlmProvider').warn(`Unexpected finishReason: ${finishReason}`);
     }
 
     if (finishReason === 'MAX_TOKENS') {

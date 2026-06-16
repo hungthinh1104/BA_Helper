@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { RetrievalRequest, RetrievedArtifact } from '../domain/retrieval.types';
 import { buildRetrievalSuggestion } from '../domain/retrieval-suggestion';
 import { EmbeddingChunkRepository } from '../../embedding/infrastructure/embedding-chunk.repository';
@@ -35,6 +35,8 @@ type Candidate = {
 
 @Injectable()
 export class HybridRetrievalService {
+  private readonly logger = new Logger(HybridRetrievalService.name);
+
   constructor(
     private readonly chunkRepo: EmbeddingChunkRepository,
     private readonly embeddingProvider: EmbeddingProvider,
@@ -177,7 +179,7 @@ export class HybridRetrievalService {
           c.signals.add('VECTOR');
         }
       } catch (error) {
-        console.warn('Vector search failed, falling back to lexical only', error);
+        this.logger.warn(`Vector search failed, falling back to lexical only: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 

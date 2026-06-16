@@ -22,6 +22,44 @@ export function isProductionLikeEnv(nodeEnv?: string): boolean {
   return nodeEnv === 'production' || nodeEnv === 'staging';
 }
 
+export function isWeakSecret(secret?: string): boolean {
+  if (!secret) return true;
+  const normalized = secret.trim();
+  if (!normalized) return true;
+
+  const weakSecrets = new Set([
+    'dev-secret-change-me',
+    'dev-super-secret-key',
+    'dev-only-local-jwt-secret',
+    'change-me',
+    'replace-with-a-long-random-secret',
+    'postgresql://localhost/ba_helper',
+    'postgresql://ba_helper:ba_helper@localhost/ba_helper',
+    'redis://localhost:6379',
+    'dev-secret',
+    'secret',
+  ]);
+
+  return weakSecrets.has(normalized);
+}
+
+export function requireEnv(key: string, devFallback?: string, nodeEnv?: string): string {
+  const env = nodeEnv ?? process.env.NODE_ENV ?? 'development';
+  const isProd = isProductionLikeEnv(env);
+  const value = process.env[key];
+
+  if (isProd) {
+    if (!value) {
+      throw new Error(`Environment variable ${key} is required in production.`);
+    }
+    if (isWeakSecret(value)) {
+      throw new Error(`Environment variable ${key} must not use a weak or default value in production.`);
+    }
+  }
+
+  return value || devFallback || '';
+}
+
 export function normalizeOrigin(origin: string): string {
   const value = origin.trim();
 

@@ -37,15 +37,19 @@ describe('jwt-config', () => {
   it('should throw Error if JWT_SECRET is missing in production', () => {
     delete process.env.JWT_SECRET;
     process.env.NODE_ENV = 'production';
-    expect(() => resolveJwtSecret()).toThrow('JWT_SECRET is required in production');
+    expect(() => resolveJwtSecret()).toThrow('Environment variable JWT_SECRET is required in production.');
   });
 
-  it('should throw Error if JWT_SECRET uses a weak example value in production', () => {
-    process.env.JWT_SECRET = 'dev-secret-change-me';
+  it('should throw if process.env.JWT_SECRET is an empty string in production', () => {
     process.env.NODE_ENV = 'production';
-    expect(() => resolveJwtSecret()).toThrow(
-      'JWT_SECRET must not use a default or weak example value in production',
-    );
+    process.env.JWT_SECRET = '   ';
+    expect(() => resolveJwtSecret()).toThrow('Environment variable JWT_SECRET must not use a weak or default value in production.');
+  });
+
+  it('should throw if process.env.JWT_SECRET is a weak string in production', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.JWT_SECRET = 'dev-secret-change-me';
+    expect(() => resolveJwtSecret()).toThrow('Environment variable JWT_SECRET must not use a weak or default value in production.');
   });
 
   it('should accept a strong custom JWT secret in production', () => {

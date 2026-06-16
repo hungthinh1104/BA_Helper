@@ -1,4 +1,5 @@
 import { retrievalMetadataSchema } from '@ba-helper/contracts';
+import { Logger } from '@nestjs/common';
 
 export const mapInsightList = (items: Array<{
   id: string;
@@ -36,7 +37,7 @@ export const mapInsightList = (items: Array<{
       const retrieval = parsedRetrieval?.success ? parsedRetrieval.data : undefined;
       
       if (parsedRetrieval && !parsedRetrieval.success) {
-        console.warn('INVALID_RETRIEVAL_METADATA_SHAPE', parsedRetrieval.error);
+        new Logger('InsightMapper').warn(`INVALID_RETRIEVAL_METADATA_SHAPE: ${parsedRetrieval.error.message}`);
       }
 
       return {

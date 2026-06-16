@@ -1,5 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import Anthropic from '@anthropic-ai/sdk';
+import { AppError } from '../../../shared/app-error';
 import { z } from 'zod';
 import { LlmProvider, LlmRequest, LlmResult } from '../domain/llm-provider.interface';
 import { AiConfig, AI_CONFIG_TOKEN } from '../domain/ai-config';
@@ -22,12 +23,37 @@ export class AnthropicLlmProvider extends LlmProvider {
     const model = request.options?.model ?? this.config.defaultModel;
     const start = Date.now();
 
-    const response = await this.client.messages.create({
-      model,
-      max_tokens: request.options?.maxTokens ?? this.config.maxTokens,
-      system: request.systemPrompt,
-      messages: [{ role: 'user', content: request.userPrompt }],
-    });
+    let response;
+    try {
+      response = await this.client.messages.create({
+        model,
+        max_tokens: request.options?.maxTokens ?? this.config.maxTokens,
+        system: request.systemPrompt,
+        messages: [{ role: 'user', content: request.userPrompt }],
+      });
+    } catch (error: any) {
+      const msg = error?.message?.toLowerCase() || '';
+      if (msg.includes('429') || msg.includes('rate limit') || msg.includes('quota') || error?.status === 429) {
+        throw new AppError('AI_PROVIDER_RATE_LIMITED', 'You have exceeded your AI provider rate limits. Please try again later or check your API quota.');
+      }
+      if (msg.includes('timeout') || msg.includes('abort') || msg.includes('network error') || msg.includes('fetch failed')) {
+        throw new AppError('AI_PROVIDER_TIMEOUT', 'The AI provider timed out. Try analyzing again.');
+      }
+      if (
+        msg.includes('503') ||
+        msg.includes('500') ||
+        msg.includes('502') ||
+        msg.includes('overload') ||
+        msg.includes('unavailable') ||
+        error?.status >= 500
+      ) {
+        throw new AppError(
+          'AI_PROVIDER_UNAVAILABLE',
+          'Anthropic is temporarily unavailable or overloaded. Retry the analysis later or switch provider/model.'
+        );
+      }
+      throw error;
+    }
 
     const content = response.content[0];
     const rawText = content.type === 'text' ? content.text : undefined;

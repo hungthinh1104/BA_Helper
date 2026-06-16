@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ScanJobRepository } from '../infrastructure/scan-job.repository';
 import { RepositoryRepository } from '../../repository/infrastructure/repository.repository';
 import { ScanJobPolicy } from '../domain/scan-job.policy';
@@ -8,6 +8,8 @@ import { QueueService } from '../../queue/queue.service';
 
 @Injectable()
 export class CreateScanJobUseCase {
+  private readonly logger = new Logger(CreateScanJobUseCase.name);
+
   constructor(
     private readonly scanJobRepository: ScanJobRepository,
     private readonly repositoryRepository: RepositoryRepository,
@@ -66,7 +68,7 @@ export class CreateScanJobUseCase {
 
       return job;
     } catch (e: any) {
-      console.error('CreateScanJob error:', e?.message, e?.stack);
+      this.logger.error(`CreateScanJob error: ${e?.message}`, e?.stack);
       throw e;
     }
   }
