@@ -1,5 +1,128 @@
 {
   "version": "cases.v0",
   "generatedBy": "manual",
-  "cases": []
+  "cases": [
+    {
+      "id": "reqimpact-case-001-backend-reliability-semantics",
+      "repo": "hungthinh1104/BA_Helper",
+      "baseSha": "ba99ad7dc3cb9fc510fc4b821f35d2f0cc0aa80e",
+      "headSha": "b92c98debd563143862f4a4b21216836e1adf1d0",
+      "commitSha": "b92c98debd563143862f4a4b21216836e1adf1d0",
+      "requirementText": "fix: harden backend reliability semantics",
+      "groundTruth": {
+        "files": [
+          "apps/api/prisma/schema.prisma",
+          "apps/api/src/modules/document/api/document.mapper.ts",
+          "apps/api/src/modules/document/application/approved-report-projection.service.ts",
+          "apps/api/src/modules/document/domain/approved-report-metadata.ts",
+          "apps/api/src/modules/impact-analysis/application/lifecycle/create-impact-analysis.usecase.ts",
+          "apps/api/src/modules/impact-analysis/application/lifecycle/finalize-impact-analysis.usecase.ts",
+          "apps/api/src/modules/impact-analysis/application/lifecycle/run-impact-analysis.usecase.ts",
+          "apps/api/src/modules/impact-analysis/application/review/get-review-queue.usecase.ts",
+          "apps/api/src/modules/impact-analysis/infrastructure/impact-analysis.mapper.ts",
+          "packages/contracts/src/document.contract.ts",
+          "packages/contracts/src/review-queue.contract.ts"
+        ]
+      },
+      "candidateArtifacts": [
+        {
+          "artifactKey": "file:apps/api/prisma/schema.prisma",
+          "filePath": "apps/api/prisma/schema.prisma",
+          "artifactName": "schema.prisma",
+          "artifactType": "SCHEMA_FILE",
+          "universalKind": "DATA_MODEL"
+        },
+        {
+          "artifactKey": "file:apps/api/src/modules/document/api/document.mapper.ts",
+          "filePath": "apps/api/src/modules/document/api/document.mapper.ts",
+          "artifactName": "document.mapper.ts",
+          "artifactType": "MAPPER_FILE"
+        },
+        {
+          "artifactKey": "file:apps/api/src/modules/document/application/approved-report-projection.service.ts",
+          "filePath": "apps/api/src/modules/document/application/approved-report-projection.service.ts",
+          "artifactName": "approved-report-projection.service.ts",
+          "artifactType": "SERVICE_FILE",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "file:apps/api/src/modules/document/domain/approved-report-metadata.ts",
+          "filePath": "apps/api/src/modules/document/domain/approved-report-metadata.ts",
+          "artifactName": "approved-report-metadata.ts",
+          "artifactType": "TYPE_FILE",
+          "universalKind": "DATA_MODEL"
+        },
+        {
+          "artifactKey": "file:apps/api/src/modules/impact-analysis/application/lifecycle/create-impact-analysis.usecase.ts",
+          "filePath": "apps/api/src/modules/impact-analysis/application/lifecycle/create-impact-analysis.usecase.ts",
+          "artifactName": "create-impact-analysis.usecase.ts",
+          "artifactType": "USE_CASE_FILE",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "file:apps/api/src/modules/impact-analysis/application/lifecycle/finalize-impact-analysis.usecase.ts",
+          "filePath": "apps/api/src/modules/impact-analysis/application/lifecycle/finalize-impact-analysis.usecase.ts",
+          "artifactName": "finalize-impact-analysis.usecase.ts",
+          "artifactType": "USE_CASE_FILE",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "file:apps/api/src/modules/impact-analysis/application/lifecycle/run-impact-analysis.usecase.ts",
+          "filePath": "apps/api/src/modules/impact-analysis/application/lifecycle/run-impact-analysis.usecase.ts",
+          "artifactName": "run-impact-analysis.usecase.ts",
+          "artifactType": "USE_CASE_FILE",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "file:apps/api/src/modules/impact-analysis/application/review/get-review-queue.usecase.ts",
+          "filePath": "apps/api/src/modules/impact-analysis/application/review/get-review-queue.usecase.ts",
+          "artifactName": "get-review-queue.usecase.ts",
+          "artifactType": "USE_CASE_FILE",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "file:apps/api/src/modules/impact-analysis/infrastructure/impact-analysis.mapper.ts",
+          "filePath": "apps/api/src/modules/impact-analysis/infrastructure/impact-analysis.mapper.ts",
+          "artifactName": "impact-analysis.mapper.ts",
+          "artifactType": "MAPPER_FILE"
+        },
+        {
+          "artifactKey": "file:packages/contracts/src/document.contract.ts",
+          "filePath": "packages/contracts/src/document.contract.ts",
+          "artifactName": "document.contract.ts",
+          "artifactType": "CONTRACT_FILE",
+          "universalKind": "DATA_MODEL"
+        },
+        {
+          "artifactKey": "file:packages/contracts/src/review-queue.contract.ts",
+          "filePath": "packages/contracts/src/review-queue.contract.ts",
+          "artifactName": "review-queue.contract.ts",
+          "artifactType": "CONTRACT_FILE",
+          "universalKind": "DATA_MODEL"
+        },
+        {
+          "artifactKey": "file:apps/api/src/modules/document/infrastructure/document.repository.ts",
+          "filePath": "apps/api/src/modules/document/infrastructure/document.repository.ts",
+          "artifactName": "document.repository.ts",
+          "artifactType": "REPOSITORY_FILE",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "file:apps/api/src/modules/impact-analysis/application/lifecycle/get-impact-analysis.usecase.ts",
+          "filePath": "apps/api/src/modules/impact-analysis/application/lifecycle/get-impact-analysis.usecase.ts",
+          "artifactName": "get-impact-analysis.usecase.ts",
+          "artifactType": "USE_CASE_FILE",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "file:apps/api/src/modules/impact-analysis/infrastructure/impact-analysis.repository.ts",
+          "filePath": "apps/api/src/modules/impact-analysis/infrastructure/impact-analysis.repository.ts",
+          "artifactName": "impact-analysis.repository.ts",
+          "artifactType": "REPOSITORY_FILE",
+          "universalKind": "DOMAIN_SERVICE"
+        }
+      ],
+      "notes": "Public commit case seeded from BA_Helper commit b92c98d. Ground truth keeps backend and shared-contract files that existed before the commit and excludes new files, tests, and web-only files."
+    }
+  ]
 }
