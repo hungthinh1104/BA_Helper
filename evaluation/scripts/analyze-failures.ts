@@ -2,10 +2,10 @@ import { writeFileSync } from 'fs';
 import { loadDataset, readJsonFile, resolveRepoPath, writeJsonFile } from '../io';
 import type { MetricsReport } from '../metrics';
 import {
-  analyzeKeywordBaselineFailures,
+  analyzeLexicalBaselineFailures,
   renderFailureAnalysisMarkdown,
-  type KeywordBaselineResultFile,
 } from '../src/failure-analysis';
+import { loadResultRegistry } from '../src/result-registry';
 
 function parseArg(flag: string, fallback: string): string {
   const index = process.argv.indexOf(flag);
@@ -14,10 +14,7 @@ function parseArg(flag: string, fallback: string): string {
 
 function main(): void {
   const datasetPath = parseArg('--dataset', 'evaluation/datasets/cases.v0.json');
-  const keywordPath = parseArg(
-    '--keyword',
-    'evaluation/results/keyword-baseline.v0.json',
-  );
+  const resultsDir = parseArg('--resultsDir', 'evaluation/results');
   const metricsPath = parseArg('--metrics', 'evaluation/results/metrics.v0.json');
   const jsonPath = parseArg(
     '--json',
@@ -29,12 +26,13 @@ function main(): void {
   );
 
   const dataset = loadDataset(datasetPath);
-  const keywordResults = readJsonFile<KeywordBaselineResultFile>(keywordPath);
+  const registry = loadResultRegistry(resolveRepoPath(resultsDir));
   const metricsReport = readJsonFile<MetricsReport>(metricsPath);
-  const report = analyzeKeywordBaselineFailures({
+  const report = analyzeLexicalBaselineFailures({
     datasetCases: dataset.cases,
-    keywordResults,
+    methods: registry.methods,
     metricsReport,
+    warnings: registry.warnings,
   });
 
   writeJsonFile(jsonPath, report);

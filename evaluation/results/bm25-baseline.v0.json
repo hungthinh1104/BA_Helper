@@ -1,6 +1,6 @@
 {
   "runId": "bm25-baseline-v0-10",
-  "generatedAt": "2026-06-17T11:15:02.747Z",
+  "generatedAt": "2026-06-17T11:40:50.782Z",
   "method": "bm25-baseline-v0",
   "topK": 10,
   "cases": [

@@ -1,40 +1,6 @@
-import type {
-  EvaluationCase,
-  FailureCategory,
-} from './types';
-import type {
-  CaseMetrics,
-  MetricsReport,
-} from '../metrics';
-
-export type KeywordBaselineResultFile = {
-  runId: string;
-  generatedAt: string;
-  method: 'keyword-baseline-v0';
-  topK: number;
-  cases: Array<{
-    caseId: string;
-    repo: string;
-    requirementText: string;
-    groundTruthFiles: string[];
-    results: Array<{
-      rank: number;
-      artifactKey: string;
-      filePath: string;
-      artifactType: string;
-      score: number;
-      matchedTokens: string[];
-      retrievalReason: string;
-    }>;
-    summary: {
-      groundTruthHitCount: number;
-      recallAt10: number;
-      missedGroundTruthFiles: string[];
-      unexpectedTopKFiles: string[];
-    };
-  }>;
-  warnings: string[];
-};
+import type { EvaluationCase, FailureCategory } from './types';
+import type { CaseMetrics, MetricsReport } from '../metrics';
+import type { NormalizedResultMethod } from './result-registry';
 
 export type FailureOutcome = 'PASS_FULL' | 'PASS_PARTIAL' | 'FAIL_MISS';
 
@@ -47,7 +13,7 @@ export type FutureHypothesis = {
     | 'DB_SNAPSHOT';
 };
 
-export type FailureAnalysisCase = {
+export type FailureAnalysisMethodCase = {
   caseId: string;
   repo: string;
   outcome: FailureOutcome;
@@ -63,22 +29,36 @@ export type FailureAnalysisCase = {
   hypothesesForFutureEvaluation: FutureHypothesis[];
 };
 
-export type FailureAnalysisReport = {
+export type FailureAnalysisMethod = {
+  method: string;
+  sourceFile: string;
+  passFullCount: number;
+  passPartialCount: number;
+  failMissCount: number;
+  categoryCounts: Partial<Record<FailureCategory, number>>;
+  cases: FailureAnalysisMethodCase[];
+};
+
+export type CrossMethodComparison = {
+  caseId: string;
+  repo: string;
+  keywordOutcome: FailureOutcome | 'NOT_AVAILABLE';
+  bm25Outcome: FailureOutcome | 'NOT_AVAILABLE';
+  bm25VsKeywordRecallAt10: 'IMPROVED' | 'REGRESSED' | 'TIED' | 'NOT_COMPARABLE';
+  bm25ChangedTopRankedFiles: boolean;
+  note: string;
+};
+
+export type MultiMethodFailureAnalysisReport = {
   runId: string;
   generatedAt: string;
-  method: 'keyword-baseline-v0';
   dataset: {
     caseCount: number;
     groundTruthType: 'changed-files-proxy';
     evaluationLevel: 'file';
   };
-  summary: {
-    passFullCount: number;
-    passPartialCount: number;
-    failMissCount: number;
-    categoryCounts: Partial<Record<FailureCategory, number>>;
-  };
-  cases: FailureAnalysisCase[];
+  methods: FailureAnalysisMethod[];
+  crossMethodComparison: CrossMethodComparison[];
   warnings: string[];
 };
 
@@ -99,7 +79,7 @@ function isTestFile(filePath: string): boolean {
   return /\.(spec|test)\./i.test(filePath) || /__tests__/i.test(filePath);
 }
 
-function classifyOutcome(recallAt10: number): FailureOutcome {
+export function classifyOutcome(recallAt10: number): FailureOutcome {
   if (recallAt10 === 1) {
     return 'PASS_FULL';
   }
@@ -109,16 +89,19 @@ function classifyOutcome(recallAt10: number): FailureOutcome {
   return 'FAIL_MISS';
 }
 
-function buildCaseMaps(report: MetricsReport, method: string): Map<string, CaseMetrics> {
+function buildDatasetCaseMap(cases: EvaluationCase[]): Map<string, EvaluationCase> {
+  return new Map(cases.map((item) => [item.id, item]));
+}
+
+function buildMethodCaseMetricsMap(
+  report: MetricsReport,
+  method: string,
+): Map<string, CaseMetrics> {
   const methodReport = report.methods.find((entry) => entry.method === method);
   if (!methodReport) {
     throw new Error(`Method ${method} not found in metrics report.`);
   }
   return new Map(methodReport.caseMetrics.map((metric) => [metric.caseId, metric]));
-}
-
-function buildDatasetCaseMap(cases: EvaluationCase[]): Map<string, EvaluationCase> {
-  return new Map(cases.map((item) => [item.id, item]));
 }
 
 function uniqueCategories(categories: FailureCategory[]): FailureCategory[] {
@@ -128,7 +111,7 @@ function uniqueCategories(categories: FailureCategory[]): FailureCategory[] {
 function categorizeObservedFailures(params: {
   evaluationCase: EvaluationCase;
   metrics: CaseMetrics;
-  keywordCase: KeywordBaselineResultFile['cases'][number];
+  methodCase: NormalizedResultMethod['cases'][number];
 }): FailureCategory[] {
   const categories: FailureCategory[] = [];
   const candidateArtifactFiles = new Set(
@@ -145,7 +128,7 @@ function categorizeObservedFailures(params: {
 
   if (
     params.metrics.recallAt10 === 0 &&
-    params.keywordCase.results.length === 0 &&
+    params.methodCase.rankedResults.length === 0 &&
     categories.length === 0
   ) {
     categories.push('LEXICAL_MISMATCH');
@@ -158,9 +141,7 @@ function categorizeObservedFailures(params: {
     categories.push('SUPPORT_FILE_OVER_RETRIEVED');
   }
 
-  if (
-    params.metrics.missedGroundTruthFiles.some((filePath) => isDataModelFile(filePath))
-  ) {
+  if (params.metrics.missedGroundTruthFiles.some((filePath) => isDataModelFile(filePath))) {
     categories.push('DATA_MODEL_MISSED');
   }
 
@@ -169,12 +150,15 @@ function categorizeObservedFailures(params: {
   }
 
   const matchedTokens = new Set(
-    params.keywordCase.results.flatMap((result) => result.matchedTokens),
+    params.methodCase.rankedResults.flatMap((result) => {
+      const value = (result as { matchedTokens?: string[] }).matchedTokens;
+      return Array.isArray(value) ? value : [];
+    }),
   );
-  const requirementText = params.keywordCase.requirementText.toLowerCase();
+  const requirementText = (params.methodCase.requirementText ?? '').toLowerCase();
   if (
     params.metrics.missedGroundTruthFiles.length > 0 &&
-    params.keywordCase.results.length > 0 &&
+    params.methodCase.rankedResults.length > 0 &&
     (matchedTokens.has('author') ||
       requirementText.includes('author') ||
       requirementText.includes('relation') ||
@@ -185,7 +169,7 @@ function categorizeObservedFailures(params: {
 
   if (
     params.metrics.missedGroundTruthFiles.length > 0 &&
-    params.keywordCase.results.length > 0 &&
+    params.methodCase.rankedResults.length > 0 &&
     params.metrics.hitGroundTruthFiles.length > 0
   ) {
     categories.push('INDIRECT_DEPENDENCY_MISSED');
@@ -199,10 +183,10 @@ function categorizeObservedFailures(params: {
 function buildObservedExplanation(params: {
   outcome: FailureOutcome;
   metrics: CaseMetrics;
-  keywordCase: KeywordBaselineResultFile['cases'][number];
+  methodCase: NormalizedResultMethod['cases'][number];
   observedFailureCategories: FailureCategory[];
 }): string {
-  const topFiles = params.keywordCase.results
+  const topFiles = params.methodCase.rankedResults
     .slice(0, 3)
     .map((result) => result.filePath);
 
@@ -210,14 +194,14 @@ function buildObservedExplanation(params: {
     return 'All proxy ground-truth files were retrieved within top-10 by exact file-path match.';
   }
 
-  if (params.outcome === 'FAIL_MISS' && params.keywordCase.results.length === 0) {
-    return `No candidate artifact achieved keyword overlap with the requirement text, so every proxy ground-truth file was missed.`;
+  if (params.outcome === 'FAIL_MISS' && params.methodCase.rankedResults.length === 0) {
+    return 'No candidate artifact achieved lexical overlap with the requirement text, so every proxy ground-truth file was missed.';
   }
 
   const parts: string[] = [];
   if (params.metrics.hitGroundTruthFiles.length > 0) {
     parts.push(
-      `Keyword overlap retrieved ${params.metrics.hitGroundTruthFiles.length} ground-truth file(s).`,
+      `Lexical ranking retrieved ${params.metrics.hitGroundTruthFiles.length} ground-truth file(s).`,
     );
   }
   if (params.metrics.missedGroundTruthFiles.length > 0) {
@@ -250,7 +234,7 @@ function buildHypotheses(params: {
   ) {
     hypotheses.push({
       hypothesis:
-        'A semantic retrieval baseline may recover files whose identifiers do not share strong lexical overlap with the requirement text.',
+        'A vector-only baseline may recover files whose identifiers do not share strong lexical overlap with the requirement text.',
       needsEvidenceFrom: 'VECTOR_BASELINE',
     });
   }
@@ -271,10 +255,7 @@ function buildHypotheses(params: {
     });
   }
 
-  if (
-    params.metrics.unexpectedTopKFiles.length > 0 ||
-    params.outcome === 'PASS_FULL'
-  ) {
+  if (params.metrics.unexpectedTopKFiles.length > 0 || params.outcome === 'PASS_FULL') {
     hypotheses.push({
       hypothesis:
         'Precision and review burden should be compared against later baselines because lexical ranking can retrieve nearby support files even when recall is high.',
@@ -285,37 +266,34 @@ function buildHypotheses(params: {
   return hypotheses;
 }
 
-export function analyzeKeywordBaselineFailures(params: {
-  datasetCases: EvaluationCase[];
-  keywordResults: KeywordBaselineResultFile;
+function analyzeMethod(params: {
+  datasetCaseMap: Map<string, EvaluationCase>;
+  method: NormalizedResultMethod;
   metricsReport: MetricsReport;
-  generatedAt?: string;
-  runId?: string;
-}): FailureAnalysisReport {
-  const caseById = buildDatasetCaseMap(params.datasetCases);
-  const metricsByCaseId = buildCaseMaps(params.metricsReport, 'keyword-baseline-v0');
+}): FailureAnalysisMethod {
+  const metricsByCaseId = buildMethodCaseMetricsMap(params.metricsReport, params.method.method);
 
-  const cases = params.keywordResults.cases.map((keywordCase) => {
-    const evaluationCase = caseById.get(keywordCase.caseId);
-    const metrics = metricsByCaseId.get(keywordCase.caseId);
+  const cases = params.method.cases.map((methodCase) => {
+    const evaluationCase = params.datasetCaseMap.get(methodCase.caseId);
+    const metrics = metricsByCaseId.get(methodCase.caseId);
 
     if (!evaluationCase) {
-      throw new Error(`Dataset case ${keywordCase.caseId} not found.`);
+      throw new Error(`Dataset case ${methodCase.caseId} not found.`);
     }
     if (!metrics) {
-      throw new Error(`Metrics for case ${keywordCase.caseId} not found.`);
+      throw new Error(`Metrics for case ${methodCase.caseId} and method ${params.method.method} not found.`);
     }
 
     const outcome = classifyOutcome(metrics.recallAt10);
     const observedFailureCategories = categorizeObservedFailures({
       evaluationCase,
       metrics,
-      keywordCase,
+      methodCase,
     });
 
     return {
-      caseId: keywordCase.caseId,
-      repo: keywordCase.repo,
+      caseId: methodCase.caseId,
+      repo: methodCase.repo,
       outcome,
       recallAt10: metrics.recallAt10,
       precisionAt10: metrics.precisionAt10,
@@ -323,12 +301,12 @@ export function analyzeKeywordBaselineFailures(params: {
       hitGroundTruthFiles: metrics.hitGroundTruthFiles,
       missedGroundTruthFiles: metrics.missedGroundTruthFiles,
       unexpectedTopKFiles: metrics.unexpectedTopKFiles,
-      topRankedFiles: keywordCase.results.map((result) => result.filePath),
+      topRankedFiles: methodCase.rankedResults.map((result) => result.filePath),
       observedFailureCategories,
       observedExplanation: buildObservedExplanation({
         outcome,
         metrics,
-        keywordCase,
+        methodCase,
         observedFailureCategories,
       }),
       hypothesesForFutureEvaluation: buildHypotheses({
@@ -336,7 +314,7 @@ export function analyzeKeywordBaselineFailures(params: {
         metrics,
         observedFailureCategories,
       }),
-    } satisfies FailureAnalysisCase;
+    };
   });
 
   const categoryCounts = cases.reduce<Partial<Record<FailureCategory, number>>>(
@@ -350,117 +328,206 @@ export function analyzeKeywordBaselineFailures(params: {
   );
 
   return {
-    runId: params.runId ?? `failure-analysis-v0-${cases.length}`,
+    method: params.method.method,
+    sourceFile: params.method.sourceFile,
+    passFullCount: cases.filter((item) => item.outcome === 'PASS_FULL').length,
+    passPartialCount: cases.filter((item) => item.outcome === 'PASS_PARTIAL').length,
+    failMissCount: cases.filter((item) => item.outcome === 'FAIL_MISS').length,
+    categoryCounts,
+    cases,
+  };
+}
+
+function compareRecallAt10(
+  keywordCase: FailureAnalysisMethodCase | undefined,
+  bm25Case: FailureAnalysisMethodCase | undefined,
+): CrossMethodComparison['bm25VsKeywordRecallAt10'] {
+  if (!keywordCase || !bm25Case) {
+    return 'NOT_COMPARABLE';
+  }
+  if (bm25Case.recallAt10 > keywordCase.recallAt10) {
+    return 'IMPROVED';
+  }
+  if (bm25Case.recallAt10 < keywordCase.recallAt10) {
+    return 'REGRESSED';
+  }
+  return 'TIED';
+}
+
+function buildCrossMethodComparison(methods: FailureAnalysisMethod[]): CrossMethodComparison[] {
+  const keyword = methods.find((method) => method.method === 'keyword-baseline-v0');
+  const bm25 = methods.find((method) => method.method === 'bm25-baseline-v0');
+  const caseIds = new Set([
+    ...(keyword?.cases.map((item) => item.caseId) ?? []),
+    ...(bm25?.cases.map((item) => item.caseId) ?? []),
+  ]);
+
+  return [...caseIds].map((caseId) => {
+    const keywordCase = keyword?.cases.find((item) => item.caseId === caseId);
+    const bm25Case = bm25?.cases.find((item) => item.caseId === caseId);
+    const changedTopRankedFiles =
+      JSON.stringify(keywordCase?.topRankedFiles ?? []) !==
+      JSON.stringify(bm25Case?.topRankedFiles ?? []);
+    const comparison = compareRecallAt10(keywordCase, bm25Case);
+
+    let note = 'Methods are not directly comparable for this case.';
+    if (comparison === 'TIED') {
+      note = changedTopRankedFiles
+        ? 'BM25 tied keyword at R@10 but changed the top-ranked file order.'
+        : 'BM25 tied keyword at R@10 and preserved the same top-ranked file set/order.';
+    } else if (comparison === 'IMPROVED') {
+      note = 'BM25 improved file-level recall over keyword on this case.';
+    } else if (comparison === 'REGRESSED') {
+      note = 'BM25 regressed file-level recall relative to keyword on this case.';
+    }
+
+    return {
+      caseId,
+      repo: keywordCase?.repo ?? bm25Case?.repo ?? 'unknown',
+      keywordOutcome: keywordCase?.outcome ?? 'NOT_AVAILABLE',
+      bm25Outcome: bm25Case?.outcome ?? 'NOT_AVAILABLE',
+      bm25VsKeywordRecallAt10: comparison,
+      bm25ChangedTopRankedFiles: changedTopRankedFiles,
+      note,
+    };
+  });
+}
+
+export function analyzeLexicalBaselineFailures(params: {
+  datasetCases: EvaluationCase[];
+  methods: NormalizedResultMethod[];
+  metricsReport: MetricsReport;
+  warnings?: string[];
+  generatedAt?: string;
+  runId?: string;
+}): MultiMethodFailureAnalysisReport {
+  const datasetCaseMap = buildDatasetCaseMap(params.datasetCases);
+  const methods = params.methods.map((method) =>
+    analyzeMethod({
+      datasetCaseMap,
+      method,
+      metricsReport: params.metricsReport,
+    }),
+  );
+  const crossMethodComparison = buildCrossMethodComparison(methods);
+  const keywordAggregate = params.metricsReport.methods.find(
+    (method) => method.method === 'keyword-baseline-v0',
+  )?.aggregate;
+  const bm25Aggregate = params.metricsReport.methods.find(
+    (method) => method.method === 'bm25-baseline-v0',
+  )?.aggregate;
+
+  const warnings = [
+    'This analyzes deterministic lexical baselines only.',
+    'Changed files are proxy ground truth.',
+    'File-level only.',
+    'No vector, graph, DB, LLM, or R1 behavior is evaluated.',
+    ...(keywordAggregate && bm25Aggregate &&
+    keywordAggregate.macroRecallAt10 === bm25Aggregate.macroRecallAt10 &&
+    keywordAggregate.macroPrecisionAt10 === bm25Aggregate.macroPrecisionAt10 &&
+    keywordAggregate.macroF1At10 === bm25Aggregate.macroF1At10
+      ? [
+          'BM25 did not improve aggregate file-level retrieval over keyword-baseline-v0 on dataset v0.',
+        ]
+      : []),
+    ...(params.warnings ?? []),
+  ];
+
+  return {
+    runId: params.runId ?? `failure-analysis-v0-${methods.length}`,
     generatedAt: params.generatedAt ?? new Date().toISOString(),
-    method: 'keyword-baseline-v0',
     dataset: {
       caseCount: params.datasetCases.length,
       groundTruthType: 'changed-files-proxy',
       evaluationLevel: 'file',
     },
-    summary: {
-      passFullCount: cases.filter((item) => item.outcome === 'PASS_FULL').length,
-      passPartialCount: cases.filter((item) => item.outcome === 'PASS_PARTIAL')
-        .length,
-      failMissCount: cases.filter((item) => item.outcome === 'FAIL_MISS').length,
-      categoryCounts,
-    },
-    cases,
-    warnings: [
-      'Changed files are proxy ground truth, not absolute impacted files.',
-      'This failure analysis is based on keyword-baseline-v0 only.',
-      'No vector, graph, DB, LLM, or R1 behavior is evaluated here.',
-    ],
+    methods,
+    crossMethodComparison,
+    warnings,
   };
 }
 
 export function renderFailureAnalysisMarkdown(
-  report: FailureAnalysisReport,
+  report: MultiMethodFailureAnalysisReport,
 ): string {
   const lines = [
-    '# Failure Analysis v0 — Keyword Baseline',
+    '# Failure Analysis v0 — Lexical Baselines',
     '',
     `Generated at: ${report.generatedAt}`,
     '',
-    'This analyzes keyword-baseline-v0 only.',
+    'This analyzes deterministic lexical baselines only.',
     'Changed files are proxy ground truth.',
     'File-level only.',
     'No vector, graph, DB, LLM, or R1 behavior is evaluated.',
     '',
-    '## Summary',
+    '## Method Summary',
     '',
-    `- PASS_FULL: ${report.summary.passFullCount}`,
-    `- PASS_PARTIAL: ${report.summary.passPartialCount}`,
-    `- FAIL_MISS: ${report.summary.failMissCount}`,
-    '',
-    '| Category | Count |',
-    '| --- | ---: |',
+    '| Method | PASS_FULL | PASS_PARTIAL | FAIL_MISS |',
+    '| --- | ---: | ---: | ---: |',
   ];
 
-  const categoryEntries = Object.entries(report.summary.categoryCounts).sort(
-    ([left], [right]) => left.localeCompare(right),
-  );
-  if (categoryEntries.length === 0) {
-    lines.push('| None | 0 |');
-  } else {
-    for (const [category, count] of categoryEntries) {
-      lines.push(`| ${category} | ${count} |`);
-    }
-  }
-
-  for (const caseResult of report.cases) {
+  for (const method of report.methods) {
     lines.push(
-      '',
-      `## ${caseResult.caseId}`,
-      '',
-      `- Outcome: ${caseResult.outcome}`,
-      `- Repo: \`${caseResult.repo}\``,
-      `- R@10: ${caseResult.recallAt10.toFixed(4)}`,
-      `- P@10: ${caseResult.precisionAt10.toFixed(4)}`,
-      `- F1@10: ${caseResult.f1At10.toFixed(4)}`,
-      `- Hit files: ${
-        caseResult.hitGroundTruthFiles.length === 0
-          ? 'None'
-          : caseResult.hitGroundTruthFiles.join(', ')
-      }`,
-      `- Missed files: ${
-        caseResult.missedGroundTruthFiles.length === 0
-          ? 'None'
-          : caseResult.missedGroundTruthFiles.join(', ')
-      }`,
-      `- Observed categories: ${
-        caseResult.observedFailureCategories.length === 0
-          ? 'None'
-          : caseResult.observedFailureCategories.join(', ')
-      }`,
-      `- Explanation: ${caseResult.observedExplanation}`,
-      `- Top ranked files: ${
-        caseResult.topRankedFiles.length === 0
-          ? 'None'
-          : caseResult.topRankedFiles.join(', ')
-      }`,
-      '',
-      'Future hypotheses:',
+      `| ${method.method} | ${method.passFullCount} | ${method.passPartialCount} | ${method.failMissCount} |`,
     );
-
-    if (caseResult.hypothesesForFutureEvaluation.length === 0) {
-      lines.push('- None');
-    } else {
-      for (const hypothesis of caseResult.hypothesesForFutureEvaluation) {
-        lines.push(
-          `- [${hypothesis.needsEvidenceFrom}] ${hypothesis.hypothesis}`,
-        );
-      }
-    }
   }
 
   lines.push(
     '',
-    '## Implications for next phase',
+    '## Cross-Method Comparison',
     '',
-    '- Lexical miss cases support adding a vector-only baseline where requirement wording and artifact identifiers do not align directly.',
-    '- Over-retrieval cases justify tracking precision and review burden, not recall alone.',
-    '- If any ground-truth file is absent from candidateArtifacts, candidate completeness should be corrected before R1 comparisons.',
+    '| Case ID | Keyword Outcome | BM25 Outcome | BM25 vs Keyword R@10 | Top-Ranked Changed | Note |',
+    '| --- | --- | --- | --- | --- | --- |',
+  );
+
+  for (const comparison of report.crossMethodComparison) {
+    lines.push(
+      `| ${comparison.caseId} | ${comparison.keywordOutcome} | ${comparison.bm25Outcome} | ${comparison.bm25VsKeywordRecallAt10} | ${comparison.bm25ChangedTopRankedFiles ? 'yes' : 'no'} | ${comparison.note} |`,
+    );
+  }
+
+  const caseIds = [...new Set(report.methods.flatMap((method) => method.cases.map((item) => item.caseId)))];
+  for (const caseId of caseIds) {
+    const methodCases = report.methods
+      .map((method) => ({
+        method: method.method,
+        caseResult: method.cases.find((item) => item.caseId === caseId),
+      }))
+      .filter((item) => item.caseResult);
+    const repo = methodCases[0]?.caseResult?.repo ?? 'unknown';
+
+    lines.push('', `## ${caseId}`, '', `Repo: \`${repo}\``, '');
+    lines.push('| Method | Outcome | R@10 | P@10 | F1@10 | Categories |');
+    lines.push('| --- | --- | ---: | ---: | ---: | --- |');
+
+    for (const entry of methodCases) {
+      const caseResult = entry.caseResult!;
+      lines.push(
+        `| ${entry.method} | ${caseResult.outcome} | ${caseResult.recallAt10.toFixed(4)} | ${caseResult.precisionAt10.toFixed(4)} | ${caseResult.f1At10.toFixed(4)} | ${caseResult.observedFailureCategories.length === 0 ? 'None' : caseResult.observedFailureCategories.join(', ')} |`,
+      );
+      lines.push('');
+      lines.push(`- ${entry.method} hit files: ${caseResult.hitGroundTruthFiles.length === 0 ? 'None' : caseResult.hitGroundTruthFiles.join(', ')}`);
+      lines.push(`- ${entry.method} missed files: ${caseResult.missedGroundTruthFiles.length === 0 ? 'None' : caseResult.missedGroundTruthFiles.join(', ')}`);
+      lines.push(`- ${entry.method} unexpected files: ${caseResult.unexpectedTopKFiles.length === 0 ? 'None' : caseResult.unexpectedTopKFiles.join(', ')}`);
+      lines.push(`- ${entry.method} explanation: ${caseResult.observedExplanation}`);
+      lines.push(`- ${entry.method} future hypotheses:`);
+      if (caseResult.hypothesesForFutureEvaluation.length === 0) {
+        lines.push('  - None');
+      } else {
+        for (const hypothesis of caseResult.hypothesesForFutureEvaluation) {
+          lines.push(`  - [${hypothesis.needsEvidenceFrom}] ${hypothesis.hypothesis}`);
+        }
+      }
+      lines.push('');
+    }
+  }
+
+  lines.push(
+    '## Implications',
+    '',
+    '- BM25 tie with keyword supports evaluating real vector-only retrieval next.',
+    '- Zero-hit cases remain candidates for semantic retrieval testing.',
+    '- Review burden remains necessary because PASS_FULL can still retrieve many non-ground-truth files.',
     '',
     '## Warnings',
     '',

@@ -1,6 +1,6 @@
 {
   "runId": "metrics-v0-2",
-  "generatedAt": "2026-06-17T11:15:03.007Z",
+  "generatedAt": "2026-06-17T11:40:50.691Z",
   "dataset": {
     "caseCount": 5,
     "groundTruthType": "changed-files-proxy",

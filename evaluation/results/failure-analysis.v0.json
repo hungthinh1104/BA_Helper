@@ -1,216 +1,479 @@
 {
-  "runId": "failure-analysis-v0-5",
-  "generatedAt": "2026-06-17T11:15:02.983Z",
-  "method": "keyword-baseline-v0",
+  "runId": "failure-analysis-v0-2",
+  "generatedAt": "2026-06-17T11:40:50.773Z",
   "dataset": {
     "caseCount": 5,
     "groundTruthType": "changed-files-proxy",
     "evaluationLevel": "file"
   },
-  "summary": {
-    "passFullCount": 2,
-    "passPartialCount": 1,
-    "failMissCount": 2,
-    "categoryCounts": {
-      "LEXICAL_MISMATCH": 2,
-      "DATA_MODEL_MISSED": 3,
-      "SUPPORT_FILE_OVER_RETRIEVED": 1,
-      "DOMAIN_ALIAS_MISSING": 1,
-      "INDIRECT_DEPENDENCY_MISSED": 1
-    }
-  },
-  "cases": [
+  "methods": [
     {
-      "caseId": "reqimpact-case-001-backend-reliability-semantics",
-      "repo": "hungthinh1104/BA_Helper",
-      "outcome": "FAIL_MISS",
-      "recallAt10": 0,
-      "precisionAt10": 0,
-      "f1At10": 0,
-      "hitGroundTruthFiles": [],
-      "missedGroundTruthFiles": [
-        "apps/api/prisma/schema.prisma",
-        "apps/api/src/modules/document/api/document.mapper.ts",
-        "apps/api/src/modules/document/application/approved-report-projection.service.ts",
-        "apps/api/src/modules/document/domain/approved-report-metadata.ts",
-        "apps/api/src/modules/impact-analysis/application/lifecycle/create-impact-analysis.usecase.ts",
-        "apps/api/src/modules/impact-analysis/application/lifecycle/finalize-impact-analysis.usecase.ts",
-        "apps/api/src/modules/impact-analysis/application/lifecycle/run-impact-analysis.usecase.ts",
-        "apps/api/src/modules/impact-analysis/application/review/get-review-queue.usecase.ts",
-        "apps/api/src/modules/impact-analysis/infrastructure/impact-analysis.mapper.ts",
-        "packages/contracts/src/document.contract.ts",
-        "packages/contracts/src/review-queue.contract.ts"
-      ],
-      "unexpectedTopKFiles": [],
-      "topRankedFiles": [],
-      "observedFailureCategories": [
-        "LEXICAL_MISMATCH",
-        "DATA_MODEL_MISSED"
-      ],
-      "observedExplanation": "No candidate artifact achieved keyword overlap with the requirement text, so every proxy ground-truth file was missed.",
-      "hypothesesForFutureEvaluation": [
+      "method": "keyword-baseline-v0",
+      "sourceFile": "keyword-baseline.v0.json",
+      "passFullCount": 2,
+      "passPartialCount": 1,
+      "failMissCount": 2,
+      "categoryCounts": {
+        "LEXICAL_MISMATCH": 2,
+        "DATA_MODEL_MISSED": 3,
+        "SUPPORT_FILE_OVER_RETRIEVED": 1,
+        "DOMAIN_ALIAS_MISSING": 1,
+        "INDIRECT_DEPENDENCY_MISSED": 1
+      },
+      "cases": [
         {
-          "hypothesis": "A semantic retrieval baseline may recover files whose identifiers do not share strong lexical overlap with the requirement text.",
-          "needsEvidenceFrom": "VECTOR_BASELINE"
-        }
-      ]
-    },
-    {
-      "caseId": "reqimpact-case-002-realworld-article-author-relation",
-      "repo": "lujakob/nestjs-realworld-example-app",
-      "outcome": "PASS_PARTIAL",
-      "recallAt10": 0.3333,
-      "precisionAt10": 0.5,
-      "f1At10": 0.4,
-      "hitGroundTruthFiles": [
-        "src/article/article.entity.ts",
-        "src/article/article.service.ts"
-      ],
-      "missedGroundTruthFiles": [
-        "src/profile/profile.controller.ts",
-        "src/profile/profile.service.ts",
-        "src/user/user.entity.ts",
-        "src/user/user.service.ts"
-      ],
-      "unexpectedTopKFiles": [
-        "src/article/article.controller.ts",
-        "src/article/comment.entity.ts"
-      ],
-      "topRankedFiles": [
-        "src/article/article.controller.ts",
-        "src/article/article.entity.ts",
-        "src/article/article.service.ts",
-        "src/article/comment.entity.ts"
-      ],
-      "observedFailureCategories": [
-        "SUPPORT_FILE_OVER_RETRIEVED",
-        "DATA_MODEL_MISSED",
-        "DOMAIN_ALIAS_MISSING",
-        "INDIRECT_DEPENDENCY_MISSED"
-      ],
-      "observedExplanation": "Keyword overlap retrieved 2 ground-truth file(s). It still missed 4 ground-truth file(s). Top-10 also included 2 non-ground-truth file(s). Top ranked files were: src/article/article.controller.ts, src/article/article.entity.ts, src/article/article.service.ts.",
-      "hypothesesForFutureEvaluation": [
-        {
-          "hypothesis": "A semantic retrieval baseline may recover files whose identifiers do not share strong lexical overlap with the requirement text.",
-          "needsEvidenceFrom": "VECTOR_BASELINE"
+          "caseId": "reqimpact-case-001-backend-reliability-semantics",
+          "repo": "hungthinh1104/BA_Helper",
+          "outcome": "FAIL_MISS",
+          "recallAt10": 0,
+          "precisionAt10": 0,
+          "f1At10": 0,
+          "hitGroundTruthFiles": [],
+          "missedGroundTruthFiles": [
+            "apps/api/prisma/schema.prisma",
+            "apps/api/src/modules/document/api/document.mapper.ts",
+            "apps/api/src/modules/document/application/approved-report-projection.service.ts",
+            "apps/api/src/modules/document/domain/approved-report-metadata.ts",
+            "apps/api/src/modules/impact-analysis/application/lifecycle/create-impact-analysis.usecase.ts",
+            "apps/api/src/modules/impact-analysis/application/lifecycle/finalize-impact-analysis.usecase.ts",
+            "apps/api/src/modules/impact-analysis/application/lifecycle/run-impact-analysis.usecase.ts",
+            "apps/api/src/modules/impact-analysis/application/review/get-review-queue.usecase.ts",
+            "apps/api/src/modules/impact-analysis/infrastructure/impact-analysis.mapper.ts",
+            "packages/contracts/src/document.contract.ts",
+            "packages/contracts/src/review-queue.contract.ts"
+          ],
+          "unexpectedTopKFiles": [],
+          "topRankedFiles": [],
+          "observedFailureCategories": [
+            "LEXICAL_MISMATCH",
+            "DATA_MODEL_MISSED"
+          ],
+          "observedExplanation": "No candidate artifact achieved lexical overlap with the requirement text, so every proxy ground-truth file was missed.",
+          "hypothesesForFutureEvaluation": [
+            {
+              "hypothesis": "A vector-only baseline may recover files whose identifiers do not share strong lexical overlap with the requirement text.",
+              "needsEvidenceFrom": "VECTOR_BASELINE"
+            }
+          ]
         },
         {
-          "hypothesis": "Hybrid retrieval may recover indirect dependency files if structural evidence links them to the retrieved direct hits.",
-          "needsEvidenceFrom": "CURRENT_HYBRID"
+          "caseId": "reqimpact-case-002-realworld-article-author-relation",
+          "repo": "lujakob/nestjs-realworld-example-app",
+          "outcome": "PASS_PARTIAL",
+          "recallAt10": 0.3333,
+          "precisionAt10": 0.5,
+          "f1At10": 0.4,
+          "hitGroundTruthFiles": [
+            "src/article/article.entity.ts",
+            "src/article/article.service.ts"
+          ],
+          "missedGroundTruthFiles": [
+            "src/profile/profile.controller.ts",
+            "src/profile/profile.service.ts",
+            "src/user/user.entity.ts",
+            "src/user/user.service.ts"
+          ],
+          "unexpectedTopKFiles": [
+            "src/article/article.controller.ts",
+            "src/article/comment.entity.ts"
+          ],
+          "topRankedFiles": [
+            "src/article/article.controller.ts",
+            "src/article/article.entity.ts",
+            "src/article/article.service.ts",
+            "src/article/comment.entity.ts"
+          ],
+          "observedFailureCategories": [
+            "SUPPORT_FILE_OVER_RETRIEVED",
+            "DATA_MODEL_MISSED",
+            "DOMAIN_ALIAS_MISSING",
+            "INDIRECT_DEPENDENCY_MISSED"
+          ],
+          "observedExplanation": "Lexical ranking retrieved 2 ground-truth file(s). It still missed 4 ground-truth file(s). Top-10 also included 2 non-ground-truth file(s). Top ranked files were: src/article/article.controller.ts, src/article/article.entity.ts, src/article/article.service.ts.",
+          "hypothesesForFutureEvaluation": [
+            {
+              "hypothesis": "A vector-only baseline may recover files whose identifiers do not share strong lexical overlap with the requirement text.",
+              "needsEvidenceFrom": "VECTOR_BASELINE"
+            },
+            {
+              "hypothesis": "Hybrid retrieval may recover indirect dependency files if structural evidence links them to the retrieved direct hits.",
+              "needsEvidenceFrom": "CURRENT_HYBRID"
+            },
+            {
+              "hypothesis": "Precision and review burden should be compared against later baselines because lexical ranking can retrieve nearby support files even when recall is high.",
+              "needsEvidenceFrom": "CURRENT_HYBRID"
+            }
+          ]
         },
         {
-          "hypothesis": "Precision and review burden should be compared against later baselines because lexical ranking can retrieve nearby support files even when recall is high.",
-          "needsEvidenceFrom": "CURRENT_HYBRID"
+          "caseId": "reqimpact-case-003-realworld-auth-middleware-user-object",
+          "repo": "lujakob/nestjs-realworld-example-app",
+          "outcome": "PASS_FULL",
+          "recallAt10": 1,
+          "precisionAt10": 0.5714,
+          "f1At10": 0.7272,
+          "hitGroundTruthFiles": [
+            "src/user/auth.middleware.ts",
+            "src/user/user.controller.ts",
+            "src/user/user.decorator.ts",
+            "src/user/user.service.ts"
+          ],
+          "missedGroundTruthFiles": [],
+          "unexpectedTopKFiles": [
+            "src/user/dto/update-user.dto.ts",
+            "src/user/user.entity.ts",
+            "src/user/user.module.ts"
+          ],
+          "topRankedFiles": [
+            "src/user/auth.middleware.ts",
+            "src/user/dto/update-user.dto.ts",
+            "src/user/user.controller.ts",
+            "src/user/user.decorator.ts",
+            "src/user/user.entity.ts",
+            "src/user/user.module.ts",
+            "src/user/user.service.ts"
+          ],
+          "observedFailureCategories": [],
+          "observedExplanation": "All proxy ground-truth files were retrieved within top-10 by exact file-path match.",
+          "hypothesesForFutureEvaluation": [
+            {
+              "hypothesis": "Precision and review burden should be compared against later baselines because lexical ranking can retrieve nearby support files even when recall is high.",
+              "needsEvidenceFrom": "CURRENT_HYBRID"
+            }
+          ]
+        },
+        {
+          "caseId": "reqimpact-case-004-nest-post-sse-empty-response",
+          "repo": "nestjs/nest",
+          "outcome": "PASS_FULL",
+          "recallAt10": 1,
+          "precisionAt10": 0.25,
+          "f1At10": 0.4,
+          "hitGroundTruthFiles": [
+            "integration/nest-application/sse/src/app.controller.ts",
+            "packages/core/router/router-response-controller.ts"
+          ],
+          "missedGroundTruthFiles": [],
+          "unexpectedTopKFiles": [
+            "packages/core/router/sse-stream.ts",
+            "integration/nest-application/sse/src/app.module.ts",
+            "packages/core/router/router-execution-context.ts",
+            "packages/core/router/router-explorer.ts",
+            "packages/core/router/router-proxy.ts",
+            "packages/core/router/routes-resolver.ts"
+          ],
+          "topRankedFiles": [
+            "packages/core/router/router-response-controller.ts",
+            "packages/core/router/sse-stream.ts",
+            "integration/nest-application/sse/src/app.controller.ts",
+            "integration/nest-application/sse/src/app.module.ts",
+            "packages/core/router/router-execution-context.ts",
+            "packages/core/router/router-explorer.ts",
+            "packages/core/router/router-proxy.ts",
+            "packages/core/router/routes-resolver.ts"
+          ],
+          "observedFailureCategories": [],
+          "observedExplanation": "All proxy ground-truth files were retrieved within top-10 by exact file-path match.",
+          "hypothesesForFutureEvaluation": [
+            {
+              "hypothesis": "Precision and review burden should be compared against later baselines because lexical ranking can retrieve nearby support files even when recall is high.",
+              "needsEvidenceFrom": "CURRENT_HYBRID"
+            }
+          ]
+        },
+        {
+          "caseId": "reqimpact-case-005-realworld-proper-error-object",
+          "repo": "lujakob/nestjs-realworld-example-app",
+          "outcome": "FAIL_MISS",
+          "recallAt10": 0,
+          "precisionAt10": 0,
+          "f1At10": 0,
+          "hitGroundTruthFiles": [],
+          "missedGroundTruthFiles": [
+            "src/shared/pipes/validation.pipe.ts",
+            "src/user/user.controller.ts",
+            "src/user/user.entity.ts"
+          ],
+          "unexpectedTopKFiles": [],
+          "topRankedFiles": [],
+          "observedFailureCategories": [
+            "LEXICAL_MISMATCH",
+            "DATA_MODEL_MISSED"
+          ],
+          "observedExplanation": "No candidate artifact achieved lexical overlap with the requirement text, so every proxy ground-truth file was missed.",
+          "hypothesesForFutureEvaluation": [
+            {
+              "hypothesis": "A vector-only baseline may recover files whose identifiers do not share strong lexical overlap with the requirement text.",
+              "needsEvidenceFrom": "VECTOR_BASELINE"
+            }
+          ]
         }
       ]
     },
     {
-      "caseId": "reqimpact-case-003-realworld-auth-middleware-user-object",
-      "repo": "lujakob/nestjs-realworld-example-app",
-      "outcome": "PASS_FULL",
-      "recallAt10": 1,
-      "precisionAt10": 0.5714,
-      "f1At10": 0.7272,
-      "hitGroundTruthFiles": [
-        "src/user/auth.middleware.ts",
-        "src/user/user.controller.ts",
-        "src/user/user.decorator.ts",
-        "src/user/user.service.ts"
-      ],
-      "missedGroundTruthFiles": [],
-      "unexpectedTopKFiles": [
-        "src/user/dto/update-user.dto.ts",
-        "src/user/user.entity.ts",
-        "src/user/user.module.ts"
-      ],
-      "topRankedFiles": [
-        "src/user/auth.middleware.ts",
-        "src/user/dto/update-user.dto.ts",
-        "src/user/user.controller.ts",
-        "src/user/user.decorator.ts",
-        "src/user/user.entity.ts",
-        "src/user/user.module.ts",
-        "src/user/user.service.ts"
-      ],
-      "observedFailureCategories": [],
-      "observedExplanation": "All proxy ground-truth files were retrieved within top-10 by exact file-path match.",
-      "hypothesesForFutureEvaluation": [
+      "method": "bm25-baseline-v0",
+      "sourceFile": "bm25-baseline.v0.json",
+      "passFullCount": 2,
+      "passPartialCount": 1,
+      "failMissCount": 2,
+      "categoryCounts": {
+        "LEXICAL_MISMATCH": 2,
+        "DATA_MODEL_MISSED": 3,
+        "SUPPORT_FILE_OVER_RETRIEVED": 1,
+        "DOMAIN_ALIAS_MISSING": 1,
+        "INDIRECT_DEPENDENCY_MISSED": 1
+      },
+      "cases": [
         {
-          "hypothesis": "Precision and review burden should be compared against later baselines because lexical ranking can retrieve nearby support files even when recall is high.",
-          "needsEvidenceFrom": "CURRENT_HYBRID"
-        }
-      ]
-    },
-    {
-      "caseId": "reqimpact-case-004-nest-post-sse-empty-response",
-      "repo": "nestjs/nest",
-      "outcome": "PASS_FULL",
-      "recallAt10": 1,
-      "precisionAt10": 0.25,
-      "f1At10": 0.4,
-      "hitGroundTruthFiles": [
-        "integration/nest-application/sse/src/app.controller.ts",
-        "packages/core/router/router-response-controller.ts"
-      ],
-      "missedGroundTruthFiles": [],
-      "unexpectedTopKFiles": [
-        "packages/core/router/sse-stream.ts",
-        "integration/nest-application/sse/src/app.module.ts",
-        "packages/core/router/router-execution-context.ts",
-        "packages/core/router/router-explorer.ts",
-        "packages/core/router/router-proxy.ts",
-        "packages/core/router/routes-resolver.ts"
-      ],
-      "topRankedFiles": [
-        "packages/core/router/router-response-controller.ts",
-        "packages/core/router/sse-stream.ts",
-        "integration/nest-application/sse/src/app.controller.ts",
-        "integration/nest-application/sse/src/app.module.ts",
-        "packages/core/router/router-execution-context.ts",
-        "packages/core/router/router-explorer.ts",
-        "packages/core/router/router-proxy.ts",
-        "packages/core/router/routes-resolver.ts"
-      ],
-      "observedFailureCategories": [],
-      "observedExplanation": "All proxy ground-truth files were retrieved within top-10 by exact file-path match.",
-      "hypothesesForFutureEvaluation": [
+          "caseId": "reqimpact-case-001-backend-reliability-semantics",
+          "repo": "hungthinh1104/BA_Helper",
+          "outcome": "FAIL_MISS",
+          "recallAt10": 0,
+          "precisionAt10": 0,
+          "f1At10": 0,
+          "hitGroundTruthFiles": [],
+          "missedGroundTruthFiles": [
+            "apps/api/prisma/schema.prisma",
+            "apps/api/src/modules/document/api/document.mapper.ts",
+            "apps/api/src/modules/document/application/approved-report-projection.service.ts",
+            "apps/api/src/modules/document/domain/approved-report-metadata.ts",
+            "apps/api/src/modules/impact-analysis/application/lifecycle/create-impact-analysis.usecase.ts",
+            "apps/api/src/modules/impact-analysis/application/lifecycle/finalize-impact-analysis.usecase.ts",
+            "apps/api/src/modules/impact-analysis/application/lifecycle/run-impact-analysis.usecase.ts",
+            "apps/api/src/modules/impact-analysis/application/review/get-review-queue.usecase.ts",
+            "apps/api/src/modules/impact-analysis/infrastructure/impact-analysis.mapper.ts",
+            "packages/contracts/src/document.contract.ts",
+            "packages/contracts/src/review-queue.contract.ts"
+          ],
+          "unexpectedTopKFiles": [],
+          "topRankedFiles": [],
+          "observedFailureCategories": [
+            "LEXICAL_MISMATCH",
+            "DATA_MODEL_MISSED"
+          ],
+          "observedExplanation": "No candidate artifact achieved lexical overlap with the requirement text, so every proxy ground-truth file was missed.",
+          "hypothesesForFutureEvaluation": [
+            {
+              "hypothesis": "A vector-only baseline may recover files whose identifiers do not share strong lexical overlap with the requirement text.",
+              "needsEvidenceFrom": "VECTOR_BASELINE"
+            }
+          ]
+        },
         {
-          "hypothesis": "Precision and review burden should be compared against later baselines because lexical ranking can retrieve nearby support files even when recall is high.",
-          "needsEvidenceFrom": "CURRENT_HYBRID"
-        }
-      ]
-    },
-    {
-      "caseId": "reqimpact-case-005-realworld-proper-error-object",
-      "repo": "lujakob/nestjs-realworld-example-app",
-      "outcome": "FAIL_MISS",
-      "recallAt10": 0,
-      "precisionAt10": 0,
-      "f1At10": 0,
-      "hitGroundTruthFiles": [],
-      "missedGroundTruthFiles": [
-        "src/shared/pipes/validation.pipe.ts",
-        "src/user/user.controller.ts",
-        "src/user/user.entity.ts"
-      ],
-      "unexpectedTopKFiles": [],
-      "topRankedFiles": [],
-      "observedFailureCategories": [
-        "LEXICAL_MISMATCH",
-        "DATA_MODEL_MISSED"
-      ],
-      "observedExplanation": "No candidate artifact achieved keyword overlap with the requirement text, so every proxy ground-truth file was missed.",
-      "hypothesesForFutureEvaluation": [
+          "caseId": "reqimpact-case-002-realworld-article-author-relation",
+          "repo": "lujakob/nestjs-realworld-example-app",
+          "outcome": "PASS_PARTIAL",
+          "recallAt10": 0.3333,
+          "precisionAt10": 0.5,
+          "f1At10": 0.4,
+          "hitGroundTruthFiles": [
+            "src/article/article.entity.ts",
+            "src/article/article.service.ts"
+          ],
+          "missedGroundTruthFiles": [
+            "src/profile/profile.controller.ts",
+            "src/profile/profile.service.ts",
+            "src/user/user.entity.ts",
+            "src/user/user.service.ts"
+          ],
+          "unexpectedTopKFiles": [
+            "src/article/article.controller.ts",
+            "src/article/comment.entity.ts"
+          ],
+          "topRankedFiles": [
+            "src/article/article.controller.ts",
+            "src/article/article.entity.ts",
+            "src/article/article.service.ts",
+            "src/article/comment.entity.ts"
+          ],
+          "observedFailureCategories": [
+            "SUPPORT_FILE_OVER_RETRIEVED",
+            "DATA_MODEL_MISSED",
+            "DOMAIN_ALIAS_MISSING",
+            "INDIRECT_DEPENDENCY_MISSED"
+          ],
+          "observedExplanation": "Lexical ranking retrieved 2 ground-truth file(s). It still missed 4 ground-truth file(s). Top-10 also included 2 non-ground-truth file(s). Top ranked files were: src/article/article.controller.ts, src/article/article.entity.ts, src/article/article.service.ts.",
+          "hypothesesForFutureEvaluation": [
+            {
+              "hypothesis": "A vector-only baseline may recover files whose identifiers do not share strong lexical overlap with the requirement text.",
+              "needsEvidenceFrom": "VECTOR_BASELINE"
+            },
+            {
+              "hypothesis": "Hybrid retrieval may recover indirect dependency files if structural evidence links them to the retrieved direct hits.",
+              "needsEvidenceFrom": "CURRENT_HYBRID"
+            },
+            {
+              "hypothesis": "Precision and review burden should be compared against later baselines because lexical ranking can retrieve nearby support files even when recall is high.",
+              "needsEvidenceFrom": "CURRENT_HYBRID"
+            }
+          ]
+        },
         {
-          "hypothesis": "A semantic retrieval baseline may recover files whose identifiers do not share strong lexical overlap with the requirement text.",
-          "needsEvidenceFrom": "VECTOR_BASELINE"
+          "caseId": "reqimpact-case-003-realworld-auth-middleware-user-object",
+          "repo": "lujakob/nestjs-realworld-example-app",
+          "outcome": "PASS_FULL",
+          "recallAt10": 1,
+          "precisionAt10": 0.5714,
+          "f1At10": 0.7272,
+          "hitGroundTruthFiles": [
+            "src/user/auth.middleware.ts",
+            "src/user/user.controller.ts",
+            "src/user/user.decorator.ts",
+            "src/user/user.service.ts"
+          ],
+          "missedGroundTruthFiles": [],
+          "unexpectedTopKFiles": [
+            "src/user/user.entity.ts",
+            "src/user/user.module.ts",
+            "src/user/dto/update-user.dto.ts"
+          ],
+          "topRankedFiles": [
+            "src/user/auth.middleware.ts",
+            "src/user/user.decorator.ts",
+            "src/user/user.controller.ts",
+            "src/user/user.entity.ts",
+            "src/user/user.module.ts",
+            "src/user/user.service.ts",
+            "src/user/dto/update-user.dto.ts"
+          ],
+          "observedFailureCategories": [],
+          "observedExplanation": "All proxy ground-truth files were retrieved within top-10 by exact file-path match.",
+          "hypothesesForFutureEvaluation": [
+            {
+              "hypothesis": "Precision and review burden should be compared against later baselines because lexical ranking can retrieve nearby support files even when recall is high.",
+              "needsEvidenceFrom": "CURRENT_HYBRID"
+            }
+          ]
+        },
+        {
+          "caseId": "reqimpact-case-004-nest-post-sse-empty-response",
+          "repo": "nestjs/nest",
+          "outcome": "PASS_FULL",
+          "recallAt10": 1,
+          "precisionAt10": 0.25,
+          "f1At10": 0.4,
+          "hitGroundTruthFiles": [
+            "integration/nest-application/sse/src/app.controller.ts",
+            "packages/core/router/router-response-controller.ts"
+          ],
+          "missedGroundTruthFiles": [],
+          "unexpectedTopKFiles": [
+            "packages/core/router/sse-stream.ts",
+            "integration/nest-application/sse/src/app.module.ts",
+            "packages/core/router/router-explorer.ts",
+            "packages/core/router/router-proxy.ts",
+            "packages/core/router/routes-resolver.ts",
+            "packages/core/router/router-execution-context.ts"
+          ],
+          "topRankedFiles": [
+            "packages/core/router/router-response-controller.ts",
+            "integration/nest-application/sse/src/app.controller.ts",
+            "packages/core/router/sse-stream.ts",
+            "integration/nest-application/sse/src/app.module.ts",
+            "packages/core/router/router-explorer.ts",
+            "packages/core/router/router-proxy.ts",
+            "packages/core/router/routes-resolver.ts",
+            "packages/core/router/router-execution-context.ts"
+          ],
+          "observedFailureCategories": [],
+          "observedExplanation": "All proxy ground-truth files were retrieved within top-10 by exact file-path match.",
+          "hypothesesForFutureEvaluation": [
+            {
+              "hypothesis": "Precision and review burden should be compared against later baselines because lexical ranking can retrieve nearby support files even when recall is high.",
+              "needsEvidenceFrom": "CURRENT_HYBRID"
+            }
+          ]
+        },
+        {
+          "caseId": "reqimpact-case-005-realworld-proper-error-object",
+          "repo": "lujakob/nestjs-realworld-example-app",
+          "outcome": "FAIL_MISS",
+          "recallAt10": 0,
+          "precisionAt10": 0,
+          "f1At10": 0,
+          "hitGroundTruthFiles": [],
+          "missedGroundTruthFiles": [
+            "src/shared/pipes/validation.pipe.ts",
+            "src/user/user.controller.ts",
+            "src/user/user.entity.ts"
+          ],
+          "unexpectedTopKFiles": [],
+          "topRankedFiles": [],
+          "observedFailureCategories": [
+            "LEXICAL_MISMATCH",
+            "DATA_MODEL_MISSED"
+          ],
+          "observedExplanation": "No candidate artifact achieved lexical overlap with the requirement text, so every proxy ground-truth file was missed.",
+          "hypothesesForFutureEvaluation": [
+            {
+              "hypothesis": "A vector-only baseline may recover files whose identifiers do not share strong lexical overlap with the requirement text.",
+              "needsEvidenceFrom": "VECTOR_BASELINE"
+            }
+          ]
         }
       ]
     }
   ],
+  "crossMethodComparison": [
+    {
+      "caseId": "reqimpact-case-001-backend-reliability-semantics",
+      "repo": "hungthinh1104/BA_Helper",
+      "keywordOutcome": "FAIL_MISS",
+      "bm25Outcome": "FAIL_MISS",
+      "bm25VsKeywordRecallAt10": "TIED",
+      "bm25ChangedTopRankedFiles": false,
+      "note": "BM25 tied keyword at R@10 and preserved the same top-ranked file set/order."
+    },
+    {
+      "caseId": "reqimpact-case-002-realworld-article-author-relation",
+      "repo": "lujakob/nestjs-realworld-example-app",
+      "keywordOutcome": "PASS_PARTIAL",
+      "bm25Outcome": "PASS_PARTIAL",
+      "bm25VsKeywordRecallAt10": "TIED",
+      "bm25ChangedTopRankedFiles": false,
+      "note": "BM25 tied keyword at R@10 and preserved the same top-ranked file set/order."
+    },
+    {
+      "caseId": "reqimpact-case-003-realworld-auth-middleware-user-object",
+      "repo": "lujakob/nestjs-realworld-example-app",
+      "keywordOutcome": "PASS_FULL",
+      "bm25Outcome": "PASS_FULL",
+      "bm25VsKeywordRecallAt10": "TIED",
+      "bm25ChangedTopRankedFiles": true,
+      "note": "BM25 tied keyword at R@10 but changed the top-ranked file order."
+    },
+    {
+      "caseId": "reqimpact-case-004-nest-post-sse-empty-response",
+      "repo": "nestjs/nest",
+      "keywordOutcome": "PASS_FULL",
+      "bm25Outcome": "PASS_FULL",
+      "bm25VsKeywordRecallAt10": "TIED",
+      "bm25ChangedTopRankedFiles": true,
+      "note": "BM25 tied keyword at R@10 but changed the top-ranked file order."
+    },
+    {
+      "caseId": "reqimpact-case-005-realworld-proper-error-object",
+      "repo": "lujakob/nestjs-realworld-example-app",
+      "keywordOutcome": "FAIL_MISS",
+      "bm25Outcome": "FAIL_MISS",
+      "bm25VsKeywordRecallAt10": "TIED",
+      "bm25ChangedTopRankedFiles": false,
+      "note": "BM25 tied keyword at R@10 and preserved the same top-ranked file set/order."
+    }
+  ],
   "warnings": [
-    "Changed files are proxy ground truth, not absolute impacted files.",
-    "This failure analysis is based on keyword-baseline-v0 only.",
-    "No vector, graph, DB, LLM, or R1 behavior is evaluated here."
+    "This analyzes deterministic lexical baselines only.",
+    "Changed files are proxy ground truth.",
+    "File-level only.",
+    "No vector, graph, DB, LLM, or R1 behavior is evaluated.",
+    "BM25 did not improve aggregate file-level retrieval over keyword-baseline-v0 on dataset v0.",
+    "Included benchmark result: keyword-baseline.v0.json",
+    "Included benchmark result: bm25-baseline.v0.json",
+    "Excluded non-benchmark result file: rag-samples.v0.json",
+    "Excluded non-benchmark result file: results.v0.json",
+    "Excluded non-benchmark result file: metrics.v0.json",
+    "Excluded non-benchmark result file: failure-analysis.v0.json",
+    "Optional result file not found: rag-samples.current-hybrid.v0.json",
+    "Optional result file not found: vector-baseline.v0.json"
   ]
 }

@@ -1,6 +1,6 @@
 # Metrics v0
 
-Generated at: 2026-06-17T11:15:03.007Z
+Generated at: 2026-06-17T11:40:50.691Z
 
 Changed files are proxy ground truth.
 File-level only.
