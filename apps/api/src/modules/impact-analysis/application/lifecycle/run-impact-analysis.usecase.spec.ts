@@ -220,8 +220,9 @@ describe('RunImpactAnalysisUseCase', () => {
           insightKey: 'i-no-evidence',
           certainty: 'INFERRED',
           metadata: expect.objectContaining({
-            origin: 'EVIDENCE_INTEGRITY_GUARD',
-            downgradedFrom: 'EVIDENCED',
+            evidenceIntegrity:
+              'EVIDENCED_DOWNGRADED_NO_PERSISTED_EVIDENCE',
+            originalCertainty: 'EVIDENCED',
           }),
         }),
       ]),

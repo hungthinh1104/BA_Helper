@@ -298,6 +298,7 @@ export class RunImpactAnalysisUseCase {
       }>;
 
       const evidencedInsightMap: Array<{ insightKey: string; artifactKeys: string[] }> = [];
+      const resolvableEvidencedInsightKeys = new Set<string>();
 
       for (const insight of llmResponse.insights) {
         let certainty = insight.certainty;
@@ -312,15 +313,16 @@ export class RunImpactAnalysisUseCase {
           if (resolvableArtifactKeys.length === 0) {
             certainty = requestedEvidenceKeys.length > 0 ? 'INFERRED' : 'UNKNOWN';
             metadata = {
-              origin: 'EVIDENCE_INTEGRITY_GUARD',
-              downgradedFrom: 'EVIDENCED',
-              downgradeReason: 'NO_RESOLVABLE_EVIDENCE',
+              evidenceIntegrity:
+                'EVIDENCED_DOWNGRADED_NO_PERSISTED_EVIDENCE',
+              originalCertainty: 'EVIDENCED',
               requestedEvidenceKeys,
             };
             this.logger.warn(
               `Downgraded insight ${insight.insightKey} from EVIDENCED because no persisted evidence could be resolved.`,
             );
           } else {
+            resolvableEvidencedInsightKeys.add(insight.insightKey);
             evidencedInsightMap.push({
               insightKey: insight.insightKey,
               artifactKeys: resolvableArtifactKeys,
@@ -421,7 +423,11 @@ export class RunImpactAnalysisUseCase {
 
       await Promise.all(
         insights
-          .filter((insight) => insight.certainty === 'EVIDENCED')
+          .filter(
+            (insight) =>
+              insight.certainty === 'EVIDENCED' &&
+              resolvableEvidencedInsightKeys.has(insight.insightKey),
+          )
           .map((insight) => {
             const mapping = evidencedInsightMap.find(
               (item) => item.insightKey === insight.insightKey,
