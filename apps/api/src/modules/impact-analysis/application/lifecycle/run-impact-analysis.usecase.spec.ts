@@ -168,4 +168,64 @@ describe('RunImpactAnalysisUseCase', () => {
       error: expect.objectContaining({ message: 'DB Error' })
     }));
   });
+
+  it('downgrades evidenced insights when no persisted evidence can be resolved', async () => {
+    const analysis = {
+      id: 'a1',
+      status: 'QUEUED',
+      snapshot: { id: 's1', repositoryId: 'r1', analyzerVersion: '1.0', diagnostics: [] },
+      requirementRevision: { rawText: 'cancel booking' },
+    };
+    impactRepo.findById.mockResolvedValue(analysis as any);
+    artifactRepo.listBySnapshot.mockResolvedValue([
+      { id: 'art1', artifactKey: 'file1', artifactType: 'CODE', filePath: 'file1.ts', name: 'File1' } as any,
+    ]);
+    retrievalService.retrieve.mockResolvedValue([
+      { artifactKey: 'file1', retrievalMethod: 'KEYWORD', score: 0.9 } as any,
+    ]);
+    evidenceRepo.upsertMany.mockResolvedValue([
+      { id: 'ev1', artifactId: 'art1', excerpt: 'code' } as any,
+    ]);
+    traceabilityRepo.upsertMany.mockResolvedValue([{ id: 'tl1', artifactId: 'art1' } as any]);
+    traceabilityRepo.linkEvidence.mockResolvedValue({ count: 1 } as any);
+
+    llmProvider.generateStructured.mockResolvedValue({
+      data: {
+        insights: [
+          {
+            insightKey: 'i-no-evidence',
+            insightType: 'CLAIM',
+            certainty: 'EVIDENCED',
+            confidence: 0.7,
+            title: 'title',
+            description: 'desc',
+            evidenceKeys: ['missing-artifact-key'],
+          },
+        ],
+        unknowns: [],
+      },
+      metadata: {},
+    } as any);
+
+    insightRepo.upsertMany.mockResolvedValue([
+      { id: 'in1', insightKey: 'i-no-evidence', certainty: 'INFERRED' } as any,
+    ]);
+    insightRepo.linkEvidence.mockResolvedValue([] as any);
+
+    await useCase.execute({ analysisId: 'a1' });
+
+    expect(insightRepo.upsertMany).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          insightKey: 'i-no-evidence',
+          certainty: 'INFERRED',
+          metadata: expect.objectContaining({
+            origin: 'EVIDENCE_INTEGRITY_GUARD',
+            downgradedFrom: 'EVIDENCED',
+          }),
+        }),
+      ]),
+    );
+    expect(insightRepo.linkEvidence).not.toHaveBeenCalled();
+  });
 });

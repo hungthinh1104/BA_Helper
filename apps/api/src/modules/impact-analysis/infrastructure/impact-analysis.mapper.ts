@@ -5,6 +5,7 @@ import type {
   MultiRepoAnalysisRunListItemResponse,
 } from '@ba-helper/contracts';
 import { deriveMultiRepoRunAggregates } from '../application/multi-repo/multi-repo-run-readiness';
+import { isAnalyzerVersionOutdated } from './analyzer-version';
 
 type BaseAnalysis = Prisma.ImpactAnalysisGetPayload<Record<string, never>>;
 type AnalysisSourceTarget = {
@@ -106,7 +107,9 @@ export const mapImpactAnalysisResponse = (params: {
     },
     freshness: {
       isStale,
-      isAnalyzerOutdated: false,
+      isAnalyzerOutdated: isAnalyzerVersionOutdated(
+        analysis.snapshot.analyzerVersion,
+      ),
       basis: isPinnedCommit ? 'PINNED_COMMIT' : 'LATEST_OBSERVED_SOURCE_TARGET',
     },
     requirement: {

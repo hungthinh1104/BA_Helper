@@ -9,26 +9,27 @@ class StubImpactRepo {
     sourceTarget: {
       resolvedRefType: 'BRANCH',
       latestObservedCommitSha: 'abc',
+      requestedRef: 'main',
     },
     snapshot: {
+      id: 'snapshot-1',
       commitSha: 'abc',
+      analyzerVersion: '1.0.0',
+      repositoryId: 'repo-1',
+      repository: {
+        projectId: 'proj-1',
+      },
+    },
+    requirementRevision: {
+      title: 'Requirement',
+      rawText: 'raw requirement',
     },
     insights: [],
   });
-
-  finalizeIfCurrent = async () => ({ count: 0 });
 }
 
 class StubDocumentRepo {
-  upsertApproved = async () => undefined;
-}
-
-class StubEventLog {
-  recordEvent = async () => undefined;
-}
-
-class StubReviewNoteRepo {
-  findByAnalysisId = async () => [];
+  findApprovedReportByAnalysisId = async () => null;
 }
 
 describe('FinalizeImpactAnalysisUseCase staleness guard', () => {
@@ -40,11 +41,24 @@ describe('FinalizeImpactAnalysisUseCase staleness guard', () => {
       { listBySnapshot: async () => [] } as any,
       { findByAnalysisId: () => Promise.resolve([]) } as any,
       { listByAnalysisId: () => Promise.resolve([]) } as any,
-      { upsertApproved: () => Promise.resolve() } as any,
-      new StubEventLog() as any,
+      new StubDocumentRepo() as any,
       { build: () => 'markdown' } as any,
       { listByAnalysisId: async () => [] } as any,
       { computeForAnalysis: async () => ({ computable: true, diff: {} }) } as any,
+      {
+        $transaction: async (callback: (tx: any) => Promise<unknown>) =>
+          callback({
+            impactAnalysis: {
+              updateMany: async () => ({ count: 0 }),
+            },
+            generatedDocument: {
+              upsert: async () => ({ id: 'doc-1' }),
+            },
+            domainEvent: {
+              upsert: async () => ({ id: 'event-1' }),
+            },
+          }),
+      } as any,
     );
 
     await expect(

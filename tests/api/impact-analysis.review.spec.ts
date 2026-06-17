@@ -30,8 +30,26 @@ const defaultAnalysisState = {
 
 const createStubRepo = (overrides = {}) => ({
   findById: async () => ({ ...defaultAnalysisState, ...overrides }),
-  updateStatus: async () => ({ ...defaultAnalysisState, ...overrides, status: 'COMPLETED' }),
-  finalizeIfCurrent: async () => ({ count: 1 }),
+});
+
+const createPrismaStub = (hooks?: {
+  onUpsert?: () => void | Promise<void>;
+}) => ({
+  $transaction: async (callback: (tx: any) => Promise<unknown>) =>
+    callback({
+      impactAnalysis: {
+        updateMany: async () => ({ count: 1 }),
+      },
+      generatedDocument: {
+        upsert: async () => {
+          await hooks?.onUpsert?.();
+          return { id: 'doc-1' };
+        },
+      },
+      domainEvent: {
+        upsert: async () => ({ id: 'event-1' }),
+      },
+    }),
 });
 
 describe('FinalizeImpactAnalysisUseCase', () => {
@@ -44,10 +62,10 @@ describe('FinalizeImpactAnalysisUseCase', () => {
       { findByAnalysisId: () => Promise.resolve([]) } as any,
       { listByAnalysisId: () => Promise.resolve([]) } as any,
       { findApprovedReportByAnalysisId: async () => null, upsertApproved: () => Promise.resolve() } as any,
-      { recordEvent: async () => undefined } as any,
       { build: () => 'markdown' } as any,
       { listByAnalysisId: async () => [] } as any,
       { computeForAnalysis: async () => ({ computable: true, diff: {} }) } as any,
+      createPrismaStub() as any,
     );
 
     await expect(
@@ -66,10 +84,10 @@ describe('FinalizeImpactAnalysisUseCase', () => {
       { findByAnalysisId: () => Promise.resolve([]) } as any,
       { listByAnalysisId: () => Promise.resolve([]) } as any,
       { findApprovedReportByAnalysisId: async () => null, upsertApproved: () => Promise.resolve() } as any,
-      { recordEvent: async () => undefined } as any,
       { build: () => 'markdown' } as any,
       { listByAnalysisId: async () => [] } as any,
       { computeForAnalysis: async () => ({ computable: true, diff: {} }) } as any,
+      createPrismaStub() as any,
     );
 
     await expect(
@@ -92,10 +110,10 @@ describe('FinalizeImpactAnalysisUseCase', () => {
         findApprovedReportByAnalysisId: async () => null,
         upsertApproved: async () => { upsertCalled = true; return { id: 'some-id', createdAt: new Date(), updatedAt: new Date() }; } 
       } as any,
-      { recordEvent: async () => undefined } as any,
       { build: () => 'markdown' } as any,
       { listByAnalysisId: async () => [] } as any,
       { computeForAnalysis: async () => ({ computable: true, diff: {} }) } as any,
+      createPrismaStub({ onUpsert: async () => { upsertCalled = true; } }) as any,
     );
 
     const result = await useCase.execute({ analysisId: 'analysis-1', acknowledgeUnreviewed: true });
@@ -116,10 +134,10 @@ describe('FinalizeImpactAnalysisUseCase', () => {
         findApprovedReportByAnalysisId: async () => null,
         upsertApproved: async () => { upsertCalls++; } 
       } as any,
-      { recordEvent: async () => undefined } as any,
       { build: () => { throw new Error('Builder crashed'); } } as any,
       { listByAnalysisId: async () => [] } as any,
       { computeForAnalysis: async () => ({ computable: true, diff: {} }) } as any,
+      createPrismaStub({ onUpsert: async () => { upsertCalls++; } }) as any,
     );
 
     await expect(

@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
 import { RequirementRepository } from '../../../requirement/infrastructure/requirement.repository';
 import { AppError } from '../../../../shared/app-error';
@@ -10,6 +11,8 @@ import { QueueService } from '../../../queue/queue.service';
 
 @Injectable()
 export class CreateImpactAnalysisUseCase {
+  private readonly logger = new Logger(CreateImpactAnalysisUseCase.name)
+
   constructor(
     private readonly impactRepo: ImpactAnalysisRepository,
     private readonly requirementRepo: RequirementRepository,
@@ -178,19 +181,32 @@ export class CreateImpactAnalysisUseCase {
         ? 'Partial snapshot accepted; coverage may be incomplete.'
         : null;
 
-    const analysis = await this.impactRepo.createQueued({
-      requirementRevisionId: params.requirementRevisionId,
-      snapshotId: params.snapshotId,
-      sourceTargetId: params.sourceTargetId,
-      multiRepoRunId: params.multiRepoRunId,
-      requestKey: params.requestKey,
-      acceptedPartialCoverage:
-        snapshot.coverageStatus === 'PARTIAL' && params.allowPartialSnapshot,
-      coverageWarning,
-      derivedFromAnalysisId: params.derivedFromAnalysisId,
-      sourceClarificationId: params.sourceClarificationId,
-      reviewClarificationRequestId: params.reviewClarificationRequestId,
-    });
+    let analysis
+    try {
+      analysis = await this.impactRepo.createQueued({
+        requirementRevisionId: params.requirementRevisionId,
+        snapshotId: params.snapshotId,
+        sourceTargetId: params.sourceTargetId,
+        multiRepoRunId: params.multiRepoRunId,
+        requestKey: params.requestKey,
+        acceptedPartialCoverage:
+          snapshot.coverageStatus === 'PARTIAL' && params.allowPartialSnapshot,
+        coverageWarning,
+        derivedFromAnalysisId: params.derivedFromAnalysisId,
+        sourceClarificationId: params.sourceClarificationId,
+        reviewClarificationRequestId: params.reviewClarificationRequestId,
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        const existingAfterRace = await this.impactRepo.findByComposite(params)
+        if (existingAfterRace) {
+          return existingAfterRace
+        }
+      }
+
+      this.logger.error(`CreateImpactAnalysis createQueued failed: ${(error as Error)?.message ?? error}`)
+      throw error
+    }
 
     await this.eventLog.recordEvent({
       eventType: 'IMPACT_ANALYSIS_QUEUED',
@@ -202,7 +218,22 @@ export class CreateImpactAnalysisUseCase {
       },
     });
 
-    await this.queue.enqueueImpactAnalysis(analysis.id);
+    try {
+      await this.queue.enqueueImpactAnalysis(analysis.id);
+    } catch (error) {
+      await this.impactRepo.updateStatus({
+        id: analysis.id,
+        status: 'FAILED',
+        stage: 'DONE',
+        progress: 0,
+        error: {
+          code: 'QUEUE_ENQUEUE_FAILED',
+          message: error instanceof Error ? error.message : 'Failed to enqueue impact analysis job.',
+        },
+      });
+      this.logger.error(`Failed to enqueue analysis ${analysis.id}: ${(error as Error)?.message ?? error}`)
+      throw error
+    }
 
     return analysis;
   }

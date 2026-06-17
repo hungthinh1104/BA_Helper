@@ -40,6 +40,8 @@ export const approvedImpactReportResponseSchema = z.object({
 		generatedDocumentId: z.string().uuid(),
 		generatedAt: z.string(),
 		finalizedAt: z.string().optional(),
+		approvedDocumentCreatedAt: z.string().optional(),
+		approvedDocumentUpdatedAt: z.string().optional(),
 		staleStatusAtReadTime: z.boolean(),
 	}),
 });

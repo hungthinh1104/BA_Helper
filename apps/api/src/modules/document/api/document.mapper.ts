@@ -33,6 +33,8 @@ export class DocumentMapper {
         generatedDocumentId: metadata.generatedDocumentId,
         generatedAt: metadata.generatedAt,
         finalizedAt: metadata.finalizedAt,
+        approvedDocumentCreatedAt: metadata.approvedDocumentCreatedAt,
+        approvedDocumentUpdatedAt: metadata.approvedDocumentUpdatedAt,
         staleStatusAtReadTime: metadata.staleStatusAtReadTime,
       },
     };

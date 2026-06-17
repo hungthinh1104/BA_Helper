@@ -36,6 +36,8 @@ describe('GetApprovedReportUseCase', () => {
         analyzerVersion: '1.0.0',
         generatedDocumentId: 'doc-1',
         generatedAt: '2026-06-06T00:00:00.000Z',
+        approvedDocumentCreatedAt: '2026-06-01T00:00:00.000Z',
+        approvedDocumentUpdatedAt: '2026-06-06T00:00:00.000Z',
         staleStatusAtReadTime: false,
       },
     } as any);

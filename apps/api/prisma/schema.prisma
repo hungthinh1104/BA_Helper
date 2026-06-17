@@ -518,6 +518,10 @@ model ImpactAnalysis {
   clarificationRequests      ReviewClarificationRequest[] @relation("AnalysisToClarificationRequest")
 
   @@unique([requirementRevisionId, snapshotId, sourceTargetId, requestKey])
+  @@index([status, createdAt])
+  @@index([requirementRevisionId])
+  @@index([snapshotId])
+  @@index([sourceTargetId])
   @@index([multiRepoRunId])
   @@index([derivedFromAnalysisId])
   @@index([sourceClarificationId])
@@ -544,6 +548,10 @@ model BaInsight {
   clarification    ClarificationItem?
 
   @@unique([impactAnalysisId, insightKey])
+  @@index([impactAnalysisId])
+  @@index([impactAnalysisId, reviewStatus])
+  @@index([impactAnalysisId, certainty])
+  @@index([impactAnalysisId, insightType])
 }
 
 model InsightEvidence {
@@ -573,6 +581,9 @@ model TraceabilityLink {
   reviewNote        ReviewNote?
 
   @@unique([impactAnalysisId, artifactId, linkType])
+  @@index([impactAnalysisId])
+  @@index([impactAnalysisId, reviewStatus])
+  @@index([artifactId])
 }
 
 model TraceabilityEvidence {
@@ -596,6 +607,7 @@ model GeneratedDocument {
   updatedAt        DateTime       @updatedAt
 
   @@unique([impactAnalysisId, type, status])
+  @@index([impactAnalysisId, status])
 }
 
 model DomainEvent {

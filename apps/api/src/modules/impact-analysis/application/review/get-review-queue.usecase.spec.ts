@@ -112,6 +112,10 @@ describe('GetReviewQueueUseCase', () => {
     const result = await useCase.execute('analysis1');
 
     expect(result.summary.total).toBe(6);
+    expect(result.summary.totalActiveItems).toBe(6);
+    expect(result.summary.decisionRequiredRemaining).toBe(4);
+    expect(result.summary.diagnosticRemaining).toBe(2);
+    expect(result.summary.remaining).toBe(4);
     // 4 insights (blocking) + 0 traceability + 2 QA gaps (non-blocking)
     expect(result.summary.blockingRemaining).toBe(4);
     // high risk = HIGH QA gap (1) + UNKNOWN (1) + STRONG insight (1) = 3
@@ -162,6 +166,8 @@ describe('GetReviewQueueUseCase', () => {
 
     const result = await useCase.execute('analysis1');
     expect(result.summary.total).toBe(1);
+    expect(result.summary.decisionRequiredRemaining).toBe(1);
+    expect(result.summary.diagnosticRemaining).toBe(0);
     expect(result.items[0].id).toBe('i3');
   });
 

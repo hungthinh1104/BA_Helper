@@ -49,66 +49,6 @@ type InsightRecord = {
   insightKey: string;
   certainty: 'EVIDENCED' | 'INFERRED' | 'UNKNOWN' | 'CONFLICTING';
 };
-
-const REQUIRED_STABLE_IDS = [
-  'api:booking.controller.cancel',
-  'service-method:booking.service.cancelBooking',
-  'service-method:payment.service.refund',
-];
-
-const GRAPH_EXPANSION_STABLE_IDS = [
-  'service-method:slot.service.releaseSlot',
-  'service-method:notification.service.notifyOwner',
-  'entity:booking',
-  'entity:paymentTransaction',
-  'test:booking.cancel.spec',
-];
-
-const includesKeyword = (input: string, keyword: string) =>
-  input.toLowerCase().includes(keyword.toLowerCase());
-
-const shouldRun = (changeRequest: string) =>
-  includesKeyword(changeRequest, 'cancel') ||
-  includesKeyword(changeRequest, 'refund');
-
-const selectEvidenceCandidates = (input: {
-  changeRequest: string;
-  artifacts: ScanArtifact[];
-  expandGraph: boolean;
-}) => {
-  if (!shouldRun(input.changeRequest)) {
-    return { artifacts: [] as ScanArtifact[] };
-  }
-
-  const artifactById = new Map(
-    input.artifacts.map((artifact) => [artifact.stableId, artifact]),
-  );
-
-  const selected = new Map<string, ScanArtifact>();
-
-  for (const stableId of REQUIRED_STABLE_IDS) {
-    const artifact = artifactById.get(stableId);
-    if (artifact) {
-      selected.set(stableId, artifact);
-    }
-  }
-
-  if (input.expandGraph) {
-    for (const stableId of GRAPH_EXPANSION_STABLE_IDS) {
-      const artifact = artifactById.get(stableId);
-      if (artifact) {
-        selected.set(stableId, artifact);
-      }
-    }
-  }
-
-  return {
-    artifacts: Array.from(selected.values()).sort((a, b) =>
-      a.stableId.localeCompare(b.stableId),
-    ),
-  };
-};
-
 const toEvidenceSourceType = (artifactType: string) =>
   artifactType === 'TEST' ? 'TEST' : 'CODE';
 
@@ -360,24 +300,46 @@ export class RunImpactAnalysisUseCase {
       const evidencedInsightMap: Array<{ insightKey: string; artifactKeys: string[] }> = [];
 
       for (const insight of llmResponse.insights) {
+        let certainty = insight.certainty;
+        let metadata: Record<string, unknown> | undefined;
+        const requestedEvidenceKeys = insight.evidenceKeys ?? [];
+
+        if (insight.certainty === 'EVIDENCED') {
+          const resolvableArtifactKeys = requestedEvidenceKeys.filter((artifactKey) =>
+            evidenceByArtifactKey.has(artifactKey),
+          );
+
+          if (resolvableArtifactKeys.length === 0) {
+            certainty = requestedEvidenceKeys.length > 0 ? 'INFERRED' : 'UNKNOWN';
+            metadata = {
+              origin: 'EVIDENCE_INTEGRITY_GUARD',
+              downgradedFrom: 'EVIDENCED',
+              downgradeReason: 'NO_RESOLVABLE_EVIDENCE',
+              requestedEvidenceKeys,
+            };
+            this.logger.warn(
+              `Downgraded insight ${insight.insightKey} from EVIDENCED because no persisted evidence could be resolved.`,
+            );
+          } else {
+            evidencedInsightMap.push({
+              insightKey: insight.insightKey,
+              artifactKeys: resolvableArtifactKeys,
+            });
+          }
+        }
+
         insightInputs.push({
           impactAnalysisId: analysis.id,
           insightKey: insight.insightKey,
           insightType: insight.insightType,
-          certainty: insight.certainty,
+          certainty,
           reviewStatus: 'NEEDS_REVIEW',
           confidence: insight.confidence,
           title: insight.title,
           description: insight.description,
           reasoning: insight.reasoning,
+          metadata,
         });
-
-        if (insight.certainty === 'EVIDENCED' && insight.evidenceKeys && insight.evidenceKeys.length > 0) {
-          evidencedInsightMap.push({
-            insightKey: insight.insightKey,
-            artifactKeys: insight.evidenceKeys,
-          });
-        }
       }
 
       // Propagate unsupported scanner diagnostics as risks
@@ -475,7 +437,6 @@ export class RunImpactAnalysisUseCase {
 
             if (evidenceIds.length === 0) {
               this.logger.warn(`Could not resolve any evidence IDs for insight ${insight.insightKey}`);
-              // Future: Downgrade insight certainty or mark validation issue here
               return Promise.resolve([]);
             }
 

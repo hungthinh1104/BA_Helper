@@ -106,7 +106,11 @@ export function ReviewQueuePanel({
   }
 
   const isMutating = reviewInsight.isPending || reviewLink.isPending
-  const percentComplete = summary.total > 0 ? ((summary.total - summary.remaining) / summary.total) * 100 : 100
+  const totalActiveItems = summary.totalActiveItems ?? summary.total
+  const decisionRequiredRemaining = summary.decisionRequiredRemaining ?? summary.remaining
+  const diagnosticRemaining = summary.diagnosticRemaining ?? Math.max(totalActiveItems - decisionRequiredRemaining, 0)
+  const percentComplete =
+    totalActiveItems > 0 ? ((totalActiveItems - decisionRequiredRemaining - diagnosticRemaining) / totalActiveItems) * 100 : 100
 
   if (!canViewReviewQueue) {
     return (
@@ -147,8 +151,8 @@ export function ReviewQueuePanel({
           {/* Progress bar */}
           <div className="space-y-1">
             <div className="flex justify-between text-[11px] text-muted-foreground">
-              <span>{summary.total - summary.remaining} / {summary.total} reviewed</span>
-              <span className="font-medium text-foreground">{summary.remaining} left</span>
+              <span>{totalActiveItems - decisionRequiredRemaining - diagnosticRemaining} / {totalActiveItems} resolved</span>
+              <span className="font-medium text-foreground">{decisionRequiredRemaining} decisions left</span>
             </div>
             <div className="bg-border h-1 w-full rounded-full overflow-hidden">
               <div
@@ -157,6 +161,12 @@ export function ReviewQueuePanel({
               />
             </div>
           </div>
+
+          {diagnosticRemaining > 0 && (
+            <div className="mt-2 text-[10px] text-muted-foreground">
+              {diagnosticRemaining} diagnostic-only items stay visible for awareness but do not block finalize.
+            </div>
+          )}
 
           {summary.highRiskRemaining > 0 && (
             <div className="flex items-center gap-1.5 text-[11px] text-danger mt-2.5 bg-danger/8 px-2 py-1.5 rounded border border-danger/20">

@@ -77,6 +77,9 @@ export interface SmokeSummary {
   reviewQueue?: {
     total: number;
     remaining: number;
+    totalActiveItems: number;
+    decisionRequiredRemaining: number;
+    diagnosticRemaining: number;
     highRiskRemaining: number;
     blockingRemaining: number;
   };
@@ -294,6 +297,9 @@ export function buildSmokeSummary(input: {
     reviewQueue: input.reviewQueue ? {
       total: input.reviewQueue.summary.total,
       remaining: input.reviewQueue.summary.remaining,
+      totalActiveItems: input.reviewQueue.summary.totalActiveItems,
+      decisionRequiredRemaining: input.reviewQueue.summary.decisionRequiredRemaining,
+      diagnosticRemaining: input.reviewQueue.summary.diagnosticRemaining,
       highRiskRemaining: input.reviewQueue.summary.highRiskRemaining,
       blockingRemaining: input.reviewQueue.summary.blockingRemaining,
     } : undefined,

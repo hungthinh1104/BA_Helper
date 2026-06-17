@@ -30,6 +30,8 @@ export class GetReviewQueueUseCase {
     const queueItems: ReviewQueueItem[] = [];
     let highRiskRemaining = 0;
     let blockingRemaining = 0;
+    let decisionRequiredRemaining = 0;
+    let diagnosticRemaining = 0;
 
     // 1. Process Insights
     for (const insight of insights) {
@@ -84,6 +86,7 @@ export class GetReviewQueueUseCase {
 
       queueItems.push(item);
       blockingRemaining++;
+      decisionRequiredRemaining++;
       if (priority === 'HIGH') highRiskRemaining++;
     }
 
@@ -138,6 +141,7 @@ export class GetReviewQueueUseCase {
 
       queueItems.push(item);
       blockingRemaining++;
+      decisionRequiredRemaining++;
       if (priority === 'HIGH') highRiskRemaining++;
     }
 
@@ -182,6 +186,7 @@ export class GetReviewQueueUseCase {
       };
 
       queueItems.push(item);
+      diagnosticRemaining++;
       if (priority === 'HIGH') highRiskRemaining++;
     }
 
@@ -191,8 +196,11 @@ export class GetReviewQueueUseCase {
     return {
       analysisId,
       summary: {
-        total: queueItems.length, // total active items in queue
-        remaining: queueItems.length,
+        total: queueItems.length,
+        remaining: decisionRequiredRemaining,
+        totalActiveItems: queueItems.length,
+        decisionRequiredRemaining,
+        diagnosticRemaining,
         blockingRemaining,
         highRiskRemaining,
       },

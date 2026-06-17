@@ -6,7 +6,7 @@ import { RequirementRepository } from '../../../requirement/infrastructure/requi
 import { PrismaService } from '../../../prisma/prisma.service';
 import { EventLogService } from '../../../event-log/application/event-log.service';
 import { QueueService } from '../../../queue/queue.service';
-import { AppError } from '../../../../shared/app-error';
+import { Prisma } from '@prisma/client';
 
 describe('CreateImpactAnalysisUseCase', () => {
   let useCase: CreateImpactAnalysisUseCase;
@@ -21,6 +21,7 @@ describe('CreateImpactAnalysisUseCase', () => {
       findByRequestKey: jest.fn(),
       findByComposite: jest.fn(),
       createQueued: jest.fn(),
+      updateStatus: jest.fn(),
     } as unknown as jest.Mocked<ImpactAnalysisRepository>;
 
     requirementRepo = {
@@ -166,6 +167,40 @@ describe('CreateImpactAnalysisUseCase', () => {
     expect(result.id).toBe('existing-1');
     expect(impactRepo.createQueued).not.toHaveBeenCalled();
     expect(queue.enqueueImpactAnalysis).not.toHaveBeenCalled();
+  });
+
+  it('returns existing analysis on unique-conflict race for same payload', async () => {
+    mockValidState();
+    impactRepo.createQueued.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: 'test',
+      }),
+    );
+    impactRepo.findByComposite.mockResolvedValueOnce(null);
+    impactRepo.findByComposite.mockResolvedValueOnce({ id: 'analysis-race' } as any);
+
+    const result = await useCase.execute(validParams);
+
+    expect(result.id).toBe('analysis-race');
+    expect(queue.enqueueImpactAnalysis).not.toHaveBeenCalled();
+  });
+
+  it('marks analysis failed if queue enqueue fails after DB create', async () => {
+    mockValidState();
+    queue.enqueueImpactAnalysis.mockRejectedValue(new Error('queue offline'));
+
+    await expect(useCase.execute(validParams)).rejects.toThrow('queue offline');
+
+    expect(impactRepo.updateStatus).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'analysis-1',
+        status: 'FAILED',
+        error: expect.objectContaining({
+          code: 'QUEUE_ENQUEUE_FAILED',
+        }),
+      }),
+    );
   });
 
   it('requestKey reused with different payload is rejected', async () => {

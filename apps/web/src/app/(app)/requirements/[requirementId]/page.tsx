@@ -10,7 +10,6 @@ import { NewAnalysisDialog } from "@/components/workspace/analysis/new-analysis/
 import { BackButton } from "@/components/workspace/shared/back-button"
 import { useRequirementDetail } from "@/hooks/api/use-requirements"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useAuth } from "@/hooks/use-auth"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useCurrentWorkspace } from "@/lib/project-context"
 import { canRunAnalysis } from "@/lib/permissions"
@@ -19,7 +18,6 @@ export default function RequirementDetailsPage({ params }: { params: Promise<{ r
   const { requirementId } = use(params)
   
   const { data: req, isLoading, error } = useRequirementDetail(undefined, requirementId)
-  const { user } = useAuth()
   const workspace = useCurrentWorkspace()
   const canRun = workspace ? canRunAnalysis(workspace.membershipRole) : false
 

@@ -55,6 +55,9 @@ export type ReviewQueueItem = z.infer<typeof reviewQueueItemSchema>;
 export const reviewQueueSummarySchema = z.object({
   total: z.number(),
   remaining: z.number(),
+  totalActiveItems: z.number(),
+  decisionRequiredRemaining: z.number(),
+  diagnosticRemaining: z.number(),
   blockingRemaining: z.number(),
   highRiskRemaining: z.number(),
 });

@@ -1,11 +1,7 @@
-import { Injectable } from "@nestjs/common";
-
 import { FinalizeImpactAnalysisUseCase } from './finalize-impact-analysis.usecase';
 import { ReviewNoteRepository } from '../../infrastructure/review-note.repository';
 import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
 import { DocumentRepository } from '../../../document/infrastructure/document.repository';
-import { EventLogService } from '../../../event-log/application/event-log.service';
-import { AppError } from '../../../../shared/app-error';
 import { InsightRepository } from '../../../insight/infrastructure/insight.repository';
 import { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
 import { GraphRepository } from '../../../graph/infrastructure/graph.repository';
@@ -14,6 +10,7 @@ import { MermaidImpactDiagramBuilder } from '../../../document/application/merma
 import { ClarificationRepository } from '../../../clarification/infrastructure/clarification.repository';
 import { ReviewDecisionRepository } from '../../infrastructure/review-decision.repository';
 import { GetImpactDiffUseCase } from '../queries/get-impact-diff.usecase';
+import { PrismaService } from '../../../prisma/prisma.service';
 
 describe('FinalizeImpactAnalysisUseCase', () => {
   let useCase: FinalizeImpactAnalysisUseCase;
@@ -26,29 +23,21 @@ describe('FinalizeImpactAnalysisUseCase', () => {
   let clarificationRepo: jest.Mocked<ClarificationRepository>;
   let decisionRepo: jest.Mocked<ReviewDecisionRepository>;
   let getDiffUseCase: jest.Mocked<GetImpactDiffUseCase>;
-  let eventLog: jest.Mocked<EventLogService>;
+  let prisma: jest.Mocked<PrismaService>;
   let reportBuilder: MarkdownImpactReportBuilder;
+  let txImpactUpdateMany: jest.Mock;
+  let txGeneratedDocumentUpsert: jest.Mock;
+  let txDomainEventUpsert: jest.Mock;
 
   beforeEach(() => {
     impactRepo = {
       findById: jest.fn(),
-      finalizeIfCurrent: jest.fn(),
     } as unknown as jest.Mocked<ImpactAnalysisRepository>;
 
     documentRepo = {
-      upsertApproved: jest.fn(),
       findApprovedReportByAnalysisId: jest.fn(),
     } as unknown as jest.Mocked<DocumentRepository>;
-    documentRepo.upsertApproved.mockResolvedValue({
-      id: 'document-1',
-      createdAt: new Date('2026-06-06T00:00:00.000Z'),
-      updatedAt: new Date('2026-06-06T00:00:00.000Z'),
-    } as any);
     documentRepo.findApprovedReportByAnalysisId.mockResolvedValue(null);
-
-    eventLog = {
-      recordEvent: jest.fn(),
-    } as unknown as jest.Mocked<EventLogService>;
 
     insightRepo = {
       listByAnalysis: jest.fn().mockResolvedValue([]),
@@ -78,6 +67,20 @@ describe('FinalizeImpactAnalysisUseCase', () => {
       computeForAnalysis: jest.fn().mockResolvedValue({ computable: false }),
     } as unknown as jest.Mocked<GetImpactDiffUseCase>;
 
+    txImpactUpdateMany = jest.fn().mockResolvedValue({ count: 1 })
+    txGeneratedDocumentUpsert = jest.fn().mockResolvedValue({ id: 'document-1' })
+    txDomainEventUpsert = jest.fn().mockResolvedValue({ id: 'event-1' })
+
+    prisma = {
+      $transaction: jest.fn(async (callback: (tx: any) => unknown) =>
+        callback({
+          impactAnalysis: { updateMany: txImpactUpdateMany },
+          generatedDocument: { upsert: txGeneratedDocumentUpsert },
+          domainEvent: { upsert: txDomainEventUpsert },
+        }),
+      ),
+    } as unknown as jest.Mocked<PrismaService>;
+
     const mermaidBuilder = {
       build: jest.fn().mockReturnValue({ mermaid: '```mermaid\nflowchart TD\n```', isTruncated: false }),
     } as unknown as jest.Mocked<MermaidImpactDiagramBuilder>;
@@ -92,10 +95,10 @@ describe('FinalizeImpactAnalysisUseCase', () => {
       reviewNoteRepo,
       clarificationRepo,
       documentRepo,
-      eventLog,
       reportBuilder,
       decisionRepo,
       getDiffUseCase,
+      prisma,
     );
   });
 
@@ -153,28 +156,21 @@ describe('FinalizeImpactAnalysisUseCase', () => {
 
   it('UC07-A: Valid finalize creates COMPLETED status, approved markdown, and emits event', async () => {
     mockValidState();
-    impactRepo.finalizeIfCurrent.mockResolvedValue({ count: 1 } as any);
 
     const result = await useCase.execute(validParams);
 
     expect(result.id).toBe('analysis-1');
-    expect(impactRepo.finalizeIfCurrent).toHaveBeenCalledWith({
-      analysisId: 'analysis-1',
-      status: 'COMPLETED',
-      stage: 'DONE',
-      progress: 100,
-      expectedCommitSha: 'abc1234',
-      expectedTargetCommitSha: 'abc1234',
-      expectedResolvedRefType: 'BRANCH',
-    });
-    expect(documentRepo.upsertApproved).toHaveBeenCalledWith({
-      id: expect.any(String),
-      impactAnalysisId: 'analysis-1',
-      content: expect.stringContaining('Insight 1'),
-    });
-    expect(eventLog.recordEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ eventType: 'IMPACT_ANALYSIS_FINALIZED' }),
+    expect(prisma.$transaction).toHaveBeenCalled();
+    expect(txImpactUpdateMany).toHaveBeenCalled();
+    expect(txGeneratedDocumentUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          impactAnalysisId: 'analysis-1',
+          content: expect.stringContaining('Insight 1'),
+        }),
+      }),
     );
+    expect(txDomainEventUpsert).toHaveBeenCalled();
   });
 
   it('UC07-A: Rejected insights are excluded from approved markdown', async () => {
@@ -196,20 +192,11 @@ describe('FinalizeImpactAnalysisUseCase', () => {
         },
       ],
     });
-    impactRepo.finalizeIfCurrent.mockResolvedValue({ count: 1 } as any);
-
     await useCase.execute(validParams);
 
-    expect(documentRepo.upsertApproved).toHaveBeenCalledWith({
-      id: expect.any(String),
-      impactAnalysisId: 'analysis-1',
-      content: expect.stringMatching(/Confirmed Insight/),
-    });
-    expect(documentRepo.upsertApproved).toHaveBeenCalledWith({
-      id: expect.any(String),
-      impactAnalysisId: 'analysis-1',
-      content: expect.not.stringMatching(/Rejected Insight/),
-    });
+    const upsertPayload = txGeneratedDocumentUpsert.mock.calls[0]?.[0]
+    expect(upsertPayload.create.content).toMatch(/Confirmed Insight/)
+    expect(upsertPayload.create.content).not.toMatch(/Rejected Insight/)
   });
 
   it('UC07-B: Finalize with unreviewed items without ack throws FINALIZE_REQUIRES_REVIEW_ACK', async () => {
@@ -227,7 +214,7 @@ describe('FinalizeImpactAnalysisUseCase', () => {
     await expect(useCase.execute(validParams)).rejects.toMatchObject({
       code: 'FINALIZE_REQUIRES_REVIEW_ACK',
     });
-    expect(impactRepo.finalizeIfCurrent).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it('UC07-C: Finalize stale analysis throws ANALYSIS_STALE', async () => {
@@ -241,7 +228,7 @@ describe('FinalizeImpactAnalysisUseCase', () => {
     await expect(useCase.execute(validParams)).rejects.toMatchObject({
       code: 'ANALYSIS_STALE',
     });
-    expect(impactRepo.finalizeIfCurrent).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it('UC07-C: Finalize terminal duplicate (COMPLETED) throws INVALID_STATE_TRANSITION', async () => {
@@ -250,7 +237,7 @@ describe('FinalizeImpactAnalysisUseCase', () => {
     await expect(useCase.execute(validParams)).rejects.toMatchObject({
       code: 'INVALID_STATE_TRANSITION',
     });
-    expect(impactRepo.finalizeIfCurrent).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it('UC07-D: Finalize unreviewed with ack success, unreviewed items remain labeled', async () => {
@@ -265,20 +252,11 @@ describe('FinalizeImpactAnalysisUseCase', () => {
         },
       ],
     });
-    impactRepo.finalizeIfCurrent.mockResolvedValue({ count: 1 } as any);
-
     await useCase.execute({ analysisId: 'analysis-1', acknowledgeUnreviewed: true });
 
-    expect(documentRepo.upsertApproved).toHaveBeenCalledWith({
-      id: expect.any(String),
-      impactAnalysisId: 'analysis-1',
-      content: expect.stringContaining('Unreviewed Insight'),
-    });
-    expect(documentRepo.upsertApproved).toHaveBeenCalledWith({
-      id: expect.any(String),
-      impactAnalysisId: 'analysis-1',
-      content: expect.stringContaining('This report was finalized with unreviewed items acknowledged.'),
-    });
-    expect(impactRepo.finalizeIfCurrent).toHaveBeenCalled();
+    const upsertPayload = txGeneratedDocumentUpsert.mock.calls[0]?.[0]
+    expect(upsertPayload.create.content).toContain('Unreviewed Insight')
+    expect(upsertPayload.create.content).toContain('This report was finalized with unreviewed items acknowledged.')
+    expect(txImpactUpdateMany).toHaveBeenCalled()
   });
 });

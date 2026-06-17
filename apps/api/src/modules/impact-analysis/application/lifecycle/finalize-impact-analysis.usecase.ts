@@ -3,7 +3,6 @@ import { randomUUID } from "crypto";
 
 import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
 import { DocumentRepository } from '../../../document/infrastructure/document.repository';
-import { EventLogService } from '../../../event-log/application/event-log.service';
 import { AppError } from '../../../../shared/app-error';
 
 import { ReviewPolicy } from '../../../review/domain/review.policy';
@@ -15,6 +14,7 @@ import { ReviewNoteRepository } from '../../infrastructure/review-note.repositor
 import { ReviewDecisionRepository } from '../../infrastructure/review-decision.repository';
 import { GetImpactDiffUseCase } from '../queries/get-impact-diff.usecase';
 import { ClarificationRepository } from '../../../clarification/infrastructure/clarification.repository';
+import { PrismaService } from '../../../prisma/prisma.service';
 
 @Injectable()
 export class FinalizeImpactAnalysisUseCase {
@@ -26,10 +26,10 @@ export class FinalizeImpactAnalysisUseCase {
     private readonly reviewNoteRepo: ReviewNoteRepository,
     private readonly clarificationRepo: ClarificationRepository,
     private readonly documentRepo: DocumentRepository,
-    private readonly eventLog: EventLogService,
     private readonly reportBuilder: MarkdownImpactReportBuilder,
     private readonly decisionRepo: ReviewDecisionRepository,
     private readonly getDiffUseCase: GetImpactDiffUseCase,
+    private readonly prisma: PrismaService,
   ) {}
 
   async execute(params: { analysisId: string; acknowledgeUnreviewed: boolean }) {
@@ -60,31 +60,6 @@ export class FinalizeImpactAnalysisUseCase {
       params.acknowledgeUnreviewed
     );
 
-    const finalizeResult = await this.impactRepo.finalizeIfCurrent({
-      analysisId: analysis.id,
-      status: 'COMPLETED',
-      stage: 'DONE',
-      progress: 100,
-      expectedCommitSha: analysis.snapshot.commitSha,
-      expectedTargetCommitSha: analysis.sourceTarget.latestObservedCommitSha,
-      expectedResolvedRefType: analysis.sourceTarget.resolvedRefType,
-    });
-
-    if (finalizeResult.count === 0) {
-      throw new AppError(
-        'ANALYSIS_STALE',
-        'Analysis became stale during finalization.',
-      );
-    }
-
-    const updated = (await this.impactRepo.findById(analysis.id)) as any;
-    if (!updated) {
-      throw new AppError(
-        'IMPACT_ANALYSIS_NOT_FOUND',
-        'Impact analysis not found after finalization.',
-      );
-    }
-
     const insights = await this.insightRepo.listByAnalysis(analysis.id);
     const reviewNotes = await this.reviewNoteRepo.findByAnalysisId(analysis.id);
     const dependencyEdges = await this.graphRepo.listBySnapshot(analysis.snapshot.id);
@@ -102,9 +77,10 @@ export class FinalizeImpactAnalysisUseCase {
     const existingReport = await this.documentRepo.findApprovedReportByAnalysisId(analysis.id);
     const generatedDocumentId = existingReport ? existingReport.id : randomUUID();
     const generatedAt = existingReport ? existingReport.createdAt.toISOString() : new Date().toISOString();
+    const finalizedAt = new Date().toISOString();
 
     const markdown = this.reportBuilder.build({
-      analysis: updated,
+      analysis: analysis as any,
       insights,
       traceabilityLinks: traceabilityLinks as any[],
       reviewNotes,
@@ -114,32 +90,90 @@ export class FinalizeImpactAnalysisUseCase {
       reviewDecisions,
       diff,
       metadata: {
-        analysisId: updated.id,
-        title: updated.requirementRevision.title,
-        projectId: updated.snapshot.repository.projectId,
-        repositoryId: updated.snapshot.repositoryId,
-        targetRef: updated.sourceTarget.requestedRef,
-        commitSha: updated.snapshot.commitSha,
-        snapshotId: updated.snapshot.id,
-        analyzerVersion: updated.snapshot.analyzerVersion,
+        analysisId: analysis.id,
+        title: analysis.requirementRevision.title,
+        projectId: analysis.snapshot.repository.projectId,
+        repositoryId: analysis.snapshot.repositoryId,
+        targetRef: analysis.sourceTarget.requestedRef,
+        commitSha: analysis.snapshot.commitSha,
+        snapshotId: analysis.snapshot.id,
+        analyzerVersion: analysis.snapshot.analyzerVersion,
         generatedDocumentId,
         generatedAt,
-        finalizedAt: new Date().toISOString(),
+        finalizedAt,
         staleStatusAtReadTime: false,
       },
     });
 
-    await this.documentRepo.upsertApproved({
-      id: generatedDocumentId,
-      impactAnalysisId: analysis.id,
-      content: markdown,
+    await this.prisma.$transaction(async (tx) => {
+      const finalizeResult = await tx.impactAnalysis.updateMany({
+        where: {
+          id: analysis.id,
+          snapshot: {
+            commitSha: analysis.snapshot.commitSha,
+          },
+          sourceTarget: {
+            resolvedRefType: analysis.sourceTarget.resolvedRefType,
+            latestObservedCommitSha: analysis.sourceTarget.latestObservedCommitSha,
+          },
+        },
+        data: {
+          status: 'COMPLETED',
+          stage: 'DONE',
+          progress: 100,
+        },
+      });
+
+      if (finalizeResult.count === 0) {
+        throw new AppError(
+          'ANALYSIS_STALE',
+          'Analysis became stale during finalization.',
+        );
+      }
+
+      await tx.generatedDocument.upsert({
+        where: {
+          impactAnalysisId_type_status: {
+            impactAnalysisId: analysis.id,
+            type: 'IMPACT_REPORT',
+            status: 'APPROVED',
+          },
+        },
+        update: {
+          content: markdown,
+        },
+        create: {
+          id: generatedDocumentId,
+          impactAnalysisId: analysis.id,
+          type: 'IMPACT_REPORT',
+          status: 'APPROVED',
+          content: markdown,
+        },
+      });
+
+      await tx.domainEvent.upsert({
+        where: {
+          idempotencyKey: `impact:${analysis.id}:finalized`,
+        },
+        update: {},
+        create: {
+          eventType: 'IMPACT_ANALYSIS_FINALIZED',
+          idempotencyKey: `impact:${analysis.id}:finalized`,
+          payload: {
+            impactAnalysisId: analysis.id,
+            actorUserId: 'SYSTEM',
+          } as any,
+        },
+      });
     });
 
-    await this.eventLog.recordEvent({
-      eventType: 'IMPACT_ANALYSIS_FINALIZED',
-      idempotencyKey: `impact:${analysis.id}:finalized`,
-      payload: { impactAnalysisId: analysis.id },
-    });
+    const updated = (await this.impactRepo.findById(analysis.id)) as any;
+    if (!updated) {
+      throw new AppError(
+        'IMPACT_ANALYSIS_NOT_FOUND',
+        'Impact analysis not found after finalization.',
+      );
+    }
 
     return updated;
   }

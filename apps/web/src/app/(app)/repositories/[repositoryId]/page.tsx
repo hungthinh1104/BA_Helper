@@ -3,9 +3,8 @@
 import { use } from "react"
 
 import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
-
 import { Button } from "@/components/ui/button"
-import { FileWarning, ChevronRight, GitBranch, GitCommit, FileText, CheckCircle2, Clock, PlayCircle, Loader2, Play, AlertTriangle, Layers, Server, Box, Beaker, Database, Activity, AlertCircle, ShieldAlert } from "lucide-react"
+import { GitBranch, Play, AlertTriangle, AlertCircle, ShieldAlert, Layers, Server, Box, Database, Beaker, Activity } from "lucide-react"
 import { useCurrentWorkspace, useOptionalProjectId } from "@/lib/project-context"
 import { canRunScan } from "@/lib/permissions"
 import { ScanJobProgress } from "@/components/workspace/repository/scan-job-progress"
@@ -18,11 +17,11 @@ import { useRepositoryDetail } from "@/hooks/api/use-repositories"
 import { useRepositorySnapshots } from "@/hooks/api/use-repository-snapshots"
 import { useCreateScanJob } from "@/hooks/api/use-scan-jobs"
 import { useRepositoryStatusWatcher } from "@/hooks/ui/use-status-watcher"
-import { useAuth } from "@/hooks/use-auth"
 import { DiagnosticItem } from "@ba-helper/contracts"
 import { Skeleton } from "@/components/ui/skeleton"
 import { v4 as uuidv4 } from "uuid"
 import type { RepositoryProfileResponse } from "@ba-helper/contracts"
+import { MaturityBadge } from "@/components/workspace/shared/status-badges"
 
 interface PageProps {
   params: Promise<{ repositoryId: string }>
@@ -51,9 +50,6 @@ function getScannerMaturity(profile?: RepositoryProfileResponse) {
   if (profile.framework !== "UNKNOWN") return "EXPERIMENTAL"
   return "UNKNOWN"
 }
-
-import { MaturityBadge } from "@/components/workspace/shared/status-badges"
-
 export default function RepositoryDetailsPage({ params }: PageProps) {
   // Since Next.js 15, params is a Promise that needs to be unwrapped with React.use
   const { repositoryId } = use(params)
@@ -63,7 +59,6 @@ export default function RepositoryDetailsPage({ params }: PageProps) {
   const { data: snapshotList } = useRepositorySnapshots(activeProjectId, repositoryId)
   const { mutateAsync: retryScan, isPending: isRetrying } = useCreateScanJob(activeProjectId, repositoryId)
 
-  const { user } = useAuth()
   const workspace = useCurrentWorkspace()
   const canScan = workspace ? canRunScan(workspace.membershipRole) : false
 

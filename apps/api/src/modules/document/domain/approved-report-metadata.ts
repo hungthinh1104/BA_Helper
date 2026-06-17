@@ -11,6 +11,8 @@ export type ApprovedReportMetadata = {
   generatedDocumentId: string;
   generatedAt: string;
   finalizedAt?: string;
+  approvedDocumentCreatedAt?: string;
+  approvedDocumentUpdatedAt?: string;
   staleStatusAtReadTime: boolean;
   staleReason?: string;
   requirementRevisionId?: string;
