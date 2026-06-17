@@ -1,4 +1,5 @@
 import type { BaselinePrediction, EvaluationCase, MetricsSummary } from './types';
+import type { NormalizedResultMethod } from './src/result-registry';
 
 const TOP_K_5 = 5;
 const TOP_K_10 = 10;
@@ -17,6 +18,7 @@ export type MethodResultFileLike = {
   generatedAt: string;
   method: string;
   topK: number;
+  sourceFile?: string;
   cases: RetrievalCaseLike[];
 };
 
@@ -25,9 +27,13 @@ export type CaseMetrics = {
   repo: string;
   topKCount: number;
   groundTruthFileCount: number;
+  retrievedUniqueFileCountAt5: number;
   retrievedUniqueFileCountAt10: number;
+  truePositiveFileCountAt5: number;
   truePositiveFileCountAt10: number;
+  falsePositiveFileCountAt5: number;
   falsePositiveFileCountAt10: number;
+  falseNegativeFileCountAt5: number;
   falseNegativeFileCountAt10: number;
   recallAt5: number;
   recallAt10: number;
@@ -35,6 +41,10 @@ export type CaseMetrics = {
   precisionAt10: number;
   f1At5: number;
   f1At10: number;
+  reviewBurdenAt5: number;
+  reviewBurdenAt10: number;
+  noHitBurdenAt5: boolean;
+  noHitBurdenAt10: boolean;
   missedGroundTruthFiles: string[];
   hitGroundTruthFiles: string[];
   unexpectedTopKFiles: string[];
@@ -47,6 +57,9 @@ export type AggregateMetrics = {
   macroPrecisionAt10: number;
   macroF1At5: number;
   macroF1At10: number;
+  macroReviewBurdenAt5: number;
+  macroReviewBurdenAt10: number;
+  noHitCaseCountAt10: number;
   totalCases: number;
   totalGroundTruthFiles: number;
   totalTruePositiveFilesAt10: number;
@@ -56,6 +69,7 @@ export type AggregateMetrics = {
 
 export type MethodMetricsReport = {
   method: string;
+  sourceFile?: string;
   caseMetrics: CaseMetrics[];
   aggregate: AggregateMetrics;
 };
@@ -111,6 +125,23 @@ function calculateF1(precision: number, recall: number): number {
     : roundMetric((2 * precision * recall) / (precision + recall));
 }
 
+function calculateReviewBurden(
+  retrievedUniqueFileCount: number,
+  truePositiveFileCount: number,
+): { value: number; noHitBurden: boolean } {
+  if (truePositiveFileCount === 0) {
+    return {
+      value: roundMetric(retrievedUniqueFileCount),
+      noHitBurden: true,
+    };
+  }
+
+  return {
+    value: roundMetric(retrievedUniqueFileCount / truePositiveFileCount),
+    noHitBurden: false,
+  };
+}
+
 export function computeCaseMetrics(params: {
   caseId: string;
   repo: string;
@@ -131,7 +162,9 @@ export function computeCaseMetrics(params: {
 
   const truePositiveAt5 = intersectExact(retrievedAt5, groundTruthSet).length;
   const truePositiveAt10 = hitGroundTruthFiles.length;
+  const falsePositiveAt5 = differenceExact(retrievedAt5, groundTruthSet).length;
   const falsePositiveAt10 = differenceExact(retrievedAt10, groundTruthSet).length;
+  const falseNegativeAt5 = differenceExact(groundTruthFiles, retrievedAt5Set).length;
   const falseNegativeAt10 = missedGroundTruthFiles.length;
 
   const recallAt5 = roundMetric(
@@ -142,15 +175,21 @@ export function computeCaseMetrics(params: {
   const precisionAt10 = roundMetric(divideSafe(truePositiveAt10, retrievedAt10.length));
   const f1At5 = calculateF1(precisionAt5, recallAt5);
   const f1At10 = calculateF1(precisionAt10, recallAt10);
+  const reviewBurdenAt5 = calculateReviewBurden(retrievedAt5.length, truePositiveAt5);
+  const reviewBurdenAt10 = calculateReviewBurden(retrievedAt10.length, truePositiveAt10);
 
   return {
     caseId: params.caseId,
     repo: params.repo,
     topKCount: params.topKCount,
     groundTruthFileCount: groundTruthFiles.length,
+    retrievedUniqueFileCountAt5: retrievedAt5.length,
     retrievedUniqueFileCountAt10: retrievedAt10.length,
+    truePositiveFileCountAt5: truePositiveAt5,
     truePositiveFileCountAt10: truePositiveAt10,
+    falsePositiveFileCountAt5: falsePositiveAt5,
     falsePositiveFileCountAt10: falsePositiveAt10,
+    falseNegativeFileCountAt5: falseNegativeAt5,
     falseNegativeFileCountAt10: falseNegativeAt10,
     recallAt5,
     recallAt10,
@@ -158,6 +197,10 @@ export function computeCaseMetrics(params: {
     precisionAt10,
     f1At5,
     f1At10,
+    reviewBurdenAt5: reviewBurdenAt5.value,
+    reviewBurdenAt10: reviewBurdenAt10.value,
+    noHitBurdenAt5: reviewBurdenAt5.noHitBurden,
+    noHitBurdenAt10: reviewBurdenAt10.noHitBurden,
     missedGroundTruthFiles,
     hitGroundTruthFiles,
     unexpectedTopKFiles,
@@ -202,6 +245,19 @@ export function aggregateCaseMetrics(caseMetrics: CaseMetrics[]): AggregateMetri
         caseMetrics.length,
       ),
     ),
+    macroReviewBurdenAt5: roundMetric(
+      divideSafe(
+        caseMetrics.reduce((sum, metric) => sum + metric.reviewBurdenAt5, 0),
+        caseMetrics.length,
+      ),
+    ),
+    macroReviewBurdenAt10: roundMetric(
+      divideSafe(
+        caseMetrics.reduce((sum, metric) => sum + metric.reviewBurdenAt10, 0),
+        caseMetrics.length,
+      ),
+    ),
+    noHitCaseCountAt10: caseMetrics.filter((metric) => metric.noHitBurdenAt10).length,
     totalCases: caseMetrics.length,
     totalGroundTruthFiles: caseMetrics.reduce(
       (sum, metric) => sum + metric.groundTruthFileCount,
@@ -235,6 +291,7 @@ export function computeMethodMetrics(methodResult: MethodResultFileLike): Method
 
   return {
     method: methodResult.method,
+    sourceFile: 'sourceFile' in methodResult ? methodResult.sourceFile : undefined,
     caseMetrics,
     aggregate: aggregateCaseMetrics(caseMetrics),
   };
@@ -245,6 +302,7 @@ export function buildMetricsReport(params: {
   datasetCaseCount: number;
   generatedAt?: string;
   runId?: string;
+  warnings?: string[];
 }): MetricsReport {
   return {
     runId: params.runId ?? `metrics-v0-${params.methods.length}`,
@@ -258,6 +316,7 @@ export function buildMetricsReport(params: {
     warnings: [
       'Changed files are proxy ground truth, not absolute impacted files.',
       'Metrics are file-level only, not method-level.',
+      ...(params.warnings ?? []),
     ],
   };
 }
@@ -271,16 +330,18 @@ export function renderMetricsMarkdown(report: MetricsReport): string {
     'Changed files are proxy ground truth.',
     'File-level only.',
     'Keyword baseline is deterministic and does not use DB, embeddings, LLM, or HybridRetrievalService.',
+    'High review burden means humans must inspect many retrieved files per true positive.',
+    'If a case has zero true positives, burden is treated as all retrieved files being wasted review effort.',
     '',
-    '| Method | R@5 | R@10 | P@5 | P@10 | F1@5 | F1@10 |',
-    '| --- | ---: | ---: | ---: | ---: | ---: | ---: |',
+    '| Method | R@5 | R@10 | P@5 | P@10 | F1@5 | F1@10 | ReviewBurden@5 | ReviewBurden@10 | NoHitCases@10 |',
+    '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
   ];
 
   for (const method of report.methods) {
     lines.push(
-      `| ${method.method} | ${method.aggregate.macroRecallAt5.toFixed(4)} | ${method.aggregate.macroRecallAt10.toFixed(4)} | ${method.aggregate.macroPrecisionAt5.toFixed(4)} | ${method.aggregate.macroPrecisionAt10.toFixed(4)} | ${method.aggregate.macroF1At5.toFixed(4)} | ${method.aggregate.macroF1At10.toFixed(4)} |`,
-    );
-  }
+      `| ${method.method} | ${method.aggregate.macroRecallAt5.toFixed(4)} | ${method.aggregate.macroRecallAt10.toFixed(4)} | ${method.aggregate.macroPrecisionAt5.toFixed(4)} | ${method.aggregate.macroPrecisionAt10.toFixed(4)} | ${method.aggregate.macroF1At5.toFixed(4)} | ${method.aggregate.macroF1At10.toFixed(4)} | ${method.aggregate.macroReviewBurdenAt5.toFixed(4)} | ${method.aggregate.macroReviewBurdenAt10.toFixed(4)} | ${method.aggregate.noHitCaseCountAt10} |`,
+      );
+    }
 
   lines.push(
     '',
@@ -302,6 +363,26 @@ export function renderMetricsMarkdown(report: MetricsReport): string {
   }
 
   return `${lines.join('\n')}\n`;
+}
+
+export function normalizeRegistryMethods(
+  methods: NormalizedResultMethod[],
+): MethodResultFileLike[] {
+  return methods.map((method) => ({
+    runId: method.sourceFile,
+    generatedAt: method.generatedAt,
+    method: method.method,
+    topK: method.topK,
+    sourceFile: method.sourceFile,
+    cases: method.cases.map((caseResult) => ({
+      caseId: caseResult.caseId,
+      repo: caseResult.repo,
+      groundTruthFiles: caseResult.groundTruthFiles,
+      results: caseResult.rankedResults.map((result) => ({
+        filePath: result.filePath,
+      })),
+    })),
+  }));
 }
 
 export function computeMetrics(params: {

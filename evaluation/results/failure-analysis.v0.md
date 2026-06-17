@@ -1,6 +1,6 @@
 # Failure Analysis v0 — Keyword Baseline
 
-Generated at: 2026-06-17T10:32:44.023Z
+Generated at: 2026-06-17T11:15:02.983Z
 
 This analyzes keyword-baseline-v0 only.
 Changed files are proxy ground truth.

@@ -1,12 +1,14 @@
-# Keyword Baseline v0
+# BM25 Baseline v0
 
-Generated at: 2026-06-17T11:15:02.599Z
+Generated at: 2026-06-17T11:15:02.747Z
 
-This is a deterministic keyword baseline, not ReqImpact hybrid retrieval.
+This is a deterministic BM25 lexical baseline, not vector retrieval.
 Changed files are proxy ground truth.
-This result is file-level only, not method-level.
+File-level only.
 
 Top K: 10
+Average Recall@10 across cases: 0.4667
+Total top-10 ground-truth hits: 8
 
 | Case ID | Repo | R@10 | Hit Count | Missed Files |
 | --- | --- | ---: | ---: | --- |
@@ -18,8 +20,9 @@ Top K: 10
 
 ## Warnings
 
-- No keyword-overlap results for case reqimpact-case-001-backend-reliability-semantics; output is empty for topK=10.
-- No keyword-overlap results for case reqimpact-case-005-realworld-proper-error-object; output is empty for topK=10.
+- BM25 baseline is lexical only; it does not use embeddings, DB, LLM, or HybridRetrievalService.
+- Changed files are proxy ground truth.
+- File-level only.
 
 ## reqimpact-case-001-backend-reliability-semantics
 
@@ -44,10 +47,10 @@ Requirement: fix: article author relation
 
 | Rank | Artifact | File | Type | Score | Matched Tokens |
 | ---: | --- | --- | --- | ---: | --- |
-| 1 | `file:src/article/article.controller.ts` | `src/article/article.controller.ts` | `CONTROLLER_FILE` | 7.50 | article |
-| 2 | `file:src/article/article.entity.ts` | `src/article/article.entity.ts` | `ENTITY_FILE` | 7.50 | article |
-| 3 | `file:src/article/article.service.ts` | `src/article/article.service.ts` | `SERVICE_FILE` | 7.50 | article |
-| 4 | `file:src/article/comment.entity.ts` | `src/article/comment.entity.ts` | `ENTITY_FILE` | 4.50 | article |
+| 1 | `file:src/article/article.controller.ts` | `src/article/article.controller.ts` | `CONTROLLER_FILE` | 1.5858 | article |
+| 2 | `file:src/article/article.entity.ts` | `src/article/article.entity.ts` | `ENTITY_FILE` | 1.5858 | article |
+| 3 | `file:src/article/article.service.ts` | `src/article/article.service.ts` | `SERVICE_FILE` | 1.5858 | article |
+| 4 | `file:src/article/comment.entity.ts` | `src/article/comment.entity.ts` | `ENTITY_FILE` | 1.2290 | article |
 
 Missed ground-truth files: src/profile/profile.controller.ts<br>src/profile/profile.service.ts<br>src/user/user.entity.ts<br>src/user/user.service.ts
 
@@ -62,17 +65,17 @@ Requirement: fix: auth middleware user object
 
 | Rank | Artifact | File | Type | Score | Matched Tokens |
 | ---: | --- | --- | --- | ---: | --- |
-| 1 | `file:src/user/auth.middleware.ts` | `src/user/auth.middleware.ts` | `MIDDLEWARE_FILE` | 21.00 | auth, middleware, user |
-| 2 | `file:src/user/dto/update-user.dto.ts` | `src/user/dto/update-user.dto.ts` | `DTO_FILE` | 7.50 | user |
-| 3 | `file:src/user/user.controller.ts` | `src/user/user.controller.ts` | `CONTROLLER_FILE` | 7.50 | user |
-| 4 | `file:src/user/user.decorator.ts` | `src/user/user.decorator.ts` | `DECORATOR_FILE` | 7.50 | user |
-| 5 | `file:src/user/user.entity.ts` | `src/user/user.entity.ts` | `ENTITY_FILE` | 7.50 | user |
-| 6 | `file:src/user/user.module.ts` | `src/user/user.module.ts` | `MODULE_FILE` | 7.50 | user |
-| 7 | `file:src/user/user.service.ts` | `src/user/user.service.ts` | `SERVICE_FILE` | 7.50 | user |
+| 1 | `file:src/user/auth.middleware.ts` | `src/user/auth.middleware.ts` | `MIDDLEWARE_FILE` | 6.1084 | auth, middleware, user |
+| 2 | `file:src/user/user.decorator.ts` | `src/user/user.decorator.ts` | `DECORATOR_FILE` | 0.3302 | user |
+| 3 | `file:src/user/user.controller.ts` | `src/user/user.controller.ts` | `CONTROLLER_FILE` | 0.3239 | user |
+| 4 | `file:src/user/user.entity.ts` | `src/user/user.entity.ts` | `ENTITY_FILE` | 0.3239 | user |
+| 5 | `file:src/user/user.module.ts` | `src/user/user.module.ts` | `MODULE_FILE` | 0.3239 | user |
+| 6 | `file:src/user/user.service.ts` | `src/user/user.service.ts` | `SERVICE_FILE` | 0.3239 | user |
+| 7 | `file:src/user/dto/update-user.dto.ts` | `src/user/dto/update-user.dto.ts` | `DTO_FILE` | 0.3148 | user |
 
 Missed ground-truth files: None
 
-Unexpected top-K files: src/user/dto/update-user.dto.ts<br>src/user/user.entity.ts<br>src/user/user.module.ts
+Unexpected top-K files: src/user/user.entity.ts<br>src/user/user.module.ts<br>src/user/dto/update-user.dto.ts
 
 
 ## reqimpact-case-004-nest-post-sse-empty-response
@@ -83,18 +86,18 @@ Requirement: fix(core): post sse endpoint empty response
 
 | Rank | Artifact | File | Type | Score | Matched Tokens |
 | ---: | --- | --- | --- | ---: | --- |
-| 1 | `file:packages/core/router/router-response-controller.ts` | `packages/core/router/router-response-controller.ts` | `SERVICE_FILE` | 12.00 | core, response |
-| 2 | `file:packages/core/router/sse-stream.ts` | `packages/core/router/sse-stream.ts` | `SERVICE_FILE` | 12.00 | core, sse |
-| 3 | `file:integration/nest-application/sse/src/app.controller.ts` | `integration/nest-application/sse/src/app.controller.ts` | `CONTROLLER_FILE` | 5.75 | sse, endpoint |
-| 4 | `file:integration/nest-application/sse/src/app.module.ts` | `integration/nest-application/sse/src/app.module.ts` | `MODULE_FILE` | 4.50 | sse |
-| 5 | `file:packages/core/router/router-execution-context.ts` | `packages/core/router/router-execution-context.ts` | `SERVICE_FILE` | 4.50 | core |
-| 6 | `file:packages/core/router/router-explorer.ts` | `packages/core/router/router-explorer.ts` | `SERVICE_FILE` | 4.50 | core |
-| 7 | `file:packages/core/router/router-proxy.ts` | `packages/core/router/router-proxy.ts` | `SERVICE_FILE` | 4.50 | core |
-| 8 | `file:packages/core/router/routes-resolver.ts` | `packages/core/router/routes-resolver.ts` | `SERVICE_FILE` | 4.50 | core |
+| 1 | `file:packages/core/router/router-response-controller.ts` | `packages/core/router/router-response-controller.ts` | `SERVICE_FILE` | 3.2152 | core, response |
+| 2 | `file:integration/nest-application/sse/src/app.controller.ts` | `integration/nest-application/sse/src/app.controller.ts` | `CONTROLLER_FILE` | 2.9642 | sse, endpoint |
+| 3 | `file:packages/core/router/sse-stream.ts` | `packages/core/router/sse-stream.ts` | `SERVICE_FILE` | 1.9740 | core, sse |
+| 4 | `file:integration/nest-application/sse/src/app.module.ts` | `integration/nest-application/sse/src/app.module.ts` | `MODULE_FILE` | 1.2562 | sse |
+| 5 | `file:packages/core/router/router-explorer.ts` | `packages/core/router/router-explorer.ts` | `SERVICE_FILE` | 0.4595 | core |
+| 6 | `file:packages/core/router/router-proxy.ts` | `packages/core/router/router-proxy.ts` | `SERVICE_FILE` | 0.4595 | core |
+| 7 | `file:packages/core/router/routes-resolver.ts` | `packages/core/router/routes-resolver.ts` | `SERVICE_FILE` | 0.4595 | core |
+| 8 | `file:packages/core/router/router-execution-context.ts` | `packages/core/router/router-execution-context.ts` | `SERVICE_FILE` | 0.4392 | core |
 
 Missed ground-truth files: None
 
-Unexpected top-K files: packages/core/router/sse-stream.ts<br>integration/nest-application/sse/src/app.module.ts<br>packages/core/router/router-execution-context.ts<br>packages/core/router/router-explorer.ts<br>packages/core/router/router-proxy.ts<br>packages/core/router/routes-resolver.ts
+Unexpected top-K files: packages/core/router/sse-stream.ts<br>integration/nest-application/sse/src/app.module.ts<br>packages/core/router/router-explorer.ts<br>packages/core/router/router-proxy.ts<br>packages/core/router/routes-resolver.ts<br>packages/core/router/router-execution-context.ts
 
 
 ## reqimpact-case-005-realworld-proper-error-object

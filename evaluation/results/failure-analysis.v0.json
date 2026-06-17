@@ -1,6 +1,6 @@
 {
   "runId": "failure-analysis-v0-5",
-  "generatedAt": "2026-06-17T10:32:44.023Z",
+  "generatedAt": "2026-06-17T11:15:02.983Z",
   "method": "keyword-baseline-v0",
   "dataset": {
     "caseCount": 5,

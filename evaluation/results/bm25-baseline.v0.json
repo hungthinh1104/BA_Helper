@@ -1,7 +1,7 @@
 {
-  "runId": "keyword-baseline-v0-10",
-  "generatedAt": "2026-06-17T11:15:02.599Z",
-  "method": "keyword-baseline-v0",
+  "runId": "bm25-baseline-v0-10",
+  "generatedAt": "2026-06-17T11:15:02.747Z",
+  "method": "bm25-baseline-v0",
   "topK": 10,
   "cases": [
     {
@@ -59,44 +59,44 @@
           "artifactKey": "file:src/article/article.controller.ts",
           "filePath": "src/article/article.controller.ts",
           "artifactType": "CONTROLLER_FILE",
-          "score": 7.5,
+          "score": 1.585806,
           "matchedTokens": [
             "article"
           ],
-          "retrievalReason": "keyword overlap: article(artifactName,artifactKey,filePath)"
+          "retrievalReason": "BM25 lexical score over candidate artifact fields"
         },
         {
           "rank": 2,
           "artifactKey": "file:src/article/article.entity.ts",
           "filePath": "src/article/article.entity.ts",
           "artifactType": "ENTITY_FILE",
-          "score": 7.5,
+          "score": 1.585806,
           "matchedTokens": [
             "article"
           ],
-          "retrievalReason": "keyword overlap: article(artifactName,artifactKey,filePath)"
+          "retrievalReason": "BM25 lexical score over candidate artifact fields"
         },
         {
           "rank": 3,
           "artifactKey": "file:src/article/article.service.ts",
           "filePath": "src/article/article.service.ts",
           "artifactType": "SERVICE_FILE",
-          "score": 7.5,
+          "score": 1.585806,
           "matchedTokens": [
             "article"
           ],
-          "retrievalReason": "keyword overlap: article(artifactName,artifactKey,filePath)"
+          "retrievalReason": "BM25 lexical score over candidate artifact fields"
         },
         {
           "rank": 4,
           "artifactKey": "file:src/article/comment.entity.ts",
           "filePath": "src/article/comment.entity.ts",
           "artifactType": "ENTITY_FILE",
-          "score": 4.5,
+          "score": 1.229,
           "matchedTokens": [
             "article"
           ],
-          "retrievalReason": "keyword overlap: article(artifactKey,filePath)"
+          "retrievalReason": "BM25 lexical score over candidate artifact fields"
         }
       ],
       "summary": {
@@ -130,79 +130,79 @@
           "artifactKey": "file:src/user/auth.middleware.ts",
           "filePath": "src/user/auth.middleware.ts",
           "artifactType": "MIDDLEWARE_FILE",
-          "score": 21,
+          "score": 6.108444,
           "matchedTokens": [
             "auth",
             "middleware",
             "user"
           ],
-          "retrievalReason": "keyword overlap: auth(artifactName,artifactKey,filePath); middleware(artifactName,artifactKey,filePath,artifactType); user(artifactKey,filePath)"
+          "retrievalReason": "BM25 lexical score over candidate artifact fields"
         },
         {
           "rank": 2,
-          "artifactKey": "file:src/user/dto/update-user.dto.ts",
-          "filePath": "src/user/dto/update-user.dto.ts",
-          "artifactType": "DTO_FILE",
-          "score": 7.5,
+          "artifactKey": "file:src/user/user.decorator.ts",
+          "filePath": "src/user/user.decorator.ts",
+          "artifactType": "DECORATOR_FILE",
+          "score": 0.330209,
           "matchedTokens": [
             "user"
           ],
-          "retrievalReason": "keyword overlap: user(artifactName,artifactKey,filePath)"
+          "retrievalReason": "BM25 lexical score over candidate artifact fields"
         },
         {
           "rank": 3,
           "artifactKey": "file:src/user/user.controller.ts",
           "filePath": "src/user/user.controller.ts",
           "artifactType": "CONTROLLER_FILE",
-          "score": 7.5,
+          "score": 0.323863,
           "matchedTokens": [
             "user"
           ],
-          "retrievalReason": "keyword overlap: user(artifactName,artifactKey,filePath)"
+          "retrievalReason": "BM25 lexical score over candidate artifact fields"
         },
         {
           "rank": 4,
-          "artifactKey": "file:src/user/user.decorator.ts",
-          "filePath": "src/user/user.decorator.ts",
-          "artifactType": "DECORATOR_FILE",
-          "score": 7.5,
-          "matchedTokens": [
-            "user"
-          ],
-          "retrievalReason": "keyword overlap: user(artifactName,artifactKey,filePath)"
-        },
-        {
-          "rank": 5,
           "artifactKey": "file:src/user/user.entity.ts",
           "filePath": "src/user/user.entity.ts",
           "artifactType": "ENTITY_FILE",
-          "score": 7.5,
+          "score": 0.323863,
           "matchedTokens": [
             "user"
           ],
-          "retrievalReason": "keyword overlap: user(artifactName,artifactKey,filePath)"
+          "retrievalReason": "BM25 lexical score over candidate artifact fields"
         },
         {
-          "rank": 6,
+          "rank": 5,
           "artifactKey": "file:src/user/user.module.ts",
           "filePath": "src/user/user.module.ts",
           "artifactType": "MODULE_FILE",
-          "score": 7.5,
+          "score": 0.323863,
           "matchedTokens": [
             "user"
           ],
-          "retrievalReason": "keyword overlap: user(artifactName,artifactKey,filePath)"
+          "retrievalReason": "BM25 lexical score over candidate artifact fields"
         },
         {
-          "rank": 7,
+          "rank": 6,
           "artifactKey": "file:src/user/user.service.ts",
           "filePath": "src/user/user.service.ts",
           "artifactType": "SERVICE_FILE",
-          "score": 7.5,
+          "score": 0.323863,
           "matchedTokens": [
             "user"
           ],
-          "retrievalReason": "keyword overlap: user(artifactName,artifactKey,filePath)"
+          "retrievalReason": "BM25 lexical score over candidate artifact fields"
+        },
+        {
+          "rank": 7,
+          "artifactKey": "file:src/user/dto/update-user.dto.ts",
+          "filePath": "src/user/dto/update-user.dto.ts",
+          "artifactType": "DTO_FILE",
+          "score": 0.314789,
+          "matchedTokens": [
+            "user"
+          ],
+          "retrievalReason": "BM25 lexical score over candidate artifact fields"
         }
       ],
       "summary": {
@@ -210,9 +210,9 @@
         "recallAt10": 1,
         "missedGroundTruthFiles": [],
         "unexpectedTopKFiles": [
-          "src/user/dto/update-user.dto.ts",
           "src/user/user.entity.ts",
-          "src/user/user.module.ts"
+          "src/user/user.module.ts",
+          "src/user/dto/update-user.dto.ts"
         ]
       }
     },
@@ -230,91 +230,91 @@
           "artifactKey": "file:packages/core/router/router-response-controller.ts",
           "filePath": "packages/core/router/router-response-controller.ts",
           "artifactType": "SERVICE_FILE",
-          "score": 12,
+          "score": 3.215185,
           "matchedTokens": [
             "core",
             "response"
           ],
-          "retrievalReason": "keyword overlap: core(artifactKey,filePath); response(artifactName,artifactKey,filePath)"
+          "retrievalReason": "BM25 lexical score over candidate artifact fields"
         },
         {
           "rank": 2,
-          "artifactKey": "file:packages/core/router/sse-stream.ts",
-          "filePath": "packages/core/router/sse-stream.ts",
-          "artifactType": "SERVICE_FILE",
-          "score": 12,
-          "matchedTokens": [
-            "core",
-            "sse"
-          ],
-          "retrievalReason": "keyword overlap: core(artifactKey,filePath); sse(artifactName,artifactKey,filePath)"
-        },
-        {
-          "rank": 3,
           "artifactKey": "file:integration/nest-application/sse/src/app.controller.ts",
           "filePath": "integration/nest-application/sse/src/app.controller.ts",
           "artifactType": "CONTROLLER_FILE",
-          "score": 5.75,
+          "score": 2.964153,
           "matchedTokens": [
             "sse",
             "endpoint"
           ],
-          "retrievalReason": "keyword overlap: sse(artifactKey,filePath); endpoint(universalKind)"
+          "retrievalReason": "BM25 lexical score over candidate artifact fields"
+        },
+        {
+          "rank": 3,
+          "artifactKey": "file:packages/core/router/sse-stream.ts",
+          "filePath": "packages/core/router/sse-stream.ts",
+          "artifactType": "SERVICE_FILE",
+          "score": 1.973961,
+          "matchedTokens": [
+            "core",
+            "sse"
+          ],
+          "retrievalReason": "BM25 lexical score over candidate artifact fields"
         },
         {
           "rank": 4,
           "artifactKey": "file:integration/nest-application/sse/src/app.module.ts",
           "filePath": "integration/nest-application/sse/src/app.module.ts",
           "artifactType": "MODULE_FILE",
-          "score": 4.5,
+          "score": 1.256237,
           "matchedTokens": [
             "sse"
           ],
-          "retrievalReason": "keyword overlap: sse(artifactKey,filePath)"
+          "retrievalReason": "BM25 lexical score over candidate artifact fields"
         },
         {
           "rank": 5,
-          "artifactKey": "file:packages/core/router/router-execution-context.ts",
-          "filePath": "packages/core/router/router-execution-context.ts",
-          "artifactType": "SERVICE_FILE",
-          "score": 4.5,
-          "matchedTokens": [
-            "core"
-          ],
-          "retrievalReason": "keyword overlap: core(artifactKey,filePath)"
-        },
-        {
-          "rank": 6,
           "artifactKey": "file:packages/core/router/router-explorer.ts",
           "filePath": "packages/core/router/router-explorer.ts",
           "artifactType": "SERVICE_FILE",
-          "score": 4.5,
+          "score": 0.459518,
           "matchedTokens": [
             "core"
           ],
-          "retrievalReason": "keyword overlap: core(artifactKey,filePath)"
+          "retrievalReason": "BM25 lexical score over candidate artifact fields"
         },
         {
-          "rank": 7,
+          "rank": 6,
           "artifactKey": "file:packages/core/router/router-proxy.ts",
           "filePath": "packages/core/router/router-proxy.ts",
           "artifactType": "SERVICE_FILE",
-          "score": 4.5,
+          "score": 0.459518,
           "matchedTokens": [
             "core"
           ],
-          "retrievalReason": "keyword overlap: core(artifactKey,filePath)"
+          "retrievalReason": "BM25 lexical score over candidate artifact fields"
         },
         {
-          "rank": 8,
+          "rank": 7,
           "artifactKey": "file:packages/core/router/routes-resolver.ts",
           "filePath": "packages/core/router/routes-resolver.ts",
           "artifactType": "SERVICE_FILE",
-          "score": 4.5,
+          "score": 0.459518,
           "matchedTokens": [
             "core"
           ],
-          "retrievalReason": "keyword overlap: core(artifactKey,filePath)"
+          "retrievalReason": "BM25 lexical score over candidate artifact fields"
+        },
+        {
+          "rank": 8,
+          "artifactKey": "file:packages/core/router/router-execution-context.ts",
+          "filePath": "packages/core/router/router-execution-context.ts",
+          "artifactType": "SERVICE_FILE",
+          "score": 0.43922,
+          "matchedTokens": [
+            "core"
+          ],
+          "retrievalReason": "BM25 lexical score over candidate artifact fields"
         }
       ],
       "summary": {
@@ -324,10 +324,10 @@
         "unexpectedTopKFiles": [
           "packages/core/router/sse-stream.ts",
           "integration/nest-application/sse/src/app.module.ts",
-          "packages/core/router/router-execution-context.ts",
           "packages/core/router/router-explorer.ts",
           "packages/core/router/router-proxy.ts",
-          "packages/core/router/routes-resolver.ts"
+          "packages/core/router/routes-resolver.ts",
+          "packages/core/router/router-execution-context.ts"
         ]
       }
     },
@@ -354,7 +354,8 @@
     }
   ],
   "warnings": [
-    "No keyword-overlap results for case reqimpact-case-001-backend-reliability-semantics; output is empty for topK=10.",
-    "No keyword-overlap results for case reqimpact-case-005-realworld-proper-error-object; output is empty for topK=10."
+    "BM25 baseline is lexical only; it does not use embeddings, DB, LLM, or HybridRetrievalService.",
+    "Changed files are proxy ground truth.",
+    "File-level only."
   ]
 }
