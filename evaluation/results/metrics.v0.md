@@ -1,14 +1,24 @@
-# ReqImpact Evaluation Metrics v0
+# Metrics v0
 
-Generated at: 2026-06-17T05:43:39.864Z
+Generated at: 2026-06-17T10:32:43.979Z
 
-| Baseline | Status | Precision | Recall | F1 | Recall@5 | Recall@10 | Evidence Coverage | Review Burden |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| keyword-baseline | COMPLETED | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |
-| vector-only-baseline | COMPLETED | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |
-| pure-llm-baseline | SKIPPED | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |
+Changed files are proxy ground truth.
+File-level only.
+Keyword baseline is deterministic and does not use DB, embeddings, LLM, or HybridRetrievalService.
 
-Notes:
-- `keyword-baseline` is deterministic lexical overlap scoring.
-- `vector-only-baseline` is deterministic sparse token-vector cosine scoring.
-- `pure-llm-baseline` is intentionally manual and skipped in the default scaffold.
+| Method | R@5 | R@10 | P@5 | P@10 | F1@5 | F1@10 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| keyword-baseline-v0 | 0.4167 | 0.4667 | 0.3000 | 0.2643 | 0.3276 | 0.3054 |
+
+| Case ID | Method | R@10 | P@10 | F1@10 | Hits | Missed Files |
+| --- | --- | ---: | ---: | ---: | --- | --- |
+| reqimpact-case-001-backend-reliability-semantics | keyword-baseline-v0 | 0.0000 | 0.0000 | 0.0000 | 0 | apps/api/prisma/schema.prisma<br>apps/api/src/modules/document/api/document.mapper.ts<br>apps/api/src/modules/document/application/approved-report-projection.service.ts<br>apps/api/src/modules/document/domain/approved-report-metadata.ts<br>apps/api/src/modules/impact-analysis/application/lifecycle/create-impact-analysis.usecase.ts<br>apps/api/src/modules/impact-analysis/application/lifecycle/finalize-impact-analysis.usecase.ts<br>apps/api/src/modules/impact-analysis/application/lifecycle/run-impact-analysis.usecase.ts<br>apps/api/src/modules/impact-analysis/application/review/get-review-queue.usecase.ts<br>apps/api/src/modules/impact-analysis/infrastructure/impact-analysis.mapper.ts<br>packages/contracts/src/document.contract.ts<br>packages/contracts/src/review-queue.contract.ts |
+| reqimpact-case-002-realworld-article-author-relation | keyword-baseline-v0 | 0.3333 | 0.5000 | 0.4000 | 2 | src/profile/profile.controller.ts<br>src/profile/profile.service.ts<br>src/user/user.entity.ts<br>src/user/user.service.ts |
+| reqimpact-case-003-realworld-auth-middleware-user-object | keyword-baseline-v0 | 1.0000 | 0.5714 | 0.7272 | 4 | None |
+| reqimpact-case-004-nest-post-sse-empty-response | keyword-baseline-v0 | 1.0000 | 0.2500 | 0.4000 | 2 | None |
+| reqimpact-case-005-realworld-proper-error-object | keyword-baseline-v0 | 0.0000 | 0.0000 | 0.0000 | 0 | src/shared/pipes/validation.pipe.ts<br>src/user/user.controller.ts<br>src/user/user.entity.ts |
+
+## Warnings
+
+- Changed files are proxy ground truth, not absolute impacted files.
+- Metrics are file-level only, not method-level.

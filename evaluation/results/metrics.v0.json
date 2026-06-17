@@ -1,0 +1,174 @@
+{
+  "runId": "metrics-v0-1",
+  "generatedAt": "2026-06-17T10:32:43.979Z",
+  "dataset": {
+    "caseCount": 5,
+    "groundTruthType": "changed-files-proxy",
+    "evaluationLevel": "file"
+  },
+  "methods": [
+    {
+      "method": "keyword-baseline-v0",
+      "caseMetrics": [
+        {
+          "caseId": "reqimpact-case-001-backend-reliability-semantics",
+          "repo": "hungthinh1104/BA_Helper",
+          "topKCount": 10,
+          "groundTruthFileCount": 11,
+          "retrievedUniqueFileCountAt10": 0,
+          "truePositiveFileCountAt10": 0,
+          "falsePositiveFileCountAt10": 0,
+          "falseNegativeFileCountAt10": 11,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "precisionAt5": 0,
+          "precisionAt10": 0,
+          "f1At5": 0,
+          "f1At10": 0,
+          "missedGroundTruthFiles": [
+            "apps/api/prisma/schema.prisma",
+            "apps/api/src/modules/document/api/document.mapper.ts",
+            "apps/api/src/modules/document/application/approved-report-projection.service.ts",
+            "apps/api/src/modules/document/domain/approved-report-metadata.ts",
+            "apps/api/src/modules/impact-analysis/application/lifecycle/create-impact-analysis.usecase.ts",
+            "apps/api/src/modules/impact-analysis/application/lifecycle/finalize-impact-analysis.usecase.ts",
+            "apps/api/src/modules/impact-analysis/application/lifecycle/run-impact-analysis.usecase.ts",
+            "apps/api/src/modules/impact-analysis/application/review/get-review-queue.usecase.ts",
+            "apps/api/src/modules/impact-analysis/infrastructure/impact-analysis.mapper.ts",
+            "packages/contracts/src/document.contract.ts",
+            "packages/contracts/src/review-queue.contract.ts"
+          ],
+          "hitGroundTruthFiles": [],
+          "unexpectedTopKFiles": []
+        },
+        {
+          "caseId": "reqimpact-case-002-realworld-article-author-relation",
+          "repo": "lujakob/nestjs-realworld-example-app",
+          "topKCount": 10,
+          "groundTruthFileCount": 6,
+          "retrievedUniqueFileCountAt10": 4,
+          "truePositiveFileCountAt10": 2,
+          "falsePositiveFileCountAt10": 2,
+          "falseNegativeFileCountAt10": 4,
+          "recallAt5": 0.3333,
+          "recallAt10": 0.3333,
+          "precisionAt5": 0.5,
+          "precisionAt10": 0.5,
+          "f1At5": 0.4,
+          "f1At10": 0.4,
+          "missedGroundTruthFiles": [
+            "src/profile/profile.controller.ts",
+            "src/profile/profile.service.ts",
+            "src/user/user.entity.ts",
+            "src/user/user.service.ts"
+          ],
+          "hitGroundTruthFiles": [
+            "src/article/article.entity.ts",
+            "src/article/article.service.ts"
+          ],
+          "unexpectedTopKFiles": [
+            "src/article/article.controller.ts",
+            "src/article/comment.entity.ts"
+          ]
+        },
+        {
+          "caseId": "reqimpact-case-003-realworld-auth-middleware-user-object",
+          "repo": "lujakob/nestjs-realworld-example-app",
+          "topKCount": 10,
+          "groundTruthFileCount": 4,
+          "retrievedUniqueFileCountAt10": 7,
+          "truePositiveFileCountAt10": 4,
+          "falsePositiveFileCountAt10": 3,
+          "falseNegativeFileCountAt10": 0,
+          "recallAt5": 0.75,
+          "recallAt10": 1,
+          "precisionAt5": 0.6,
+          "precisionAt10": 0.5714,
+          "f1At5": 0.6667,
+          "f1At10": 0.7272,
+          "missedGroundTruthFiles": [],
+          "hitGroundTruthFiles": [
+            "src/user/auth.middleware.ts",
+            "src/user/user.controller.ts",
+            "src/user/user.decorator.ts",
+            "src/user/user.service.ts"
+          ],
+          "unexpectedTopKFiles": [
+            "src/user/dto/update-user.dto.ts",
+            "src/user/user.entity.ts",
+            "src/user/user.module.ts"
+          ]
+        },
+        {
+          "caseId": "reqimpact-case-004-nest-post-sse-empty-response",
+          "repo": "nestjs/nest",
+          "topKCount": 10,
+          "groundTruthFileCount": 2,
+          "retrievedUniqueFileCountAt10": 8,
+          "truePositiveFileCountAt10": 2,
+          "falsePositiveFileCountAt10": 6,
+          "falseNegativeFileCountAt10": 0,
+          "recallAt5": 1,
+          "recallAt10": 1,
+          "precisionAt5": 0.4,
+          "precisionAt10": 0.25,
+          "f1At5": 0.5714,
+          "f1At10": 0.4,
+          "missedGroundTruthFiles": [],
+          "hitGroundTruthFiles": [
+            "integration/nest-application/sse/src/app.controller.ts",
+            "packages/core/router/router-response-controller.ts"
+          ],
+          "unexpectedTopKFiles": [
+            "packages/core/router/sse-stream.ts",
+            "integration/nest-application/sse/src/app.module.ts",
+            "packages/core/router/router-execution-context.ts",
+            "packages/core/router/router-explorer.ts",
+            "packages/core/router/router-proxy.ts",
+            "packages/core/router/routes-resolver.ts"
+          ]
+        },
+        {
+          "caseId": "reqimpact-case-005-realworld-proper-error-object",
+          "repo": "lujakob/nestjs-realworld-example-app",
+          "topKCount": 10,
+          "groundTruthFileCount": 3,
+          "retrievedUniqueFileCountAt10": 0,
+          "truePositiveFileCountAt10": 0,
+          "falsePositiveFileCountAt10": 0,
+          "falseNegativeFileCountAt10": 3,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "precisionAt5": 0,
+          "precisionAt10": 0,
+          "f1At5": 0,
+          "f1At10": 0,
+          "missedGroundTruthFiles": [
+            "src/shared/pipes/validation.pipe.ts",
+            "src/user/user.controller.ts",
+            "src/user/user.entity.ts"
+          ],
+          "hitGroundTruthFiles": [],
+          "unexpectedTopKFiles": []
+        }
+      ],
+      "aggregate": {
+        "macroRecallAt5": 0.4167,
+        "macroRecallAt10": 0.4667,
+        "macroPrecisionAt5": 0.3,
+        "macroPrecisionAt10": 0.2643,
+        "macroF1At5": 0.3276,
+        "macroF1At10": 0.3054,
+        "totalCases": 5,
+        "totalGroundTruthFiles": 26,
+        "totalTruePositiveFilesAt10": 8,
+        "totalFalsePositiveFilesAt10": 11,
+        "totalFalseNegativeFilesAt10": 18
+      }
+    }
+  ],
+  "warnings": [
+    "Changed files are proxy ground truth, not absolute impacted files.",
+    "Metrics are file-level only, not method-level."
+  ]
+}
