@@ -51,3 +51,18 @@ The vector baseline provider gate rejects:
 ## Phase 2F status
 
 `run-vector-baseline.ts` may be used to validate provider configuration, but it must refuse to emit `vector-baseline.v0.json` unless a real provider is explicitly configured.
+
+## Phase 3A probe
+
+Use `evaluation/scripts/probe-vector-baseline-path.ts` to select which real vector path is currently feasible.
+
+The probe:
+
+- does not run vector retrieval
+- does not call network providers
+- does not create `vector-baseline.v0.json`
+- reports whether the next feasible path is:
+  - `PERSISTED_DB`
+  - `LOCAL_MODEL`
+  - `NETWORK_PROVIDER`
+  - `NONE`
