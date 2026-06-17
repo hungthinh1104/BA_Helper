@@ -1,0 +1,14 @@
+# ReqImpact Evaluation Metrics v0
+
+Generated at: 2026-06-17T05:43:39.864Z
+
+| Baseline | Status | Precision | Recall | F1 | Recall@5 | Recall@10 | Evidence Coverage | Review Burden |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| keyword-baseline | COMPLETED | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |
+| vector-only-baseline | COMPLETED | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |
+| pure-llm-baseline | SKIPPED | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |
+
+Notes:
+- `keyword-baseline` is deterministic lexical overlap scoring.
+- `vector-only-baseline` is deterministic sparse token-vector cosine scoring.
+- `pure-llm-baseline` is intentionally manual and skipped in the default scaffold.

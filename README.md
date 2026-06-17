@@ -3,6 +3,7 @@
 Map requirement changes to impacted backend code, evidence, unknowns/risks, QA scenarios, review coverage, and traceability reports.
 
 **BA Helper** is a requirement-to-code impact analyzer for backend teams.
+In research and paper context, the tool name is **ReqImpact**.
 
 ## The Problem
 When a business requirement changes, backend systems are highly susceptible to hidden impacts. Traditional impact analysis is either entirely manual (relying on tribal knowledge) or requires heavy, proprietary integration. Generic AI chatbots lack repository-wide context and fail to provide auditable evidence of *why* specific code blocks are impacted, leading to brittle updates and missed QA regressions.
@@ -150,6 +151,20 @@ If you wish to test the retrieval and domain matching logic explicitly:
 pnpm test tests/evaluation/impact-evaluation.spec.ts
 ```
 
+### 7b. Run Research Evaluation Scaffold (Optional)
+The research branch keeps a separate, additive evaluation scaffold under
+`evaluation/` for `ReqImpact`.
+
+```bash
+pnpm eval:run
+pnpm eval:metrics
+```
+
+This scaffold is intentionally conservative:
+- dataset cases live in `evaluation/datasets/cases.v0.json`
+- keyword and vector-only baselines run offline and deterministically
+- pure-LLM comparison is documented as a manual lane, not a default CI gate
+
 ### 8. Start the Application (Optional)
 If you wish to run the full UI and Backend locally:
 ```bash
@@ -226,6 +241,23 @@ Built as a TypeScript modular monolith to balance speed of development with even
 - **Pilot scanner adapters:** Java/Spring Boot is `PARTIAL`; Go `net/http`, Go/Gin, Python/FastAPI, C#/ASP.NET Core, PHP/Laravel, and Ruby/Rails are `EXPERIMENTAL` capability proofs.
 - **Capability metadata:** Every scan exposes `SCANNER_CAPABILITY_SUMMARY` so reviewers can see whether a result came from a `STABLE`, `PARTIAL`, or `EXPERIMENTAL` adapter.
 - **Output generation:** Impact matrices, QA scenarios, unknown/risk tracking, human review, Markdown/PDF exports, and drift-aware traceability reports.
+
+## Research Track
+
+`main` stays the stable product/demo branch.
+Research and evaluation work should live on a separate branch such as
+`research/reqimpact-eval-v0`.
+
+The research objective is narrower than generic AI coding claims:
+- requirement-to-code impact analysis
+- evidence-backed traceability
+- human-in-the-loop review
+- approved report provenance
+
+See:
+- [Evaluation Scaffold](evaluation/README.md)
+- [Research Proposal](docs/research/proposal.md)
+- [Research Architecture View](docs/research/architecture-research-view.md)
 
 ## Known Limits
 - TypeScript/NestJS is the strongest scanner path.

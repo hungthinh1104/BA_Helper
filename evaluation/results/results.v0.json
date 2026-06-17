@@ -1,0 +1,60 @@
+{
+  "version": "results.v0",
+  "generatedAt": "2026-06-17T05:43:39.864Z",
+  "datasetVersion": "cases.v0",
+  "baselines": [
+    {
+      "baselineId": "keyword-baseline",
+      "mode": "deterministic",
+      "status": "COMPLETED",
+      "predictions": [],
+      "notes": "Deterministic lexical overlap between requirement text and candidate file path, artifact name, and excerpt."
+    },
+    {
+      "baselineId": "vector-only-baseline",
+      "mode": "deterministic",
+      "status": "COMPLETED",
+      "predictions": [],
+      "notes": "Deterministic sparse token-vector cosine similarity baseline. This is an offline retrieval baseline, not a hosted embedding provider benchmark."
+    },
+    {
+      "baselineId": "pure-llm-baseline",
+      "mode": "manual",
+      "status": "SKIPPED",
+      "notes": "Manual lane only. This baseline requires an explicitly configured real provider and prompt protocol, so it is intentionally skipped in the default reproducible scaffold.",
+      "predictions": []
+    }
+  ],
+  "metrics": {
+    "keyword-baseline": {
+      "evaluatedCases": 0,
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "recallAt5": 0,
+      "recallAt10": 0,
+      "evidenceCoverage": 0,
+      "reviewBurden": 0
+    },
+    "vector-only-baseline": {
+      "evaluatedCases": 0,
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "recallAt5": 0,
+      "recallAt10": 0,
+      "evidenceCoverage": 0,
+      "reviewBurden": 0
+    },
+    "pure-llm-baseline": {
+      "evaluatedCases": 0,
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "recallAt5": 0,
+      "recallAt10": 0,
+      "evidenceCoverage": 0,
+      "reviewBurden": 0
+    }
+  }
+}

@@ -9,6 +9,8 @@
     "dev:api": "pnpm --dir apps/api dev",
     "dev:web": "pnpm --dir apps/web dev",
     "dev:worker": "pnpm --dir apps/worker dev",
+    "eval:run": "ts-node --project tsconfig.json evaluation/scripts/run-evaluation.ts",
+    "eval:metrics": "ts-node --project tsconfig.json evaluation/scripts/compute-metrics.ts",
     "infra:down": "docker compose down",
     "infra:up": "docker compose up -d postgres redis",
     "lint": "pnpm -r lint",

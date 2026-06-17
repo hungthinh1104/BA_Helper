@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reqimpact.local/evaluation/datasets/cases.v0.schema.json",
+  "title": "ReqImpact evaluation dataset v0",
+  "type": "object",
+  "required": ["version", "cases"],
+  "properties": {
+    "version": {
+      "const": "cases.v0"
+    },
+    "generatedBy": {
+      "type": "string"
+    },
+    "cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "repo",
+          "issueUrl",
+          "commitSha",
+          "requirementText",
+          "groundTruth",
+          "notes"
+        ],
+        "properties": {
+          "id": { "type": "string" },
+          "repo": { "type": "string" },
+          "issueUrl": { "type": "string", "format": "uri" },
+          "prUrl": { "type": "string", "format": "uri" },
+          "commitSha": { "type": "string" },
+          "requirementText": { "type": "string" },
+          "groundTruth": {
+            "type": "object",
+            "required": ["files", "methods"],
+            "properties": {
+              "files": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "methods": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          },
+          "candidateArtifacts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["artifactKey", "filePath", "artifactName", "excerpt"],
+              "properties": {
+                "artifactKey": { "type": "string" },
+                "filePath": { "type": "string" },
+                "artifactName": { "type": "string" },
+                "excerpt": { "type": "string" }
+              }
+            }
+          },
+          "notes": { "type": "string" }
+        }
+      }
+    }
+  }
+}

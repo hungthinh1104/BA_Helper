@@ -19,7 +19,10 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@ba-helper/contracts": ["../../packages/contracts/src/index.ts"],
+      "@ba-helper/shared": ["../../packages/shared/src/index.ts"],
+      "@ba-helper/analyzer": ["../../packages/analyzer/src/index.ts"]
     }
   },
   "include": [

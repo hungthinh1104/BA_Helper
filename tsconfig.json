@@ -3,7 +3,9 @@
   "compilerOptions": {},
   "include": [
     "apps/**/*.ts",
+    "evaluation/**/*.ts",
     "packages/**/*.ts",
+    "scripts/**/*.ts",
     "tests/**/*.ts",
     "tests/**/*.d.ts"
   ],
