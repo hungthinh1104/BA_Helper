@@ -123,6 +123,320 @@
         }
       ],
       "notes": "Public commit case seeded from BA_Helper commit b92c98d. Ground truth keeps backend and shared-contract files that existed before the commit and excludes new files, tests, and web-only files."
+    },
+    {
+      "id": "reqimpact-case-002-realworld-article-author-relation",
+      "repo": "lujakob/nestjs-realworld-example-app",
+      "baseSha": "20b92a1017e31028aa0e00c894da70af813a86a1",
+      "headSha": "2b56fb43bb99ad18cef26dcd70882b4e7c83d96d",
+      "commitSha": "2b56fb43bb99ad18cef26dcd70882b4e7c83d96d",
+      "requirementText": "fix: article author relation",
+      "groundTruth": {
+        "files": [
+          "src/article/article.entity.ts",
+          "src/article/article.service.ts",
+          "src/profile/profile.controller.ts",
+          "src/profile/profile.service.ts",
+          "src/user/user.entity.ts",
+          "src/user/user.service.ts"
+        ]
+      },
+      "candidateArtifacts": [
+        {
+          "artifactKey": "file:src/article/article.entity.ts",
+          "filePath": "src/article/article.entity.ts",
+          "artifactName": "article.entity.ts",
+          "artifactType": "ENTITY_FILE",
+          "universalKind": "DATA_MODEL"
+        },
+        {
+          "artifactKey": "file:src/article/article.service.ts",
+          "filePath": "src/article/article.service.ts",
+          "artifactName": "article.service.ts",
+          "artifactType": "SERVICE_FILE",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "file:src/profile/profile.controller.ts",
+          "filePath": "src/profile/profile.controller.ts",
+          "artifactName": "profile.controller.ts",
+          "artifactType": "CONTROLLER_FILE",
+          "universalKind": "API_ENDPOINT"
+        },
+        {
+          "artifactKey": "file:src/profile/profile.service.ts",
+          "filePath": "src/profile/profile.service.ts",
+          "artifactName": "profile.service.ts",
+          "artifactType": "SERVICE_FILE",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "file:src/user/user.entity.ts",
+          "filePath": "src/user/user.entity.ts",
+          "artifactName": "user.entity.ts",
+          "artifactType": "ENTITY_FILE",
+          "universalKind": "DATA_MODEL"
+        },
+        {
+          "artifactKey": "file:src/user/user.service.ts",
+          "filePath": "src/user/user.service.ts",
+          "artifactName": "user.service.ts",
+          "artifactType": "SERVICE_FILE",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "file:src/article/article.controller.ts",
+          "filePath": "src/article/article.controller.ts",
+          "artifactName": "article.controller.ts",
+          "artifactType": "CONTROLLER_FILE",
+          "universalKind": "API_ENDPOINT"
+        },
+        {
+          "artifactKey": "file:src/article/comment.entity.ts",
+          "filePath": "src/article/comment.entity.ts",
+          "artifactName": "comment.entity.ts",
+          "artifactType": "ENTITY_FILE",
+          "universalKind": "DATA_MODEL"
+        },
+        {
+          "artifactKey": "file:src/profile/follows.entity.ts",
+          "filePath": "src/profile/follows.entity.ts",
+          "artifactName": "follows.entity.ts",
+          "artifactType": "ENTITY_FILE",
+          "universalKind": "DATA_MODEL"
+        },
+        {
+          "artifactKey": "file:src/user/user.controller.ts",
+          "filePath": "src/user/user.controller.ts",
+          "artifactName": "user.controller.ts",
+          "artifactType": "CONTROLLER_FILE",
+          "universalKind": "API_ENDPOINT"
+        }
+      ],
+      "notes": "External public backend case from nestjs-realworld-example-app commit 2b56fb4. Candidate artifacts were manually assembled from the pre-change article/profile/user modules and include non-ground-truth neighbors."
+    },
+    {
+      "id": "reqimpact-case-003-realworld-auth-middleware-user-object",
+      "repo": "lujakob/nestjs-realworld-example-app",
+      "baseSha": "a0edadd2812bea5f1ad00e4074ffb048d80df105",
+      "headSha": "7c7e385565f5ea23e5ee2735702124e1f0e8e2fa",
+      "commitSha": "7c7e385565f5ea23e5ee2735702124e1f0e8e2fa",
+      "requirementText": "fix: auth middleware user object",
+      "groundTruth": {
+        "files": [
+          "src/user/auth.middleware.ts",
+          "src/user/user.controller.ts",
+          "src/user/user.decorator.ts",
+          "src/user/user.service.ts"
+        ]
+      },
+      "candidateArtifacts": [
+        {
+          "artifactKey": "file:src/user/auth.middleware.ts",
+          "filePath": "src/user/auth.middleware.ts",
+          "artifactName": "auth.middleware.ts",
+          "artifactType": "MIDDLEWARE_FILE",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "file:src/user/user.controller.ts",
+          "filePath": "src/user/user.controller.ts",
+          "artifactName": "user.controller.ts",
+          "artifactType": "CONTROLLER_FILE",
+          "universalKind": "API_ENDPOINT"
+        },
+        {
+          "artifactKey": "file:src/user/user.decorator.ts",
+          "filePath": "src/user/user.decorator.ts",
+          "artifactName": "user.decorator.ts",
+          "artifactType": "DECORATOR_FILE"
+        },
+        {
+          "artifactKey": "file:src/user/user.service.ts",
+          "filePath": "src/user/user.service.ts",
+          "artifactName": "user.service.ts",
+          "artifactType": "SERVICE_FILE",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "file:src/user/user.entity.ts",
+          "filePath": "src/user/user.entity.ts",
+          "artifactName": "user.entity.ts",
+          "artifactType": "ENTITY_FILE",
+          "universalKind": "DATA_MODEL"
+        },
+        {
+          "artifactKey": "file:src/shared/pipes/validation.pipe.ts",
+          "filePath": "src/shared/pipes/validation.pipe.ts",
+          "artifactName": "validation.pipe.ts",
+          "artifactType": "PIPE_FILE"
+        },
+        {
+          "artifactKey": "file:src/user/dto/update-user.dto.ts",
+          "filePath": "src/user/dto/update-user.dto.ts",
+          "artifactName": "update-user.dto.ts",
+          "artifactType": "DTO_FILE"
+        },
+        {
+          "artifactKey": "file:src/user/user.module.ts",
+          "filePath": "src/user/user.module.ts",
+          "artifactName": "user.module.ts",
+          "artifactType": "MODULE_FILE",
+          "universalKind": "DOMAIN_SERVICE"
+        }
+      ],
+      "notes": "External public backend case from nestjs-realworld-example-app commit 7c7e385. Candidate artifacts were manually assembled from the pre-change user/shared module area and include non-ground-truth support files."
+    },
+    {
+      "id": "reqimpact-case-004-nest-post-sse-empty-response",
+      "repo": "nestjs/nest",
+      "issueUrl": "https://github.com/nestjs/nest/issues/17098",
+      "baseSha": "02f804159841a2771755c382832a7938b904c420",
+      "headSha": "d152eec8ebba6a38eb448021a83018b43372192e",
+      "commitSha": "d152eec8ebba6a38eb448021a83018b43372192e",
+      "requirementText": "fix(core): post sse endpoint empty response",
+      "groundTruth": {
+        "files": [
+          "integration/nest-application/sse/src/app.controller.ts",
+          "packages/core/router/router-response-controller.ts"
+        ]
+      },
+      "candidateArtifacts": [
+        {
+          "artifactKey": "file:integration/nest-application/sse/src/app.controller.ts",
+          "filePath": "integration/nest-application/sse/src/app.controller.ts",
+          "artifactName": "app.controller.ts",
+          "artifactType": "CONTROLLER_FILE",
+          "universalKind": "API_ENDPOINT"
+        },
+        {
+          "artifactKey": "file:packages/core/router/router-response-controller.ts",
+          "filePath": "packages/core/router/router-response-controller.ts",
+          "artifactName": "router-response-controller.ts",
+          "artifactType": "SERVICE_FILE",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "file:packages/core/router/sse-stream.ts",
+          "filePath": "packages/core/router/sse-stream.ts",
+          "artifactName": "sse-stream.ts",
+          "artifactType": "SERVICE_FILE",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "file:packages/core/router/router-explorer.ts",
+          "filePath": "packages/core/router/router-explorer.ts",
+          "artifactName": "router-explorer.ts",
+          "artifactType": "SERVICE_FILE",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "file:packages/core/router/router-execution-context.ts",
+          "filePath": "packages/core/router/router-execution-context.ts",
+          "artifactName": "router-execution-context.ts",
+          "artifactType": "SERVICE_FILE",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "file:packages/core/router/routes-resolver.ts",
+          "filePath": "packages/core/router/routes-resolver.ts",
+          "artifactName": "routes-resolver.ts",
+          "artifactType": "SERVICE_FILE",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "file:integration/nest-application/sse/src/app.module.ts",
+          "filePath": "integration/nest-application/sse/src/app.module.ts",
+          "artifactName": "app.module.ts",
+          "artifactType": "MODULE_FILE",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "file:packages/core/router/router-proxy.ts",
+          "filePath": "packages/core/router/router-proxy.ts",
+          "artifactName": "router-proxy.ts",
+          "artifactType": "SERVICE_FILE",
+          "universalKind": "DOMAIN_SERVICE"
+        }
+      ],
+      "notes": "External public backend framework case from nestjs/nest commit d152eec8 linked to issue #17098. Candidate artifacts were manually assembled from the pre-change SSE sample app and core router package."
+    },
+    {
+      "id": "reqimpact-case-005-realworld-proper-error-object",
+      "repo": "lujakob/nestjs-realworld-example-app",
+      "baseSha": "78e92f57b21038bbce0cde740dcbaeca68412c72",
+      "headSha": "cbb92cf40d47da79812833ef0e75618df95113d1",
+      "commitSha": "cbb92cf40d47da79812833ef0e75618df95113d1",
+      "requirementText": "fix: Return proper error object",
+      "groundTruth": {
+        "files": [
+          "src/shared/pipes/validation.pipe.ts",
+          "src/user/user.controller.ts",
+          "src/user/user.entity.ts"
+        ]
+      },
+      "candidateArtifacts": [
+        {
+          "artifactKey": "file:src/shared/pipes/validation.pipe.ts",
+          "filePath": "src/shared/pipes/validation.pipe.ts",
+          "artifactName": "validation.pipe.ts",
+          "artifactType": "PIPE_FILE"
+        },
+        {
+          "artifactKey": "file:src/user/user.controller.ts",
+          "filePath": "src/user/user.controller.ts",
+          "artifactName": "user.controller.ts",
+          "artifactType": "CONTROLLER_FILE",
+          "universalKind": "API_ENDPOINT"
+        },
+        {
+          "artifactKey": "file:src/user/user.entity.ts",
+          "filePath": "src/user/user.entity.ts",
+          "artifactName": "user.entity.ts",
+          "artifactType": "ENTITY_FILE",
+          "universalKind": "DATA_MODEL"
+        },
+        {
+          "artifactKey": "file:src/shared/base.controller.ts",
+          "filePath": "src/shared/base.controller.ts",
+          "artifactName": "base.controller.ts",
+          "artifactType": "CONTROLLER_FILE",
+          "universalKind": "API_ENDPOINT"
+        },
+        {
+          "artifactKey": "file:src/user/user.service.ts",
+          "filePath": "src/user/user.service.ts",
+          "artifactName": "user.service.ts",
+          "artifactType": "SERVICE_FILE",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "file:src/user/auth.middleware.ts",
+          "filePath": "src/user/auth.middleware.ts",
+          "artifactName": "auth.middleware.ts",
+          "artifactType": "MIDDLEWARE_FILE",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "file:src/user/user.decorator.ts",
+          "filePath": "src/user/user.decorator.ts",
+          "artifactName": "user.decorator.ts",
+          "artifactType": "DECORATOR_FILE"
+        },
+        {
+          "artifactKey": "file:src/user/dto/create-user.dto.ts",
+          "filePath": "src/user/dto/create-user.dto.ts",
+          "artifactName": "create-user.dto.ts",
+          "artifactType": "DTO_FILE"
+        },
+        {
+          "artifactKey": "file:src/user/dto/login-user.dto.ts",
+          "filePath": "src/user/dto/login-user.dto.ts",
+          "artifactName": "login-user.dto.ts",
+          "artifactType": "DTO_FILE"
+        }
+      ],
+      "notes": "External public backend validation case from nestjs-realworld-example-app commit cbb92cf. Candidate artifacts were manually assembled from the pre-change user/shared validation area and include non-ground-truth controller/service/DTO neighbors."
     }
   ]
 }

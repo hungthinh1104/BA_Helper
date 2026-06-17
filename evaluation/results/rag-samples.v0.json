@@ -1,29 +1,52 @@
 {
-  "runId": "rag-sample:case_only:reqimpact-case-001-backend-reliability-semantics:2026-06-17T09-24-38-042Z",
-  "generatedAt": "2026-06-17T09:24:38.042Z",
+  "runId": "rag-sample:case_only:reqimpact-case-005-realworld-proper-error-object:2026-06-17T09-43-23-569Z",
+  "generatedAt": "2026-06-17T09:43:23.570Z",
   "mode": "CASE_ONLY",
-  "caseId": "reqimpact-case-001-backend-reliability-semantics",
-  "repo": "hungthinh1104/BA_Helper",
-  "requirementText": "fix: harden backend reliability semantics",
+  "caseId": "reqimpact-case-005-realworld-proper-error-object",
+  "repo": "lujakob/nestjs-realworld-example-app",
+  "requirementText": "fix: Return proper error object",
   "groundTruthFiles": [
-    "apps/api/prisma/schema.prisma",
-    "apps/api/src/modules/document/api/document.mapper.ts",
-    "apps/api/src/modules/document/application/approved-report-projection.service.ts",
-    "apps/api/src/modules/document/domain/approved-report-metadata.ts",
-    "apps/api/src/modules/impact-analysis/application/lifecycle/create-impact-analysis.usecase.ts",
-    "apps/api/src/modules/impact-analysis/application/lifecycle/finalize-impact-analysis.usecase.ts",
-    "apps/api/src/modules/impact-analysis/application/lifecycle/run-impact-analysis.usecase.ts",
-    "apps/api/src/modules/impact-analysis/application/review/get-review-queue.usecase.ts",
-    "apps/api/src/modules/impact-analysis/infrastructure/impact-analysis.mapper.ts",
-    "packages/contracts/src/document.contract.ts",
-    "packages/contracts/src/review-queue.contract.ts"
+    "src/shared/pipes/validation.pipe.ts",
+    "src/user/user.controller.ts",
+    "src/user/user.entity.ts"
   ],
   "topK": [
     {
       "rank": 1,
-      "artifactKey": "file:apps/api/prisma/schema.prisma",
-      "filePath": "apps/api/prisma/schema.prisma",
-      "artifactType": "SCHEMA_FILE",
+      "artifactKey": "file:src/shared/pipes/validation.pipe.ts",
+      "filePath": "src/shared/pipes/validation.pipe.ts",
+      "artifactType": "PIPE_FILE",
+      "retrievalSignals": [],
+      "retrievalReason": "CASE_ONLY mode does not run retrieval; candidateArtifacts are exported in dataset order.",
+      "evidence": {
+        "hasEvidence": false,
+        "excerptLength": 0,
+        "excerptPreview": "",
+        "isLocationOnly": false,
+        "isCodeLike": false
+      }
+    },
+    {
+      "rank": 2,
+      "artifactKey": "file:src/user/user.controller.ts",
+      "filePath": "src/user/user.controller.ts",
+      "artifactType": "CONTROLLER_FILE",
+      "retrievalSignals": [],
+      "retrievalReason": "CASE_ONLY mode does not run retrieval; candidateArtifacts are exported in dataset order.",
+      "evidence": {
+        "hasEvidence": false,
+        "excerptLength": 0,
+        "excerptPreview": "",
+        "isLocationOnly": false,
+        "isCodeLike": false
+      },
+      "universalKind": "API_ENDPOINT"
+    },
+    {
+      "rank": 3,
+      "artifactKey": "file:src/user/user.entity.ts",
+      "filePath": "src/user/user.entity.ts",
+      "artifactType": "ENTITY_FILE",
       "retrievalSignals": [],
       "retrievalReason": "CASE_ONLY mode does not run retrieval; candidateArtifacts are exported in dataset order.",
       "evidence": {
@@ -36,10 +59,10 @@
       "universalKind": "DATA_MODEL"
     },
     {
-      "rank": 2,
-      "artifactKey": "file:apps/api/src/modules/document/api/document.mapper.ts",
-      "filePath": "apps/api/src/modules/document/api/document.mapper.ts",
-      "artifactType": "MAPPER_FILE",
+      "rank": 4,
+      "artifactKey": "file:src/shared/base.controller.ts",
+      "filePath": "src/shared/base.controller.ts",
+      "artifactType": "CONTROLLER_FILE",
       "retrievalSignals": [],
       "retrievalReason": "CASE_ONLY mode does not run retrieval; candidateArtifacts are exported in dataset order.",
       "evidence": {
@@ -48,12 +71,13 @@
         "excerptPreview": "",
         "isLocationOnly": false,
         "isCodeLike": false
-      }
+      },
+      "universalKind": "API_ENDPOINT"
     },
     {
-      "rank": 3,
-      "artifactKey": "file:apps/api/src/modules/document/application/approved-report-projection.service.ts",
-      "filePath": "apps/api/src/modules/document/application/approved-report-projection.service.ts",
+      "rank": 5,
+      "artifactKey": "file:src/user/user.service.ts",
+      "filePath": "src/user/user.service.ts",
       "artifactType": "SERVICE_FILE",
       "retrievalSignals": [],
       "retrievalReason": "CASE_ONLY mode does not run retrieval; candidateArtifacts are exported in dataset order.",
@@ -67,42 +91,10 @@
       "universalKind": "DOMAIN_SERVICE"
     },
     {
-      "rank": 4,
-      "artifactKey": "file:apps/api/src/modules/document/domain/approved-report-metadata.ts",
-      "filePath": "apps/api/src/modules/document/domain/approved-report-metadata.ts",
-      "artifactType": "TYPE_FILE",
-      "retrievalSignals": [],
-      "retrievalReason": "CASE_ONLY mode does not run retrieval; candidateArtifacts are exported in dataset order.",
-      "evidence": {
-        "hasEvidence": false,
-        "excerptLength": 0,
-        "excerptPreview": "",
-        "isLocationOnly": false,
-        "isCodeLike": false
-      },
-      "universalKind": "DATA_MODEL"
-    },
-    {
-      "rank": 5,
-      "artifactKey": "file:apps/api/src/modules/impact-analysis/application/lifecycle/create-impact-analysis.usecase.ts",
-      "filePath": "apps/api/src/modules/impact-analysis/application/lifecycle/create-impact-analysis.usecase.ts",
-      "artifactType": "USE_CASE_FILE",
-      "retrievalSignals": [],
-      "retrievalReason": "CASE_ONLY mode does not run retrieval; candidateArtifacts are exported in dataset order.",
-      "evidence": {
-        "hasEvidence": false,
-        "excerptLength": 0,
-        "excerptPreview": "",
-        "isLocationOnly": false,
-        "isCodeLike": false
-      },
-      "universalKind": "DOMAIN_SERVICE"
-    },
-    {
       "rank": 6,
-      "artifactKey": "file:apps/api/src/modules/impact-analysis/application/lifecycle/finalize-impact-analysis.usecase.ts",
-      "filePath": "apps/api/src/modules/impact-analysis/application/lifecycle/finalize-impact-analysis.usecase.ts",
-      "artifactType": "USE_CASE_FILE",
+      "artifactKey": "file:src/user/auth.middleware.ts",
+      "filePath": "src/user/auth.middleware.ts",
+      "artifactType": "MIDDLEWARE_FILE",
       "retrievalSignals": [],
       "retrievalReason": "CASE_ONLY mode does not run retrieval; candidateArtifacts are exported in dataset order.",
       "evidence": {
@@ -116,41 +108,9 @@
     },
     {
       "rank": 7,
-      "artifactKey": "file:apps/api/src/modules/impact-analysis/application/lifecycle/run-impact-analysis.usecase.ts",
-      "filePath": "apps/api/src/modules/impact-analysis/application/lifecycle/run-impact-analysis.usecase.ts",
-      "artifactType": "USE_CASE_FILE",
-      "retrievalSignals": [],
-      "retrievalReason": "CASE_ONLY mode does not run retrieval; candidateArtifacts are exported in dataset order.",
-      "evidence": {
-        "hasEvidence": false,
-        "excerptLength": 0,
-        "excerptPreview": "",
-        "isLocationOnly": false,
-        "isCodeLike": false
-      },
-      "universalKind": "DOMAIN_SERVICE"
-    },
-    {
-      "rank": 8,
-      "artifactKey": "file:apps/api/src/modules/impact-analysis/application/review/get-review-queue.usecase.ts",
-      "filePath": "apps/api/src/modules/impact-analysis/application/review/get-review-queue.usecase.ts",
-      "artifactType": "USE_CASE_FILE",
-      "retrievalSignals": [],
-      "retrievalReason": "CASE_ONLY mode does not run retrieval; candidateArtifacts are exported in dataset order.",
-      "evidence": {
-        "hasEvidence": false,
-        "excerptLength": 0,
-        "excerptPreview": "",
-        "isLocationOnly": false,
-        "isCodeLike": false
-      },
-      "universalKind": "DOMAIN_SERVICE"
-    },
-    {
-      "rank": 9,
-      "artifactKey": "file:apps/api/src/modules/impact-analysis/infrastructure/impact-analysis.mapper.ts",
-      "filePath": "apps/api/src/modules/impact-analysis/infrastructure/impact-analysis.mapper.ts",
-      "artifactType": "MAPPER_FILE",
+      "artifactKey": "file:src/user/user.decorator.ts",
+      "filePath": "src/user/user.decorator.ts",
+      "artifactType": "DECORATOR_FILE",
       "retrievalSignals": [],
       "retrievalReason": "CASE_ONLY mode does not run retrieval; candidateArtifacts are exported in dataset order.",
       "evidence": {
@@ -162,10 +122,10 @@
       }
     },
     {
-      "rank": 10,
-      "artifactKey": "file:packages/contracts/src/document.contract.ts",
-      "filePath": "packages/contracts/src/document.contract.ts",
-      "artifactType": "CONTRACT_FILE",
+      "rank": 8,
+      "artifactKey": "file:src/user/dto/create-user.dto.ts",
+      "filePath": "src/user/dto/create-user.dto.ts",
+      "artifactType": "DTO_FILE",
       "retrievalSignals": [],
       "retrievalReason": "CASE_ONLY mode does not run retrieval; candidateArtifacts are exported in dataset order.",
       "evidence": {
@@ -174,17 +134,40 @@
         "excerptPreview": "",
         "isLocationOnly": false,
         "isCodeLike": false
-      },
-      "universalKind": "DATA_MODEL"
+      }
+    },
+    {
+      "rank": 9,
+      "artifactKey": "file:src/user/dto/login-user.dto.ts",
+      "filePath": "src/user/dto/login-user.dto.ts",
+      "artifactType": "DTO_FILE",
+      "retrievalSignals": [],
+      "retrievalReason": "CASE_ONLY mode does not run retrieval; candidateArtifacts are exported in dataset order.",
+      "evidence": {
+        "hasEvidence": false,
+        "excerptLength": 0,
+        "excerptPreview": "",
+        "isLocationOnly": false,
+        "isCodeLike": false
+      }
     }
   ],
   "summary": {
-    "topKCount": 10,
-    "groundTruthHitCount": 10,
-    "recallAtK": 0.9091,
+    "topKCount": 9,
+    "groundTruthHitCount": 3,
+    "recallAt10": 1,
     "evidenceCoverage": 0,
     "locationOnlyEvidenceCount": 0,
-    "codeLikeEvidenceCount": 0
+    "codeLikeEvidenceCount": 0,
+    "missedGroundTruthFiles": [],
+    "unexpectedTopKFiles": [
+      "src/shared/base.controller.ts",
+      "src/user/user.service.ts",
+      "src/user/auth.middleware.ts",
+      "src/user/user.decorator.ts",
+      "src/user/dto/create-user.dto.ts",
+      "src/user/dto/login-user.dto.ts"
+    ]
   },
   "warnings": [
     "CASE_ONLY mode does not execute retrieval. Candidate artifacts are exported in dataset order only.",

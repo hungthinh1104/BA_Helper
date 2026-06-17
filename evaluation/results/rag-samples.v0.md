@@ -1,41 +1,42 @@
 # ReqImpact RAG Sample Export v0
 
-- Run ID: rag-sample:case_only:reqimpact-case-001-backend-reliability-semantics:2026-06-17T09-24-38-042Z
+- Run ID: rag-sample:case_only:reqimpact-case-005-realworld-proper-error-object:2026-06-17T09-43-23-569Z
 - Mode: CASE_ONLY
-- Case ID: reqimpact-case-001-backend-reliability-semantics
-- Repo: hungthinh1104/BA_Helper
+- Case ID: reqimpact-case-005-realworld-proper-error-object
+- Repo: lujakob/nestjs-realworld-example-app
 
 ## Requirement Text
 
-fix: harden backend reliability semantics
+fix: Return proper error object
 
 ## Ground Truth Note
 
-Changed files are used here as a practical proxy ground truth. This export does not claim method-level accuracy or final research results.
+Changed files are proxy ground truth. This smoke export is not a final benchmark result.
 
 ## Summary
 
-- Top-K count: 10
-- Ground-truth hits in top-K: 10
-- Recall@K: 0.9091
+- Top-K count: 9
+- Ground-truth hits in top-K: 3
+- Recall@10: 1
 - Evidence coverage: 0
 - Location-only evidence count: 0
 - Code-like evidence count: 0
+- Missed ground-truth files: none
+- Unexpected top-K files: src/shared/base.controller.ts, src/user/user.service.ts, src/user/auth.middleware.ts, src/user/user.decorator.ts, src/user/dto/create-user.dto.ts, src/user/dto/login-user.dto.ts
 
 ## Top-K
 
-| Rank | File | Type | Kind | Score | Signals | Evidence | Location-only | Code-like | Preview |
-| ---: | --- | --- | --- | ---: | --- | --- | --- | --- | --- |
-| 1 | apps/api/prisma/schema.prisma | SCHEMA_FILE | DATA_MODEL | 0.0000 |  | no | no | no |  |
-| 2 | apps/api/src/modules/document/api/document.mapper.ts | MAPPER_FILE |  | 0.0000 |  | no | no | no |  |
-| 3 | apps/api/src/modules/document/application/approved-report-projection.service.ts | SERVICE_FILE | DOMAIN_SERVICE | 0.0000 |  | no | no | no |  |
-| 4 | apps/api/src/modules/document/domain/approved-report-metadata.ts | TYPE_FILE | DATA_MODEL | 0.0000 |  | no | no | no |  |
-| 5 | apps/api/src/modules/impact-analysis/application/lifecycle/create-impact-analysis.usecase.ts | USE_CASE_FILE | DOMAIN_SERVICE | 0.0000 |  | no | no | no |  |
-| 6 | apps/api/src/modules/impact-analysis/application/lifecycle/finalize-impact-analysis.usecase.ts | USE_CASE_FILE | DOMAIN_SERVICE | 0.0000 |  | no | no | no |  |
-| 7 | apps/api/src/modules/impact-analysis/application/lifecycle/run-impact-analysis.usecase.ts | USE_CASE_FILE | DOMAIN_SERVICE | 0.0000 |  | no | no | no |  |
-| 8 | apps/api/src/modules/impact-analysis/application/review/get-review-queue.usecase.ts | USE_CASE_FILE | DOMAIN_SERVICE | 0.0000 |  | no | no | no |  |
-| 9 | apps/api/src/modules/impact-analysis/infrastructure/impact-analysis.mapper.ts | MAPPER_FILE |  | 0.0000 |  | no | no | no |  |
-| 10 | packages/contracts/src/document.contract.ts | CONTRACT_FILE | DATA_MODEL | 0.0000 |  | no | no | no |  |
+| Rank | File | Type | Kind | Score | Final | Lexical | Vector | Graph | Kind Boost | Domain Boost | Signals | Evidence | Location-only | Code-like | Preview |
+| ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- | --- | --- | --- |
+| 1 | src/shared/pipes/validation.pipe.ts | PIPE_FILE |  | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |  | no | no | no |  |
+| 2 | src/user/user.controller.ts | CONTROLLER_FILE | API_ENDPOINT | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |  | no | no | no |  |
+| 3 | src/user/user.entity.ts | ENTITY_FILE | DATA_MODEL | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |  | no | no | no |  |
+| 4 | src/shared/base.controller.ts | CONTROLLER_FILE | API_ENDPOINT | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |  | no | no | no |  |
+| 5 | src/user/user.service.ts | SERVICE_FILE | DOMAIN_SERVICE | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |  | no | no | no |  |
+| 6 | src/user/auth.middleware.ts | MIDDLEWARE_FILE | DOMAIN_SERVICE | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |  | no | no | no |  |
+| 7 | src/user/user.decorator.ts | DECORATOR_FILE |  | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |  | no | no | no |  |
+| 8 | src/user/dto/create-user.dto.ts | DTO_FILE |  | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |  | no | no | no |  |
+| 9 | src/user/dto/login-user.dto.ts | DTO_FILE |  | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |  | no | no | no |  |
 
 ## Warnings
 

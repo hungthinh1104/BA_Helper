@@ -82,4 +82,228 @@ rather than minimal necessity.
 ### Suitability
 
 This case is suitable for file-level evaluation only in v0.
+
+## Case 004
+
+### Source repository
+
+- Repository: `nestjs/nest`
+- Issue link:
+  `https://github.com/nestjs/nest/issues/17098`
+- Commit link:
+  `https://github.com/nestjs/nest/commit/d152eec8ebba6a38eb448021a83018b43372192e`
+- Base commit:
+  `02f804159841a2771755c382832a7938b904c420`
+- Head/commit SHA:
+  `d152eec8ebba6a38eb448021a83018b43372192e`
+
+### Public evidence used to infer requirementText
+
+- Commit title:
+  `fix(core): post sse endpoint empty response`
+- Public issue number in commit message:
+  `#17098`
+
+### Changed backend files used as proxy ground truth
+
+- `integration/nest-application/sse/src/app.controller.ts`
+- `packages/core/router/router-response-controller.ts`
+
+### Excluded files and why
+
+- Integration spec files were excluded from `groundTruth.files` because v0 is
+  focused on backend implementation impact, not test-maintenance impact.
+- `package.json` was not involved in this commit, so no config/dependency noise
+  had to be handled.
+- Neighbor router files were kept as candidates, not ground truth, because they
+  are plausible retrieval distractors around SSE behavior.
+
+### Candidate artifact construction method
+
+- Candidate artifacts were assembled manually from the pre-change
+  `packages/core/router` subtree plus the SSE sample app module/controller.
+- The candidate set intentionally includes changed implementation files and
+  nearby non-changed router components.
+
+### Ground truth limitation statement
+
+The selected `groundTruth.files` are a practical file-level proxy derived from
+public changed backend implementation files. They do not claim to capture every
+file that might be semantically related to SSE response behavior.
+
+### Threats to validity
+
+- This is a framework repository, not an application repository.
+- Requirement text is inferred from public issue/commit title rather than a BA
+  requirement document.
+- Excluding changed test files narrows evaluation to implementation impact only.
+
+### Suitability
+
+This case is suitable for file-level evaluation only in v0, not method-level.
+
+## Case 005
+
+### Source repository
+
+- Repository: `lujakob/nestjs-realworld-example-app`
+- Commit link:
+  `https://github.com/lujakob/nestjs-realworld-example-app/commit/cbb92cf40d47da79812833ef0e75618df95113d1`
+- Base commit:
+  `78e92f57b21038bbce0cde740dcbaeca68412c72`
+- Head/commit SHA:
+  `cbb92cf40d47da79812833ef0e75618df95113d1`
+
+### Public evidence used to infer requirementText
+
+- Commit title:
+  `fix: Return proper error object`
+
+### Changed backend files used as proxy ground truth
+
+- `src/shared/pipes/validation.pipe.ts`
+- `src/user/user.controller.ts`
+- `src/user/user.entity.ts`
+
+### Excluded files and why
+
+- DTO, middleware, decorator, and service files were not placed in ground truth
+  because they were unchanged in the commit, but they remain plausible
+  candidates around the validation/user flow.
+- No frontend or docs files were involved.
+
+### Candidate artifact construction method
+
+- Candidate artifacts were assembled manually from the pre-change `src/shared`
+  and `src/user` tree.
+- The set includes changed files plus plausible neighbors like DTOs,
+  middleware, decorator, and service files.
+
+### Ground truth limitation statement
+
+The selected changed backend files are used only as a practical file-level
+proxy. They do not claim full semantic completeness for validation/user error
+handling logic.
+
+### Threats to validity
+
+- Requirement text is commit-title-derived.
+- Candidate artifacts are manually assembled rather than scanner-exported.
+- The commit is relatively small, so retrieval difficulty is moderate rather
+  than broad.
+
+### Suitability
+
+This case is suitable for file-level evaluation only in v0, not method-level.
 It is not suitable for method-level accuracy claims yet.
+
+## Case 002
+
+### Source repo
+
+- Repository: `lujakob/nestjs-realworld-example-app`
+- Commit URL:
+  `https://github.com/lujakob/nestjs-realworld-example-app/commit/2b56fb43bb99ad18cef26dcd70882b4e7c83d96d`
+- Base commit:
+  `https://github.com/lujakob/nestjs-realworld-example-app/commit/20b92a1017e31028aa0e00c894da70af813a86a1`
+
+### PR / issue / commit links
+
+- Public commit:
+  `https://github.com/lujakob/nestjs-realworld-example-app/commit/2b56fb43bb99ad18cef26dcd70882b4e7c83d96d`
+- No issue or pull request URL was recovered confidently from local git history,
+  so the commit title is used as the requirement-text proxy:
+  `fix: article author relation`
+
+### Why this case qualifies
+
+- External public repository, not BA_Helper.
+- NestJS backend application.
+- The change affects backend relationship and profile/article behavior, not docs,
+  frontend, dependency bumps, or CI.
+- The changed files cluster cleanly in article/profile/user modules.
+
+### Why excluded files are excluded
+
+- DTO index files, module files, and unchanged neighbors are kept as candidate
+  artifacts only where they are plausible retrieval distractors.
+- Files outside article/profile/user scope were excluded because they are weakly
+  connected to the observed behavior change.
+
+### Ground truth limitation statement
+
+`groundTruth.files` is derived from backend files changed in the public commit.
+It is a practical file-level proxy, not absolute truth about all semantically
+relevant code.
+
+### Candidate artifact construction method
+
+- Candidate artifacts were assembled manually from the pre-change
+  `src/article`, `src/profile`, and `src/user` structure.
+- The set includes both changed files and plausible non-changed neighbors such
+  as controller/entity/module-adjacent files.
+
+### Known threats to validity
+
+- Requirement text is proxied from the commit title.
+- Candidate artifacts are manually assembled rather than scanner-exported.
+- This case measures file-level retrieval plausibility only.
+
+### Suitability
+
+This case is suitable for file-level evaluation only in v0.
+
+## Case 003
+
+### Source repo
+
+- Repository: `lujakob/nestjs-realworld-example-app`
+- Commit URL:
+  `https://github.com/lujakob/nestjs-realworld-example-app/commit/7c7e385565f5ea23e5ee2735702124e1f0e8e2fa`
+- Base commit:
+  `https://github.com/lujakob/nestjs-realworld-example-app/commit/a0edadd2812bea5f1ad00e4074ffb048d80df105`
+
+### PR / issue / commit links
+
+- Public commit:
+  `https://github.com/lujakob/nestjs-realworld-example-app/commit/7c7e385565f5ea23e5ee2735702124e1f0e8e2fa`
+- No issue or pull request URL was recovered confidently from local git history,
+  so the commit title is used as the requirement-text proxy:
+  `fix: auth middleware user object`
+
+### Why this case qualifies
+
+- External public NestJS backend repository.
+- The change targets authentication/user flow behavior.
+- It is backend-only and scoped to middleware/controller/decorator/service logic.
+- It is not a dependency-only, docs-only, or formatting-only change.
+
+### Why excluded files are excluded
+
+- DTO, module, and shared validation files are included only as broader
+  candidates where they are plausible but not confirmed ground truth.
+- Broader repository areas unrelated to auth/user flow were excluded from the
+  candidate set because they would add noise without improving this first v0
+  seed.
+
+### Ground truth limitation statement
+
+`groundTruth.files` reflects backend files changed in the public commit and is
+used only as practical file-level proxy ground truth.
+
+### Candidate artifact construction method
+
+- Candidate artifacts were assembled manually from the pre-change `src/user`
+  and `src/shared` tree.
+- The set is broader than the changed files and includes plausible distractors
+  such as DTO/module/validation files.
+
+### Known threats to validity
+
+- Requirement text is proxied from the commit title.
+- Candidate universe is manually assembled.
+- This does not support method-level claims.
+
+### Suitability
+
+This case is suitable for file-level evaluation only in v0.
