@@ -68,7 +68,7 @@ function main(): void {
   const results: EvaluationResults = {
     version: 'results.v0',
     generatedAt: new Date().toISOString(),
-    datasetVersion: dataset.version,
+    datasetVersion: dataset.version ?? 'cases.v0',
     baselines,
     metrics,
   };

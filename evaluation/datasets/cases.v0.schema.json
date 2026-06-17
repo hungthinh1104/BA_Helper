@@ -3,7 +3,8 @@
   "$id": "https://reqimpact.local/evaluation/datasets/cases.v0.schema.json",
   "title": "ReqImpact evaluation dataset v0",
   "type": "object",
-  "required": ["version", "cases"],
+  "additionalProperties": false,
+  "required": ["cases"],
   "properties": {
     "version": {
       "const": "cases.v0"
@@ -14,51 +15,119 @@
     "cases": {
       "type": "array",
       "items": {
-        "type": "object",
-        "required": [
-          "id",
-          "repo",
-          "issueUrl",
-          "commitSha",
-          "requirementText",
-          "groundTruth",
-          "notes"
-        ],
-        "properties": {
-          "id": { "type": "string" },
-          "repo": { "type": "string" },
-          "issueUrl": { "type": "string", "format": "uri" },
-          "prUrl": { "type": "string", "format": "uri" },
-          "commitSha": { "type": "string" },
-          "requirementText": { "type": "string" },
-          "groundTruth": {
-            "type": "object",
-            "required": ["files", "methods"],
-            "properties": {
-              "files": {
-                "type": "array",
-                "items": { "type": "string" }
-              },
-              "methods": {
-                "type": "array",
-                "items": { "type": "string" }
-              }
-            }
-          },
-          "candidateArtifacts": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "required": ["artifactKey", "filePath", "artifactName", "excerpt"],
-              "properties": {
-                "artifactKey": { "type": "string" },
-                "filePath": { "type": "string" },
-                "artifactName": { "type": "string" },
-                "excerpt": { "type": "string" }
-              }
-            }
-          },
-          "notes": { "type": "string" }
+        "$ref": "#/$defs/ReqImpactEvaluationCase"
+      }
+    }
+  },
+  "$defs": {
+    "GroundTruth": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["files"],
+      "properties": {
+        "files": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "methods": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "CandidateArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifactKey", "filePath", "artifactName", "artifactType"],
+      "properties": {
+        "artifactKey": {
+          "type": "string",
+          "minLength": 1
+        },
+        "filePath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifactName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifactType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "universalKind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "excerpt": {
+          "type": "string"
+        }
+      }
+    },
+    "ReqImpactEvaluationCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "repo",
+        "baseSha",
+        "requirementText",
+        "groundTruth",
+        "candidateArtifacts"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "repo": {
+          "type": "string",
+          "minLength": 1
+        },
+        "issueUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "prUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "baseSha": {
+          "type": "string",
+          "minLength": 1
+        },
+        "headSha": {
+          "type": "string",
+          "minLength": 1
+        },
+        "commitSha": {
+          "type": "string",
+          "minLength": 1
+        },
+        "requirementText": {
+          "type": "string",
+          "minLength": 1
+        },
+        "groundTruth": {
+          "$ref": "#/$defs/GroundTruth"
+        },
+        "candidateArtifacts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/CandidateArtifact"
+          }
+        },
+        "notes": {
+          "type": "string"
         }
       }
     }
