@@ -8,6 +8,14 @@ import { PrismaService } from '../../apps/api/src/modules/prisma/prisma.service'
 import { HybridRetrievalService } from '../../apps/api/src/modules/retrieval/application/hybrid-retrieval.service';
 import { loadDataset, writeJsonFile } from '../io';
 import { summarizeEvidenceQuality } from '../src/evidence-quality';
+import {
+  mapSnapshotMetadata,
+  readArtifactEvidenceExcerpt,
+  readEmbeddingState,
+  readSnapshotMetadata,
+  type RagExportEmbeddingState,
+  type RagExportSnapshotMetadata,
+} from '../src/rag-export-db-read-model';
 import type {
   CandidateArtifact,
   ReqImpactEvaluationCase,
@@ -15,6 +23,15 @@ import type {
 } from '../src/types';
 
 type ExportMode = 'CASE_ONLY' | 'CURRENT_HYBRID';
+
+type RetrievedArtifactResultWithExtras = RetrievedArtifactResult & {
+  universalKind?: string;
+  strategyVersion?: string;
+  retrievalDiagnostics?: unknown;
+  evidence: RetrievedArtifactResult['evidence'] & {
+    excerptPreview: string;
+  };
+};
 
 type RagSampleExport = {
   runId: string;
@@ -24,24 +41,22 @@ type RagSampleExport = {
   repo: string;
   requirementText: string;
   groundTruthFiles: string[];
+  snapshot?: RagExportSnapshotMetadata;
+  embeddingState?: RagExportEmbeddingState & {
+    providerName?: string;
+  };
   topK: RetrievedArtifactResultWithExtras[];
   summary: {
     topKCount: number;
     groundTruthHitCount: number;
-    recallAtK: number;
+    recallAt10: number;
     evidenceCoverage: number;
     locationOnlyEvidenceCount: number;
     codeLikeEvidenceCount: number;
+    missedGroundTruthFiles: string[];
+    unexpectedTopKFiles: string[];
   };
   warnings: string[];
-};
-
-type RetrievedArtifactResultWithExtras = RetrievedArtifactResult & {
-  universalKind?: string;
-  strategyVersion?: string;
-  evidence: RetrievedArtifactResult['evidence'] & {
-    excerptPreview: string;
-  };
 };
 
 function parseArg(flag: string): string | undefined {
@@ -96,8 +111,11 @@ function computeSummary(
   topK: RetrievedArtifactResultWithExtras[],
 ) {
   const truthSet = new Set(groundTruthFiles);
-  const groundTruthHitCount = topK.filter((item) => truthSet.has(item.filePath))
-    .length;
+  const topKFiles = topK.map((item) => item.filePath);
+  const topKFileSet = new Set(topKFiles);
+  const groundTruthHitCount = topKFiles.filter((filePath) =>
+    truthSet.has(filePath),
+  ).length;
   const evidenceCount = topK.filter((item) => item.evidence.hasEvidence).length;
   const locationOnlyEvidenceCount = topK.filter(
     (item) => item.evidence.isLocationOnly,
@@ -108,12 +126,18 @@ function computeSummary(
   return {
     topKCount: topK.length,
     groundTruthHitCount,
-    recallAtK:
-      truthSet.size === 0 ? 0 : Number((groundTruthHitCount / truthSet.size).toFixed(4)),
+    recallAt10:
+      truthSet.size === 0
+        ? 0
+        : Number((groundTruthHitCount / truthSet.size).toFixed(4)),
     evidenceCoverage:
       topK.length === 0 ? 0 : Number((evidenceCount / topK.length).toFixed(4)),
     locationOnlyEvidenceCount,
     codeLikeEvidenceCount,
+    missedGroundTruthFiles: groundTruthFiles.filter(
+      (filePath) => !topKFileSet.has(filePath),
+    ),
+    unexpectedTopKFiles: topKFiles.filter((filePath) => !truthSet.has(filePath)),
   };
 }
 
@@ -132,28 +156,71 @@ function renderMarkdown(result: RagSampleExport): string {
     '',
     '## Ground Truth Note',
     '',
-    'Changed files are used here as a practical proxy ground truth. This export does not claim method-level accuracy or final research results.',
+    'Changed files are proxy ground truth. This smoke export is not a final benchmark result.',
+  ];
+
+  if (result.snapshot) {
+    lines.push(
+      '',
+      '## Snapshot Metadata',
+      '',
+      `- Snapshot ID: ${result.snapshot.snapshotId}`,
+      `- Repository ID: ${result.snapshot.repositoryId}`,
+      `- Project ID: ${result.snapshot.projectId}`,
+      `- Commit SHA: ${result.snapshot.commitSha}`,
+      `- Analyzer Version: ${result.snapshot.analyzerVersion}`,
+      `- Coverage Status: ${result.snapshot.coverageStatus}`,
+      `- Index Status: ${result.snapshot.indexStatus}`,
+      `- Created At: ${result.snapshot.createdAt}`,
+    );
+  }
+
+  if (result.embeddingState) {
+    lines.push(
+      '',
+      '## Embedding State',
+      '',
+      `- Provider: ${result.embeddingState.providerName ?? 'unknown'}`,
+      `- Chunk count: ${result.embeddingState.chunkCount}`,
+      `- Embedding models: ${result.embeddingState.embeddingModels.join(', ') || 'none'}`,
+      `- Chunker versions: ${result.embeddingState.chunkerVersions.join(', ') || 'none'}`,
+    );
+  }
+
+  lines.push(
     '',
     '## Summary',
     '',
     `- Top-K count: ${result.summary.topKCount}`,
     `- Ground-truth hits in top-K: ${result.summary.groundTruthHitCount}`,
-    `- Recall@K: ${result.summary.recallAtK}`,
+    `- Recall@10: ${result.summary.recallAt10}`,
     `- Evidence coverage: ${result.summary.evidenceCoverage}`,
     `- Location-only evidence count: ${result.summary.locationOnlyEvidenceCount}`,
     `- Code-like evidence count: ${result.summary.codeLikeEvidenceCount}`,
+    `- Missed ground-truth files: ${result.summary.missedGroundTruthFiles.join(', ') || 'none'}`,
+    `- Unexpected top-K files: ${result.summary.unexpectedTopKFiles.join(', ') || 'none'}`,
     '',
     '## Top-K',
     '',
-    '| Rank | File | Type | Kind | Score | Signals | Evidence | Location-only | Code-like | Preview |',
-    '| ---: | --- | --- | --- | ---: | --- | --- | --- | --- | --- |',
-  ];
+    '| Rank | File | Type | Kind | Score | Final | Lexical | Vector | Graph | Kind Boost | Domain Boost | Signals | Evidence | Location-only | Code-like | Preview |',
+    '| ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- | --- | --- | --- |',
+  );
 
   for (const item of result.topK) {
     lines.push(
       `| ${item.rank} | ${item.filePath} | ${item.artifactType} | ${item.universalKind ?? ''} | ${(
-        item.finalScore ?? item.score ?? 0
-      ).toFixed(4)} | ${item.retrievalSignals.join(', ')} | ${item.evidence.hasEvidence ? 'yes' : 'no'} | ${item.evidence.isLocationOnly ? 'yes' : 'no'} | ${item.evidence.isCodeLike ? 'yes' : 'no'} | ${item.evidence.excerptPreview.replace(/\|/g, '\\|')} |`,
+        item.score ?? 0
+      ).toFixed(4)} | ${(item.finalScore ?? 0).toFixed(4)} | ${(
+        item.lexicalScore ?? 0
+      ).toFixed(4)} | ${(item.vectorScore ?? 0).toFixed(4)} | ${(
+        item.graphScore ?? 0
+      ).toFixed(4)} | ${(item.kindBoost ?? 0).toFixed(4)} | ${(
+        item.domainBoost ?? 0
+      ).toFixed(4)} | ${item.retrievalSignals.join(', ')} | ${
+        item.evidence.hasEvidence ? 'yes' : 'no'
+      } | ${item.evidence.isLocationOnly ? 'yes' : 'no'} | ${
+        item.evidence.isCodeLike ? 'yes' : 'no'
+      } | ${item.evidence.excerptPreview.replace(/\|/g, '\\|')} |`,
     );
   }
 
@@ -168,25 +235,6 @@ function renderMarkdown(result: RagSampleExport): string {
   }
 
   return `${lines.join('\n')}\n`;
-}
-
-async function readArtifactEvidencePreview(params: {
-  prisma: PrismaService;
-  snapshotId: string;
-  artifactId: string;
-}): Promise<string | undefined> {
-  const chunk = await params.prisma.embeddingChunk.findFirst({
-    where: {
-      snapshotId: params.snapshotId,
-      artifactId: params.artifactId,
-    },
-    orderBy: [{ tokenCount: 'desc' }, { stableChunkId: 'asc' }],
-    select: {
-      content: true,
-    },
-  });
-
-  return chunk?.content ?? undefined;
 }
 
 async function runCaseOnlyMode(params: {
@@ -223,17 +271,46 @@ async function runCurrentHybridMode(params: {
 }): Promise<RagSampleExport> {
   if (!process.env.DATABASE_URL) {
     throw new Error(
-      'CURRENT_HYBRID mode requires DATABASE_URL because it reads the current snapshot, artifacts, graph edges, and embedding chunks from PostgreSQL.',
+      'CURRENT_HYBRID mode requires DATABASE_URL and existing local DB state.',
     );
   }
 
+  const fakeEmbeddingProvider = new FakeEmbeddingProvider();
   const prisma = new PrismaService();
   await prisma.$connect();
 
   try {
+    const snapshot = await readSnapshotMetadata({
+      prisma,
+      snapshotId: params.snapshotId,
+    });
+
+    if (!snapshot) {
+      throw new Error(
+        `Snapshot not found: ${params.snapshotId}. CURRENT_HYBRID mode requires an existing local snapshot.`,
+      );
+    }
+
+    if (snapshot.repositoryId !== params.repositoryId) {
+      throw new Error(
+        `Snapshot repository mismatch: snapshot.repositoryId=${snapshot.repositoryId} but --repositoryId=${params.repositoryId}.`,
+      );
+    }
+
+    if (snapshot.repository.projectId !== params.projectId) {
+      throw new Error(
+        `Snapshot project mismatch: repository.projectId=${snapshot.repository.projectId} but --projectId=${params.projectId}.`,
+      );
+    }
+
+    const embeddingState = await readEmbeddingState({
+      prisma,
+      snapshotId: params.snapshotId,
+    });
+
     const retrievalService = new HybridRetrievalService(
       new EmbeddingChunkRepository(prisma),
-      new FakeEmbeddingProvider(),
+      fakeEmbeddingProvider,
       new ArtifactRepository(prisma),
       new GraphRepository(prisma),
       prisma,
@@ -250,7 +327,7 @@ async function runCurrentHybridMode(params: {
 
     const topK: RetrievedArtifactResultWithExtras[] = [];
     for (const [index, retrieved] of retrievedArtifacts.entries()) {
-      const excerpt = await readArtifactEvidencePreview({
+      const excerpt = await readArtifactEvidenceExcerpt({
         prisma,
         snapshotId: params.snapshotId,
         artifactId: retrieved.artifactId,
@@ -275,8 +352,32 @@ async function runCurrentHybridMode(params: {
         retrievalSignals: retrieved.retrievalSignals,
         retrievalReason: retrieved.retrievalReason,
         strategyVersion: retrieved.strategyVersion,
+        retrievalDiagnostics: retrieved.retrievalDiagnostics,
         evidence,
       });
+    }
+
+    const warnings: string[] = [
+      'Changed files are proxy ground truth. This smoke export is not a final benchmark result.',
+      `CURRENT_HYBRID mode used ${fakeEmbeddingProvider.providerName} embedding provider for deterministic local query embedding. This is deterministic smoke, not a real semantic benchmark.`,
+    ];
+
+    if (snapshot.indexStatus !== 'VECTOR_READY') {
+      warnings.push(
+        `Snapshot indexStatus is ${snapshot.indexStatus}; vector channel may be absent or incomplete.`,
+      );
+    }
+
+    if (embeddingState.chunkCount === 0) {
+      warnings.push(
+        'No EmbeddingChunk rows exist for this snapshot, so vector retrieval cannot be evaluated.',
+      );
+    }
+
+    if (!topK.some((item) => item.retrievalSignals.includes('VECTOR'))) {
+      warnings.push(
+        'No VECTOR retrieval signal appeared in the exported top-k results.',
+      );
     }
 
     return {
@@ -287,16 +388,30 @@ async function runCurrentHybridMode(params: {
       repo: params.evaluationCase.repo,
       requirementText: params.evaluationCase.requirementText,
       groundTruthFiles: params.evaluationCase.groundTruth.files,
+      snapshot: mapSnapshotMetadata(snapshot),
+      embeddingState: {
+        ...embeddingState,
+        providerName: fakeEmbeddingProvider.providerName,
+      },
       topK,
       summary: computeSummary(params.evaluationCase.groundTruth.files, topK),
-      warnings: [
-        'CURRENT_HYBRID mode uses FakeEmbeddingProvider for deterministic local query embedding and does not call external network services.',
-        'Changed files are proxy ground truth, not absolute truth.',
-      ],
+      warnings,
     };
   } finally {
     await prisma.$disconnect();
   }
+}
+
+function getOutputTargets(mode: ExportMode) {
+  return mode === 'CURRENT_HYBRID'
+    ? {
+        json: 'evaluation/results/rag-samples.current-hybrid.v0.json',
+        markdown: 'evaluation/results/rag-samples.current-hybrid.v0.md',
+      }
+    : {
+        json: 'evaluation/results/rag-samples.v0.json',
+        markdown: 'evaluation/results/rag-samples.v0.md',
+      };
 }
 
 async function main(): Promise<void> {
@@ -321,34 +436,30 @@ async function main(): Promise<void> {
     );
   }
 
-  const result = isCurrentHybridMode
-    ? await runCurrentHybridMode({
-        evaluationCase,
-        projectId: projectId as string,
-        repositoryId: repositoryId as string,
-        snapshotId: snapshotId as string,
-        topKLimit,
-      })
-    : await runCaseOnlyMode({
-        evaluationCase,
-        topKLimit,
-      });
+  const mode: ExportMode = isCurrentHybridMode ? 'CURRENT_HYBRID' : 'CASE_ONLY';
+  const outputs = getOutputTargets(mode);
 
-  writeJsonFile('evaluation/results/rag-samples.v0.json', result);
-  writeFileSync(
-    resolveOutputPath('evaluation/results/rag-samples.v0.md'),
-    renderMarkdown(result),
-    'utf8',
-  );
+  const result =
+    mode === 'CURRENT_HYBRID'
+      ? await runCurrentHybridMode({
+          evaluationCase,
+          projectId: projectId as string,
+          repositoryId: repositoryId as string,
+          snapshotId: snapshotId as string,
+          topKLimit,
+        })
+      : await runCaseOnlyMode({
+          evaluationCase,
+          topKLimit,
+        });
 
-  console.log(
-    `Wrote RAG sample export to evaluation/results/rag-samples.v0.json (${result.mode})`,
-  );
+  writeJsonFile(outputs.json, result);
+  writeFileSync(resolveOutputPath(outputs.markdown), renderMarkdown(result), 'utf8');
+
+  console.log(`Wrote RAG sample export to ${outputs.json} (${result.mode})`);
 }
 
 main().catch((error) => {
-  console.error(
-    error instanceof Error ? error.message : String(error),
-  );
+  console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);
 });
