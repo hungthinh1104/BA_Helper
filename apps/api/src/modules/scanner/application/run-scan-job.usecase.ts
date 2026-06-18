@@ -157,6 +157,21 @@ export class RunScanJobUseCase {
           });
           commitSha = fetchResult.commitSha;
         } catch (err) {
+          if (err instanceof AppError) {
+            throw err;
+          }
+          if (
+            err &&
+            typeof err === 'object' &&
+            'code' in err &&
+            err.code === 'COMMIT_NOT_FETCHABLE'
+          ) {
+            const message =
+              'message' in err && typeof err.message === 'string'
+                ? err.message
+                : 'Requested commit SHA could not be checked out.';
+            throw new AppError('COMMIT_NOT_FETCHABLE', message);
+          }
           throw new AppError('CLONE_FAILED', (err as Error).message);
         }
 

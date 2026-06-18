@@ -114,6 +114,19 @@ If the current product scan workflow cannot materialize the exact public base
 SHA without runtime changes, stop and document that blocker instead of silently
 using a nearby snapshot.
 
+The concrete Squareboat blocker from Phase 4G is exactly this:
+
+- `git clone --branch <sha>` is invalid for a raw commit SHA ref
+- research alignment requires `snapshot.commitSha == case.baseSha`
+- so scanner correctness must support detached exact-commit checkout before the
+  candidate can legally become `Case 006`
+
+Phase 4H implemented that scanner correction and runtime verification now shows
+the Squareboat base SHA can be materialized as an exact local snapshot commit.
+That removes the scanner-materialization blocker, but it still does **not**
+automatically admit the candidate into dataset v0. Case promotion remains a
+separate follow-up step after aligned snapshot readiness is reviewed.
+
 ## Phase 4G Decision Rule
 
 For the next phase:

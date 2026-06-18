@@ -336,6 +336,31 @@ describe('RunScanJobUseCase', () => {
     expect(prisma.repositoryProfile.upsert).not.toHaveBeenCalled();
   });
 
+  it('preserves COMMIT_NOT_FETCHABLE for exact SHA checkout failures', async () => {
+    (fs.mkdtemp as jest.Mock).mockResolvedValue('/tmp/ba-scan-commit-sha');
+    (fs.rm as jest.Mock).mockResolvedValue(undefined);
+    analyzer.GitHubUrlValidator.validate.mockReturnValue({ isValid: true });
+    analyzer.GitRepositoryFetcher.fetch.mockRejectedValue({
+      code: 'COMMIT_NOT_FETCHABLE',
+      message:
+        'Requested commit SHA could not be checked out. repositoryUrl=https://github.com/owner/repo requestedSha=33ca78792610f1b0ece552767ef370bcb1978205 gitError=fatal: reference is not a tree',
+    });
+
+    await expect(useCase.execute({ jobId: 'job-1' })).rejects.toMatchObject({
+      code: 'COMMIT_NOT_FETCHABLE',
+    } satisfies Partial<AppError>);
+
+    expect(scanJobRepository.updateState).toHaveBeenLastCalledWith({
+      jobId: 'job-1',
+      status: ScanJobStatus.FAILED,
+      stage: ScanJobStage.DONE,
+      progress: 0,
+      errorCode: 'COMMIT_NOT_FETCHABLE',
+      errorMessage:
+        'Requested commit SHA could not be checked out. repositoryUrl=https://github.com/owner/repo requestedSha=33ca78792610f1b0ece552767ef370bcb1978205 gitError=fatal: reference is not a tree',
+    });
+  });
+
   it('persists INCREMENTAL_SCAN_SUMMARY diagnostic without raw source or hashes', async () => {
     (fs.mkdtemp as jest.Mock).mockResolvedValue('/tmp/ba-scan-incremental');
     (fs.rm as jest.Mock).mockResolvedValue(undefined);

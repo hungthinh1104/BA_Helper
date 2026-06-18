@@ -273,3 +273,50 @@ The runtime API result was:
   aligned snapshot exists.
 - no current-hybrid benchmark export was run.
 - no `vector-baseline.v0.json` was created.
+
+### Follow-up after scanner fix
+
+Phase 4H should change scanner materialization so:
+
+- full 40-character commit SHA refs are not treated as branch names
+- the repository can be cloned/fetched first
+- the exact historical commit can be checked out in detached `HEAD`
+- `snapshot.commitSha` is verified against the requested dataset `baseSha`
+
+Only after that fix should Phase 4G be rerun for the Squareboat candidate.
+
+## Phase 4H Exact Commit Checkout Fix
+
+- Goal: support exact historical commit checkout for local research snapshots.
+- Result: **implemented and runtime-verified**
+
+### Runtime verification
+
+After rebuilding the local `api` and `worker` services with the scanner fix,
+the Squareboat repository was scanned again using the exact historical base SHA
+as the requested ref:
+
+- Project ID: `a89660ef-6a15-4f65-a53d-2dbb1218a2ea`
+- Repository ID: `b8687312-ed36-4bca-b519-32b6e49b31f4`
+- Scan Job ID: `9a9c7f84-0489-4fd3-bb12-5a207267589d`
+- Snapshot ID: `b8676c81-b19b-4c97-93a5-38125b9b525b`
+- Requested ref: `33ca78792610f1b0ece552767ef370bcb1978205`
+- Published snapshot commit SHA:
+  `33ca78792610f1b0ece552767ef370bcb1978205`
+
+This proves the scanner no longer treats the exact commit SHA as a remote
+branch name.
+
+### Scope boundary
+
+- This phase fixes scanner correctness only.
+- It does **not** add `Case 006`.
+- It does **not** generate benchmark output.
+- It does **not** create `vector-baseline.v0.json`.
+- It does **not** create `rag-samples.current-hybrid.v0.*`.
+
+### Next step
+
+With exact commit checkout now working, the next research step is to rerun the
+Squareboat candidate promotion flow on top of the new aligned snapshot and only
+then decide whether the case should be added to dataset v0.
