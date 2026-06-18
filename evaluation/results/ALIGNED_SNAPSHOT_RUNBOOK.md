@@ -320,3 +320,16 @@ branch name.
 With exact commit checkout now working, the next research step is to rerun the
 Squareboat candidate promotion flow on top of the new aligned snapshot and only
 then decide whether the case should be added to dataset v0.
+
+## Embedding Profile Registry Note
+
+Research benchmark eligibility now depends on embedding profile compatibility,
+not only vector dimensions. The expected real Google profile for aligned
+snapshot work is:
+
+- `EMBEDDING_INDEX_PROFILE=google-gemini-001-1536`
+- `EMBEDDING_QUERY_PROFILE=google-gemini-001-1536`
+
+Do not mix Gemini 1536-dimensional artifact embeddings with OpenAI
+1536-dimensional query embeddings. Equal dimensions are not enough to make two
+embedding spaces benchmark-compatible.

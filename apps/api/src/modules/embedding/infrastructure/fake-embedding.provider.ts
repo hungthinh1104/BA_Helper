@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { EmbeddingProvider, EmbeddingRequest, EmbeddingResult } from '../domain/embedding-provider.interface';
+import type { EmbeddingProfile } from '../domain/embedding-profile';
+import { resolveEmbeddingProfile } from '../domain/embedding-profile-registry';
 
 /**
  * Deterministic fake embedding provider for tests.
@@ -9,9 +11,15 @@ import { EmbeddingProvider, EmbeddingRequest, EmbeddingResult } from '../domain/
 @Injectable()
 export class FakeEmbeddingProvider extends EmbeddingProvider {
   readonly providerName = 'fake';
+  private readonly profile: EmbeddingProfile;
+
+  constructor(profile = resolveEmbeddingProfile('fake-1536')) {
+    super();
+    this.profile = profile;
+  }
 
   async embed(request: EmbeddingRequest): Promise<EmbeddingResult> {
-    const dimensions = 1536;
+    const dimensions = this.profile.dimensions;
     const embeddings = request.texts.map((text) => {
       // Generate deterministic pseudo-vector from text
       const vector = new Array(dimensions).fill(0);
@@ -25,7 +33,7 @@ export class FakeEmbeddingProvider extends EmbeddingProvider {
 
     return {
       embeddings,
-      model: 'fake-embedding',
+      model: this.profile.model,
       dimensions,
       tokenUsage: request.texts.reduce((sum, t) => sum + Math.ceil(t.length / 4), 0),
     };

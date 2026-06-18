@@ -3,19 +3,19 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { EmbeddingProvider, EmbeddingRequest, EmbeddingResult } from '../domain/embedding-provider.interface';
 import { AppError } from '../../../shared/app-error';
 import { resolveGoogleProviderApiKey } from '../../ai/infrastructure/google-provider-env';
-
-const DEFAULT_MODEL = 'gemini-embedding-001';
-const EXPECTED_DIMENSIONS = 1536;
-const CONCURRENCY_LIMIT = 5;
+import type { EmbeddingProfile } from '../domain/embedding-profile';
+import { resolveEmbeddingProfile } from '../domain/embedding-profile-registry';
 
 @Injectable()
 export class GoogleEmbeddingProvider extends EmbeddingProvider {
   readonly providerName = 'google';
   private readonly client: GoogleGenerativeAI;
   private readonly logger = new Logger(GoogleEmbeddingProvider.name);
+  private readonly profile: EmbeddingProfile;
 
-  constructor() {
+  constructor(profile = resolveEmbeddingProfile('google-gemini-001-1536')) {
     super();
+    this.profile = profile;
     const apiKey = resolveGoogleProviderApiKey();
     if (!apiKey) {
       throw new AppError(
@@ -27,22 +27,22 @@ export class GoogleEmbeddingProvider extends EmbeddingProvider {
   }
 
   async embed(request: EmbeddingRequest): Promise<EmbeddingResult> {
-    const modelName = request.model ?? DEFAULT_MODEL;
+    const modelName = request.model ?? this.profile.model;
     const model = this.client.getGenerativeModel({ model: modelName });
 
     let embeddingsResult: number[][] = [];
     try {
-      this.logger.log(`Generating embeddings for ${request.texts.length} texts using model ${modelName} (Targeting ${EXPECTED_DIMENSIONS}d)`);
+      this.logger.log(`Generating embeddings for ${request.texts.length} texts using model ${modelName} (Targeting ${this.profile.dimensions}d)`);
       
       // Batch processing to avoid rate limits
-      for (let i = 0; i < request.texts.length; i += CONCURRENCY_LIMIT) {
-        const batch = request.texts.slice(i, i + CONCURRENCY_LIMIT);
+      for (let i = 0; i < request.texts.length; i += this.profile.batchSize) {
+        const batch = request.texts.slice(i, i + this.profile.batchSize);
         const results = await Promise.all(
           batch.map(t => 
-            // We pass outputDimensionality to force the vector size to exactly 1536
             model.embedContent({ 
               content: { role: 'user', parts: [{ text: t }] }, 
-              outputDimensionality: EXPECTED_DIMENSIONS 
+              outputDimensionality: this.profile.outputDimensionality,
+              taskType: this.profile.documentTaskType,
             } as any)
           )
         );
@@ -59,10 +59,10 @@ export class GoogleEmbeddingProvider extends EmbeddingProvider {
 
     // Strict dimension validation without any artificial padding
     for (const vector of embeddingsResult) {
-      if (!vector || vector.length !== EXPECTED_DIMENSIONS) {
+      if (!vector || vector.length !== this.profile.dimensions) {
         throw new AppError(
           'EMBEDDING_DIMENSION_MISMATCH', 
-          `Expected exactly ${EXPECTED_DIMENSIONS} dimensions, but got ${vector?.length}. Semantic padding is forbidden.`
+          `Expected exactly ${this.profile.dimensions} dimensions, but got ${vector?.length}. Semantic padding is forbidden.`
         );
       }
     }
@@ -70,7 +70,7 @@ export class GoogleEmbeddingProvider extends EmbeddingProvider {
     return {
       embeddings: embeddingsResult,
       model: modelName,
-      dimensions: EXPECTED_DIMENSIONS,
+      dimensions: this.profile.dimensions,
       tokenUsage: undefined, // Do not report 0 artificially
     };
   }

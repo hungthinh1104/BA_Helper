@@ -48,6 +48,9 @@ Required environment:
 AI_PROVIDER=google
 GEMINI_API_KEY=<your-gemini-key>
 AI_MAX_TOKENS=8192
+EMBEDDING_DEFAULT_PROFILE=fake-1536
+EMBEDDING_INDEX_PROFILE=fake-1536
+EMBEDDING_QUERY_PROFILE=fake-1536
 EMBEDDING_PROVIDER=fake
 GOOGLE_EMBEDDING_MODEL=gemini-embedding-001
 DATABASE_URL=postgresql://ba_helper:ba_helper@localhost:5432/ba_helper
@@ -82,7 +85,7 @@ pnpm --dir apps/api smoke:public-github:real-llm
 For the full real path with Google embeddings:
 
 ```bash
-AI_PROVIDER=google EMBEDDING_PROVIDER=google pnpm --dir apps/api smoke:public-github:real-path
+AI_PROVIDER=google EMBEDDING_DEFAULT_PROFILE=google-gemini-001-1536 EMBEDDING_INDEX_PROFILE=google-gemini-001-1536 EMBEDDING_QUERY_PROFILE=google-gemini-001-1536 EMBEDDING_PROVIDER=google pnpm --dir apps/api smoke:public-github:real-path
 ```
 
 ## Success Markers
