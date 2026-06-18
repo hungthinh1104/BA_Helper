@@ -95,13 +95,30 @@ expected to be smaller than the Nest framework repository case:
 - `reqimpact-case-003-realworld-auth-middleware-user-object`
   - repo: `https://github.com/lujakob/nestjs-realworld-example-app`
   - base SHA: `a0edadd2812bea5f1ad00e4074ffb048d80df105`
+  - refs checked: `HEAD`, `refs/heads/*`, `refs/tags/*`, `refs/pull/*`
   - result: no public remote ref currently resolves to this SHA
 - `reqimpact-case-002-realworld-article-author-relation`
   - base SHA: `20b92a1017e31028aa0e00c894da70af813a86a1`
+  - refs checked: `HEAD`, `refs/heads/*`, `refs/tags/*`, `refs/pull/*`
   - result: no public remote ref currently resolves to this SHA
 - `reqimpact-case-005-realworld-proper-error-object`
   - base SHA: `78e92f57b21038bbce0cde740dcbaeca68412c72`
+  - refs checked: `HEAD`, `refs/heads/*`, `refs/tags/*`, `refs/pull/*`
   - result: no public remote ref currently resolves to this SHA
+
+For completeness, the other existing dataset repos were also checked:
+
+- `hungthinh1104/BA_Helper`
+  - case: `reqimpact-case-001-backend-reliability-semantics`
+  - base SHA: `ba99ad7dc3cb9fc510fc4b821f35d2f0cc0aa80e`
+  - refs checked: `HEAD`, `refs/heads/*`, `refs/tags/*`, `refs/pull/*`
+  - result: no public remote ref currently resolves to this SHA
+- `nestjs/nest`
+  - case: `reqimpact-case-004-nest-post-sse-empty-response`
+  - base SHA: `02f804159841a2771755c382832a7938b904c420`
+  - refs checked: `HEAD`, `refs/heads/*`, `refs/tags/*`, `refs/pull/*`
+  - result: public tag `v11.1.25^{}` resolves to this SHA, so this is the only
+    currently product-scan-alignable dataset case
 
 So Phase 4D could not legally switch to a smaller aligned case without either:
 
