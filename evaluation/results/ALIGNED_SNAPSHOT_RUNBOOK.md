@@ -202,3 +202,74 @@ But the evaluation-case gate failed:
   - `evaluation/datasets/case-snapshot-overrides.v0.json` remains unchanged
   - no current-hybrid benchmark export was run
   - no `vector-baseline.v0.json` was created
+
+## Phase 4G Squareboat Verification
+
+- Goal: verify whether the recommended discovery candidate can be materialized
+  at the exact dataset base SHA and then indexed to `VECTOR_READY`.
+- Candidate:
+  - repo: `https://github.com/squareboat/nestjs-boilerplate`
+  - PR: `https://github.com/squareboat/nestjs-boilerplate/pull/37`
+  - title: `FIX: default includes`
+  - required changed backend file:
+    `libs/boat/src/transformers/transformer.ts`
+- Result: **blocked before snapshot publication**
+
+### Public metadata verified
+
+- PR base SHA: `33ca78792610f1b0ece552767ef370bcb1978205`
+- PR head SHA: `355af958495378cb6d24e75316d1a41128699653`
+- Changed files:
+  - `libs/boat/src/transformers/transformer.ts`
+  - `package.json`
+- Requirement text derivable from public evidence:
+  - the pull request fixes the issue with default includes in the Transformer
+    class
+
+### Local runtime attempt
+
+- Project ID: `a89660ef-6a15-4f65-a53d-2dbb1218a2ea`
+- Repository ID: `b8687312-ed36-4bca-b519-32b6e49b31f4`
+- Scan Job ID: `a61d1898-31c2-4565-81c1-4d3d36fe5a89`
+- Requested ref: `33ca78792610f1b0ece552767ef370bcb1978205`
+
+### Exact blocker
+
+The existing product scan workflow still clones with:
+
+- `git clone --depth 1 --branch <ref> --single-branch`
+
+When the exact PR base SHA was submitted as `ref`, the job failed at
+`CLONING_REPO` with:
+
+```text
+CLONE_FAILED
+fatal: Remote branch 33ca78792610f1b0ece552767ef370bcb1978205 not found in upstream origin
+```
+
+The runtime API result was:
+
+- `status = FAILED`
+- `stage = DONE`
+- `snapshotId = null`
+- `sourceTargetId = null`
+
+### Why this blocks Case 006
+
+- The candidate still passes the **case quality gate** from Phase 4F.
+- It fails the **snapshot materialization gate** required by Phase 4G.
+- No exact base snapshot means:
+  - no aligned `snapshot.commitSha`
+  - no vector indexing attempt against the required commit
+  - no legal basis to add `reqimpact-case-006-squareboat-default-includes`
+
+### Practical consequence
+
+- `cases.v0.json` remains unchanged at 5 cases.
+- `case-snapshot-overrides.v0.json` remains unchanged.
+- `db-snapshot-readiness.v0.*` remains unchanged because no new snapshot was
+  published.
+- `case-snapshot-alignment.v0.*` remains unchanged because no new mapping or
+  aligned snapshot exists.
+- no current-hybrid benchmark export was run.
+- no `vector-baseline.v0.json` was created.
