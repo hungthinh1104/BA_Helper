@@ -4,6 +4,7 @@ export type RagExportSnapshotMetadata = {
   snapshotId: string;
   repositoryId: string;
   projectId: string;
+  repositoryCanonicalUrl: string;
   commitSha: string;
   analyzerVersion: string;
   coverageStatus: string;
@@ -28,6 +29,7 @@ export async function readSnapshotMetadata(params: {
         select: {
           id: true,
           projectId: true,
+          canonicalUrl: true,
         },
       },
     },
@@ -85,7 +87,7 @@ export async function readEmbeddingState(params: {
 export function mapSnapshotMetadata(snapshot: {
   id: string;
   repositoryId: string;
-  repository: { projectId: string };
+  repository: { projectId: string; canonicalUrl: string };
   commitSha: string;
   analyzerVersion: string;
   coverageStatus: string;
@@ -96,6 +98,7 @@ export function mapSnapshotMetadata(snapshot: {
     snapshotId: snapshot.id,
     repositoryId: snapshot.repositoryId,
     projectId: snapshot.repository.projectId,
+    repositoryCanonicalUrl: snapshot.repository.canonicalUrl,
     commitSha: snapshot.commitSha,
     analyzerVersion: snapshot.analyzerVersion,
     coverageStatus: snapshot.coverageStatus,

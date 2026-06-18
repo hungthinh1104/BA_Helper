@@ -4,6 +4,8 @@
 - `keyword-baseline.v0.json` is the first actual benchmark result file in this research branch.
 - `bm25-baseline.v0.json` is a stronger lexical benchmark result, but it is still lexical only and not semantic retrieval.
 - Any current-hybrid benchmark requires real DB-backed snapshot and index state. Until that exists as an explicit benchmark result file, it stays out of metrics aggregation.
+- `CURRENT_HYBRID_SMOKE` output is not benchmark evidence and must not be aggregated as a measured method.
+- `CURRENT_HYBRID_BENCHMARK` is allowed only when repo/baseSha/snapshot alignment and real query embedding gates all pass.
 - A future vector-only baseline must not use fake embeddings, hash vectors, random vectors, or keyword-derived pseudo-semantic vectors as evidence.
 - No `vector-baseline.v0.json` should exist until real embeddings are used with documented provider provenance.
 - `db-snapshot-readiness.v0.json` is a read-only environment/state probe only. It is not a retrieval benchmark result and must not be added to metrics aggregation.

@@ -2,9 +2,8 @@
 
 ## Purpose
 
-This runbook explains how to execute the `CURRENT_HYBRID` smoke exporter for
-ReqImpact on local persisted snapshot data without changing product runtime
-behavior.
+This runbook explains how to execute the `CURRENT_HYBRID` research exporter for
+ReqImpact on local persisted snapshot data without changing product runtime behavior.
 
 The goal is to observe:
 - what current hybrid retrieval returns
@@ -12,7 +11,10 @@ The goal is to observe:
 - whether evidence looks code-like or location-only
 - whether vector signals are actually present
 
-This is a smoke export, not a benchmark result.
+Two modes now exist:
+
+- `CURRENT_HYBRID_SMOKE`
+- `CURRENT_HYBRID_BENCHMARK`
 
 ## Required local DB state
 
@@ -24,8 +26,8 @@ You need:
 - existing `CodeArtifact` rows for that snapshot
 - ideally existing `EmbeddingChunk` rows if vector behavior is to be observed
 
-If those are missing, `CURRENT_HYBRID` should fail clearly and write no
-misleading current-hybrid result files.
+If those are missing, benchmark mode must fail clearly and write no misleading
+benchmark current-hybrid result files.
 
 ## How to find IDs
 
@@ -101,23 +103,45 @@ That failure mode was verified for this phase and should not generate
 - exports dataset candidate artifacts in their current order
 - useful for CI-safe structure checks only
 
-### CURRENT_HYBRID
+### CURRENT_HYBRID_SMOKE
 
 - requires DB state and snapshot IDs
-- calls the current `HybridRetrievalService` read-only
-- exports current top-k retrieval behavior
+- may call the current `HybridRetrievalService` read-only
+- writes smoke-labeled output only
+- is not benchmark evidence
+- must not write `rag-samples.current-hybrid.v0.json`
+
+### CURRENT_HYBRID_BENCHMARK
+
+- requires DB state and snapshot IDs
+- requires `REQIMPACT_ALLOW_REAL_QUERY_EMBEDDING=1`
+- requires a real query embedding provider
+- requires case/baseSha alignment with the selected snapshot commit
+- requires `VECTOR_READY` plus persisted non-fake artifact embeddings
+- may write `rag-samples.current-hybrid.v0.json`
 - does not tune scoring
 - does not write product DB data
 
-## Why this is not R1 and not a final benchmark
+## Benchmark guard rules
+
+Benchmark mode is blocked when any of these are true:
+
+- case repo and snapshot repository identity do not match
+- `case.baseSha !== snapshot.commitSha`
+- `snapshot.indexStatus !== VECTOR_READY`
+- no persisted `EmbeddingChunk` rows exist
+- artifact embeddings are `fake-embedding` only
+- query provider is fake
+- query embedding model is missing
+- `REQIMPACT_ALLOW_REAL_QUERY_EMBEDDING` is not set to `1`
+
+## Why this is not R1
 
 - It does not change artifact representation.
 - It does not change hybrid retrieval scoring.
 - It does not implement structured embedding.
-- It may use deterministic fake query embeddings for smoke safety.
 - Changed files remain proxy ground truth.
-
-The purpose here is observability and failure analysis, not performance claims.
+The purpose here is observability and guarded benchmark execution, not performance claims without alignment.
 
 ## Phase 3B DB readiness probe
 

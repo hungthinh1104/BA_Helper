@@ -2,11 +2,19 @@ import { writeFileSync } from 'fs';
 import { resolve } from 'path';
 import { ArtifactRepository } from '../../apps/api/src/modules/artifact/infrastructure/artifact.repository';
 import { FakeEmbeddingProvider } from '../../apps/api/src/modules/embedding/infrastructure/fake-embedding.provider';
+import { GoogleEmbeddingProvider } from '../../apps/api/src/modules/embedding/infrastructure/google-embedding.provider';
+import { OpenAiEmbeddingProvider } from '../../apps/api/src/modules/embedding/infrastructure/openai-embedding.provider';
 import { EmbeddingChunkRepository } from '../../apps/api/src/modules/embedding/infrastructure/embedding-chunk.repository';
+import { type EmbeddingProvider } from '../../apps/api/src/modules/embedding/domain/embedding-provider.interface';
 import { GraphRepository } from '../../apps/api/src/modules/graph/infrastructure/graph.repository';
 import { PrismaService } from '../../apps/api/src/modules/prisma/prisma.service';
 import { HybridRetrievalService } from '../../apps/api/src/modules/retrieval/application/hybrid-retrieval.service';
 import { loadDataset, writeJsonFile } from '../io';
+import {
+  evaluateCurrentHybridExportGuard,
+  getCurrentHybridOutputTargets,
+  type CurrentHybridExportMode,
+} from '../src/current-hybrid-export-guard';
 import { summarizeEvidenceQuality } from '../src/evidence-quality';
 import {
   mapSnapshotMetadata,
@@ -36,14 +44,18 @@ type RetrievedArtifactResultWithExtras = RetrievedArtifactResult & {
 type RagSampleExport = {
   runId: string;
   generatedAt: string;
-  mode: ExportMode;
+  mode: 'CASE_ONLY' | 'CURRENT_HYBRID_SMOKE' | 'CURRENT_HYBRID_BENCHMARK';
   caseId: string;
   repo: string;
+  caseBaseSha?: string;
   requirementText: string;
   groundTruthFiles: string[];
   snapshot?: RagExportSnapshotMetadata;
   embeddingState?: RagExportEmbeddingState & {
-    providerName?: string;
+    queryProviderName?: string;
+    queryEmbeddingModel?: string;
+    artifactEmbeddingModels?: string[];
+    alignmentVerified?: boolean;
   };
   topK: RetrievedArtifactResultWithExtras[];
   summary: {
@@ -85,6 +97,40 @@ function buildRunId(mode: ExportMode, caseId: string): string {
   return `rag-sample:${mode.toLowerCase()}:${caseId}:${new Date()
     .toISOString()
     .replace(/[:.]/g, '-')}`;
+}
+
+function shouldAllowRealQueryEmbedding(): boolean {
+  return process.env.REQIMPACT_ALLOW_REAL_QUERY_EMBEDDING === '1';
+}
+
+function resolveRealQueryEmbeddingProvider(): {
+  provider: EmbeddingProvider;
+  providerName: string;
+  embeddingModel: string;
+} {
+  const providerName = (process.env.EMBEDDING_PROVIDER ?? 'fake').trim().toLowerCase();
+  const embeddingModel = (process.env.EMBEDDING_MODEL ?? '').trim();
+
+  switch (providerName) {
+    case 'google':
+      return {
+        provider: new GoogleEmbeddingProvider(),
+        providerName: 'google',
+        embeddingModel: embeddingModel || 'gemini-embedding-001',
+      };
+    case 'openai':
+      return {
+        provider: new OpenAiEmbeddingProvider(),
+        providerName: 'openai',
+        embeddingModel: embeddingModel || 'text-embedding-3-small',
+      };
+    case 'fake':
+      throw new Error('Fake query embedding provider is configured. Benchmark mode requires a real provider.');
+    default:
+      throw new Error(
+        `Real query embedding provider "${providerName || 'unset'}" is not wired into the research exporter.`,
+      );
+  }
 }
 
 function mapCandidateArtifactToResult(
@@ -168,6 +214,7 @@ function renderMarkdown(result: RagSampleExport): string {
       `- Repository ID: ${result.snapshot.repositoryId}`,
       `- Project ID: ${result.snapshot.projectId}`,
       `- Commit SHA: ${result.snapshot.commitSha}`,
+      ...(result.caseBaseSha ? [`- Case Base SHA: ${result.caseBaseSha}`] : []),
       `- Analyzer Version: ${result.snapshot.analyzerVersion}`,
       `- Coverage Status: ${result.snapshot.coverageStatus}`,
       `- Index Status: ${result.snapshot.indexStatus}`,
@@ -180,10 +227,12 @@ function renderMarkdown(result: RagSampleExport): string {
       '',
       '## Embedding State',
       '',
-      `- Provider: ${result.embeddingState.providerName ?? 'unknown'}`,
+      `- Query Provider: ${result.embeddingState.queryProviderName ?? 'unknown'}`,
+      `- Query Embedding Model: ${result.embeddingState.queryEmbeddingModel ?? 'unknown'}`,
       `- Chunk count: ${result.embeddingState.chunkCount}`,
-      `- Embedding models: ${result.embeddingState.embeddingModels.join(', ') || 'none'}`,
+      `- Artifact embedding models: ${result.embeddingState.artifactEmbeddingModels?.join(', ') || 'none'}`,
       `- Chunker versions: ${result.embeddingState.chunkerVersions.join(', ') || 'none'}`,
+      `- Alignment verified: ${result.embeddingState.alignmentVerified ? 'yes' : 'no'}`,
     );
   }
 
@@ -275,7 +324,6 @@ async function runCurrentHybridMode(params: {
     );
   }
 
-  const fakeEmbeddingProvider = new FakeEmbeddingProvider();
   const prisma = new PrismaService();
   await prisma.$connect();
 
@@ -308,9 +356,53 @@ async function runCurrentHybridMode(params: {
       snapshotId: params.snapshotId,
     });
 
+    const allowRealQueryEmbedding = shouldAllowRealQueryEmbedding();
+    const isSmokeMode = !allowRealQueryEmbedding;
+    let queryProvider: EmbeddingProvider;
+    let queryProviderName: string;
+    let queryEmbeddingModel: string;
+
+    if (isSmokeMode) {
+      const fakeProvider = new FakeEmbeddingProvider();
+      queryProvider = fakeProvider;
+      queryProviderName = fakeProvider.providerName;
+      queryEmbeddingModel = 'fake-embedding';
+    } else {
+      try {
+        const resolvedProvider = resolveRealQueryEmbeddingProvider();
+        queryProvider = resolvedProvider.provider;
+        queryProviderName = resolvedProvider.providerName;
+        queryEmbeddingModel = resolvedProvider.embeddingModel;
+      } catch (error) {
+        throw new Error(
+          `Real query embedding provider is configured but not yet wired into research exporter. ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+
+    const guardResult = evaluateCurrentHybridExportGuard({
+      caseRepo: params.evaluationCase.repo,
+      caseBaseSha: params.evaluationCase.baseSha,
+      repositoryIdentity: snapshot.repository.canonicalUrl,
+      snapshotCommitSha: snapshot.commitSha,
+      snapshotIndexStatus: snapshot.indexStatus,
+      chunkCount: embeddingState.chunkCount,
+      embeddingModels: embeddingState.embeddingModels,
+      queryProviderName,
+      queryEmbeddingModel,
+      allowRealQueryEmbedding,
+      isSmokeMode,
+    });
+
+    if (!guardResult.allowed) {
+      throw new Error(
+        `CURRENT_HYBRID benchmark blocked:\n${guardResult.blockers.join('\n')}`,
+      );
+    }
+
     const retrievalService = new HybridRetrievalService(
       new EmbeddingChunkRepository(prisma),
-      fakeEmbeddingProvider,
+      queryProvider,
       new ArtifactRepository(prisma),
       new GraphRepository(prisma),
       prisma,
@@ -359,8 +451,17 @@ async function runCurrentHybridMode(params: {
 
     const warnings: string[] = [
       'Changed files are proxy ground truth. This smoke export is not a final benchmark result.',
-      `CURRENT_HYBRID mode used ${fakeEmbeddingProvider.providerName} embedding provider for deterministic local query embedding. This is deterministic smoke, not a real semantic benchmark.`,
     ];
+
+    if (guardResult.mode === 'CURRENT_HYBRID_SMOKE') {
+      warnings.push(
+        `CURRENT_HYBRID smoke mode used ${queryProviderName} query embedding provider. This output is SMOKE_ONLY and not benchmark evidence.`,
+      );
+      warnings.push(...guardResult.warnings);
+    } else {
+      warnings.push('CURRENT_HYBRID benchmark mode alignment was verified.');
+      warnings.push(...guardResult.warnings);
+    }
 
     if (snapshot.indexStatus !== 'VECTOR_READY') {
       warnings.push(
@@ -383,15 +484,19 @@ async function runCurrentHybridMode(params: {
     return {
       runId: buildRunId('CURRENT_HYBRID', params.evaluationCase.id),
       generatedAt: new Date().toISOString(),
-      mode: 'CURRENT_HYBRID',
+      mode: guardResult.mode,
       caseId: params.evaluationCase.id,
       repo: params.evaluationCase.repo,
+      caseBaseSha: params.evaluationCase.baseSha,
       requirementText: params.evaluationCase.requirementText,
       groundTruthFiles: params.evaluationCase.groundTruth.files,
       snapshot: mapSnapshotMetadata(snapshot),
       embeddingState: {
         ...embeddingState,
-        providerName: fakeEmbeddingProvider.providerName,
+        queryProviderName,
+        queryEmbeddingModel,
+        artifactEmbeddingModels: embeddingState.embeddingModels,
+        alignmentVerified: guardResult.mode === 'CURRENT_HYBRID_BENCHMARK',
       },
       topK,
       summary: computeSummary(params.evaluationCase.groundTruth.files, topK),
@@ -404,10 +509,11 @@ async function runCurrentHybridMode(params: {
 
 function getOutputTargets(mode: ExportMode) {
   return mode === 'CURRENT_HYBRID'
-    ? {
-        json: 'evaluation/results/rag-samples.current-hybrid.v0.json',
-        markdown: 'evaluation/results/rag-samples.current-hybrid.v0.md',
-      }
+    ? getCurrentHybridOutputTargets(
+        shouldAllowRealQueryEmbedding()
+          ? 'CURRENT_HYBRID_BENCHMARK'
+          : 'CURRENT_HYBRID_SMOKE',
+      )
     : {
         json: 'evaluation/results/rag-samples.v0.json',
         markdown: 'evaluation/results/rag-samples.v0.md',

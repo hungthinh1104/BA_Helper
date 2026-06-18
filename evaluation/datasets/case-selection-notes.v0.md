@@ -1,5 +1,67 @@
 # Case Selection Notes v0
 
+## Case 006 Blocker
+
+### Target snapshot alignment requirement
+
+- Target repository: `ndmen/booking`
+- Snapshot ID:
+  `444246fb-2942-4668-be16-85bcf3164fe0`
+- Snapshot commit SHA:
+  `f26cd56837cd10a1c00bb89d74d97519abc6f732`
+- Project ID:
+  `ab9bd99d-2b54-44ac-bd20-3f017a84cdff`
+- Repository ID:
+  `d7b8030c-a4fb-4b24-b27d-0375c06ccd0d`
+
+### Public evidence inspected
+
+- Snapshot commit:
+  `https://github.com/ndmen/booking/commit/f26cd56837cd10a1c00bb89d74d97519abc6f732`
+- Public commit history:
+  `https://github.com/ndmen/booking/commits/main/`
+
+### Why no case was added yet
+
+The alignment rule for this phase requires an evaluation case whose
+`baseSha` is exactly:
+
+`f26cd56837cd10a1c00bb89d74d97519abc6f732`
+
+That snapshot commit is currently the public tip commit on `main`, and the
+public repo shows:
+
+- latest visible commit: `f26cd56` with message `Update README.md`
+- public pull requests: `0`
+
+So there is no confidently verifiable public descendant backend change whose
+base is `f26cd56837cd10a1c00bb89d74d97519abc6f732`.
+
+### Why this blocks an evaluation-valid case
+
+- Using `f26cd56` itself would fail the phase rule because the aligned change
+  is README-only, not a backend requirement/behavior/workflow/validation/domain
+  logic change.
+- Using an older backend commit such as `2adedd4` would break the required
+  `baseSha == snapshot.commitSha` invariant.
+- No public PR branch was available to prove a later backend change based on
+  `f26cd56`.
+
+### Candidate artifact construction status
+
+No candidate artifact set was added for Case 006 because doing so without a
+valid aligned public change would fabricate the evaluation case boundary.
+
+### Threats to validity / operational note
+
+- The DB snapshot is real and vector-ready, but dataset alignment still depends
+  on a public repo history point that can be paired with the snapshot commit as
+  `baseSha`.
+- Until such a public aligned change exists, current-hybrid export for
+  `ndmen/booking` would be DB-valid but not evaluation-valid for dataset v0.
+- This remains a file-level evaluation workflow only; no method-level claim is
+  implied.
+
 ## Case 001
 
 ### Source repo
