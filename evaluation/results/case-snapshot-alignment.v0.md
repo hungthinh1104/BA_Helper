@@ -1,9 +1,9 @@
 # Case Snapshot Alignment v0
 
-Generated at: 2026-06-18T03:53:22.242Z
+Generated at: 2026-06-18T12:42:05.633Z
 
-- Cases: 5
-- ALIGNED_VECTOR_READY: 0
+- Cases: 6
+- ALIGNED_VECTOR_READY: 1
 - ALIGNED_LEXICAL_ONLY: 1
 - SNAPSHOT_MISSING: 4
 
@@ -27,6 +27,7 @@ Only ALIGNED_VECTOR_READY cases are eligible for current-hybrid benchmark export
 | reqimpact-case-003-realworld-auth-middleware-user-object | lujakob/nestjs-realworld-example-app | a0edadd2812bea5f1ad00e4074ffb048d80df105 | SNAPSHOT_MISSING | none | none | 0 | none | Create/index snapshot at case baseSha. |
 | reqimpact-case-004-nest-post-sse-empty-response | nestjs/nest | 02f804159841a2771755c382832a7938b904c420 | ALIGNED_LEXICAL_ONLY | ef931de3-5b6e-4465-91c2-f7d6b46e6eed | VECTOR_FAILED | 0 | none | Snapshot aligns by commit, but real vector benchmark is blocked until usable non-fake embeddings exist. |
 | reqimpact-case-005-realworld-proper-error-object | lujakob/nestjs-realworld-example-app | 78e92f57b21038bbce0cde740dcbaeca68412c72 | SNAPSHOT_MISSING | none | none | 0 | none | Create/index snapshot at case baseSha. |
+| reqimpact-case-006-squareboat-default-includes | squareboat/nestjs-boilerplate | 33ca78792610f1b0ece552767ef370bcb1978205 | ALIGNED_VECTOR_READY | b8676c81-b19b-4c97-93a5-38125b9b525b | VECTOR_READY | 14 | gemini-embedding-001 | Eligible for future CURRENT_HYBRID benchmark export when real query embedding is enabled. |
 
 ## Future CURRENT_HYBRID Command Template
 

@@ -267,7 +267,51 @@ The runtime API result was:
 - No exact base snapshot means:
   - no aligned `snapshot.commitSha`
   - no vector indexing attempt against the required commit
-  - no legal basis to add `reqimpact-case-006-squareboat-default-includes`
+- no legal basis to add `reqimpact-case-006-squareboat-default-includes`
+
+## Phase E7 Outcome
+
+- Goal: re-index the exact aligned Squareboat snapshot with explicit embedding
+  profile provenance and promote it only if benchmark-eligible.
+- Result: **passed**
+
+### Verified runtime identity
+
+- Repository: `https://github.com/squareboat/nestjs-boilerplate`
+- PR: `https://github.com/squareboat/nestjs-boilerplate/pull/37`
+- Base SHA: `33ca78792610f1b0ece552767ef370bcb1978205`
+- Head SHA: `355af958495378cb6d24e75316d1a41128699653`
+- Project ID: `a89660ef-6a15-4f65-a53d-2dbb1218a2ea`
+- Repository ID: `b8687312-ed36-4bca-b519-32b6e49b31f4`
+- Snapshot ID: `b8676c81-b19b-4c97-93a5-38125b9b525b`
+
+### What changed in E7
+
+- Deleted 14 legacy `EmbeddingChunk` rows for this snapshot where
+  `embeddingProfileId IS NULL`.
+- Re-ran `EmbedSnapshotArtifactsUseCase` with explicit runtime env:
+  - `EMBEDDING_INDEX_PROFILE=google-gemini-001-1536`
+  - `EMBEDDING_QUERY_PROFILE=google-gemini-001-1536`
+  - `EMBEDDING_PROVIDER=google`
+
+### Post-reindex verification
+
+- `snapshot.commitSha == 33ca78792610f1b0ece552767ef370bcb1978205`
+- `snapshot.indexStatus = VECTOR_READY`
+- `chunkCount = 14`
+- All persisted chunks for this snapshot now have:
+  - `embeddingProfileId = google-gemini-001-1536`
+  - `embeddingProvider = google`
+  - `embeddingModel = gemini-embedding-001`
+  - `embeddingDimensions = 1536`
+  - `embeddingConfigHash` present
+- No fake or legacy profile-missing chunk rows remain for this snapshot.
+
+### Dataset impact
+
+- `reqimpact-case-006-squareboat-default-includes` is now added to dataset v0.
+- A case-snapshot override was added for the aligned exact-SHA snapshot.
+- This phase still does **not** run current-hybrid benchmark export.
 
 ### Practical consequence
 

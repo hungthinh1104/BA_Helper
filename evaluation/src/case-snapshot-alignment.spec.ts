@@ -2,9 +2,11 @@ import {
   buildCaseSnapshotAlignmentRegistry,
   evaluateCaseSnapshotAlignment,
 } from './case-snapshot-alignment';
+import { loadDataset } from '../io';
 
 describe('case snapshot alignment', () => {
   it('marks all cases as SNAPSHOT_MISSING when no mappings exist', () => {
+    const datasetCaseCount = loadDataset('evaluation/datasets/cases.v0.json').cases.length;
     const registry = buildCaseSnapshotAlignmentRegistry({
       datasetPath: 'evaluation/datasets/cases.v0.json',
       dbReadinessPath: 'evaluation/results/does-not-exist.json',
@@ -12,8 +14,8 @@ describe('case snapshot alignment', () => {
       generatedAt: '2026-06-18T00:00:00.000Z',
     });
 
-    expect(registry.caseCount).toBe(5);
-    expect(registry.snapshotMissingCount).toBe(5);
+    expect(registry.caseCount).toBe(datasetCaseCount);
+    expect(registry.snapshotMissingCount).toBe(datasetCaseCount);
     expect(registry.cases.every((item) => item.status === 'SNAPSHOT_MISSING')).toBe(true);
   });
 

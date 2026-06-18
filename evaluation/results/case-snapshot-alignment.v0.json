@@ -1,8 +1,8 @@
 {
   "runId": "case-snapshot-alignment-v0",
-  "generatedAt": "2026-06-18T03:53:22.242Z",
-  "caseCount": 5,
-  "alignedVectorReadyCount": 0,
+  "generatedAt": "2026-06-18T12:42:05.633Z",
+  "caseCount": 6,
+  "alignedVectorReadyCount": 1,
   "alignedLexicalOnlyCount": 1,
   "snapshotMissingCount": 4,
   "cases": [
@@ -84,6 +84,24 @@
       "embeddingModels": [],
       "requiredNextAction": "Create/index snapshot at case baseSha.",
       "warnings": []
+    },
+    {
+      "caseId": "reqimpact-case-006-squareboat-default-includes",
+      "repo": "squareboat/nestjs-boilerplate",
+      "baseSha": "33ca78792610f1b0ece552767ef370bcb1978205",
+      "projectId": "a89660ef-6a15-4f65-a53d-2dbb1218a2ea",
+      "repositoryId": "b8687312-ed36-4bca-b519-32b6e49b31f4",
+      "snapshotId": "b8676c81-b19b-4c97-93a5-38125b9b525b",
+      "snapshotCommitSha": "33ca78792610f1b0ece552767ef370bcb1978205",
+      "indexStatus": "VECTOR_READY",
+      "chunkCount": 14,
+      "embeddingModels": [
+        "gemini-embedding-001"
+      ],
+      "warnings": [],
+      "notes": "https://github.com/squareboat/nestjs-boilerplate",
+      "status": "ALIGNED_VECTOR_READY",
+      "requiredNextAction": "Eligible for future CURRENT_HYBRID benchmark export when real query embedding is enabled."
     }
   ],
   "warnings": [

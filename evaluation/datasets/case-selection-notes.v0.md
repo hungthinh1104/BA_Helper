@@ -1,5 +1,73 @@
 # Case Selection Notes v0
 
+## Case 006
+
+### Source repository
+
+- Repository: `squareboat/nestjs-boilerplate`
+- PR link:
+  `https://github.com/squareboat/nestjs-boilerplate/pull/37`
+- Issue link:
+  `https://github.com/squareboat/nestjs-boilerplate/issues/36`
+- Base commit:
+  `33ca78792610f1b0ece552767ef370bcb1978205`
+- Head / commit SHA:
+  `355af958495378cb6d24e75316d1a41128699653`
+
+### Public evidence used to infer requirementText
+
+- PR title:
+  `FIX: default includes`
+- PR description/comment:
+  the pull request fixes the issue with default includes in the Transformer
+  class
+
+### Changed backend files used as proxy ground truth
+
+- `libs/boat/src/transformers/transformer.ts`
+
+### Excluded files and why
+
+- `package-lock.json` was excluded from `groundTruth.files` because it is
+  dependency-lock noise, not the backend requirement target.
+- No frontend-only or docs-only files were part of this PR.
+- Neighbor files under `libs/boat/src/rest` and `libs/boat/src/validator` were
+  kept as candidates rather than ground truth because they are plausible
+  implementation distractors around request transformation and validation.
+
+### Candidate artifact construction method
+
+- Candidate artifacts were built from the pre-change snapshot aligned to
+  `baseSha = 33ca78792610f1b0ece552767ef370bcb1978205`.
+- The pool combines:
+  - persisted scanner artifacts already extracted from that snapshot
+  - the changed `transformer.ts` file itself as a manual file-level candidate
+  - nearby rest/validator/user-layer neighbors that are plausible retrieval
+    distractors
+- The candidate file set is broader than the proxy ground truth and includes
+  multiple non-ground-truth neighbors.
+
+### Ground truth limitation statement
+
+`groundTruth.files` in v0 is a practical proxy derived from the public PR’s
+changed backend implementation file. It is not absolute truth. Some nearby
+files may still be relevant implementation context, and the selected file set
+does not claim method-level necessity.
+
+### Known threats to validity
+
+- The scanner-aligned base snapshot did **not** persist
+  `libs/boat/src/transformers/transformer.ts` as a `CodeArtifact`, so the case
+  currently mixes real extracted artifacts with one manual file-level candidate.
+- That means the case is valid for dataset/file-level evaluation, but it also
+  captures a scanner-coverage gap that may block later persisted-hybrid
+  retrieval from surfacing the ground-truth file directly.
+- This remains a file-level-only case. No method-level accuracy claim is made.
+
+### Suitability
+
+This case is suitable for file-level evaluation only in v0.
+
 ## Phase 4E Screening Note
 
 ### Candidate screened but rejected for dataset addition

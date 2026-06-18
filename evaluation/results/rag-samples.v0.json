@@ -1,21 +1,19 @@
 {
-  "runId": "rag-sample:case_only:reqimpact-case-005-realworld-proper-error-object:2026-06-17T09-43-23-569Z",
-  "generatedAt": "2026-06-17T09:43:23.570Z",
+  "runId": "rag-sample:case_only:reqimpact-case-006-squareboat-default-includes:2026-06-18T12-42-09-987Z",
+  "generatedAt": "2026-06-18T12:42:09.987Z",
   "mode": "CASE_ONLY",
-  "caseId": "reqimpact-case-005-realworld-proper-error-object",
-  "repo": "lujakob/nestjs-realworld-example-app",
-  "requirementText": "fix: Return proper error object",
+  "caseId": "reqimpact-case-006-squareboat-default-includes",
+  "repo": "squareboat/nestjs-boilerplate",
+  "requirementText": "fix: default includes in transformer class",
   "groundTruthFiles": [
-    "src/shared/pipes/validation.pipe.ts",
-    "src/user/user.controller.ts",
-    "src/user/user.entity.ts"
+    "libs/boat/src/transformers/transformer.ts"
   ],
   "topK": [
     {
       "rank": 1,
-      "artifactKey": "file:src/shared/pipes/validation.pipe.ts",
-      "filePath": "src/shared/pipes/validation.pipe.ts",
-      "artifactType": "PIPE_FILE",
+      "artifactKey": "file:libs/boat/src/transformers/transformer.ts",
+      "filePath": "libs/boat/src/transformers/transformer.ts",
+      "artifactType": "TRANSFORMER_FILE",
       "retrievalSignals": [],
       "retrievalReason": "CASE_ONLY mode does not run retrieval; candidateArtifacts are exported in dataset order.",
       "evidence": {
@@ -24,13 +22,14 @@
         "excerptPreview": "",
         "isLocationOnly": false,
         "isCodeLike": false
-      }
+      },
+      "universalKind": "DOMAIN_SERVICE"
     },
     {
       "rank": 2,
-      "artifactKey": "file:src/user/user.controller.ts",
-      "filePath": "src/user/user.controller.ts",
-      "artifactType": "CONTROLLER_FILE",
+      "artifactKey": "service-method:explorer.lookupListeners",
+      "filePath": "libs/boat/src/rest/explorer.ts",
+      "artifactType": "SERVICE_METHOD",
       "retrievalSignals": [],
       "retrievalReason": "CASE_ONLY mode does not run retrieval; candidateArtifacts are exported in dataset order.",
       "evidence": {
@@ -40,13 +39,13 @@
         "isLocationOnly": false,
         "isCodeLike": false
       },
-      "universalKind": "API_ENDPOINT"
+      "universalKind": "DOMAIN_SERVICE"
     },
     {
       "rank": 3,
-      "artifactKey": "file:src/user/user.entity.ts",
-      "filePath": "src/user/user.entity.ts",
-      "artifactType": "ENTITY_FILE",
+      "artifactKey": "service-method:explorer.onModuleInit",
+      "filePath": "libs/boat/src/rest/explorer.ts",
+      "artifactType": "SERVICE_METHOD",
       "retrievalSignals": [],
       "retrievalReason": "CASE_ONLY mode does not run retrieval; candidateArtifacts are exported in dataset order.",
       "evidence": {
@@ -56,13 +55,13 @@
         "isLocationOnly": false,
         "isCodeLike": false
       },
-      "universalKind": "DATA_MODEL"
+      "universalKind": "DOMAIN_SERVICE"
     },
     {
       "rank": 4,
-      "artifactKey": "file:src/shared/base.controller.ts",
-      "filePath": "src/shared/base.controller.ts",
-      "artifactType": "CONTROLLER_FILE",
+      "artifactKey": "service-method:guards.canActivate",
+      "filePath": "libs/boat/src/rest/guards.ts",
+      "artifactType": "SERVICE_METHOD",
       "retrievalSignals": [],
       "retrievalReason": "CASE_ONLY mode does not run retrieval; candidateArtifacts are exported in dataset order.",
       "evidence": {
@@ -72,13 +71,13 @@
         "isLocationOnly": false,
         "isCodeLike": false
       },
-      "universalKind": "API_ENDPOINT"
+      "universalKind": "DOMAIN_SERVICE"
     },
     {
       "rank": 5,
-      "artifactKey": "file:src/user/user.service.ts",
-      "filePath": "src/user/user.service.ts",
-      "artifactType": "SERVICE_FILE",
+      "artifactKey": "service-method:timeoutInterceptor.intercept",
+      "filePath": "libs/boat/src/rest/timeoutInterceptor.ts",
+      "artifactType": "SERVICE_METHOD",
       "retrievalSignals": [],
       "retrievalReason": "CASE_ONLY mode does not run retrieval; candidateArtifacts are exported in dataset order.",
       "evidence": {
@@ -92,9 +91,9 @@
     },
     {
       "rank": 6,
-      "artifactKey": "file:src/user/auth.middleware.ts",
-      "filePath": "src/user/auth.middleware.ts",
-      "artifactType": "MIDDLEWARE_FILE",
+      "artifactKey": "service-method:basevalidator.fire",
+      "filePath": "libs/boat/src/validator/basevalidator.ts",
+      "artifactType": "SERVICE_METHOD",
       "retrievalSignals": [],
       "retrievalReason": "CASE_ONLY mode does not run retrieval; candidateArtifacts are exported in dataset order.",
       "evidence": {
@@ -108,9 +107,9 @@
     },
     {
       "rank": 7,
-      "artifactKey": "file:src/user/user.decorator.ts",
-      "filePath": "src/user/user.decorator.ts",
-      "artifactType": "DECORATOR_FILE",
+      "artifactKey": "service-method:isValueFromConfig.validate",
+      "filePath": "libs/boat/src/validator/decorators/isValueFromConfig.ts",
+      "artifactType": "SERVICE_METHOD",
       "retrievalSignals": [],
       "retrievalReason": "CASE_ONLY mode does not run retrieval; candidateArtifacts are exported in dataset order.",
       "evidence": {
@@ -119,13 +118,14 @@
         "excerptPreview": "",
         "isLocationOnly": false,
         "isCodeLike": false
-      }
+      },
+      "universalKind": "DOMAIN_SERVICE"
     },
     {
       "rank": 8,
-      "artifactKey": "file:src/user/dto/create-user.dto.ts",
-      "filePath": "src/user/dto/create-user.dto.ts",
-      "artifactType": "DTO_FILE",
+      "artifactKey": "api:user.getProfile",
+      "filePath": "src/user/controllers/user.ts",
+      "artifactType": "API_ROUTE",
       "retrievalSignals": [],
       "retrievalReason": "CASE_ONLY mode does not run retrieval; candidateArtifacts are exported in dataset order.",
       "evidence": {
@@ -134,13 +134,14 @@
         "excerptPreview": "",
         "isLocationOnly": false,
         "isCodeLike": false
-      }
+      },
+      "universalKind": "API_ENDPOINT"
     },
     {
       "rank": 9,
-      "artifactKey": "file:src/user/dto/login-user.dto.ts",
-      "filePath": "src/user/dto/login-user.dto.ts",
-      "artifactType": "DTO_FILE",
+      "artifactKey": "service-method:user.get",
+      "filePath": "src/user/services/user.ts",
+      "artifactType": "SERVICE_METHOD",
       "retrievalSignals": [],
       "retrievalReason": "CASE_ONLY mode does not run retrieval; candidateArtifacts are exported in dataset order.",
       "evidence": {
@@ -149,24 +150,44 @@
         "excerptPreview": "",
         "isLocationOnly": false,
         "isCodeLike": false
-      }
+      },
+      "universalKind": "DOMAIN_SERVICE"
+    },
+    {
+      "rank": 10,
+      "artifactKey": "service-method:greetUser.handle",
+      "filePath": "src/user/commands/greetUser.ts",
+      "artifactType": "SERVICE_METHOD",
+      "retrievalSignals": [],
+      "retrievalReason": "CASE_ONLY mode does not run retrieval; candidateArtifacts are exported in dataset order.",
+      "evidence": {
+        "hasEvidence": false,
+        "excerptLength": 0,
+        "excerptPreview": "",
+        "isLocationOnly": false,
+        "isCodeLike": false
+      },
+      "universalKind": "DOMAIN_SERVICE"
     }
   ],
   "summary": {
-    "topKCount": 9,
-    "groundTruthHitCount": 3,
+    "topKCount": 10,
+    "groundTruthHitCount": 1,
     "recallAt10": 1,
     "evidenceCoverage": 0,
     "locationOnlyEvidenceCount": 0,
     "codeLikeEvidenceCount": 0,
     "missedGroundTruthFiles": [],
     "unexpectedTopKFiles": [
-      "src/shared/base.controller.ts",
-      "src/user/user.service.ts",
-      "src/user/auth.middleware.ts",
-      "src/user/user.decorator.ts",
-      "src/user/dto/create-user.dto.ts",
-      "src/user/dto/login-user.dto.ts"
+      "libs/boat/src/rest/explorer.ts",
+      "libs/boat/src/rest/explorer.ts",
+      "libs/boat/src/rest/guards.ts",
+      "libs/boat/src/rest/timeoutInterceptor.ts",
+      "libs/boat/src/validator/basevalidator.ts",
+      "libs/boat/src/validator/decorators/isValueFromConfig.ts",
+      "src/user/controllers/user.ts",
+      "src/user/services/user.ts",
+      "src/user/commands/greetUser.ts"
     ]
   },
   "warnings": [

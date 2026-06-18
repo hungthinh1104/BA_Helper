@@ -437,6 +437,93 @@
         }
       ],
       "notes": "External public backend validation case from nestjs-realworld-example-app commit cbb92cf. Candidate artifacts were manually assembled from the pre-change user/shared validation area and include non-ground-truth controller/service/DTO neighbors."
+    },
+    {
+      "id": "reqimpact-case-006-squareboat-default-includes",
+      "repo": "squareboat/nestjs-boilerplate",
+      "prUrl": "https://github.com/squareboat/nestjs-boilerplate/pull/37",
+      "baseSha": "33ca78792610f1b0ece552767ef370bcb1978205",
+      "headSha": "355af958495378cb6d24e75316d1a41128699653",
+      "commitSha": "355af958495378cb6d24e75316d1a41128699653",
+      "requirementText": "fix: default includes in transformer class",
+      "groundTruth": {
+        "files": [
+          "libs/boat/src/transformers/transformer.ts"
+        ]
+      },
+      "candidateArtifacts": [
+        {
+          "artifactKey": "file:libs/boat/src/transformers/transformer.ts",
+          "filePath": "libs/boat/src/transformers/transformer.ts",
+          "artifactName": "transformer.ts",
+          "artifactType": "TRANSFORMER_FILE",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "service-method:explorer.lookupListeners",
+          "filePath": "libs/boat/src/rest/explorer.ts",
+          "artifactName": "HttpExplorer.lookupListeners",
+          "artifactType": "SERVICE_METHOD",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "service-method:explorer.onModuleInit",
+          "filePath": "libs/boat/src/rest/explorer.ts",
+          "artifactName": "HttpExplorer.onModuleInit",
+          "artifactType": "SERVICE_METHOD",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "service-method:guards.canActivate",
+          "filePath": "libs/boat/src/rest/guards.ts",
+          "artifactName": "RequestGuard.canActivate",
+          "artifactType": "SERVICE_METHOD",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "service-method:timeoutInterceptor.intercept",
+          "filePath": "libs/boat/src/rest/timeoutInterceptor.ts",
+          "artifactName": "TimeoutInterceptor.intercept",
+          "artifactType": "SERVICE_METHOD",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "service-method:basevalidator.fire",
+          "filePath": "libs/boat/src/validator/basevalidator.ts",
+          "artifactName": "BaseValidator.fire",
+          "artifactType": "SERVICE_METHOD",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "service-method:isValueFromConfig.validate",
+          "filePath": "libs/boat/src/validator/decorators/isValueFromConfig.ts",
+          "artifactName": "IsValueFromConfigConstraint.validate",
+          "artifactType": "SERVICE_METHOD",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "api:user.getProfile",
+          "filePath": "src/user/controllers/user.ts",
+          "artifactName": "UserController.getProfile",
+          "artifactType": "API_ROUTE",
+          "universalKind": "API_ENDPOINT"
+        },
+        {
+          "artifactKey": "service-method:user.get",
+          "filePath": "src/user/services/user.ts",
+          "artifactName": "UserService.get",
+          "artifactType": "SERVICE_METHOD",
+          "universalKind": "DOMAIN_SERVICE"
+        },
+        {
+          "artifactKey": "service-method:greetUser.handle",
+          "filePath": "src/user/commands/greetUser.ts",
+          "artifactName": "GreetUser.handle",
+          "artifactType": "SERVICE_METHOD",
+          "universalKind": "DOMAIN_SERVICE"
+        }
+      ],
+      "notes": "External public backend bugfix from squareboat/nestjs-boilerplate PR #37. Candidate pool mixes extracted pre-change artifacts with the changed transformer file and nearby manual file-level neighbors because the scanner did not persist transformer.ts as a CodeArtifact at this base snapshot."
     }
   ]
 }

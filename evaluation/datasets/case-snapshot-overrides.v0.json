@@ -6,6 +6,14 @@
       "repositoryId": "6e99eeb1-02b2-422b-939d-d9d5174ac77a",
       "snapshotId": "ef931de3-5b6e-4465-91c2-f7d6b46e6eed",
       "notes": "https://github.com/nestjs/nest"
+    },
+    {
+      "caseId": "reqimpact-case-006-squareboat-default-includes",
+      "projectId": "a89660ef-6a15-4f65-a53d-2dbb1218a2ea",
+      "repositoryId": "b8687312-ed36-4bca-b519-32b6e49b31f4",
+      "snapshotId": "b8676c81-b19b-4c97-93a5-38125b9b525b",
+      "embeddingProfileId": "google-gemini-001-1536",
+      "notes": "https://github.com/squareboat/nestjs-boilerplate"
     }
   ]
 }
