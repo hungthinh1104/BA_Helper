@@ -106,4 +106,37 @@ describe('db snapshot readiness', () => {
     expect(markdown).toContain('No retrieval was executed.');
     expect(markdown).toContain('No vector-baseline.v0.json was created.');
   });
+
+  it('uses an aligned-case placeholder instead of a misleading concrete case id', () => {
+    const report = buildDbSnapshotReadinessReport({
+      hasDatabaseUrl: true,
+      inspectedReadOnly: true,
+      generatedAt: '2026-06-17T12:00:00.000Z',
+      inspectionResult: {
+        projectCount: 1,
+        repositoryCount: 1,
+        snapshots: [
+          {
+            projectId: 'project-1',
+            repositoryId: 'repo-1',
+            snapshotId: 'snapshot-1',
+            commitSha: 'abc123',
+            indexStatus: 'VECTOR_READY',
+            chunkCount: 3,
+            embeddingModels: ['gemini-embedding-001'],
+            chunkerVersions: ['artifact-chunker@0.1.0'],
+          },
+        ],
+      },
+    });
+
+    const markdown = renderDbSnapshotReadinessMarkdown({
+      report,
+      exampleCaseId: 'reqimpact-case-001',
+    });
+
+    expect(markdown).toContain('--caseId <aligned-case-id>');
+    expect(markdown).toContain('case-snapshot-alignment.v0.json');
+    expect(markdown).not.toContain('reqimpact-case-001');
+  });
 });

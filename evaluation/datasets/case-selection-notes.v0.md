@@ -1,5 +1,37 @@
 # Case Selection Notes v0
 
+## Phase 4E Screening Note
+
+### Candidate screened but rejected for dataset addition
+
+- Repository: `Saluki/nestjs-template`
+- PR:
+  `https://github.com/Saluki/nestjs-template/pull/55`
+- PR title:
+  `Implemented Authentication`
+- Public base ref used for local scan:
+  `master`
+- Local aligned snapshot reached real `VECTOR_READY` at:
+  `d10b46097021e9d1fe8286995a0b685c8a444dfe`
+
+### Why it was rejected as Case 006
+
+- The case is public and runtime-viable, but it is not a strong ReqImpact v0
+  evaluation case.
+- The PR mainly introduces new authentication files and related module
+  scaffolding rather than modifying a stable existing backend slice already
+  present in the base snapshot.
+- That means the changed-file proxy would over-represent **new file creation**
+  instead of requirement-to-existing-code impact retrieval.
+
+### Decision
+
+- Do not add this candidate to `cases.v0.json`.
+- Keep dataset v0 focused on file-level impact over code that already exists in
+  the selected base snapshot.
+- Treat this candidate as proof that a smaller repo can reach real
+  `VECTOR_READY`, not as proof that it is a valid evaluation case.
+
 ## Case 006 Blocker
 
 ### Target snapshot alignment requirement

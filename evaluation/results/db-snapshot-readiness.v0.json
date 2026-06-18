@@ -1,19 +1,39 @@
 {
   "runId": "db-snapshot-readiness-v0",
-  "generatedAt": "2026-06-18T03:53:20.474Z",
+  "generatedAt": "2026-06-18T04:46:36.280Z",
   "status": "READY_CANDIDATES_FOUND",
   "database": {
     "hasDatabaseUrl": true,
     "inspectedReadOnly": true
   },
   "summary": {
-    "projectCount": 5,
-    "repositoryCount": 5,
-    "snapshotCount": 5,
-    "vectorReadyCandidateCount": 2,
+    "projectCount": 7,
+    "repositoryCount": 6,
+    "snapshotCount": 6,
+    "vectorReadyCandidateCount": 3,
     "lexicalOnlyCandidateCount": 3
   },
   "candidates": [
+    {
+      "projectId": "3744b50c-9cda-4c15-93df-0b4a9d21bff2",
+      "repositoryId": "643d9d25-ae49-4c2e-835c-22e5e9458ec4",
+      "snapshotId": "ba8d4eb8-e713-4bcf-ae31-12af1690b614",
+      "commitSha": "d10b46097021e9d1fe8286995a0b685c8a444dfe",
+      "indexStatus": "VECTOR_READY",
+      "chunkCount": 14,
+      "embeddingModels": [
+        "gemini-embedding-001"
+      ],
+      "chunkerVersions": [
+        "artifact-chunker@0.1.0"
+      ],
+      "classification": "VECTOR_READY_CANDIDATE",
+      "usableFor": [
+        "VECTOR_BASELINE",
+        "CURRENT_HYBRID_EXPORT"
+      ],
+      "warnings": []
+    },
     {
       "projectId": "84bdbbc6-d70c-4f1f-b17c-a379a3682952",
       "repositoryId": "6e99eeb1-02b2-422b-939d-d9d5174ac77a",
@@ -110,9 +130,9 @@
     }
   ],
   "nextInputsNeeded": [
-    "--projectId ab9bd99d-2b54-44ac-bd20-3f017a84cdff",
-    "--repositoryId d7b8030c-a4fb-4b24-b27d-0375c06ccd0d",
-    "--snapshotId 444246fb-2942-4668-be16-85bcf3164fe0"
+    "--projectId 3744b50c-9cda-4c15-93df-0b4a9d21bff2",
+    "--repositoryId 643d9d25-ae49-4c2e-835c-22e5e9458ec4",
+    "--snapshotId ba8d4eb8-e713-4bcf-ae31-12af1690b614"
   ],
   "warnings": [
     "This probe does not run retrieval.",

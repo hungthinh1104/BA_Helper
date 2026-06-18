@@ -145,3 +145,60 @@ So Phase 4D could not legally switch to a smaller aligned case without either:
 
 - No current-hybrid benchmark export was run in this phase.
 - No `vector-baseline.v0.json` was created in this phase.
+
+## Phase 4E Candidate Discovery
+
+- Goal: find one **new** public backend case that can become
+  `ALIGNED_VECTOR_READY` before adding it to dataset v0.
+- Result: **blocked on case quality, not on vector runtime**
+
+### Candidate that reached real vector-ready state
+
+- Repository: `https://github.com/Saluki/nestjs-template`
+- Candidate PR: `https://github.com/Saluki/nestjs-template/pull/55`
+- PR title: `Implemented Authentication`
+- Public base ref used for scan: `master`
+- Public base SHA resolved by scan:
+  `d10b46097021e9d1fe8286995a0b685c8a444dfe`
+
+### Local runtime IDs
+
+- Project ID: `3744b50c-9cda-4c15-93df-0b4a9d21bff2`
+- Repository ID: `643d9d25-ae49-4c2e-835c-22e5e9458ec4`
+- Scan Job ID: `17b97eec-dc13-4104-a522-e10edbcee535`
+- Snapshot ID: `ba8d4eb8-e713-4bcf-ae31-12af1690b614`
+- Snapshot commit SHA: `d10b46097021e9d1fe8286995a0b685c8a444dfe`
+- Index status: `VECTOR_READY`
+- Coverage status: `READY`
+- Chunker version: `artifact-chunker@0.1.0`
+
+### Why this candidate was not added as Case 006
+
+The infrastructure gate passed:
+
+- the repo is public
+- the base ref is public and resolvable through the product scan workflow
+- the local snapshot reached `VECTOR_READY`
+- the embedding path used the real provider, not `fake-embedding`
+
+But the evaluation-case gate failed:
+
+- PR `#55` is primarily an **auth module introduction** on top of a base tree
+  that does not yet contain those auth implementation files
+- most meaningful backend files in the PR are **newly introduced files**, not
+  existing artifacts in the base snapshot candidate universe
+- that makes it a weak fit for ReqImpact v0, which is intended to evaluate
+  requirement-to-**existing-code** impact retrieval rather than greenfield file
+  creation
+
+### Practical consequence
+
+- This candidate proves the smaller real-provider path can reach
+  `VECTOR_READY` without the Google quota failure seen on `nestjs/nest`.
+- It does **not** justify adding a dataset case, because doing so would blur
+  the file-level retrieval target with new-file implementation work.
+- Therefore:
+  - `evaluation/datasets/cases.v0.json` remains unchanged
+  - `evaluation/datasets/case-snapshot-overrides.v0.json` remains unchanged
+  - no current-hybrid benchmark export was run
+  - no `vector-baseline.v0.json` was created

@@ -428,7 +428,6 @@ export function renderDbSnapshotReadinessMarkdown(params: {
   exampleCaseId?: string;
 }): string {
   const { report } = params;
-  const exampleCaseId = params.exampleCaseId ?? '<case-id>';
   const lines = [
     '# DB Snapshot Readiness v0',
     '',
@@ -499,10 +498,12 @@ export function renderDbSnapshotReadinessMarkdown(params: {
     lines.push('- No candidate snapshot is ready enough for a concrete next command yet.');
   } else {
     lines.push(
+      'Only use a caseId that is explicitly aligned in evaluation/results/case-snapshot-alignment.v0.json.',
+      '',
       '### CURRENT_HYBRID export',
       '',
       '```bash',
-      `pnpm exec ts-node --project tsconfig.json evaluation/scripts/export-rag-samples.ts --caseId ${exampleCaseId} --projectId ${selectedCandidate.projectId} --repositoryId ${selectedCandidate.repositoryId} --snapshotId ${selectedCandidate.snapshotId}`,
+      `pnpm exec ts-node --project tsconfig.json evaluation/scripts/export-rag-samples.ts --caseId <aligned-case-id> --projectId ${selectedCandidate.projectId} --repositoryId ${selectedCandidate.repositoryId} --snapshotId ${selectedCandidate.snapshotId}`,
       '```',
       '',
       '### Future persisted-vector baseline inputs',
