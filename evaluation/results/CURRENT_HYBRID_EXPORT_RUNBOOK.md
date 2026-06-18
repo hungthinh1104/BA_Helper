@@ -135,6 +135,37 @@ Benchmark mode is blocked when any of these are true:
 - query embedding model is missing
 - `REQIMPACT_ALLOW_REAL_QUERY_EMBEDDING` is not set to `1`
 
+## Phase E8 blocker
+
+The repository state on `research/reqimpact-eval-v0` does not satisfy the
+stated E8 precondition yet.
+
+Verified local facts:
+
+- `evaluation/datasets/cases.v0.json` still contains exactly 5 cases
+- `reqimpact-case-006-squareboat-default-includes` is not present
+- `evaluation/datasets/case-snapshot-overrides.v0.json` still contains only the
+  Nest case mapping
+- `evaluation/results/case-snapshot-alignment.v0.json` still reports:
+  - `caseCount = 5`
+  - `alignedVectorReadyCount = 0`
+  - no Squareboat alignment item
+
+Practical consequence:
+
+- `CURRENT_HYBRID_BENCHMARK` for Case 006 must not run yet
+- `rag-samples.current-hybrid.v0.json` and `.md` must not be created
+- any benchmark-named export would currently be invalid because the dataset and
+  alignment registry do not yet prove the Squareboat case is promotable
+
+Required precondition before rerunning E8:
+
+- add `reqimpact-case-006-squareboat-default-includes` to the dataset
+- add its snapshot override
+- refresh readiness/alignment so the registry explicitly reports the case as
+  `ALIGNED_VECTOR_READY`
+- then rerun the guarded export command
+
 ## Why this is not R1
 
 - It does not change artifact representation.
