@@ -32,7 +32,11 @@ export class EmbeddingChunkRepository {
       contentHash: string;
       tokenCount: number;
       chunkerVersion: string | null;
+      embeddingProfileId: string;
+      embeddingProvider: string;
       embeddingModel: string;
+      embeddingDimensions: number;
+      embeddingConfigHash: string;
       embedding: number[];
     }>,
   ): Promise<void> {
@@ -44,8 +48,9 @@ export class EmbeddingChunkRepository {
         INSERT INTO "EmbeddingChunk" (
           id, "tenantId", "projectId", "repositoryId", "snapshotId", "artifactId",
           "stableChunkId", "commitSha", "filePath", "symbolName", "artifactType",
-          content, "contentHash", "tokenCount", "chunkerVersion", "embeddingModel",
-          embedding, "createdAt"
+          content, "contentHash", "tokenCount", "chunkerVersion",
+          "embeddingProfileId", "embeddingProvider", "embeddingModel",
+          "embeddingDimensions", "embeddingConfigHash", embedding, "createdAt"
         ) VALUES (
           gen_random_uuid(),
           ${chunk.tenantId}::uuid, ${chunk.projectId}::uuid,
@@ -54,10 +59,12 @@ export class EmbeddingChunkRepository {
           ${chunk.stableChunkId}, ${chunk.commitSha},
           ${chunk.filePath}, ${chunk.symbolName}, ${chunk.artifactType},
           ${chunk.content}, ${chunk.contentHash}, ${chunk.tokenCount},
-          ${chunk.chunkerVersion ?? null}, ${chunk.embeddingModel},
+          ${chunk.chunkerVersion ?? null}, ${chunk.embeddingProfileId},
+          ${chunk.embeddingProvider}, ${chunk.embeddingModel},
+          ${chunk.embeddingDimensions}, ${chunk.embeddingConfigHash},
           ${vectorStr}::vector, NOW()
         )
-        ON CONFLICT ("snapshotId", "stableChunkId", "embeddingModel")
+        ON CONFLICT ("snapshotId", "stableChunkId", "embeddingProfileId")
         DO UPDATE SET
           "content" = EXCLUDED."content",
           "contentHash" = EXCLUDED."contentHash",
@@ -67,7 +74,11 @@ export class EmbeddingChunkRepository {
           "filePath" = EXCLUDED."filePath",
           "symbolName" = EXCLUDED."symbolName",
           "artifactType" = EXCLUDED."artifactType",
-          "commitSha" = EXCLUDED."commitSha"
+          "commitSha" = EXCLUDED."commitSha",
+          "embeddingProvider" = EXCLUDED."embeddingProvider",
+          "embeddingModel" = EXCLUDED."embeddingModel",
+          "embeddingDimensions" = EXCLUDED."embeddingDimensions",
+          "embeddingConfigHash" = EXCLUDED."embeddingConfigHash"
           -- NOTE: chunkerVersion is intentionally excluded from DO UPDATE
           -- so re-runs never silently change the version recorded at creation time.
       `;
@@ -114,10 +125,17 @@ export class EmbeddingChunkRepository {
     `;
   }
 
-  async listBySnapshot(snapshotId: string, embeddingModel: string) {
+  async listBySnapshot(snapshotId: string, embeddingProfileId: string) {
     return this.prisma.embeddingChunk.findMany({
-      where: { snapshotId, embeddingModel },
-      select: { stableChunkId: true, contentHash: true, artifactId: true, chunkerVersion: true },
+      where: { snapshotId, embeddingProfileId },
+      select: {
+        stableChunkId: true,
+        contentHash: true,
+        artifactId: true,
+        chunkerVersion: true,
+        embeddingProfileId: true,
+        embeddingConfigHash: true,
+      },
     });
   }
 
@@ -146,19 +164,41 @@ export class EmbeddingChunkRepository {
   async listForReuseByArtifacts(params: {
     snapshotId: string;
     artifactIds: string[];
-    embeddingModel: string;
+    embeddingProfileId: string;
     chunkerVersion: string;
-  }): Promise<Array<{ artifactId: string; contentHash: string; chunkerVersion: string | null; embeddingModel: string }>> {
+  }): Promise<
+    Array<{
+      artifactId: string;
+      contentHash: string;
+      chunkerVersion: string | null;
+      embeddingProfileId: string | null;
+      embeddingConfigHash: string | null;
+    }>
+  > {
     if (params.artifactIds.length === 0) return [];
     return this.prisma.embeddingChunk.findMany({
       where: {
         snapshotId: params.snapshotId,
         artifactId: { in: params.artifactIds },
-        embeddingModel: params.embeddingModel,
+        embeddingProfileId: params.embeddingProfileId,
         chunkerVersion: params.chunkerVersion,
       },
-      select: { artifactId: true, contentHash: true, chunkerVersion: true, embeddingModel: true },
-    }) as Promise<Array<{ artifactId: string; contentHash: string; chunkerVersion: string | null; embeddingModel: string }>>;
+      select: {
+        artifactId: true,
+        contentHash: true,
+        chunkerVersion: true,
+        embeddingProfileId: true,
+        embeddingConfigHash: true,
+      },
+    }) as Promise<
+      Array<{
+        artifactId: string;
+        contentHash: string;
+        chunkerVersion: string | null;
+        embeddingProfileId: string | null;
+        embeddingConfigHash: string | null;
+      }>
+    >;
   }
 
   /**
@@ -171,7 +211,11 @@ export class EmbeddingChunkRepository {
   async copyChunk(params: {
     baseSnapshotId: string;
     oldArtifactId: string;
+    embeddingProfileId: string;
+    embeddingProvider: string;
     embeddingModel: string;
+    embeddingDimensions: number;
+    embeddingConfigHash: string;
     chunkerVersion: string;
     contentHash: string;
     // New row fields
@@ -192,8 +236,9 @@ export class EmbeddingChunkRepository {
       INSERT INTO "EmbeddingChunk" (
         id, "tenantId", "projectId", "repositoryId", "snapshotId", "artifactId",
         "stableChunkId", "commitSha", "filePath", "symbolName", "artifactType",
-        content, "contentHash", "tokenCount", "chunkerVersion", "embeddingModel",
-        embedding, "createdAt"
+        content, "contentHash", "tokenCount", "chunkerVersion",
+        "embeddingProfileId", "embeddingProvider", "embeddingModel",
+        "embeddingDimensions", "embeddingConfigHash", embedding, "createdAt"
       )
       SELECT
         gen_random_uuid(),
@@ -203,16 +248,20 @@ export class EmbeddingChunkRepository {
         ${params.newStableChunkId}, ${params.commitSha},
         ${params.filePath}, ${params.symbolName}, ${params.artifactType},
         ${params.content}, ${params.contentHash}, ${params.tokenCount},
-        ${params.chunkerVersion}, ${params.embeddingModel},
+        ${params.chunkerVersion}, ${params.embeddingProfileId},
+        ${params.embeddingProvider}, ${params.embeddingModel},
+        ${params.embeddingDimensions}, ${params.embeddingConfigHash},
         embedding, NOW()
       FROM "EmbeddingChunk"
       WHERE "snapshotId"   = ${params.baseSnapshotId}::uuid
         AND "artifactId"   = ${params.oldArtifactId}::uuid
+        AND "embeddingProfileId" = ${params.embeddingProfileId}
         AND "embeddingModel" = ${params.embeddingModel}
+        AND "embeddingConfigHash" = ${params.embeddingConfigHash}
         AND "chunkerVersion" = ${params.chunkerVersion}
         AND "contentHash"  = ${params.contentHash}
       LIMIT 1
-      ON CONFLICT ("snapshotId", "stableChunkId", "embeddingModel") DO NOTHING
+      ON CONFLICT ("snapshotId", "stableChunkId", "embeddingProfileId") DO NOTHING
     `;
     return result > 0;
   }

@@ -35,7 +35,11 @@ describe('db snapshot readiness', () => {
       commitSha: 'abc123',
       indexStatus: 'VECTOR_READY',
       chunkCount: 4,
+      embeddingProfileIds: ['openai-3-large-1536'],
+      embeddingProviders: ['openai'],
       embeddingModels: ['text-embedding-004'],
+      embeddingDimensions: [1536],
+      embeddingConfigHashes: ['hash-1'],
       chunkerVersions: ['artifact-chunker@1'],
     });
 
@@ -54,7 +58,11 @@ describe('db snapshot readiness', () => {
       commitSha: 'abc123',
       indexStatus: 'LEXICAL_READY',
       chunkCount: 0,
+      embeddingProfileIds: [],
+      embeddingProviders: [],
       embeddingModels: [],
+      embeddingDimensions: [],
+      embeddingConfigHashes: [],
       chunkerVersions: [],
     });
 
@@ -70,11 +78,16 @@ describe('db snapshot readiness', () => {
       commitSha: 'abc123',
       indexStatus: 'VECTOR_READY',
       chunkCount: 3,
+      embeddingProfileIds: [],
+      embeddingProviders: ['google'],
       embeddingModels: [],
+      embeddingDimensions: [1536],
+      embeddingConfigHashes: ['hash-1'],
       chunkerVersions: ['artifact-chunker@1'],
     });
 
-    expect(candidate.classification).toBe('NOT_READY');
+    expect(candidate.classification).toBe('LEGACY_PROFILE_MISSING');
+    expect(candidate.warnings.join(' ')).toContain('embeddingProfileId metadata is missing');
   });
 
   it('returns DB_UNAVAILABLE when DB inspection fails', async () => {
@@ -123,7 +136,11 @@ describe('db snapshot readiness', () => {
             commitSha: 'abc123',
             indexStatus: 'VECTOR_READY',
             chunkCount: 3,
+            embeddingProfileIds: ['google-gemini-001-1536'],
+            embeddingProviders: ['google'],
             embeddingModels: ['gemini-embedding-001'],
+            embeddingDimensions: [1536],
+            embeddingConfigHashes: ['hash-google'],
             chunkerVersions: ['artifact-chunker@0.1.0'],
           },
         ],

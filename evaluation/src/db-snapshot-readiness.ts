@@ -10,6 +10,7 @@ export type DbSnapshotReadinessStatus =
 export type SnapshotReadinessClassification =
   | 'VECTOR_READY_CANDIDATE'
   | 'LEXICAL_ONLY_CANDIDATE'
+  | 'LEGACY_PROFILE_MISSING'
   | 'NOT_READY'
   | 'UNKNOWN';
 
@@ -22,7 +23,11 @@ export type SnapshotInspectionInput = {
   commitSha: string | null;
   indexStatus: string | null;
   chunkCount: number;
+  embeddingProfileIds: string[];
+  embeddingProviders: string[];
   embeddingModels: string[];
+  embeddingDimensions: number[];
+  embeddingConfigHashes: string[];
   chunkerVersions: string[];
 };
 
@@ -33,7 +38,11 @@ export type DbSnapshotReadinessCandidate = {
   commitSha: string;
   indexStatus: string | null;
   chunkCount: number;
+  embeddingProfileIds: string[];
+  embeddingProviders: string[];
   embeddingModels: string[];
+  embeddingDimensions: number[];
+  embeddingConfigHashes: string[];
   chunkerVersions: string[];
   classification: SnapshotReadinessClassification;
   usableFor: SnapshotUsableFor[];
@@ -88,7 +97,11 @@ function createUnknownCandidate(
     commitSha: input.commitSha ?? 'UNKNOWN',
     indexStatus: input.indexStatus ?? null,
     chunkCount: input.chunkCount,
+    embeddingProfileIds: normalizeDistinct(input.embeddingProfileIds),
+    embeddingProviders: normalizeDistinct(input.embeddingProviders),
     embeddingModels: normalizeDistinct(input.embeddingModels),
+    embeddingDimensions: Array.from(new Set(input.embeddingDimensions)).sort((a, b) => a - b),
+    embeddingConfigHashes: normalizeDistinct(input.embeddingConfigHashes),
     chunkerVersions: normalizeDistinct(input.chunkerVersions),
     classification: 'UNKNOWN',
     usableFor: [],
@@ -100,6 +113,10 @@ export function classifySnapshotCandidate(
   input: SnapshotInspectionInput,
 ): DbSnapshotReadinessCandidate {
   const normalizedModels = normalizeDistinct(input.embeddingModels);
+  const normalizedProfileIds = normalizeDistinct(input.embeddingProfileIds);
+  const normalizedProviders = normalizeDistinct(input.embeddingProviders);
+  const normalizedDimensions = Array.from(new Set(input.embeddingDimensions)).sort((a, b) => a - b);
+  const normalizedConfigHashes = normalizeDistinct(input.embeddingConfigHashes);
   const normalizedChunkerVersions = normalizeDistinct(input.chunkerVersions);
   const baseWarnings: string[] = [];
 
@@ -129,7 +146,11 @@ export function classifySnapshotCandidate(
       commitSha: input.commitSha,
       indexStatus: input.indexStatus,
       chunkCount: 0,
+      embeddingProfileIds: normalizedProfileIds,
+      embeddingProviders: normalizedProviders,
       embeddingModels: normalizedModels,
+      embeddingDimensions: normalizedDimensions,
+      embeddingConfigHashes: normalizedConfigHashes,
       chunkerVersions: normalizedChunkerVersions,
       classification: 'LEXICAL_ONLY_CANDIDATE',
       usableFor: ['CURRENT_HYBRID_EXPORT'],
@@ -140,7 +161,7 @@ export function classifySnapshotCandidate(
     };
   }
 
-  if (normalizedModels.length === 0 || normalizedChunkerVersions.length === 0) {
+  if (normalizedProfileIds.length === 0) {
     return {
       projectId: input.projectId,
       repositoryId: input.repositoryId,
@@ -148,14 +169,56 @@ export function classifySnapshotCandidate(
       commitSha: input.commitSha,
       indexStatus: input.indexStatus,
       chunkCount: input.chunkCount,
+      embeddingProfileIds: normalizedProfileIds,
+      embeddingProviders: normalizedProviders,
       embeddingModels: normalizedModels,
+      embeddingDimensions: normalizedDimensions,
+      embeddingConfigHashes: normalizedConfigHashes,
+      chunkerVersions: normalizedChunkerVersions,
+      classification: 'LEGACY_PROFILE_MISSING',
+      usableFor: [],
+      warnings: [
+        ...baseWarnings,
+        'EmbeddingChunk rows exist but embeddingProfileId metadata is missing; treat these rows as legacy and not benchmark-ready.',
+      ],
+    };
+  }
+
+  if (
+    normalizedModels.length === 0 ||
+    normalizedChunkerVersions.length === 0 ||
+    normalizedProviders.length === 0 ||
+    normalizedDimensions.length === 0 ||
+    normalizedConfigHashes.length === 0
+  ) {
+    return {
+      projectId: input.projectId,
+      repositoryId: input.repositoryId,
+      snapshotId: input.snapshotId,
+      commitSha: input.commitSha,
+      indexStatus: input.indexStatus,
+      chunkCount: input.chunkCount,
+      embeddingProfileIds: normalizedProfileIds,
+      embeddingProviders: normalizedProviders,
+      embeddingModels: normalizedModels,
+      embeddingDimensions: normalizedDimensions,
+      embeddingConfigHashes: normalizedConfigHashes,
       chunkerVersions: normalizedChunkerVersions,
       classification: 'NOT_READY',
       usableFor: [],
       warnings: [
         ...baseWarnings,
+        ...(normalizedProviders.length === 0
+          ? ['EmbeddingChunk rows exist but embeddingProvider metadata is missing.']
+          : []),
         ...(normalizedModels.length === 0
           ? ['EmbeddingChunk rows exist but embeddingModel metadata is missing.']
+          : []),
+        ...(normalizedDimensions.length === 0
+          ? ['EmbeddingChunk rows exist but embeddingDimensions metadata is missing.']
+          : []),
+        ...(normalizedConfigHashes.length === 0
+          ? ['EmbeddingChunk rows exist but embeddingConfigHash metadata is missing.']
           : []),
         ...(normalizedChunkerVersions.length === 0
           ? ['EmbeddingChunk rows exist but chunkerVersion metadata is missing.']
@@ -172,7 +235,11 @@ export function classifySnapshotCandidate(
       commitSha: input.commitSha,
       indexStatus: input.indexStatus,
       chunkCount: input.chunkCount,
+      embeddingProfileIds: normalizedProfileIds,
+      embeddingProviders: normalizedProviders,
       embeddingModels: normalizedModels,
+      embeddingDimensions: normalizedDimensions,
+      embeddingConfigHashes: normalizedConfigHashes,
       chunkerVersions: normalizedChunkerVersions,
       classification: 'VECTOR_READY_CANDIDATE',
       usableFor: ['VECTOR_BASELINE', 'CURRENT_HYBRID_EXPORT'],
@@ -187,7 +254,11 @@ export function classifySnapshotCandidate(
     commitSha: input.commitSha,
     indexStatus: input.indexStatus,
     chunkCount: input.chunkCount,
+    embeddingProfileIds: normalizedProfileIds,
+    embeddingProviders: normalizedProviders,
     embeddingModels: normalizedModels,
+    embeddingDimensions: normalizedDimensions,
+    embeddingConfigHashes: normalizedConfigHashes,
     chunkerVersions: normalizedChunkerVersions,
     classification: 'NOT_READY',
     usableFor: ['CURRENT_HYBRID_EXPORT'],
@@ -333,7 +404,11 @@ export async function inspectDbSnapshotStateReadOnly(): Promise<DbSnapshotInspec
       prisma.embeddingChunk.findMany({
         select: {
           snapshotId: true,
+          embeddingProfileId: true,
+          embeddingProvider: true,
           embeddingModel: true,
+          embeddingDimensions: true,
+          embeddingConfigHash: true,
           chunkerVersion: true,
         },
       }),
@@ -343,7 +418,11 @@ export async function inspectDbSnapshotStateReadOnly(): Promise<DbSnapshotInspec
       string,
       {
         chunkCount: number;
+        embeddingProfileIds: string[];
+        embeddingProviders: string[];
         embeddingModels: string[];
+        embeddingDimensions: number[];
+        embeddingConfigHashes: string[];
         chunkerVersions: string[];
       }
     >();
@@ -353,12 +432,28 @@ export async function inspectDbSnapshotStateReadOnly(): Promise<DbSnapshotInspec
         chunkStateBySnapshot.get(row.snapshotId) ??
         {
           chunkCount: 0,
+          embeddingProfileIds: [],
+          embeddingProviders: [],
           embeddingModels: [],
+          embeddingDimensions: [],
+          embeddingConfigHashes: [],
           chunkerVersions: [],
         };
 
       current.chunkCount += 1;
+      if (row.embeddingProfileId) {
+        current.embeddingProfileIds.push(row.embeddingProfileId);
+      }
+      if (row.embeddingProvider) {
+        current.embeddingProviders.push(row.embeddingProvider);
+      }
       current.embeddingModels.push(row.embeddingModel);
+      if (typeof row.embeddingDimensions === 'number') {
+        current.embeddingDimensions.push(row.embeddingDimensions);
+      }
+      if (row.embeddingConfigHash) {
+        current.embeddingConfigHashes.push(row.embeddingConfigHash);
+      }
       if (row.chunkerVersion) {
         current.chunkerVersions.push(row.chunkerVersion);
       }
@@ -377,7 +472,11 @@ export async function inspectDbSnapshotStateReadOnly(): Promise<DbSnapshotInspec
           commitSha: snapshot.commitSha,
           indexStatus: snapshot.indexStatus,
           chunkCount: chunkState?.chunkCount ?? 0,
+          embeddingProfileIds: normalizeDistinct(chunkState?.embeddingProfileIds ?? []),
+          embeddingProviders: normalizeDistinct(chunkState?.embeddingProviders ?? []),
           embeddingModels: normalizeDistinct(chunkState?.embeddingModels ?? []),
+          embeddingDimensions: Array.from(new Set(chunkState?.embeddingDimensions ?? [])).sort((a, b) => a - b),
+          embeddingConfigHashes: normalizeDistinct(chunkState?.embeddingConfigHashes ?? []),
           chunkerVersions: normalizeDistinct(chunkState?.chunkerVersions ?? []),
         };
       }),
@@ -461,8 +560,8 @@ export function renderDbSnapshotReadinessMarkdown(params: {
     lines.push('- None');
   } else {
     lines.push(
-      '| Project | Repository | Snapshot | Commit | Index Status | Chunks | Models | Chunkers | Classification | Usable For | Warnings |',
-      '| --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- | --- |',
+      '| Project | Repository | Snapshot | Commit | Index Status | Chunks | Profiles | Providers | Models | Dims | Chunkers | Classification | Usable For | Warnings |',
+      '| --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- | --- | --- | --- | --- |',
     );
 
     for (const candidate of report.candidates) {
@@ -470,7 +569,13 @@ export function renderDbSnapshotReadinessMarkdown(params: {
         `| ${candidate.projectId} | ${candidate.repositoryId} | ${candidate.snapshotId} | ${candidate.commitSha} | ${
           candidate.indexStatus ?? 'UNKNOWN'
         } | ${candidate.chunkCount} | ${
+          candidate.embeddingProfileIds.join(', ') || 'none'
+        } | ${
+          candidate.embeddingProviders.join(', ') || 'none'
+        } | ${
           candidate.embeddingModels.join(', ') || 'none'
+        } | ${
+          candidate.embeddingDimensions.join(', ') || 'none'
         } | ${
           candidate.chunkerVersions.join(', ') || 'none'
         } | ${candidate.classification} | ${

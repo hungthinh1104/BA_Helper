@@ -37,7 +37,11 @@ describe('EmbeddingChunkRepository', () => {
       contentHash: 'hash-abc',
       tokenCount: 10,
       chunkerVersion: CHUNK_BUILDER_VERSION,
+      embeddingProfileId: 'openai-3-small-1536',
+      embeddingProvider: 'openai',
       embeddingModel: 'text-embedding-3-small',
+      embeddingDimensions: 1536,
+      embeddingConfigHash: 'config-hash-1',
       embedding: [0.1, 0.2, 0.3],
     };
 
@@ -59,6 +63,18 @@ describe('EmbeddingChunkRepository', () => {
     it('accepts chunks with CHUNK_BUILDER_VERSION set', async () => {
       await expect(repo.insertMany([baseChunk])).resolves.toBeUndefined();
     });
+
+    it('persists full embedding provenance fields', async () => {
+      await repo.insertMany([baseChunk]);
+
+      const sqlPayload = JSON.stringify(executeRawCalls[0]);
+      expect(sqlPayload).toContain('embeddingProfileId');
+      expect(sqlPayload).toContain('embeddingProvider');
+      expect(sqlPayload).toContain('embeddingDimensions');
+      expect(sqlPayload).toContain('embeddingConfigHash');
+      expect(sqlPayload).toContain('openai-3-small-1536');
+      expect(sqlPayload).toContain('config-hash-1');
+    });
   });
 
   describe('listBySnapshot', () => {
@@ -69,10 +85,12 @@ describe('EmbeddingChunkRepository', () => {
           contentHash: 'hash-1',
           artifactId: 'artifact-1',
           chunkerVersion: CHUNK_BUILDER_VERSION,
+          embeddingProfileId: 'openai-3-small-1536',
+          embeddingConfigHash: 'config-hash-1',
         },
       ]);
 
-      const result = await repo.listBySnapshot('snapshot-1', 'text-embedding-3-small');
+      const result = await repo.listBySnapshot('snapshot-1', 'openai-3-small-1536');
 
       expect(prisma.embeddingChunk.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -89,22 +107,92 @@ describe('EmbeddingChunkRepository', () => {
           contentHash: 'hash-1',
           artifactId: 'artifact-1',
           chunkerVersion: null,
+          embeddingProfileId: null,
+          embeddingConfigHash: null,
         },
       ]);
 
-      const result = await repo.listBySnapshot('snapshot-1', 'text-embedding-3-small');
+      const result = await repo.listBySnapshot('snapshot-1', 'openai-3-small-1536');
       expect(result[0].chunkerVersion).toBeNull();
     });
 
-    it('filters by snapshotId and embeddingModel', async () => {
+    it('filters by snapshotId and embeddingProfileId', async () => {
       prisma.embeddingChunk.findMany.mockResolvedValue([]);
-      await repo.listBySnapshot('snapshot-1', 'text-embedding-3-small');
+      await repo.listBySnapshot('snapshot-1', 'openai-3-small-1536');
 
       expect(prisma.embeddingChunk.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { snapshotId: 'snapshot-1', embeddingModel: 'text-embedding-3-small' },
+          where: {
+            snapshotId: 'snapshot-1',
+            embeddingProfileId: 'openai-3-small-1536',
+          },
         }),
       );
+    });
+  });
+
+  describe('listForReuseByArtifacts', () => {
+    it('filters by embeddingProfileId and chunkerVersion', async () => {
+      prisma.embeddingChunk.findMany.mockResolvedValue([]);
+
+      await repo.listForReuseByArtifacts({
+        snapshotId: 'snapshot-1',
+        artifactIds: ['artifact-1'],
+        embeddingProfileId: 'google-gemini-001-1536',
+        chunkerVersion: CHUNK_BUILDER_VERSION,
+      });
+
+      expect(prisma.embeddingChunk.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            snapshotId: 'snapshot-1',
+            artifactId: { in: ['artifact-1'] },
+            embeddingProfileId: 'google-gemini-001-1536',
+            chunkerVersion: CHUNK_BUILDER_VERSION,
+          },
+        }),
+      );
+    });
+  });
+
+  describe('copyChunk', () => {
+    const copyParams = {
+      baseSnapshotId: 'base-snapshot',
+      oldArtifactId: 'old-artifact',
+      embeddingProfileId: 'google-gemini-001-1536',
+      embeddingProvider: 'google',
+      embeddingModel: 'gemini-embedding-001',
+      embeddingDimensions: 1536,
+      embeddingConfigHash: 'config-hash-google',
+      chunkerVersion: CHUNK_BUILDER_VERSION,
+      contentHash: 'hash-abc',
+      tenantId: 'tenant-1',
+      projectId: 'project-1',
+      repositoryId: 'repo-1',
+      targetSnapshotId: 'target-snapshot',
+      newArtifactId: 'new-artifact',
+      newStableChunkId: 'target:artifact:METHOD_BODY',
+      commitSha: 'abc123',
+      filePath: 'src/booking.ts',
+      symbolName: 'BookingService.cancel',
+      artifactType: 'METHOD_BODY',
+      content: 'cancel() {}',
+      tokenCount: 10,
+    };
+
+    it('copies only same profile/config provenance', async () => {
+      await repo.copyChunk(copyParams);
+
+      const sqlPayload = JSON.stringify(executeRawCalls[0]);
+      expect(sqlPayload).toContain('embeddingProfileId');
+      expect(sqlPayload).toContain('embeddingConfigHash');
+      expect(sqlPayload).toContain('google-gemini-001-1536');
+      expect(sqlPayload).toContain('config-hash-google');
+    });
+
+    it('returns false when source chunk is missing', async () => {
+      prisma.$executeRaw.mockResolvedValueOnce(0);
+      await expect(repo.copyChunk(copyParams)).resolves.toBe(false);
     });
   });
 

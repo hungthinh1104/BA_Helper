@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { AppError } from '../../../shared/app-error';
 import { EmbeddingChunkRepository } from '../infrastructure/embedding-chunk.repository';
 import { EmbeddingProvider } from '../domain/embedding-provider.interface';
+import { buildEmbeddingConfigHash } from '../domain/embedding-profile-registry';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ArtifactChunkBuilder, CHUNK_BUILDER_VERSION } from '../domain/artifact-chunk.builder';
 import { matchChunksForReuse, CurrentChunkItem, MatchResult } from '../domain/embedding-reuse-matcher';
@@ -55,7 +56,7 @@ export class EmbedSnapshotArtifactsUseCase {
       // Idempotency guard: skip chunks already persisted for this snapshot
       const existingChunks = await this.chunkRepo.listBySnapshot(
         params.snapshotId,
-        this.embeddingProvider.profile.model,
+        this.embeddingProvider.profile.id,
       );
       const existingByStableId = new Map<string, string>(
         existingChunks.map((c) => [c.stableChunkId, c.contentHash]),
@@ -122,7 +123,11 @@ export class EmbedSnapshotArtifactsUseCase {
         const copied = await this.chunkRepo.copyChunk({
           baseSnapshotId: reusePlan!.baseSnapshotId!,
           oldArtifactId: previousArtifactId,
+          embeddingProfileId: this.embeddingProvider.profile.id,
+          embeddingProvider: this.embeddingProvider.profile.provider,
           embeddingModel: this.embeddingProvider.profile.model,
+          embeddingDimensions: this.embeddingProvider.profile.dimensions,
+          embeddingConfigHash: buildEmbeddingConfigHash(this.embeddingProvider.profile),
           chunkerVersion: CHUNK_BUILDER_VERSION,
           contentHash: current.contentHash,
           tenantId: projectId,
@@ -171,7 +176,11 @@ export class EmbedSnapshotArtifactsUseCase {
           contentHash: item.contentHash,
           tokenCount: Math.ceil(item.redactedContent.length / 4),
           chunkerVersion: item.chunkerVersion,
+          embeddingProfileId: result.profileId,
+          embeddingProvider: result.provider,
           embeddingModel: result.model,
+          embeddingDimensions: result.dimensions,
+          embeddingConfigHash: result.configHash,
           embedding: result.embeddings[idx],
         }));
 
@@ -185,7 +194,11 @@ export class EmbedSnapshotArtifactsUseCase {
         mode: 'SNAPSHOT_SCOPED_COPY',
         baseSnapshotId,
         targetSnapshotId: params.snapshotId,
+        embeddingProfileId: this.embeddingProvider.profile.id,
+        embeddingProvider: this.embeddingProvider.profile.provider,
         embeddingModel: this.embeddingProvider.profile.model,
+        embeddingDimensions: this.embeddingProvider.profile.dimensions,
+        embeddingConfigHash: buildEmbeddingConfigHash(this.embeddingProvider.profile),
         chunkerVersion: CHUNK_BUILDER_VERSION,
         copiedChunkCount: copiedCount,
         generatedChunkCount: generatedCount,
@@ -290,14 +303,19 @@ export class EmbedSnapshotArtifactsUseCase {
     const previousChunks = await this.chunkRepo.listForReuseByArtifacts({
       snapshotId: baseSnapshotId,
       artifactIds: candidateArtifactIds,
-      embeddingModel: this.embeddingProvider.profile.model,
+      embeddingProfileId: this.embeddingProvider.profile.id,
       chunkerVersion: CHUNK_BUILDER_VERSION,
     });
 
     const previousChunkByArtifactId = new Map(
       previousChunks.map((c) => [
         c.artifactId,
-        { contentHash: c.contentHash, chunkerVersion: c.chunkerVersion, embeddingModel: c.embeddingModel },
+        {
+          contentHash: c.contentHash,
+          chunkerVersion: c.chunkerVersion,
+          embeddingProfileId: c.embeddingProfileId,
+          embeddingConfigHash: c.embeddingConfigHash,
+        },
       ]),
     );
 
@@ -307,7 +325,8 @@ export class EmbedSnapshotArtifactsUseCase {
       previousChunkByArtifactId,
       currentArtifactContentHashByKey,
       previousArtifactContentHashByKey,
-      targetEmbeddingModel: this.embeddingProvider.profile.model,
+      targetEmbeddingProfileId: this.embeddingProvider.profile.id,
+      targetEmbeddingConfigHash: buildEmbeddingConfigHash(this.embeddingProvider.profile),
       versionChangeBlocked: reusePlan.reuseSafety === 'VERSION_CHANGED_REVIEW_REQUIRED',
     });
   }

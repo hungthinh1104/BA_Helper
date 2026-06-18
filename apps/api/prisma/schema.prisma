@@ -733,18 +733,23 @@ model EmbeddingChunk {
   tokenCount     Int
   chunkerVersion String?
 
-  embeddingModel String
-  embedding      Unsupported("vector(1536)")
+  embeddingProfileId   String?
+  embeddingProvider    String?
+  embeddingModel       String
+  embeddingDimensions  Int?
+  embeddingConfigHash  String?
+  embedding            Unsupported("vector(1536)")
 
   snapshot  RepositorySnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
   artifact  CodeArtifact?      @relation(fields: [artifactId], references: [id], onDelete: Cascade)
   createdAt DateTime           @default(now())
 
-  @@unique([snapshotId, stableChunkId, embeddingModel])
+  @@unique([snapshotId, stableChunkId, embeddingProfileId])
   @@index([tenantId])
   @@index([projectId])
   @@index([repositoryId])
   @@index([snapshotId])
   @@index([artifactId])
   @@index([commitSha])
+  @@index([snapshotId, embeddingProfileId])
 }

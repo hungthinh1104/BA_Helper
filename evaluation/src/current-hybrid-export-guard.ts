@@ -10,7 +10,9 @@ export type CurrentHybridExportGuardInput = {
   snapshotCommitSha?: string | null;
   snapshotIndexStatus?: string | null;
   chunkCount: number;
+  embeddingProfileIds: readonly string[];
   embeddingModels: readonly string[];
+  embeddingConfigHashes: readonly string[];
   queryProviderName?: string | null;
   queryEmbeddingModel?: string | null;
   allowRealQueryEmbedding: boolean;
@@ -70,6 +72,14 @@ function hasOnlyFakeArtifactEmbeddings(embeddingModels: readonly string[]): bool
     .filter((value) => value.length > 0);
 
   return normalized.length > 0 && normalized.every((value) => value === 'fake-embedding');
+}
+
+function hasMissingArtifactProfileProvenance(
+  chunkCount: number,
+  embeddingProfileIds: readonly string[],
+  embeddingConfigHashes: readonly string[],
+): boolean {
+  return chunkCount > 0 && (embeddingProfileIds.length === 0 || embeddingConfigHashes.length === 0);
 }
 
 function isFakeQueryProvider(providerName: string | null | undefined): boolean {
@@ -135,6 +145,18 @@ export function evaluateCurrentHybridExportGuard(
 
   if (hasOnlyFakeArtifactEmbeddings(input.embeddingModels)) {
     blockers.push('Artifact embedding model is fake-embedding only. Benchmark mode requires real persisted embeddings.');
+  }
+
+  if (
+    hasMissingArtifactProfileProvenance(
+      input.chunkCount,
+      input.embeddingProfileIds,
+      input.embeddingConfigHashes,
+    )
+  ) {
+    blockers.push(
+      'Artifact embeddings are legacy profile-missing rows. Benchmark mode requires embeddingProfileId and embeddingConfigHash provenance.',
+    );
   }
 
   if (isFakeQueryProvider(input.queryProviderName)) {

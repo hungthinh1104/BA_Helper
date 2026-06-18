@@ -14,7 +14,11 @@ export type RagExportSnapshotMetadata = {
 
 export type RagExportEmbeddingState = {
   chunkCount: number;
+  embeddingProfileIds: string[];
+  embeddingProviders: string[];
   embeddingModels: string[];
+  embeddingDimensions: number[];
+  embeddingConfigHashes: string[];
   chunkerVersions: string[];
 };
 
@@ -64,16 +68,36 @@ export async function readEmbeddingState(params: {
       snapshotId: params.snapshotId,
     },
     select: {
+      embeddingProfileId: true,
+      embeddingProvider: true,
       embeddingModel: true,
+      embeddingDimensions: true,
+      embeddingConfigHash: true,
       chunkerVersion: true,
     },
   });
 
   return {
     chunkCount: rows.length,
+    embeddingProfileIds: Array.from(
+      new Set(rows.map((row) => row.embeddingProfileId).filter(Boolean)),
+    ).sort() as string[],
+    embeddingProviders: Array.from(
+      new Set(rows.map((row) => row.embeddingProvider).filter(Boolean)),
+    ).sort() as string[],
     embeddingModels: Array.from(
       new Set(rows.map((row) => row.embeddingModel).filter(Boolean)),
     ).sort(),
+    embeddingDimensions: Array.from(
+      new Set(
+        rows
+          .map((row) => row.embeddingDimensions)
+          .filter((value): value is number => typeof value === 'number'),
+      ),
+    ).sort((a, b) => a - b),
+    embeddingConfigHashes: Array.from(
+      new Set(rows.map((row) => row.embeddingConfigHash).filter(Boolean)),
+    ).sort() as string[],
     chunkerVersions: Array.from(
       new Set(
         rows

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { EmbedSnapshotArtifactsUseCase } from '../../apps/api/src/modules/embedding/application/embed-snapshot-artifacts.usecase';
 import { FakeEmbeddingProvider } from '../../apps/api/src/modules/embedding/infrastructure/fake-embedding.provider';
 import { ArtifactChunkBuilder, CHUNK_BUILDER_VERSION } from '../../apps/api/src/modules/embedding/domain/artifact-chunk.builder';
+import { buildEmbeddingConfigHash } from '../../apps/api/src/modules/embedding/domain/embedding-profile-registry';
 import { createHash } from 'node:crypto';
 
 const SNAPSHOT_NO_PLAN = {
@@ -182,7 +183,8 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
         artifactId: 'old-art-1',
         contentHash,
         chunkerVersion: CHUNK_BUILDER_VERSION,
-        embeddingModel: 'fake',
+        embeddingProfileId: 'fake-1536',
+        embeddingConfigHash: buildEmbeddingConfigHash(provider.profile),
       },
     ]);
     chunkRepoMock.copyChunk.mockResolvedValue(true);
@@ -214,7 +216,11 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
       .mockResolvedValueOnce([{ id: 'old-art-1', artifactKey: ARTIFACT.artifactKey, contentHash: 'artifact-hash-1' }]);
     chunkRepoMock.listBySnapshot.mockResolvedValue([]);
     chunkRepoMock.listForReuseByArtifacts.mockResolvedValue([{
-      artifactId: 'old-art-1', contentHash, chunkerVersion: CHUNK_BUILDER_VERSION, embeddingModel: 'fake',
+      artifactId: 'old-art-1',
+      contentHash,
+      chunkerVersion: CHUNK_BUILDER_VERSION,
+      embeddingProfileId: 'fake-1536',
+      embeddingConfigHash: buildEmbeddingConfigHash(provider.profile),
     }]);
 
     await useCase.execute({ snapshotId: 'snap-1' });
@@ -245,7 +251,11 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
       .mockResolvedValueOnce([{ id: 'old-art-1', artifactKey: ARTIFACT.artifactKey, contentHash: 'artifact-hash-1' }]);
     chunkRepoMock.listBySnapshot.mockResolvedValue([]);
     chunkRepoMock.listForReuseByArtifacts.mockResolvedValue([{
-      artifactId: 'old-art-1', contentHash, chunkerVersion: CHUNK_BUILDER_VERSION, embeddingModel: 'fake',
+      artifactId: 'old-art-1',
+      contentHash,
+      chunkerVersion: CHUNK_BUILDER_VERSION,
+      embeddingProfileId: 'fake-1536',
+      embeddingConfigHash: buildEmbeddingConfigHash(provider.profile),
     }]);
     chunkRepoMock.copyChunk.mockResolvedValue(false); // source missing → fallback
 
@@ -285,6 +295,11 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
     const execSummary = storedDiagnostics?.find((d: any) => d.code === 'EMBEDDING_REUSE_EXECUTION_SUMMARY');
     expect(execSummary).toBeDefined();
     expect(execSummary.payload.mode).toBe('SNAPSHOT_SCOPED_COPY');
+    expect(execSummary.payload.embeddingProfileId).toBe('fake-1536');
+    expect(execSummary.payload.embeddingProvider).toBe('fake');
+    expect(execSummary.payload.embeddingModel).toBe('fake-embedding');
+    expect(execSummary.payload.embeddingDimensions).toBe(1536);
+    expect(execSummary.payload.embeddingConfigHash).toBeDefined();
     expect(execSummary.payload).not.toHaveProperty('embedding'); // diagnostic contains no vector
     expect(execSummary.payload).not.toHaveProperty('contentHash'); // diagnostic contains no hash
     expect(execSummary.payload).not.toHaveProperty('source'); // diagnostic contains no raw source

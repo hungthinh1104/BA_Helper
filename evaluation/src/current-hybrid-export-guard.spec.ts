@@ -11,7 +11,9 @@ describe('current hybrid export guard', () => {
     snapshotCommitSha: 'abc123',
     snapshotIndexStatus: 'VECTOR_READY',
     chunkCount: 31,
+    embeddingProfileIds: ['google-gemini-001-1536'],
     embeddingModels: ['gemini-embedding-001'],
+    embeddingConfigHashes: ['config-hash-google'],
     queryProviderName: 'google',
     queryEmbeddingModel: 'gemini-embedding-001',
     allowRealQueryEmbedding: true,
@@ -56,6 +58,16 @@ describe('current hybrid export guard', () => {
 
     expect(result.allowed).toBe(false);
     expect(result.blockers.join('\n')).toMatch(/fake-embedding/i);
+  });
+
+  it('rejects legacy artifact embeddings without profile provenance', () => {
+    const result = evaluateCurrentHybridExportGuard({
+      ...baseInput,
+      embeddingProfileIds: [],
+    });
+
+    expect(result.allowed).toBe(false);
+    expect(result.blockers.join('\n')).toMatch(/embeddingProfileId and embeddingConfigHash provenance/i);
   });
 
   it('rejects non vector ready snapshots', () => {

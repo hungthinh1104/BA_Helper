@@ -24,7 +24,8 @@ export type PreviousArtifact = {
 export type PreviousChunk = {
   contentHash: string;
   chunkerVersion: string | null;
-  embeddingModel: string;
+  embeddingProfileId: string | null;
+  embeddingConfigHash: string | null;
 };
 
 export type ReuseCandidate = {
@@ -61,7 +62,8 @@ export type MatchResult = {
  *  - both artifact contentHashes exist and match
  *  - previous chunk exists for the previous artifact
  *  - previous chunk.chunkerVersion === CHUNK_BUILDER_VERSION (no legacy/null)
- *  - previous chunk.embeddingModel === targetEmbeddingModel
+ *  - previous chunk.embeddingProfileId === targetEmbeddingProfileId
+ *  - previous chunk.embeddingConfigHash === targetEmbeddingConfigHash
  *  - previous chunk.contentHash === current built chunk contentHash
  *
  * Blocked items (version/model/hash mismatch) fall back to normal generation.
@@ -73,7 +75,8 @@ export function matchChunksForReuse(params: {
   previousChunkByArtifactId: Map<string, PreviousChunk>;
   currentArtifactContentHashByKey: Map<string, string | null>;
   previousArtifactContentHashByKey: Map<string, string | null>;
-  targetEmbeddingModel: string;
+  targetEmbeddingProfileId: string;
+  targetEmbeddingConfigHash: string;
   versionChangeBlocked: boolean;
 }): MatchResult {
   const {
@@ -82,7 +85,8 @@ export function matchChunksForReuse(params: {
     previousChunkByArtifactId,
     currentArtifactContentHashByKey,
     previousArtifactContentHashByKey,
-    targetEmbeddingModel,
+    targetEmbeddingProfileId,
+    targetEmbeddingConfigHash,
     versionChangeBlocked,
   } = params;
 
@@ -126,9 +130,15 @@ export function matchChunksForReuse(params: {
       continue;
     }
 
-    if (prevChunk.embeddingModel !== targetEmbeddingModel) {
+    if (prevChunk.embeddingProfileId !== targetEmbeddingProfileId) {
       counts.modelMismatchChunkCount++;
       blocked.push({ current: item, reason: 'MODEL_MISMATCH' });
+      continue;
+    }
+
+    if (!prevChunk.embeddingConfigHash || prevChunk.embeddingConfigHash !== targetEmbeddingConfigHash) {
+      counts.modelMismatchChunkCount++;
+      blocked.push({ current: item, reason: 'CONFIG_HASH_MISMATCH' });
       continue;
     }
 
