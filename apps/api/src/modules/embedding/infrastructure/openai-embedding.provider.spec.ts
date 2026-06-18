@@ -11,10 +11,12 @@ jest.mock('openai', () => ({
 
 import { resolveEmbeddingProfile } from '../domain/embedding-profile-registry';
 import { OpenAiEmbeddingProvider } from './openai-embedding.provider';
+import { QueryEmbeddingCacheService } from '../application/query-embedding-cache.service';
 
 describe('OpenAiEmbeddingProvider', () => {
   beforeEach(() => {
     mockCreate.mockReset();
+    QueryEmbeddingCacheService.clear();
   });
 
   it('passes profile model and dimensions explicitly', async () => {
@@ -59,6 +61,25 @@ describe('OpenAiEmbeddingProvider', () => {
       }),
     ).rejects.toMatchObject({
       code: 'EMBEDDING_DIMENSION_MISMATCH',
+    });
+  });
+
+  it('retries rate limits and throws EMBEDDING_RATE_LIMITED after exhaustion', async () => {
+    const profile = resolveEmbeddingProfile('openai-3-small-1536');
+    mockCreate.mockRejectedValue({
+      status: 429,
+      message: 'rate limit hit',
+    });
+    const provider = new OpenAiEmbeddingProvider({ ...profile, maxRetries: 1 });
+
+    await expect(
+      provider.embed({
+        texts: ['booking validation change'],
+        profile: { ...profile, maxRetries: 1 },
+        inputRole: 'QUERY',
+      }),
+    ).rejects.toMatchObject({
+      code: 'EMBEDDING_RATE_LIMITED',
     });
   });
 });

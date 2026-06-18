@@ -11,6 +11,7 @@ jest.mock('@google/generative-ai', () => ({
 
 import { resolveEmbeddingProfile } from '../domain/embedding-profile-registry';
 import { GoogleEmbeddingProvider } from './google-embedding.provider';
+import { QueryEmbeddingCacheService } from '../application/query-embedding-cache.service';
 
 describe('GoogleEmbeddingProvider', () => {
   const originalEnv = process.env;
@@ -19,6 +20,7 @@ describe('GoogleEmbeddingProvider', () => {
     process.env = { ...originalEnv, GEMINI_API_KEY: 'test-key' };
     mockEmbedContent.mockReset();
     mockGetGenerativeModel.mockClear();
+    QueryEmbeddingCacheService.clear();
   });
 
   afterAll(() => {
@@ -87,6 +89,25 @@ describe('GoogleEmbeddingProvider', () => {
       }),
     ).rejects.toMatchObject({
       code: 'EMBEDDING_DIMENSION_MISMATCH',
+    });
+  });
+
+  it('retries rate limits and throws EMBEDDING_RATE_LIMITED after exhaustion', async () => {
+    const profile = resolveEmbeddingProfile('google-gemini-001-1536');
+    mockEmbedContent.mockRejectedValue({
+      status: 429,
+      message: 'Too Many Requests',
+    });
+    const provider = new GoogleEmbeddingProvider({ ...profile, maxRetries: 1 });
+
+    await expect(
+      provider.embed({
+        texts: ['booking query'],
+        profile: { ...profile, maxRetries: 1 },
+        inputRole: 'QUERY',
+      }),
+    ).rejects.toMatchObject({
+      code: 'EMBEDDING_RATE_LIMITED',
     });
   });
 });

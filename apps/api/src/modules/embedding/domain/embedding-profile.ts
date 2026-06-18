@@ -15,6 +15,7 @@ export type EmbeddingProfile = {
   maxInputTokens?: number;
   batchSize: number;
   maxConcurrency: number;
+  maxRetries?: number;
   isFake: boolean;
   benchmarkAllowed: boolean;
 };

@@ -140,6 +140,12 @@ So Phase 4D could not legally switch to a smaller aligned case without either:
   - quota metric: `generativelanguage.googleapis.com/embed_content_free_tier_requests`
 - The runtime attempted embeddings for `807` texts and the snapshot ended at:
   - `indexStatus = VECTOR_FAILED`
+- Runtime hardening now adds:
+  - bounded retry with exponential backoff and `Retry-After` support
+  - provider-level concurrency limits from the embedding profile
+  - explicit `EMBEDDING_RATE_LIMITED` surfacing after retry exhaustion
+- This reduces ambiguity, but it does **not** guarantee the large Nest case can
+  finish under free-tier quota.
 
 ## Important Boundary
 

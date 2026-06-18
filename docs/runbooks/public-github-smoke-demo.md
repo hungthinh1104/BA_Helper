@@ -154,6 +154,11 @@ report finalization/fetch failed
 temp workspace cleanup leak detected
 ```
 
+For real embedding runs, a repeated `429 Too Many Requests` / quota response
+should now surface as `EMBEDDING_RATE_LIMITED` after bounded retries. Query
+embedding reuse is query-only and keyed by embedding profile/config plus hashed
+text; it does not change artifact indexing semantics.
+
 ## Diagnostics Triage
 
 If the smoke run fails:

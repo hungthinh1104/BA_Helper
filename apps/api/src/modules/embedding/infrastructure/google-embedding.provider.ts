@@ -8,12 +8,18 @@ import {
   buildEmbeddingConfigHash,
   resolveEmbeddingProfile,
 } from '../domain/embedding-profile-registry';
+import {
+  mapWithConcurrency,
+  withEmbeddingRetry,
+} from '../domain/embedding-retry-policy';
+import { QueryEmbeddingCacheService } from '../application/query-embedding-cache.service';
 
 @Injectable()
 export class GoogleEmbeddingProvider extends EmbeddingProvider {
   readonly providerName = 'google';
   private readonly client: GoogleGenerativeAI;
   private readonly logger = new Logger(GoogleEmbeddingProvider.name);
+  private readonly queryCache = new QueryEmbeddingCacheService();
   readonly profile: EmbeddingProfile;
 
   constructor(profile = resolveEmbeddingProfile('google-gemini-001-1536')) {
@@ -38,27 +44,23 @@ export class GoogleEmbeddingProvider extends EmbeddingProvider {
         ? request.profile.queryTaskType
         : request.profile.documentTaskType;
 
+    const configHash = buildEmbeddingConfigHash(request.profile);
     let embeddingsResult: number[][] = [];
     try {
       this.logger.log(
         `Generating embeddings for ${request.texts.length} texts using model ${modelName} (Targeting ${request.profile.dimensions}d)`,
       );
 
-      for (let i = 0; i < request.texts.length; i += request.profile.batchSize) {
-        const batch = request.texts.slice(i, i + request.profile.batchSize);
-        const results = await Promise.all(
-          batch.map((text) =>
-            model.embedContent({
-              content: { role: 'user', parts: [{ text }] },
-              outputDimensionality:
-                request.profile.outputDimensionality ?? request.profile.dimensions,
-              taskType,
-            } as any),
-          ),
-        );
-        embeddingsResult.push(...results.map((result) => result.embedding.values));
-      }
+      embeddingsResult = await this.embedTexts({
+        model,
+        request,
+        taskType,
+        configHash,
+      });
     } catch (error: any) {
+      if (error instanceof AppError) {
+        throw error;
+      }
       this.logger.error(
         `Failed to generate embeddings: ${error.message}`,
         error.stack,
@@ -90,10 +92,82 @@ export class GoogleEmbeddingProvider extends EmbeddingProvider {
       model: modelName,
       dimensions: request.profile.dimensions,
       profileId: request.profile.id,
-      configHash: buildEmbeddingConfigHash(request.profile),
+      configHash,
       normalized: request.profile.normalize,
       tokenUsage: undefined,
     };
+  }
+
+  private async embedTexts(params: {
+    model: ReturnType<GoogleGenerativeAI['getGenerativeModel']>;
+    request: EmbeddingRequest;
+    taskType?: string;
+    configHash: string;
+  }): Promise<number[][]> {
+    const results = new Array<number[]>(params.request.texts.length);
+    const missing: Array<{ index: number; text: string }> = [];
+
+    if (params.request.inputRole === 'QUERY') {
+      for (const [index, text] of params.request.texts.entries()) {
+        const cached = this.queryCache.get({
+          profile: params.request.profile,
+          configHash: params.configHash,
+          text,
+          inputRole: 'QUERY',
+        });
+        if (cached) {
+          results[index] = cached;
+          continue;
+        }
+        missing.push({ index, text });
+      }
+    } else {
+      missing.push(
+        ...params.request.texts.map((text, index) => ({ index, text })),
+      );
+    }
+
+    for (let i = 0; i < missing.length; i += params.request.profile.batchSize) {
+      const batch = missing.slice(i, i + params.request.profile.batchSize);
+      const batchResults = await mapWithConcurrency(
+        batch,
+        params.request.profile.maxConcurrency,
+        ({ text }) =>
+          withEmbeddingRetry(
+            {
+              provider: this.providerName,
+              model: params.request.profile.model,
+              profile: params.request.profile,
+              logger: (message) => this.logger.warn(message),
+            },
+            async () => {
+              const result = await params.model.embedContent({
+                content: { role: 'user', parts: [{ text }] },
+                outputDimensionality:
+                  params.request.profile.outputDimensionality ??
+                  params.request.profile.dimensions,
+                taskType: params.taskType,
+              } as any);
+              return result.embedding.values;
+            },
+          ),
+      );
+
+      batch.forEach(({ index, text }, batchIndex) => {
+        results[index] = batchResults[batchIndex];
+        if (params.request.inputRole === 'QUERY') {
+          this.queryCache.set({
+            profile: params.request.profile,
+            configHash: params.configHash,
+            text,
+            inputRole: 'QUERY',
+            embedding: batchResults[batchIndex],
+          });
+        }
+      });
+    }
+
+    return results;
   }
 
   private assertProfile(profile: EmbeddingProfile): void {

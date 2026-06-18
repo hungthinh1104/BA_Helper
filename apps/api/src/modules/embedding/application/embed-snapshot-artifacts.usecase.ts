@@ -251,9 +251,37 @@ export class EmbedSnapshotArtifactsUseCase {
         },
       });
     } catch (error) {
+      const existingDiagnostics = Array.isArray(snapshot.diagnostics)
+        ? (snapshot.diagnostics as unknown as DiagnosticItem[])
+        : [];
+      const failureMessage =
+        error instanceof AppError
+          ? `${error.code}: ${error.message}`
+          : `EMBEDDING_PROVIDER_FAILED: ${error instanceof Error ? error.message : String(error)}`;
+      const failurePayload = {
+        provider: this.embeddingProvider.profile.provider,
+        model: this.embeddingProvider.profile.model,
+        profileId: this.embeddingProvider.profile.id,
+        dimensions: this.embeddingProvider.profile.dimensions,
+        retryable:
+          error instanceof AppError && error.code === 'EMBEDDING_RATE_LIMITED',
+      };
+
       await this.prisma.repositorySnapshot.update({
         where: { id: snapshot.id },
-        data: { indexStatus: 'VECTOR_FAILED' },
+        data: {
+          indexStatus: 'VECTOR_FAILED',
+          diagnostics: [
+            ...existingDiagnostics,
+            {
+              code: 'EMBEDDING_INDEX_FAILURE',
+              severity: 'ERROR',
+              message: failureMessage,
+              category: 'SCANNER',
+              payload: failurePayload as Record<string, unknown>,
+            },
+          ] as unknown as import('@prisma/client').Prisma.InputJsonValue,
+        },
       });
       throw error;
     }

@@ -56,6 +56,7 @@ export type AppErrorCode =
   | 'AI_PROVIDER_RATE_LIMITED'
   | 'AI_PROVIDER_TIMEOUT'
   | 'AI_PROVIDER_AUTH_FAILED'
+  | 'EMBEDDING_RATE_LIMITED'
   | 'EMBEDDING_PROVIDER_FAILED'
   | 'EMBEDDING_EMPTY_RESPONSE'
   | 'INVALID_REVIEW_NOTE_TARGET'
@@ -111,7 +112,9 @@ export class AppError extends Error {
   constructor(
     public readonly code: AppErrorCode,
     message: string,
+    public readonly details?: Record<string, unknown>,
   ) {
     super(message);
+    this.name = 'AppError';
   }
 }

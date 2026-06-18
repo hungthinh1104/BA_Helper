@@ -140,9 +140,12 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
     jest.spyOn(provider, 'embed').mockRejectedValue(new Error('API Down'));
 
     await expect(useCase.execute({ snapshotId: 'snap-1' })).rejects.toThrow('API Down');
-    expect(prismaMock.repositorySnapshot.update).toHaveBeenCalledWith({
-      where: { id: 'snap-1' }, data: { indexStatus: 'VECTOR_FAILED' },
-    });
+    expect(prismaMock.repositorySnapshot.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'snap-1' },
+        data: expect.objectContaining({ indexStatus: 'VECTOR_FAILED' }),
+      }),
+    );
   });
 
   // ── Reuse path ───────────────────────────────────────────────────────────
