@@ -118,6 +118,10 @@ function categorizeObservedFailures(params: {
     params.evaluationCase.candidateArtifacts.map((artifact) => artifact.filePath),
   );
 
+  if (params.evaluationCase.evaluationScope === 'E2E_SCANNER_COVERAGE_FAILURE') {
+    categories.push('SCANNER_MISSING_ARTIFACT');
+  }
+
   if (
     params.metrics.missedGroundTruthFiles.some(
       (filePath) => !candidateArtifactFiles.has(filePath),
@@ -181,6 +185,7 @@ function categorizeObservedFailures(params: {
 }
 
 function buildObservedExplanation(params: {
+  evaluationCase: EvaluationCase;
   outcome: FailureOutcome;
   metrics: CaseMetrics;
   methodCase: NormalizedResultMethod['cases'][number];
@@ -199,6 +204,11 @@ function buildObservedExplanation(params: {
   }
 
   const parts: string[] = [];
+  if (params.evaluationCase.evaluationScope === 'E2E_SCANNER_COVERAGE_FAILURE') {
+    parts.push(
+      'This case is labeled as an end-to-end scanner coverage failure, so retrieval metrics must not be read as clean retrieval-only performance.',
+    );
+  }
   if (params.metrics.hitGroundTruthFiles.length > 0) {
     parts.push(
       `Lexical ranking retrieved ${params.metrics.hitGroundTruthFiles.length} ground-truth file(s).`,
@@ -304,6 +314,7 @@ function analyzeMethod(params: {
       topRankedFiles: methodCase.rankedResults.map((result) => result.filePath),
       observedFailureCategories,
       observedExplanation: buildObservedExplanation({
+        evaluationCase,
         outcome,
         metrics,
         methodCase,

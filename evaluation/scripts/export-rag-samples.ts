@@ -1,4 +1,4 @@
-import { writeFileSync } from 'fs';
+import { existsSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 import { ArtifactRepository } from '../../apps/api/src/modules/artifact/infrastructure/artifact.repository';
 import { FakeEmbeddingProvider } from '../../apps/api/src/modules/embedding/infrastructure/fake-embedding.provider';
@@ -14,7 +14,7 @@ import {
 import { GraphRepository } from '../../apps/api/src/modules/graph/infrastructure/graph.repository';
 import { PrismaService } from '../../apps/api/src/modules/prisma/prisma.service';
 import { HybridRetrievalService } from '../../apps/api/src/modules/retrieval/application/hybrid-retrieval.service';
-import { loadDataset, writeJsonFile } from '../io';
+import { loadDataset, readJsonFile, resolveRepoPath, writeJsonFile } from '../io';
 import {
   evaluateCurrentHybridExportGuard,
   getCurrentHybridOutputTargets,
@@ -84,6 +84,13 @@ type RagSampleExport = {
   warnings: string[];
 };
 
+type CaseSnapshotOverridesFile = {
+  mappings: Array<{
+    caseId: string;
+    embeddingProfileId?: string;
+  }>;
+};
+
 function parseArg(flag: string): string | undefined {
   const index = process.argv.indexOf(flag);
   return index >= 0 ? process.argv[index + 1] : undefined;
@@ -104,6 +111,17 @@ function getRequiredCase(caseId: string): ReqImpactEvaluationCase {
   }
 
   return selectedCase;
+}
+
+function getMappedEmbeddingProfileId(caseId: string): string | undefined {
+  const path = 'evaluation/datasets/case-snapshot-overrides.v0.json';
+  if (!existsSync(resolveRepoPath(path))) {
+    return undefined;
+  }
+
+  const overrides = readJsonFile<CaseSnapshotOverridesFile>(path);
+  return overrides.mappings.find((mapping) => mapping.caseId === caseId)
+    ?.embeddingProfileId;
 }
 
 function buildRunId(mode: ExportMode, caseId: string): string {
@@ -344,6 +362,7 @@ async function runCurrentHybridMode(params: {
   projectId: string;
   repositoryId: string;
   snapshotId: string;
+  embeddingArtifactProfileId?: string;
   topKLimit: number;
 }): Promise<RagSampleExport> {
   if (!process.env.DATABASE_URL) {
@@ -418,11 +437,23 @@ async function runCurrentHybridMode(params: {
         );
       }
     }
-    const artifactEmbeddingProfileId = embeddingState.embeddingProfileIds[0];
-    const artifactEmbeddingProvider = embeddingState.embeddingProviders[0];
-    const artifactEmbeddingModel = embeddingState.embeddingModels[0];
-    const artifactEmbeddingDimensions = embeddingState.embeddingDimensions[0];
-    const artifactEmbeddingConfigHash = embeddingState.embeddingConfigHashes[0];
+    const artifactEmbeddingProfileId =
+      params.embeddingArtifactProfileId ??
+      getMappedEmbeddingProfileId(params.evaluationCase.id) ??
+      (embeddingState.embeddingProfileIds.length === 1
+        ? embeddingState.embeddingProfileIds[0]
+        : undefined);
+    const selectedArtifactProfile = embeddingState.profiles.find(
+      (profile) => profile.embeddingProfileId === artifactEmbeddingProfileId,
+    );
+    const artifactEmbeddingProvider =
+      selectedArtifactProfile?.embeddingProvider ?? undefined;
+    const artifactEmbeddingModel =
+      selectedArtifactProfile?.embeddingModel ?? undefined;
+    const artifactEmbeddingDimensions =
+      selectedArtifactProfile?.embeddingDimensions ?? undefined;
+    const artifactEmbeddingConfigHash =
+      selectedArtifactProfile?.embeddingConfigHash ?? undefined;
 
     const guardResult = evaluateCurrentHybridExportGuard({
       caseRepo: params.evaluationCase.repo,
@@ -433,9 +464,19 @@ async function runCurrentHybridMode(params: {
       chunkCount: embeddingState.chunkCount,
       embeddingProfileIds: embeddingState.embeddingProfileIds,
       embeddingModels: embeddingState.embeddingModels,
+      embeddingDimensions: embeddingState.embeddingDimensions,
       embeddingConfigHashes: embeddingState.embeddingConfigHashes,
-      queryProviderName,
+      queryEmbeddingProfileId,
+      queryEmbeddingProvider: queryProviderName,
       queryEmbeddingModel,
+      queryEmbeddingDimensions,
+      queryEmbeddingConfigHash,
+      artifactEmbeddingProfileId,
+      artifactEmbeddingProvider,
+      artifactEmbeddingModel,
+      artifactEmbeddingDimensions,
+      artifactEmbeddingConfigHash,
+      selectedArtifactProfileChunkCount: selectedArtifactProfile?.chunkCount,
       allowRealQueryEmbedding,
       isSmokeMode,
     });
@@ -459,7 +500,7 @@ async function runCurrentHybridMode(params: {
       repositoryId: params.repositoryId,
       snapshotId: params.snapshotId,
       embeddingQueryProfileId: queryEmbeddingProfileId,
-      embeddingArtifactProfileId: artifactEmbeddingProfileId,
+      embeddingArtifactProfileId: artifactEmbeddingProfileId ?? '',
       changeRequest: params.evaluationCase.requirementText,
       maxResults: params.topKLimit,
       expandGraph: true,
@@ -498,7 +539,7 @@ async function runCurrentHybridMode(params: {
     }
 
     const warnings: string[] = [
-      'Changed files are proxy ground truth. This smoke export is not a final benchmark result.',
+      'Changed files are proxy ground truth. This export is not a final research conclusion.',
     ];
 
     if (guardResult.mode === 'CURRENT_HYBRID_SMOKE') {
@@ -526,6 +567,19 @@ async function runCurrentHybridMode(params: {
     if (!topK.some((item) => item.retrievalSignals.includes('VECTOR'))) {
       warnings.push(
         'No VECTOR retrieval signal appeared in the exported top-k results.',
+      );
+    }
+
+    if (
+      params.evaluationCase.evaluationScope ===
+      'E2E_SCANNER_COVERAGE_FAILURE'
+    ) {
+      warnings.push(
+        params.evaluationCase.scannerCoverageNote ??
+          'This case is labeled as a scanner coverage failure.',
+      );
+      warnings.push(
+        'Recall@10=0 for this case should be interpreted as scanner coverage / E2E failure, not pure retrieval failure.',
       );
     }
 
@@ -585,6 +639,7 @@ async function main(): Promise<void> {
   const projectId = parseArg('--projectId');
   const repositoryId = parseArg('--repositoryId');
   const snapshotId = parseArg('--snapshotId');
+  const embeddingArtifactProfileId = parseArg('--embeddingArtifactProfileId');
   const topKLimit = Number.parseInt(parseArg('--topK') ?? '10', 10);
   const evaluationCase = getRequiredCase(caseId);
   const isCurrentHybridMode = Boolean(projectId && repositoryId && snapshotId);
@@ -608,6 +663,7 @@ async function main(): Promise<void> {
           projectId: projectId as string,
           repositoryId: repositoryId as string,
           snapshotId: snapshotId as string,
+          embeddingArtifactProfileId,
           topKLimit,
         })
       : await runCaseOnlyMode({

@@ -1,6 +1,6 @@
 # Failure Analysis v0 — Lexical Baselines
 
-Generated at: 2026-06-17T11:40:50.773Z
+Generated at: 2026-06-18T14:45:13.918Z
 
 This analyzes deterministic lexical baselines only.
 Changed files are proxy ground truth.
@@ -11,8 +11,8 @@ No vector, graph, DB, LLM, or R1 behavior is evaluated.
 
 | Method | PASS_FULL | PASS_PARTIAL | FAIL_MISS |
 | --- | ---: | ---: | ---: |
-| keyword-baseline-v0 | 2 | 1 | 2 |
-| bm25-baseline-v0 | 2 | 1 | 2 |
+| keyword-baseline-v0 | 3 | 1 | 2 |
+| bm25-baseline-v0 | 3 | 1 | 2 |
 
 ## Cross-Method Comparison
 
@@ -23,6 +23,7 @@ No vector, graph, DB, LLM, or R1 behavior is evaluated.
 | reqimpact-case-003-realworld-auth-middleware-user-object | PASS_FULL | PASS_FULL | TIED | yes | BM25 tied keyword at R@10 but changed the top-ranked file order. |
 | reqimpact-case-004-nest-post-sse-empty-response | PASS_FULL | PASS_FULL | TIED | yes | BM25 tied keyword at R@10 but changed the top-ranked file order. |
 | reqimpact-case-005-realworld-proper-error-object | FAIL_MISS | FAIL_MISS | TIED | no | BM25 tied keyword at R@10 and preserved the same top-ranked file set/order. |
+| reqimpact-case-006-squareboat-default-includes | PASS_FULL | PASS_FULL | TIED | no | BM25 tied keyword at R@10 and preserved the same top-ranked file set/order. |
 
 ## reqimpact-case-001-backend-reliability-semantics
 
@@ -152,6 +153,33 @@ Repo: `lujakob/nestjs-realworld-example-app`
 - bm25-baseline-v0 future hypotheses:
   - [VECTOR_BASELINE] A vector-only baseline may recover files whose identifiers do not share strong lexical overlap with the requirement text.
 
+
+## reqimpact-case-006-squareboat-default-includes
+
+Repo: `squareboat/nestjs-boilerplate`
+
+| Method | Outcome | R@10 | P@10 | F1@10 | Categories |
+| --- | --- | ---: | ---: | ---: | --- |
+| keyword-baseline-v0 | PASS_FULL | 1.0000 | 1.0000 | 1.0000 | SCANNER_MISSING_ARTIFACT |
+
+- keyword-baseline-v0 hit files: libs/boat/src/transformers/transformer.ts
+- keyword-baseline-v0 missed files: None
+- keyword-baseline-v0 unexpected files: None
+- keyword-baseline-v0 explanation: This case is labeled as an end-to-end scanner coverage failure, so retrieval metrics must not be read as clean retrieval-only performance. Lexical ranking retrieved 1 ground-truth file(s). Top ranked files were: libs/boat/src/transformers/transformer.ts.
+- keyword-baseline-v0 future hypotheses:
+  - [DB_SNAPSHOT] Dataset candidates or snapshot-export completeness should be verified before comparing stronger retrieval methods.
+  - [CURRENT_HYBRID] Precision and review burden should be compared against later baselines because lexical ranking can retrieve nearby support files even when recall is high.
+
+| bm25-baseline-v0 | PASS_FULL | 1.0000 | 1.0000 | 1.0000 | SCANNER_MISSING_ARTIFACT |
+
+- bm25-baseline-v0 hit files: libs/boat/src/transformers/transformer.ts
+- bm25-baseline-v0 missed files: None
+- bm25-baseline-v0 unexpected files: None
+- bm25-baseline-v0 explanation: This case is labeled as an end-to-end scanner coverage failure, so retrieval metrics must not be read as clean retrieval-only performance. Lexical ranking retrieved 1 ground-truth file(s). Top ranked files were: libs/boat/src/transformers/transformer.ts.
+- bm25-baseline-v0 future hypotheses:
+  - [DB_SNAPSHOT] Dataset candidates or snapshot-export completeness should be verified before comparing stronger retrieval methods.
+  - [CURRENT_HYBRID] Precision and review burden should be compared against later baselines because lexical ranking can retrieve nearby support files even when recall is high.
+
 ## Implications
 
 - BM25 tie with keyword supports evaluating real vector-only retrieval next.
@@ -171,5 +199,5 @@ Repo: `lujakob/nestjs-realworld-example-app`
 - Excluded non-benchmark result file: results.v0.json
 - Excluded non-benchmark result file: metrics.v0.json
 - Excluded non-benchmark result file: failure-analysis.v0.json
-- Optional result file not found: rag-samples.current-hybrid.v0.json
+- Optional result file present but excluded until explicitly supported: rag-samples.current-hybrid.v0.json
 - Optional result file not found: vector-baseline.v0.json

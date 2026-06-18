@@ -1,14 +1,14 @@
 # BM25 Baseline v0
 
-Generated at: 2026-06-17T11:40:50.782Z
+Generated at: 2026-06-18T14:45:10.584Z
 
 This is a deterministic BM25 lexical baseline, not vector retrieval.
 Changed files are proxy ground truth.
 File-level only.
 
 Top K: 10
-Average Recall@10 across cases: 0.4667
-Total top-10 ground-truth hits: 8
+Average Recall@10 across cases: 0.5555
+Total top-10 ground-truth hits: 9
 
 | Case ID | Repo | R@10 | Hit Count | Missed Files |
 | --- | --- | ---: | ---: | --- |
@@ -17,6 +17,7 @@ Total top-10 ground-truth hits: 8
 | reqimpact-case-003-realworld-auth-middleware-user-object | `lujakob/nestjs-realworld-example-app` | 1.0000 | 4 | None |
 | reqimpact-case-004-nest-post-sse-empty-response | `nestjs/nest` | 1.0000 | 2 | None |
 | reqimpact-case-005-realworld-proper-error-object | `lujakob/nestjs-realworld-example-app` | 0.0000 | 0 | src/shared/pipes/validation.pipe.ts<br>src/user/user.controller.ts<br>src/user/user.entity.ts |
+| reqimpact-case-006-squareboat-default-includes | `squareboat/nestjs-boilerplate` | 1.0000 | 1 | None |
 
 ## Warnings
 
@@ -111,6 +112,21 @@ Requirement: fix: Return proper error object
 | - | No matched artifacts | - | - | 0 | - |
 
 Missed ground-truth files: src/shared/pipes/validation.pipe.ts<br>src/user/user.controller.ts<br>src/user/user.entity.ts
+
+Unexpected top-K files: None
+
+
+## reqimpact-case-006-squareboat-default-includes
+
+Repo: `squareboat/nestjs-boilerplate`
+
+Requirement: fix: default includes in transformer class
+
+| Rank | Artifact | File | Type | Score | Matched Tokens |
+| ---: | --- | --- | --- | ---: | --- |
+| 1 | `file:libs/boat/src/transformers/transformer.ts` | `libs/boat/src/transformers/transformer.ts` | `TRANSFORMER_FILE` | 3.3569 | transformer |
+
+Missed ground-truth files: None
 
 Unexpected top-K files: None
 

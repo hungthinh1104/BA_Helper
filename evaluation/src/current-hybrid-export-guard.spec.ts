@@ -13,9 +13,19 @@ describe('current hybrid export guard', () => {
     chunkCount: 31,
     embeddingProfileIds: ['google-gemini-001-1536'],
     embeddingModels: ['gemini-embedding-001'],
+    embeddingDimensions: [1536],
     embeddingConfigHashes: ['config-hash-google'],
-    queryProviderName: 'google',
+    queryEmbeddingProfileId: 'google-gemini-001-1536',
+    queryEmbeddingProvider: 'google',
     queryEmbeddingModel: 'gemini-embedding-001',
+    queryEmbeddingDimensions: 1536,
+    queryEmbeddingConfigHash: 'config-hash-google',
+    artifactEmbeddingProfileId: 'google-gemini-001-1536',
+    artifactEmbeddingProvider: 'google',
+    artifactEmbeddingModel: 'gemini-embedding-001',
+    artifactEmbeddingDimensions: 1536,
+    artifactEmbeddingConfigHash: 'config-hash-google',
+    selectedArtifactProfileChunkCount: 31,
     allowRealQueryEmbedding: true,
     isSmokeMode: false,
   } as const;
@@ -33,7 +43,7 @@ describe('current hybrid export guard', () => {
   it('rejects fake query provider', () => {
     const result = evaluateCurrentHybridExportGuard({
       ...baseInput,
-      queryProviderName: 'fake',
+      queryEmbeddingProvider: 'fake',
     });
 
     expect(result.allowed).toBe(false);
@@ -70,6 +80,60 @@ describe('current hybrid export guard', () => {
     expect(result.blockers.join('\n')).toMatch(/embeddingProfileId and embeddingConfigHash provenance/i);
   });
 
+  it('rejects query and artifact profile id mismatch', () => {
+    const result = evaluateCurrentHybridExportGuard({
+      ...baseInput,
+      artifactEmbeddingProfileId: 'openai-3-small-1536',
+    });
+
+    expect(result.allowed).toBe(false);
+    expect(result.blockers.join('\n')).toMatch(/profile mismatch/i);
+  });
+
+  it('rejects provider mismatch with same dimensions', () => {
+    const result = evaluateCurrentHybridExportGuard({
+      ...baseInput,
+      artifactEmbeddingProvider: 'openai',
+      artifactEmbeddingModel: 'text-embedding-3-small',
+      artifactEmbeddingConfigHash: 'config-hash-openai',
+    });
+
+    expect(result.allowed).toBe(false);
+    expect(result.blockers.join('\n')).toMatch(/provider mismatch/i);
+  });
+
+  it('rejects dimension mismatch', () => {
+    const result = evaluateCurrentHybridExportGuard({
+      ...baseInput,
+      artifactEmbeddingDimensions: 3072,
+    });
+
+    expect(result.allowed).toBe(false);
+    expect(result.blockers.join('\n')).toMatch(/dimension mismatch/i);
+  });
+
+  it('rejects config hash mismatch', () => {
+    const result = evaluateCurrentHybridExportGuard({
+      ...baseInput,
+      artifactEmbeddingConfigHash: 'different-config-hash',
+    });
+
+    expect(result.allowed).toBe(false);
+    expect(result.blockers.join('\n')).toMatch(/config hash mismatch/i);
+  });
+
+  it('rejects multiple artifact profiles without selected artifact profile', () => {
+    const result = evaluateCurrentHybridExportGuard({
+      ...baseInput,
+      embeddingProfileIds: ['google-gemini-001-1536', 'openai-3-small-1536'],
+      artifactEmbeddingProfileId: '',
+      selectedArtifactProfileChunkCount: 0,
+    });
+
+    expect(result.allowed).toBe(false);
+    expect(result.blockers.join('\n')).toMatch(/multiple artifact embedding profiles/i);
+  });
+
   it('rejects non vector ready snapshots', () => {
     const result = evaluateCurrentHybridExportGuard({
       ...baseInput,
@@ -93,7 +157,7 @@ describe('current hybrid export guard', () => {
       ...baseInput,
       isSmokeMode: true,
       allowRealQueryEmbedding: false,
-      queryProviderName: 'fake',
+      queryEmbeddingProvider: 'fake',
       queryEmbeddingModel: 'fake-embedding',
     });
 

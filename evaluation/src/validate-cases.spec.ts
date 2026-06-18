@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { validateCasesDataset } from './validate-cases';
+import { loadDataset } from '../io';
 
 describe('validateCasesDataset', () => {
   const tempDir = mkdtempSync(join(tmpdir(), 'reqimpact-eval-'));
@@ -98,5 +99,15 @@ describe('validateCasesDataset', () => {
         caseId: 'case-002',
       }),
     ]);
+  });
+
+  it('labels Case 006 as scanner coverage failure metadata', () => {
+    const dataset = loadDataset('evaluation/datasets/cases.v0.json');
+    const case006 = dataset.cases.find(
+      (item) => item.id === 'reqimpact-case-006-squareboat-default-includes',
+    );
+
+    expect(case006?.evaluationScope).toBe('E2E_SCANNER_COVERAGE_FAILURE');
+    expect(case006?.scannerCoverageNote).toMatch(/not persisted as a CodeArtifact/i);
   });
 });

@@ -1,6 +1,6 @@
 {
   "runId": "case-snapshot-alignment-v0",
-  "generatedAt": "2026-06-18T12:46:26.436Z",
+  "generatedAt": "2026-06-18T14:45:07.262Z",
   "caseCount": 6,
   "alignedVectorReadyCount": 1,
   "alignedLexicalOnlyCount": 1,
@@ -17,7 +17,12 @@
       "snapshotCommitSha": null,
       "indexStatus": null,
       "chunkCount": 0,
+      "selectedEmbeddingProfileId": null,
+      "embeddingProfileIds": [],
+      "embeddingProviders": [],
       "embeddingModels": [],
+      "embeddingDimensions": [],
+      "embeddingConfigHashes": [],
       "requiredNextAction": "Create/index snapshot at case baseSha.",
       "warnings": []
     },
@@ -32,7 +37,12 @@
       "snapshotCommitSha": null,
       "indexStatus": null,
       "chunkCount": 0,
+      "selectedEmbeddingProfileId": null,
+      "embeddingProfileIds": [],
+      "embeddingProviders": [],
       "embeddingModels": [],
+      "embeddingDimensions": [],
+      "embeddingConfigHashes": [],
       "requiredNextAction": "Create/index snapshot at case baseSha.",
       "warnings": []
     },
@@ -47,7 +57,12 @@
       "snapshotCommitSha": null,
       "indexStatus": null,
       "chunkCount": 0,
+      "selectedEmbeddingProfileId": null,
+      "embeddingProfileIds": [],
+      "embeddingProviders": [],
       "embeddingModels": [],
+      "embeddingDimensions": [],
+      "embeddingConfigHashes": [],
       "requiredNextAction": "Create/index snapshot at case baseSha.",
       "warnings": []
     },
@@ -61,14 +76,19 @@
       "snapshotCommitSha": "02f804159841a2771755c382832a7938b904c420",
       "indexStatus": "VECTOR_FAILED",
       "chunkCount": 0,
+      "selectedEmbeddingProfileId": null,
+      "embeddingProfileIds": [],
+      "embeddingProviders": [],
       "embeddingModels": [],
+      "embeddingDimensions": [],
+      "embeddingConfigHashes": [],
       "warnings": [
         "Snapshot indexStatus is VECTOR_FAILED; vector retrieval may be absent or incomplete.",
         "No EmbeddingChunk rows exist for this snapshot."
       ],
       "notes": "https://github.com/nestjs/nest",
       "status": "ALIGNED_LEXICAL_ONLY",
-      "requiredNextAction": "Snapshot aligns by commit, but real vector benchmark is blocked until usable non-fake embeddings exist."
+      "requiredNextAction": "Selected embedding profile UNKNOWN is missing from snapshot chunks."
     },
     {
       "caseId": "reqimpact-case-005-realworld-proper-error-object",
@@ -81,7 +101,12 @@
       "snapshotCommitSha": null,
       "indexStatus": null,
       "chunkCount": 0,
+      "selectedEmbeddingProfileId": null,
+      "embeddingProfileIds": [],
+      "embeddingProviders": [],
       "embeddingModels": [],
+      "embeddingDimensions": [],
+      "embeddingConfigHashes": [],
       "requiredNextAction": "Create/index snapshot at case baseSha.",
       "warnings": []
     },
@@ -95,8 +120,21 @@
       "snapshotCommitSha": "33ca78792610f1b0ece552767ef370bcb1978205",
       "indexStatus": "VECTOR_READY",
       "chunkCount": 14,
+      "selectedEmbeddingProfileId": "google-gemini-001-1536",
+      "embeddingProfileIds": [
+        "google-gemini-001-1536"
+      ],
+      "embeddingProviders": [
+        "google"
+      ],
       "embeddingModels": [
         "gemini-embedding-001"
+      ],
+      "embeddingDimensions": [
+        1536
+      ],
+      "embeddingConfigHashes": [
+        "ae7b397d6b6fce4573794e52c1daa56d7daed714bdc75898b8a54e4d588565d5"
       ],
       "warnings": [],
       "notes": "https://github.com/squareboat/nestjs-boilerplate",

@@ -59,9 +59,12 @@ does not claim method-level necessity.
 - The scanner-aligned base snapshot did **not** persist
   `libs/boat/src/transformers/transformer.ts` as a `CodeArtifact`, so the case
   currently mixes real extracted artifacts with one manual file-level candidate.
-- That means the case is valid for dataset/file-level evaluation, but it also
-  captures a scanner-coverage gap that may block later persisted-hybrid
-  retrieval from surfacing the ground-truth file directly.
+- The case is explicitly labeled
+  `evaluationScope = E2E_SCANNER_COVERAGE_FAILURE`.
+- Current-hybrid cannot retrieve the ground-truth file from persisted DB
+  artifacts until scanner coverage materializes `transformer.ts`.
+- Recall@10=0 for current-hybrid on this case must be interpreted as scanner
+  coverage / end-to-end failure, not a clean retrieval-only miss.
 - This remains a file-level-only case. No method-level accuracy claim is made.
 
 ### Suitability

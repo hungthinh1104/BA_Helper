@@ -1,6 +1,6 @@
 # Keyword Baseline v0
 
-Generated at: 2026-06-17T11:40:50.717Z
+Generated at: 2026-06-18T14:45:08.936Z
 
 This is a deterministic keyword baseline, not ReqImpact hybrid retrieval.
 Changed files are proxy ground truth.
@@ -15,6 +15,7 @@ Top K: 10
 | reqimpact-case-003-realworld-auth-middleware-user-object | `lujakob/nestjs-realworld-example-app` | 1.0000 | 4 | None |
 | reqimpact-case-004-nest-post-sse-empty-response | `nestjs/nest` | 1.0000 | 2 | None |
 | reqimpact-case-005-realworld-proper-error-object | `lujakob/nestjs-realworld-example-app` | 0.0000 | 0 | src/shared/pipes/validation.pipe.ts<br>src/user/user.controller.ts<br>src/user/user.entity.ts |
+| reqimpact-case-006-squareboat-default-includes | `squareboat/nestjs-boilerplate` | 1.0000 | 1 | None |
 
 ## Warnings
 
@@ -108,6 +109,21 @@ Requirement: fix: Return proper error object
 | - | No matched artifacts | - | - | 0 | - |
 
 Missed ground-truth files: src/shared/pipes/validation.pipe.ts<br>src/user/user.controller.ts<br>src/user/user.entity.ts
+
+Unexpected top-K files: None
+
+
+## reqimpact-case-006-squareboat-default-includes
+
+Repo: `squareboat/nestjs-boilerplate`
+
+Requirement: fix: default includes in transformer class
+
+| Rank | Artifact | File | Type | Score | Matched Tokens |
+| ---: | --- | --- | --- | ---: | --- |
+| 1 | `file:libs/boat/src/transformers/transformer.ts` | `libs/boat/src/transformers/transformer.ts` | `TRANSFORMER_FILE` | 9.00 | transformer |
+
+Missed ground-truth files: None
 
 Unexpected top-K files: None
 

@@ -1,6 +1,6 @@
 {
   "runId": "bm25-baseline-v0-10",
-  "generatedAt": "2026-06-17T11:40:50.782Z",
+  "generatedAt": "2026-06-18T14:45:10.584Z",
   "method": "bm25-baseline-v0",
   "topK": 10,
   "cases": [
@@ -349,6 +349,33 @@
           "src/user/user.controller.ts",
           "src/user/user.entity.ts"
         ],
+        "unexpectedTopKFiles": []
+      }
+    },
+    {
+      "caseId": "reqimpact-case-006-squareboat-default-includes",
+      "repo": "squareboat/nestjs-boilerplate",
+      "requirementText": "fix: default includes in transformer class",
+      "groundTruthFiles": [
+        "libs/boat/src/transformers/transformer.ts"
+      ],
+      "results": [
+        {
+          "rank": 1,
+          "artifactKey": "file:libs/boat/src/transformers/transformer.ts",
+          "filePath": "libs/boat/src/transformers/transformer.ts",
+          "artifactType": "TRANSFORMER_FILE",
+          "score": 3.356907,
+          "matchedTokens": [
+            "transformer"
+          ],
+          "retrievalReason": "BM25 lexical score over candidate artifact fields"
+        }
+      ],
+      "summary": {
+        "groundTruthHitCount": 1,
+        "recallAt10": 1,
+        "missedGroundTruthFiles": [],
         "unexpectedTopKFiles": []
       }
     }

@@ -131,40 +131,33 @@ Benchmark mode is blocked when any of these are true:
 - `snapshot.indexStatus !== VECTOR_READY`
 - no persisted `EmbeddingChunk` rows exist
 - artifact embeddings are `fake-embedding` only
+- query/artifact embedding profile IDs do not match
+- query/artifact providers, models, dimensions, or config hashes do not match
+- multiple artifact embedding profiles exist and no explicit artifact profile is selected
+- selected artifact profile has zero persisted chunks
+- artifact chunks are legacy profile-missing rows
 - query provider is fake
 - query embedding model is missing
 - `REQIMPACT_ALLOW_REAL_QUERY_EMBEDDING` is not set to `1`
 
-## Phase E8 blocker
+## Phase E8/E9 status
 
-The repository state on `research/reqimpact-eval-v0` does not satisfy the
-stated E8 precondition yet.
+Case 006 now has one guarded benchmark-named current-hybrid export:
 
-Verified local facts:
+- case: `reqimpact-case-006-squareboat-default-includes`
+- output: `evaluation/results/rag-samples.current-hybrid.v0.json`
+- mode: `CURRENT_HYBRID_BENCHMARK`
+- query/artifact profile: `google-gemini-001-1536`
+- alignment verified: yes
 
-- `evaluation/datasets/cases.v0.json` still contains exactly 5 cases
-- `reqimpact-case-006-squareboat-default-includes` is not present
-- `evaluation/datasets/case-snapshot-overrides.v0.json` still contains only the
-  Nest case mapping
-- `evaluation/results/case-snapshot-alignment.v0.json` still reports:
-  - `caseCount = 5`
-  - `alignedVectorReadyCount = 0`
-  - no Squareboat alignment item
+Interpretation limit:
 
-Practical consequence:
-
-- `CURRENT_HYBRID_BENCHMARK` for Case 006 must not run yet
-- `rag-samples.current-hybrid.v0.json` and `.md` must not be created
-- any benchmark-named export would currently be invalid because the dataset and
-  alignment registry do not yet prove the Squareboat case is promotable
-
-Required precondition before rerunning E8:
-
-- add `reqimpact-case-006-squareboat-default-includes` to the dataset
-- add its snapshot override
-- refresh readiness/alignment so the registry explicitly reports the case as
-  `ALIGNED_VECTOR_READY`
-- then rerun the guarded export command
+- Case 006 is labeled `E2E_SCANNER_COVERAGE_FAILURE`.
+- The changed ground-truth file `libs/boat/src/transformers/transformer.ts`
+  was not persisted as a retrievable `CodeArtifact` in the aligned base
+  snapshot.
+- Current-hybrid Recall@10=0 for this case is therefore an end-to-end scanner
+  coverage failure, not a clean retrieval-only miss.
 
 ## Why this is not R1
 

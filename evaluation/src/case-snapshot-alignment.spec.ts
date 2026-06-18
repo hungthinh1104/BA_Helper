@@ -1,10 +1,34 @@
 import {
   buildCaseSnapshotAlignmentRegistry,
+  type DbReadinessCandidate,
   evaluateCaseSnapshotAlignment,
 } from './case-snapshot-alignment';
 import { loadDataset } from '../io';
 
 describe('case snapshot alignment', () => {
+  function candidate(
+    overrides: Partial<DbReadinessCandidate> = {},
+  ): DbReadinessCandidate {
+    return {
+      projectId: 'project-1',
+      repositoryId: 'repo-1',
+      snapshotId: 'snapshot-1',
+      commitSha: 'abc123',
+      indexStatus: 'VECTOR_READY',
+      chunkCount: 10,
+      embeddingProfileIds: ['google-gemini-001-1536'],
+      embeddingProviders: ['google'],
+      embeddingModels: ['gemini-embedding-001'],
+      embeddingDimensions: [1536],
+      embeddingConfigHashes: ['config-hash-google'],
+      chunkerVersions: ['artifact-chunker@0.1.0'],
+      classification: 'VECTOR_READY_CANDIDATE',
+      usableFor: ['CURRENT_HYBRID_EXPORT'],
+      warnings: [],
+      ...overrides,
+    };
+  }
+
   it('marks all cases as SNAPSHOT_MISSING when no mappings exist', () => {
     const datasetCaseCount = loadDataset('evaluation/datasets/cases.v0.json').cases.length;
     const registry = buildCaseSnapshotAlignmentRegistry({
@@ -30,19 +54,7 @@ describe('case snapshot alignment', () => {
         repositoryId: 'repo-1',
         snapshotId: 'snapshot-1',
       },
-      candidate: {
-        projectId: 'project-1',
-        repositoryId: 'repo-1',
-        snapshotId: 'snapshot-1',
-        commitSha: 'abc123',
-        indexStatus: 'VECTOR_READY',
-        chunkCount: 10,
-        embeddingModels: ['gemini-embedding-001'],
-        chunkerVersions: ['artifact-chunker@0.1.0'],
-        classification: 'VECTOR_READY_CANDIDATE',
-        usableFor: ['CURRENT_HYBRID_EXPORT'],
-        warnings: [],
-      },
+      candidate: candidate(),
     });
 
     expect(item.status).toBe('ALIGNED_VECTOR_READY');
@@ -59,19 +71,17 @@ describe('case snapshot alignment', () => {
         repositoryId: 'repo-1',
         snapshotId: 'snapshot-1',
       },
-      candidate: {
-        projectId: 'project-1',
-        repositoryId: 'repo-1',
-        snapshotId: 'snapshot-1',
-        commitSha: 'abc123',
+      candidate: candidate({
         indexStatus: 'NOT_INDEXED',
         chunkCount: 0,
+        embeddingProfileIds: [],
+        embeddingProviders: [],
         embeddingModels: [],
+        embeddingDimensions: [],
+        embeddingConfigHashes: [],
         chunkerVersions: [],
         classification: 'LEXICAL_ONLY_CANDIDATE',
-        usableFor: ['CURRENT_HYBRID_EXPORT'],
-        warnings: [],
-      },
+      }),
     });
 
     expect(item.status).toBe('ALIGNED_LEXICAL_ONLY');
@@ -88,19 +98,9 @@ describe('case snapshot alignment', () => {
         repositoryId: 'repo-1',
         snapshotId: 'snapshot-1',
       },
-      candidate: {
-        projectId: 'project-1',
-        repositoryId: 'repo-1',
-        snapshotId: 'snapshot-1',
+      candidate: candidate({
         commitSha: 'wrong',
-        indexStatus: 'VECTOR_READY',
-        chunkCount: 10,
-        embeddingModels: ['gemini-embedding-001'],
-        chunkerVersions: ['artifact-chunker@0.1.0'],
-        classification: 'VECTOR_READY_CANDIDATE',
-        usableFor: ['CURRENT_HYBRID_EXPORT'],
-        warnings: [],
-      },
+      }),
     });
 
     expect(item.status).toBe('SNAPSHOT_COMMIT_MISMATCH');
@@ -118,19 +118,7 @@ describe('case snapshot alignment', () => {
         snapshotId: 'snapshot-1',
         notes: 'lujakob/nestjs-realworld-example-app',
       },
-      candidate: {
-        projectId: 'project-1',
-        repositoryId: 'repo-1',
-        snapshotId: 'snapshot-1',
-        commitSha: 'abc123',
-        indexStatus: 'VECTOR_READY',
-        chunkCount: 10,
-        embeddingModels: ['gemini-embedding-001'],
-        chunkerVersions: ['artifact-chunker@0.1.0'],
-        classification: 'VECTOR_READY_CANDIDATE',
-        usableFor: ['CURRENT_HYBRID_EXPORT'],
-        warnings: [],
-      },
+      candidate: candidate(),
     });
 
     expect(item.status).toBe('REPO_MISMATCH');
@@ -147,21 +135,33 @@ describe('case snapshot alignment', () => {
         repositoryId: 'repo-1',
         snapshotId: 'snapshot-1',
       },
-      candidate: {
-        projectId: 'project-1',
-        repositoryId: 'repo-1',
-        snapshotId: 'snapshot-1',
-        commitSha: 'abc123',
-        indexStatus: 'VECTOR_READY',
-        chunkCount: 10,
+      candidate: candidate({
+        embeddingProfileIds: ['fake-1536'],
+        embeddingProviders: ['fake'],
         embeddingModels: ['fake-embedding'],
-        chunkerVersions: ['artifact-chunker@0.1.0'],
-        classification: 'VECTOR_READY_CANDIDATE',
-        usableFor: ['CURRENT_HYBRID_EXPORT'],
-        warnings: [],
-      },
+        embeddingConfigHashes: ['config-hash-fake'],
+      }),
     });
 
     expect(item.status).toBe('ALIGNED_LEXICAL_ONLY');
+  });
+
+  it('requires mapping embeddingProfileId to exist in readiness candidate', () => {
+    const item = evaluateCaseSnapshotAlignment({
+      caseId: 'case-1',
+      repo: 'ndmen/booking',
+      baseSha: 'abc123',
+      mapping: {
+        caseId: 'case-1',
+        projectId: 'project-1',
+        repositoryId: 'repo-1',
+        snapshotId: 'snapshot-1',
+        embeddingProfileId: 'openai-3-small-1536',
+      },
+      candidate: candidate(),
+    });
+
+    expect(item.status).toBe('ALIGNED_LEXICAL_ONLY');
+    expect(item.requiredNextAction).toMatch(/selected embedding profile/i);
   });
 });

@@ -14,6 +14,7 @@ export type CaseSnapshotOverrideMapping = {
   projectId: string;
   repositoryId: string;
   snapshotId: string;
+  embeddingProfileId?: string;
   notes?: string;
 };
 
@@ -28,7 +29,11 @@ export type DbReadinessCandidate = {
   commitSha: string;
   indexStatus: string | null;
   chunkCount: number;
+  embeddingProfileIds: string[];
+  embeddingProviders: string[];
   embeddingModels: string[];
+  embeddingDimensions: number[];
+  embeddingConfigHashes: string[];
   chunkerVersions: string[];
   classification: string;
   usableFor: string[];
@@ -54,7 +59,12 @@ export type CaseSnapshotAlignmentItem = {
   snapshotCommitSha: string | null;
   indexStatus: string | null;
   chunkCount: number;
+  selectedEmbeddingProfileId: string | null;
+  embeddingProfileIds: string[];
+  embeddingProviders: string[];
   embeddingModels: string[];
+  embeddingDimensions: number[];
+  embeddingConfigHashes: string[];
   requiredNextAction: string;
   warnings: string[];
   notes?: string;
@@ -125,6 +135,26 @@ function hasUsableNonFakeEmbeddings(embeddingModels: readonly string[]): boolean
   return normalized.some((value) => value !== 'fake-embedding');
 }
 
+function hasSelectedProfile(params: {
+  mapping?: CaseSnapshotOverrideMapping;
+  candidate: DbReadinessCandidate;
+}): boolean {
+  const selectedProfile = params.mapping?.embeddingProfileId?.trim();
+  if (!selectedProfile) {
+    return params.candidate.embeddingProfileIds.length > 0;
+  }
+
+  return params.candidate.embeddingProfileIds.includes(selectedProfile);
+}
+
+function hasSelectedProfileProvenance(candidate: DbReadinessCandidate): boolean {
+  return (
+    candidate.embeddingProviders.length > 0 &&
+    candidate.embeddingDimensions.length > 0 &&
+    candidate.embeddingConfigHashes.length > 0
+  );
+}
+
 function createMissingItem(params: {
   caseId: string;
   repo: string;
@@ -141,7 +171,12 @@ function createMissingItem(params: {
     snapshotCommitSha: null,
     indexStatus: null,
     chunkCount: 0,
+    selectedEmbeddingProfileId: null,
+    embeddingProfileIds: [],
+    embeddingProviders: [],
     embeddingModels: [],
+    embeddingDimensions: [],
+    embeddingConfigHashes: [],
     requiredNextAction: 'Create/index snapshot at case baseSha.',
     warnings: [],
   };
@@ -183,7 +218,12 @@ export function evaluateCaseSnapshotAlignment(params: {
     snapshotCommitSha,
     indexStatus: candidate.indexStatus,
     chunkCount: candidate.chunkCount,
+    selectedEmbeddingProfileId: params.mapping.embeddingProfileId ?? null,
+    embeddingProfileIds: [...candidate.embeddingProfileIds],
+    embeddingProviders: [...candidate.embeddingProviders],
     embeddingModels: [...candidate.embeddingModels],
+    embeddingDimensions: [...candidate.embeddingDimensions],
+    embeddingConfigHashes: [...candidate.embeddingConfigHashes],
     warnings,
     notes: params.mapping.notes,
   };
@@ -218,10 +258,20 @@ export function evaluateCaseSnapshotAlignment(params: {
     };
   }
 
+  if (!hasSelectedProfile({ mapping: params.mapping, candidate })) {
+    return {
+      ...itemBase,
+      status: 'ALIGNED_LEXICAL_ONLY',
+      requiredNextAction:
+        `Selected embedding profile ${params.mapping.embeddingProfileId ?? 'UNKNOWN'} is missing from snapshot chunks.`,
+    };
+  }
+
   if (
     candidate.indexStatus === 'VECTOR_READY' &&
     candidate.chunkCount > 0 &&
-    hasUsableNonFakeEmbeddings(candidate.embeddingModels)
+    hasUsableNonFakeEmbeddings(candidate.embeddingModels) &&
+    hasSelectedProfileProvenance(candidate)
   ) {
     return {
       ...itemBase,
@@ -231,7 +281,11 @@ export function evaluateCaseSnapshotAlignment(params: {
     };
   }
 
-  if (candidate.chunkCount <= 0 || !hasUsableNonFakeEmbeddings(candidate.embeddingModels)) {
+  if (
+    candidate.chunkCount <= 0 ||
+    !hasUsableNonFakeEmbeddings(candidate.embeddingModels) ||
+    !hasSelectedProfileProvenance(candidate)
+  ) {
     return {
       ...itemBase,
       status: 'ALIGNED_LEXICAL_ONLY',
@@ -331,13 +385,13 @@ export function renderCaseSnapshotAlignmentMarkdown(
     '',
     '## Cases',
     '',
-    '| Case | Repo | Base SHA | Status | Snapshot | Index Status | Chunks | Embeddings | Next Action |',
-    '| --- | --- | --- | --- | --- | --- | ---: | --- | --- |',
+    '| Case | Repo | Base SHA | Status | Snapshot | Index Status | Chunks | Selected Profile | Profiles | Embeddings | Next Action |',
+    '| --- | --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- |',
   ];
 
   for (const item of registry.cases) {
     lines.push(
-      `| ${item.caseId} | ${item.repo} | ${item.baseSha ?? 'none'} | ${item.status} | ${item.snapshotId ?? 'none'} | ${item.indexStatus ?? 'none'} | ${item.chunkCount} | ${item.embeddingModels.join(', ') || 'none'} | ${item.requiredNextAction} |`,
+      `| ${item.caseId} | ${item.repo} | ${item.baseSha ?? 'none'} | ${item.status} | ${item.snapshotId ?? 'none'} | ${item.indexStatus ?? 'none'} | ${item.chunkCount} | ${item.selectedEmbeddingProfileId ?? 'none'} | ${item.embeddingProfileIds.join(', ') || 'none'} | ${item.embeddingModels.join(', ') || 'none'} | ${item.requiredNextAction} |`,
     );
   }
 

@@ -12,9 +12,19 @@ export type CurrentHybridExportGuardInput = {
   chunkCount: number;
   embeddingProfileIds: readonly string[];
   embeddingModels: readonly string[];
+  embeddingDimensions: readonly number[];
   embeddingConfigHashes: readonly string[];
-  queryProviderName?: string | null;
+  queryEmbeddingProfileId?: string | null;
+  queryEmbeddingProvider?: string | null;
   queryEmbeddingModel?: string | null;
+  queryEmbeddingDimensions?: number | null;
+  queryEmbeddingConfigHash?: string | null;
+  artifactEmbeddingProfileId?: string | null;
+  artifactEmbeddingProvider?: string | null;
+  artifactEmbeddingModel?: string | null;
+  artifactEmbeddingDimensions?: number | null;
+  artifactEmbeddingConfigHash?: string | null;
+  selectedArtifactProfileChunkCount?: number | null;
   allowRealQueryEmbedding: boolean;
   isSmokeMode: boolean;
 };
@@ -84,6 +94,19 @@ function hasMissingArtifactProfileProvenance(
 
 function isFakeQueryProvider(providerName: string | null | undefined): boolean {
   return (providerName ?? '').trim().toLowerCase().includes('fake');
+}
+
+function isFakeArtifactProviderOrModel(params: {
+  provider?: string | null;
+  model?: string | null;
+}): boolean {
+  return [params.provider, params.model].some((value) =>
+    (value ?? '').trim().toLowerCase().includes('fake'),
+  );
+}
+
+function isBlank(value: string | null | undefined): boolean {
+  return (value ?? '').trim().length === 0;
 }
 
 export function evaluateCurrentHybridExportGuard(
@@ -159,12 +182,113 @@ export function evaluateCurrentHybridExportGuard(
     );
   }
 
-  if (isFakeQueryProvider(input.queryProviderName)) {
+  if (isFakeQueryProvider(input.queryEmbeddingProvider)) {
     blockers.push('Fake query embedding providers are not allowed in benchmark mode.');
+  }
+
+  if (isFakeArtifactProviderOrModel({
+    provider: input.artifactEmbeddingProvider,
+    model: input.artifactEmbeddingModel,
+  })) {
+    blockers.push('Fake artifact embedding profiles are not allowed in benchmark mode.');
+  }
+
+  if (isBlank(input.queryEmbeddingProfileId)) {
+    blockers.push('queryEmbeddingProfileId is required for benchmark provenance.');
+  }
+
+  if (isBlank(input.artifactEmbeddingProfileId)) {
+    blockers.push('artifactEmbeddingProfileId is required for benchmark provenance.');
+  }
+
+  if (
+    !isBlank(input.queryEmbeddingProfileId) &&
+    !isBlank(input.artifactEmbeddingProfileId) &&
+    input.queryEmbeddingProfileId !== input.artifactEmbeddingProfileId
+  ) {
+    blockers.push(
+      `Embedding profile mismatch: query=${input.queryEmbeddingProfileId} artifact=${input.artifactEmbeddingProfileId}.`,
+    );
+  }
+
+  if (isBlank(input.queryEmbeddingProvider)) {
+    blockers.push('queryEmbeddingProvider is required for benchmark provenance.');
+  }
+
+  if (isBlank(input.artifactEmbeddingProvider)) {
+    blockers.push('artifactEmbeddingProvider is required for benchmark provenance.');
+  }
+
+  if (
+    !isBlank(input.queryEmbeddingProvider) &&
+    !isBlank(input.artifactEmbeddingProvider) &&
+    input.queryEmbeddingProvider !== input.artifactEmbeddingProvider
+  ) {
+    blockers.push(
+      `Embedding provider mismatch: query=${input.queryEmbeddingProvider} artifact=${input.artifactEmbeddingProvider}.`,
+    );
   }
 
   if ((input.queryEmbeddingModel ?? '').trim().length === 0) {
     blockers.push('queryEmbeddingModel is required for benchmark provenance.');
+  }
+
+  if (isBlank(input.artifactEmbeddingModel)) {
+    blockers.push('artifactEmbeddingModel is required for benchmark provenance.');
+  }
+
+  if (
+    !isBlank(input.queryEmbeddingModel) &&
+    !isBlank(input.artifactEmbeddingModel) &&
+    input.queryEmbeddingModel !== input.artifactEmbeddingModel
+  ) {
+    blockers.push(
+      `Embedding model mismatch: query=${input.queryEmbeddingModel} artifact=${input.artifactEmbeddingModel}.`,
+    );
+  }
+
+  if (!input.queryEmbeddingDimensions) {
+    blockers.push('queryEmbeddingDimensions is required for benchmark provenance.');
+  }
+
+  if (!input.artifactEmbeddingDimensions) {
+    blockers.push('artifactEmbeddingDimensions is required for benchmark provenance.');
+  }
+
+  if (
+    input.queryEmbeddingDimensions &&
+    input.artifactEmbeddingDimensions &&
+    input.queryEmbeddingDimensions !== input.artifactEmbeddingDimensions
+  ) {
+    blockers.push(
+      `Embedding dimension mismatch: query=${input.queryEmbeddingDimensions} artifact=${input.artifactEmbeddingDimensions}.`,
+    );
+  }
+
+  if (isBlank(input.queryEmbeddingConfigHash)) {
+    blockers.push('queryEmbeddingConfigHash is required for benchmark provenance.');
+  }
+
+  if (isBlank(input.artifactEmbeddingConfigHash)) {
+    blockers.push('artifactEmbeddingConfigHash is required for benchmark provenance.');
+  }
+
+  if (
+    !isBlank(input.queryEmbeddingConfigHash) &&
+    !isBlank(input.artifactEmbeddingConfigHash) &&
+    input.queryEmbeddingConfigHash !== input.artifactEmbeddingConfigHash
+  ) {
+    blockers.push('Embedding config hash mismatch between query and artifact profiles.');
+  }
+
+  if (input.embeddingProfileIds.length > 1 && isBlank(input.artifactEmbeddingProfileId)) {
+    blockers.push(
+      'Multiple artifact embedding profiles exist; select --embeddingArtifactProfileId explicitly for benchmark mode.',
+    );
+  }
+
+  if ((input.selectedArtifactProfileChunkCount ?? 0) <= 0) {
+    blockers.push('Selected artifact embedding profile has zero persisted chunks.');
   }
 
   if (!input.allowRealQueryEmbedding) {

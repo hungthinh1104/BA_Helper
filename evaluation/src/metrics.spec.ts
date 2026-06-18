@@ -106,24 +106,27 @@ describe('evaluation metrics', () => {
 
   it('computes macro averages across cases', () => {
     const method = computeMethodMetrics({
-      runId: 'run-001',
-      generatedAt: '2026-06-17T00:00:00.000Z',
-      method: 'keyword-baseline-v0',
-      topK: 10,
-      cases: [
-        {
-          caseId: 'case-001',
-          repo: 'owner/repo',
-          groundTruthFiles: ['a.ts'],
-          results: [{ filePath: 'a.ts' }],
-        },
-        {
-          caseId: 'case-002',
-          repo: 'owner/repo',
-          groundTruthFiles: ['b.ts'],
-          results: [{ filePath: 'x.ts' }],
-        },
-      ],
+      methodResult: {
+        runId: 'run-001',
+        generatedAt: '2026-06-17T00:00:00.000Z',
+        method: 'keyword-baseline-v0',
+        topK: 10,
+        cases: [
+          {
+            caseId: 'case-001',
+            repo: 'owner/repo',
+            groundTruthFiles: ['a.ts'],
+            results: [{ filePath: 'a.ts' }],
+          },
+          {
+            caseId: 'case-002',
+            repo: 'owner/repo',
+            groundTruthFiles: ['b.ts'],
+            results: [{ filePath: 'x.ts' }],
+          },
+        ],
+      },
+      cleanRetrievalExcludedCaseIds: new Set(['case-002']),
     });
 
     expect(method.aggregate.macroRecallAt10).toBe(0.5);
@@ -131,6 +134,8 @@ describe('evaluation metrics', () => {
     expect(method.aggregate.macroF1At10).toBe(0.5);
     expect(method.aggregate.macroReviewBurdenAt10).toBe(1);
     expect(method.aggregate.noHitCaseCountAt10).toBe(1);
+    expect(method.cleanRetrievalAggregate?.macroRecallAt10).toBe(1);
+    expect(method.cleanRetrievalAggregate?.totalCases).toBe(1);
   });
 
   it('matches exact file paths, not substring matches', () => {

@@ -1,8 +1,8 @@
 {
   "runId": "failure-analysis-v0-2",
-  "generatedAt": "2026-06-17T11:40:50.773Z",
+  "generatedAt": "2026-06-18T14:45:13.918Z",
   "dataset": {
-    "caseCount": 5,
+    "caseCount": 6,
     "groundTruthType": "changed-files-proxy",
     "evaluationLevel": "file"
   },
@@ -10,7 +10,7 @@
     {
       "method": "keyword-baseline-v0",
       "sourceFile": "keyword-baseline.v0.json",
-      "passFullCount": 2,
+      "passFullCount": 3,
       "passPartialCount": 1,
       "failMissCount": 2,
       "categoryCounts": {
@@ -18,7 +18,8 @@
         "DATA_MODEL_MISSED": 3,
         "SUPPORT_FILE_OVER_RETRIEVED": 1,
         "DOMAIN_ALIAS_MISSING": 1,
-        "INDIRECT_DEPENDENCY_MISSED": 1
+        "INDIRECT_DEPENDENCY_MISSED": 1,
+        "SCANNER_MISSING_ARTIFACT": 1
       },
       "cases": [
         {
@@ -207,13 +208,43 @@
               "needsEvidenceFrom": "VECTOR_BASELINE"
             }
           ]
+        },
+        {
+          "caseId": "reqimpact-case-006-squareboat-default-includes",
+          "repo": "squareboat/nestjs-boilerplate",
+          "outcome": "PASS_FULL",
+          "recallAt10": 1,
+          "precisionAt10": 1,
+          "f1At10": 1,
+          "hitGroundTruthFiles": [
+            "libs/boat/src/transformers/transformer.ts"
+          ],
+          "missedGroundTruthFiles": [],
+          "unexpectedTopKFiles": [],
+          "topRankedFiles": [
+            "libs/boat/src/transformers/transformer.ts"
+          ],
+          "observedFailureCategories": [
+            "SCANNER_MISSING_ARTIFACT"
+          ],
+          "observedExplanation": "This case is labeled as an end-to-end scanner coverage failure, so retrieval metrics must not be read as clean retrieval-only performance. Lexical ranking retrieved 1 ground-truth file(s). Top ranked files were: libs/boat/src/transformers/transformer.ts.",
+          "hypothesesForFutureEvaluation": [
+            {
+              "hypothesis": "Dataset candidates or snapshot-export completeness should be verified before comparing stronger retrieval methods.",
+              "needsEvidenceFrom": "DB_SNAPSHOT"
+            },
+            {
+              "hypothesis": "Precision and review burden should be compared against later baselines because lexical ranking can retrieve nearby support files even when recall is high.",
+              "needsEvidenceFrom": "CURRENT_HYBRID"
+            }
+          ]
         }
       ]
     },
     {
       "method": "bm25-baseline-v0",
       "sourceFile": "bm25-baseline.v0.json",
-      "passFullCount": 2,
+      "passFullCount": 3,
       "passPartialCount": 1,
       "failMissCount": 2,
       "categoryCounts": {
@@ -221,7 +252,8 @@
         "DATA_MODEL_MISSED": 3,
         "SUPPORT_FILE_OVER_RETRIEVED": 1,
         "DOMAIN_ALIAS_MISSING": 1,
-        "INDIRECT_DEPENDENCY_MISSED": 1
+        "INDIRECT_DEPENDENCY_MISSED": 1,
+        "SCANNER_MISSING_ARTIFACT": 1
       },
       "cases": [
         {
@@ -410,6 +442,36 @@
               "needsEvidenceFrom": "VECTOR_BASELINE"
             }
           ]
+        },
+        {
+          "caseId": "reqimpact-case-006-squareboat-default-includes",
+          "repo": "squareboat/nestjs-boilerplate",
+          "outcome": "PASS_FULL",
+          "recallAt10": 1,
+          "precisionAt10": 1,
+          "f1At10": 1,
+          "hitGroundTruthFiles": [
+            "libs/boat/src/transformers/transformer.ts"
+          ],
+          "missedGroundTruthFiles": [],
+          "unexpectedTopKFiles": [],
+          "topRankedFiles": [
+            "libs/boat/src/transformers/transformer.ts"
+          ],
+          "observedFailureCategories": [
+            "SCANNER_MISSING_ARTIFACT"
+          ],
+          "observedExplanation": "This case is labeled as an end-to-end scanner coverage failure, so retrieval metrics must not be read as clean retrieval-only performance. Lexical ranking retrieved 1 ground-truth file(s). Top ranked files were: libs/boat/src/transformers/transformer.ts.",
+          "hypothesesForFutureEvaluation": [
+            {
+              "hypothesis": "Dataset candidates or snapshot-export completeness should be verified before comparing stronger retrieval methods.",
+              "needsEvidenceFrom": "DB_SNAPSHOT"
+            },
+            {
+              "hypothesis": "Precision and review burden should be compared against later baselines because lexical ranking can retrieve nearby support files even when recall is high.",
+              "needsEvidenceFrom": "CURRENT_HYBRID"
+            }
+          ]
         }
       ]
     }
@@ -459,6 +521,15 @@
       "bm25VsKeywordRecallAt10": "TIED",
       "bm25ChangedTopRankedFiles": false,
       "note": "BM25 tied keyword at R@10 and preserved the same top-ranked file set/order."
+    },
+    {
+      "caseId": "reqimpact-case-006-squareboat-default-includes",
+      "repo": "squareboat/nestjs-boilerplate",
+      "keywordOutcome": "PASS_FULL",
+      "bm25Outcome": "PASS_FULL",
+      "bm25VsKeywordRecallAt10": "TIED",
+      "bm25ChangedTopRankedFiles": false,
+      "note": "BM25 tied keyword at R@10 and preserved the same top-ranked file set/order."
     }
   ],
   "warnings": [
@@ -473,7 +544,7 @@
     "Excluded non-benchmark result file: results.v0.json",
     "Excluded non-benchmark result file: metrics.v0.json",
     "Excluded non-benchmark result file: failure-analysis.v0.json",
-    "Optional result file not found: rag-samples.current-hybrid.v0.json",
+    "Optional result file present but excluded until explicitly supported: rag-samples.current-hybrid.v0.json",
     "Optional result file not found: vector-baseline.v0.json"
   ]
 }

@@ -72,6 +72,7 @@ export type MethodMetricsReport = {
   sourceFile?: string;
   caseMetrics: CaseMetrics[];
   aggregate: AggregateMetrics;
+  cleanRetrievalAggregate?: AggregateMetrics;
 };
 
 export type MetricsReport = {
@@ -79,6 +80,7 @@ export type MetricsReport = {
   generatedAt: string;
   dataset: {
     caseCount: number;
+    scannerCoverageFailureCaseCount?: number;
     groundTruthType: 'changed-files-proxy';
     evaluationLevel: 'file';
   };
@@ -278,7 +280,11 @@ export function aggregateCaseMetrics(caseMetrics: CaseMetrics[]): AggregateMetri
   };
 }
 
-export function computeMethodMetrics(methodResult: MethodResultFileLike): MethodMetricsReport {
+export function computeMethodMetrics(params: {
+  methodResult: MethodResultFileLike;
+  cleanRetrievalExcludedCaseIds?: Set<string>;
+}): MethodMetricsReport {
+  const { methodResult } = params;
   const caseMetrics = methodResult.cases.map((caseResult) =>
     computeCaseMetrics({
       caseId: caseResult.caseId,
@@ -294,28 +300,49 @@ export function computeMethodMetrics(methodResult: MethodResultFileLike): Method
     sourceFile: 'sourceFile' in methodResult ? methodResult.sourceFile : undefined,
     caseMetrics,
     aggregate: aggregateCaseMetrics(caseMetrics),
+    cleanRetrievalAggregate: aggregateCaseMetrics(
+      caseMetrics.filter(
+        (metric) => !params.cleanRetrievalExcludedCaseIds?.has(metric.caseId),
+      ),
+    ),
   };
 }
 
 export function buildMetricsReport(params: {
   methods: MethodResultFileLike[];
   datasetCaseCount: number;
+  scannerCoverageFailureCaseIds?: string[];
   generatedAt?: string;
   runId?: string;
   warnings?: string[];
 }): MetricsReport {
+  const scannerCoverageFailureCaseIds = params.scannerCoverageFailureCaseIds ?? [];
+  const cleanRetrievalExcludedCaseIds = new Set(scannerCoverageFailureCaseIds);
+
   return {
     runId: params.runId ?? `metrics-v0-${params.methods.length}`,
     generatedAt: params.generatedAt ?? new Date().toISOString(),
     dataset: {
       caseCount: params.datasetCaseCount,
+      scannerCoverageFailureCaseCount: scannerCoverageFailureCaseIds.length,
       groundTruthType: 'changed-files-proxy',
       evaluationLevel: 'file',
     },
-    methods: params.methods.map((methodResult) => computeMethodMetrics(methodResult)),
+    methods: params.methods.map((methodResult) =>
+      computeMethodMetrics({
+        methodResult,
+        cleanRetrievalExcludedCaseIds,
+      }),
+    ),
     warnings: [
       'Changed files are proxy ground truth, not absolute impacted files.',
       'Metrics are file-level only, not method-level.',
+      ...(scannerCoverageFailureCaseIds.length > 0
+        ? [
+            `Clean retrieval aggregate excludes scanner coverage failure case(s): ${scannerCoverageFailureCaseIds.join(', ')}.`,
+            'E2E aggregate includes all cases, including scanner coverage failures.',
+          ]
+        : []),
       ...(params.warnings ?? []),
     ],
   };
@@ -333,14 +360,28 @@ export function renderMetricsMarkdown(report: MetricsReport): string {
     'High review burden means humans must inspect many retrieved files per true positive.',
     'If a case has zero true positives, burden is treated as all retrieved files being wasted review effort.',
     '',
-    '| Method | R@5 | R@10 | P@5 | P@10 | F1@5 | F1@10 | ReviewBurden@5 | ReviewBurden@10 | NoHitCases@10 |',
-    '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
+    '| Method | Aggregate | Cases | R@5 | R@10 | P@5 | P@10 | F1@5 | F1@10 | ReviewBurden@5 | ReviewBurden@10 | NoHitCases@10 |',
+    '| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
   ];
 
   for (const method of report.methods) {
-    lines.push(
-      `| ${method.method} | ${method.aggregate.macroRecallAt5.toFixed(4)} | ${method.aggregate.macroRecallAt10.toFixed(4)} | ${method.aggregate.macroPrecisionAt5.toFixed(4)} | ${method.aggregate.macroPrecisionAt10.toFixed(4)} | ${method.aggregate.macroF1At5.toFixed(4)} | ${method.aggregate.macroF1At10.toFixed(4)} | ${method.aggregate.macroReviewBurdenAt5.toFixed(4)} | ${method.aggregate.macroReviewBurdenAt10.toFixed(4)} | ${method.aggregate.noHitCaseCountAt10} |`,
+    const rows = [
+      { label: 'E2E all cases', aggregate: method.aggregate },
+      ...(method.cleanRetrievalAggregate
+        ? [
+            {
+              label: 'Clean retrieval subset',
+              aggregate: method.cleanRetrievalAggregate,
+            },
+          ]
+        : []),
+    ];
+
+    for (const row of rows) {
+      lines.push(
+        `| ${method.method} | ${row.label} | ${row.aggregate.totalCases} | ${row.aggregate.macroRecallAt5.toFixed(4)} | ${row.aggregate.macroRecallAt10.toFixed(4)} | ${row.aggregate.macroPrecisionAt5.toFixed(4)} | ${row.aggregate.macroPrecisionAt10.toFixed(4)} | ${row.aggregate.macroF1At5.toFixed(4)} | ${row.aggregate.macroF1At10.toFixed(4)} | ${row.aggregate.macroReviewBurdenAt5.toFixed(4)} | ${row.aggregate.macroReviewBurdenAt10.toFixed(4)} | ${row.aggregate.noHitCaseCountAt10} |`,
       );
+    }
     }
 
   lines.push(

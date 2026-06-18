@@ -46,6 +46,8 @@ export const reqImpactEvaluationCaseSchema = z
     requirementText: z.string().min(1),
     groundTruth: groundTruthSchema,
     candidateArtifacts: z.array(candidateArtifactSchema).min(1),
+    evaluationScope: z.string().min(1).optional(),
+    scannerCoverageNote: z.string().min(1).optional(),
     notes: z.string().optional(),
   })
   .strict();

@@ -21,9 +21,16 @@ function main(): void {
   const dataset = loadDataset(datasetPath);
   const registry = loadResultRegistry(resolveRepoPath(resultsDir));
   const methods = normalizeRegistryMethods(registry.methods);
+  const scannerCoverageFailureCaseIds = dataset.cases
+    .filter(
+      (evaluationCase) =>
+        evaluationCase.evaluationScope === 'E2E_SCANNER_COVERAGE_FAILURE',
+    )
+    .map((evaluationCase) => evaluationCase.id);
   const report = buildMetricsReport({
     methods,
     datasetCaseCount: dataset.cases.length,
+    scannerCoverageFailureCaseIds,
     warnings: registry.warnings,
   });
 

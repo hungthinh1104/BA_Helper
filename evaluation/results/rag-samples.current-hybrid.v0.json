@@ -1,6 +1,6 @@
 {
-  "runId": "rag-sample:current_hybrid:reqimpact-case-006-squareboat-default-includes:2026-06-18T12-44-43-414Z",
-  "generatedAt": "2026-06-18T12:44:43.414Z",
+  "runId": "rag-sample:current_hybrid:reqimpact-case-006-squareboat-default-includes:2026-06-18T14-44-41-057Z",
+  "generatedAt": "2026-06-18T14:44:41.057Z",
   "mode": "CURRENT_HYBRID_BENCHMARK",
   "caseId": "reqimpact-case-006-squareboat-default-includes",
   "repo": "squareboat/nestjs-boilerplate",
@@ -39,6 +39,16 @@
     ],
     "chunkerVersions": [
       "artifact-chunker@0.1.0"
+    ],
+    "profiles": [
+      {
+        "embeddingProfileId": "google-gemini-001-1536",
+        "embeddingProvider": "google",
+        "embeddingModel": "gemini-embedding-001",
+        "embeddingDimensions": 1536,
+        "embeddingConfigHash": "ae7b397d6b6fce4573794e52c1daa56d7daed714bdc75898b8a54e4d588565d5",
+        "chunkCount": 14
+      }
     ],
     "queryEmbeddingProfileId": "google-gemini-001-1536",
     "queryProviderName": "google",
@@ -531,7 +541,9 @@
     ]
   },
   "warnings": [
-    "Changed files are proxy ground truth. This smoke export is not a final benchmark result.",
-    "CURRENT_HYBRID benchmark mode alignment was verified."
+    "Changed files are proxy ground truth. This export is not a final research conclusion.",
+    "CURRENT_HYBRID benchmark mode alignment was verified.",
+    "The changed ground-truth file libs/boat/src/transformers/transformer.ts was not persisted as a CodeArtifact in the aligned base snapshot. Therefore current-hybrid cannot retrieve the ground-truth artifact. This case is valid as an end-to-end scanner coverage failure, but must not be interpreted as a clean retrieval-only miss.",
+    "Recall@10=0 for this case should be interpreted as scanner coverage / E2E failure, not pure retrieval failure."
   ]
 }

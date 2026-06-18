@@ -1,6 +1,6 @@
 # ReqImpact RAG Sample Export v0
 
-- Run ID: rag-sample:current_hybrid:reqimpact-case-006-squareboat-default-includes:2026-06-18T12-44-43-414Z
+- Run ID: rag-sample:current_hybrid:reqimpact-case-006-squareboat-default-includes:2026-06-18T14-44-41-057Z
 - Mode: CURRENT_HYBRID_BENCHMARK
 - Case ID: reqimpact-case-006-squareboat-default-includes
 - Repo: squareboat/nestjs-boilerplate
@@ -117,5 +117,7 @@ Changed files are proxy ground truth. This smoke export is not a final benchmark
 
 ## Warnings
 
-- Changed files are proxy ground truth. This smoke export is not a final benchmark result.
+- Changed files are proxy ground truth. This export is not a final research conclusion.
 - CURRENT_HYBRID benchmark mode alignment was verified.
+- The changed ground-truth file libs/boat/src/transformers/transformer.ts was not persisted as a CodeArtifact in the aligned base snapshot. Therefore current-hybrid cannot retrieve the ground-truth artifact. This case is valid as an end-to-end scanner coverage failure, but must not be interpreted as a clean retrieval-only miss.
+- Recall@10=0 for this case should be interpreted as scanner coverage / E2E failure, not pure retrieval failure.

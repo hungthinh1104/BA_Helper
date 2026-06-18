@@ -311,17 +311,16 @@ The runtime API result was:
 
 - `reqimpact-case-006-squareboat-default-includes` is now added to dataset v0.
 - A case-snapshot override was added for the aligned exact-SHA snapshot.
-- This phase still does **not** run current-hybrid benchmark export.
+- A guarded current-hybrid benchmark export now exists for Case 006 after E8/E9.
 
 ### Practical consequence
 
-- `cases.v0.json` remains unchanged at 5 cases.
-- `case-snapshot-overrides.v0.json` remains unchanged.
-- `db-snapshot-readiness.v0.*` remains unchanged because no new snapshot was
-  published.
-- `case-snapshot-alignment.v0.*` remains unchanged because no new mapping or
-  aligned snapshot exists.
-- no current-hybrid benchmark export was run.
+- `cases.v0.json` contains 6 cases.
+- `case-snapshot-alignment.v0.*` reports Case 006 as `ALIGNED_VECTOR_READY`.
+- `rag-samples.current-hybrid.v0.*` contains one Case 006 benchmark export.
+- Case 006 is labeled `E2E_SCANNER_COVERAGE_FAILURE`.
+- current-hybrid Recall@10=0 for Case 006 is a scanner coverage / E2E failure,
+  not a clean retrieval-only miss.
 - no `vector-baseline.v0.json` was created.
 
 ### Follow-up after scanner fix

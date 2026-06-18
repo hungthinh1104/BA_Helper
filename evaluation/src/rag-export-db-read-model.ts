@@ -20,6 +20,14 @@ export type RagExportEmbeddingState = {
   embeddingDimensions: number[];
   embeddingConfigHashes: string[];
   chunkerVersions: string[];
+  profiles: Array<{
+    embeddingProfileId: string;
+    embeddingProvider: string | null;
+    embeddingModel: string | null;
+    embeddingDimensions: number | null;
+    embeddingConfigHash: string | null;
+    chunkCount: number;
+  }>;
 };
 
 export async function readSnapshotMetadata(params: {
@@ -77,6 +85,38 @@ export async function readEmbeddingState(params: {
     },
   });
 
+  const profileMap = new Map<
+    string,
+    {
+      embeddingProfileId: string;
+      embeddingProvider: string | null;
+      embeddingModel: string | null;
+      embeddingDimensions: number | null;
+      embeddingConfigHash: string | null;
+      chunkCount: number;
+    }
+  >();
+
+  for (const row of rows) {
+    if (!row.embeddingProfileId) {
+      continue;
+    }
+
+    const existing = profileMap.get(row.embeddingProfileId);
+    if (existing) {
+      existing.chunkCount += 1;
+    } else {
+      profileMap.set(row.embeddingProfileId, {
+        embeddingProfileId: row.embeddingProfileId,
+        embeddingProvider: row.embeddingProvider,
+        embeddingModel: row.embeddingModel,
+        embeddingDimensions: row.embeddingDimensions,
+        embeddingConfigHash: row.embeddingConfigHash,
+        chunkCount: 1,
+      });
+    }
+  }
+
   return {
     chunkCount: rows.length,
     embeddingProfileIds: Array.from(
@@ -105,6 +145,9 @@ export async function readEmbeddingState(params: {
           .filter((value): value is string => Boolean(value)),
       ),
     ).sort(),
+    profiles: Array.from(profileMap.values()).sort((a, b) =>
+      a.embeddingProfileId.localeCompare(b.embeddingProfileId),
+    ),
   };
 }
 
