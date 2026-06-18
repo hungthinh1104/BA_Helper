@@ -6,7 +6,11 @@ import { GoogleEmbeddingProvider } from '../../apps/api/src/modules/embedding/in
 import { OpenAiEmbeddingProvider } from '../../apps/api/src/modules/embedding/infrastructure/openai-embedding.provider';
 import { EmbeddingChunkRepository } from '../../apps/api/src/modules/embedding/infrastructure/embedding-chunk.repository';
 import { type EmbeddingProvider } from '../../apps/api/src/modules/embedding/domain/embedding-provider.interface';
-import { resolveRuntimeEmbeddingProfileFromEnv } from '../../apps/api/src/modules/embedding/domain/embedding-profile-registry';
+import type { EmbeddingProfile } from '../../apps/api/src/modules/embedding/domain/embedding-profile';
+import {
+  buildEmbeddingConfigHash,
+  resolveRuntimeEmbeddingProfileFromEnv,
+} from '../../apps/api/src/modules/embedding/domain/embedding-profile-registry';
 import { GraphRepository } from '../../apps/api/src/modules/graph/infrastructure/graph.repository';
 import { PrismaService } from '../../apps/api/src/modules/prisma/prisma.service';
 import { HybridRetrievalService } from '../../apps/api/src/modules/retrieval/application/hybrid-retrieval.service';
@@ -53,8 +57,16 @@ type RagSampleExport = {
   groundTruthFiles: string[];
   snapshot?: RagExportSnapshotMetadata;
   embeddingState?: RagExportEmbeddingState & {
+    queryEmbeddingProfileId?: string;
     queryProviderName?: string;
     queryEmbeddingModel?: string;
+    queryEmbeddingDimensions?: number;
+    queryEmbeddingConfigHash?: string;
+    artifactEmbeddingProfileId?: string;
+    artifactEmbeddingProvider?: string;
+    artifactEmbeddingModel?: string;
+    artifactEmbeddingDimensions?: number;
+    artifactEmbeddingConfigHash?: string;
     artifactEmbeddingModels?: string[];
     alignmentVerified?: boolean;
   };
@@ -109,6 +121,7 @@ function resolveRealQueryEmbeddingProvider(): {
   providerName: string;
   embeddingModel: string;
   embeddingProfileId: string;
+  profile: EmbeddingProfile;
 } {
   const profile = resolveRuntimeEmbeddingProfileFromEnv('QUERY');
   const providerName = profile.provider;
@@ -121,6 +134,7 @@ function resolveRealQueryEmbeddingProvider(): {
         providerName: 'google',
         embeddingModel,
         embeddingProfileId: profile.id,
+        profile,
       };
     case 'openai':
       return {
@@ -128,6 +142,7 @@ function resolveRealQueryEmbeddingProvider(): {
         providerName: 'openai',
         embeddingModel,
         embeddingProfileId: profile.id,
+        profile,
       };
     case 'fake':
       throw new Error('Fake query embedding provider is configured. Benchmark mode requires a real provider.');
@@ -232,8 +247,16 @@ function renderMarkdown(result: RagSampleExport): string {
       '',
       '## Embedding State',
       '',
+      `- Query Profile ID: ${result.embeddingState.queryEmbeddingProfileId ?? 'unknown'}`,
       `- Query Provider: ${result.embeddingState.queryProviderName ?? 'unknown'}`,
       `- Query Embedding Model: ${result.embeddingState.queryEmbeddingModel ?? 'unknown'}`,
+      `- Query Dimensions: ${result.embeddingState.queryEmbeddingDimensions ?? 'unknown'}`,
+      `- Query Config Hash: ${result.embeddingState.queryEmbeddingConfigHash ?? 'unknown'}`,
+      `- Artifact Profile ID: ${result.embeddingState.artifactEmbeddingProfileId ?? 'unknown'}`,
+      `- Artifact Provider: ${result.embeddingState.artifactEmbeddingProvider ?? 'unknown'}`,
+      `- Artifact Embedding Model: ${result.embeddingState.artifactEmbeddingModel ?? 'unknown'}`,
+      `- Artifact Dimensions: ${result.embeddingState.artifactEmbeddingDimensions ?? 'unknown'}`,
+      `- Artifact Config Hash: ${result.embeddingState.artifactEmbeddingConfigHash ?? 'unknown'}`,
       `- Chunk count: ${result.embeddingState.chunkCount}`,
       `- Artifact embedding models: ${result.embeddingState.artifactEmbeddingModels?.join(', ') || 'none'}`,
       `- Chunker versions: ${result.embeddingState.chunkerVersions.join(', ') || 'none'}`,
@@ -367,6 +390,8 @@ async function runCurrentHybridMode(params: {
     let queryProviderName: string;
     let queryEmbeddingModel: string;
     let queryEmbeddingProfileId: string;
+    let queryEmbeddingDimensions: number;
+    let queryEmbeddingConfigHash: string;
 
     if (isSmokeMode) {
       const fakeProvider = new FakeEmbeddingProvider();
@@ -374,6 +399,8 @@ async function runCurrentHybridMode(params: {
       queryProviderName = fakeProvider.providerName;
       queryEmbeddingModel = 'fake-embedding';
       queryEmbeddingProfileId = fakeProvider.profile.id;
+      queryEmbeddingDimensions = fakeProvider.profile.dimensions;
+      queryEmbeddingConfigHash = buildEmbeddingConfigHash(fakeProvider.profile);
     } else {
       try {
         const resolvedProvider = resolveRealQueryEmbeddingProvider();
@@ -381,12 +408,21 @@ async function runCurrentHybridMode(params: {
         queryProviderName = resolvedProvider.providerName;
         queryEmbeddingModel = resolvedProvider.embeddingModel;
         queryEmbeddingProfileId = resolvedProvider.embeddingProfileId;
+        queryEmbeddingDimensions = resolvedProvider.profile.dimensions;
+        queryEmbeddingConfigHash = buildEmbeddingConfigHash(
+          resolvedProvider.profile,
+        );
       } catch (error) {
         throw new Error(
           `Real query embedding provider is configured but not yet wired into research exporter. ${error instanceof Error ? error.message : String(error)}`,
         );
       }
     }
+    const artifactEmbeddingProfileId = embeddingState.embeddingProfileIds[0];
+    const artifactEmbeddingProvider = embeddingState.embeddingProviders[0];
+    const artifactEmbeddingModel = embeddingState.embeddingModels[0];
+    const artifactEmbeddingDimensions = embeddingState.embeddingDimensions[0];
+    const artifactEmbeddingConfigHash = embeddingState.embeddingConfigHashes[0];
 
     const guardResult = evaluateCurrentHybridExportGuard({
       caseRepo: params.evaluationCase.repo,
@@ -423,7 +459,7 @@ async function runCurrentHybridMode(params: {
       repositoryId: params.repositoryId,
       snapshotId: params.snapshotId,
       embeddingQueryProfileId: queryEmbeddingProfileId,
-      embeddingArtifactProfileId: embeddingState.embeddingProfileIds[0],
+      embeddingArtifactProfileId: artifactEmbeddingProfileId,
       changeRequest: params.evaluationCase.requirementText,
       maxResults: params.topKLimit,
       expandGraph: true,
@@ -505,8 +541,16 @@ async function runCurrentHybridMode(params: {
       snapshot: mapSnapshotMetadata(snapshot),
       embeddingState: {
         ...embeddingState,
+        queryEmbeddingProfileId,
         queryProviderName,
         queryEmbeddingModel,
+        queryEmbeddingDimensions,
+        queryEmbeddingConfigHash,
+        artifactEmbeddingProfileId,
+        artifactEmbeddingProvider,
+        artifactEmbeddingModel,
+        artifactEmbeddingDimensions,
+        artifactEmbeddingConfigHash,
         artifactEmbeddingModels: embeddingState.embeddingModels,
         alignmentVerified: guardResult.mode === 'CURRENT_HYBRID_BENCHMARK',
       },

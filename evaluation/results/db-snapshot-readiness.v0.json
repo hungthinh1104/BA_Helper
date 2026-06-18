@@ -1,21 +1,191 @@
 {
   "runId": "db-snapshot-readiness-v0",
-  "generatedAt": "2026-06-18T12:42:12.165Z",
-  "status": "NO_DATABASE_URL",
+  "generatedAt": "2026-06-18T12:46:04.764Z",
+  "status": "READY_CANDIDATES_FOUND",
   "database": {
-    "hasDatabaseUrl": false,
-    "inspectedReadOnly": false
+    "hasDatabaseUrl": true,
+    "inspectedReadOnly": true
   },
   "summary": {
-    "projectCount": 0,
-    "repositoryCount": 0,
-    "snapshotCount": 0,
-    "vectorReadyCandidateCount": 0,
-    "lexicalOnlyCandidateCount": 0
+    "projectCount": 8,
+    "repositoryCount": 7,
+    "snapshotCount": 7,
+    "vectorReadyCandidateCount": 1,
+    "lexicalOnlyCandidateCount": 3
   },
-  "candidates": [],
+  "candidates": [
+    {
+      "projectId": "a89660ef-6a15-4f65-a53d-2dbb1218a2ea",
+      "repositoryId": "b8687312-ed36-4bca-b519-32b6e49b31f4",
+      "snapshotId": "b8676c81-b19b-4c97-93a5-38125b9b525b",
+      "commitSha": "33ca78792610f1b0ece552767ef370bcb1978205",
+      "indexStatus": "VECTOR_READY",
+      "chunkCount": 14,
+      "embeddingProfileIds": [
+        "google-gemini-001-1536"
+      ],
+      "embeddingProviders": [
+        "google"
+      ],
+      "embeddingModels": [
+        "gemini-embedding-001"
+      ],
+      "embeddingDimensions": [
+        1536
+      ],
+      "embeddingConfigHashes": [
+        "ae7b397d6b6fce4573794e52c1daa56d7daed714bdc75898b8a54e4d588565d5"
+      ],
+      "chunkerVersions": [
+        "artifact-chunker@0.1.0"
+      ],
+      "classification": "VECTOR_READY_CANDIDATE",
+      "usableFor": [
+        "VECTOR_BASELINE",
+        "CURRENT_HYBRID_EXPORT"
+      ],
+      "warnings": []
+    },
+    {
+      "projectId": "3744b50c-9cda-4c15-93df-0b4a9d21bff2",
+      "repositoryId": "643d9d25-ae49-4c2e-835c-22e5e9458ec4",
+      "snapshotId": "ba8d4eb8-e713-4bcf-ae31-12af1690b614",
+      "commitSha": "d10b46097021e9d1fe8286995a0b685c8a444dfe",
+      "indexStatus": "VECTOR_READY",
+      "chunkCount": 14,
+      "embeddingProfileIds": [],
+      "embeddingProviders": [],
+      "embeddingModels": [
+        "gemini-embedding-001"
+      ],
+      "embeddingDimensions": [],
+      "embeddingConfigHashes": [],
+      "chunkerVersions": [
+        "artifact-chunker@0.1.0"
+      ],
+      "classification": "LEGACY_PROFILE_MISSING",
+      "usableFor": [],
+      "warnings": [
+        "EmbeddingChunk rows exist but embeddingProfileId metadata is missing; treat these rows as legacy and not benchmark-ready."
+      ]
+    },
+    {
+      "projectId": "84bdbbc6-d70c-4f1f-b17c-a379a3682952",
+      "repositoryId": "6e99eeb1-02b2-422b-939d-d9d5174ac77a",
+      "snapshotId": "ef931de3-5b6e-4465-91c2-f7d6b46e6eed",
+      "commitSha": "02f804159841a2771755c382832a7938b904c420",
+      "indexStatus": "VECTOR_FAILED",
+      "chunkCount": 0,
+      "embeddingProfileIds": [],
+      "embeddingProviders": [],
+      "embeddingModels": [],
+      "embeddingDimensions": [],
+      "embeddingConfigHashes": [],
+      "chunkerVersions": [],
+      "classification": "LEXICAL_ONLY_CANDIDATE",
+      "usableFor": [
+        "CURRENT_HYBRID_EXPORT"
+      ],
+      "warnings": [
+        "Snapshot indexStatus is VECTOR_FAILED; vector retrieval may be absent or incomplete.",
+        "No EmbeddingChunk rows exist for this snapshot."
+      ]
+    },
+    {
+      "projectId": "ff6fd8e0-8ded-46bf-adfe-0e02b586977f",
+      "repositoryId": "40772cf0-8f58-49c4-8a97-df2c6730a759",
+      "snapshotId": "5d7d7147-5410-4ea0-993c-a16e3732c175",
+      "commitSha": "mock-commit-sha",
+      "indexStatus": "NOT_INDEXED",
+      "chunkCount": 0,
+      "embeddingProfileIds": [],
+      "embeddingProviders": [],
+      "embeddingModels": [],
+      "embeddingDimensions": [],
+      "embeddingConfigHashes": [],
+      "chunkerVersions": [],
+      "classification": "LEXICAL_ONLY_CANDIDATE",
+      "usableFor": [
+        "CURRENT_HYBRID_EXPORT"
+      ],
+      "warnings": [
+        "Snapshot indexStatus is NOT_INDEXED; vector retrieval may be absent or incomplete.",
+        "No EmbeddingChunk rows exist for this snapshot."
+      ]
+    },
+    {
+      "projectId": "1f19825e-6ed9-48d0-a226-ce2bcdb4cac8",
+      "repositoryId": "7e6fb612-55d2-4849-8226-48b89837235c",
+      "snapshotId": "b2196b22-2a89-472a-942a-cc606e5cf0f4",
+      "commitSha": "mock-commit-sha",
+      "indexStatus": "NOT_INDEXED",
+      "chunkCount": 0,
+      "embeddingProfileIds": [],
+      "embeddingProviders": [],
+      "embeddingModels": [],
+      "embeddingDimensions": [],
+      "embeddingConfigHashes": [],
+      "chunkerVersions": [],
+      "classification": "LEXICAL_ONLY_CANDIDATE",
+      "usableFor": [
+        "CURRENT_HYBRID_EXPORT"
+      ],
+      "warnings": [
+        "Snapshot indexStatus is NOT_INDEXED; vector retrieval may be absent or incomplete.",
+        "No EmbeddingChunk rows exist for this snapshot."
+      ]
+    },
+    {
+      "projectId": "ab9bd99d-2b54-44ac-bd20-3f017a84cdff",
+      "repositoryId": "d7b8030c-a4fb-4b24-b27d-0375c06ccd0d",
+      "snapshotId": "444246fb-2942-4668-be16-85bcf3164fe0",
+      "commitSha": "f26cd56837cd10a1c00bb89d74d97519abc6f732",
+      "indexStatus": "VECTOR_READY",
+      "chunkCount": 31,
+      "embeddingProfileIds": [],
+      "embeddingProviders": [],
+      "embeddingModels": [
+        "gemini-embedding-001"
+      ],
+      "embeddingDimensions": [],
+      "embeddingConfigHashes": [],
+      "chunkerVersions": [
+        "artifact-chunker@0.1.0"
+      ],
+      "classification": "LEGACY_PROFILE_MISSING",
+      "usableFor": [],
+      "warnings": [
+        "EmbeddingChunk rows exist but embeddingProfileId metadata is missing; treat these rows as legacy and not benchmark-ready."
+      ]
+    },
+    {
+      "projectId": "ab9bd99d-2b54-44ac-bd20-3f017a84cdff",
+      "repositoryId": "d7b8030c-a4fb-4b24-b27d-0375c06ccd0d",
+      "snapshotId": "01eab892-56ed-45cc-844d-c6b9a66d80c9",
+      "commitSha": "f26cd56837cd10a1c00bb89d74d97519abc6f732",
+      "indexStatus": "VECTOR_READY",
+      "chunkCount": 31,
+      "embeddingProfileIds": [],
+      "embeddingProviders": [],
+      "embeddingModels": [
+        "fake-embedding"
+      ],
+      "embeddingDimensions": [],
+      "embeddingConfigHashes": [],
+      "chunkerVersions": [
+        "artifact-chunker@0.1.0"
+      ],
+      "classification": "LEGACY_PROFILE_MISSING",
+      "usableFor": [],
+      "warnings": [
+        "EmbeddingChunk rows exist but embeddingProfileId metadata is missing; treat these rows as legacy and not benchmark-ready."
+      ]
+    }
+  ],
   "nextInputsNeeded": [
-    "Set DATABASE_URL and rerun evaluation/scripts/probe-db-snapshot-readiness.ts."
+    "--projectId a89660ef-6a15-4f65-a53d-2dbb1218a2ea",
+    "--repositoryId b8687312-ed36-4bca-b519-32b6e49b31f4",
+    "--snapshotId b8676c81-b19b-4c97-93a5-38125b9b525b"
   ],
   "warnings": [
     "This probe does not run retrieval.",
