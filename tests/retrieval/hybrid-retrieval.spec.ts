@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { HybridRetrievalService } from '../../apps/api/src/modules/retrieval/application/hybrid-retrieval.service';
-import { FakeEmbeddingProvider } from '../../apps/api/src/modules/embedding/infrastructure/fake-embedding.provider';
+import { resolveEmbeddingProfile } from '../../apps/api/src/modules/embedding/domain/embedding-profile-registry';
 
 describe('HybridRetrievalService', () => {
   let service: HybridRetrievalService;
   let chunkRepoMock: any;
-  let provider: FakeEmbeddingProvider;
+  let provider: any;
   let artifactRepoMock: any;
   let graphRepoMock: any;
   let prismaMock: any;
@@ -16,11 +16,24 @@ describe('HybridRetrievalService', () => {
     snapshotId: 'snap-1',
     changeRequest: 'cancel booking and issue refund',
     domain: 'BOOKING',
+    embeddingQueryProfileId: 'google-gemini-001-1536',
+    embeddingArtifactProfileId: 'google-gemini-001-1536',
   };
 
   beforeEach(() => {
     chunkRepoMock = { searchSimilar: jest.fn() };
-    provider = new FakeEmbeddingProvider();
+    provider = {
+      providerName: 'google',
+      embed: jest.fn<any>().mockResolvedValue({
+        embeddings: [new Array(1536).fill(0.01)],
+        provider: 'google',
+        model: 'gemini-embedding-001',
+        dimensions: 1536,
+        profileId: 'google-gemini-001-1536',
+        configHash: 'cfg',
+        normalized: true,
+      }),
+    };
     artifactRepoMock = { findById: jest.fn() };
     graphRepoMock = { expandFromSeeds: jest.fn() };
     prismaMock = {
@@ -55,6 +68,7 @@ describe('HybridRetrievalService', () => {
           projectId: 'proj-1',
           repositoryId: 'repo-1',
           snapshotId: 'snap-1',
+          embeddingProfileId: 'google-gemini-001-1536',
         }),
       );
     });
@@ -207,6 +221,68 @@ describe('HybridRetrievalService', () => {
       expect(results).toHaveLength(1);
       expect(results[0].artifactId).toBe('art-1');
       expect(results[0].retrievalMethod).toBe('LEXICAL');
+    });
+
+    it('skips vector path when query and artifact embedding profiles are incompatible', async () => {
+      prismaMock.repositorySnapshot.findUnique.mockResolvedValue({ indexStatus: 'VECTOR_READY' });
+      prismaMock.$queryRaw.mockResolvedValue([
+        { id: 'art-1', artifactKey: 'file1.ts', filePath: 'src/file1.ts', symbolName: 'func1', artifactType: 'FILE' },
+      ]);
+      graphRepoMock.expandFromSeeds.mockResolvedValue([]);
+
+      const results = await service.retrieve({
+        ...BASE_REQUEST,
+        embeddingQueryProfileId: 'google-gemini-001-1536',
+        embeddingArtifactProfileId: 'openai-3-small-1536',
+      });
+
+      expect(chunkRepoMock.searchSimilar).not.toHaveBeenCalled();
+      expect(results).toHaveLength(1);
+      expect(results[0].retrievalMethod).toBe('LEXICAL');
+    });
+
+    it('passes artifact embedding profile id into vector search when profiles are compatible', async () => {
+      const embeddingProviderMock = {
+        embed: jest.fn<any>().mockResolvedValue({
+          embeddings: [new Array(1536).fill(0.01)],
+          provider: 'google',
+          model: 'gemini-embedding-001',
+          dimensions: 1536,
+          profileId: 'google-gemini-001-1536',
+          configHash: 'cfg',
+          normalized: true,
+        }),
+      } as any;
+
+      service = new HybridRetrievalService(
+        chunkRepoMock,
+        embeddingProviderMock,
+        artifactRepoMock,
+        graphRepoMock,
+        prismaMock,
+      );
+
+      prismaMock.repositorySnapshot.findUnique.mockResolvedValue({ indexStatus: 'VECTOR_READY' });
+      prismaMock.$queryRaw.mockResolvedValue([]);
+      chunkRepoMock.searchSimilar.mockResolvedValue([]);
+      graphRepoMock.expandFromSeeds.mockResolvedValue([]);
+
+      await service.retrieve({
+        ...BASE_REQUEST,
+        embeddingQueryProfileId: 'google-gemini-001-1536',
+        embeddingArtifactProfileId: 'google-gemini-001-1536',
+      });
+
+      expect(embeddingProviderMock.embed).toHaveBeenCalledWith({
+        texts: [BASE_REQUEST.changeRequest],
+        profile: resolveEmbeddingProfile('google-gemini-001-1536'),
+        inputRole: 'QUERY',
+      });
+      expect(chunkRepoMock.searchSimilar).toHaveBeenCalledWith(
+        expect.objectContaining({
+          embeddingProfileId: 'google-gemini-001-1536',
+        }),
+      );
     });
   });
 });

@@ -49,6 +49,7 @@ describe('EmbeddingChunkRepository — multi-tenant isolation', () => {
         projectId: TENANT_A.projectId,
         repositoryId: TENANT_A.repositoryId,
         snapshotId: TENANT_A.snapshotId,
+        embeddingProfileId: 'fake-1536',
         queryEmbedding: new Array(1536).fill(0.1),
       });
 
@@ -79,6 +80,7 @@ describe('EmbeddingChunkRepository — multi-tenant isolation', () => {
         projectId: TENANT_A.projectId,
         repositoryId: TENANT_A.repositoryId,
         snapshotId: TENANT_A.snapshotId,
+        embeddingProfileId: 'fake-1536',
         queryEmbedding: new Array(1536).fill(0.1),
       });
 
@@ -97,6 +99,7 @@ describe('EmbeddingChunkRepository — multi-tenant isolation', () => {
         projectId: TENANT_A.projectId,
         repositoryId: TENANT_A.repositoryId,
         snapshotId: 'new-snapshot-id',
+        embeddingProfileId: 'fake-1536',
         queryEmbedding: new Array(1536).fill(0.1),
       });
 

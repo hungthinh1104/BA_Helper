@@ -1,4 +1,5 @@
 import { HybridRetrievalService } from './hybrid-retrieval.service';
+import { resolveEmbeddingProfile } from '../../embedding/domain/embedding-profile-registry';
 
 describe('HybridRetrievalService', () => {
   describe('security', () => {
@@ -187,6 +188,102 @@ describe('HybridRetrievalService', () => {
       // Used fallback domain 'BOOKING' via parameter
       // If it works, it won't throw. The test ensures it handles null profiles gracefully.
       expect(prisma.repositorySnapshot.findUnique).toHaveBeenCalled();
+    });
+  });
+
+  describe('embedding profile compatibility (Phase E4)', () => {
+    it('passes artifact embedding profile id into vector search when query and artifact profiles are compatible', async () => {
+      const prisma = {
+        repositorySnapshot: {
+          findUnique: jest.fn().mockResolvedValue({
+            indexStatus: 'VECTOR_READY',
+            profile: null,
+          }),
+        },
+        $queryRaw: jest.fn().mockResolvedValue([]),
+      } as any;
+
+      const chunkRepo = {
+        searchSimilar: jest.fn().mockResolvedValue([]),
+      } as any;
+      const embeddingProvider = {
+        embed: jest.fn().mockResolvedValue({
+          embeddings: [new Array(1536).fill(0.1)],
+          provider: 'google',
+          model: 'gemini-embedding-001',
+          dimensions: 1536,
+          profileId: 'google-gemini-001-1536',
+          configHash: 'cfg',
+          normalized: true,
+        }),
+      } as any;
+
+      const service = new HybridRetrievalService(
+        chunkRepo,
+        embeddingProvider,
+        { findById: jest.fn() } as any,
+        { expandFromSeeds: jest.fn().mockResolvedValue([]) } as any,
+        prisma,
+      );
+
+      await service.retrieve({
+        projectId: '11',
+        repositoryId: '22',
+        snapshotId: '33',
+        changeRequest: 'booking',
+        embeddingQueryProfileId: 'google-gemini-001-1536',
+        embeddingArtifactProfileId: 'google-gemini-001-1536',
+      });
+
+      expect(embeddingProvider.embed).toHaveBeenCalledWith({
+        texts: ['booking'],
+        profile: resolveEmbeddingProfile('google-gemini-001-1536'),
+        inputRole: 'QUERY',
+      });
+      expect(chunkRepo.searchSimilar).toHaveBeenCalledWith(
+        expect.objectContaining({
+          embeddingProfileId: 'google-gemini-001-1536',
+        }),
+      );
+    });
+
+    it('skips vector search when query and artifact profiles are incompatible', async () => {
+      const prisma = {
+        repositorySnapshot: {
+          findUnique: jest.fn().mockResolvedValue({
+            indexStatus: 'VECTOR_READY',
+            profile: null,
+          }),
+        },
+        $queryRaw: jest.fn().mockResolvedValue([]),
+      } as any;
+
+      const chunkRepo = {
+        searchSimilar: jest.fn().mockResolvedValue([]),
+      } as any;
+      const embeddingProvider = {
+        embed: jest.fn(),
+      } as any;
+
+      const service = new HybridRetrievalService(
+        chunkRepo,
+        embeddingProvider,
+        { findById: jest.fn() } as any,
+        { expandFromSeeds: jest.fn().mockResolvedValue([]) } as any,
+        prisma,
+      );
+
+      await service.retrieve({
+        projectId: '11',
+        repositoryId: '22',
+        snapshotId: '33',
+        changeRequest: 'booking',
+        embeddingQueryProfileId: 'google-gemini-001-1536',
+        embeddingArtifactProfileId: 'openai-3-small-1536',
+      });
+
+      expect(embeddingProvider.embed).not.toHaveBeenCalled();
+      expect(chunkRepo.searchSimilar).not.toHaveBeenCalled();
     });
   });
 });

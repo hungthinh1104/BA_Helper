@@ -90,6 +90,7 @@ export class EmbeddingChunkRepository {
     projectId: string;
     repositoryId: string;
     snapshotId: string;
+    embeddingProfileId: string;
     queryEmbedding: number[];
     limit?: number;
     artifactTypes?: string[];
@@ -106,6 +107,7 @@ export class EmbeddingChunkRepository {
           AND "projectId"    = ${params.projectId}
           AND "repositoryId" = ${params.repositoryId}
           AND "snapshotId"   = ${params.snapshotId}
+          AND "embeddingProfileId" = ${params.embeddingProfileId}
           AND "artifactType" = ANY(${params.artifactTypes})
         ORDER BY embedding <=> ${vectorStr}::vector
         LIMIT ${limit}
@@ -120,6 +122,7 @@ export class EmbeddingChunkRepository {
         AND "projectId"    = ${params.projectId}
         AND "repositoryId" = ${params.repositoryId}
         AND "snapshotId"   = ${params.snapshotId}
+        AND "embeddingProfileId" = ${params.embeddingProfileId}
       ORDER BY embedding <=> ${vectorStr}::vector
       LIMIT ${limit}
     `;

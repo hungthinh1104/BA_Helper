@@ -46,6 +46,10 @@ export interface RetrievalRequest {
   projectId: string;
   repositoryId: string;
   snapshotId: string;
+  /** Optional query embedding profile override for research or benchmark tooling. */
+  embeddingQueryProfileId?: string;
+  /** Optional artifact embedding profile override for research or benchmark tooling. */
+  embeddingArtifactProfileId?: string;
   changeRequest: string;
   /** Domain profile key e.g. 'BOOKING'. Drives glossary-based keyword expansion. */
   domain?: string;

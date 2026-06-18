@@ -4,6 +4,11 @@ import { buildRetrievalSuggestion } from '../domain/retrieval-suggestion';
 import { EmbeddingChunkRepository } from '../../embedding/infrastructure/embedding-chunk.repository';
 import { EmbeddingProvider } from '../../embedding/domain/embedding-provider.interface';
 import { resolveSelectedEmbeddingProfile } from '../../embedding/embedding.module';
+import {
+  areEmbeddingProfilesCompatible,
+  resolveEmbeddingProfile,
+} from '../../embedding/domain/embedding-profile-registry';
+import type { EmbeddingProfile } from '../../embedding/domain/embedding-profile';
 import { ArtifactRepository } from '../../artifact/infrastructure/artifact.repository';
 import { GraphRepository } from '../../graph/infrastructure/graph.repository';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -148,39 +153,48 @@ export class HybridRetrievalService {
     // 2. Vector semantic search
     if (indexStatus === 'VECTOR_READY') {
       try {
-        const queryProfile = resolveSelectedEmbeddingProfile('QUERY');
-        const vectorResponse = await this.embeddingProvider.embed({
-          texts: [request.changeRequest],
-          profile: queryProfile,
-          inputRole: 'QUERY',
-        });
-        const queryEmbedding = vectorResponse.embeddings[0];
+        const queryProfile = this.resolveQueryProfile(request);
+        const artifactProfile = this.resolveArtifactProfile(request, queryProfile);
 
-        const vectorHits = await this.chunkRepo.searchSimilar({
-          tenantId,
-          projectId: request.projectId,
-          repositoryId: request.repositoryId,
-          snapshotId: request.snapshotId,
-          queryEmbedding,
-          limit: this.normalizeLimit(maxResults * 2), // fetch more to allow dropping
-        });
+        if (!areEmbeddingProfilesCompatible(queryProfile, artifactProfile)) {
+          this.logger.warn(
+            `Vector search skipped due to incompatible embedding profiles: query=${queryProfile.id} artifact=${artifactProfile.id}`,
+          );
+        } else {
+          const vectorResponse = await this.embeddingProvider.embed({
+            texts: [request.changeRequest],
+            profile: queryProfile,
+            inputRole: 'QUERY',
+          });
+          const queryEmbedding = vectorResponse.embeddings[0];
 
-        for (const hit of vectorHits) {
-          if (!hit.artifactId) continue;
-          
-          let artifact = candidates.get(hit.artifactId)?.artifact;
-          if (!artifact) {
-            artifact = await this.artifactRepo.findById(hit.artifactId);
-            if (artifact) {
-               artifact.symbolName = artifact.name;
+          const vectorHits = await this.chunkRepo.searchSimilar({
+            tenantId,
+            projectId: request.projectId,
+            repositoryId: request.repositoryId,
+            snapshotId: request.snapshotId,
+            embeddingProfileId: artifactProfile.id,
+            queryEmbedding,
+            limit: this.normalizeLimit(maxResults * 2), // fetch more to allow dropping
+          });
+
+          for (const hit of vectorHits) {
+            if (!hit.artifactId) continue;
+
+            let artifact = candidates.get(hit.artifactId)?.artifact;
+            if (!artifact) {
+              artifact = await this.artifactRepo.findById(hit.artifactId);
+              if (artifact) {
+                 artifact.symbolName = artifact.name;
+              }
             }
-          }
-            
-          if (!artifact) continue;
 
-          const c = getCandidate(hit.artifactId, artifact);
-          c.vectorScoreNorm = Math.max(c.vectorScoreNorm, hit.similarity);
-          c.signals.add('VECTOR');
+            if (!artifact) continue;
+
+            const c = getCandidate(hit.artifactId, artifact);
+            c.vectorScoreNorm = Math.max(c.vectorScoreNorm, hit.similarity);
+            c.signals.add('VECTOR');
+          }
         }
       } catch (error) {
         this.logger.warn(`Vector search failed, falling back to lexical only: ${error instanceof Error ? error.message : String(error)}`);
@@ -345,6 +359,25 @@ export class HybridRetrievalService {
     }
 
     return Math.max(1, Math.min(Math.trunc(value), MAX_RETRIEVAL_RESULTS));
+  }
+
+  private resolveQueryProfile(request: RetrievalRequest): EmbeddingProfile {
+    if (request.embeddingQueryProfileId) {
+      return resolveEmbeddingProfile(request.embeddingQueryProfileId);
+    }
+
+    return resolveSelectedEmbeddingProfile('QUERY');
+  }
+
+  private resolveArtifactProfile(
+    request: RetrievalRequest,
+    queryProfile: EmbeddingProfile,
+  ): EmbeddingProfile {
+    if (request.embeddingArtifactProfileId) {
+      return resolveEmbeddingProfile(request.embeddingArtifactProfileId);
+    }
+
+    return queryProfile;
   }
 
   private extractKeywords(text: string, domain?: string): { glossaryMatches: string[], symbolMatches: string[] } {

@@ -6,6 +6,7 @@ import { GoogleEmbeddingProvider } from '../../apps/api/src/modules/embedding/in
 import { OpenAiEmbeddingProvider } from '../../apps/api/src/modules/embedding/infrastructure/openai-embedding.provider';
 import { EmbeddingChunkRepository } from '../../apps/api/src/modules/embedding/infrastructure/embedding-chunk.repository';
 import { type EmbeddingProvider } from '../../apps/api/src/modules/embedding/domain/embedding-provider.interface';
+import { resolveRuntimeEmbeddingProfileFromEnv } from '../../apps/api/src/modules/embedding/domain/embedding-profile-registry';
 import { GraphRepository } from '../../apps/api/src/modules/graph/infrastructure/graph.repository';
 import { PrismaService } from '../../apps/api/src/modules/prisma/prisma.service';
 import { HybridRetrievalService } from '../../apps/api/src/modules/retrieval/application/hybrid-retrieval.service';
@@ -107,22 +108,26 @@ function resolveRealQueryEmbeddingProvider(): {
   provider: EmbeddingProvider;
   providerName: string;
   embeddingModel: string;
+  embeddingProfileId: string;
 } {
-  const providerName = (process.env.EMBEDDING_PROVIDER ?? 'fake').trim().toLowerCase();
-  const embeddingModel = (process.env.EMBEDDING_MODEL ?? '').trim();
+  const profile = resolveRuntimeEmbeddingProfileFromEnv('QUERY');
+  const providerName = profile.provider;
+  const embeddingModel = profile.model;
 
   switch (providerName) {
     case 'google':
       return {
-        provider: new GoogleEmbeddingProvider(),
+        provider: new GoogleEmbeddingProvider(profile),
         providerName: 'google',
-        embeddingModel: embeddingModel || 'gemini-embedding-001',
+        embeddingModel,
+        embeddingProfileId: profile.id,
       };
     case 'openai':
       return {
-        provider: new OpenAiEmbeddingProvider(),
+        provider: new OpenAiEmbeddingProvider(profile),
         providerName: 'openai',
-        embeddingModel: embeddingModel || 'text-embedding-3-small',
+        embeddingModel,
+        embeddingProfileId: profile.id,
       };
     case 'fake':
       throw new Error('Fake query embedding provider is configured. Benchmark mode requires a real provider.');
@@ -361,18 +366,21 @@ async function runCurrentHybridMode(params: {
     let queryProvider: EmbeddingProvider;
     let queryProviderName: string;
     let queryEmbeddingModel: string;
+    let queryEmbeddingProfileId: string;
 
     if (isSmokeMode) {
       const fakeProvider = new FakeEmbeddingProvider();
       queryProvider = fakeProvider;
       queryProviderName = fakeProvider.providerName;
       queryEmbeddingModel = 'fake-embedding';
+      queryEmbeddingProfileId = fakeProvider.profile.id;
     } else {
       try {
         const resolvedProvider = resolveRealQueryEmbeddingProvider();
         queryProvider = resolvedProvider.provider;
         queryProviderName = resolvedProvider.providerName;
         queryEmbeddingModel = resolvedProvider.embeddingModel;
+        queryEmbeddingProfileId = resolvedProvider.embeddingProfileId;
       } catch (error) {
         throw new Error(
           `Real query embedding provider is configured but not yet wired into research exporter. ${error instanceof Error ? error.message : String(error)}`,
@@ -414,6 +422,8 @@ async function runCurrentHybridMode(params: {
       projectId: params.projectId,
       repositoryId: params.repositoryId,
       snapshotId: params.snapshotId,
+      embeddingQueryProfileId: queryEmbeddingProfileId,
+      embeddingArtifactProfileId: embeddingState.embeddingProfileIds[0],
       changeRequest: params.evaluationCase.requirementText,
       maxResults: params.topKLimit,
       expandGraph: true,
