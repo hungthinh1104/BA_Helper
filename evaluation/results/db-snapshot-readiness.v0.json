@@ -1,0 +1,24 @@
+{
+  "runId": "db-snapshot-readiness-v0",
+  "generatedAt": "2026-06-18T00:50:32.048Z",
+  "status": "NO_DATABASE_URL",
+  "database": {
+    "hasDatabaseUrl": false,
+    "inspectedReadOnly": false
+  },
+  "summary": {
+    "projectCount": 0,
+    "repositoryCount": 0,
+    "snapshotCount": 0,
+    "vectorReadyCandidateCount": 0,
+    "lexicalOnlyCandidateCount": 0
+  },
+  "candidates": [],
+  "nextInputsNeeded": [
+    "Set DATABASE_URL and rerun evaluation/scripts/probe-db-snapshot-readiness.ts."
+  ],
+  "warnings": [
+    "This probe does not run retrieval.",
+    "This probe does not create vector-baseline.v0.json."
+  ]
+}

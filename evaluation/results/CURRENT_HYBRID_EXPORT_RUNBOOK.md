@@ -118,3 +118,17 @@ That failure mode was verified for this phase and should not generate
 - Changed files remain proxy ground truth.
 
 The purpose here is observability and failure analysis, not performance claims.
+
+## Phase 3B DB readiness probe
+
+Use `evaluation/scripts/probe-db-snapshot-readiness.ts` before attempting any
+DB-backed research export.
+
+The probe:
+
+- inspects local DB state read-only when `DATABASE_URL` is available
+- reports whether snapshots are usable for future `CURRENT_HYBRID` export
+- reports whether snapshots are usable for a future persisted-vector baseline
+- does not run retrieval
+- does not create `rag-samples.current-hybrid.v0.json`
+- does not create `vector-baseline.v0.json`

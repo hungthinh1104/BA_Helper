@@ -66,3 +66,21 @@ The probe:
   - `LOCAL_MODEL`
   - `NETWORK_PROVIDER`
   - `NONE`
+
+## Phase 3B DB snapshot readiness
+
+Use `evaluation/scripts/probe-db-snapshot-readiness.ts` to determine whether
+the local product database contains any snapshot/index/embedding state usable
+for a future persisted-vector baseline.
+
+This probe:
+
+- is read-only
+- does not run retrieval
+- does not write product DB rows
+- does not create `vector-baseline.v0.json`
+- can classify snapshots as:
+  - `VECTOR_READY_CANDIDATE`
+  - `LEXICAL_ONLY_CANDIDATE`
+  - `NOT_READY`
+  - `UNKNOWN`
