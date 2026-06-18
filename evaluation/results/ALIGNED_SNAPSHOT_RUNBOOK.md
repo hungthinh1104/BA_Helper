@@ -1,5 +1,25 @@
 # Aligned Snapshot Runbook
 
+## Phase 4D Outcome
+
+- Goal: find a smaller existing dataset case that can become `ALIGNED_VECTOR_READY`
+  under the current product scan workflow.
+- Result: **blocked**
+- Reason:
+  - the preferred smaller cases from `lujakob/nestjs-realworld-example-app`
+    (`reqimpact-case-002`, `reqimpact-case-003`, `reqimpact-case-005`) do not
+    have any currently public branch/tag ref that resolves exactly to their
+    dataset `baseSha`
+  - the current scan workflow accepts a repository URL plus a `ref`, and the
+    runtime clone path currently works with public branch/tag refs, not an
+    arbitrary detached commit SHA
+- Practical consequence:
+  - the only existing dataset case currently proven scan-alignable through the
+    public product workflow is still
+    `reqimpact-case-004-nest-post-sse-empty-response`
+  - that case aligns by commit, but remains `ALIGNED_LEXICAL_ONLY` because real
+    Google embedding hit quota and the snapshot ended `VECTOR_FAILED`
+
 ## Selected Case
 
 - Case ID: `reqimpact-case-004-nest-post-sse-empty-response`
@@ -13,6 +33,12 @@
 - Repository ID: `6e99eeb1-02b2-422b-939d-d9d5174ac77a`
 - Scan Job ID: `6b450c75-42ec-438f-aace-b53aae3cdbf6`
 - Snapshot ID: `ef931de3-5b6e-4465-91c2-f7d6b46e6eed`
+- Snapshot commit SHA: `02f804159841a2771755c382832a7938b904c420`
+- Index status: `VECTOR_FAILED`
+- Chunk count: `0`
+- Embedding model: `none persisted`
+- Chunker version: `none persisted`
+- Alignment state: `ALIGNED_LEXICAL_ONLY`
 
 ## Commands / API Steps Used
 
@@ -60,6 +86,28 @@ POST /api/v1/repositories/:repositoryId/scan-jobs
 - Embedding provider configured: `google`
 - Embedding model requested by runtime: `gemini-embedding-001`
 - Chunker version path: `artifact-chunker@0.1.0`
+
+## Smaller Case Screening
+
+The following existing dataset cases were checked first because they are
+expected to be smaller than the Nest framework repository case:
+
+- `reqimpact-case-003-realworld-auth-middleware-user-object`
+  - repo: `https://github.com/lujakob/nestjs-realworld-example-app`
+  - base SHA: `a0edadd2812bea5f1ad00e4074ffb048d80df105`
+  - result: no public remote ref currently resolves to this SHA
+- `reqimpact-case-002-realworld-article-author-relation`
+  - base SHA: `20b92a1017e31028aa0e00c894da70af813a86a1`
+  - result: no public remote ref currently resolves to this SHA
+- `reqimpact-case-005-realworld-proper-error-object`
+  - base SHA: `78e92f57b21038bbce0cde740dcbaeca68412c72`
+  - result: no public remote ref currently resolves to this SHA
+
+So Phase 4D could not legally switch to a smaller aligned case without either:
+
+- changing product clone behavior to support detached commit fetches, or
+- changing the dataset to a case whose `baseSha` is reachable through a public
+  branch/tag ref
 
 ## Why Fake Snapshot Is Excluded
 
