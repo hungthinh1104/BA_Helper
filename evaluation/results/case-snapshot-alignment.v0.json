@@ -1,0 +1,93 @@
+{
+  "runId": "case-snapshot-alignment-v0",
+  "generatedAt": "2026-06-18T03:13:51.075Z",
+  "caseCount": 5,
+  "alignedVectorReadyCount": 0,
+  "alignedLexicalOnlyCount": 1,
+  "snapshotMissingCount": 4,
+  "cases": [
+    {
+      "caseId": "reqimpact-case-001-backend-reliability-semantics",
+      "repo": "hungthinh1104/BA_Helper",
+      "baseSha": "ba99ad7dc3cb9fc510fc4b821f35d2f0cc0aa80e",
+      "status": "SNAPSHOT_MISSING",
+      "projectId": null,
+      "repositoryId": null,
+      "snapshotId": null,
+      "snapshotCommitSha": null,
+      "indexStatus": null,
+      "chunkCount": 0,
+      "embeddingModels": [],
+      "requiredNextAction": "Create/index snapshot at case baseSha.",
+      "warnings": []
+    },
+    {
+      "caseId": "reqimpact-case-002-realworld-article-author-relation",
+      "repo": "lujakob/nestjs-realworld-example-app",
+      "baseSha": "20b92a1017e31028aa0e00c894da70af813a86a1",
+      "status": "SNAPSHOT_MISSING",
+      "projectId": null,
+      "repositoryId": null,
+      "snapshotId": null,
+      "snapshotCommitSha": null,
+      "indexStatus": null,
+      "chunkCount": 0,
+      "embeddingModels": [],
+      "requiredNextAction": "Create/index snapshot at case baseSha.",
+      "warnings": []
+    },
+    {
+      "caseId": "reqimpact-case-003-realworld-auth-middleware-user-object",
+      "repo": "lujakob/nestjs-realworld-example-app",
+      "baseSha": "a0edadd2812bea5f1ad00e4074ffb048d80df105",
+      "status": "SNAPSHOT_MISSING",
+      "projectId": null,
+      "repositoryId": null,
+      "snapshotId": null,
+      "snapshotCommitSha": null,
+      "indexStatus": null,
+      "chunkCount": 0,
+      "embeddingModels": [],
+      "requiredNextAction": "Create/index snapshot at case baseSha.",
+      "warnings": []
+    },
+    {
+      "caseId": "reqimpact-case-004-nest-post-sse-empty-response",
+      "repo": "nestjs/nest",
+      "baseSha": "02f804159841a2771755c382832a7938b904c420",
+      "projectId": "84bdbbc6-d70c-4f1f-b17c-a379a3682952",
+      "repositoryId": "6e99eeb1-02b2-422b-939d-d9d5174ac77a",
+      "snapshotId": "ef931de3-5b6e-4465-91c2-f7d6b46e6eed",
+      "snapshotCommitSha": "02f804159841a2771755c382832a7938b904c420",
+      "indexStatus": "VECTOR_FAILED",
+      "chunkCount": 0,
+      "embeddingModels": [],
+      "warnings": [
+        "Snapshot indexStatus is VECTOR_FAILED; vector retrieval may be absent or incomplete.",
+        "No EmbeddingChunk rows exist for this snapshot."
+      ],
+      "notes": "https://github.com/nestjs/nest",
+      "status": "ALIGNED_LEXICAL_ONLY",
+      "requiredNextAction": "Snapshot aligns by commit, but real vector benchmark is blocked until usable non-fake embeddings exist."
+    },
+    {
+      "caseId": "reqimpact-case-005-realworld-proper-error-object",
+      "repo": "lujakob/nestjs-realworld-example-app",
+      "baseSha": "78e92f57b21038bbce0cde740dcbaeca68412c72",
+      "status": "SNAPSHOT_MISSING",
+      "projectId": null,
+      "repositoryId": null,
+      "snapshotId": null,
+      "snapshotCommitSha": null,
+      "indexStatus": null,
+      "chunkCount": 0,
+      "embeddingModels": [],
+      "requiredNextAction": "Create/index snapshot at case baseSha.",
+      "warnings": []
+    }
+  ],
+  "warnings": [
+    "This registry does not run retrieval.",
+    "Only ALIGNED_VECTOR_READY cases are eligible for current-hybrid benchmark export."
+  ]
+}

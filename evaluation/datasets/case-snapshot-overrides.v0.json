@@ -1,0 +1,11 @@
+{
+  "mappings": [
+    {
+      "caseId": "reqimpact-case-004-nest-post-sse-empty-response",
+      "projectId": "84bdbbc6-d70c-4f1f-b17c-a379a3682952",
+      "repositoryId": "6e99eeb1-02b2-422b-939d-d9d5174ac77a",
+      "snapshotId": "ef931de3-5b6e-4465-91c2-f7d6b46e6eed",
+      "notes": "https://github.com/nestjs/nest"
+    }
+  ]
+}
