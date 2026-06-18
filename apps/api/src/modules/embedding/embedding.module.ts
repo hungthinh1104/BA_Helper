@@ -7,8 +7,7 @@ import { EmbeddingChunkRepository } from './infrastructure/embedding-chunk.repos
 import { EmbedSnapshotArtifactsUseCase } from './application/embed-snapshot-artifacts.usecase';
 import { PrismaModule } from '../prisma/prisma.module';
 import {
-  resolveEmbeddingProfile,
-  resolveEmbeddingProfileFromEnv,
+  resolveRuntimeEmbeddingProfileFromEnv,
 } from './domain/embedding-profile-registry';
 
 const EMBEDDING_PROVIDERS = ['fake', 'openai', 'google'] as const;
@@ -22,6 +21,36 @@ export function resolveEmbeddingProvider(rawProvider?: string): EmbeddingProvide
   throw new Error(`Unsupported EMBEDDING_PROVIDER "${rawProvider}". Expected one of: ${EMBEDDING_PROVIDERS.join(', ')}.`);
 }
 
+export function resolveSelectedEmbeddingProfile(kind: 'INDEX' | 'QUERY' = 'INDEX') {
+  return resolveRuntimeEmbeddingProfileFromEnv(kind);
+}
+
+export function createEmbeddingProviderForProfile() {
+  const profile = resolveSelectedEmbeddingProfile();
+  const provider = profile.provider;
+  const fakeAllowed =
+    process.env.ALLOW_FAKE_EMBEDDING_IN_PRODUCTION?.trim().toLowerCase() ===
+    'true';
+
+  if (
+    process.env.NODE_ENV === 'production' &&
+    provider === 'fake' &&
+    !fakeAllowed
+  ) {
+    throw new Error(
+      'FakeEmbeddingProvider is forbidden in production. Please set an embedding profile/provider or ALLOW_FAKE_EMBEDDING_IN_PRODUCTION=true.',
+    );
+  }
+
+  if (provider === 'openai') {
+    return new OpenAiEmbeddingProvider(profile);
+  }
+  if (provider === 'google') {
+    return new GoogleEmbeddingProvider(profile);
+  }
+  return new FakeEmbeddingProvider(profile);
+}
+
 @Module({
   imports: [PrismaModule],
   providers: [
@@ -29,28 +58,7 @@ export function resolveEmbeddingProvider(rawProvider?: string): EmbeddingProvide
     EmbedSnapshotArtifactsUseCase,
     {
       provide: EmbeddingProvider,
-      useFactory: () => {
-        const usesProfileEnv = Boolean(
-          process.env.EMBEDDING_INDEX_PROFILE ||
-            process.env.EMBEDDING_DEFAULT_PROFILE,
-        );
-        const profile = usesProfileEnv
-          ? resolveEmbeddingProfileFromEnv('INDEX')
-          : resolveEmbeddingProfile(process.env.EMBEDDING_PROVIDER ? undefined : 'fake-1536');
-        const provider = profile.provider || resolveEmbeddingProvider(process.env.EMBEDDING_PROVIDER);
-
-        if (process.env.NODE_ENV === 'production' && provider === 'fake') {
-          throw new Error('FakeEmbeddingProvider is forbidden in production. Please set EMBEDDING_PROVIDER.');
-        }
-
-        if (provider === 'openai') {
-          return new OpenAiEmbeddingProvider(profile);
-        }
-        if (provider === 'google') {
-          return new GoogleEmbeddingProvider(profile);
-        }
-        return new FakeEmbeddingProvider(profile);
-      },
+      useFactory: () => createEmbeddingProviderForProfile(),
     },
   ],
   exports: [EmbedSnapshotArtifactsUseCase, EmbeddingChunkRepository, EmbeddingProvider],

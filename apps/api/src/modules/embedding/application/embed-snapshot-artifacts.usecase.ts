@@ -55,7 +55,7 @@ export class EmbedSnapshotArtifactsUseCase {
       // Idempotency guard: skip chunks already persisted for this snapshot
       const existingChunks = await this.chunkRepo.listBySnapshot(
         params.snapshotId,
-        this.embeddingProvider.providerName,
+        this.embeddingProvider.profile.model,
       );
       const existingByStableId = new Map<string, string>(
         existingChunks.map((c) => [c.stableChunkId, c.contentHash]),
@@ -122,7 +122,7 @@ export class EmbedSnapshotArtifactsUseCase {
         const copied = await this.chunkRepo.copyChunk({
           baseSnapshotId: reusePlan!.baseSnapshotId!,
           oldArtifactId: previousArtifactId,
-          embeddingModel: this.embeddingProvider.providerName,
+          embeddingModel: this.embeddingProvider.profile.model,
           chunkerVersion: CHUNK_BUILDER_VERSION,
           contentHash: current.contentHash,
           tenantId: projectId,
@@ -152,6 +152,8 @@ export class EmbedSnapshotArtifactsUseCase {
 
         const result = await this.embeddingProvider.embed({
           texts: redacted.map((r) => r.redactedContent),
+          profile: this.embeddingProvider.profile,
+          inputRole: 'DOCUMENT',
         });
 
         const chunksToInsert = redacted.map((item, idx) => ({
@@ -183,7 +185,7 @@ export class EmbedSnapshotArtifactsUseCase {
         mode: 'SNAPSHOT_SCOPED_COPY',
         baseSnapshotId,
         targetSnapshotId: params.snapshotId,
-        embeddingModel: this.embeddingProvider.providerName,
+        embeddingModel: this.embeddingProvider.profile.model,
         chunkerVersion: CHUNK_BUILDER_VERSION,
         copiedChunkCount: copiedCount,
         generatedChunkCount: generatedCount,
@@ -288,7 +290,7 @@ export class EmbedSnapshotArtifactsUseCase {
     const previousChunks = await this.chunkRepo.listForReuseByArtifacts({
       snapshotId: baseSnapshotId,
       artifactIds: candidateArtifactIds,
-      embeddingModel: this.embeddingProvider.providerName,
+      embeddingModel: this.embeddingProvider.profile.model,
       chunkerVersion: CHUNK_BUILDER_VERSION,
     });
 
@@ -305,7 +307,7 @@ export class EmbedSnapshotArtifactsUseCase {
       previousChunkByArtifactId,
       currentArtifactContentHashByKey,
       previousArtifactContentHashByKey,
-      targetEmbeddingModel: this.embeddingProvider.providerName,
+      targetEmbeddingModel: this.embeddingProvider.profile.model,
       versionChangeBlocked: reusePlan.reuseSafety === 'VERSION_CHANGED_REVIEW_REQUIRED',
     });
   }

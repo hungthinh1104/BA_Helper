@@ -125,6 +125,29 @@ export function resolveEmbeddingProfileFromEnv(kind: 'INDEX' | 'QUERY'): Embeddi
   return resolveEmbeddingProfile(explicit || undefined);
 }
 
+export function resolveRuntimeEmbeddingProfileFromEnv(
+  kind: 'INDEX' | 'QUERY',
+): EmbeddingProfile {
+  const explicit =
+    kind === 'INDEX'
+      ? envOrEmpty('EMBEDDING_INDEX_PROFILE')
+      : envOrEmpty('EMBEDDING_QUERY_PROFILE');
+
+  if (explicit) {
+    return resolveEmbeddingProfile(explicit);
+  }
+
+  if (envOrEmpty('EMBEDDING_DEFAULT_PROFILE')) {
+    return resolveEmbeddingProfile(envOrEmpty('EMBEDDING_DEFAULT_PROFILE'));
+  }
+
+  if (envOrEmpty('EMBEDDING_PROVIDER')) {
+    return resolveEmbeddingProfile();
+  }
+
+  return resolveEmbeddingProfile('fake-1536');
+}
+
 export function buildEmbeddingConfigHash(profile: EmbeddingProfile): string {
   const stablePayload = {
     provider: profile.provider,

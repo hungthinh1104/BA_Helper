@@ -3,6 +3,7 @@ import { RetrievalRequest, RetrievedArtifact } from '../domain/retrieval.types';
 import { buildRetrievalSuggestion } from '../domain/retrieval-suggestion';
 import { EmbeddingChunkRepository } from '../../embedding/infrastructure/embedding-chunk.repository';
 import { EmbeddingProvider } from '../../embedding/domain/embedding-provider.interface';
+import { resolveSelectedEmbeddingProfile } from '../../embedding/embedding.module';
 import { ArtifactRepository } from '../../artifact/infrastructure/artifact.repository';
 import { GraphRepository } from '../../graph/infrastructure/graph.repository';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -147,8 +148,11 @@ export class HybridRetrievalService {
     // 2. Vector semantic search
     if (indexStatus === 'VECTOR_READY') {
       try {
+        const queryProfile = resolveSelectedEmbeddingProfile('QUERY');
         const vectorResponse = await this.embeddingProvider.embed({
           texts: [request.changeRequest],
+          profile: queryProfile,
+          inputRole: 'QUERY',
         });
         const queryEmbedding = vectorResponse.embeddings[0];
 
