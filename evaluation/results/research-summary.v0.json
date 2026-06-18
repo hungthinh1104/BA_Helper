@@ -1,0 +1,60 @@
+{
+  "datasetVersion": "cases.v0",
+  "caseCount": 5,
+  "evaluationLevel": "file",
+  "groundTruthType": "changed-files-proxy",
+  "methodsMeasured": [
+    "keyword-baseline-v0",
+    "bm25-baseline-v0"
+  ],
+  "methodsNotMeasured": [
+    "vector-baseline-v0",
+    "current-hybrid",
+    "r1-structured-embedding"
+  ],
+  "aggregateMetrics": [
+    {
+      "method": "keyword-baseline-v0",
+      "macroRecallAt10": 0.4667,
+      "macroPrecisionAt10": 0.2643,
+      "macroF1At10": 0.3054,
+      "macroReviewBurdenAt10": 1.55,
+      "noHitCaseCountAt10": 2
+    },
+    {
+      "method": "bm25-baseline-v0",
+      "macroRecallAt10": 0.4667,
+      "macroPrecisionAt10": 0.2643,
+      "macroF1At10": 0.3054,
+      "macroReviewBurdenAt10": 1.55,
+      "noHitCaseCountAt10": 2
+    }
+  ],
+  "interimFindings": [
+    "bm25-baseline-v0 did not improve aggregate file-level retrieval over keyword-baseline-v0 on dataset v0.",
+    "Lexical retrieval remains insufficient for some dataset v0 cases.",
+    "This supports evaluating a real vector-only retrieval path next.",
+    "This does not prove vector retrieval will improve."
+  ],
+  "allowedClaims": [
+    "Dataset v0 with 5 public cases is implemented.",
+    "Deterministic lexical baselines are implemented and measured.",
+    "keyword-baseline-v0 and bm25-baseline-v0 achieve the reported file-level metrics on dataset v0.",
+    "BM25 ties keyword on aggregate dataset v0 metrics.",
+    "Failure analysis identifies lexical mismatch and data or indirect dependency misses as observed lexical-baseline issues."
+  ],
+  "disallowedClaims": [
+    "No SOTA claim.",
+    "No method-level accuracy claim.",
+    "No vector retrieval improvement claim.",
+    "No current-hybrid benchmark claim.",
+    "No R1 structured embedding improvement claim.",
+    "No GraphRAG comparison claim."
+  ],
+  "nextValidPaths": [
+    "Configure local DB and inspect persisted EmbeddingChunk and snapshot readiness for DB-backed export.",
+    "Configure a documented local real embedding provider for a vector-only baseline.",
+    "Explicitly allow a network embedding provider for a manual vector-only baseline.",
+    "If vector remains blocked, expand the dataset and deepen the threat model."
+  ]
+}
