@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { traceabilityReviewDecisionSchema } from './traceability.contract';
 
 export const documentSchema = z.object({
 	id: z.string().uuid(),
@@ -37,6 +38,7 @@ export const evidenceQualitySummarySchema = z.object({
 });
 
 export const evidenceQualityItemSchema = z.object({
+	linkId: z.string().min(1),
 	artifact: z.string(),
 	quality: z.enum([
 		'EVIDENCED',
@@ -46,6 +48,7 @@ export const evidenceQualityItemSchema = z.object({
 		'REVIEW_REQUIRED',
 	]),
 	reasons: z.array(z.string()),
+	reviewDecision: traceabilityReviewDecisionSchema.optional().nullable(),
 });
 
 export const approvedImpactReportResponseSchema = z.object({
