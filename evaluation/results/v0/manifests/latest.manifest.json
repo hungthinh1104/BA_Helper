@@ -19,14 +19,16 @@
   ],
   "notMeasuredYet": [
     "vector-only-baseline-v0",
-    "r1-structured-embedding"
+    "r1-structured-embedding",
+    "aggregate-current-hybrid-on-clean-subset-v0"
   ],
   "canonicalArtifacts": {
     "cases": "evaluation/datasets/v0/cases.v0.json",
     "alignment": "evaluation/results/v0/alignment/case-snapshot-alignment.v0.json",
     "metrics": "evaluation/results/v0/analysis/metrics.v0.json",
     "currentHybridCase006": "evaluation/results/v0/samples/current-hybrid/case006.v0.json",
-    "vectorOnlyCase006": "evaluation/results/v0/samples/vector-only/case006.v0.json"
+    "vectorOnlyCase006": "evaluation/results/v0/samples/vector-only/case006.v0.json",
+    "cleanVectorReadySubset": "evaluation/datasets/v0/subsets/clean-vector-ready.v0.json"
   },
   "plannedArtifacts": {},
   "knownLimits": [

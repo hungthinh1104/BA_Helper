@@ -12,6 +12,7 @@ export const EvaluationPaths = {
     schema: 'evaluation/datasets/v0/cases.v0.schema.json',
     notes: 'evaluation/datasets/v0/case-selection-notes.v0.md',
     snapshotOverrides: 'evaluation/datasets/v0/case-snapshot-overrides.v0.json',
+    subsets: 'evaluation/datasets/v0/subsets',
   },
   
   resultsV0: {

@@ -286,6 +286,48 @@ export function validateResults(): { valid: boolean; errors: string[] } {
     }
   }
 
+  // 6.6 Verify clean-vector-ready subset
+  const subsetPath = resolveRepoPath(EvaluationPaths.datasetV0.subsets + '/clean-vector-ready.v0.json');
+  if (existsSync(subsetPath)) {
+    const subset = readJsonFile<any>(subsetPath);
+    if (subset.subsetId !== 'clean-vector-ready-v0') errors.push('clean-vector-ready subsetId must be clean-vector-ready-v0');
+    if (subset.datasetVersion !== 'v0') errors.push('clean-vector-ready datasetVersion must be v0');
+    
+    const casesPath = resolveRepoPath(EvaluationPaths.datasetV0.cases);
+    if (existsSync(casesPath)) {
+      const casesData = readJsonFile<any>(casesPath);
+      subset.caseIds.forEach((id: string) => {
+        if (!casesData.cases.find((c: any) => c.id === id)) errors.push(`clean-vector-ready included case ${id} not found in cases.v0.json`);
+      });
+    }
+    
+    if (alignment) {
+      subset.caseIds.forEach((id: string) => {
+        const c = alignment.cases.find((ac: any) => ac.caseId === id);
+        if (!c) errors.push(`clean-vector-ready included case ${id} not found in alignment`);
+        else {
+          if (c.status !== 'ALIGNED_VECTOR_READY') errors.push(`clean-vector-ready case ${id} status must be ALIGNED_VECTOR_READY`);
+          if (c.cleanRetrievalEligible !== true) errors.push(`clean-vector-ready case ${id} cleanRetrievalEligible must be true`);
+          if (c.scannerCoverageStatus !== 'OK') errors.push(`clean-vector-ready case ${id} scannerCoverageStatus must be OK`);
+        }
+      });
+    }
+    
+    subset.excludedCases.forEach((c: any) => {
+      if (!c.reasonCodes || c.reasonCodes.length === 0) errors.push(`clean-vector-ready excluded case ${c.caseId} must have reasonCodes`);
+      if (!c.reason) errors.push(`clean-vector-ready excluded case ${c.caseId} must have reason`);
+    });
+    
+    if (subset.counts.eligibleCases !== subset.caseIds.length) errors.push('clean-vector-ready counts.eligibleCases mismatch');
+    if (subset.counts.excludedCases !== subset.excludedCases.length) errors.push('clean-vector-ready counts.excludedCases mismatch');
+    
+    const hasSmallSubsetWarning = subset.knownLimits?.some((l: string) => l.toLowerCase().includes('small'));
+    const hasNoAggregateWarning = subset.knownLimits?.some((l: string) => l.toLowerCase().includes('no aggregate vector-only baseline'));
+    if (!hasSmallSubsetWarning || !hasNoAggregateWarning) {
+      errors.push('clean-vector-ready knownLimits must mention "small" subset and "No aggregate vector-only baseline"');
+    }
+  }
+
   // 7. Verify Manifest
   const manifestPath = resolveRepoPath(EvaluationPaths.resultsV0.manifests + '/latest.manifest.json');
   if (!existsSync(manifestPath)) {

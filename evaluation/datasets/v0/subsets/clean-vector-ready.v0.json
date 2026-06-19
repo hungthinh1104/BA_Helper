@@ -1,0 +1,110 @@
+{
+  "subsetId": "clean-vector-ready-v0",
+  "datasetVersion": "v0",
+  "generatedAt": "2026-06-19T13:35:32.440Z",
+  "purpose": "Common fair retrieval subset for future aggregate retrieval comparison",
+  "eligibilityRules": {
+    "alignmentStatus": "ALIGNED_VECTOR_READY",
+    "cleanRetrievalEligible": true,
+    "scannerCoverageStatus": "OK",
+    "requiresSnapshot": true,
+    "requiresVectorIndex": true,
+    "requiresEmbeddingProfile": true,
+    "requiresIndexedGroundTruth": true
+  },
+  "caseIds": [
+    "reqimpact-case-006-squareboat-default-includes"
+  ],
+  "excludedCases": [
+    {
+      "caseId": "reqimpact-case-001-backend-reliability-semantics",
+      "reasonCodes": [
+        "NOT_ALIGNED_VECTOR_READY",
+        "SNAPSHOT_MISSING",
+        "INDEX_STATUS_NOT_VECTOR_READY",
+        "NO_CHUNKS",
+        "MISSING_SELECTED_EMBEDDING_PROFILE",
+        "MISSING_EMBEDDING_PROVIDER",
+        "MISSING_EMBEDDING_MODEL",
+        "MISSING_EMBEDDING_DIMENSIONS",
+        "NOT_CLEAN_RETRIEVAL_ELIGIBLE",
+        "SCANNER_COVERAGE_NOT_OK"
+      ],
+      "reason": "Case failed one or more eligibility rules for clean vector retrieval."
+    },
+    {
+      "caseId": "reqimpact-case-002-realworld-article-author-relation",
+      "reasonCodes": [
+        "NOT_ALIGNED_VECTOR_READY",
+        "SNAPSHOT_MISSING",
+        "INDEX_STATUS_NOT_VECTOR_READY",
+        "NO_CHUNKS",
+        "MISSING_SELECTED_EMBEDDING_PROFILE",
+        "MISSING_EMBEDDING_PROVIDER",
+        "MISSING_EMBEDDING_MODEL",
+        "MISSING_EMBEDDING_DIMENSIONS",
+        "NOT_CLEAN_RETRIEVAL_ELIGIBLE",
+        "SCANNER_COVERAGE_NOT_OK"
+      ],
+      "reason": "Case failed one or more eligibility rules for clean vector retrieval."
+    },
+    {
+      "caseId": "reqimpact-case-003-realworld-auth-middleware-user-object",
+      "reasonCodes": [
+        "NOT_ALIGNED_VECTOR_READY",
+        "SNAPSHOT_MISSING",
+        "INDEX_STATUS_NOT_VECTOR_READY",
+        "NO_CHUNKS",
+        "MISSING_SELECTED_EMBEDDING_PROFILE",
+        "MISSING_EMBEDDING_PROVIDER",
+        "MISSING_EMBEDDING_MODEL",
+        "MISSING_EMBEDDING_DIMENSIONS",
+        "NOT_CLEAN_RETRIEVAL_ELIGIBLE",
+        "SCANNER_COVERAGE_NOT_OK"
+      ],
+      "reason": "Case failed one or more eligibility rules for clean vector retrieval."
+    },
+    {
+      "caseId": "reqimpact-case-004-nest-post-sse-empty-response",
+      "reasonCodes": [
+        "NOT_ALIGNED_VECTOR_READY",
+        "INDEX_STATUS_NOT_VECTOR_READY",
+        "NO_CHUNKS",
+        "MISSING_SELECTED_EMBEDDING_PROFILE",
+        "MISSING_EMBEDDING_PROVIDER",
+        "MISSING_EMBEDDING_MODEL",
+        "MISSING_EMBEDDING_DIMENSIONS",
+        "GROUND_TRUTH_NOT_INDEXED",
+        "NOT_CLEAN_RETRIEVAL_ELIGIBLE",
+        "SCANNER_COVERAGE_NOT_OK"
+      ],
+      "reason": "Case failed one or more eligibility rules for clean vector retrieval."
+    },
+    {
+      "caseId": "reqimpact-case-005-realworld-proper-error-object",
+      "reasonCodes": [
+        "NOT_ALIGNED_VECTOR_READY",
+        "SNAPSHOT_MISSING",
+        "INDEX_STATUS_NOT_VECTOR_READY",
+        "NO_CHUNKS",
+        "MISSING_SELECTED_EMBEDDING_PROFILE",
+        "MISSING_EMBEDDING_PROVIDER",
+        "MISSING_EMBEDDING_MODEL",
+        "MISSING_EMBEDDING_DIMENSIONS",
+        "NOT_CLEAN_RETRIEVAL_ELIGIBLE",
+        "SCANNER_COVERAGE_NOT_OK"
+      ],
+      "reason": "Case failed one or more eligibility rules for clean vector retrieval."
+    }
+  ],
+  "counts": {
+    "totalCases": 6,
+    "eligibleCases": 1,
+    "excludedCases": 5
+  },
+  "knownLimits": [
+    "Clean vector-ready subset size is small and not representative of the full dataset.",
+    "Changed files are proxy ground truth",
+    "No aggregate vector-only baseline is published in E11B."
+  ]
+}
