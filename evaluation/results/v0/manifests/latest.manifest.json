@@ -1,8 +1,8 @@
 {
   "datasetVersion": "v0",
   "latestGeneratedAt": "2026-06-19T06:54:08.637Z",
-  "latestRunId": "2026-06-19T06-54-08-637Z",
-  "lastSuccessfulRunId": "2026-06-19T06-54-08-637Z",
+  "latestRunId": "vector-only-case006:2026-06-19T12-38-56-777Z",
+  "lastSuccessfulRunId": "vector-only-case006:2026-06-19T12-38-56-777Z",
   "lastAttemptedRunId": "2026-06-19T06-54-08-637Z",
   "status": "PARTIAL_RESEARCH_READY",
   "dataset": {
@@ -25,11 +25,10 @@
     "cases": "evaluation/datasets/v0/cases.v0.json",
     "alignment": "evaluation/results/v0/alignment/case-snapshot-alignment.v0.json",
     "metrics": "evaluation/results/v0/analysis/metrics.v0.json",
-    "currentHybridCase006": "evaluation/results/v0/samples/current-hybrid/case006.v0.json"
-  },
-  "plannedArtifacts": {
+    "currentHybridCase006": "evaluation/results/v0/samples/current-hybrid/case006.v0.json",
     "vectorOnlyCase006": "evaluation/results/v0/samples/vector-only/case006.v0.json"
   },
+  "plannedArtifacts": {},
   "knownLimits": [
     "current-hybrid is single-case only and not aggregate evidence",
     "No vector-only aggregate result yet",

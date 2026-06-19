@@ -1,0 +1,309 @@
+{
+  "runId": "vector-only-case006:2026-06-19T12-38-56-777Z",
+  "generatedAt": "2026-06-19T12:38:57.491Z",
+  "mode": "VECTOR_ONLY_CASE_PROBE",
+  "caseId": "reqimpact-case-006-squareboat-default-includes",
+  "scope": {
+    "type": "SINGLE_CASE_PROBE",
+    "datasetVersion": "v0",
+    "aggregateBenchmark": false
+  },
+  "retrievalMode": "VECTOR_ONLY",
+  "repo": "squareboat/nestjs-boilerplate",
+  "requirementText": "fix: default includes in transformer class",
+  "groundTruthFiles": [
+    "libs/boat/src/transformers/transformer.ts"
+  ],
+  "embeddingState": {
+    "provider": "google",
+    "model": "gemini-embedding-001",
+    "queryDimensions": 1536,
+    "documentDimensions": 1536,
+    "queryTaskType": "RETRIEVAL_QUERY",
+    "documentTaskType": "RETRIEVAL_DOCUMENT",
+    "queryEmbeddingProfileId": "google-gemini-001-1536",
+    "documentEmbeddingProfileId": "google-gemini-001-1536",
+    "profileCompatible": true,
+    "alignmentVerified": true
+  },
+  "groundTruthCoverage": {
+    "status": "OK",
+    "indexedGroundTruthFiles": [
+      "libs/boat/src/transformers/transformer.ts"
+    ],
+    "missingIndexedGroundTruthFiles": []
+  },
+  "topK": [
+    {
+      "rank": 1,
+      "filePath": "libs/boat/src/transformers/transformer.ts",
+      "score": 0.79040726394675,
+      "finalScore": 0.79040726394675,
+      "vectorScore": 0.79040726394675,
+      "lexicalScore": 0,
+      "graphScore": 0,
+      "evidenceStatus": "EVIDENCED",
+      "signals": [
+        "VECTOR"
+      ]
+    },
+    {
+      "rank": 2,
+      "filePath": "libs/boat/src/interfaces/transformer.ts",
+      "score": 0.7721581960775167,
+      "finalScore": 0.7721581960775167,
+      "vectorScore": 0.7721581960775167,
+      "lexicalScore": 0,
+      "graphScore": 0,
+      "evidenceStatus": "EVIDENCED",
+      "signals": [
+        "VECTOR"
+      ]
+    },
+    {
+      "rank": 3,
+      "filePath": "src/transformer/user/detail.ts",
+      "score": 0.7460161669855171,
+      "finalScore": 0.7460161669855171,
+      "vectorScore": 0.7460161669855171,
+      "lexicalScore": 0,
+      "graphScore": 0,
+      "evidenceStatus": "EVIDENCED",
+      "signals": [
+        "VECTOR"
+      ]
+    },
+    {
+      "rank": 4,
+      "filePath": "libs/boat/src/rest/restController.ts",
+      "score": 0.7207352782172309,
+      "finalScore": 0.7207352782172309,
+      "vectorScore": 0.7207352782172309,
+      "lexicalScore": 0,
+      "graphScore": 0,
+      "evidenceStatus": "EVIDENCED",
+      "signals": [
+        "VECTOR"
+      ]
+    },
+    {
+      "rank": 5,
+      "filePath": "src/transformer/index.ts",
+      "score": 0.7141189788019356,
+      "finalScore": 0.7141189788019356,
+      "vectorScore": 0.7141189788019356,
+      "lexicalScore": 0,
+      "graphScore": 0,
+      "evidenceStatus": "EVIDENCED",
+      "signals": [
+        "VECTOR"
+      ]
+    },
+    {
+      "rank": 6,
+      "filePath": "src/transformer/user/index.ts",
+      "score": 0.6968424347200189,
+      "finalScore": 0.6968424347200189,
+      "vectorScore": 0.6968424347200189,
+      "lexicalScore": 0,
+      "graphScore": 0,
+      "evidenceStatus": "EVIDENCED",
+      "signals": [
+        "VECTOR"
+      ]
+    },
+    {
+      "rank": 7,
+      "filePath": "libs/boat/src/rest/guards.ts",
+      "score": 0.687474470584063,
+      "finalScore": 0.687474470584063,
+      "vectorScore": 0.687474470584063,
+      "lexicalScore": 0,
+      "graphScore": 0,
+      "evidenceStatus": "EVIDENCED",
+      "signals": [
+        "VECTOR"
+      ]
+    },
+    {
+      "rank": 8,
+      "filePath": "libs/boat/src/interfaces/index.ts",
+      "score": 0.6691726845009734,
+      "finalScore": 0.6691726845009734,
+      "vectorScore": 0.6691726845009734,
+      "lexicalScore": 0,
+      "graphScore": 0,
+      "evidenceStatus": "EVIDENCED",
+      "signals": [
+        "VECTOR"
+      ]
+    },
+    {
+      "rank": 9,
+      "filePath": "libs/boat/src/index.ts",
+      "score": 0.6677502592727622,
+      "finalScore": 0.6677502592727622,
+      "vectorScore": 0.6677502592727622,
+      "lexicalScore": 0,
+      "graphScore": 0,
+      "evidenceStatus": "EVIDENCED",
+      "signals": [
+        "VECTOR"
+      ]
+    },
+    {
+      "rank": 10,
+      "filePath": "libs/boat/src/validator/index.ts",
+      "score": 0.6673764189295897,
+      "finalScore": 0.6673764189295897,
+      "vectorScore": 0.6673764189295897,
+      "lexicalScore": 0,
+      "graphScore": 0,
+      "evidenceStatus": "EVIDENCED",
+      "signals": [
+        "VECTOR"
+      ]
+    },
+    {
+      "rank": 11,
+      "filePath": "libs/boat/src/utils/context.ts",
+      "score": 0.6624318558702429,
+      "finalScore": 0.6624318558702429,
+      "vectorScore": 0.6624318558702429,
+      "lexicalScore": 0,
+      "graphScore": 0,
+      "evidenceStatus": "EVIDENCED",
+      "signals": [
+        "VECTOR"
+      ]
+    },
+    {
+      "rank": 12,
+      "filePath": "src/user/models/user.ts",
+      "score": 0.6618888575401565,
+      "finalScore": 0.6618888575401565,
+      "vectorScore": 0.6618888575401565,
+      "lexicalScore": 0,
+      "graphScore": 0,
+      "evidenceStatus": "EVIDENCED",
+      "signals": [
+        "VECTOR"
+      ]
+    },
+    {
+      "rank": 13,
+      "filePath": "libs/boat/src/rest/interfaces.ts",
+      "score": 0.6607147652123802,
+      "finalScore": 0.6607147652123802,
+      "vectorScore": 0.6607147652123802,
+      "lexicalScore": 0,
+      "graphScore": 0,
+      "evidenceStatus": "EVIDENCED",
+      "signals": [
+        "VECTOR"
+      ]
+    },
+    {
+      "rank": 14,
+      "filePath": "libs/boat/src/rest/metadata.ts",
+      "score": 0.658837854162263,
+      "finalScore": 0.658837854162263,
+      "vectorScore": 0.658837854162263,
+      "lexicalScore": 0,
+      "graphScore": 0,
+      "evidenceStatus": "EVIDENCED",
+      "signals": [
+        "VECTOR"
+      ]
+    },
+    {
+      "rank": 15,
+      "filePath": "libs/boat/src/service.ts",
+      "score": 0.6580681793154641,
+      "finalScore": 0.6580681793154641,
+      "vectorScore": 0.6580681793154641,
+      "lexicalScore": 0,
+      "graphScore": 0,
+      "evidenceStatus": "EVIDENCED",
+      "signals": [
+        "VECTOR"
+      ]
+    },
+    {
+      "rank": 16,
+      "filePath": "libs/boat/src/utils/collection.ts",
+      "score": 0.6572564636025705,
+      "finalScore": 0.6572564636025705,
+      "vectorScore": 0.6572564636025705,
+      "lexicalScore": 0,
+      "graphScore": 0,
+      "evidenceStatus": "EVIDENCED",
+      "signals": [
+        "VECTOR"
+      ]
+    },
+    {
+      "rank": 17,
+      "filePath": "src/user/repositories/user/contract.ts",
+      "score": 0.6567341284970682,
+      "finalScore": 0.6567341284970682,
+      "vectorScore": 0.6567341284970682,
+      "lexicalScore": 0,
+      "graphScore": 0,
+      "evidenceStatus": "EVIDENCED",
+      "signals": [
+        "VECTOR"
+      ]
+    },
+    {
+      "rank": 18,
+      "filePath": "config/services.ts",
+      "score": 0.6565125379867874,
+      "finalScore": 0.6565125379867874,
+      "vectorScore": 0.6565125379867874,
+      "lexicalScore": 0,
+      "graphScore": 0,
+      "evidenceStatus": "EVIDENCED",
+      "signals": [
+        "VECTOR"
+      ]
+    },
+    {
+      "rank": 19,
+      "filePath": "src/user/repositories/user/database.ts",
+      "score": 0.6543500618442915,
+      "finalScore": 0.6543500618442915,
+      "vectorScore": 0.6543500618442915,
+      "lexicalScore": 0,
+      "graphScore": 0,
+      "evidenceStatus": "EVIDENCED",
+      "signals": [
+        "VECTOR"
+      ]
+    },
+    {
+      "rank": 20,
+      "filePath": "libs/boat/src/rest/decorators.ts",
+      "score": 0.6530689584972527,
+      "finalScore": 0.6530689584972527,
+      "vectorScore": 0.6530689584972527,
+      "lexicalScore": 0,
+      "graphScore": 0,
+      "evidenceStatus": "EVIDENCED",
+      "signals": [
+        "VECTOR"
+      ]
+    }
+  ],
+  "groundTruthHitAtK": true,
+  "oracleCheck": {
+    "status": "NOT_AVAILABLE",
+    "reason": "Exact flat vector oracle is not implemented yet",
+    "requiredForAggregateBaseline": true
+  },
+  "knownLimits": [
+    "Single-case probe only, not an aggregate benchmark",
+    "Changed files are proxy ground truth",
+    "Vector-only result is path validation, not product ranking approval"
+  ]
+}
