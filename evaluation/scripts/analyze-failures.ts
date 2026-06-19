@@ -1,7 +1,7 @@
-import { writeFileSync } from 'fs';
+import { existsSync } from 'fs';
 import { writeResult } from '../src/core/write-result';
 import { EvaluationPaths } from '../src/core/paths';
-import { loadDataset, readJsonFile, resolveRepoPath, writeJsonFile } from '../io';
+import { loadDataset, readJsonFile, resolveRepoPath } from '../io';
 import type { MetricsReport } from '../metrics';
 import {
   analyzeLexicalBaselineFailures,
@@ -16,8 +16,18 @@ function parseArg(flag: string, fallback: string): string {
 
 function main(): void {
   const datasetPath = parseArg('--dataset', EvaluationPaths.datasetV0.cases);
-  const resultsDir = parseArg('--resultsDir', 'evaluation/results');
-  const metricsPath = parseArg('--metrics', EvaluationPaths.resultsLegacy.analysis.metricsJson);
+  let resultsDir = parseArg('--resultsDir', '');
+  if (!resultsDir) {
+    resultsDir = existsSync(resolveRepoPath(EvaluationPaths.resultsV0.baselines))
+      ? EvaluationPaths.resultsV0.baselines
+      : EvaluationPaths.resultsLegacy.root;
+  }
+  let metricsPath = parseArg('--metrics', '');
+  if (!metricsPath) {
+    metricsPath = existsSync(resolveRepoPath(EvaluationPaths.resultsV0.analysis + '/metrics.v0.json'))
+      ? EvaluationPaths.resultsV0.analysis + '/metrics.v0.json'
+      : EvaluationPaths.resultsLegacy.analysis.metricsJson;
+  }
   const jsonPath = parseArg(
     '--json',
     EvaluationPaths.resultsLegacy.analysis.failuresJson,

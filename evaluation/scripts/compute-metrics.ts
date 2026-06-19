@@ -1,3 +1,4 @@
+import { existsSync } from 'fs';
 import { EvaluationPaths } from '../src/core/paths';
 import { loadDataset, resolveRepoPath } from '../io';
 import {
@@ -15,7 +16,12 @@ function parseArg(flag: string, fallback: string): string {
 
 function main(): void {
   const datasetPath = parseArg('--dataset', EvaluationPaths.datasetV0.cases);
-  const resultsDir = parseArg('--resultsDir', 'evaluation/results');
+  let resultsDir = parseArg('--resultsDir', '');
+  if (!resultsDir) {
+    resultsDir = existsSync(resolveRepoPath(EvaluationPaths.resultsV0.baselines))
+      ? EvaluationPaths.resultsV0.baselines
+      : EvaluationPaths.resultsLegacy.root;
+  }
 
   const dataset = loadDataset(datasetPath);
   const registry = loadResultRegistry(resolveRepoPath(resultsDir));

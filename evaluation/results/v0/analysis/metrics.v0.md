@@ -1,6 +1,6 @@
 # Metrics v0
 
-Generated at: 2026-06-19T10:38:56.029Z
+Generated at: 2026-06-19T10:49:15.417Z
 
 Changed files are proxy ground truth.
 File-level only.
@@ -39,9 +39,5 @@ If a case has zero true positives, burden is treated as all retrieved files bein
 - Metrics are file-level only, not method-level.
 - Included benchmark result: keyword-baseline.v0.json
 - Included benchmark result: bm25-baseline.v0.json
-- Excluded non-benchmark result file: rag-samples.v0.json
-- Excluded non-benchmark result file: results.v0.json
-- Excluded non-benchmark result file: metrics.v0.json
-- Excluded non-benchmark result file: failure-analysis.v0.json
-- Optional result file present but excluded until explicitly supported: rag-samples.current-hybrid.v0.json
+- Optional result file not found: rag-samples.current-hybrid.v0.json
 - Optional result file not found: vector-baseline.v0.json

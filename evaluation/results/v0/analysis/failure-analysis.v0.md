@@ -1,6 +1,6 @@
 # Failure Analysis v0 — Lexical Baselines
 
-Generated at: 2026-06-19T10:38:57.764Z
+Generated at: 2026-06-19T10:49:17.135Z
 
 This analyzes deterministic lexical baselines only.
 Changed files are proxy ground truth.
@@ -193,9 +193,5 @@ Repo: `squareboat/nestjs-boilerplate`
 - BM25 did not improve aggregate file-level retrieval over keyword-baseline-v0 on dataset v0.
 - Included benchmark result: keyword-baseline.v0.json
 - Included benchmark result: bm25-baseline.v0.json
-- Excluded non-benchmark result file: rag-samples.v0.json
-- Excluded non-benchmark result file: results.v0.json
-- Excluded non-benchmark result file: metrics.v0.json
-- Excluded non-benchmark result file: failure-analysis.v0.json
-- Optional result file present but excluded until explicitly supported: rag-samples.current-hybrid.v0.json
+- Optional result file not found: rag-samples.current-hybrid.v0.json
 - Optional result file not found: vector-baseline.v0.json

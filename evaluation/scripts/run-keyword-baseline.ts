@@ -1,7 +1,6 @@
-import { writeFileSync } from 'fs';
 import { writeResult } from '../src/core/write-result';
 import { EvaluationPaths } from '../src/core/paths';
-import { loadDataset, resolveRepoPath, writeJsonFile } from '../io';
+import { loadDataset } from '../io';
 import {
   runKeywordBaselineDetailed,
   type KeywordBaselineCaseResult,

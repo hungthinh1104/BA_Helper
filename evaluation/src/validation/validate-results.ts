@@ -127,6 +127,7 @@ export function validateResults(): { valid: boolean; errors: string[] } {
 
   // 5. Verify metrics output
   const metricsPath = resolveRepoPath(EvaluationPaths.resultsV0.analysis + '/metrics.v0.json');
+  const metricsMdPath = resolveRepoPath(EvaluationPaths.resultsV0.analysis + '/metrics.v0.md');
   if (existsSync(metricsPath)) {
     const metrics = readJsonFile<MetricsReport>(metricsPath);
     if (!metrics.runId) errors.push('Metrics missing runId');
@@ -140,6 +141,13 @@ export function validateResults(): { valid: boolean; errors: string[] } {
       errors.push('Metrics missing dataset.scannerCoverageFailureCaseCountSource');
     } else if (source !== 'DATASET_METADATA' && source !== 'DB_ALIGNMENT') {
       errors.push(`Metrics source ${source} is not a valid enum value.`);
+    }
+
+    if (source === 'DATASET_METADATA' && existsSync(metricsMdPath)) {
+      const mdContent = require('fs').readFileSync(metricsMdPath, 'utf8');
+      if (!mdContent.includes('Metrics scope limitation') && !mdContent.includes('DATASET_METADATA')) {
+        errors.push('Metrics markdown is missing the DATASET_METADATA disclaimer.');
+      }
     }
 
     if (source === 'DB_ALIGNMENT' && alignment) {
@@ -205,6 +213,18 @@ export function validateResults(): { valid: boolean; errors: string[] } {
     const manifest = readJsonFile<any>(manifestPath);
     if (alignment && manifest.dataset?.caseCount !== alignment.caseCount) {
       errors.push(`Manifest case count (${manifest.dataset?.caseCount}) does not match alignment case count (${alignment.caseCount}).`);
+    }
+    if (alignment && manifest.dataset?.cleanRetrievalEligibleCount !== alignment.cleanRetrievalEligibleCount) {
+      errors.push(`Manifest cleanRetrievalEligibleCount (${manifest.dataset?.cleanRetrievalEligibleCount}) does not match alignment cleanRetrievalEligibleCount (${alignment.cleanRetrievalEligibleCount}).`);
+    }
+    if (alignment && manifest.dataset?.scannerCoverageFailureCount !== alignment.scannerCoverageFailureCount) {
+      errors.push(`Manifest scannerCoverageFailureCount (${manifest.dataset?.scannerCoverageFailureCount}) does not match alignment scannerCoverageFailureCount (${alignment.scannerCoverageFailureCount}).`);
+    }
+    if (!Array.isArray(manifest.notMeasuredYet) || !manifest.notMeasuredYet.includes('vector-only-baseline-v0')) {
+      errors.push('Manifest notMeasuredYet is missing vector-only-baseline-v0.');
+    }
+    if (!manifest.canonicalArtifacts?.currentHybridCase006) {
+      errors.push('Manifest is missing canonicalArtifacts.currentHybridCase006.');
     }
   }
 

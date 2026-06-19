@@ -1,6 +1,6 @@
 # ReqImpact Evaluation Metrics v0
 
-Generated at: 2026-06-19T10:38:59.489Z
+Generated at: 2026-06-19T10:49:18.840Z
 
 | Baseline | Status | Precision | Recall | F1 | Recall@5 | Recall@10 | Evidence Coverage | Review Burden |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |

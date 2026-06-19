@@ -1,3 +1,5 @@
+import { existsSync } from 'fs';
+import { readJsonFile, resolveRepoPath } from '../io';
 import { writeResult } from '../src/core/write-result';
 import { EvaluationPaths } from '../src/core/paths';
 import {
@@ -21,7 +23,15 @@ function main(): void {
   );
 
   const registry = buildCaseSnapshotAlignmentRegistry();
-  const isDbUnavailable = registry.cases.length > 0 && registry.cases.every(c => c.status === 'SNAPSHOT_MISSING');
+  
+  const readinessPath = resolveRepoPath(EvaluationPaths.resultsLegacy.probes.dbReadinessJson);
+  let isDbUnavailable = false;
+  if (existsSync(readinessPath)) {
+    const readiness = readJsonFile<any>(readinessPath);
+    if (readiness.status === 'NO_DATABASE_URL' || readiness.status === 'DB_UNAVAILABLE') {
+      isDbUnavailable = true;
+    }
+  }
 
   writeResult({
     canonicalJsonPath: isDbUnavailable ? undefined : EvaluationPaths.resultsV0.alignment + '/case-snapshot-alignment.v0.json',
