@@ -1,6 +1,9 @@
 {
   "datasetVersion": "v0",
   "latestGeneratedAt": "2026-06-19T06:54:08.637Z",
+  "latestRunId": "2026-06-19T06-54-08-637Z",
+  "lastSuccessfulRunId": "2026-06-19T06-54-08-637Z",
+  "lastAttemptedRunId": "2026-06-19T06-54-08-637Z",
   "status": "PARTIAL_RESEARCH_READY",
   "dataset": {
     "caseCount": 6,
@@ -23,6 +26,9 @@
     "alignment": "evaluation/results/v0/alignment/case-snapshot-alignment.v0.json",
     "metrics": "evaluation/results/v0/analysis/metrics.v0.json",
     "currentHybridCase006": "evaluation/results/v0/samples/current-hybrid/case006.v0.json"
+  },
+  "plannedArtifacts": {
+    "vectorOnlyCase006": "evaluation/results/v0/samples/vector-only/case006.v0.json"
   },
   "knownLimits": [
     "current-hybrid is single-case only and not aggregate evidence",

@@ -706,10 +706,10 @@ async function main(): Promise<void> {
         });
 
   const canonicalJsonPath = mode === 'CURRENT_HYBRID' 
-    ? (result.mode === 'CURRENT_HYBRID_BENCHMARK' ? EvaluationPaths.resultsV0.samples + '/current-hybrid/case006.v0.json' : undefined)
+    ? (result.mode === 'CURRENT_HYBRID_BENCHMARK' ? EvaluationPaths.resultsV0.samples.currentHybrid + '/case006.v0.json' : undefined)
     : undefined;
   const canonicalMarkdownPath = mode === 'CURRENT_HYBRID'
-    ? (result.mode === 'CURRENT_HYBRID_BENCHMARK' ? EvaluationPaths.resultsV0.samples + '/current-hybrid/case006.v0.md' : undefined)
+    ? (result.mode === 'CURRENT_HYBRID_BENCHMARK' ? EvaluationPaths.resultsV0.samples.currentHybrid + '/case006.v0.md' : undefined)
     : undefined;
 
   writeResult({

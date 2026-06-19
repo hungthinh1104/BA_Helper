@@ -19,9 +19,15 @@ export const EvaluationPaths = {
     probes: 'evaluation/results/v0/probes',
     alignment: 'evaluation/results/v0/alignment',
     baselines: 'evaluation/results/v0/baselines',
-    samples: 'evaluation/results/v0/samples',
+    samples: {
+      root: 'evaluation/results/v0/samples',
+      currentHybrid: 'evaluation/results/v0/samples/current-hybrid',
+      vectorOnly: 'evaluation/results/v0/samples/vector-only',
+    },
     analysis: 'evaluation/results/v0/analysis',
     runbooks: 'evaluation/results/v0/runbooks',
+    runs: 'evaluation/results/v0/runs',
+    errors: 'evaluation/results/v0/errors',
   },
 
   resultsLegacy: {

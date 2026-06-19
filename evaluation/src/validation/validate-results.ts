@@ -4,13 +4,7 @@ import { readJsonFile, resolveRepoPath } from '../../io';
 import type { MetricsReport } from '../../metrics';
 import type { CaseSnapshotAlignmentRegistry, DbReadinessFile } from '../alignment/case-snapshot-alignment';
 
-function deepEqual(a: any, b: any): boolean {
-  try {
-    return JSON.stringify(a) === JSON.stringify(b);
-  } catch {
-    return false;
-  }
-}
+import { semanticEqualForAlias } from '../core/canonicalize';
 
 export function validateResults(): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
@@ -30,7 +24,7 @@ export function validateResults(): { valid: boolean; errors: string[] } {
       const legacy = readJsonFile<DbReadinessFile>(legacyPath);
       // If legacy shows DB is unavailable, we intentionally skipped overwriting canonical
       if (legacy.status !== 'NO_DATABASE_URL' && legacy.status !== 'DB_UNAVAILABLE') {
-        if (!deepEqual(readiness, legacy)) {
+        if (!semanticEqualForAlias(readiness, legacy)) {
           errors.push('Legacy alias for db-snapshot-readiness does not match canonical output.');
         }
       }
@@ -59,7 +53,7 @@ export function validateResults(): { valid: boolean; errors: string[] } {
       }
       
       if (!isDbUnavailable) {
-        if (!deepEqual(alignment, readJsonFile(legacyPath))) {
+        if (!semanticEqualForAlias(alignment, readJsonFile(legacyPath))) {
           errors.push('Legacy alias for case-snapshot-alignment does not match canonical output.');
         }
       }
@@ -87,7 +81,7 @@ export function validateResults(): { valid: boolean; errors: string[] } {
   }
 
   // 3. Verify case006 semantic invariants & cross-checks
-  const case006SamplePath = resolveRepoPath(EvaluationPaths.resultsV0.samples + '/current-hybrid/case006.v0.json');
+  const case006SamplePath = resolveRepoPath(EvaluationPaths.resultsV0.samples.currentHybrid + '/case006.v0.json');
   let case006SampleOk = false;
 
   if (existsSync(case006SamplePath)) {
@@ -96,7 +90,7 @@ export function validateResults(): { valid: boolean; errors: string[] } {
     // Legacy alias check
     const legacyPath = resolveRepoPath(EvaluationPaths.resultsLegacy.samples.currentHybridJson);
     if (existsSync(legacyPath)) {
-      if (!deepEqual(case006Sample, readJsonFile(legacyPath))) {
+      if (!semanticEqualForAlias(case006Sample, readJsonFile(legacyPath))) {
         errors.push('Legacy alias for case006 current-hybrid sample does not match canonical output.');
       }
     }
@@ -189,7 +183,7 @@ export function validateResults(): { valid: boolean; errors: string[] } {
     // Verify Legacy Alias
     const legacyPath = resolveRepoPath(EvaluationPaths.resultsLegacy.analysis.metricsJson);
     if (existsSync(legacyPath)) {
-      if (!deepEqual(metrics, readJsonFile(legacyPath))) {
+      if (!semanticEqualForAlias(metrics, readJsonFile(legacyPath))) {
         errors.push('Legacy alias for metrics does not match canonical output.');
       }
     }
@@ -202,7 +196,7 @@ export function validateResults(): { valid: boolean; errors: string[] } {
   if (existsSync(failurePath)) {
     const legacyPath = resolveRepoPath(EvaluationPaths.resultsLegacy.analysis.failuresJson);
     if (existsSync(legacyPath)) {
-      if (!deepEqual(readJsonFile(failurePath), readJsonFile(legacyPath))) {
+      if (!semanticEqualForAlias(readJsonFile(failurePath), readJsonFile(legacyPath))) {
         errors.push('Legacy alias for failure-analysis does not match canonical output.');
       }
     }
@@ -213,7 +207,7 @@ export function validateResults(): { valid: boolean; errors: string[] } {
   if (existsSync(bm25Path)) {
     const legacyPath = resolveRepoPath(EvaluationPaths.resultsLegacy.baselines.bm25Json);
     if (existsSync(legacyPath)) {
-      if (!deepEqual(readJsonFile(bm25Path), readJsonFile(legacyPath))) {
+      if (!semanticEqualForAlias(readJsonFile(bm25Path), readJsonFile(legacyPath))) {
         errors.push('Legacy alias for bm25-baseline does not match canonical output.');
       }
     }
@@ -223,7 +217,7 @@ export function validateResults(): { valid: boolean; errors: string[] } {
   if (existsSync(keywordPath)) {
     const legacyPath = resolveRepoPath(EvaluationPaths.resultsLegacy.baselines.keywordJson);
     if (existsSync(legacyPath)) {
-      if (!deepEqual(readJsonFile(keywordPath), readJsonFile(legacyPath))) {
+      if (!semanticEqualForAlias(readJsonFile(keywordPath), readJsonFile(legacyPath))) {
         errors.push('Legacy alias for keyword-baseline does not match canonical output.');
       }
     }
