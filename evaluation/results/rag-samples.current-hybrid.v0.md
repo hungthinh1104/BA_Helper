@@ -11,7 +11,7 @@ fix: default includes in transformer class
 
 ## Ground Truth Note
 
-Changed files are proxy ground truth. This smoke export is not a final benchmark result.
+Changed files are proxy ground truth. This single-case current-hybrid benchmark export is not an aggregate research conclusion.
 
 ## Snapshot Metadata
 

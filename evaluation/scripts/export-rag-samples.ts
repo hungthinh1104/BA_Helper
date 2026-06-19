@@ -29,6 +29,10 @@ import {
   type RagExportEmbeddingState,
   type RagExportSnapshotMetadata,
 } from '../src/rag-export-db-read-model';
+import {
+  readGroundTruthArtifactCoverage,
+  type GroundTruthCoverageResult,
+} from '../src/ground-truth-coverage';
 import type {
   CandidateArtifact,
   ReqImpactEvaluationCase,
@@ -70,6 +74,7 @@ type RagSampleExport = {
     artifactEmbeddingModels?: string[];
     alignmentVerified?: boolean;
   };
+  groundTruthCoverage?: GroundTruthCoverageResult;
   topK: RetrievedArtifactResultWithExtras[];
   summary: {
     topKCount: number;
@@ -226,6 +231,10 @@ function computeSummary(
 }
 
 function renderMarkdown(result: RagSampleExport): string {
+  const groundTruthNote =
+    result.mode === 'CURRENT_HYBRID_BENCHMARK'
+      ? 'Changed files are proxy ground truth. This single-case current-hybrid benchmark export is not an aggregate research conclusion.'
+      : 'Changed files are proxy ground truth. This smoke export is not a final benchmark result.';
   const lines = [
     '# ReqImpact RAG Sample Export v0',
     '',
@@ -240,7 +249,7 @@ function renderMarkdown(result: RagSampleExport): string {
     '',
     '## Ground Truth Note',
     '',
-    'Changed files are proxy ground truth. This smoke export is not a final benchmark result.',
+    groundTruthNote,
   ];
 
   if (result.snapshot) {
@@ -279,6 +288,17 @@ function renderMarkdown(result: RagSampleExport): string {
       `- Artifact embedding models: ${result.embeddingState.artifactEmbeddingModels?.join(', ') || 'none'}`,
       `- Chunker versions: ${result.embeddingState.chunkerVersions.join(', ') || 'none'}`,
       `- Alignment verified: ${result.embeddingState.alignmentVerified ? 'yes' : 'no'}`,
+    );
+  }
+
+  if (result.groundTruthCoverage) {
+    lines.push(
+      '',
+      '## Ground Truth Artifact Coverage',
+      '',
+      `- Status: ${result.groundTruthCoverage.status}`,
+      `- Indexed ground-truth files: ${result.groundTruthCoverage.indexedGroundTruthFiles.join(', ') || 'none'}`,
+      `- Missing indexed ground-truth files: ${result.groundTruthCoverage.missingIndexedGroundTruthFiles.join(', ') || 'none'}`,
     );
   }
 
@@ -401,6 +421,11 @@ async function runCurrentHybridMode(params: {
     const embeddingState = await readEmbeddingState({
       prisma,
       snapshotId: params.snapshotId,
+    });
+    const groundTruthCoverage = await readGroundTruthArtifactCoverage({
+      prisma,
+      snapshotId: params.snapshotId,
+      groundTruthFiles: params.evaluationCase.groundTruth.files,
     });
 
     const allowRealQueryEmbedding = shouldAllowRealQueryEmbedding();
@@ -583,6 +608,12 @@ async function runCurrentHybridMode(params: {
       );
     }
 
+    if (groundTruthCoverage.status === 'GROUND_TRUTH_NOT_INDEXED') {
+      warnings.push(
+        `Ground-truth file(s) missing from persisted CodeArtifact rows: ${groundTruthCoverage.missingIndexedGroundTruthFiles.join(', ')}.`,
+      );
+    }
+
     return {
       runId: buildRunId('CURRENT_HYBRID', params.evaluationCase.id),
       generatedAt: new Date().toISOString(),
@@ -608,6 +639,7 @@ async function runCurrentHybridMode(params: {
         artifactEmbeddingModels: embeddingState.embeddingModels,
         alignmentVerified: guardResult.mode === 'CURRENT_HYBRID_BENCHMARK',
       },
+      groundTruthCoverage,
       topK,
       summary: computeSummary(params.evaluationCase.groundTruth.files, topK),
       warnings,

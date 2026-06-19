@@ -1,5 +1,9 @@
 import { existsSync } from 'fs';
 import { loadDataset, readJsonFile, resolveRepoPath } from '../io';
+import {
+  evaluateGroundTruthArtifactCoverage,
+  type GroundTruthCoverageStatus,
+} from './ground-truth-coverage';
 
 export type CaseSnapshotAlignmentStatus =
   | 'ALIGNED_VECTOR_READY'
@@ -35,6 +39,7 @@ export type DbReadinessCandidate = {
   embeddingDimensions: number[];
   embeddingConfigHashes: string[];
   chunkerVersions: string[];
+  indexedArtifactFilePaths?: string[];
   classification: string;
   usableFor: string[];
   warnings: string[];
@@ -65,6 +70,10 @@ export type CaseSnapshotAlignmentItem = {
   embeddingModels: string[];
   embeddingDimensions: number[];
   embeddingConfigHashes: string[];
+  cleanRetrievalEligible: boolean;
+  e2eEligible: boolean;
+  scannerCoverageStatus: GroundTruthCoverageStatus;
+  missingIndexedGroundTruthFiles: string[];
   requiredNextAction: string;
   warnings: string[];
   notes?: string;
@@ -77,6 +86,8 @@ export type CaseSnapshotAlignmentRegistry = {
   alignedVectorReadyCount: number;
   alignedLexicalOnlyCount: number;
   snapshotMissingCount: number;
+  cleanRetrievalEligibleCount: number;
+  scannerCoverageFailureCount: number;
   cases: CaseSnapshotAlignmentItem[];
   warnings: string[];
 };
@@ -177,6 +188,10 @@ function createMissingItem(params: {
     embeddingModels: [],
     embeddingDimensions: [],
     embeddingConfigHashes: [],
+    cleanRetrievalEligible: false,
+    e2eEligible: false,
+    scannerCoverageStatus: 'UNKNOWN',
+    missingIndexedGroundTruthFiles: [],
     requiredNextAction: 'Create/index snapshot at case baseSha.',
     warnings: [],
   };
@@ -186,6 +201,8 @@ export function evaluateCaseSnapshotAlignment(params: {
   caseId: string;
   repo: string;
   baseSha: string | null;
+  groundTruthFiles?: readonly string[];
+  evaluationScope?: string;
   mapping?: CaseSnapshotOverrideMapping;
   candidate?: DbReadinessCandidate | null;
 }): CaseSnapshotAlignmentItem {
@@ -201,6 +218,20 @@ export function evaluateCaseSnapshotAlignment(params: {
 
   const candidate = params.candidate;
   const warnings = [...candidate.warnings];
+  const coverage = evaluateGroundTruthArtifactCoverage({
+    groundTruthFiles: params.groundTruthFiles ?? [],
+    indexedArtifactFilePaths: candidate.indexedArtifactFilePaths,
+  });
+  const explicitScannerCoverageFailure =
+    params.evaluationScope === 'E2E_SCANNER_COVERAGE_FAILURE';
+  const scannerCoverageStatus =
+    explicitScannerCoverageFailure && coverage.status !== 'OK'
+      ? 'GROUND_TRUTH_NOT_INDEXED'
+      : coverage.status;
+  const missingIndexedGroundTruthFiles =
+    explicitScannerCoverageFailure && coverage.status !== 'OK'
+      ? [...(params.groundTruthFiles ?? [])]
+      : coverage.missingIndexedGroundTruthFiles;
 
   const snapshotCommitSha = candidate.commitSha?.trim() || null;
   const normalizedRepositoryId = params.mapping.repositoryId;
@@ -224,6 +255,10 @@ export function evaluateCaseSnapshotAlignment(params: {
     embeddingModels: [...candidate.embeddingModels],
     embeddingDimensions: [...candidate.embeddingDimensions],
     embeddingConfigHashes: [...candidate.embeddingConfigHashes],
+    cleanRetrievalEligible: false,
+    e2eEligible: false,
+    scannerCoverageStatus,
+    missingIndexedGroundTruthFiles,
     warnings,
     notes: params.mapping.notes,
   };
@@ -262,6 +297,7 @@ export function evaluateCaseSnapshotAlignment(params: {
     return {
       ...itemBase,
       status: 'ALIGNED_LEXICAL_ONLY',
+      e2eEligible: true,
       requiredNextAction:
         `Selected embedding profile ${params.mapping.embeddingProfileId ?? 'UNKNOWN'} is missing from snapshot chunks.`,
     };
@@ -276,8 +312,12 @@ export function evaluateCaseSnapshotAlignment(params: {
     return {
       ...itemBase,
       status: 'ALIGNED_VECTOR_READY',
+      cleanRetrievalEligible: scannerCoverageStatus === 'OK',
+      e2eEligible: true,
       requiredNextAction:
-        'Eligible for future CURRENT_HYBRID benchmark export when real query embedding is enabled.',
+        scannerCoverageStatus === 'OK'
+          ? 'Eligible for future CURRENT_HYBRID benchmark export when real query embedding is enabled.'
+          : 'Vector-ready for E2E, but clean retrieval aggregate is blocked until ground-truth files are indexed as CodeArtifact rows.',
     };
   }
 
@@ -289,6 +329,7 @@ export function evaluateCaseSnapshotAlignment(params: {
     return {
       ...itemBase,
       status: 'ALIGNED_LEXICAL_ONLY',
+      e2eEligible: true,
       requiredNextAction:
         'Snapshot aligns by commit, but real vector benchmark is blocked until usable non-fake embeddings exist.',
     };
@@ -335,6 +376,8 @@ export function buildCaseSnapshotAlignmentRegistry(params?: {
       caseId: evaluationCase.id,
       repo: evaluationCase.repo,
       baseSha: evaluationCase.baseSha ?? null,
+      groundTruthFiles: evaluationCase.groundTruth.files,
+      evaluationScope: evaluationCase.evaluationScope,
       mapping,
       candidate,
     });
@@ -347,6 +390,10 @@ export function buildCaseSnapshotAlignmentRegistry(params?: {
     alignedVectorReadyCount: cases.filter((item) => item.status === 'ALIGNED_VECTOR_READY').length,
     alignedLexicalOnlyCount: cases.filter((item) => item.status === 'ALIGNED_LEXICAL_ONLY').length,
     snapshotMissingCount: cases.filter((item) => item.status === 'SNAPSHOT_MISSING').length,
+    cleanRetrievalEligibleCount: cases.filter((item) => item.cleanRetrievalEligible).length,
+    scannerCoverageFailureCount: cases.filter(
+      (item) => item.scannerCoverageStatus === 'GROUND_TRUTH_NOT_INDEXED',
+    ).length,
     cases,
     warnings: [
       'This registry does not run retrieval.',
@@ -371,6 +418,8 @@ export function renderCaseSnapshotAlignmentMarkdown(
     `- ALIGNED_VECTOR_READY: ${registry.alignedVectorReadyCount}`,
     `- ALIGNED_LEXICAL_ONLY: ${registry.alignedLexicalOnlyCount}`,
     `- SNAPSHOT_MISSING: ${registry.snapshotMissingCount}`,
+    `- Clean retrieval eligible: ${registry.cleanRetrievalEligibleCount}`,
+    `- Scanner coverage failures: ${registry.scannerCoverageFailureCount}`,
     '',
     'This registry does not run retrieval.',
     'Only ALIGNED_VECTOR_READY cases are eligible for current-hybrid benchmark export.',
@@ -385,13 +434,13 @@ export function renderCaseSnapshotAlignmentMarkdown(
     '',
     '## Cases',
     '',
-    '| Case | Repo | Base SHA | Status | Snapshot | Index Status | Chunks | Selected Profile | Profiles | Embeddings | Next Action |',
-    '| --- | --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- |',
+    '| Case | Repo | Base SHA | Status | Clean Retrieval | E2E | Scanner Coverage | Missing Indexed Ground Truth | Snapshot | Index Status | Chunks | Selected Profile | Profiles | Embeddings | Next Action |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- |',
   ];
 
   for (const item of registry.cases) {
     lines.push(
-      `| ${item.caseId} | ${item.repo} | ${item.baseSha ?? 'none'} | ${item.status} | ${item.snapshotId ?? 'none'} | ${item.indexStatus ?? 'none'} | ${item.chunkCount} | ${item.selectedEmbeddingProfileId ?? 'none'} | ${item.embeddingProfileIds.join(', ') || 'none'} | ${item.embeddingModels.join(', ') || 'none'} | ${item.requiredNextAction} |`,
+      `| ${item.caseId} | ${item.repo} | ${item.baseSha ?? 'none'} | ${item.status} | ${item.cleanRetrievalEligible ? 'yes' : 'no'} | ${item.e2eEligible ? 'yes' : 'no'} | ${item.scannerCoverageStatus} | ${item.missingIndexedGroundTruthFiles.join(', ') || 'none'} | ${item.snapshotId ?? 'none'} | ${item.indexStatus ?? 'none'} | ${item.chunkCount} | ${item.selectedEmbeddingProfileId ?? 'none'} | ${item.embeddingProfileIds.join(', ') || 'none'} | ${item.embeddingModels.join(', ') || 'none'} | ${item.requiredNextAction} |`,
     );
   }
 

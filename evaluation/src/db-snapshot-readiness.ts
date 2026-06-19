@@ -29,6 +29,7 @@ export type SnapshotInspectionInput = {
   embeddingDimensions: number[];
   embeddingConfigHashes: string[];
   chunkerVersions: string[];
+  indexedArtifactFilePaths?: string[];
 };
 
 export type DbSnapshotReadinessCandidate = {
@@ -44,6 +45,7 @@ export type DbSnapshotReadinessCandidate = {
   embeddingDimensions: number[];
   embeddingConfigHashes: string[];
   chunkerVersions: string[];
+  indexedArtifactFilePaths: string[];
   classification: SnapshotReadinessClassification;
   usableFor: SnapshotUsableFor[];
   warnings: string[];
@@ -103,6 +105,7 @@ function createUnknownCandidate(
     embeddingDimensions: Array.from(new Set(input.embeddingDimensions)).sort((a, b) => a - b),
     embeddingConfigHashes: normalizeDistinct(input.embeddingConfigHashes),
     chunkerVersions: normalizeDistinct(input.chunkerVersions),
+    indexedArtifactFilePaths: normalizeDistinct(input.indexedArtifactFilePaths ?? []),
     classification: 'UNKNOWN',
     usableFor: [],
     warnings,
@@ -118,6 +121,7 @@ export function classifySnapshotCandidate(
   const normalizedDimensions = Array.from(new Set(input.embeddingDimensions)).sort((a, b) => a - b);
   const normalizedConfigHashes = normalizeDistinct(input.embeddingConfigHashes);
   const normalizedChunkerVersions = normalizeDistinct(input.chunkerVersions);
+  const indexedArtifactFilePaths = normalizeDistinct(input.indexedArtifactFilePaths ?? []);
   const baseWarnings: string[] = [];
 
   if (!input.projectId || !input.repositoryId || !input.snapshotId || !input.commitSha) {
@@ -152,6 +156,7 @@ export function classifySnapshotCandidate(
       embeddingDimensions: normalizedDimensions,
       embeddingConfigHashes: normalizedConfigHashes,
       chunkerVersions: normalizedChunkerVersions,
+      indexedArtifactFilePaths,
       classification: 'LEXICAL_ONLY_CANDIDATE',
       usableFor: ['CURRENT_HYBRID_EXPORT'],
       warnings: [
@@ -175,6 +180,7 @@ export function classifySnapshotCandidate(
       embeddingDimensions: normalizedDimensions,
       embeddingConfigHashes: normalizedConfigHashes,
       chunkerVersions: normalizedChunkerVersions,
+      indexedArtifactFilePaths,
       classification: 'LEGACY_PROFILE_MISSING',
       usableFor: [],
       warnings: [
@@ -204,6 +210,7 @@ export function classifySnapshotCandidate(
       embeddingDimensions: normalizedDimensions,
       embeddingConfigHashes: normalizedConfigHashes,
       chunkerVersions: normalizedChunkerVersions,
+      indexedArtifactFilePaths,
       classification: 'NOT_READY',
       usableFor: [],
       warnings: [
@@ -241,6 +248,7 @@ export function classifySnapshotCandidate(
       embeddingDimensions: normalizedDimensions,
       embeddingConfigHashes: normalizedConfigHashes,
       chunkerVersions: normalizedChunkerVersions,
+      indexedArtifactFilePaths,
       classification: 'VECTOR_READY_CANDIDATE',
       usableFor: ['VECTOR_BASELINE', 'CURRENT_HYBRID_EXPORT'],
       warnings: [],
@@ -260,6 +268,7 @@ export function classifySnapshotCandidate(
     embeddingDimensions: normalizedDimensions,
     embeddingConfigHashes: normalizedConfigHashes,
     chunkerVersions: normalizedChunkerVersions,
+    indexedArtifactFilePaths,
     classification: 'NOT_READY',
     usableFor: ['CURRENT_HYBRID_EXPORT'],
     warnings: [
@@ -384,7 +393,7 @@ export async function inspectDbSnapshotStateReadOnly(): Promise<DbSnapshotInspec
   await prisma.onModuleInit();
 
   try {
-    const [projectCount, repositoryCount, snapshots, chunkRows] = await Promise.all([
+    const [projectCount, repositoryCount, snapshots, chunkRows, artifactRows] = await Promise.all([
       prisma.project.count(),
       prisma.repository.count(),
       prisma.repositorySnapshot.findMany({
@@ -410,6 +419,12 @@ export async function inspectDbSnapshotStateReadOnly(): Promise<DbSnapshotInspec
           embeddingDimensions: true,
           embeddingConfigHash: true,
           chunkerVersion: true,
+        },
+      }),
+      prisma.codeArtifact.findMany({
+        select: {
+          snapshotId: true,
+          filePath: true,
         },
       }),
     ]);
@@ -460,6 +475,13 @@ export async function inspectDbSnapshotStateReadOnly(): Promise<DbSnapshotInspec
       chunkStateBySnapshot.set(row.snapshotId, current);
     }
 
+    const artifactFilePathsBySnapshot = new Map<string, string[]>();
+    for (const row of artifactRows) {
+      const current = artifactFilePathsBySnapshot.get(row.snapshotId) ?? [];
+      current.push(row.filePath);
+      artifactFilePathsBySnapshot.set(row.snapshotId, current);
+    }
+
     return {
       projectCount,
       repositoryCount,
@@ -478,6 +500,9 @@ export async function inspectDbSnapshotStateReadOnly(): Promise<DbSnapshotInspec
           embeddingDimensions: Array.from(new Set(chunkState?.embeddingDimensions ?? [])).sort((a, b) => a - b),
           embeddingConfigHashes: normalizeDistinct(chunkState?.embeddingConfigHashes ?? []),
           chunkerVersions: normalizeDistinct(chunkState?.chunkerVersions ?? []),
+          indexedArtifactFilePaths: normalizeDistinct(
+            artifactFilePathsBySnapshot.get(snapshot.id) ?? [],
+          ),
         };
       }),
     };

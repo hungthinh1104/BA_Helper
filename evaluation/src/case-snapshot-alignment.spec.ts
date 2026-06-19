@@ -22,6 +22,7 @@ describe('case snapshot alignment', () => {
       embeddingDimensions: [1536],
       embeddingConfigHashes: ['config-hash-google'],
       chunkerVersions: ['artifact-chunker@0.1.0'],
+      indexedArtifactFilePaths: ['src/app.service.ts'],
       classification: 'VECTOR_READY_CANDIDATE',
       usableFor: ['CURRENT_HYBRID_EXPORT'],
       warnings: [],
@@ -40,6 +41,8 @@ describe('case snapshot alignment', () => {
 
     expect(registry.caseCount).toBe(datasetCaseCount);
     expect(registry.snapshotMissingCount).toBe(datasetCaseCount);
+    expect(registry.cleanRetrievalEligibleCount).toBe(0);
+    expect(registry.scannerCoverageFailureCount).toBe(0);
     expect(registry.cases.every((item) => item.status === 'SNAPSHOT_MISSING')).toBe(true);
   });
 
@@ -58,6 +61,83 @@ describe('case snapshot alignment', () => {
     });
 
     expect(item.status).toBe('ALIGNED_VECTOR_READY');
+  });
+
+  it('marks cleanRetrievalEligible when all ground-truth files are indexed artifacts', () => {
+    const item = evaluateCaseSnapshotAlignment({
+      caseId: 'case-1',
+      repo: 'ndmen/booking',
+      baseSha: 'abc123',
+      groundTruthFiles: ['src/app.service.ts'],
+      mapping: {
+        caseId: 'case-1',
+        projectId: 'project-1',
+        repositoryId: 'repo-1',
+        snapshotId: 'snapshot-1',
+      },
+      candidate: candidate({
+        indexedArtifactFilePaths: ['src/app.service.ts', 'src/app.controller.ts'],
+      }),
+    });
+
+    expect(item.status).toBe('ALIGNED_VECTOR_READY');
+    expect(item.cleanRetrievalEligible).toBe(true);
+    expect(item.e2eEligible).toBe(true);
+    expect(item.scannerCoverageStatus).toBe('OK');
+    expect(item.missingIndexedGroundTruthFiles).toEqual([]);
+  });
+
+  it('marks scanner coverage failure when a vector-ready case lacks indexed ground-truth artifacts', () => {
+    const item = evaluateCaseSnapshotAlignment({
+      caseId: 'case-006',
+      repo: 'squareboat/nestjs-boilerplate',
+      baseSha: 'abc123',
+      groundTruthFiles: ['libs/boat/src/transformers/transformer.ts'],
+      mapping: {
+        caseId: 'case-006',
+        projectId: 'project-1',
+        repositoryId: 'repo-1',
+        snapshotId: 'snapshot-1',
+      },
+      candidate: candidate({
+        indexedArtifactFilePaths: ['libs/boat/src/boat.service.ts'],
+      }),
+    });
+
+    expect(item.status).toBe('ALIGNED_VECTOR_READY');
+    expect(item.cleanRetrievalEligible).toBe(false);
+    expect(item.e2eEligible).toBe(true);
+    expect(item.scannerCoverageStatus).toBe('GROUND_TRUTH_NOT_INDEXED');
+    expect(item.missingIndexedGroundTruthFiles).toEqual([
+      'libs/boat/src/transformers/transformer.ts',
+    ]);
+  });
+
+  it('uses E2E scanner coverage label as fallback when indexed artifact paths are unavailable', () => {
+    const item = evaluateCaseSnapshotAlignment({
+      caseId: 'case-006',
+      repo: 'squareboat/nestjs-boilerplate',
+      baseSha: 'abc123',
+      groundTruthFiles: ['libs/boat/src/transformers/transformer.ts'],
+      evaluationScope: 'E2E_SCANNER_COVERAGE_FAILURE',
+      mapping: {
+        caseId: 'case-006',
+        projectId: 'project-1',
+        repositoryId: 'repo-1',
+        snapshotId: 'snapshot-1',
+      },
+      candidate: candidate({
+        indexedArtifactFilePaths: undefined,
+      }),
+    });
+
+    expect(item.status).toBe('ALIGNED_VECTOR_READY');
+    expect(item.cleanRetrievalEligible).toBe(false);
+    expect(item.e2eEligible).toBe(true);
+    expect(item.scannerCoverageStatus).toBe('GROUND_TRUTH_NOT_INDEXED');
+    expect(item.missingIndexedGroundTruthFiles).toEqual([
+      'libs/boat/src/transformers/transformer.ts',
+    ]);
   });
 
   it('returns ALIGNED_LEXICAL_ONLY for matching commit without usable vectors', () => {
