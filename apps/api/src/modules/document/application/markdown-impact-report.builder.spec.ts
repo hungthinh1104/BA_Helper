@@ -1,16 +1,22 @@
 import { MarkdownImpactReportBuilder } from './markdown-impact-report.builder';
 import { MermaidImpactDiagramBuilder } from './mermaid-impact-diagram.builder';
+import { EvaluationContextAdapter } from './evaluation-context.adapter';
 
 describe('MarkdownImpactReportBuilder', () => {
   let builder: MarkdownImpactReportBuilder;
   let mermaidBuilder: jest.Mocked<MermaidImpactDiagramBuilder>;
+  let evalContextAdapter: jest.Mocked<EvaluationContextAdapter>;
 
   beforeEach(() => {
     mermaidBuilder = {
       build: jest.fn().mockReturnValue({ mermaid: '```mermaid\nflowchart TD\n```', isTruncated: false }),
     } as unknown as jest.Mocked<MermaidImpactDiagramBuilder>;
     
-    builder = new MarkdownImpactReportBuilder(mermaidBuilder);
+    evalContextAdapter = {
+      getEvaluationContext: jest.fn().mockReturnValue(null),
+    } as unknown as jest.Mocked<EvaluationContextAdapter>;
+    
+    builder = new MarkdownImpactReportBuilder(mermaidBuilder, evalContextAdapter);
   });
 
   const mockAnalysis = {
@@ -361,6 +367,51 @@ describe('MarkdownImpactReportBuilder', () => {
           hasUnreviewedItems: false,
         });
       }).not.toThrow();
+    });
+  });
+
+  describe('Evaluation Context', () => {
+    it('omits Evaluation Context when adapter returns null', () => {
+      evalContextAdapter.getEvaluationContext.mockReturnValue(null);
+      const report = builder.build({
+        analysis: mockAnalysis,
+        insights: [],
+        traceabilityLinks: [],
+        hasUnreviewedItems: false,
+      });
+
+      expect(report).not.toContain('## Evaluation Context');
+    });
+
+    it('appends Evaluation Context when adapter returns context', () => {
+      evalContextAdapter.getEvaluationContext.mockReturnValue({
+        datasetVersion: 'v0',
+        subsetId: 'clean-vector-ready-v0',
+        subsetSize: '1/6',
+        interpretation: 'ILLUSTRATIVE_ONLY',
+        knownLimits: ['Limit A'],
+        evidenceQualityNotes: ['Note B'],
+        datasetExpansionRecommendations: ['Rec C'],
+        researchFindingsArtifact: 'e13.json',
+        sameSubsetComparisonArtifact: 'comp.json'
+      });
+
+      const report = builder.build({
+        analysis: mockAnalysis,
+        insights: [],
+        traceabilityLinks: [],
+        hasUnreviewedItems: false,
+      });
+
+      expect(report).toContain('## Evaluation Context');
+      expect(report).toContain('**Dataset Version**: `v0`');
+      expect(report).toContain('**Subset Size**: `1/6` (Illustrative Only)');
+      expect(report).toContain('### Known Limits');
+      expect(report).toContain('- Limit A');
+      expect(report).toContain('### Evidence Quality Notes');
+      expect(report).toContain('- Note B');
+      expect(report).toContain('### Dataset Expansion Recommendations');
+      expect(report).toContain('- Rec C');
     });
   });
 });

@@ -14,6 +14,8 @@ import { EventLogModule } from '../event-log/event-log.module';
 import { EventLogService } from '../event-log/application/event-log.service';
 import { ProjectModule } from '../project/project.module';
 
+import { EvaluationContextAdapter } from './application/evaluation-context.adapter';
+
 @Module({
   imports: [PrismaModule, EventLogModule, ProjectModule],
   controllers: [DocumentController],
@@ -57,6 +59,7 @@ import { ProjectModule } from '../project/project.module';
         PdfExportRenderer,
       ],
     },
+    EvaluationContextAdapter,
     MermaidImpactDiagramBuilder,
     MarkdownImpactReportBuilder,
   ],
