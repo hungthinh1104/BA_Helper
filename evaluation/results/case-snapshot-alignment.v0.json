@@ -1,10 +1,12 @@
 {
   "runId": "case-snapshot-alignment-v0",
-  "generatedAt": "2026-06-18T14:45:07.262Z",
+  "generatedAt": "2026-06-19T06:22:54.804Z",
   "caseCount": 6,
-  "alignedVectorReadyCount": 1,
-  "alignedLexicalOnlyCount": 1,
-  "snapshotMissingCount": 4,
+  "alignedVectorReadyCount": 0,
+  "alignedLexicalOnlyCount": 0,
+  "snapshotMissingCount": 6,
+  "cleanRetrievalEligibleCount": 0,
+  "scannerCoverageFailureCount": 0,
   "cases": [
     {
       "caseId": "reqimpact-case-001-backend-reliability-semantics",
@@ -23,6 +25,10 @@
       "embeddingModels": [],
       "embeddingDimensions": [],
       "embeddingConfigHashes": [],
+      "cleanRetrievalEligible": false,
+      "e2eEligible": false,
+      "scannerCoverageStatus": "UNKNOWN",
+      "missingIndexedGroundTruthFiles": [],
       "requiredNextAction": "Create/index snapshot at case baseSha.",
       "warnings": []
     },
@@ -43,6 +49,10 @@
       "embeddingModels": [],
       "embeddingDimensions": [],
       "embeddingConfigHashes": [],
+      "cleanRetrievalEligible": false,
+      "e2eEligible": false,
+      "scannerCoverageStatus": "UNKNOWN",
+      "missingIndexedGroundTruthFiles": [],
       "requiredNextAction": "Create/index snapshot at case baseSha.",
       "warnings": []
     },
@@ -63,6 +73,10 @@
       "embeddingModels": [],
       "embeddingDimensions": [],
       "embeddingConfigHashes": [],
+      "cleanRetrievalEligible": false,
+      "e2eEligible": false,
+      "scannerCoverageStatus": "UNKNOWN",
+      "missingIndexedGroundTruthFiles": [],
       "requiredNextAction": "Create/index snapshot at case baseSha.",
       "warnings": []
     },
@@ -70,11 +84,12 @@
       "caseId": "reqimpact-case-004-nest-post-sse-empty-response",
       "repo": "nestjs/nest",
       "baseSha": "02f804159841a2771755c382832a7938b904c420",
-      "projectId": "84bdbbc6-d70c-4f1f-b17c-a379a3682952",
-      "repositoryId": "6e99eeb1-02b2-422b-939d-d9d5174ac77a",
-      "snapshotId": "ef931de3-5b6e-4465-91c2-f7d6b46e6eed",
-      "snapshotCommitSha": "02f804159841a2771755c382832a7938b904c420",
-      "indexStatus": "VECTOR_FAILED",
+      "status": "SNAPSHOT_MISSING",
+      "projectId": null,
+      "repositoryId": null,
+      "snapshotId": null,
+      "snapshotCommitSha": null,
+      "indexStatus": null,
       "chunkCount": 0,
       "selectedEmbeddingProfileId": null,
       "embeddingProfileIds": [],
@@ -82,13 +97,12 @@
       "embeddingModels": [],
       "embeddingDimensions": [],
       "embeddingConfigHashes": [],
-      "warnings": [
-        "Snapshot indexStatus is VECTOR_FAILED; vector retrieval may be absent or incomplete.",
-        "No EmbeddingChunk rows exist for this snapshot."
-      ],
-      "notes": "https://github.com/nestjs/nest",
-      "status": "ALIGNED_LEXICAL_ONLY",
-      "requiredNextAction": "Selected embedding profile UNKNOWN is missing from snapshot chunks."
+      "cleanRetrievalEligible": false,
+      "e2eEligible": false,
+      "scannerCoverageStatus": "UNKNOWN",
+      "missingIndexedGroundTruthFiles": [],
+      "requiredNextAction": "Create/index snapshot at case baseSha.",
+      "warnings": []
     },
     {
       "caseId": "reqimpact-case-005-realworld-proper-error-object",
@@ -107,6 +121,10 @@
       "embeddingModels": [],
       "embeddingDimensions": [],
       "embeddingConfigHashes": [],
+      "cleanRetrievalEligible": false,
+      "e2eEligible": false,
+      "scannerCoverageStatus": "UNKNOWN",
+      "missingIndexedGroundTruthFiles": [],
       "requiredNextAction": "Create/index snapshot at case baseSha.",
       "warnings": []
     },
@@ -114,32 +132,25 @@
       "caseId": "reqimpact-case-006-squareboat-default-includes",
       "repo": "squareboat/nestjs-boilerplate",
       "baseSha": "33ca78792610f1b0ece552767ef370bcb1978205",
-      "projectId": "a89660ef-6a15-4f65-a53d-2dbb1218a2ea",
-      "repositoryId": "b8687312-ed36-4bca-b519-32b6e49b31f4",
-      "snapshotId": "b8676c81-b19b-4c97-93a5-38125b9b525b",
-      "snapshotCommitSha": "33ca78792610f1b0ece552767ef370bcb1978205",
-      "indexStatus": "VECTOR_READY",
-      "chunkCount": 14,
-      "selectedEmbeddingProfileId": "google-gemini-001-1536",
-      "embeddingProfileIds": [
-        "google-gemini-001-1536"
-      ],
-      "embeddingProviders": [
-        "google"
-      ],
-      "embeddingModels": [
-        "gemini-embedding-001"
-      ],
-      "embeddingDimensions": [
-        1536
-      ],
-      "embeddingConfigHashes": [
-        "ae7b397d6b6fce4573794e52c1daa56d7daed714bdc75898b8a54e4d588565d5"
-      ],
-      "warnings": [],
-      "notes": "https://github.com/squareboat/nestjs-boilerplate",
-      "status": "ALIGNED_VECTOR_READY",
-      "requiredNextAction": "Eligible for future CURRENT_HYBRID benchmark export when real query embedding is enabled."
+      "status": "SNAPSHOT_MISSING",
+      "projectId": null,
+      "repositoryId": null,
+      "snapshotId": null,
+      "snapshotCommitSha": null,
+      "indexStatus": null,
+      "chunkCount": 0,
+      "selectedEmbeddingProfileId": null,
+      "embeddingProfileIds": [],
+      "embeddingProviders": [],
+      "embeddingModels": [],
+      "embeddingDimensions": [],
+      "embeddingConfigHashes": [],
+      "cleanRetrievalEligible": false,
+      "e2eEligible": false,
+      "scannerCoverageStatus": "UNKNOWN",
+      "missingIndexedGroundTruthFiles": [],
+      "requiredNextAction": "Create/index snapshot at case baseSha.",
+      "warnings": []
     }
   ],
   "warnings": [

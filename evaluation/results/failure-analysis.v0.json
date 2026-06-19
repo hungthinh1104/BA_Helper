@@ -1,6 +1,6 @@
 {
   "runId": "failure-analysis-v0-2",
-  "generatedAt": "2026-06-18T14:45:13.918Z",
+  "generatedAt": "2026-06-19T06:21:52.721Z",
   "dataset": {
     "caseCount": 6,
     "groundTruthType": "changed-files-proxy",
