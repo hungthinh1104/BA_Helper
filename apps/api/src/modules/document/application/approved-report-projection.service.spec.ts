@@ -1,12 +1,22 @@
 import { ApprovedReportProjectionService } from './approved-report-projection.service';
 
 describe('ApprovedReportProjectionService', () => {
-  it('projects report provenance with explicit document timestamps', async () => {
-    const service = new ApprovedReportProjectionService({
-      analysisReviewDecision: {
-        findFirst: jest.fn().mockResolvedValue(null),
-      },
-    } as any);
+  it('returns false for isStale when target is pinned commit and no review decisions', async () => {
+    const mockTraceabilityRepo = {
+      listByAnalysis: jest.fn().mockResolvedValue([]),
+    };
+    const mockEvalContextAdapter = {
+      getEvaluationContext: jest.fn().mockReturnValue(null),
+    };
+    const service = new ApprovedReportProjectionService(
+      {
+        analysisReviewDecision: {
+          findFirst: jest.fn().mockResolvedValue(null),
+        },
+      } as any,
+      mockTraceabilityRepo as any,
+      mockEvalContextAdapter as any,
+    );
 
     const result = await service.project({
       id: 'doc-1',

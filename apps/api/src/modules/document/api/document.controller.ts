@@ -58,7 +58,7 @@ export class DocumentController {
     await this.permissions.assertCanReadAnalysis(actor, analysisId);
     const result = await this.getApprovedReport.execute(analysisId);
 
-    const mapped = DocumentMapper.toApprovedReportResponse(result.report, result.metadata);
+    const mapped = DocumentMapper.toApprovedReportResponse(result);
 
     return approvedImpactReportResponseSchema.parse(mapped);
   }

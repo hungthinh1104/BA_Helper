@@ -3,9 +3,17 @@ import { ApprovedReportMetadata } from '../domain/approved-report-metadata';
 
 export class DocumentMapper {
   static toApprovedReportResponse(
-    report: any,
-    metadata: ApprovedReportMetadata,
+    projectedResult: {
+      report: any;
+      isStale: boolean;
+      staleReason?: string;
+      metadata: ApprovedReportMetadata;
+      evaluationContext?: any;
+      evidenceQualitySummary?: any;
+      evidenceQualityItems?: any[];
+    }
   ): ApprovedImpactReportResponse {
+    const { report, metadata, evaluationContext, evidenceQualitySummary, evidenceQualityItems } = projectedResult;
     const analysis = report.impactAnalysis;
     const revision = analysis.requirementRevision;
 
@@ -22,6 +30,9 @@ export class DocumentMapper {
       markdown: report.content,
       isStale: metadata.staleStatusAtReadTime,
       staleReason: metadata.staleReason,
+      evaluationContext: evaluationContext || undefined,
+      evidenceQualitySummary: evidenceQualitySummary || undefined,
+      evidenceQualityItems: evidenceQualityItems || undefined,
       provenance: {
         analysisId: metadata.analysisId,
         projectId: metadata.projectId,
