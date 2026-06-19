@@ -1,0 +1,50 @@
+{
+  "runId": "keyword-clean-subset-baseline-v0:2026-06-19T14-30-52-359Z",
+  "generatedAt": "2026-06-19T14:30:52.370Z",
+  "method": "KEYWORD",
+  "datasetVersion": "v0",
+  "subsetId": "clean-vector-ready-v0",
+  "subsetArtifact": "evaluation/datasets/v0/subsets/clean-vector-ready.v0.json",
+  "caseCount": 1,
+  "caseIds": [
+    "reqimpact-case-006-squareboat-default-includes"
+  ],
+  "metrics": {
+    "hitAt1": 1,
+    "hitAt5": 1,
+    "hitAt10": 1,
+    "mrr": 1
+  },
+  "results": [
+    {
+      "caseId": "reqimpact-case-006-squareboat-default-includes",
+      "retrievalMode": "KEYWORD",
+      "groundTruthFiles": [
+        "libs/boat/src/transformers/transformer.ts"
+      ],
+      "topK": [
+        {
+          "rank": 1,
+          "filePath": "libs/boat/src/transformers/transformer.ts",
+          "score": 7.5,
+          "finalScore": 7.5,
+          "vectorScore": 0,
+          "lexicalScore": 7.5,
+          "graphScore": 0,
+          "signals": [
+            "KEYWORD"
+          ]
+        }
+      ],
+      "hitAt1": true,
+      "hitAt5": true,
+      "hitAt10": true,
+      "reciprocalRank": 1
+    }
+  ],
+  "knownLimits": [
+    "Measured only on clean-vector-ready-v0.",
+    "Subset size is 1/6 and not representative of the full dataset.",
+    "Do not use E12B for cross-method comparison; E12C will compare methods on the same subset."
+  ]
+}

@@ -337,6 +337,96 @@ export function validateResults(): { valid: boolean; errors: string[] } {
     }
   }
 
+  // 6.3 Verify Keyword Baseline
+  const keywordBaselinePath = resolveRepoPath(EvaluationPaths.resultsV0.baselines + '/keyword-clean-subset-baseline.v0.json');
+  if (existsSync(keywordBaselinePath)) {
+    const kBaseline = readJsonFile<any>(keywordBaselinePath);
+    if (kBaseline.method !== 'KEYWORD') errors.push('keyword-baseline method must be KEYWORD');
+    if (kBaseline.datasetVersion !== 'v0') errors.push('keyword-baseline datasetVersion must be v0');
+    if (kBaseline.subsetId !== 'clean-vector-ready-v0') errors.push('keyword-baseline subsetId must be clean-vector-ready-v0');
+
+    verifyMetricsRecomputable(kBaseline, 'keyword-baseline');
+
+    const subsetPath = resolveRepoPath(EvaluationPaths.datasetV0.subsets + '/clean-vector-ready.v0.json');
+    if (existsSync(subsetPath)) {
+      const subset = readJsonFile<any>(subsetPath);
+      if (kBaseline.caseCount !== subset.caseIds.length) errors.push('keyword-baseline caseCount must match subset caseIds length');
+      
+      const baselineIdsStr = JSON.stringify([...kBaseline.caseIds].sort());
+      const subsetIdsStr = JSON.stringify([...subset.caseIds].sort());
+      if (baselineIdsStr !== subsetIdsStr) errors.push('keyword-baseline caseIds must exactly match subset caseIds');
+      
+      if (!kBaseline.results || kBaseline.results.length !== kBaseline.caseCount) errors.push('keyword-baseline results length must match caseCount');
+
+      kBaseline.results.forEach((r: any) => {
+        if (!subset.caseIds.includes(r.caseId)) errors.push(`keyword-baseline result caseId ${r.caseId} not in subset`);
+        if (r.retrievalMode !== 'KEYWORD') errors.push(`keyword-baseline result ${r.caseId} retrievalMode must be KEYWORD`);
+        
+        r.topK.forEach((k: any) => {
+          if (k.finalScore !== k.lexicalScore) errors.push(`keyword-baseline result ${r.caseId} file ${k.filePath} finalScore must equal lexicalScore`);
+          if (k.vectorScore !== 0) errors.push(`keyword-baseline result ${r.caseId} file ${k.filePath} vectorScore must be 0`);
+          if (k.graphScore !== 0) errors.push(`keyword-baseline result ${r.caseId} file ${k.filePath} graphScore must be 0`);
+          
+          const signals = k.signals || [];
+          if (signals.length !== 1 || signals[0] !== 'KEYWORD') {
+            errors.push(`keyword-baseline result ${r.caseId} file ${k.filePath} must have exactly one signal: KEYWORD`);
+          }
+        });
+      });
+    }
+
+    const hasSubsetSizeWarning = kBaseline.knownLimits?.some((l: string) => l.toLowerCase().includes('subset size') && l.toLowerCase().includes('not representative'));
+    const hasCrossMethodWarning = kBaseline.knownLimits?.some((l: string) => l.toLowerCase().includes('cross-method comparison'));
+    if (!hasSubsetSizeWarning || !hasCrossMethodWarning) {
+      errors.push('keyword-baseline knownLimits must include warnings about subset size and no cross-method comparison');
+    }
+  }
+
+  // 6.4 Verify BM25 Baseline
+  const bm25BaselinePath = resolveRepoPath(EvaluationPaths.resultsV0.baselines + '/bm25-clean-subset-baseline.v0.json');
+  if (existsSync(bm25BaselinePath)) {
+    const bBaseline = readJsonFile<any>(bm25BaselinePath);
+    if (bBaseline.method !== 'BM25') errors.push('bm25-baseline method must be BM25');
+    if (bBaseline.datasetVersion !== 'v0') errors.push('bm25-baseline datasetVersion must be v0');
+    if (bBaseline.subsetId !== 'clean-vector-ready-v0') errors.push('bm25-baseline subsetId must be clean-vector-ready-v0');
+
+    verifyMetricsRecomputable(bBaseline, 'bm25-baseline');
+
+    const subsetPath = resolveRepoPath(EvaluationPaths.datasetV0.subsets + '/clean-vector-ready.v0.json');
+    if (existsSync(subsetPath)) {
+      const subset = readJsonFile<any>(subsetPath);
+      if (bBaseline.caseCount !== subset.caseIds.length) errors.push('bm25-baseline caseCount must match subset caseIds length');
+      
+      const baselineIdsStr = JSON.stringify([...bBaseline.caseIds].sort());
+      const subsetIdsStr = JSON.stringify([...subset.caseIds].sort());
+      if (baselineIdsStr !== subsetIdsStr) errors.push('bm25-baseline caseIds must exactly match subset caseIds');
+      
+      if (!bBaseline.results || bBaseline.results.length !== bBaseline.caseCount) errors.push('bm25-baseline results length must match caseCount');
+
+      bBaseline.results.forEach((r: any) => {
+        if (!subset.caseIds.includes(r.caseId)) errors.push(`bm25-baseline result caseId ${r.caseId} not in subset`);
+        if (r.retrievalMode !== 'BM25') errors.push(`bm25-baseline result ${r.caseId} retrievalMode must be BM25`);
+        
+        r.topK.forEach((k: any) => {
+          if (k.finalScore !== k.lexicalScore) errors.push(`bm25-baseline result ${r.caseId} file ${k.filePath} finalScore must equal lexicalScore`);
+          if (k.vectorScore !== 0) errors.push(`bm25-baseline result ${r.caseId} file ${k.filePath} vectorScore must be 0`);
+          if (k.graphScore !== 0) errors.push(`bm25-baseline result ${r.caseId} file ${k.filePath} graphScore must be 0`);
+          
+          const signals = k.signals || [];
+          if (signals.length !== 1 || signals[0] !== 'BM25') {
+            errors.push(`bm25-baseline result ${r.caseId} file ${k.filePath} must have exactly one signal: BM25`);
+          }
+        });
+      });
+    }
+
+    const hasSubsetSizeWarning = bBaseline.knownLimits?.some((l: string) => l.toLowerCase().includes('subset size') && l.toLowerCase().includes('not representative'));
+    const hasCrossMethodWarning = bBaseline.knownLimits?.some((l: string) => l.toLowerCase().includes('cross-method comparison'));
+    if (!hasSubsetSizeWarning || !hasCrossMethodWarning) {
+      errors.push('bm25-baseline knownLimits must include warnings about subset size and no cross-method comparison');
+    }
+  }
+
   // 6.5 Verify E11A vector-only Case006 probe
   const vectorOnlyPath = resolveRepoPath(EvaluationPaths.resultsV0.samples.vectorOnly + '/case006.v0.json');
   if (existsSync(vectorOnlyPath)) {
@@ -467,6 +557,18 @@ export function validateResults(): { valid: boolean; errors: string[] } {
     } else {
       if (!manifest.notMeasuredYet?.includes('aggregate-current-hybrid-on-clean-subset-v0')) {
         errors.push('Manifest notMeasuredYet MUST include aggregate-current-hybrid-on-clean-subset-v0');
+      }
+    }
+    
+    if (existsSync(keywordBaselinePath)) {
+      if (!manifest.canonicalArtifacts?.keywordCleanSubsetBaseline) {
+        errors.push('Manifest canonicalArtifacts must include keywordCleanSubsetBaseline');
+      }
+    }
+    
+    if (existsSync(bm25BaselinePath)) {
+      if (!manifest.canonicalArtifacts?.bm25CleanSubsetBaseline) {
+        errors.push('Manifest canonicalArtifacts must include bm25CleanSubsetBaseline');
       }
     }
     
