@@ -216,6 +216,15 @@ function updateManifest(runId: string) {
       manifest.notMeasuredYet = manifest.notMeasuredYet.filter((item: string) => item !== 'vector-only-baseline-v0');
     }
     
+    if (manifest.knownLimits) {
+      const oldStr = "No vector-only aggregate result yet";
+      const newStr = "Vector-only aggregate baseline exists only for clean-vector-ready-v0 subset.";
+      manifest.knownLimits = manifest.knownLimits.map((l: string) => l === oldStr ? newStr : l);
+      if (!manifest.knownLimits.includes(newStr)) {
+        manifest.knownLimits.push(newStr);
+      }
+    }
+    
     manifest.latestRunId = runId;
     manifest.lastSuccessfulRunId = runId;
     

@@ -33,7 +33,7 @@
   "plannedArtifacts": {},
   "knownLimits": [
     "current-hybrid is single-case only and not aggregate evidence",
-    "No vector-only aggregate result yet",
+    "Vector-only aggregate baseline exists only for clean-vector-ready-v0 subset.",
     "File-level evaluation only",
     "Changed files are proxy ground truth"
   ],
