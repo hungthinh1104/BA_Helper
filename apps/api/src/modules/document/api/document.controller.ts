@@ -1,9 +1,11 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Post } from '@nestjs/common';
 import { documentListResponseSchema } from '@ba-helper/contracts';
 import { ListDocumentsUseCase } from '../application/list-documents.usecase';
 import { GetApprovedReportUseCase } from '../application/get-approved-report.usecase';
 import { ExportApprovedReportUseCase } from '../application/export-approved-report.usecase';
-import { approvedImpactReportResponseSchema, RequestUser } from '@ba-helper/contracts';
+import { CreateReviewedReportSnapshotUseCase } from '../application/create-reviewed-report-snapshot.usecase';
+import { GetLatestReviewedReportSnapshotUseCase } from '../application/get-latest-reviewed-report-snapshot.usecase';
+import { approvedImpactReportResponseSchema, reviewedReportSnapshotSchema, RequestUser } from '@ba-helper/contracts';
 import { DocumentMapper } from './document.mapper';
 import { Res } from '@nestjs/common';
 import { CurrentUser } from '../../auth/api/current-user.decorator';
@@ -15,6 +17,8 @@ export class DocumentController {
     private readonly listDocuments: ListDocumentsUseCase,
     private readonly getApprovedReport: GetApprovedReportUseCase,
     private readonly exportApprovedReport: ExportApprovedReportUseCase,
+    private readonly createReviewedReportSnapshot: CreateReviewedReportSnapshotUseCase,
+    private readonly getLatestReviewedReportSnapshot: GetLatestReviewedReportSnapshotUseCase,
     private readonly permissions: ProjectPermissionService,
   ) {}
 
@@ -105,5 +109,33 @@ export class DocumentController {
     res.setHeader('Content-Type', result.contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
     res.send(result.buffer);
+  }
+
+  @Post('/impact-analyses/:analysisId/reviewed-report-snapshot')
+  async createSnapshot(
+    @Param('analysisId') analysisId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    // Requires finalize permission as snapshotting is an audit/finalize action
+    await this.permissions.assertPermissionForAnalysis(actor, analysisId, 'analysis:finalize');
+    
+    const snapshot = await this.createReviewedReportSnapshot.execute({
+      analysisId,
+      createdByUserId: actor.id,
+    });
+
+    return reviewedReportSnapshotSchema.parse(snapshot);
+  }
+
+  @Get('/impact-analyses/:analysisId/reviewed-report-snapshot/latest')
+  async getLatestSnapshot(
+    @Param('analysisId') analysisId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadAnalysis(actor, analysisId);
+    
+    const snapshot = await this.getLatestReviewedReportSnapshot.execute(analysisId);
+
+    return reviewedReportSnapshotSchema.parse(snapshot);
   }
 }

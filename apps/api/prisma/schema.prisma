@@ -226,6 +226,7 @@ model User {
   projectMemberships          ProjectMember[]
   selectedProject             Project?                              @relation("SelectedProject", fields: [selectedProjectId], references: [id], onDelete: SetNull)
   createdMultiRepoRuns        MultiRepoAnalysisRun[]                @relation("CreatedMultiRepoRuns")
+  reviewedReportSnapshots     ReviewedReportSnapshot[]
 
   @@index([selectedProjectId])
   @@map("user")
@@ -514,6 +515,7 @@ model ImpactAnalysis {
   clarificationItems          ClarificationItem[]
   reviewDecisions             AnalysisReviewDecision[]
   traceabilityReviewDecisions TraceabilityReviewDecision[]
+  reviewedReportSnapshots     ReviewedReportSnapshot[]
 
   // Traceability & Lineage
   derivedFromAnalysisId        String? @map("derived_from_analysis_id")
@@ -635,9 +637,29 @@ model GeneratedDocument {
   impactAnalysis   ImpactAnalysis @relation(fields: [impactAnalysisId], references: [id])
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
+  reviewedSnapshots ReviewedReportSnapshot[]
 
   @@unique([impactAnalysisId, type, status])
   @@index([impactAnalysisId, status])
+}
+
+model ReviewedReportSnapshot {
+  id                             String   @id @default(uuid())
+  analysisId                     String   @map("analysis_id")
+  approvedDocumentId             String?  @map("approved_document_id")
+  markdown                       String
+  reviewDecisionsSnapshot        Json     @map("review_decisions_snapshot")
+  evidenceQualitySummarySnapshot Json     @map("evidence_quality_summary_snapshot")
+  evaluationContextSnapshot      Json?    @map("evaluation_context_snapshot")
+  createdByUserId                String?  @map("created_by_user_id") @db.Uuid
+  createdAt                      DateTime @default(now()) @map("created_at")
+
+  analysis         ImpactAnalysis     @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  approvedDocument GeneratedDocument? @relation(fields: [approvedDocumentId], references: [id], onDelete: SetNull)
+  createdByUser    User?              @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([analysisId, createdAt])
+  @@map("reviewed_report_snapshot")
 }
 
 model DomainEvent {
