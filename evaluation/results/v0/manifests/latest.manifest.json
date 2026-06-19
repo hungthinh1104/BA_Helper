@@ -1,8 +1,8 @@
 {
   "datasetVersion": "v0",
   "latestGeneratedAt": "2026-06-19T06:54:08.637Z",
-  "latestRunId": "bm25-clean-subset-baseline-v0:2026-06-19T14-30-54-127Z",
-  "lastSuccessfulRunId": "bm25-clean-subset-baseline-v0:2026-06-19T14-30-54-127Z",
+  "latestRunId": "same-subset-comparison-v0:2026-06-19T14-42-42-790Z",
+  "lastSuccessfulRunId": "same-subset-comparison-v0:2026-06-19T14-42-42-790Z",
   "lastAttemptedRunId": "2026-06-19T06-54-08-637Z",
   "status": "PARTIAL_RESEARCH_READY",
   "dataset": {
@@ -30,7 +30,8 @@
     "vectorBaseline": "evaluation/results/v0/baselines/vector-baseline.v0.json",
     "currentHybridCleanSubsetBaseline": "evaluation/results/v0/baselines/current-hybrid-clean-subset-baseline.v0.json",
     "keywordCleanSubsetBaseline": "evaluation/results/v0/baselines/keyword-clean-subset-baseline.v0.json",
-    "bm25CleanSubsetBaseline": "evaluation/results/v0/baselines/bm25-clean-subset-baseline.v0.json"
+    "bm25CleanSubsetBaseline": "evaluation/results/v0/baselines/bm25-clean-subset-baseline.v0.json",
+    "sameSubsetComparison": "evaluation/results/v0/analysis/same-subset-comparison.v0.json"
   },
   "plannedArtifacts": {},
   "knownLimits": [

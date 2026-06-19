@@ -1,0 +1,63 @@
+{
+  "runId": "same-subset-comparison-v0:2026-06-19T14-42-42-790Z",
+  "method": "SAME_SUBSET_COMPARISON",
+  "datasetVersion": "v0",
+  "subsetId": "clean-vector-ready-v0",
+  "caseCount": 1,
+  "caseIds": [
+    "reqimpact-case-006-squareboat-default-includes"
+  ],
+  "methods": [
+    {
+      "method": "VECTOR_ONLY",
+      "artifact": "evaluation/results/v0/baselines/vector-baseline.v0.json",
+      "metrics": {
+        "hitAt1": 1,
+        "hitAt5": 1,
+        "hitAt10": 1,
+        "mrr": 1
+      }
+    },
+    {
+      "method": "CURRENT_HYBRID",
+      "artifact": "evaluation/results/v0/baselines/current-hybrid-clean-subset-baseline.v0.json",
+      "metrics": {
+        "hitAt1": 1,
+        "hitAt5": 1,
+        "hitAt10": 1,
+        "mrr": 1
+      }
+    },
+    {
+      "method": "KEYWORD",
+      "artifact": "evaluation/results/v0/baselines/keyword-clean-subset-baseline.v0.json",
+      "metrics": {
+        "hitAt1": 1,
+        "hitAt5": 1,
+        "hitAt10": 1,
+        "mrr": 1
+      }
+    },
+    {
+      "method": "BM25",
+      "artifact": "evaluation/results/v0/baselines/bm25-clean-subset-baseline.v0.json",
+      "metrics": {
+        "hitAt1": 1,
+        "hitAt5": 1,
+        "hitAt10": 1,
+        "mrr": 1
+      }
+    }
+  ],
+  "comparisonPolicy": {
+    "sameSubsetRequired": true,
+    "sameCaseIdsRequired": true,
+    "winnerAllowed": false,
+    "interpretation": "ILLUSTRATIVE_ONLY"
+  },
+  "knownLimits": [
+    "Measured only on clean-vector-ready-v0.",
+    "Subset size is 1/6 and not representative of the full dataset.",
+    "Do not generalize method superiority from this comparison."
+  ]
+}

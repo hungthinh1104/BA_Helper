@@ -2,7 +2,7 @@
 
 Subset ID: `clean-vector-ready-v0`
 Dataset Version: `v0`
-Generated At: `2026-06-19T14:30:23.299Z`
+Generated At: `2026-06-19T14:42:10.838Z`
 
 ## Purpose
 Common fair retrieval subset for future aggregate retrieval comparison

@@ -1,7 +1,7 @@
 {
   "subsetId": "clean-vector-ready-v0",
   "datasetVersion": "v0",
-  "generatedAt": "2026-06-19T14:30:23.299Z",
+  "generatedAt": "2026-06-19T14:42:10.838Z",
   "purpose": "Common fair retrieval subset for future aggregate retrieval comparison",
   "eligibilityRules": {
     "alignmentStatus": "ALIGNED_VECTOR_READY",

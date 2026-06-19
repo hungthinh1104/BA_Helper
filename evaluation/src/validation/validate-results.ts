@@ -427,7 +427,46 @@ export function validateResults(): { valid: boolean; errors: string[] } {
     }
   }
 
-  // 6.5 Verify E11A vector-only Case006 probe
+  // 6.5 Verify Same-Subset Comparison Report
+  const sameSubsetComparisonPath = resolveRepoPath(EvaluationPaths.resultsV0.analysis + '/same-subset-comparison.v0.json');
+  if (existsSync(sameSubsetComparisonPath)) {
+    const comp = readJsonFile<any>(sameSubsetComparisonPath);
+    if (comp.method !== 'SAME_SUBSET_COMPARISON') errors.push('same-subset-comparison method must be SAME_SUBSET_COMPARISON');
+    if (comp.subsetId !== 'clean-vector-ready-v0') errors.push('same-subset-comparison subsetId must be clean-vector-ready-v0');
+    
+    if (!comp.comparisonPolicy) {
+      errors.push('same-subset-comparison must have comparisonPolicy');
+    } else {
+      if (comp.comparisonPolicy.sameSubsetRequired !== true) errors.push('same-subset-comparison comparisonPolicy.sameSubsetRequired must be true');
+      if (comp.comparisonPolicy.winnerAllowed !== false) errors.push('same-subset-comparison comparisonPolicy.winnerAllowed must be false');
+    }
+
+    const subsetPath = resolveRepoPath(EvaluationPaths.datasetV0.subsets + '/clean-vector-ready.v0.json');
+    if (existsSync(subsetPath)) {
+      const subset = readJsonFile<any>(subsetPath);
+      const baselineIdsStr = JSON.stringify([...comp.caseIds].sort());
+      const subsetIdsStr = JSON.stringify([...subset.caseIds].sort());
+      if (baselineIdsStr !== subsetIdsStr) errors.push('same-subset-comparison caseIds must exactly match subset caseIds');
+    }
+
+    if (!comp.methods || comp.methods.length !== 4) {
+      errors.push('same-subset-comparison must include exactly 4 methods');
+    } else {
+      const expectedMethods = ['VECTOR_ONLY', 'CURRENT_HYBRID', 'KEYWORD', 'BM25'];
+      const actualMethods = comp.methods.map((m: any) => m.method);
+      expectedMethods.forEach(m => {
+        if (!actualMethods.includes(m)) errors.push(`same-subset-comparison methods must include ${m}`);
+      });
+    }
+
+    const hasSubsetSizeWarning = comp.knownLimits?.some((l: string) => l.toLowerCase().includes('subset size') && l.toLowerCase().includes('not representative'));
+    const hasSuperiorityWarning = comp.knownLimits?.some((l: string) => l.toLowerCase().includes('generalize method superiority'));
+    if (!hasSubsetSizeWarning || !hasSuperiorityWarning) {
+      errors.push('same-subset-comparison knownLimits must include warnings about subset size and no superiority claims');
+    }
+  }
+
+  // 6.6 Verify E11A vector-only Case006 probe
   const vectorOnlyPath = resolveRepoPath(EvaluationPaths.resultsV0.samples.vectorOnly + '/case006.v0.json');
   if (existsSync(vectorOnlyPath)) {
     const sample = readJsonFile<any>(vectorOnlyPath);
