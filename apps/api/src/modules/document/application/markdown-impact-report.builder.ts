@@ -28,10 +28,14 @@ type TraceabilityLinkWithArtifact = Prisma.TraceabilityLinkGetPayload<{
 import { MermaidImpactDiagramBuilder, ReportDependencyEdge } from './mermaid-impact-diagram.builder';
 import { ClarificationItemDto } from '@ba-helper/contracts';
 import { ApprovedReportMetadata } from '../domain/approved-report-metadata';
+import { EvaluationContextAdapter } from './evaluation-context.adapter';
 
 @Injectable()
 export class MarkdownImpactReportBuilder {
-  constructor(private readonly mermaidBuilder: MermaidImpactDiagramBuilder) {}
+  constructor(
+    private readonly mermaidBuilder: MermaidImpactDiagramBuilder,
+    private readonly evalContextAdapter: EvaluationContextAdapter
+  ) {}
 
   private resolveArtifactDisplayType(artifact?: { artifactType?: string | null; universalKind?: string | null } | null): string {
     if (!artifact) return 'Unknown';
@@ -401,6 +405,37 @@ export class MarkdownImpactReportBuilder {
         lines.push(`| ${time} | ${reviewer} | ${decision} | ${note} |`);
       }
       lines.push('');
+    }
+
+    const evalContext = this.evalContextAdapter.getEvaluationContext();
+    if (evalContext) {
+      lines.push('## Evaluation Context');
+      lines.push('');
+      lines.push(`- **Dataset Version**: \`${evalContext.datasetVersion}\``);
+      lines.push(`- **Subset ID**: \`${evalContext.subsetId}\``);
+      lines.push(`- **Subset Size**: \`${evalContext.subsetSize}\` (Illustrative Only)`);
+      lines.push(`- **Interpretation**: \`${evalContext.interpretation}\``);
+      lines.push(`- **Research Artifact**: \`${evalContext.researchFindingsArtifact}\``);
+      lines.push(`- **Comparison Artifact**: \`${evalContext.sameSubsetComparisonArtifact}\``);
+      lines.push('');
+      
+      if (evalContext.knownLimits.length > 0) {
+        lines.push('### Known Limits');
+        evalContext.knownLimits.forEach(l => lines.push(`- ${l}`));
+        lines.push('');
+      }
+
+      if (evalContext.evidenceQualityNotes.length > 0) {
+        lines.push('### Evidence Quality Notes');
+        evalContext.evidenceQualityNotes.forEach(l => lines.push(`- ${l}`));
+        lines.push('');
+      }
+
+      if (evalContext.datasetExpansionRecommendations.length > 0) {
+        lines.push('### Dataset Expansion Recommendations');
+        evalContext.datasetExpansionRecommendations.forEach(l => lines.push(`- ${l}`));
+        lines.push('');
+      }
     }
 
     if (diff) {
