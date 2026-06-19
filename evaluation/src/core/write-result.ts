@@ -25,14 +25,18 @@ export function writeResult<T>(params: WriteResultParams<T>): void {
 
   // Canonical paths write
   if (params.canonicalJsonPath && params.jsonData !== undefined) {
-    writeJsonFile(params.canonicalJsonPath, params.jsonData);
+    const jsonPath = resolveRepoPath(params.canonicalJsonPath);
+    mkdirSync(dirname(jsonPath), { recursive: true });
+    writeFileSync(jsonPath, `${JSON.stringify(params.jsonData, null, 2)}\n`, 'utf8');
     if (params.legacyJsonPath) {
       writeLegacyAlias(params.canonicalJsonPath, params.legacyJsonPath);
     }
   }
 
   if (params.canonicalMarkdownPath && params.markdownData !== undefined) {
-    writeFileSync(resolveRepoPath(params.canonicalMarkdownPath), params.markdownData, 'utf8');
+    const mdPath = resolveRepoPath(params.canonicalMarkdownPath);
+    mkdirSync(dirname(mdPath), { recursive: true });
+    writeFileSync(mdPath, params.markdownData, 'utf8');
     if (params.legacyMarkdownPath) {
       writeLegacyAlias(params.canonicalMarkdownPath, params.legacyMarkdownPath);
     }

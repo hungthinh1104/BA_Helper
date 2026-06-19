@@ -1,0 +1,13 @@
+{
+  "generatedAt": "2026-06-19T12:38:27.660Z",
+  "runId": "vector-only-case006:2026-06-19T12-38-26-871Z",
+  "name": "probe-vector-only-case006",
+  "status": "PIPELINE_ERROR",
+  "message": "ENOENT: no such file or directory, open '/home/diphungthinh/Desktop/BA_helper_test/evaluation/results/v0/samples/vector-only/case006.v0.json'",
+  "cause": {
+    "errno": -2,
+    "code": "ENOENT",
+    "syscall": "open",
+    "path": "/home/diphungthinh/Desktop/BA_helper_test/evaluation/results/v0/samples/vector-only/case006.v0.json"
+  }
+}

@@ -1,3 +1,4 @@
+import { writeFileSync } from 'fs';
 import { ArtifactRepository } from '../../apps/api/src/modules/artifact/infrastructure/artifact.repository';
 import { GoogleEmbeddingProvider } from '../../apps/api/src/modules/embedding/infrastructure/google-embedding.provider';
 import { OpenAiEmbeddingProvider } from '../../apps/api/src/modules/embedding/infrastructure/openai-embedding.provider';
@@ -236,9 +237,7 @@ function updateManifest(runId: string) {
     manifest.latestRunId = runId;
     manifest.lastSuccessfulRunId = runId;
     
-    // We import writeFileSync directly to avoid circular dependency loops if any
-    const fs = require('fs');
-    fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\\n', 'utf8');
+    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf8');
   }
 }
 
