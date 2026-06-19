@@ -175,6 +175,13 @@ enum AnalysisReviewDecisionValue {
   NEEDS_MORE_CLARIFICATION
 }
 
+enum TraceabilityReviewDecisionValue {
+  ACCEPTED
+  REJECTED
+  NEEDS_REVIEW
+  NEEDS_MORE_EVIDENCE
+}
+
 enum TraceabilityLinkBasis {
   EVIDENCED
   INFERRED
@@ -212,6 +219,7 @@ model User {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   reviewDecisions             AnalysisReviewDecision[]
+  traceabilityReviewDecisions TraceabilityReviewDecision[]
   mergedReportReviewDecisions MergedMultiRepoReportReviewDecision[]
   createdClarifications       ReviewClarificationRequest[]          @relation("ClarificationCreatedBy")
   answeredClarifications      ReviewClarificationRequest[]          @relation("ClarificationAnsweredBy")
@@ -480,31 +488,32 @@ model MergedMultiRepoReportReviewDecision {
 }
 
 model ImpactAnalysis {
-  id                      String                   @id @default(uuid())
-  requirementRevisionId   String
-  snapshotId              String
-  sourceTargetId          String
-  multiRepoRunId          String?
-  requestKey              String
-  status                  ImpactAnalysisStatus
-  stage                   ImpactAnalysisStage
-  progress                Int                      @default(0)
-  acceptedPartialCoverage Boolean                  @default(false)
-  coverageWarning         String?
-  requirementRevision     RequirementRevision      @relation(fields: [requirementRevisionId], references: [id])
-  snapshot                RepositorySnapshot       @relation(fields: [snapshotId], references: [id])
-  sourceTarget            RepositoryTarget         @relation(fields: [sourceTargetId], references: [id])
-  multiRepoRun            MultiRepoAnalysisRun?    @relation(fields: [multiRepoRunId], references: [id], onDelete: SetNull)
-  insights                BaInsight[]
-  traceabilityLinks       TraceabilityLink[]
-  documents               GeneratedDocument[]
-  metadata                Json?
-  error                   Json?
-  createdAt               DateTime                 @default(now())
-  updatedAt               DateTime                 @updatedAt
-  reviewNotes             ReviewNote[]
-  clarificationItems      ClarificationItem[]
-  reviewDecisions         AnalysisReviewDecision[]
+  id                          String                       @id @default(uuid())
+  requirementRevisionId       String
+  snapshotId                  String
+  sourceTargetId              String
+  multiRepoRunId              String?
+  requestKey                  String
+  status                      ImpactAnalysisStatus
+  stage                       ImpactAnalysisStage
+  progress                    Int                          @default(0)
+  acceptedPartialCoverage     Boolean                      @default(false)
+  coverageWarning             String?
+  requirementRevision         RequirementRevision          @relation(fields: [requirementRevisionId], references: [id])
+  snapshot                    RepositorySnapshot           @relation(fields: [snapshotId], references: [id])
+  sourceTarget                RepositoryTarget             @relation(fields: [sourceTargetId], references: [id])
+  multiRepoRun                MultiRepoAnalysisRun?        @relation(fields: [multiRepoRunId], references: [id], onDelete: SetNull)
+  insights                    BaInsight[]
+  traceabilityLinks           TraceabilityLink[]
+  documents                   GeneratedDocument[]
+  metadata                    Json?
+  error                       Json?
+  createdAt                   DateTime                     @default(now())
+  updatedAt                   DateTime                     @updatedAt
+  reviewNotes                 ReviewNote[]
+  clarificationItems          ClarificationItem[]
+  reviewDecisions             AnalysisReviewDecision[]
+  traceabilityReviewDecisions TraceabilityReviewDecision[]
 
   // Traceability & Lineage
   derivedFromAnalysisId        String? @map("derived_from_analysis_id")
@@ -565,25 +574,46 @@ model InsightEvidence {
 }
 
 model TraceabilityLink {
-  id                String                 @id @default(uuid())
+  id                String                      @id @default(uuid())
   impactAnalysisId  String
   artifactId        String
   linkType          TraceabilityLinkType
   linkBasis         TraceabilityLinkBasis
   reviewStatus      ReviewStatus
   confidence        Float?
-  impactAnalysis    ImpactAnalysis         @relation(fields: [impactAnalysisId], references: [id])
-  artifact          CodeArtifact           @relation(fields: [artifactId], references: [id])
+  impactAnalysis    ImpactAnalysis              @relation(fields: [impactAnalysisId], references: [id])
+  artifact          CodeArtifact                @relation(fields: [artifactId], references: [id])
   evidenceLinks     TraceabilityEvidence[]
-  retrievalMetadata Json?                  @map("retrieval_metadata")
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
+  retrievalMetadata Json?                       @map("retrieval_metadata")
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
   reviewNote        ReviewNote?
+  reviewDecision    TraceabilityReviewDecision?
 
   @@unique([impactAnalysisId, artifactId, linkType])
   @@index([impactAnalysisId])
   @@index([impactAnalysisId, reviewStatus])
   @@index([artifactId])
+}
+
+model TraceabilityReviewDecision {
+  id                 String                          @id @default(uuid())
+  analysisId         String                          @map("analysis_id")
+  traceabilityLinkId String                          @unique @map("traceability_link_id")
+  decision           TraceabilityReviewDecisionValue
+  note               String?
+  reviewedByUserId   String?                         @map("reviewed_by_user_id") @db.Uuid
+  reviewedAt         DateTime                        @default(now()) @map("reviewed_at")
+  createdAt          DateTime                        @default(now()) @map("created_at")
+  updatedAt          DateTime                        @updatedAt @map("updated_at")
+
+  analysis         ImpactAnalysis   @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  traceabilityLink TraceabilityLink @relation(fields: [traceabilityLinkId], references: [id], onDelete: Cascade)
+  reviewedByUser   User?            @relation(fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([analysisId])
+  @@index([reviewedByUserId])
+  @@map("traceability_review_decision")
 }
 
 model TraceabilityEvidence {
@@ -733,12 +763,12 @@ model EmbeddingChunk {
   tokenCount     Int
   chunkerVersion String?
 
-  embeddingProfileId   String?
-  embeddingProvider    String?
-  embeddingModel       String
-  embeddingDimensions  Int?
-  embeddingConfigHash  String?
-  embedding            Unsupported("vector(1536)")
+  embeddingProfileId  String?
+  embeddingProvider   String?
+  embeddingModel      String
+  embeddingDimensions Int?
+  embeddingConfigHash String?
+  embedding           Unsupported("vector(1536)")
 
   snapshot  RepositorySnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
   artifact  CodeArtifact?      @relation(fields: [artifactId], references: [id], onDelete: Cascade)

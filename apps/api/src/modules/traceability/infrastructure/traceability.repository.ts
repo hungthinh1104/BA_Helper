@@ -19,6 +19,7 @@ export class TraceabilityRepository {
           },
         },
         artifact: true,
+        reviewDecision: true,
       },
     });
   }
@@ -123,6 +124,36 @@ export class TraceabilityRepository {
 
     return this.prisma.traceabilityEvidence.findMany({
       where: { traceabilityLinkId: params.linkId },
+    });
+  }
+  async deleteReviewDecision(linkId: string) {
+    return this.prisma.traceabilityReviewDecision.delete({
+      where: { traceabilityLinkId: linkId },
+    });
+  }
+
+  async upsertReviewDecision(params: {
+    linkId: string;
+    analysisId: string;
+    decision: 'ACCEPTED' | 'REJECTED' | 'NEEDS_REVIEW' | 'NEEDS_MORE_EVIDENCE';
+    note?: string | null;
+    reviewedByUserId?: string | null;
+  }) {
+    return this.prisma.traceabilityReviewDecision.upsert({
+      where: { traceabilityLinkId: params.linkId },
+      create: {
+        traceabilityLinkId: params.linkId,
+        analysisId: params.analysisId,
+        decision: params.decision,
+        note: params.note,
+        reviewedByUserId: params.reviewedByUserId,
+      },
+      update: {
+        decision: params.decision,
+        note: params.note,
+        reviewedByUserId: params.reviewedByUserId,
+        reviewedAt: new Date(),
+      },
     });
   }
 }

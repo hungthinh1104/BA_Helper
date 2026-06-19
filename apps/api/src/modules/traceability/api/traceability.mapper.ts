@@ -62,5 +62,16 @@ export const mapTraceabilityList = (items: Array<{
         artifactKey: (evidenceLink.evidence as any).artifact?.artifactKey ?? undefined,
         retrieval,
       })),
+      reviewDecision: (link as any).reviewDecision
+        ? {
+            id: (link as any).reviewDecision.id,
+            analysisId: (link as any).reviewDecision.analysisId,
+            traceabilityLinkId: (link as any).reviewDecision.traceabilityLinkId,
+            decision: (link as any).reviewDecision.decision,
+            note: (link as any).reviewDecision.note,
+            reviewedByUserId: (link as any).reviewDecision.reviewedByUserId,
+            reviewedAt: (link as any).reviewDecision.reviewedAt.toISOString(),
+          }
+        : undefined,
     };
   });
