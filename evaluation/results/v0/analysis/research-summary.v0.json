@@ -1,60 +1,85 @@
 {
-  "version": "results.v0",
-  "generatedAt": "2026-06-17T05:43:39.864Z",
   "datasetVersion": "cases.v0",
-  "baselines": [
+  "caseCount": 6,
+  "evaluationLevel": "file",
+  "groundTruthType": "changed-files-proxy",
+  "methodsMeasured": [
+    "keyword-baseline-v0",
+    "bm25-baseline-v0"
+  ],
+  "methodsNotMeasured": [
+    "vector-baseline-v0",
+    "current-hybrid",
+    "r1-structured-embedding"
+  ],
+  "aggregateMetrics": [
     {
-      "baselineId": "keyword-baseline",
-      "mode": "deterministic",
-      "status": "COMPLETED",
-      "predictions": [],
-      "notes": "Deterministic lexical overlap between requirement text and candidate file path, artifact name, and excerpt."
+      "method": "keyword-baseline-v0",
+      "aggregate": "E2E all cases",
+      "caseCount": 6,
+      "macroRecallAt10": 0.5555,
+      "macroPrecisionAt10": 0.3869,
+      "macroF1At10": 0.4212,
+      "macroReviewBurdenAt10": 1.4583,
+      "noHitCaseCountAt10": 2
     },
     {
-      "baselineId": "vector-only-baseline",
-      "mode": "deterministic",
-      "status": "COMPLETED",
-      "predictions": [],
-      "notes": "Deterministic sparse token-vector cosine similarity baseline. This is an offline retrieval baseline, not a hosted embedding provider benchmark."
+      "method": "keyword-baseline-v0",
+      "aggregate": "Clean retrieval subset",
+      "caseCount": 5,
+      "macroRecallAt10": 0.4667,
+      "macroPrecisionAt10": 0.2643,
+      "macroF1At10": 0.3054,
+      "macroReviewBurdenAt10": 1.55,
+      "noHitCaseCountAt10": 2
     },
     {
-      "baselineId": "pure-llm-baseline",
-      "mode": "manual",
-      "status": "SKIPPED",
-      "notes": "Manual lane only. This baseline requires an explicitly configured real provider and prompt protocol, so it is intentionally skipped in the default reproducible scaffold.",
-      "predictions": []
+      "method": "bm25-baseline-v0",
+      "aggregate": "E2E all cases",
+      "caseCount": 6,
+      "macroRecallAt10": 0.5555,
+      "macroPrecisionAt10": 0.3869,
+      "macroF1At10": 0.4212,
+      "macroReviewBurdenAt10": 1.4583,
+      "noHitCaseCountAt10": 2
+    },
+    {
+      "method": "bm25-baseline-v0",
+      "aggregate": "Clean retrieval subset",
+      "caseCount": 5,
+      "macroRecallAt10": 0.4667,
+      "macroPrecisionAt10": 0.2643,
+      "macroF1At10": 0.3054,
+      "macroReviewBurdenAt10": 1.55,
+      "noHitCaseCountAt10": 2
     }
   ],
-  "metrics": {
-    "keyword-baseline": {
-      "evaluatedCases": 0,
-      "precision": 0,
-      "recall": 0,
-      "f1": 0,
-      "recallAt5": 0,
-      "recallAt10": 0,
-      "evidenceCoverage": 0,
-      "reviewBurden": 0
-    },
-    "vector-only-baseline": {
-      "evaluatedCases": 0,
-      "precision": 0,
-      "recall": 0,
-      "f1": 0,
-      "recallAt5": 0,
-      "recallAt10": 0,
-      "evidenceCoverage": 0,
-      "reviewBurden": 0
-    },
-    "pure-llm-baseline": {
-      "evaluatedCases": 0,
-      "precision": 0,
-      "recall": 0,
-      "f1": 0,
-      "recallAt5": 0,
-      "recallAt10": 0,
-      "evidenceCoverage": 0,
-      "reviewBurden": 0
-    }
-  }
+  "interimFindings": [
+    "bm25-baseline-v0 did not improve aggregate file-level retrieval over keyword-baseline-v0 on dataset v0.",
+    "Lexical retrieval remains insufficient for some dataset v0 cases.",
+    "This supports evaluating a real vector-only retrieval path next.",
+    "This does not prove vector retrieval will improve."
+  ],
+  "allowedClaims": [
+    "Dataset v0 with 6 public cases is implemented.",
+    "Deterministic lexical baselines are implemented and measured.",
+    "keyword-baseline-v0 and bm25-baseline-v0 achieve the reported file-level metrics on dataset v0.",
+    "BM25 ties keyword on aggregate dataset v0 metrics.",
+    "Failure analysis identifies lexical mismatch and data or indirect dependency misses as observed lexical-baseline issues.",
+    "One guarded current-hybrid benchmark export exists for Case 006, interpreted as scanner coverage / E2E failure rather than clean retrieval performance."
+  ],
+  "disallowedClaims": [
+    "No SOTA claim.",
+    "No method-level accuracy claim.",
+    "No vector retrieval improvement claim.",
+    "No general current-hybrid performance claim.",
+    "No R1 structured embedding improvement claim.",
+    "No GraphRAG comparison claim."
+  ],
+  "nextValidPaths": [
+    "Decide whether to fix scanner coverage for Squareboat transformer files before interpreting Case 006 as retrieval evidence.",
+    "Configure a documented local real embedding provider for a vector-only baseline.",
+    "Explicitly allow a network embedding provider for a manual vector-only baseline.",
+    "If vector remains blocked, expand the dataset and deepen the threat model."
+  ]
 }
