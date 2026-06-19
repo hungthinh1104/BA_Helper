@@ -73,6 +73,10 @@ describe('embedding profile registry', () => {
     expect(resolveEmbeddingProfile('openai-3-large-1536').dimensions).toBe(1536);
   });
 
+  it('keeps Google research concurrency conservative', () => {
+    expect(resolveEmbeddingProfile('google-gemini-001-1536').maxConcurrency).toBe(1);
+  });
+
   it('builds a stable config hash', () => {
     const profile = resolveEmbeddingProfile('google-gemini-001-1536');
 

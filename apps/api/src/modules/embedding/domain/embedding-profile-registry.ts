@@ -27,7 +27,8 @@ export const EMBEDDING_PROFILES = {
     normalize: true,
     distanceMetric: 'cosine',
     batchSize: 5,
-    maxConcurrency: 5,
+    // Lower default concurrency reduces 429/quota instability in reproducible research runs.
+    maxConcurrency: 1,
     maxRetries: 3,
     isFake: false,
     benchmarkAllowed: true,
