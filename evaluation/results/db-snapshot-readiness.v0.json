@@ -1,6 +1,6 @@
 {
   "runId": "db-snapshot-readiness-v0",
-  "generatedAt": "2026-06-19T13:35:28.528Z",
+  "generatedAt": "2026-06-19T13:48:13.562Z",
   "status": "READY_CANDIDATES_FOUND",
   "database": {
     "hasDatabaseUrl": true,

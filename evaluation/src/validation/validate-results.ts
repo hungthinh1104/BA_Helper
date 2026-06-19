@@ -223,10 +223,48 @@ export function validateResults(): { valid: boolean; errors: string[] } {
     }
   }
 
-  // 6. Verify vector baseline is absent
+  // 6. Verify vector baseline
   const vectorBaselinePath = resolveRepoPath(EvaluationPaths.resultsV0.baselines + '/vector-baseline.v0.json');
   if (existsSync(vectorBaselinePath)) {
-    errors.push('vector-baseline.v0.json should remain absent in the committed repository');
+    const vBaseline = readJsonFile<any>(vectorBaselinePath);
+    if (vBaseline.method !== 'VECTOR_ONLY') errors.push('vector-baseline method must be VECTOR_ONLY');
+    if (vBaseline.datasetVersion !== 'v0') errors.push('vector-baseline datasetVersion must be v0');
+    if (vBaseline.subsetId !== 'clean-vector-ready-v0') errors.push('vector-baseline subsetId must be clean-vector-ready-v0');
+    
+    const subsetPath = resolveRepoPath(EvaluationPaths.datasetV0.subsets + '/clean-vector-ready.v0.json');
+    if (existsSync(subsetPath)) {
+      const subset = readJsonFile<any>(subsetPath);
+      if (vBaseline.caseCount !== subset.caseIds.length) errors.push('vector-baseline caseCount must match subset caseIds length');
+      if (vBaseline.caseCount !== subset.counts.eligibleCases) errors.push('vector-baseline caseCount must match subset eligibleCases');
+      
+      const baselineIdsStr = JSON.stringify([...vBaseline.caseIds].sort());
+      const subsetIdsStr = JSON.stringify([...subset.caseIds].sort());
+      if (baselineIdsStr !== subsetIdsStr) errors.push('vector-baseline caseIds must exactly match subset caseIds');
+      
+      if (!vBaseline.results || vBaseline.results.length !== vBaseline.caseCount) errors.push('vector-baseline results length must match caseCount');
+      
+      vBaseline.results.forEach((r: any) => {
+        if (!subset.caseIds.includes(r.caseId)) errors.push(`vector-baseline result caseId ${r.caseId} not in subset`);
+        if (r.retrievalMode !== 'VECTOR_ONLY') errors.push(`vector-baseline result ${r.caseId} retrievalMode must be VECTOR_ONLY`);
+        
+        r.topK.forEach((k: any) => {
+          if (k.finalScore !== k.vectorScore) errors.push(`vector-baseline result ${r.caseId} file ${k.filePath} finalScore must equal vectorScore`);
+          if (k.lexicalScore !== 0) errors.push(`vector-baseline result ${r.caseId} file ${k.filePath} lexicalScore must be 0`);
+          if (k.graphScore !== 0) errors.push(`vector-baseline result ${r.caseId} file ${k.filePath} graphScore must be 0`);
+          
+          const signals = k.signals || [];
+          if (signals.length !== 1 || signals[0] !== 'VECTOR') {
+            errors.push(`vector-baseline result ${r.caseId} file ${k.filePath} must have exactly one signal: VECTOR`);
+          }
+        });
+      });
+    }
+
+    const hasSubsetSizeWarning = vBaseline.knownLimits?.some((l: string) => l.toLowerCase().includes('subset size') && l.toLowerCase().includes('not representative'));
+    const hasCrossMethodWarning = vBaseline.knownLimits?.some((l: string) => l.toLowerCase().includes('do not use e11c for cross-method comparison'));
+    if (!hasSubsetSizeWarning || !hasCrossMethodWarning) {
+      errors.push('vector-baseline knownLimits must include warnings about subset size and no cross-method comparison');
+    }
   }
 
   // 6.5 Verify E11A vector-only Case006 probe
@@ -340,11 +378,24 @@ export function validateResults(): { valid: boolean; errors: string[] } {
     if (alignment && manifest.dataset?.cleanRetrievalEligibleCount !== alignment.cleanRetrievalEligibleCount) {
       errors.push(`Manifest cleanRetrievalEligibleCount (${manifest.dataset?.cleanRetrievalEligibleCount}) does not match alignment cleanRetrievalEligibleCount (${alignment.cleanRetrievalEligibleCount}).`);
     }
+    if (existsSync(vectorBaselinePath)) {
+      if (manifest.notMeasuredYet?.includes('vector-only-baseline-v0')) {
+        errors.push('Manifest notMeasuredYet should NOT include vector-only-baseline-v0');
+      }
+      if (!manifest.canonicalArtifacts?.vectorBaseline) {
+        errors.push('Manifest canonicalArtifacts must include vectorBaseline');
+      }
+    }
+    if (!manifest.notMeasuredYet?.includes('aggregate-current-hybrid-on-clean-subset-v0')) {
+      errors.push('Manifest notMeasuredYet MUST include aggregate-current-hybrid-on-clean-subset-v0');
+    }
     if (alignment && manifest.dataset?.scannerCoverageFailureCount !== alignment.scannerCoverageFailureCount) {
       errors.push(`Manifest scannerCoverageFailureCount (${manifest.dataset?.scannerCoverageFailureCount}) does not match alignment scannerCoverageFailureCount (${alignment.scannerCoverageFailureCount}).`);
     }
-    if (!Array.isArray(manifest.notMeasuredYet) || !manifest.notMeasuredYet.includes('vector-only-baseline-v0')) {
-      errors.push('Manifest notMeasuredYet is missing vector-only-baseline-v0.');
+    if (!existsSync(vectorBaselinePath)) {
+      if (!Array.isArray(manifest.notMeasuredYet) || !manifest.notMeasuredYet.includes('vector-only-baseline-v0')) {
+        errors.push('Manifest notMeasuredYet is missing vector-only-baseline-v0.');
+      }
     }
     if (!manifest.canonicalArtifacts?.currentHybridCase006) {
       errors.push('Manifest is missing canonicalArtifacts.currentHybridCase006.');

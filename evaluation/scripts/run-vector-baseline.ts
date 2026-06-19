@@ -1,99 +1,226 @@
+import { writeFileSync, existsSync } from 'fs';
+import { ArtifactRepository } from '../../apps/api/src/modules/artifact/infrastructure/artifact.repository';
+import { GoogleEmbeddingProvider } from '../../apps/api/src/modules/embedding/infrastructure/google-embedding.provider';
+import { OpenAiEmbeddingProvider } from '../../apps/api/src/modules/embedding/infrastructure/openai-embedding.provider';
+import { EmbeddingChunkRepository } from '../../apps/api/src/modules/embedding/infrastructure/embedding-chunk.repository';
+import { type EmbeddingProvider } from '../../apps/api/src/modules/embedding/domain/embedding-provider.interface';
+import { resolveRuntimeEmbeddingProfileFromEnv } from '../../apps/api/src/modules/embedding/domain/embedding-profile-registry';
+import { GraphRepository } from '../../apps/api/src/modules/graph/infrastructure/graph.repository';
+import { PrismaService } from '../../apps/api/src/modules/prisma/prisma.service';
+import { HybridRetrievalService } from '../../apps/api/src/modules/retrieval/application/hybrid-retrieval.service';
+import { readJsonFile, resolveRepoPath } from '../io';
 import { EvaluationPaths } from '../src/core/paths';
-import { existsSync } from 'fs';
-import { resolveRepoPath } from '../io';
-import {
-  assertUsableVectorProvider,
-  getVectorBaselineRefusalMessage,
-  type VectorBaselineProviderConfig,
-} from '../src/core/vector-provider-gate';
+import { writeResult } from '../src/core/write-result';
+import { writeErrorArtifact } from '../src/core/write-error-artifact';
 
-function envOrEmpty(name: string): string {
-  return (process.env[name] ?? '').trim();
+function parseArg(flag: string): string | undefined {
+  const index = process.argv.indexOf(flag);
+  return index >= 0 ? process.argv[index + 1] : undefined;
 }
 
-function inferSource(raw: string): VectorBaselineProviderConfig['source'] {
-  const normalized = raw.trim().toLowerCase();
-  if (
-    normalized === 'persisted-db' ||
-    normalized === 'local-real' ||
-    normalized === 'network-real' ||
-    normalized === 'fake' ||
-    normalized === 'hash' ||
-    normalized === 'random' ||
-    normalized === 'keyword'
-  ) {
-    return normalized;
+function resolveRealQueryEmbeddingProvider(): { provider: EmbeddingProvider; model: string; providerName: string } {
+  const profile = resolveRuntimeEmbeddingProfileFromEnv('QUERY');
+  const providerName = profile.provider;
+  switch (providerName) {
+    case 'google': return { provider: new GoogleEmbeddingProvider(profile), model: profile.model, providerName };
+    case 'openai': return { provider: new OpenAiEmbeddingProvider(profile), model: profile.model, providerName };
+    default: throw new Error(`Real query embedding provider "${providerName}" is not supported.`);
   }
-  return 'fake';
 }
 
-function loadProviderConfig(): VectorBaselineProviderConfig {
-  const source = inferSource(envOrEmpty('REQIMPACT_VECTOR_PROVIDER_SOURCE'));
-  const providerName = envOrEmpty('REQIMPACT_VECTOR_PROVIDER_NAME');
-  const embeddingModel = envOrEmpty('REQIMPACT_VECTOR_PROVIDER_MODEL');
-  const allowsNetwork = envOrEmpty('REQIMPACT_VECTOR_PROVIDER_NETWORK') === '1';
-  const isFake = envOrEmpty('REQIMPACT_VECTOR_PROVIDER_FAKE') === '1';
-  const dbModeAvailable =
-    envOrEmpty('REQIMPACT_VECTOR_DB_MODE') === '1' &&
-    envOrEmpty('DATABASE_URL').length > 0;
+async function main() {
+  const subsetParam = parseArg('--subset');
+  if (subsetParam !== 'clean-vector-ready-v0') {
+    console.error('Usage: run-vector-baseline.ts --subset clean-vector-ready-v0');
+    process.exit(1);
+  }
 
-  return {
-    providerName,
-    embeddingModel,
-    source,
-    allowsNetwork,
-    isDeterministic: envOrEmpty('REQIMPACT_VECTOR_PROVIDER_DETERMINISTIC') !== '0',
-    isFake,
-    dbModeAvailable,
-    notes: 'Phase 2F gate only. This script refuses to emit vector-baseline.v0.json without a real provider.',
-  };
-}
+  const runId = `vector-baseline-v0:${new Date().toISOString().replace(/[:.]/g, '-')}`;
 
-export function runVectorBaselineGate(params?: {
-  outputPath?: string;
-  providerConfig?: VectorBaselineProviderConfig;
-}): {
-  refused: boolean;
-  wroteOutput: boolean;
-  message: string;
-} {
-  const outputPath =
-    params?.outputPath ?? resolveRepoPath(EvaluationPaths.resultsLegacy.baselines.vectorJson);
-  const providerConfig = params?.providerConfig ?? loadProviderConfig();
   try {
-    assertUsableVectorProvider(providerConfig);
-  } catch (error) {
-    if (existsSync(outputPath)) {
-      return {
-        refused: true,
-        wroteOutput: false,
-        message: `Refusing vector baseline run while ${outputPath} already exists. Remove the file and rerun with a real provider.`,
-      };
+    if (!process.env.DATABASE_URL) {
+      throw new Error('Vector baseline REQUIRES database to be available. Failing fast.');
     }
 
-    return {
-      refused: true,
-      wroteOutput: false,
-      message: `${getVectorBaselineRefusalMessage(error)}\nNo vector-baseline.v0.json was written. Configure a real provider before running this benchmark.`,
+    const subsetPath = resolveRepoPath(EvaluationPaths.datasetV0.subsets + '/clean-vector-ready.v0.json');
+    if (!existsSync(subsetPath)) throw new Error('Subset file not found: ' + subsetPath);
+    const subsetData = readJsonFile<any>(subsetPath);
+
+    const alignmentPath = resolveRepoPath(EvaluationPaths.resultsV0.alignment + '/case-snapshot-alignment.v0.json');
+    const alignment = readJsonFile<any>(alignmentPath);
+
+    const casesPath = resolveRepoPath(EvaluationPaths.datasetV0.cases);
+    const casesData = readJsonFile<any>(casesPath);
+
+    const prisma = new PrismaService();
+    await prisma.$connect();
+
+    const { provider, providerName } = resolveRealQueryEmbeddingProvider();
+    if (providerName === 'fake') throw new Error('Provider cannot be fake for real vector baseline');
+
+    const retrievalService = new HybridRetrievalService(
+      new EmbeddingChunkRepository(prisma),
+      provider,
+      new ArtifactRepository(prisma),
+      new GraphRepository(prisma),
+      prisma,
+    );
+
+    const results = [];
+    let hitsAt1 = 0;
+    let hitsAt5 = 0;
+    let hitsAt10 = 0;
+    let sumRR = 0;
+
+    for (const caseId of subsetData.caseIds) {
+      const caseDef = casesData.cases.find((c: any) => c.id === caseId);
+      const caseAlign = alignment.cases.find((c: any) => c.caseId === caseId);
+
+      if (!caseAlign || caseAlign.status !== 'ALIGNED_VECTOR_READY') {
+        throw new Error(`Case ${caseId} is not ALIGNED_VECTOR_READY`);
+      }
+
+      const { projectId, repositoryId, snapshotId } = caseAlign;
+      const groundTruthFiles = caseDef.groundTruth.files;
+
+      const retrievedArtifacts = await retrievalService.retrieve({
+        projectId,
+        repositoryId,
+        snapshotId,
+        changeRequest: caseDef.requirementText,
+        maxResults: 20,
+        expandGraph: false,
+        retrievalMode: 'VECTOR_ONLY'
+      });
+
+      const topK = [];
+      let firstRelevantRank = -1;
+
+      for (const [index, retrieved] of retrievedArtifacts.entries()) {
+        topK.push({
+          rank: index + 1,
+          filePath: retrieved.filePath,
+          score: retrieved.score,
+          finalScore: retrieved.score,
+          vectorScore: retrieved.score,
+          lexicalScore: 0,
+          graphScore: 0,
+          signals: retrieved.retrievalSignals
+        });
+
+        if (firstRelevantRank === -1 && groundTruthFiles.includes(retrieved.filePath)) {
+          firstRelevantRank = index + 1;
+        }
+      }
+
+      const hitAt1 = firstRelevantRank === 1;
+      const hitAt5 = firstRelevantRank !== -1 && firstRelevantRank <= 5;
+      const hitAt10 = firstRelevantRank !== -1 && firstRelevantRank <= 10;
+      const reciprocalRank = firstRelevantRank !== -1 ? 1 / firstRelevantRank : 0;
+
+      if (hitAt1) hitsAt1++;
+      if (hitAt5) hitsAt5++;
+      if (hitAt10) hitsAt10++;
+      sumRR += reciprocalRank;
+
+      results.push({
+        caseId,
+        retrievalMode: 'VECTOR_ONLY',
+        groundTruthFiles,
+        topK,
+        hitAt1,
+        hitAt5,
+        hitAt10,
+        reciprocalRank
+      });
+    }
+
+    const caseCount = subsetData.caseIds.length;
+    const metrics = {
+      hitAt1: caseCount > 0 ? hitsAt1 / caseCount : 0,
+      hitAt5: caseCount > 0 ? hitsAt5 / caseCount : 0,
+      hitAt10: caseCount > 0 ? hitsAt10 / caseCount : 0,
+      mrr: caseCount > 0 ? sumRR / caseCount : 0
     };
-  }
 
-  return {
-    refused: false,
-    wroteOutput: false,
-    message:
-      'Provider gate passed, but Phase 2F does not implement real vector scoring yet. No vector-baseline.v0.json was written.',
-  };
-}
+    const artifactJson = {
+      runId,
+      generatedAt: new Date().toISOString(),
+      method: 'VECTOR_ONLY',
+      datasetVersion: 'v0',
+      subsetId: 'clean-vector-ready-v0',
+      subsetArtifact: 'evaluation/datasets/v0/subsets/clean-vector-ready.v0.json',
+      caseCount,
+      caseIds: subsetData.caseIds,
+      metrics,
+      results,
+      knownLimits: [
+        'Measured only on clean-vector-ready-v0.',
+        'Subset size is 1/6 and not representative of the full dataset.',
+        'Do not use E11C for cross-method comparison; E12 will compare methods on the same subset.'
+      ]
+    };
 
-function main(): void {
-  const result = runVectorBaselineGate();
-  console.log(result.message);
-  if (result.refused && result.message.includes('already exists')) {
+    const mdLines = [
+      '# Vector-Only Baseline',
+      '',
+      `Method: \`${artifactJson.method}\``,
+      `Subset: \`${artifactJson.subsetId}\` (Size: ${caseCount})`,
+      `Generated At: \`${artifactJson.generatedAt}\``,
+      '',
+      '## Metrics',
+      `hitAt1: ${metrics.hitAt1.toFixed(4)}`,
+      `hitAt5: ${metrics.hitAt5.toFixed(4)}`,
+      `hitAt10: ${metrics.hitAt10.toFixed(4)}`,
+      `mrr: ${metrics.mrr.toFixed(4)}`,
+      '',
+      '## Known Limits',
+      ...artifactJson.knownLimits.map(l => `- ${l}`)
+    ];
+
+    writeResult({
+      canonicalJsonPath: EvaluationPaths.resultsV0.baselines + '/vector-baseline.v0.json',
+      canonicalMarkdownPath: EvaluationPaths.resultsV0.baselines + '/vector-baseline.v0.md',
+      runId,
+      relativeArtifactPath: 'baselines/vector-baseline.v0.json',
+      jsonData: artifactJson,
+      markdownData: mdLines.join('\n')
+    });
+
+    updateManifest(runId);
+    
+    await prisma.$disconnect();
+    console.log(`Successfully completed VECTOR_ONLY baseline on ${caseCount} cases.`);
+
+  } catch (error) {
+    console.error('[ERROR] vector baseline failed: ', error instanceof Error ? error.message : error);
+    writeErrorArtifact({
+      runId,
+      name: 'probe-vector-baseline.error',
+      status: 'PIPELINE_ERROR',
+      message: error instanceof Error ? error.message : String(error)
+    });
     process.exit(1);
   }
 }
 
-if (require.main === module) {
-  main();
+function updateManifest(runId: string) {
+  const manifestPath = resolveRepoPath(EvaluationPaths.resultsV0.manifests + '/latest.manifest.json');
+  if (existsSync(manifestPath)) {
+    const manifest = readJsonFile<any>(manifestPath);
+    
+    manifest.canonicalArtifacts = manifest.canonicalArtifacts || {};
+    manifest.canonicalArtifacts.vectorBaseline = 'evaluation/results/v0/baselines/vector-baseline.v0.json';
+    
+    if (manifest.notMeasuredYet) {
+      manifest.notMeasuredYet = manifest.notMeasuredYet.filter((item: string) => item !== 'vector-only-baseline-v0');
+    }
+    
+    manifest.latestRunId = runId;
+    manifest.lastSuccessfulRunId = runId;
+    
+    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf8');
+  }
 }
+
+main();
