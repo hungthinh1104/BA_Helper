@@ -30,5 +30,6 @@ import { ProjectModule } from '../project/project.module';
       inject: [TraceabilityRepository, EventLogService],
     },
   ],
+  exports: [TraceabilityRepository],
 })
 export class TraceabilityModule {}

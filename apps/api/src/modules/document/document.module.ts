@@ -13,11 +13,12 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { EventLogModule } from '../event-log/event-log.module';
 import { EventLogService } from '../event-log/application/event-log.service';
 import { ProjectModule } from '../project/project.module';
+import { TraceabilityModule } from '../traceability/traceability.module';
 
 import { EvaluationContextAdapter } from './application/evaluation-context.adapter';
 
 @Module({
-  imports: [PrismaModule, EventLogModule, ProjectModule],
+  imports: [PrismaModule, EventLogModule, ProjectModule, TraceabilityModule],
   controllers: [DocumentController],
   providers: [
     DocumentRepository,

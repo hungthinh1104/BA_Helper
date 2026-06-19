@@ -1,16 +1,26 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ApprovedReportMetadata } from '../domain/approved-report-metadata';
+import { TraceabilityRepository } from '../../traceability/infrastructure/traceability.repository';
+import { EvaluationContextAdapter } from './evaluation-context.adapter';
+import { EvidenceQualityAnnotator } from './evidence-quality.annotator';
 
 @Injectable()
 export class ApprovedReportProjectionService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly traceabilityRepo: TraceabilityRepository,
+    private readonly evalContextAdapter: EvaluationContextAdapter,
+  ) {}
 
   async project(report: any): Promise<{
     report: any;
     isStale: boolean;
     staleReason?: string;
     metadata: ApprovedReportMetadata;
+    evaluationContext?: any;
+    evidenceQualitySummary?: any;
+    evidenceQualityItems?: any[];
   }> {
     const analysis = report.impactAnalysis;
     const isPinnedCommit = analysis.sourceTarget.resolvedRefType === 'COMMIT';
@@ -35,10 +45,35 @@ export class ApprovedReportProjectionService {
       staleReason = 'Review decisions changed after the approved report snapshot was generated.';
     }
 
+    const evaluationContext = this.evalContextAdapter.getEvaluationContext();
+    const traceabilityLinks = await this.traceabilityRepo.listByAnalysis(analysis.id);
+
+    const linkAnnotations = traceabilityLinks.map(link => ({
+      link,
+      annotation: EvidenceQualityAnnotator.annotate(link as any),
+    }));
+
+    const evidenceQualitySummary = {
+      evidenced: linkAnnotations.filter(l => l.annotation.label === 'EVIDENCED').length,
+      inferred: linkAnnotations.filter(l => l.annotation.label === 'INFERRED').length,
+      weakEvidence: linkAnnotations.filter(l => l.annotation.label === 'WEAK_EVIDENCE').length,
+      missingEvidence: linkAnnotations.filter(l => l.annotation.label === 'MISSING_EVIDENCE').length,
+      reviewRequired: linkAnnotations.filter(l => l.annotation.label === 'REVIEW_REQUIRED').length,
+    };
+
+    const evidenceQualityItems = linkAnnotations.map(item => ({
+      artifact: item.link.artifact?.filePath || item.link.artifact?.name || 'Unknown',
+      quality: item.annotation.label,
+      reasons: item.annotation.reasons,
+    }));
+
     return {
       report,
       isStale,
       staleReason,
+      evaluationContext,
+      evidenceQualitySummary,
+      evidenceQualityItems,
       metadata: {
         analysisId: analysis.id,
         title: analysis.requirementRevision.title,
