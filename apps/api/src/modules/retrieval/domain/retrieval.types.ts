@@ -16,6 +16,8 @@ export interface RetrievalDiagnostics {
   } | null;
   /** Glossary terms from the domain profile that appeared in the change request. Max 10. */
   matchedDomainTerms?: string[];
+  /** True when the embedding query text was secret-redacted before provider call. */
+  queryRedacted?: boolean;
   finalScore: number;
 }
 

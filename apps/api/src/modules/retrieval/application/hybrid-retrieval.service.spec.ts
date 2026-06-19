@@ -285,5 +285,119 @@ describe('HybridRetrievalService', () => {
       expect(embeddingProvider.embed).not.toHaveBeenCalled();
       expect(chunkRepo.searchSimilar).not.toHaveBeenCalled();
     });
+
+    it('redacts query text before embedding without mutating the original request text', async () => {
+      const prisma = {
+        repositorySnapshot: {
+          findUnique: jest.fn().mockResolvedValue({
+            indexStatus: 'VECTOR_READY',
+            profile: null,
+          }),
+        },
+        $queryRaw: jest.fn().mockResolvedValue([]),
+      } as any;
+      const embeddingProvider = {
+        embed: jest.fn().mockResolvedValue({
+          embeddings: [new Array(1536).fill(0.1)],
+          provider: 'google',
+          model: 'gemini-embedding-001',
+          dimensions: 1536,
+          profileId: 'google-gemini-001-1536',
+          configHash: 'cfg',
+          normalized: true,
+        }),
+      } as any;
+      const request = {
+        projectId: '11',
+        repositoryId: '22',
+        snapshotId: '33',
+        changeRequest: 'Find users where token="ghp_secret123"',
+        embeddingQueryProfileId: 'google-gemini-001-1536',
+        embeddingArtifactProfileId: 'google-gemini-001-1536',
+      };
+
+      const service = new HybridRetrievalService(
+        { searchSimilar: jest.fn().mockResolvedValue([]) } as any,
+        embeddingProvider,
+        { findById: jest.fn() } as any,
+        { expandFromSeeds: jest.fn().mockResolvedValue([]) } as any,
+        prisma,
+      );
+
+      await service.retrieve(request);
+
+      expect(embeddingProvider.embed).toHaveBeenCalledWith(
+        expect.objectContaining({
+          texts: ['Find users where token="[REDACTED]"'],
+        }),
+      );
+      expect(request.changeRequest).toBe('Find users where token="ghp_secret123"');
+    });
+
+    it('filters weak vector candidates even when graph marks them as seeds', async () => {
+      const prisma = {
+        repositorySnapshot: {
+          findUnique: jest.fn().mockResolvedValue({
+            indexStatus: 'VECTOR_READY',
+            profile: null,
+          }),
+        },
+        $queryRaw: jest.fn().mockResolvedValue([]),
+      } as any;
+      const chunkRepo = {
+        searchSimilar: jest.fn().mockResolvedValue([
+          {
+            artifactId: 'artifact-weak',
+            similarity: 0.5,
+          },
+        ]),
+      } as any;
+      const artifactRepo = {
+        findById: jest.fn().mockResolvedValue({
+          id: 'artifact-weak',
+          artifactKey: 'file:src.weak.ts',
+          filePath: 'src/weak.ts',
+          name: 'weak.ts',
+          symbolName: 'weak.ts',
+          artifactType: 'FILE',
+          universalKind: 'UNKNOWN',
+        }),
+      } as any;
+      const graphRepo = {
+        expandFromSeeds: jest.fn().mockResolvedValue(['artifact-weak']),
+      } as any;
+      const embeddingProvider = {
+        embed: jest.fn().mockResolvedValue({
+          embeddings: [new Array(1536).fill(0.1)],
+          provider: 'google',
+          model: 'gemini-embedding-001',
+          dimensions: 1536,
+          profileId: 'google-gemini-001-1536',
+          configHash: 'cfg',
+          normalized: true,
+        }),
+      } as any;
+
+      const service = new HybridRetrievalService(
+        chunkRepo,
+        embeddingProvider,
+        artifactRepo,
+        graphRepo,
+        prisma,
+      );
+
+      const results = await service.retrieve({
+        projectId: '11',
+        repositoryId: '22',
+        snapshotId: '33',
+        changeRequest: 'booking',
+        expandGraph: true,
+        embeddingQueryProfileId: 'google-gemini-001-1536',
+        embeddingArtifactProfileId: 'google-gemini-001-1536',
+      });
+
+      expect(results).toEqual([]);
+      expect(graphRepo.expandFromSeeds).toHaveBeenCalledWith('33', ['artifact-weak']);
+    });
   });
 });

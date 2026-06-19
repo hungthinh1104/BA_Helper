@@ -14,6 +14,7 @@ import { GraphRepository } from '../../graph/infrastructure/graph.repository';
 import { PrismaService } from '../../prisma/prisma.service';
 import { getDomainGlossary, matchDomainTerms, isDomainSupported } from '../../domain-profile';
 import { Prisma } from '@prisma/client';
+import { AiPolicy } from '../../ai/domain/ai.policy';
 
 const WEIGHTS = {
   lexical: 0.45,
@@ -37,6 +38,7 @@ type Candidate = {
   signals: Set<'LEXICAL' | 'GRAPH' | 'VECTOR' | 'DOMAIN' | 'KIND'>;
   graphDepth?: number;
   lexicalReasons: string[];
+  weakVectorSeed?: boolean;
 };
 
 @Injectable()
@@ -78,6 +80,7 @@ export class HybridRetrievalService {
           noisePenalty: 0,
           signals: new Set(),
           lexicalReasons: [],
+          weakVectorSeed: false,
         };
         candidates.set(id, c);
       }
@@ -155,6 +158,7 @@ export class HybridRetrievalService {
       try {
         const queryProfile = this.resolveQueryProfile(request);
         const artifactProfile = this.resolveArtifactProfile(request, queryProfile);
+        const embeddingQueryRedaction = AiPolicy.redactPayload(request.changeRequest);
 
         if (!areEmbeddingProfilesCompatible(queryProfile, artifactProfile)) {
           this.logger.warn(
@@ -162,7 +166,7 @@ export class HybridRetrievalService {
           );
         } else {
           const vectorResponse = await this.embeddingProvider.embed({
-            texts: [request.changeRequest],
+            texts: [embeddingQueryRedaction.redactedPayload],
             profile: queryProfile,
             inputRole: 'QUERY',
           });
@@ -193,6 +197,7 @@ export class HybridRetrievalService {
 
             const c = getCandidate(hit.artifactId, artifact);
             c.vectorScoreNorm = Math.max(c.vectorScoreNorm, hit.similarity);
+            c.weakVectorSeed = c.vectorScoreNorm < MIN_VECTOR_SIMILARITY;
             c.signals.add('VECTOR');
           }
         }
@@ -259,6 +264,10 @@ export class HybridRetrievalService {
       // Drop vector-only low similarity candidate
       if (isVectorOnly && isTooWeakToKeep) {
          continue; 
+      }
+
+      if (c.weakVectorSeed && !hasLexical) {
+         continue;
       }
       
       // Apply noise penalties
@@ -341,6 +350,7 @@ export class HybridRetrievalService {
             request.changeRequest,
             profileDomain ?? request.domain,
           ).slice(0, 10),
+          queryRedacted: AiPolicy.redactPayload(request.changeRequest).hasSecrets,
           finalScore,
         }
       };
