@@ -12,6 +12,9 @@ import remarkGfm from "remark-gfm"
 import { apiGetFile } from "@/lib/api-client"
 import { toast } from "sonner"
 import { AnalysisStatusBadge } from "@/components/workspace/shared/status-badges"
+import { EvaluationContextCard } from "./evaluation-context-card"
+import { EvidenceQualitySummary } from "./evidence-quality-summary"
+import { EvidenceQualityTable } from "./evidence-quality-table"
 
 interface ReportViewerProps {
   analysisId: string;
@@ -223,6 +226,13 @@ export function ReportViewer({ analysisId }: ReportViewerProps) {
           {report.markdown}
         </ReactMarkdown>
       </article>
+
+      {/* Structured Evidence Quality and Evaluation Context */}
+      <div className="mt-12 space-y-8 border-t border-border/50 pt-8 print:hidden">
+        <EvidenceQualitySummary summary={report.evidenceQualitySummary} />
+        <EvidenceQualityTable items={report.evidenceQualityItems} />
+        <EvaluationContextCard context={report.evaluationContext} />
+      </div>
     </div>
   )
 }
