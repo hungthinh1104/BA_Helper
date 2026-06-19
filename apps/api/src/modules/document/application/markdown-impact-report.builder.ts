@@ -22,6 +22,11 @@ type InsightWithEvidence = Prisma.BaInsightGetPayload<{
 type TraceabilityLinkWithArtifact = Prisma.TraceabilityLinkGetPayload<{
   include: {
     artifact: true;
+    evidenceLinks: {
+      include: {
+        evidence: true;
+      };
+    };
   };
 }>;
 
@@ -29,6 +34,7 @@ import { MermaidImpactDiagramBuilder, ReportDependencyEdge } from './mermaid-imp
 import { ClarificationItemDto } from '@ba-helper/contracts';
 import { ApprovedReportMetadata } from '../domain/approved-report-metadata';
 import { EvaluationContextAdapter } from './evaluation-context.adapter';
+import { EvidenceQualityAnnotator } from './evidence-quality.annotator';
 
 @Injectable()
 export class MarkdownImpactReportBuilder {
@@ -403,6 +409,32 @@ export class MarkdownImpactReportBuilder {
         const decision = d.decision;
         const note = d.note || '-';
         lines.push(`| ${time} | ${reviewer} | ${decision} | ${note} |`);
+      }
+      lines.push('');
+    }
+
+    if (traceabilityLinks.length > 0) {
+      const linkAnnotations = traceabilityLinks.map(link => ({
+        link,
+        annotation: EvidenceQualityAnnotator.annotate(link as any)
+      }));
+
+      const evidencedCount = linkAnnotations.filter(l => l.annotation.label === 'EVIDENCED' || l.annotation.label === 'WEAK_EVIDENCE').length;
+      const inferredCount = linkAnnotations.filter(l => l.annotation.label === 'INFERRED').length;
+      const reviewRequiredCount = linkAnnotations.filter(l => l.annotation.label === 'REVIEW_REQUIRED').length;
+
+      lines.push('## Evidence Quality & Dataset Readiness');
+      lines.push('');
+      lines.push(`- Evidence-backed links: ${evidencedCount}`);
+      lines.push(`- Inferred links: ${inferredCount}`);
+      lines.push(`- Review required: ${reviewRequiredCount}`);
+      lines.push('');
+      lines.push('| Artifact | Quality | Reason |');
+      lines.push('|---|---|---|');
+      
+      for (const item of linkAnnotations) {
+        const artifactName = item.link.artifact?.filePath ? `\`${item.link.artifact.filePath}\`` : (item.link.artifact?.name || 'Unknown');
+        lines.push(`| ${artifactName} | ${item.annotation.label} | ${item.annotation.reasons.join(', ')} |`);
       }
       lines.push('');
     }

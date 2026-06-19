@@ -370,6 +370,76 @@ describe('MarkdownImpactReportBuilder', () => {
     });
   });
 
+  describe('Evidence Quality & Dataset Readiness', () => {
+    it('renders Evidence Quality section with table and summary when traceability links exist', () => {
+      const links = [
+        {
+          id: 'link-1',
+          linkType: 'AFFECTED',
+          linkBasis: 'EVIDENCED',
+          reviewStatus: 'CONFIRMED',
+          retrievalMetadata: { semanticScore: 0.9 },
+          artifact: {
+            id: 'art-1',
+            filePath: 'src/app.ts',
+            name: 'AppModule',
+          },
+          evidenceLinks: [
+            {
+              evidence: {
+                excerpt: 'module',
+                startLine: 1,
+                endLine: 2,
+              }
+            }
+          ]
+        },
+        {
+          id: 'link-2',
+          linkType: 'AFFECTED',
+          linkBasis: 'INFERRED',
+          reviewStatus: 'NEEDS_REVIEW',
+          retrievalMetadata: {},
+          artifact: {
+            id: 'art-2',
+            filePath: 'src/main.ts',
+            name: 'main',
+          },
+          evidenceLinks: []
+        }
+      ] as unknown as any[];
+
+      const report = builder.build({
+        analysis: mockAnalysis,
+        insights: [],
+        traceabilityLinks: links,
+        hasUnreviewedItems: true,
+      });
+
+      expect(report).toContain('## Evidence Quality & Dataset Readiness');
+      expect(report).toContain('- Evidence-backed links: 1');
+      expect(report).toContain('- Inferred links: 0'); // Because link-2 is REVIEW_REQUIRED (precedence override)
+      expect(report).toContain('- Review required: 1');
+      
+      expect(report).toContain('| Artifact | Quality | Reason |');
+      // link-1 is EVIDENCED
+      expect(report).toMatch(/\| `src\/app\.ts` \| EVIDENCED \| .*hasSourceSnippet.*hasFilePath.*hasSymbolName.*hasLineRange.*hasRetrieverScore.* \|/);
+      // link-2 is REVIEW_REQUIRED because of staleOrUnverified
+      expect(report).toMatch(/\| `src\/main\.ts` \| REVIEW_REQUIRED \| .*missingSourceQuote.*inferredOnly.*staleOrUnverified.* \|/);
+    });
+
+    it('omits Evidence Quality section when no traceability links exist', () => {
+      const report = builder.build({
+        analysis: mockAnalysis,
+        insights: [],
+        traceabilityLinks: [],
+        hasUnreviewedItems: false,
+      });
+
+      expect(report).not.toContain('## Evidence Quality & Dataset Readiness');
+    });
+  });
+
   describe('Evaluation Context', () => {
     it('omits Evaluation Context when adapter returns null', () => {
       evalContextAdapter.getEvaluationContext.mockReturnValue(null);
