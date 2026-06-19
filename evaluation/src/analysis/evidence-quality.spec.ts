@@ -2,7 +2,7 @@ import {
   isCodeLikeEvidence,
   isLocationOnlyEvidence,
   summarizeEvidenceQuality,
-} from './evidence-quality';
+} from '../analysis/evidence-quality';
 
 describe('evidence-quality helpers', () => {
   it('handles an empty excerpt', () => {

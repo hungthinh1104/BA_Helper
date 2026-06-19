@@ -1,3 +1,4 @@
+import { EvaluationPaths } from './paths';
 import {
   evaluateCurrentHybridExportGuard,
   getCurrentHybridOutputTargets,
@@ -170,6 +171,6 @@ describe('current hybrid export guard', () => {
     const targets = getCurrentHybridOutputTargets('CURRENT_HYBRID_SMOKE');
 
     expect(targets.json).toContain('.smoke.');
-    expect(targets.json).not.toBe('evaluation/results/rag-samples.current-hybrid.v0.json');
+    expect(targets.json).not.toBe(EvaluationPaths.resultsLegacy.samples.currentHybridJson);
   });
 });

@@ -1,9 +1,9 @@
-import { writeFileSync } from 'fs';
-import { resolveRepoPath, writeJsonFile } from '../io';
+import { writeResult } from '../src/core/write-result';
+import { EvaluationPaths } from '../src/core/paths';
 import {
   probeVectorBaselinePath,
   renderVectorPathProbeMarkdown,
-} from '../src/vector-path-probe';
+} from '../src/probes/vector-path-probe';
 
 function parseArg(flag: string, fallback: string): string {
   const index = process.argv.indexOf(flag);
@@ -13,20 +13,22 @@ function parseArg(flag: string, fallback: string): string {
 function main(): void {
   const jsonPath = parseArg(
     '--json',
-    'evaluation/results/vector-baseline-path.v0.json',
+    EvaluationPaths.resultsLegacy.probes.vectorBaselinePathJson,
   );
   const markdownPath = parseArg(
     '--markdown',
-    'evaluation/results/vector-baseline-path.v0.md',
+    EvaluationPaths.resultsLegacy.probes.vectorBaselinePathMd,
   );
 
   const report = probeVectorBaselinePath();
-  writeJsonFile(jsonPath, report);
-  writeFileSync(
-    resolveRepoPath(markdownPath),
-    renderVectorPathProbeMarkdown(report),
-    'utf8',
-  );
+  writeResult({
+    canonicalJsonPath: EvaluationPaths.resultsV0.probes + '/vector-baseline-path.v0.json',
+    canonicalMarkdownPath: EvaluationPaths.resultsV0.probes + '/vector-baseline-path.v0.md',
+    legacyJsonPath: jsonPath,
+    legacyMarkdownPath: markdownPath,
+    jsonData: report,
+    markdownData: renderVectorPathProbeMarkdown(report)
+  });
 
   console.log(`Wrote vector path probe JSON to ${jsonPath}`);
   console.log(`Wrote vector path probe markdown to ${markdownPath}`);

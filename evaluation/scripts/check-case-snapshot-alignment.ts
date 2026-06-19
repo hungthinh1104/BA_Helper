@@ -1,9 +1,9 @@
-import { writeFileSync } from 'fs';
-import { resolveRepoPath, writeJsonFile } from '../io';
+import { writeResult } from '../src/core/write-result';
+import { EvaluationPaths } from '../src/core/paths';
 import {
   buildCaseSnapshotAlignmentRegistry,
   renderCaseSnapshotAlignmentMarkdown,
-} from '../src/case-snapshot-alignment';
+} from '../src/alignment/case-snapshot-alignment';
 
 function parseArg(flag: string, fallback: string): string {
   const index = process.argv.indexOf(flag);
@@ -13,23 +13,25 @@ function parseArg(flag: string, fallback: string): string {
 function main(): void {
   const jsonPath = parseArg(
     '--json',
-    'evaluation/results/case-snapshot-alignment.v0.json',
+    EvaluationPaths.resultsLegacy.alignment.alignmentJson,
   );
   const markdownPath = parseArg(
     '--markdown',
-    'evaluation/results/case-snapshot-alignment.v0.md',
+    EvaluationPaths.resultsLegacy.alignment.alignmentMd,
   );
 
   const registry = buildCaseSnapshotAlignmentRegistry();
-  writeJsonFile(jsonPath, registry);
-  writeFileSync(
-    resolveRepoPath(markdownPath),
-    renderCaseSnapshotAlignmentMarkdown(registry),
-    'utf8',
-  );
+  writeResult({
+    canonicalJsonPath: EvaluationPaths.resultsV0.alignment + '/case-snapshot-alignment.v0.json',
+    canonicalMarkdownPath: EvaluationPaths.resultsV0.alignment + '/case-snapshot-alignment.v0.md',
+    legacyJsonPath: jsonPath,
+    legacyMarkdownPath: markdownPath,
+    jsonData: registry,
+    markdownData: renderCaseSnapshotAlignmentMarkdown(registry)
+  });
 
-  console.log(`Wrote case snapshot alignment JSON to ${jsonPath}`);
-  console.log(`Wrote case snapshot alignment markdown to ${markdownPath}`);
+  console.log(`Wrote case snapshot alignment JSON to canonical path and legacy alias`);
+  console.log(`Wrote case snapshot alignment markdown to canonical path and legacy alias`);
 }
 
 main();

@@ -1,96 +1,62 @@
-# ReqImpact Evaluation Scaffold
+# ReqImpact Evaluation Workspace
 
-This folder turns the product branch into a reproducible research artifact on
-`research/reqimpact-eval-v0` without changing the main demo workflow.
+This folder acts as a reproducible research evaluation pipeline for measuring retrieval and impact analysis quality without mixing research scaffolding into the production codebase.
 
 ## Scope
 
-The scaffold is intentionally narrow:
-- dataset cases stored as JSON
-- deterministic offline baselines
-- metrics computation by command
-- manual lane placeholder for pure-LLM comparison
-
-It does not claim benchmark results yet. `cases.v0.json` starts empty on
-purpose so no public data is fabricated into the repository.
+The scaffold is intentionally narrow and focuses on evaluating the engine across various baselines against hand-authored dataset cases. 
 
 ## Folder layout
 
 ```text
 evaluation/
-  datasets/
-    cases.v0.json
-    cases.v0.schema.json
-  baselines/
-    keyword-baseline.ts
-    pure-llm-baseline.ts
-    vector-only-baseline.ts
-  scripts/
-    run-evaluation.ts
-    compute-metrics.ts
-  results/
-    results.v0.json
-    metrics.v0.md
+  datasets/v0/                 # Hand-authored ground-truth cases
+  results/v0/                  # Canonical machine-generated outputs
+    manifests/                 # Pipeline state dashboards
+    probes/                    # Runtime environment / DB readiness
+    alignment/                 # Snapshot mapping
+    baselines/                 # Keyword, BM25, etc.
+    samples/current-hybrid/    # Production retrieval outputs
+    analysis/                  # Metrics and failures
+    runbooks/                  # Generated doc exports
+  src/
+    alignment/                 # Dataset mapping logic
+    analysis/                  # Metrics algorithms
+    core/                      # Shared paths and I/O helpers
+    probes/                    # Readiness checks
+    validation/                # Semantic invariant checkers
+  baselines/                   # Retrieval algorithm implementations
+  scripts/                     # Pipeline executables
 ```
 
 ## Dataset shape
 
-Each case follows this base structure:
-
-```json
-{
-  "id": "case-001",
-  "repo": "owner/repo",
-  "issueUrl": "https://github.com/owner/repo/issues/123",
-  "prUrl": "https://github.com/owner/repo/pull/456",
-  "commitSha": "abcdef123456",
-  "requirementText": "When a paid booking is cancelled, refund the payment.",
-  "groundTruth": {
-    "files": ["src/..."],
-    "methods": []
-  },
-  "candidateArtifacts": [
-    {
-      "artifactKey": "api:booking.cancel",
-      "filePath": "src/booking/booking.controller.ts",
-      "artifactName": "cancelBooking",
-      "excerpt": "..."
-    }
-  ],
-  "notes": "Why these files changed."
-}
-```
-
-`candidateArtifacts` is optional but strongly recommended for the deterministic
-offline baselines. It gives the evaluation scripts a bounded artifact universe
-without requiring live repo ingestion during every metric run.
+Cases (`datasets/v0/cases.v0.json`) use `candidateArtifacts` to support deterministic offline baselines.
 
 ## Commands
 
-Run the scaffold:
+Run the full evaluation pipeline (generates canonical paths and legacy aliases):
 
 ```bash
-pnpm eval:run
-pnpm eval:metrics
+pnpm eval:pipeline:v0
 ```
 
-Explicit paths:
+Individual pipeline stages:
 
-```bash
-pnpm eval:run -- --dataset evaluation/datasets/cases.v0.json --results evaluation/results/results.v0.json --markdown evaluation/results/metrics.v0.md
-pnpm eval:metrics -- --dataset evaluation/datasets/cases.v0.json --results evaluation/results/results.v0.json
-```
+- `eval:probe:db`: Checks DB environment
+- `eval:probe:vector-path`: Validates vector settings
+- `eval:alignment`: Maps cases to snapshots
+- `eval:baseline:keyword`: Runs keyword baseline
+- `eval:baseline:bm25`: Runs BM25 baseline
+- `eval:samples`: Exports sample current-hybrid results
+- `eval:analyze`: Generates failure diagnosis
+- `eval:metrics`: Computes R@10, Hit Count, Evidence Coverage
+- `eval:research-summary`: Summarizes findings
+- `eval:validate`: Enforces semantic invariants (e10b reproducibility)
 
 ## Baselines
 
-- `keyword-baseline`: lexical overlap between requirement text and candidate
-  artifact path/name/excerpt.
-- `vector-only-baseline`: deterministic sparse token-vector cosine scoring.
-- `pure-llm-baseline`: manual lane placeholder, skipped by default to keep the
-  scaffold reproducible and CI-safe.
-
-## Current limitation
-
-The scaffold is operational, but benchmark quality depends entirely on adding
-real public cases with trustworthy ground truth. That data-collection phase is
-the next research task, not something this commit invents locally.
+- `keyword-baseline`: lexical overlap between requirement text and candidate artifact path/name/excerpt.
+- `bm25-baseline`: standard BM25 retrieval over files.
+- `vector-only-baseline`: (probed but absent in baseline exports intentionally).
+- `current-hybrid`: evaluated via `eval:samples` to export RAG samples using live production components.

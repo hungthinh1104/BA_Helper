@@ -1,8 +1,9 @@
+import { EvaluationPaths } from '../core/paths';
 import { mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { validateCasesDataset } from './validate-cases';
-import { loadDataset } from '../io';
+import { loadDataset } from '../../io';
 
 describe('validateCasesDataset', () => {
   const tempDir = mkdtempSync(join(tmpdir(), 'reqimpact-eval-'));
@@ -102,7 +103,7 @@ describe('validateCasesDataset', () => {
   });
 
   it('labels Case 006 as scanner-aligned clean retrieval metadata', () => {
-    const dataset = loadDataset('evaluation/datasets/cases.v0.json');
+    const dataset = loadDataset(EvaluationPaths.datasetV0.cases);
     const case006 = dataset.cases.find(
       (item) => item.id === 'reqimpact-case-006-squareboat-default-includes',
     );

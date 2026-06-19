@@ -1,4 +1,4 @@
-import { evaluateGroundTruthArtifactCoverage } from './ground-truth-coverage';
+import { evaluateGroundTruthArtifactCoverage } from '../analysis/ground-truth-coverage';
 
 describe('ground-truth artifact coverage', () => {
   it('returns OK when every ground-truth file has an indexed artifact path', () => {

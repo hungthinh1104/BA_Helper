@@ -1,4 +1,6 @@
 import { writeFileSync } from 'fs';
+import { writeResult } from '../src/core/write-result';
+import { EvaluationPaths } from '../src/core/paths';
 import { loadDataset, resolveRepoPath, writeJsonFile } from '../io';
 import {
   runKeywordBaselineDetailed,
@@ -94,11 +96,11 @@ function renderMarkdown(output: KeywordBaselineOutput): string {
 }
 
 function main(): void {
-  const datasetPath = parseArg('--dataset', 'evaluation/datasets/cases.v0.json');
-  const jsonPath = parseArg('--json', 'evaluation/results/keyword-baseline.v0.json');
+  const datasetPath = parseArg('--dataset', EvaluationPaths.datasetV0.cases);
+  const jsonPath = parseArg('--json', EvaluationPaths.resultsLegacy.baselines.keywordJson);
   const markdownPath = parseArg(
     '--markdown',
-    'evaluation/results/keyword-baseline.v0.md',
+    EvaluationPaths.resultsLegacy.baselines.keywordMd,
   );
   const topK = parseTopK();
   const dataset = loadDataset(datasetPath);

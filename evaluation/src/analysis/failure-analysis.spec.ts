@@ -1,6 +1,6 @@
 import { analyzeLexicalBaselineFailures, classifyOutcome } from './failure-analysis';
-import type { EvaluationCase } from './types';
-import type { MetricsReport } from '../metrics';
+import type { EvaluationCase } from '../core/types';
+import type { MetricsReport } from '../../metrics';
 import type { NormalizedResultMethod } from './result-registry';
 
 function buildDatasetCase(overrides: Partial<EvaluationCase> = {}): EvaluationCase {

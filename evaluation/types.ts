@@ -1,1 +1,1 @@
-export * from './src/types';
+export * from './src/core/types';

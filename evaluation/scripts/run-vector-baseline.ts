@@ -1,10 +1,11 @@
+import { EvaluationPaths } from '../src/core/paths';
 import { existsSync } from 'fs';
 import { resolveRepoPath } from '../io';
 import {
   assertUsableVectorProvider,
   getVectorBaselineRefusalMessage,
   type VectorBaselineProviderConfig,
-} from '../src/vector-provider-gate';
+} from '../src/core/vector-provider-gate';
 
 function envOrEmpty(name: string): string {
   return (process.env[name] ?? '').trim();
@@ -57,7 +58,7 @@ export function runVectorBaselineGate(params?: {
   message: string;
 } {
   const outputPath =
-    params?.outputPath ?? resolveRepoPath('evaluation/results/vector-baseline.v0.json');
+    params?.outputPath ?? resolveRepoPath(EvaluationPaths.resultsLegacy.baselines.vectorJson);
   const providerConfig = params?.providerConfig ?? loadProviderConfig();
   try {
     assertUsableVectorProvider(providerConfig);

@@ -1,11 +1,13 @@
 import { writeFileSync } from 'fs';
+import { writeResult } from '../src/core/write-result';
+import { EvaluationPaths } from '../src/core/paths';
 import { loadDataset, readJsonFile, resolveRepoPath, writeJsonFile } from '../io';
 import type { MetricsReport } from '../metrics';
 import {
   analyzeLexicalBaselineFailures,
   renderFailureAnalysisMarkdown,
-} from '../src/failure-analysis';
-import { loadResultRegistry } from '../src/result-registry';
+} from '../src/analysis/failure-analysis';
+import { loadResultRegistry } from '../src/analysis/result-registry';
 
 function parseArg(flag: string, fallback: string): string {
   const index = process.argv.indexOf(flag);
@@ -13,16 +15,16 @@ function parseArg(flag: string, fallback: string): string {
 }
 
 function main(): void {
-  const datasetPath = parseArg('--dataset', 'evaluation/datasets/cases.v0.json');
+  const datasetPath = parseArg('--dataset', EvaluationPaths.datasetV0.cases);
   const resultsDir = parseArg('--resultsDir', 'evaluation/results');
-  const metricsPath = parseArg('--metrics', 'evaluation/results/metrics.v0.json');
+  const metricsPath = parseArg('--metrics', EvaluationPaths.resultsLegacy.analysis.metricsJson);
   const jsonPath = parseArg(
     '--json',
-    'evaluation/results/failure-analysis.v0.json',
+    EvaluationPaths.resultsLegacy.analysis.failuresJson,
   );
   const markdownPath = parseArg(
     '--markdown',
-    'evaluation/results/failure-analysis.v0.md',
+    EvaluationPaths.resultsLegacy.analysis.failuresMd,
   );
 
   const dataset = loadDataset(datasetPath);

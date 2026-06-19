@@ -1,5 +1,5 @@
 import type { BaselinePrediction, EvaluationCase, MetricsSummary } from './types';
-import type { NormalizedResultMethod } from './src/result-registry';
+import type { NormalizedResultMethod } from './src/analysis/result-registry';
 
 const TOP_K_5 = 5;
 const TOP_K_10 = 10;

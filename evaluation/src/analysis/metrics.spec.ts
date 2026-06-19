@@ -2,7 +2,7 @@ import {
   aggregateCaseMetrics,
   computeCaseMetrics,
   computeMethodMetrics,
-} from '../metrics';
+} from '../../metrics';
 
 describe('evaluation metrics', () => {
   it('calculates recall@K correctly', () => {

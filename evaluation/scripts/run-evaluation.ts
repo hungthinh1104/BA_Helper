@@ -1,5 +1,7 @@
 import { writeFileSync } from 'fs';
 import { computeMetrics } from '../metrics';
+import { writeResult } from '../src/core/write-result';
+import { EvaluationPaths } from '../src/core/paths';
 import { loadDataset, resolveRepoPath, writeJsonFile } from '../io';
 import { runKeywordBaseline } from '../baselines/keyword-baseline';
 import { runPureLlmBaseline } from '../baselines/pure-llm-baseline';
@@ -40,7 +42,7 @@ function renderMetricsMarkdown(results: EvaluationResults): string {
 }
 
 function collectBaselines(): BaselineRun[] {
-  const datasetPath = parseArg('--dataset', 'evaluation/datasets/cases.v0.json');
+  const datasetPath = parseArg('--dataset', EvaluationPaths.datasetV0.cases);
   const dataset = loadDataset(datasetPath);
   return [
     runKeywordBaseline(dataset.cases),
@@ -50,9 +52,9 @@ function collectBaselines(): BaselineRun[] {
 }
 
 function main(): void {
-  const datasetPath = parseArg('--dataset', 'evaluation/datasets/cases.v0.json');
-  const resultsPath = parseArg('--results', 'evaluation/results/results.v0.json');
-  const markdownPath = parseArg('--markdown', 'evaluation/results/metrics.v0.md');
+  const datasetPath = parseArg('--dataset', EvaluationPaths.datasetV0.cases);
+  const resultsPath = parseArg('--results', EvaluationPaths.resultsLegacy.root + '/results.v0.json');
+  const markdownPath = parseArg('--markdown', EvaluationPaths.resultsLegacy.analysis.metricsMd);
   const dataset = loadDataset(datasetPath);
   const baselines = collectBaselines();
   const metrics = Object.fromEntries(

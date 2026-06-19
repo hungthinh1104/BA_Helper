@@ -1,3 +1,4 @@
+import { EvaluationPaths } from '../src/core/paths';
 import { writeFileSync } from 'fs';
 import { resolveRepoPath, loadDataset, writeJsonFile } from '../io';
 import {
@@ -5,7 +6,7 @@ import {
   normalizeRegistryMethods,
   renderMetricsMarkdown,
 } from '../metrics';
-import { loadResultRegistry } from '../src/result-registry';
+import { loadResultRegistry } from '../src/analysis/result-registry';
 
 function parseArg(flag: string, fallback: string): string {
   const index = process.argv.indexOf(flag);
@@ -13,10 +14,10 @@ function parseArg(flag: string, fallback: string): string {
 }
 
 function main(): void {
-  const datasetPath = parseArg('--dataset', 'evaluation/datasets/cases.v0.json');
+  const datasetPath = parseArg('--dataset', EvaluationPaths.datasetV0.cases);
   const resultsDir = parseArg('--resultsDir', 'evaluation/results');
-  const jsonPath = parseArg('--json', 'evaluation/results/metrics.v0.json');
-  const markdownPath = parseArg('--markdown', 'evaluation/results/metrics.v0.md');
+  const jsonPath = parseArg('--json', EvaluationPaths.resultsLegacy.analysis.metricsJson);
+  const markdownPath = parseArg('--markdown', EvaluationPaths.resultsLegacy.analysis.metricsMd);
 
   const dataset = loadDataset(datasetPath);
   const registry = loadResultRegistry(resolveRepoPath(resultsDir));

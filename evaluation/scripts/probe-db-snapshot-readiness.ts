@@ -1,9 +1,10 @@
-import { writeFileSync } from 'fs';
-import { loadDataset, resolveRepoPath, writeJsonFile } from '../io';
+import { loadDataset } from '../io';
+import { EvaluationPaths } from '../src/core/paths';
+import { writeResult } from '../src/core/write-result';
 import {
   probeDbSnapshotReadiness,
   renderDbSnapshotReadinessMarkdown,
-} from '../src/db-snapshot-readiness';
+} from '../src/probes/db-snapshot-readiness';
 
 function parseArg(flag: string, fallback: string): string {
   const index = process.argv.indexOf(flag);
@@ -13,25 +14,27 @@ function parseArg(flag: string, fallback: string): string {
 async function main(): Promise<void> {
   const jsonPath = parseArg(
     '--json',
-    'evaluation/results/db-snapshot-readiness.v0.json',
+    EvaluationPaths.resultsLegacy.probes.dbReadinessJson,
   );
   const markdownPath = parseArg(
     '--markdown',
-    'evaluation/results/db-snapshot-readiness.v0.md',
+    EvaluationPaths.resultsLegacy.probes.dbReadinessMd,
   );
-  const dataset = loadDataset('evaluation/datasets/cases.v0.json');
+  const dataset = loadDataset(EvaluationPaths.datasetV0.cases);
   const exampleCaseId = dataset.cases[0]?.id;
 
   const report = await probeDbSnapshotReadiness();
-  writeJsonFile(jsonPath, report);
-  writeFileSync(
-    resolveRepoPath(markdownPath),
-    renderDbSnapshotReadinessMarkdown({ report, exampleCaseId }),
-    'utf8',
-  );
+  writeResult({
+    canonicalJsonPath: EvaluationPaths.resultsV0.probes + '/db-snapshot-readiness.v0.json',
+    canonicalMarkdownPath: EvaluationPaths.resultsV0.probes + '/db-snapshot-readiness.v0.md',
+    legacyJsonPath: jsonPath,
+    legacyMarkdownPath: markdownPath,
+    jsonData: report,
+    markdownData: renderDbSnapshotReadinessMarkdown({ report, exampleCaseId })
+  });
 
-  console.log(`Wrote DB snapshot readiness JSON to ${jsonPath}`);
-  console.log(`Wrote DB snapshot readiness markdown to ${markdownPath}`);
+  console.log(`Wrote DB snapshot readiness JSON to ${jsonPath} and canonical path`);
+  console.log(`Wrote DB snapshot readiness markdown to ${markdownPath} and canonical path`);
 }
 
 main().catch((error) => {

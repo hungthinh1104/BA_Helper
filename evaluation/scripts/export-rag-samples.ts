@@ -14,13 +14,15 @@ import {
 import { GraphRepository } from '../../apps/api/src/modules/graph/infrastructure/graph.repository';
 import { PrismaService } from '../../apps/api/src/modules/prisma/prisma.service';
 import { HybridRetrievalService } from '../../apps/api/src/modules/retrieval/application/hybrid-retrieval.service';
-import { loadDataset, readJsonFile, resolveRepoPath, writeJsonFile } from '../io';
+import { loadDataset, readJsonFile, resolveRepoPath } from '../io';
+import { EvaluationPaths } from '../src/core/paths';
+import { writeResult } from '../src/core/write-result';
 import {
   evaluateCurrentHybridExportGuard,
   getCurrentHybridOutputTargets,
   type CurrentHybridExportMode,
-} from '../src/current-hybrid-export-guard';
-import { summarizeEvidenceQuality } from '../src/evidence-quality';
+} from '../src/core/current-hybrid-export-guard';
+import { summarizeEvidenceQuality } from '../src/analysis/evidence-quality';
 import {
   mapSnapshotMetadata,
   readArtifactEvidenceExcerpt,
@@ -28,16 +30,16 @@ import {
   readSnapshotMetadata,
   type RagExportEmbeddingState,
   type RagExportSnapshotMetadata,
-} from '../src/rag-export-db-read-model';
+} from '../src/analysis/rag-export-db-read-model';
 import {
   readGroundTruthArtifactCoverage,
   type GroundTruthCoverageResult,
-} from '../src/ground-truth-coverage';
+} from '../src/analysis/ground-truth-coverage';
 import type {
   CandidateArtifact,
   ReqImpactEvaluationCase,
   RetrievedArtifactResult,
-} from '../src/types';
+} from '../src/core/types';
 
 type ExportMode = 'CASE_ONLY' | 'CURRENT_HYBRID';
 
@@ -106,7 +108,7 @@ function resolveOutputPath(relativePath: string): string {
 }
 
 function getRequiredCase(caseId: string): ReqImpactEvaluationCase {
-  const dataset = loadDataset('evaluation/datasets/cases.v0.json');
+  const dataset = loadDataset(EvaluationPaths.datasetV0.cases);
   const selectedCase = dataset.cases.find(
     (evaluationCase) => evaluationCase.id === caseId,
   );
@@ -119,7 +121,7 @@ function getRequiredCase(caseId: string): ReqImpactEvaluationCase {
 }
 
 function getMappedEmbeddingProfileId(caseId: string): string | undefined {
-  const path = 'evaluation/datasets/case-snapshot-overrides.v0.json';
+  const path = EvaluationPaths.datasetV0.snapshotOverrides;
   if (!existsSync(resolveRepoPath(path))) {
     return undefined;
   }
@@ -657,8 +659,8 @@ function getOutputTargets(mode: ExportMode) {
           : 'CURRENT_HYBRID_SMOKE',
       )
     : {
-        json: 'evaluation/results/rag-samples.v0.json',
-        markdown: 'evaluation/results/rag-samples.v0.md',
+        json: EvaluationPaths.resultsLegacy.samples.ragSamplesJson,
+        markdown: EvaluationPaths.resultsLegacy.samples.ragSamplesMd,
       };
 }
 
@@ -703,10 +705,23 @@ async function main(): Promise<void> {
           topKLimit,
         });
 
-  writeJsonFile(outputs.json, result);
-  writeFileSync(resolveOutputPath(outputs.markdown), renderMarkdown(result), 'utf8');
+  const canonicalJsonPath = mode === 'CURRENT_HYBRID' 
+    ? (result.mode === 'CURRENT_HYBRID_BENCHMARK' ? EvaluationPaths.resultsV0.samples + '/current-hybrid/case006.v0.json' : undefined)
+    : undefined;
+  const canonicalMarkdownPath = mode === 'CURRENT_HYBRID'
+    ? (result.mode === 'CURRENT_HYBRID_BENCHMARK' ? EvaluationPaths.resultsV0.samples + '/current-hybrid/case006.v0.md' : undefined)
+    : undefined;
 
-  console.log(`Wrote RAG sample export to ${outputs.json} (${result.mode})`);
+  writeResult({
+    canonicalJsonPath,
+    canonicalMarkdownPath,
+    legacyJsonPath: outputs.json,
+    legacyMarkdownPath: outputs.markdown,
+    jsonData: result,
+    markdownData: renderMarkdown(result)
+  });
+
+  console.log(`Wrote RAG sample export to canonical paths and legacy alias (${result.mode})`);
 }
 
 main().catch((error) => {

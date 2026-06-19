@@ -1,5 +1,6 @@
-import { writeFileSync } from 'fs';
-import { loadDataset, resolveRepoPath, writeJsonFile } from '../io';
+import { writeResult } from '../src/core/write-result';
+import { EvaluationPaths } from '../src/core/paths';
+import { loadDataset } from '../io';
 import {
   runBm25BaselineDetailed,
   type Bm25BaselineCaseResult,
@@ -106,11 +107,11 @@ function renderMarkdown(output: Bm25BaselineOutput): string {
 }
 
 function main(): void {
-  const datasetPath = parseArg('--dataset', 'evaluation/datasets/cases.v0.json');
-  const jsonPath = parseArg('--json', 'evaluation/results/bm25-baseline.v0.json');
+  const datasetPath = parseArg('--dataset', EvaluationPaths.datasetV0.cases);
+  const jsonPath = parseArg('--json', EvaluationPaths.resultsLegacy.baselines.bm25Json);
   const markdownPath = parseArg(
     '--markdown',
-    'evaluation/results/bm25-baseline.v0.md',
+    EvaluationPaths.resultsLegacy.baselines.bm25Md,
   );
   const topK = parseTopK();
   const dataset = loadDataset(datasetPath);
@@ -119,11 +120,17 @@ function main(): void {
     topK,
   });
 
-  writeJsonFile(jsonPath, output);
-  writeFileSync(resolveRepoPath(markdownPath), renderMarkdown(output), 'utf8');
+  writeResult({
+    canonicalJsonPath: EvaluationPaths.resultsV0.baselines + '/bm25-baseline.v0.json',
+    canonicalMarkdownPath: EvaluationPaths.resultsV0.baselines + '/bm25-baseline.v0.md',
+    legacyJsonPath: jsonPath,
+    legacyMarkdownPath: markdownPath,
+    jsonData: output,
+    markdownData: renderMarkdown(output)
+  });
 
-  console.log(`Wrote BM25 baseline JSON to ${jsonPath}`);
-  console.log(`Wrote BM25 baseline markdown to ${markdownPath}`);
+  console.log(`Wrote BM25 baseline JSON to canonical path and legacy alias`);
+  console.log(`Wrote BM25 baseline markdown to canonical path and legacy alias`);
 }
 
 main();
