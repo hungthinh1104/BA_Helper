@@ -1,6 +1,6 @@
 # BM25 Baseline v0
 
-Generated at: 2026-06-19T06:51:34.473Z
+Generated at: 2026-06-19T10:38:54.256Z
 
 This is a deterministic BM25 lexical baseline, not vector retrieval.
 Changed files are proxy ground truth.

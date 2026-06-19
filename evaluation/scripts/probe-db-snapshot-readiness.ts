@@ -24,17 +24,24 @@ async function main(): Promise<void> {
   const exampleCaseId = dataset.cases[0]?.id;
 
   const report = await probeDbSnapshotReadiness();
+  
+  const isDbUnavailable = report.status === 'NO_DATABASE_URL' || report.status === 'DB_UNAVAILABLE';
+  
   writeResult({
-    canonicalJsonPath: EvaluationPaths.resultsV0.probes + '/db-snapshot-readiness.v0.json',
-    canonicalMarkdownPath: EvaluationPaths.resultsV0.probes + '/db-snapshot-readiness.v0.md',
+    canonicalJsonPath: isDbUnavailable ? undefined : EvaluationPaths.resultsV0.probes + '/db-snapshot-readiness.v0.json',
+    canonicalMarkdownPath: isDbUnavailable ? undefined : EvaluationPaths.resultsV0.probes + '/db-snapshot-readiness.v0.md',
     legacyJsonPath: jsonPath,
     legacyMarkdownPath: markdownPath,
     jsonData: report,
     markdownData: renderDbSnapshotReadinessMarkdown({ report, exampleCaseId })
   });
 
-  console.log(`Wrote DB snapshot readiness JSON to ${jsonPath} and canonical path`);
-  console.log(`Wrote DB snapshot readiness markdown to ${markdownPath} and canonical path`);
+  if (isDbUnavailable) {
+    console.warn(`[WARNING] DB is unavailable (${report.status}). Skipping canonical write. Wrote to legacy paths only.`);
+  } else {
+    console.log(`Wrote DB snapshot readiness JSON to ${jsonPath} and canonical path`);
+    console.log(`Wrote DB snapshot readiness markdown to ${markdownPath} and canonical path`);
+  }
 }
 
 main().catch((error) => {

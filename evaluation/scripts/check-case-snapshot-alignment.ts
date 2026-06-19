@@ -21,17 +21,23 @@ function main(): void {
   );
 
   const registry = buildCaseSnapshotAlignmentRegistry();
+  const isDbUnavailable = registry.cases.length > 0 && registry.cases.every(c => c.status === 'SNAPSHOT_MISSING');
+
   writeResult({
-    canonicalJsonPath: EvaluationPaths.resultsV0.alignment + '/case-snapshot-alignment.v0.json',
-    canonicalMarkdownPath: EvaluationPaths.resultsV0.alignment + '/case-snapshot-alignment.v0.md',
+    canonicalJsonPath: isDbUnavailable ? undefined : EvaluationPaths.resultsV0.alignment + '/case-snapshot-alignment.v0.json',
+    canonicalMarkdownPath: isDbUnavailable ? undefined : EvaluationPaths.resultsV0.alignment + '/case-snapshot-alignment.v0.md',
     legacyJsonPath: jsonPath,
     legacyMarkdownPath: markdownPath,
     jsonData: registry,
     markdownData: renderCaseSnapshotAlignmentMarkdown(registry)
   });
 
-  console.log(`Wrote case snapshot alignment JSON to canonical path and legacy alias`);
-  console.log(`Wrote case snapshot alignment markdown to canonical path and legacy alias`);
+  if (isDbUnavailable) {
+    console.warn(`[WARNING] DB is unavailable or all snapshots missing. Skipping canonical write. Wrote to legacy paths only.`);
+  } else {
+    console.log(`Wrote case snapshot alignment JSON to canonical path and legacy alias`);
+    console.log(`Wrote case snapshot alignment markdown to canonical path and legacy alias`);
+  }
 }
 
 main();

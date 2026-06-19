@@ -81,6 +81,7 @@ export type MetricsReport = {
   dataset: {
     caseCount: number;
     scannerCoverageFailureCaseCount?: number;
+    scannerCoverageFailureCaseCountSource?: 'DATASET_METADATA' | 'DB_ALIGNMENT';
     groundTruthType: 'changed-files-proxy';
     evaluationLevel: 'file';
   };
@@ -312,6 +313,7 @@ export function buildMetricsReport(params: {
   methods: MethodResultFileLike[];
   datasetCaseCount: number;
   scannerCoverageFailureCaseIds?: string[];
+  scannerCoverageFailureCaseCountSource?: 'DATASET_METADATA' | 'DB_ALIGNMENT';
   generatedAt?: string;
   runId?: string;
   warnings?: string[];
@@ -325,6 +327,7 @@ export function buildMetricsReport(params: {
     dataset: {
       caseCount: params.datasetCaseCount,
       scannerCoverageFailureCaseCount: scannerCoverageFailureCaseIds.length,
+      scannerCoverageFailureCaseCountSource: params.scannerCoverageFailureCaseCountSource,
       groundTruthType: 'changed-files-proxy',
       evaluationLevel: 'file',
     },
@@ -360,6 +363,9 @@ export function renderMetricsMarkdown(report: MetricsReport): string {
     'High review burden means humans must inspect many retrieved files per true positive.',
     'If a case has zero true positives, burden is treated as all retrieved files being wasted review effort.',
     '',
+    ...(report.dataset.scannerCoverageFailureCaseCountSource === 'DATASET_METADATA' 
+      ? ['> [!WARNING]', '> **Metrics scope limitation:** The scanner coverage failure case count is derived from `DATASET_METADATA` (case.evaluationScope), which assumes offline context. This is NOT equivalent to live DB snapshot indexing coverage. Do not conflate this count with DB scanner coverage.', ''] 
+      : []),
     '| Method | Aggregate | Cases | R@5 | R@10 | P@5 | P@10 | F1@5 | F1@10 | ReviewBurden@5 | ReviewBurden@10 | NoHitCases@10 |',
     '| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
   ];

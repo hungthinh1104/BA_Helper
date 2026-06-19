@@ -1,6 +1,6 @@
 # Failure Analysis v0 — Lexical Baselines
 
-Generated at: 2026-06-19T06:54:10.034Z
+Generated at: 2026-06-19T10:38:57.764Z
 
 This analyzes deterministic lexical baselines only.
 Changed files are proxy ground truth.

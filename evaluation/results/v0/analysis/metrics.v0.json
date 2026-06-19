@@ -1,9 +1,10 @@
 {
   "runId": "metrics-v0-2",
-  "generatedAt": "2026-06-19T06:54:08.250Z",
+  "generatedAt": "2026-06-19T10:38:56.029Z",
   "dataset": {
     "caseCount": 6,
     "scannerCoverageFailureCaseCount": 0,
+    "scannerCoverageFailureCaseCountSource": "DATASET_METADATA",
     "groundTruthType": "changed-files-proxy",
     "evaluationLevel": "file"
   },

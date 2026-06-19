@@ -37,15 +37,14 @@ function main(): void {
     warnings: registry.warnings,
   });
 
-  writeJsonFile(jsonPath, report);
-  writeFileSync(
-    resolveRepoPath(markdownPath),
-    renderFailureAnalysisMarkdown(report),
-    'utf8',
-  );
-
-  console.log(`Wrote failure analysis JSON to ${jsonPath}`);
-  console.log(`Wrote failure analysis markdown to ${markdownPath}`);
+  writeResult({
+    canonicalJsonPath: EvaluationPaths.resultsV0.analysis + '/failure-analysis.v0.json',
+    canonicalMarkdownPath: EvaluationPaths.resultsV0.analysis + '/failure-analysis.v0.md',
+    legacyJsonPath: jsonPath,
+    legacyMarkdownPath: markdownPath,
+    jsonData: report,
+    markdownData: renderFailureAnalysisMarkdown(report),
+  });
 }
 
 main();

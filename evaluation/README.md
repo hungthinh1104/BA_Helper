@@ -50,7 +50,7 @@ Individual pipeline stages:
 - `eval:baseline:bm25`: Runs BM25 baseline
 - `eval:samples`: Exports sample current-hybrid results
 - `eval:analyze`: Generates failure diagnosis
-- `eval:metrics`: Computes R@10, Hit Count, Evidence Coverage
+- `eval:metrics`: Computes R@10, Hit Count, Evidence Coverage. Note: Metrics counts scanner coverage failures from `DATASET_METADATA` by default, which is distinct from actual `DB_ALIGNMENT` database-level indexing coverage. Do not conflate the two.
 - `eval:research-summary`: Summarizes findings
 - `eval:validate`: Enforces semantic invariants (e10b reproducibility)
 

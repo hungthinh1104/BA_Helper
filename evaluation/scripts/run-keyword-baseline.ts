@@ -109,11 +109,14 @@ function main(): void {
     topK,
   });
 
-  writeJsonFile(jsonPath, output);
-  writeFileSync(resolveRepoPath(markdownPath), renderMarkdown(output), 'utf8');
-
-  console.log(`Wrote keyword baseline JSON to ${jsonPath}`);
-  console.log(`Wrote keyword baseline markdown to ${markdownPath}`);
+  writeResult({
+    canonicalJsonPath: EvaluationPaths.resultsV0.baselines + '/keyword-baseline.v0.json',
+    canonicalMarkdownPath: EvaluationPaths.resultsV0.baselines + '/keyword-baseline.v0.md',
+    legacyJsonPath: jsonPath,
+    legacyMarkdownPath: markdownPath,
+    jsonData: output,
+    markdownData: renderMarkdown(output),
+  });
 }
 
 main();

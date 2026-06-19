@@ -1,12 +1,12 @@
 import { EvaluationPaths } from '../src/core/paths';
-import { writeFileSync } from 'fs';
-import { resolveRepoPath, loadDataset, writeJsonFile } from '../io';
+import { loadDataset, resolveRepoPath } from '../io';
 import {
   buildMetricsReport,
   normalizeRegistryMethods,
   renderMetricsMarkdown,
 } from '../metrics';
 import { loadResultRegistry } from '../src/analysis/result-registry';
+import { writeResult } from '../src/core/write-result';
 
 function parseArg(flag: string, fallback: string): string {
   const index = process.argv.indexOf(flag);
@@ -16,8 +16,6 @@ function parseArg(flag: string, fallback: string): string {
 function main(): void {
   const datasetPath = parseArg('--dataset', EvaluationPaths.datasetV0.cases);
   const resultsDir = parseArg('--resultsDir', 'evaluation/results');
-  const jsonPath = parseArg('--json', EvaluationPaths.resultsLegacy.analysis.metricsJson);
-  const markdownPath = parseArg('--markdown', EvaluationPaths.resultsLegacy.analysis.metricsMd);
 
   const dataset = loadDataset(datasetPath);
   const registry = loadResultRegistry(resolveRepoPath(resultsDir));
@@ -32,18 +30,18 @@ function main(): void {
     methods,
     datasetCaseCount: dataset.cases.length,
     scannerCoverageFailureCaseIds,
+    scannerCoverageFailureCaseCountSource: 'DATASET_METADATA',
     warnings: registry.warnings,
   });
 
-  writeJsonFile(jsonPath, report);
-  writeFileSync(
-    resolveRepoPath(markdownPath),
-    renderMetricsMarkdown(report),
-    'utf8',
-  );
-
-  console.log(`Wrote metrics JSON to ${jsonPath}`);
-  console.log(`Wrote metrics markdown to ${markdownPath}`);
+  writeResult({
+    canonicalJsonPath: EvaluationPaths.resultsV0.analysis + '/metrics.v0.json',
+    canonicalMarkdownPath: EvaluationPaths.resultsV0.analysis + '/metrics.v0.md',
+    legacyJsonPath: EvaluationPaths.resultsLegacy.analysis.metricsJson,
+    legacyMarkdownPath: EvaluationPaths.resultsLegacy.analysis.metricsMd,
+    jsonData: report,
+    markdownData: renderMetricsMarkdown(report),
+  });
 }
 
 main();

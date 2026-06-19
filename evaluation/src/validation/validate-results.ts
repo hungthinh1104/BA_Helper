@@ -134,8 +134,61 @@ export function validateResults(): { valid: boolean; errors: string[] } {
     if (metrics.dataset?.scannerCoverageFailureCaseCount === undefined) {
       errors.push('Metrics missing dataset.scannerCoverageFailureCaseCount');
     }
+    
+    const source = metrics.dataset?.scannerCoverageFailureCaseCountSource;
+    if (!source) {
+      errors.push('Metrics missing dataset.scannerCoverageFailureCaseCountSource');
+    } else if (source !== 'DATASET_METADATA' && source !== 'DB_ALIGNMENT') {
+      errors.push(`Metrics source ${source} is not a valid enum value.`);
+    }
+
+    if (source === 'DB_ALIGNMENT' && alignment) {
+      if (metrics.dataset?.scannerCoverageFailureCaseCount !== alignment.scannerCoverageFailureCount) {
+        errors.push(`Metrics count (${metrics.dataset?.scannerCoverageFailureCaseCount}) does not match alignment scannerCoverageFailureCount (${alignment.scannerCoverageFailureCount}).`);
+      }
+    }
+
+    // Verify Legacy Alias
+    const legacyPath = resolveRepoPath(EvaluationPaths.resultsLegacy.analysis.metricsJson);
+    if (existsSync(legacyPath)) {
+      if (!deepEqual(metrics, readJsonFile(legacyPath))) {
+        errors.push('Legacy alias for metrics does not match canonical output.');
+      }
+    }
   } else {
     errors.push('Metrics file missing at canonical path');
+  }
+
+  // Verify Failure Analysis Legacy Alias
+  const failurePath = resolveRepoPath(EvaluationPaths.resultsV0.analysis + '/failure-analysis.v0.json');
+  if (existsSync(failurePath)) {
+    const legacyPath = resolveRepoPath(EvaluationPaths.resultsLegacy.analysis.failuresJson);
+    if (existsSync(legacyPath)) {
+      if (!deepEqual(readJsonFile(failurePath), readJsonFile(legacyPath))) {
+        errors.push('Legacy alias for failure-analysis does not match canonical output.');
+      }
+    }
+  }
+
+  // Verify Baseline Legacy Aliases
+  const bm25Path = resolveRepoPath(EvaluationPaths.resultsV0.baselines + '/bm25-baseline.v0.json');
+  if (existsSync(bm25Path)) {
+    const legacyPath = resolveRepoPath(EvaluationPaths.resultsLegacy.baselines.bm25Json);
+    if (existsSync(legacyPath)) {
+      if (!deepEqual(readJsonFile(bm25Path), readJsonFile(legacyPath))) {
+        errors.push('Legacy alias for bm25-baseline does not match canonical output.');
+      }
+    }
+  }
+
+  const keywordPath = resolveRepoPath(EvaluationPaths.resultsV0.baselines + '/keyword-baseline.v0.json');
+  if (existsSync(keywordPath)) {
+    const legacyPath = resolveRepoPath(EvaluationPaths.resultsLegacy.baselines.keywordJson);
+    if (existsSync(legacyPath)) {
+      if (!deepEqual(readJsonFile(keywordPath), readJsonFile(legacyPath))) {
+        errors.push('Legacy alias for keyword-baseline does not match canonical output.');
+      }
+    }
   }
 
   // 6. Verify vector baseline is absent
@@ -148,6 +201,11 @@ export function validateResults(): { valid: boolean; errors: string[] } {
   const manifestPath = resolveRepoPath(EvaluationPaths.resultsV0.manifests + '/latest.manifest.json');
   if (!existsSync(manifestPath)) {
     errors.push('latest.manifest.json is missing.');
+  } else {
+    const manifest = readJsonFile<any>(manifestPath);
+    if (alignment && manifest.dataset?.caseCount !== alignment.caseCount) {
+      errors.push(`Manifest case count (${manifest.dataset?.caseCount}) does not match alignment case count (${alignment.caseCount}).`);
+    }
   }
 
   return { valid: errors.length === 0, errors };
