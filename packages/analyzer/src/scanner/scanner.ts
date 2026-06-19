@@ -4,6 +4,35 @@ import { ANALYZER_VERSION } from './scanner.types';
 import type { ScanInput, ScanResult, ScanArtifact } from './scanner.types';
 import { computeArtifactContentHash } from './core/content-hasher';
 
+const toFileArtifactStableId = (filePath: string) =>
+  `file:${filePath.replace(/[\/\\]/g, '.')}`;
+
+const shouldCreateFileFallbackArtifact = (
+  filePath: string,
+  artifacts: ScanArtifact[],
+) => {
+  if (filePath.endsWith('.d.ts')) return false;
+  if (filePath.includes('.spec.ts') || filePath.includes('.test.ts')) return false;
+  return !artifacts.some((artifact) => artifact.filePath === filePath);
+};
+
+const createFileFallbackArtifact = (
+  sourceFile: import('ts-morph').SourceFile,
+  filePath: string,
+): ScanArtifact => {
+  const excerpt = sourceFile.getText();
+  return {
+    stableId: toFileArtifactStableId(filePath),
+    type: 'FILE',
+    filePath,
+    symbolName: sourceFile.getBaseName(),
+    startLine: 1,
+    endLine: sourceFile.getEndLineNumber(),
+    excerpt,
+    contentHash: computeArtifactContentHash(excerpt),
+  };
+};
+
 export const scanFixture = (input: ScanInput): ScanResult => {
   if (input.fixturePath.includes('express-unsupported')) {
     throw new Error('UNSUPPORTED_FRAMEWORK');
@@ -189,6 +218,10 @@ export const scanProject = (input: ScanInput & { tsFiles: string[], coverage?: i
           });
         }
       }
+    }
+
+    if (shouldCreateFileFallbackArtifact(filePath, artifacts)) {
+      artifacts.push(createFileFallbackArtifact(sourceFile, filePath));
     }
   }
 

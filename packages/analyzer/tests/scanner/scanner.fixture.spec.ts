@@ -1,4 +1,6 @@
 import * as path from 'node:path';
+import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
 import { SafeFileEnumerator } from '../../src/scanner/core/safe-file-enumerator';
 import { scanProject } from '../../src/scanner/scanner';
 import { scanJavaSpringProject } from '../../src/scanner/extractors/java-spring-scanner';
@@ -48,6 +50,69 @@ describe('Scanner Golden Fixtures', () => {
 
     // Verify content hashes
     expect(result.artifacts.every(a => a.contentHash && a.contentHash.startsWith('sha256:'))).toBe(true);
+  });
+
+  it('materializes file-level fallback artifacts for unsupported TypeScript source files', async () => {
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ba-scan-file-fallback-'));
+
+    try {
+      const transformerPath = path.join(tempDir, 'src/transformers/transformer.ts');
+      const servicePath = path.join(tempDir, 'src/app.service.ts');
+
+      await fs.mkdir(path.dirname(transformerPath), { recursive: true });
+      await fs.writeFile(
+        transformerPath,
+        [
+          'export class DefaultIncludesTransformer {',
+          '  transform(includes: string[]): string[] {',
+          '    return includes.filter(Boolean);',
+          '  }',
+          '}',
+          '',
+        ].join('\n'),
+      );
+      await fs.writeFile(
+        servicePath,
+        [
+          "import { Injectable } from '@nestjs/common';",
+          '',
+          '@Injectable()',
+          'export class AppService {',
+          '  getHealth(): string {',
+          "    return 'ok';",
+          '  }',
+          '}',
+          '',
+        ].join('\n'),
+      );
+
+      const result = scanProject({
+        fixturePath: tempDir,
+        tsFiles: [transformerPath, servicePath],
+      });
+
+      expect(result.artifacts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            stableId: 'file:src.transformers.transformer.ts',
+            type: 'FILE',
+            filePath: 'src/transformers/transformer.ts',
+            symbolName: 'transformer.ts',
+          }),
+          expect.objectContaining({
+            stableId: 'service-method:app.service.getHealth',
+            type: 'SERVICE_METHOD',
+            filePath: 'src/app.service.ts',
+          }),
+        ]),
+      );
+      expect(
+        result.artifacts.some((artifact) => artifact.stableId === 'file:src.app.service.ts'),
+      ).toBe(false);
+      expect(result.artifacts.every(a => a.contentHash && a.contentHash.startsWith('sha256:'))).toBe(true);
+    } finally {
+      await fs.rm(tempDir, { recursive: true, force: true });
+    }
   });
 
   it('should scan java-spring-basic and produce PARTIAL coverage with stable artifact counts', async () => {
