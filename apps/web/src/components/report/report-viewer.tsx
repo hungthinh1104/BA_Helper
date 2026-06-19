@@ -230,7 +230,9 @@ export function ReportViewer({ analysisId }: ReportViewerProps) {
       {/* Structured Evidence Quality and Evaluation Context */}
       <div className="mt-12 space-y-8 border-t border-border/50 pt-8 print:hidden">
         <EvidenceQualitySummary summary={report.evidenceQualitySummary} />
-        <EvidenceQualityTable items={report.evidenceQualityItems} />
+        {report.evidenceQualityItems && report.evidenceQualityItems.length > 0 && (
+          <EvidenceQualityTable analysisId={analysisId} items={report.evidenceQualityItems} />
+        )}
         <EvaluationContextCard context={report.evaluationContext} />
       </div>
     </div>

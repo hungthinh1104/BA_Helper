@@ -1,11 +1,13 @@
 import { ApprovedImpactReportResponse } from "@ba-helper/contracts";
 import { Badge } from "@/components/ui/badge";
+import { ReviewDecisionControls } from "./review-decision-controls";
 
 interface EvidenceQualityTableProps {
+  analysisId: string;
   items: ApprovedImpactReportResponse["evidenceQualityItems"];
 }
 
-export function EvidenceQualityTable({ items }: EvidenceQualityTableProps) {
+export function EvidenceQualityTable({ analysisId, items }: EvidenceQualityTableProps) {
   if (!items || items.length === 0) return null;
 
   return (
@@ -18,19 +20,32 @@ export function EvidenceQualityTable({ items }: EvidenceQualityTableProps) {
               <tr>
                 <th className="px-4 py-3 font-medium whitespace-nowrap">Artifact</th>
                 <th className="px-4 py-3 font-medium whitespace-nowrap">Quality</th>
+                <th className="px-4 py-3 font-medium whitespace-nowrap">Review Decision</th>
                 <th className="px-4 py-3 font-medium">Reason</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40 bg-surface">
               {items.map((item, idx) => (
                 <tr key={idx} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3 font-mono text-foreground/90 whitespace-nowrap break-all">
+                  <td className="px-4 py-3 font-mono text-foreground/90 whitespace-nowrap break-all align-top">
                     {item.artifact}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-4 py-3 whitespace-nowrap align-top">
                     <EvidenceQualityBadge quality={item.quality} />
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">
+                  <td className="px-4 py-3 align-top min-w-[180px]">
+                    <ReviewDecisionControls
+                      analysisId={analysisId}
+                      linkId={item.linkId}
+                      currentDecision={item.reviewDecision}
+                    />
+                    {item.reviewDecision?.note && (
+                      <div className="mt-2 text-[12px] text-muted-foreground leading-relaxed italic border-l-2 border-border pl-2">
+                        {item.reviewDecision.note}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground align-top">
                     {item.reasons.join(", ")}
                   </td>
                 </tr>
