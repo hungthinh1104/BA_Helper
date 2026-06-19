@@ -3,6 +3,8 @@ import { DocumentController } from './api/document.controller';
 import { ListDocumentsUseCase } from './application/list-documents.usecase';
 import { GetApprovedReportUseCase } from './application/get-approved-report.usecase';
 import { ExportApprovedReportUseCase } from './application/export-approved-report.usecase';
+import { CreateReviewedReportSnapshotUseCase } from './application/create-reviewed-report-snapshot.usecase';
+import { GetLatestReviewedReportSnapshotUseCase } from './application/get-latest-reviewed-report-snapshot.usecase';
 import { DocumentRepository } from './infrastructure/document.repository';
 import { MarkdownImpactReportBuilder } from './application/markdown-impact-report.builder';
 import { MermaidImpactDiagramBuilder } from './application/mermaid-impact-diagram.builder';
@@ -63,12 +65,16 @@ import { EvaluationContextAdapter } from './application/evaluation-context.adapt
     EvaluationContextAdapter,
     MermaidImpactDiagramBuilder,
     MarkdownImpactReportBuilder,
+    CreateReviewedReportSnapshotUseCase,
+    GetLatestReviewedReportSnapshotUseCase,
   ],
   exports: [
     DocumentRepository,
     MarkdownImpactReportBuilder,
     MarkdownExportRenderer,
     PdfExportRenderer,
+    CreateReviewedReportSnapshotUseCase,
+    GetLatestReviewedReportSnapshotUseCase,
   ],
 })
 export class DocumentModule {}

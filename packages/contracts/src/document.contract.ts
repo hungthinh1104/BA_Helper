@@ -84,6 +84,19 @@ export const approvedImpactReportResponseSchema = z.object({
 	}),
 });
 
+export const reviewedReportSnapshotSchema = z.object({
+	id: z.string().uuid(),
+	analysisId: z.string().uuid(),
+	approvedDocumentId: z.string().uuid().nullable().optional(),
+	markdown: z.string(),
+	reviewDecisionsSnapshot: z.any(),
+	evidenceQualitySummarySnapshot: z.any(),
+	evaluationContextSnapshot: z.any().nullable().optional(),
+	createdByUserId: z.string().uuid().nullable().optional(),
+	createdAt: z.string(),
+});
+
 export type DocumentListResponse = z.infer<typeof documentListResponseSchema>;
 export type FinalizeImpactAnalysisRequest = z.infer<typeof finalizeImpactAnalysisRequestSchema>;
 export type ApprovedImpactReportResponse = z.infer<typeof approvedImpactReportResponseSchema>;
+export type ReviewedReportSnapshotResponse = z.infer<typeof reviewedReportSnapshotSchema>;
