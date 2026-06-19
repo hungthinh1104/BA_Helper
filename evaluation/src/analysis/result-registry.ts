@@ -53,7 +53,6 @@ type KeywordBaselineResultFile = {
 type Bm25BaselineResultFile = KeywordBaselineResultFile;
 
 const OPTIONAL_EXCLUDED_FILES = [
-  'rag-samples.current-hybrid.v0.json',
   'vector-baseline.v0.json',
 ];
 

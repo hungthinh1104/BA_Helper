@@ -4,6 +4,15 @@ import { readJsonFile, resolveRepoPath } from '../io';
 import { EvaluationPaths } from '../src/core/paths';
 
 function main(): void {
+  const readinessPath = resolveRepoPath(EvaluationPaths.resultsLegacy.probes.dbReadinessJson);
+  if (existsSync(readinessPath)) {
+    const readiness = readJsonFile<any>(readinessPath);
+    if (readiness.status === 'NO_DATABASE_URL' || readiness.status === 'DB_UNAVAILABLE') {
+      console.warn(`[WARNING] DB is ${readiness.status}. Softly skipping eval:samples.`);
+      return;
+    }
+  }
+
   const alignmentPath = resolveRepoPath(EvaluationPaths.resultsV0.alignment + '/case-snapshot-alignment.v0.json');
   if (!existsSync(alignmentPath)) {
     console.warn('[WARNING] Alignment file missing. Skipping eval:samples.');
@@ -31,6 +40,7 @@ function main(): void {
       );
     } catch (e) {
       console.error(`[ERROR] Failed to export samples for ${caseData.caseId}`);
+      process.exit(1);
     }
   }
 }

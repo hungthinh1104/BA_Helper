@@ -37,6 +37,11 @@ async function main(): Promise<void> {
   });
 
   if (isDbUnavailable) {
+    // Write directly to legacy paths since writeResult skips them when canonical is undefined
+    const { writeJsonFile, resolveRepoPath } = require('../io');
+    const { writeFileSync } = require('fs');
+    writeJsonFile(jsonPath, report);
+    writeFileSync(resolveRepoPath(markdownPath), renderDbSnapshotReadinessMarkdown({ report, exampleCaseId }), 'utf8');
     console.warn(`[WARNING] DB is unavailable (${report.status}). Skipping canonical write. Wrote to legacy paths only.`);
   } else {
     console.log(`Wrote DB snapshot readiness JSON to ${jsonPath} and canonical path`);

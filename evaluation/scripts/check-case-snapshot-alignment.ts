@@ -43,7 +43,12 @@ function main(): void {
   });
 
   if (isDbUnavailable) {
-    console.warn(`[WARNING] DB is unavailable or all snapshots missing. Skipping canonical write. Wrote to legacy paths only.`);
+    // Write directly to legacy paths since writeResult skips them when canonical is undefined
+    const { writeJsonFile, resolveRepoPath } = require('../io');
+    const { writeFileSync } = require('fs');
+    writeJsonFile(jsonPath, registry);
+    writeFileSync(resolveRepoPath(markdownPath), renderCaseSnapshotAlignmentMarkdown(registry), 'utf8');
+    console.warn(`[WARNING] DB readiness status is NO_DATABASE_URL or DB_UNAVAILABLE. Skipping canonical write. Wrote to legacy paths only.`);
   } else {
     console.log(`Wrote case snapshot alignment JSON to canonical path and legacy alias`);
     console.log(`Wrote case snapshot alignment markdown to canonical path and legacy alias`);

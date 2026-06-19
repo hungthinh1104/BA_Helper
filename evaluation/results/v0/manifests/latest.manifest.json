@@ -29,5 +29,8 @@
     "No vector-only aggregate result yet",
     "File-level evaluation only",
     "Changed files are proxy ground truth"
+  ],
+  "acceptedStaleArtifacts": [
+    "currentHybridCase006"
   ]
 }

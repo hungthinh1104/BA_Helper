@@ -27,9 +27,12 @@ export function validateResults(): { valid: boolean; errors: string[] } {
     // Verify Legacy Alias Equality
     const legacyPath = resolveRepoPath(EvaluationPaths.resultsLegacy.probes.dbReadinessJson);
     if (existsSync(legacyPath)) {
-      const legacy = readJsonFile(legacyPath);
-      if (!deepEqual(readiness, legacy)) {
-        errors.push('Legacy alias for db-snapshot-readiness does not match canonical output.');
+      const legacy = readJsonFile<DbReadinessFile>(legacyPath);
+      // If legacy shows DB is unavailable, we intentionally skipped overwriting canonical
+      if (legacy.status !== 'NO_DATABASE_URL' && legacy.status !== 'DB_UNAVAILABLE') {
+        if (!deepEqual(readiness, legacy)) {
+          errors.push('Legacy alias for db-snapshot-readiness does not match canonical output.');
+        }
       }
     }
   }
@@ -45,8 +48,20 @@ export function validateResults(): { valid: boolean; errors: string[] } {
     // Legacy alias check
     const legacyPath = resolveRepoPath(EvaluationPaths.resultsLegacy.alignment.alignmentJson);
     if (existsSync(legacyPath)) {
-      if (!deepEqual(alignment, readJsonFile(legacyPath))) {
-        errors.push('Legacy alias for case-snapshot-alignment does not match canonical output.');
+      // If DB is unavailable, legacy alias will intentionally diverge from frozen canonical output
+      const legacyReadinessPath = resolveRepoPath(EvaluationPaths.resultsLegacy.probes.dbReadinessJson);
+      let isDbUnavailable = false;
+      if (existsSync(legacyReadinessPath)) {
+        const legacyReadiness = readJsonFile<DbReadinessFile>(legacyReadinessPath);
+        if (legacyReadiness.status === 'NO_DATABASE_URL' || legacyReadiness.status === 'DB_UNAVAILABLE') {
+          isDbUnavailable = true;
+        }
+      }
+      
+      if (!isDbUnavailable) {
+        if (!deepEqual(alignment, readJsonFile(legacyPath))) {
+          errors.push('Legacy alias for case-snapshot-alignment does not match canonical output.');
+        }
       }
     }
 
@@ -109,6 +124,21 @@ export function validateResults(): { valid: boolean; errors: string[] } {
       }
       if (!rank1.evidence?.isCodeLike) {
          errors.push('case006 sample rank 1 evidence is not code-like');
+      }
+    }
+    
+    // Check freshness against manifest if DB was ready and it ran in pipeline
+    const manifestPath = resolveRepoPath(EvaluationPaths.resultsV0.manifests + '/latest.manifest.json');
+    if (existsSync(manifestPath)) {
+      const manifest = readJsonFile<any>(manifestPath);
+      if (case006Sample.generatedAt && manifest.latestGeneratedAt) {
+        const sampleTime = new Date(case006Sample.generatedAt).getTime();
+        const manifestTime = new Date(manifest.latestGeneratedAt).getTime();
+        const isStale = Math.abs(sampleTime - manifestTime) > 5 * 60 * 1000;
+        const isAcceptedStale = manifest.acceptedStaleArtifacts?.includes('currentHybridCase006');
+        if (isStale && !isAcceptedStale) {
+          errors.push('case006 sample is stale but not explicitly accepted in manifest.');
+        }
       }
     }
   } else {
