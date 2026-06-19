@@ -1,8 +1,8 @@
 {
   "datasetVersion": "v0",
   "latestGeneratedAt": "2026-06-19T06:54:08.637Z",
-  "latestRunId": "vector-baseline-v0:2026-06-19T13-48-20-221Z",
-  "lastSuccessfulRunId": "vector-baseline-v0:2026-06-19T13-48-20-221Z",
+  "latestRunId": "current-hybrid-clean-subset-baseline-v0:2026-06-19T14-07-29-014Z",
+  "lastSuccessfulRunId": "current-hybrid-clean-subset-baseline-v0:2026-06-19T14-07-29-014Z",
   "lastAttemptedRunId": "2026-06-19T06-54-08-637Z",
   "status": "PARTIAL_RESEARCH_READY",
   "dataset": {
@@ -18,8 +18,7 @@
     "current-hybrid-case006"
   ],
   "notMeasuredYet": [
-    "r1-structured-embedding",
-    "aggregate-current-hybrid-on-clean-subset-v0"
+    "r1-structured-embedding"
   ],
   "canonicalArtifacts": {
     "cases": "evaluation/datasets/v0/cases.v0.json",
@@ -28,7 +27,8 @@
     "currentHybridCase006": "evaluation/results/v0/samples/current-hybrid/case006.v0.json",
     "vectorOnlyCase006": "evaluation/results/v0/samples/vector-only/case006.v0.json",
     "cleanVectorReadySubset": "evaluation/datasets/v0/subsets/clean-vector-ready.v0.json",
-    "vectorBaseline": "evaluation/results/v0/baselines/vector-baseline.v0.json"
+    "vectorBaseline": "evaluation/results/v0/baselines/vector-baseline.v0.json",
+    "currentHybridCleanSubsetBaseline": "evaluation/results/v0/baselines/current-hybrid-clean-subset-baseline.v0.json"
   },
   "plannedArtifacts": {},
   "knownLimits": [

@@ -1,0 +1,94 @@
+{
+  "runId": "current-hybrid-clean-subset-baseline-v0:2026-06-19T14-07-29-014Z",
+  "generatedAt": "2026-06-19T14:07:29.709Z",
+  "method": "CURRENT_HYBRID",
+  "datasetVersion": "v0",
+  "subsetId": "clean-vector-ready-v0",
+  "subsetArtifact": "evaluation/datasets/v0/subsets/clean-vector-ready.v0.json",
+  "caseCount": 1,
+  "caseIds": [
+    "reqimpact-case-006-squareboat-default-includes"
+  ],
+  "retrievalConfig": {
+    "retrievalMode": "HYBRID",
+    "expandGraph": true
+  },
+  "metrics": {
+    "hitAt1": 1,
+    "hitAt5": 1,
+    "hitAt10": 1,
+    "mrr": 1
+  },
+  "results": [
+    {
+      "caseId": "reqimpact-case-006-squareboat-default-includes",
+      "retrievalMode": "HYBRID",
+      "groundTruthFiles": [
+        "libs/boat/src/transformers/transformer.ts"
+      ],
+      "topK": [
+        {
+          "rank": 1,
+          "filePath": "libs/boat/src/transformers/transformer.ts",
+          "score": 0.42664254238136246,
+          "finalScore": 0.42664254238136246,
+          "vectorScore": 0.79040726394675,
+          "lexicalScore": 0,
+          "graphScore": 1,
+          "signals": [
+            "VECTOR",
+            "GRAPH"
+          ]
+        },
+        {
+          "rank": 2,
+          "filePath": "libs/boat/src/interfaces/transformer.ts",
+          "score": 0.42025536862713087,
+          "finalScore": 0.42025536862713087,
+          "vectorScore": 0.7721581960775167,
+          "lexicalScore": 0,
+          "graphScore": 1,
+          "signals": [
+            "VECTOR",
+            "GRAPH"
+          ]
+        },
+        {
+          "rank": 3,
+          "filePath": "src/transformer/user/detail.ts",
+          "score": 0.41110565844493097,
+          "finalScore": 0.41110565844493097,
+          "vectorScore": 0.7460161669855171,
+          "lexicalScore": 0,
+          "graphScore": 1,
+          "signals": [
+            "VECTOR",
+            "GRAPH"
+          ]
+        },
+        {
+          "rank": 4,
+          "filePath": "libs/boat/src/rest/restController.ts",
+          "score": 0.4022573473760308,
+          "finalScore": 0.4022573473760308,
+          "vectorScore": 0.7207352782172309,
+          "lexicalScore": 0,
+          "graphScore": 1,
+          "signals": [
+            "VECTOR",
+            "GRAPH"
+          ]
+        }
+      ],
+      "hitAt1": true,
+      "hitAt5": true,
+      "hitAt10": true,
+      "reciprocalRank": 1
+    }
+  ],
+  "knownLimits": [
+    "Measured only on clean-vector-ready-v0.",
+    "Subset size is small and not representative of the full dataset.",
+    "Do not use E12A for cross-method comparison; E12C will compare methods on the same subset."
+  ]
+}

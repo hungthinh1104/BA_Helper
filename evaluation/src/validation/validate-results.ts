@@ -223,6 +223,33 @@ export function validateResults(): { valid: boolean; errors: string[] } {
     }
   }
 
+  // Helper to verify metrics
+  function verifyMetricsRecomputable(artifact: any, name: string) {
+    if (!artifact.results || !artifact.metrics) return;
+    let h1 = 0, h5 = 0, h10 = 0, sumRR = 0;
+    const count = artifact.caseCount;
+    if (count === 0) return;
+
+    artifact.results.forEach((r: any) => {
+      let firstRank = -1;
+      r.topK.forEach((k: any) => {
+        if (firstRank === -1 && r.groundTruthFiles.includes(k.filePath)) {
+          firstRank = k.rank;
+        }
+      });
+      if (firstRank === 1) h1++;
+      if (firstRank !== -1 && firstRank <= 5) h5++;
+      if (firstRank !== -1 && firstRank <= 10) h10++;
+      if (firstRank !== -1) sumRR += (1 / firstRank);
+    });
+
+    const eps = 0.0001;
+    if (Math.abs(artifact.metrics.hitAt1 - (h1 / count)) > eps) errors.push(`${name} hitAt1 not recomputable`);
+    if (Math.abs(artifact.metrics.hitAt5 - (h5 / count)) > eps) errors.push(`${name} hitAt5 not recomputable`);
+    if (Math.abs(artifact.metrics.hitAt10 - (h10 / count)) > eps) errors.push(`${name} hitAt10 not recomputable`);
+    if (Math.abs(artifact.metrics.mrr - (sumRR / count)) > eps) errors.push(`${name} mrr not recomputable`);
+  }
+
   // 6. Verify vector baseline
   const vectorBaselinePath = resolveRepoPath(EvaluationPaths.resultsV0.baselines + '/vector-baseline.v0.json');
   if (existsSync(vectorBaselinePath)) {
@@ -230,6 +257,8 @@ export function validateResults(): { valid: boolean; errors: string[] } {
     if (vBaseline.method !== 'VECTOR_ONLY') errors.push('vector-baseline method must be VECTOR_ONLY');
     if (vBaseline.datasetVersion !== 'v0') errors.push('vector-baseline datasetVersion must be v0');
     if (vBaseline.subsetId !== 'clean-vector-ready-v0') errors.push('vector-baseline subsetId must be clean-vector-ready-v0');
+    
+    verifyMetricsRecomputable(vBaseline, 'vector-baseline');
     
     const subsetPath = resolveRepoPath(EvaluationPaths.datasetV0.subsets + '/clean-vector-ready.v0.json');
     if (existsSync(subsetPath)) {
@@ -261,9 +290,50 @@ export function validateResults(): { valid: boolean; errors: string[] } {
     }
 
     const hasSubsetSizeWarning = vBaseline.knownLimits?.some((l: string) => l.toLowerCase().includes('subset size') && l.toLowerCase().includes('not representative'));
-    const hasCrossMethodWarning = vBaseline.knownLimits?.some((l: string) => l.toLowerCase().includes('do not use e11c for cross-method comparison'));
+    const hasCrossMethodWarning = vBaseline.knownLimits?.some((l: string) => l.toLowerCase().includes('cross-method comparison'));
     if (!hasSubsetSizeWarning || !hasCrossMethodWarning) {
       errors.push('vector-baseline knownLimits must include warnings about subset size and no cross-method comparison');
+    }
+  }
+
+  // 6.2 Verify current hybrid baseline
+  const hybridBaselinePath = resolveRepoPath(EvaluationPaths.resultsV0.baselines + '/current-hybrid-clean-subset-baseline.v0.json');
+  if (existsSync(hybridBaselinePath)) {
+    const hBaseline = readJsonFile<any>(hybridBaselinePath);
+    if (hBaseline.method !== 'CURRENT_HYBRID') errors.push('current-hybrid-baseline method must be CURRENT_HYBRID');
+    if (hBaseline.datasetVersion !== 'v0') errors.push('current-hybrid-baseline datasetVersion must be v0');
+    if (hBaseline.subsetId !== 'clean-vector-ready-v0') errors.push('current-hybrid-baseline subsetId must be clean-vector-ready-v0');
+    if (hBaseline.retrievalConfig?.retrievalMode !== 'HYBRID') errors.push('current-hybrid-baseline retrievalConfig.retrievalMode must be HYBRID');
+    if (hBaseline.retrievalConfig?.expandGraph !== true) errors.push('current-hybrid-baseline retrievalConfig.expandGraph must be true');
+
+    verifyMetricsRecomputable(hBaseline, 'current-hybrid-baseline');
+
+    const subsetPath = resolveRepoPath(EvaluationPaths.datasetV0.subsets + '/clean-vector-ready.v0.json');
+    if (existsSync(subsetPath)) {
+      const subset = readJsonFile<any>(subsetPath);
+      if (hBaseline.caseCount !== subset.caseIds.length) errors.push('current-hybrid-baseline caseCount must match subset caseIds length');
+      
+      const baselineIdsStr = JSON.stringify([...hBaseline.caseIds].sort());
+      const subsetIdsStr = JSON.stringify([...subset.caseIds].sort());
+      if (baselineIdsStr !== subsetIdsStr) errors.push('current-hybrid-baseline caseIds must exactly match subset caseIds');
+      
+      hBaseline.results.forEach((r: any) => {
+        if (!subset.caseIds.includes(r.caseId)) errors.push(`current-hybrid-baseline result caseId ${r.caseId} not in subset`);
+        if (r.retrievalMode !== 'HYBRID') errors.push(`current-hybrid-baseline result ${r.caseId} retrievalMode must be HYBRID`);
+        
+        r.topK.forEach((k: any) => {
+          if (typeof k.rank !== 'number' || k.rank < 1) errors.push(`current-hybrid-baseline result ${r.caseId} file ${k.filePath} must have valid rank`);
+          if (!k.filePath) errors.push(`current-hybrid-baseline result ${r.caseId} has item without filePath`);
+          if (typeof k.score !== 'number' || typeof k.finalScore !== 'number') errors.push(`current-hybrid-baseline result ${r.caseId} file ${k.filePath} must have numeric score/finalScore`);
+          if (!Array.isArray(k.signals)) errors.push(`current-hybrid-baseline result ${r.caseId} file ${k.filePath} must have signals array`);
+        });
+      });
+    }
+
+    const hasSubsetSizeWarning = hBaseline.knownLimits?.some((l: string) => l.toLowerCase().includes('subset size') && l.toLowerCase().includes('not representative'));
+    const hasCrossMethodWarning = hBaseline.knownLimits?.some((l: string) => l.toLowerCase().includes('cross-method comparison'));
+    if (!hasSubsetSizeWarning || !hasCrossMethodWarning) {
+      errors.push('current-hybrid-baseline knownLimits must include warnings about subset size and no cross-method comparison');
     }
   }
 
@@ -386,9 +456,20 @@ export function validateResults(): { valid: boolean; errors: string[] } {
         errors.push('Manifest canonicalArtifacts must include vectorBaseline');
       }
     }
-    if (!manifest.notMeasuredYet?.includes('aggregate-current-hybrid-on-clean-subset-v0')) {
-      errors.push('Manifest notMeasuredYet MUST include aggregate-current-hybrid-on-clean-subset-v0');
+    
+    if (existsSync(hybridBaselinePath)) {
+      if (manifest.notMeasuredYet?.includes('aggregate-current-hybrid-on-clean-subset-v0')) {
+        errors.push('Manifest notMeasuredYet should NOT include aggregate-current-hybrid-on-clean-subset-v0');
+      }
+      if (!manifest.canonicalArtifacts?.currentHybridCleanSubsetBaseline) {
+        errors.push('Manifest canonicalArtifacts must include currentHybridCleanSubsetBaseline');
+      }
+    } else {
+      if (!manifest.notMeasuredYet?.includes('aggregate-current-hybrid-on-clean-subset-v0')) {
+        errors.push('Manifest notMeasuredYet MUST include aggregate-current-hybrid-on-clean-subset-v0');
+      }
     }
+    
     if (alignment && manifest.dataset?.scannerCoverageFailureCount !== alignment.scannerCoverageFailureCount) {
       errors.push(`Manifest scannerCoverageFailureCount (${manifest.dataset?.scannerCoverageFailureCount}) does not match alignment scannerCoverageFailureCount (${alignment.scannerCoverageFailureCount}).`);
     }
