@@ -88,7 +88,9 @@ export class HybridRetrievalService {
     };
 
     // 1. Lexical search — domain-glossary-aware keyword extraction
-    const { glossaryMatches, symbolMatches } = this.extractKeywords(request.changeRequest, profileDomain ?? request.domain);
+    const { glossaryMatches, symbolMatches } = request.retrievalMode !== 'VECTOR_ONLY' 
+      ? this.extractKeywords(request.changeRequest, profileDomain ?? request.domain)
+      : { glossaryMatches: [], symbolMatches: [] };
     const keywords = [...glossaryMatches, ...symbolMatches];
     
     // Intent Detection
@@ -207,7 +209,7 @@ export class HybridRetrievalService {
     }
 
     // 3. Graph expansion from current seed set
-    if (request.expandGraph) {
+    if (request.expandGraph && request.retrievalMode !== 'VECTOR_ONLY') {
       const seedIds = Array.from(candidates.keys());
       if (seedIds.length > 0) {
         const expandedIds = await this.graphRepo.expandFromSeeds(request.snapshotId, seedIds);
@@ -292,12 +294,13 @@ export class HybridRetrievalService {
         c.signals.add('KIND');
       }
 
-      const finalScore = 
-        (c.lexicalScoreNorm * WEIGHTS.lexical) + 
-        (c.graphScoreNorm * WEIGHTS.graph) + 
-        (c.vectorScoreNorm * WEIGHTS.vector) + 
-        (c.kindBoostNorm * WEIGHTS.kindBoost) - 
-        c.noisePenalty;
+      const finalScore = request.retrievalMode === 'VECTOR_ONLY'
+        ? c.vectorScoreNorm
+        : (c.lexicalScoreNorm * WEIGHTS.lexical) + 
+          (c.graphScoreNorm * WEIGHTS.graph) + 
+          (c.vectorScoreNorm * WEIGHTS.vector) + 
+          (c.kindBoostNorm * WEIGHTS.kindBoost) - 
+          c.noisePenalty;
         
       if (finalScore <= 0) continue;
       

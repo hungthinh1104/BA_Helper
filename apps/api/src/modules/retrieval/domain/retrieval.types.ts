@@ -56,5 +56,7 @@ export interface RetrievalRequest {
   /** Domain profile key e.g. 'BOOKING'. Drives glossary-based keyword expansion. */
   domain?: string;
   expandGraph?: boolean;
+  /** Optional mode to bypass hybrid logic and run a fast-path retrieval strategy. */
+  retrievalMode?: 'HYBRID' | 'VECTOR_ONLY';
   maxResults?: number;
 }

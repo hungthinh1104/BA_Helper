@@ -229,6 +229,42 @@ export function validateResults(): { valid: boolean; errors: string[] } {
     errors.push('vector-baseline.v0.json should remain absent in the committed repository');
   }
 
+  // 6.5 Verify E11A vector-only Case006 probe
+  const vectorOnlyPath = resolveRepoPath(EvaluationPaths.resultsV0.samples.vectorOnly + '/case006.v0.json');
+  if (existsSync(vectorOnlyPath)) {
+    const sample = readJsonFile<any>(vectorOnlyPath);
+    if (sample.mode !== 'VECTOR_ONLY_CASE_PROBE') errors.push('vectorOnlyCase006: mode must be VECTOR_ONLY_CASE_PROBE');
+    if (sample.caseId !== 'reqimpact-case-006-squareboat-default-includes') errors.push('vectorOnlyCase006: caseId must be Case006');
+    if (sample.scope?.type !== 'SINGLE_CASE_PROBE') errors.push('vectorOnlyCase006: scope.type must be SINGLE_CASE_PROBE');
+    if (sample.scope?.aggregateBenchmark !== false) errors.push('vectorOnlyCase006: scope.aggregateBenchmark must be false');
+    
+    if (alignment) {
+      const c = alignment.cases.find((c: any) => c.caseId === sample.caseId);
+      if (!c || c.status !== 'ALIGNED_VECTOR_READY' || c.cleanRetrievalEligible !== true) {
+        errors.push('vectorOnlyCase006: Case006 must be clean and ALIGNED_VECTOR_READY in alignment output');
+      }
+    }
+    
+    if (sample.groundTruthCoverage?.status !== 'OK') errors.push('vectorOnlyCase006: groundTruthCoverage must be OK');
+    if (sample.embeddingState?.provider === 'fake') errors.push('vectorOnlyCase006: provider cannot be fake');
+    if (!sample.embeddingState?.model || /fake|mock|random|hash/i.test(sample.embeddingState.model)) {
+      errors.push('vectorOnlyCase006: model cannot be fake/mock');
+    }
+    if (sample.embeddingState?.queryEmbeddingProfileId === sample.embeddingState?.documentEmbeddingProfileId && !sample.embeddingState?.profileCompatible) {
+      errors.push('vectorOnlyCase006: profile Compatible flag should be true');
+    }
+    if (!sample.topK || sample.topK.length === 0) errors.push('vectorOnlyCase006: topK cannot be empty');
+    if (typeof sample.groundTruthHitAtK !== 'boolean') errors.push('vectorOnlyCase006: groundTruthHitAtK must be a boolean');
+    if (!sample.knownLimits?.some((l: string) => l.includes('Single-case probe only'))) {
+      errors.push('vectorOnlyCase006: knownLimits must explicitly state Single-case probe only');
+    }
+    if (!sample.oracleCheck?.status) {
+      errors.push('vectorOnlyCase006: oracleCheck.status is required');
+    } else if (sample.oracleCheck.status === 'PASSED') {
+      errors.push('vectorOnlyCase006: oracleCheck cannot be mocked as PASSED');
+    }
+  }
+
   // 7. Verify Manifest
   const manifestPath = resolveRepoPath(EvaluationPaths.resultsV0.manifests + '/latest.manifest.json');
   if (!existsSync(manifestPath)) {
@@ -249,6 +285,13 @@ export function validateResults(): { valid: boolean; errors: string[] } {
     }
     if (!manifest.canonicalArtifacts?.currentHybridCase006) {
       errors.push('Manifest is missing canonicalArtifacts.currentHybridCase006.');
+    }
+    if (manifest.canonicalArtifacts?.vectorOnlyCase006) {
+      if (!existsSync(resolveRepoPath(manifest.canonicalArtifacts.vectorOnlyCase006))) {
+        errors.push('vectorOnlyCase006 is in canonicalArtifacts but the file does not exist');
+      }
+    } else if (!manifest.plannedArtifacts?.vectorOnlyCase006) {
+      errors.push('vectorOnlyCase006 must be declared in either canonicalArtifacts or plannedArtifacts');
     }
   }
 

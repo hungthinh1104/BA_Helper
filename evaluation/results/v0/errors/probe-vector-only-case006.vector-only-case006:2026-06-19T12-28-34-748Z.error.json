@@ -1,0 +1,8 @@
+{
+  "generatedAt": "2026-06-19T12:28:34.749Z",
+  "runId": "vector-only-case006:2026-06-19T12-28-34-748Z",
+  "name": "probe-vector-only-case006",
+  "status": "PIPELINE_ERROR",
+  "message": "E11A-1 vector probe REQUIRES database to be available. Failing fast.",
+  "cause": {}
+}
