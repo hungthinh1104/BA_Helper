@@ -1,12 +1,9 @@
-import { execSync } from 'child_process';
-import { readFileSync } from 'fs';
 import { ArtifactRepository } from '../../apps/api/src/modules/artifact/infrastructure/artifact.repository';
-import { FakeEmbeddingProvider } from '../../apps/api/src/modules/embedding/infrastructure/fake-embedding.provider';
 import { GoogleEmbeddingProvider } from '../../apps/api/src/modules/embedding/infrastructure/google-embedding.provider';
 import { OpenAiEmbeddingProvider } from '../../apps/api/src/modules/embedding/infrastructure/openai-embedding.provider';
 import { EmbeddingChunkRepository } from '../../apps/api/src/modules/embedding/infrastructure/embedding-chunk.repository';
 import { type EmbeddingProvider } from '../../apps/api/src/modules/embedding/domain/embedding-provider.interface';
-import { resolveRuntimeEmbeddingProfileFromEnv } from '../../apps/api/src/modules/embedding/domain/embedding-profile-registry';
+import { areEmbeddingProfilesCompatible, resolveEmbeddingProfile, resolveRuntimeEmbeddingProfileFromEnv } from '../../apps/api/src/modules/embedding/domain/embedding-profile-registry';
 import { GraphRepository } from '../../apps/api/src/modules/graph/infrastructure/graph.repository';
 import { PrismaService } from '../../apps/api/src/modules/prisma/prisma.service';
 import { HybridRetrievalService } from '../../apps/api/src/modules/retrieval/application/hybrid-retrieval.service';
@@ -106,6 +103,10 @@ async function main() {
         rank: index + 1,
         filePath: retrieved.filePath,
         score: retrieved.score,
+        finalScore: retrieved.score,
+        vectorScore: retrieved.score,
+        lexicalScore: 0,
+        graphScore: 0,
         evidenceStatus: evidence.hasEvidence ? 'EVIDENCED' : 'NO_EVIDENCE',
         signals: retrieved.retrievalSignals
       });
@@ -115,31 +116,37 @@ async function main() {
       }
     }
 
-    const artifactJson = {
-      runId,
-      generatedAt: new Date().toISOString(),
-      mode: 'VECTOR_ONLY_CASE_PROBE',
-      caseId,
-      scope: {
-        type: 'SINGLE_CASE_PROBE',
-        datasetVersion: 'v0',
-        aggregateBenchmark: false
-      },
-      retrievalMode: 'VECTOR_ONLY',
-      repo: caseDef.repo,
-      requirementText: caseDef.requirementText,
-      groundTruthFiles,
-      embeddingState: {
-        provider: providerName,
-        model,
-        dimensions: embeddingState.profiles[0]?.embeddingDimensions || 0,
-        queryTaskType: 'RETRIEVAL_QUERY',
-        documentTaskType: 'RETRIEVAL_DOCUMENT',
-        queryEmbeddingProfileId: resolveRuntimeEmbeddingProfileFromEnv('QUERY').id,
-        documentEmbeddingProfileId: embeddingState.embeddingProfileIds[0] || '',
-        profileCompatible: true,
-        alignmentVerified: true
-      },
+      const docProfileId = embeddingState.embeddingProfileIds[0] || '';
+      const docProfile = resolveEmbeddingProfile(docProfileId);
+      const queryProfile = resolveRuntimeEmbeddingProfileFromEnv('QUERY');
+      const profileCompatible = areEmbeddingProfilesCompatible(queryProfile, docProfile);
+
+      const artifactJson = {
+        runId,
+        generatedAt: new Date().toISOString(),
+        mode: 'VECTOR_ONLY_CASE_PROBE',
+        caseId,
+        scope: {
+          type: 'SINGLE_CASE_PROBE',
+          datasetVersion: 'v0',
+          aggregateBenchmark: false
+        },
+        retrievalMode: 'VECTOR_ONLY',
+        repo: caseDef.repo,
+        requirementText: caseDef.requirementText,
+        groundTruthFiles,
+        embeddingState: {
+          provider: providerName,
+          model,
+          queryDimensions: queryProfile.dimensions,
+          documentDimensions: docProfile.dimensions,
+          queryTaskType: 'RETRIEVAL_QUERY',
+          documentTaskType: 'RETRIEVAL_DOCUMENT',
+          queryEmbeddingProfileId: queryProfile.id,
+          documentEmbeddingProfileId: docProfile.id,
+          profileCompatible,
+          alignmentVerified: true
+        },
       groundTruthCoverage: {
         status: groundTruthCoverage.status,
         indexedGroundTruthFiles: groundTruthCoverage.indexedGroundTruthFiles,
@@ -171,15 +178,16 @@ async function main() {
       '## Embedding Provenance',
       `Provider: ${artifactJson.embeddingState.provider}`,
       `Model: ${artifactJson.embeddingState.model}`,
-      `Dimensions: ${artifactJson.embeddingState.dimensions}`,
+      `Query dimensions: ${artifactJson.embeddingState.queryDimensions}`,
+      `Document dimensions: ${artifactJson.embeddingState.documentDimensions}`,
       `Query task type: ${artifactJson.embeddingState.queryTaskType}`,
       `Document task type: ${artifactJson.embeddingState.documentTaskType}`,
       `Profile compatible: ${artifactJson.embeddingState.profileCompatible}`,
       '',
       '## Retrieval Result',
-      '| Rank | FilePath | Score | Evidence Status | Signals |',
-      '| ---: | --- | ---: | --- | --- |',
-      ...topK.map(k => `| ${k.rank} | ${k.filePath} | ${k.score.toFixed(4)} | ${k.evidenceStatus} | ${k.signals.join(', ')} |`),
+      '| Rank | FilePath | Final Score | Vector Score | Lexical | Graph | Evidence | Signals |',
+      '| ---: | --- | ---: | ---: | ---: | ---: | --- | --- |',
+      ...topK.map(k => `| ${k.rank} | ${k.filePath} | ${k.finalScore.toFixed(4)} | ${k.vectorScore.toFixed(4)} | ${k.lexicalScore} | ${k.graphScore} | ${k.evidenceStatus} | ${k.signals.join(', ')} |`),
       '',
       '## Ground Truth Hit',
       `groundTruthHitAtK: ${groundTruthHitAtK}`,

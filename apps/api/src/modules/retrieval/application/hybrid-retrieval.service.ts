@@ -204,6 +204,7 @@ export class HybridRetrievalService {
           }
         }
       } catch (error) {
+        if (request.retrievalMode === 'VECTOR_ONLY') throw error;
         this.logger.warn(`Vector search failed, falling back to lexical only: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
@@ -258,40 +259,43 @@ export class HybridRetrievalService {
       const isTooWeakToKeep = hasVector && c.vectorScoreNorm < MIN_VECTOR_SIMILARITY;
       const isVectorOnly = hasVector && !hasLexical && !hasGraph;
       
-      // Filter graph depth > 2
-      if (c.graphDepth !== undefined && c.graphDepth > 2) {
-         continue; 
-      }
-      
-      // Drop vector-only low similarity candidate
-      if (isVectorOnly && isTooWeakToKeep) {
-         continue; 
-      }
+      // Skip filters and penalty/boost for VECTOR_ONLY
+      if (request.retrievalMode !== 'VECTOR_ONLY') {
+        // Filter graph depth > 2
+        if (c.graphDepth !== undefined && c.graphDepth > 2) {
+           continue; 
+        }
+        
+        // Drop vector-only low similarity candidate
+        if (isVectorOnly && isTooWeakToKeep) {
+           continue; 
+        }
 
-      if (c.weakVectorSeed && !hasLexical) {
-         continue;
-      }
-      
-      // Apply noise penalties
-      if (isNoisySupport) {
-         c.noisePenalty = 0.15;
-      } else if (isWeakVector && isVectorOnly) {
-         if (isTest && !mentionsTest) {
-             c.noisePenalty = 0.05;
-         } else {
-             c.noisePenalty = 0.10;
-         }
-      }
+        if (c.weakVectorSeed && !hasLexical) {
+           continue;
+        }
+        
+        // Apply noise penalties
+        if (isNoisySupport) {
+           c.noisePenalty = 0.15;
+        } else if (isWeakVector && isVectorOnly) {
+           if (isTest && !mentionsTest) {
+               c.noisePenalty = 0.05;
+           } else {
+               c.noisePenalty = 0.10;
+           }
+        }
 
-      // Calculate kindBoostNorm
-      const kind = artifact.universalKind;
-      if (kind === 'API_ENDPOINT' && wantsApi) c.kindBoostNorm = 1.0;
-      else if (kind === 'DOMAIN_SERVICE' && wantsService) c.kindBoostNorm = 1.0;
-      else if (kind === 'DATA_MODEL' && wantsData) c.kindBoostNorm = 1.0;
-      else if (kind === 'TEST_CASE' && wantsTest) c.kindBoostNorm = 1.0;
+        // Calculate kindBoostNorm
+        const kind = artifact.universalKind;
+        if (kind === 'API_ENDPOINT' && wantsApi) c.kindBoostNorm = 1.0;
+        else if (kind === 'DOMAIN_SERVICE' && wantsService) c.kindBoostNorm = 1.0;
+        else if (kind === 'DATA_MODEL' && wantsData) c.kindBoostNorm = 1.0;
+        else if (kind === 'TEST_CASE' && wantsTest) c.kindBoostNorm = 1.0;
 
-      if (c.kindBoostNorm > 0) {
-        c.signals.add('KIND');
+        if (c.kindBoostNorm > 0) {
+          c.signals.add('KIND');
+        }
       }
 
       const finalScore = request.retrievalMode === 'VECTOR_ONLY'

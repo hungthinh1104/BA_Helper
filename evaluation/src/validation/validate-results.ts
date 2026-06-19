@@ -250,10 +250,31 @@ export function validateResults(): { valid: boolean; errors: string[] } {
     if (!sample.embeddingState?.model || /fake|mock|random|hash/i.test(sample.embeddingState.model)) {
       errors.push('vectorOnlyCase006: model cannot be fake/mock');
     }
-    if (sample.embeddingState?.queryEmbeddingProfileId === sample.embeddingState?.documentEmbeddingProfileId && !sample.embeddingState?.profileCompatible) {
-      errors.push('vectorOnlyCase006: profile Compatible flag should be true');
+    if (sample.embeddingState?.profileCompatible !== true) {
+      errors.push('vectorOnlyCase006: profileCompatible must be strictly true');
     }
-    if (!sample.topK || sample.topK.length === 0) errors.push('vectorOnlyCase006: topK cannot be empty');
+    if (!sample.embeddingState?.queryEmbeddingProfileId || !sample.embeddingState?.documentEmbeddingProfileId) {
+      errors.push('vectorOnlyCase006: query and document profile IDs must exist');
+    }
+    if (!sample.embeddingState?.queryDimensions || sample.embeddingState?.queryDimensions !== sample.embeddingState?.documentDimensions) {
+      errors.push('vectorOnlyCase006: query and document dimensions must match and exist');
+    }
+    if (!sample.topK || sample.topK.length === 0) {
+      errors.push('vectorOnlyCase006: topK cannot be empty');
+    } else {
+      sample.topK.forEach((k: any) => {
+        if (k.finalScore !== k.vectorScore) errors.push(`vectorOnlyCase006: finalScore must equal vectorScore for ${k.filePath}`);
+        if (k.lexicalScore !== 0) errors.push(`vectorOnlyCase006: lexicalScore must be 0 for ${k.filePath}`);
+        if (k.graphScore !== 0) errors.push(`vectorOnlyCase006: graphScore must be 0 for ${k.filePath}`);
+        const signals = k.signals || [];
+        if (signals.some((s: string) => ['LEXICAL', 'GRAPH', 'DOMAIN', 'KIND'].includes(s))) {
+          errors.push(`vectorOnlyCase006: signals must not contain LEXICAL/GRAPH/DOMAIN/KIND for ${k.filePath}`);
+        }
+        if (!signals.includes('VECTOR')) {
+           errors.push(`vectorOnlyCase006: signals must contain VECTOR for ${k.filePath}`);
+        }
+      });
+    }
     if (typeof sample.groundTruthHitAtK !== 'boolean') errors.push('vectorOnlyCase006: groundTruthHitAtK must be a boolean');
     if (!sample.knownLimits?.some((l: string) => l.includes('Single-case probe only'))) {
       errors.push('vectorOnlyCase006: knownLimits must explicitly state Single-case probe only');
