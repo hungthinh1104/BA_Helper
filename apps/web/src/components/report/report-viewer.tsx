@@ -15,6 +15,7 @@ import { AnalysisStatusBadge } from "@/components/workspace/shared/status-badges
 import { EvaluationContextCard } from "./evaluation-context-card"
 import { EvidenceQualitySummary } from "./evidence-quality-summary"
 import { EvidenceQualityTable } from "./evidence-quality-table"
+import { ReviewedSnapshotPanel } from "./reviewed-snapshot-panel"
 
 interface ReportViewerProps {
   analysisId: string;
@@ -235,6 +236,8 @@ export function ReportViewer({ analysisId }: ReportViewerProps) {
         )}
         <EvaluationContextCard context={report.evaluationContext} />
       </div>
+
+      <ReviewedSnapshotPanel analysisId={analysisId} />
     </div>
   )
 }

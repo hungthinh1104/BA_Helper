@@ -58,7 +58,7 @@ export function EvidenceQualityTable({ analysisId, items }: EvidenceQualityTable
   );
 }
 
-function EvidenceQualityBadge({ quality }: { quality: string }) {
+export function EvidenceQualityBadge({ quality }: { quality: string }) {
   // Use neutral technical variants to avoid pass/fail coloring
   let variant: "default" | "secondary" | "outline" | "destructive" = "secondary";
   
