@@ -466,7 +466,45 @@ export function validateResults(): { valid: boolean; errors: string[] } {
     }
   }
 
-  // 6.6 Verify E11A vector-only Case006 probe
+  // 6.6 Verify E13 Research Findings
+  const e13FindingsPath = resolveRepoPath(EvaluationPaths.resultsV0.analysis + '/e13-research-findings.v0.json');
+  if (existsSync(e13FindingsPath)) {
+    const findings = readJsonFile<any>(e13FindingsPath);
+    if (findings.method !== 'RESEARCH_FINDINGS') errors.push('e13-research-findings method must be RESEARCH_FINDINGS');
+    if (findings.datasetVersion !== 'v0') errors.push('e13-research-findings datasetVersion must be v0');
+    if (findings.subsetId !== 'clean-vector-ready-v0') errors.push('e13-research-findings subsetId must be clean-vector-ready-v0');
+
+    if (findings.winner || findings.leaderboard || findings.bestMethod || findings.superiorityClaim || findings.ranking) {
+      errors.push('e13-research-findings must NOT contain winner, leaderboard, bestMethod, superiorityClaim, or ranking fields');
+    }
+
+    const subsetPath = resolveRepoPath(EvaluationPaths.datasetV0.subsets + '/clean-vector-ready.v0.json');
+    if (existsSync(subsetPath)) {
+      const subset = readJsonFile<any>(subsetPath);
+      const expectedExcludedCount = subset.excludedCases?.length || 0;
+      if (findings.subsetFailureAnalysis?.excludedCount !== expectedExcludedCount) {
+        errors.push(`e13-research-findings subsetFailureAnalysis.excludedCount (${findings.subsetFailureAnalysis?.excludedCount}) must match subset excludedCases length (${expectedExcludedCount})`);
+      }
+      
+      const allExpectedReasonCodes = new Set<string>();
+      subset.excludedCases?.forEach((ec: any) => {
+        ec.reasonCodes?.forEach((rc: string) => allExpectedReasonCodes.add(rc));
+      });
+      const actualReasonCodes = Object.keys(findings.subsetFailureAnalysis?.reasonCounts || {});
+      for (const rc of allExpectedReasonCodes) {
+        if (!actualReasonCodes.includes(rc)) {
+          errors.push(`e13-research-findings subsetFailureAnalysis.reasonCounts must include count for ${rc}`);
+        }
+      }
+    }
+
+    const hasNoSuperiorityWarning = findings.knownLimits?.some((l: string) => l.toLowerCase().includes('no method superiority claim'));
+    if (!hasNoSuperiorityWarning) {
+      errors.push('e13-research-findings knownLimits must include warning that no method superiority claim is made');
+    }
+  }
+
+  // 6.7 Verify E11A vector-only Case006 probe
   const vectorOnlyPath = resolveRepoPath(EvaluationPaths.resultsV0.samples.vectorOnly + '/case006.v0.json');
   if (existsSync(vectorOnlyPath)) {
     const sample = readJsonFile<any>(vectorOnlyPath);
@@ -608,6 +646,18 @@ export function validateResults(): { valid: boolean; errors: string[] } {
     if (existsSync(bm25BaselinePath)) {
       if (!manifest.canonicalArtifacts?.bm25CleanSubsetBaseline) {
         errors.push('Manifest canonicalArtifacts must include bm25CleanSubsetBaseline');
+      }
+    }
+    
+    if (existsSync(sameSubsetComparisonPath)) {
+      if (!manifest.canonicalArtifacts?.sameSubsetComparison) {
+        errors.push('Manifest canonicalArtifacts must include sameSubsetComparison');
+      }
+    }
+    
+    if (existsSync(e13FindingsPath)) {
+      if (!manifest.canonicalArtifacts?.e13ResearchFindings) {
+        errors.push('Manifest canonicalArtifacts must include e13ResearchFindings');
       }
     }
     

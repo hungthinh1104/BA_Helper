@@ -1,0 +1,160 @@
+{
+  "runId": "e13-research-findings-v0:2026-06-19T14-51-27-967Z",
+  "generatedAt": "2026-06-19T14:51:27.978Z",
+  "method": "RESEARCH_FINDINGS",
+  "datasetVersion": "v0",
+  "subsetId": "clean-vector-ready-v0",
+  "sourceArtifacts": {
+    "subset": "evaluation/datasets/v0/subsets/clean-vector-ready.v0.json",
+    "sameSubsetComparison": "evaluation/results/v0/analysis/same-subset-comparison.v0.json",
+    "vectorBaseline": "evaluation/results/v0/baselines/vector-baseline.v0.json",
+    "currentHybridBaseline": "evaluation/results/v0/baselines/current-hybrid-clean-subset-baseline.v0.json",
+    "keywordBaseline": "evaluation/results/v0/baselines/keyword-clean-subset-baseline.v0.json",
+    "bm25Baseline": "evaluation/results/v0/baselines/bm25-clean-subset-baseline.v0.json"
+  },
+  "subsetFailureAnalysis": {
+    "excludedCount": 5,
+    "reasonCounts": {
+      "NOT_ALIGNED_VECTOR_READY": 5,
+      "SNAPSHOT_MISSING": 4,
+      "INDEX_STATUS_NOT_VECTOR_READY": 5,
+      "NO_CHUNKS": 5,
+      "MISSING_SELECTED_EMBEDDING_PROFILE": 5,
+      "MISSING_EMBEDDING_PROVIDER": 5,
+      "MISSING_EMBEDDING_MODEL": 5,
+      "MISSING_EMBEDDING_DIMENSIONS": 5,
+      "NOT_CLEAN_RETRIEVAL_ELIGIBLE": 5,
+      "SCANNER_COVERAGE_NOT_OK": 5,
+      "GROUND_TRUTH_NOT_INDEXED": 1
+    },
+    "details": [
+      {
+        "caseId": "reqimpact-case-001-backend-reliability-semantics",
+        "reasonCodes": [
+          "NOT_ALIGNED_VECTOR_READY",
+          "SNAPSHOT_MISSING",
+          "INDEX_STATUS_NOT_VECTOR_READY",
+          "NO_CHUNKS",
+          "MISSING_SELECTED_EMBEDDING_PROFILE",
+          "MISSING_EMBEDDING_PROVIDER",
+          "MISSING_EMBEDDING_MODEL",
+          "MISSING_EMBEDDING_DIMENSIONS",
+          "NOT_CLEAN_RETRIEVAL_ELIGIBLE",
+          "SCANNER_COVERAGE_NOT_OK"
+        ]
+      },
+      {
+        "caseId": "reqimpact-case-002-realworld-article-author-relation",
+        "reasonCodes": [
+          "NOT_ALIGNED_VECTOR_READY",
+          "SNAPSHOT_MISSING",
+          "INDEX_STATUS_NOT_VECTOR_READY",
+          "NO_CHUNKS",
+          "MISSING_SELECTED_EMBEDDING_PROFILE",
+          "MISSING_EMBEDDING_PROVIDER",
+          "MISSING_EMBEDDING_MODEL",
+          "MISSING_EMBEDDING_DIMENSIONS",
+          "NOT_CLEAN_RETRIEVAL_ELIGIBLE",
+          "SCANNER_COVERAGE_NOT_OK"
+        ]
+      },
+      {
+        "caseId": "reqimpact-case-003-realworld-auth-middleware-user-object",
+        "reasonCodes": [
+          "NOT_ALIGNED_VECTOR_READY",
+          "SNAPSHOT_MISSING",
+          "INDEX_STATUS_NOT_VECTOR_READY",
+          "NO_CHUNKS",
+          "MISSING_SELECTED_EMBEDDING_PROFILE",
+          "MISSING_EMBEDDING_PROVIDER",
+          "MISSING_EMBEDDING_MODEL",
+          "MISSING_EMBEDDING_DIMENSIONS",
+          "NOT_CLEAN_RETRIEVAL_ELIGIBLE",
+          "SCANNER_COVERAGE_NOT_OK"
+        ]
+      },
+      {
+        "caseId": "reqimpact-case-004-nest-post-sse-empty-response",
+        "reasonCodes": [
+          "NOT_ALIGNED_VECTOR_READY",
+          "INDEX_STATUS_NOT_VECTOR_READY",
+          "NO_CHUNKS",
+          "MISSING_SELECTED_EMBEDDING_PROFILE",
+          "MISSING_EMBEDDING_PROVIDER",
+          "MISSING_EMBEDDING_MODEL",
+          "MISSING_EMBEDDING_DIMENSIONS",
+          "GROUND_TRUTH_NOT_INDEXED",
+          "NOT_CLEAN_RETRIEVAL_ELIGIBLE",
+          "SCANNER_COVERAGE_NOT_OK"
+        ]
+      },
+      {
+        "caseId": "reqimpact-case-005-realworld-proper-error-object",
+        "reasonCodes": [
+          "NOT_ALIGNED_VECTOR_READY",
+          "SNAPSHOT_MISSING",
+          "INDEX_STATUS_NOT_VECTOR_READY",
+          "NO_CHUNKS",
+          "MISSING_SELECTED_EMBEDDING_PROFILE",
+          "MISSING_EMBEDDING_PROVIDER",
+          "MISSING_EMBEDDING_MODEL",
+          "MISSING_EMBEDDING_DIMENSIONS",
+          "NOT_CLEAN_RETRIEVAL_ELIGIBLE",
+          "SCANNER_COVERAGE_NOT_OK"
+        ]
+      }
+    ]
+  },
+  "evidenceQuality": {
+    "methodObservations": [
+      {
+        "method": "VECTOR_ONLY",
+        "rank1HasGroundTruth": true,
+        "traceableSignals": [
+          "VECTOR"
+        ]
+      },
+      {
+        "method": "CURRENT_HYBRID",
+        "rank1HasGroundTruth": true,
+        "traceableSignals": [
+          "LEXICAL",
+          "VECTOR",
+          "GRAPH",
+          "KIND"
+        ]
+      },
+      {
+        "method": "KEYWORD",
+        "rank1HasGroundTruth": true,
+        "traceableSignals": [
+          "KEYWORD"
+        ]
+      },
+      {
+        "method": "BM25",
+        "rank1HasGroundTruth": true,
+        "traceableSignals": [
+          "BM25"
+        ]
+      }
+    ],
+    "topKCoverage": "All evaluated baselines returned topK items for the cases, but the trace signals vary greatly by method."
+  },
+  "methodBehaviorNotes": [
+    "VECTOR_ONLY captures purely semantic similarity on Case006.",
+    "CURRENT_HYBRID combines lexical patterns, vector scores, and graph expansion.",
+    "KEYWORD relies strictly on deterministic overlap with high-weight fields.",
+    "BM25 distributes weights based on term frequency and inverted document frequency."
+  ],
+  "datasetExpansionRecommendation": [
+    "Improve Indexing Resilience: Ensure all case ground-truth files are embedded to avoid GROUND_TRUTH_NOT_INDEXED.",
+    "Address Scanner Coverage: Ensure framework scanners do not fail or partially skip essential files, avoiding SCANNER_COVERAGE_NOT_OK.",
+    "Increase Subsets: Currently at 1/6. We need to stabilize indexing so that at least 3/6 cases are VECTOR_READY to allow for more statistically significant comparisons."
+  ],
+  "knownLimits": [
+    "Findings are based only on clean-vector-ready-v0.",
+    "Subset size is 1/6 and not representative of the full dataset.",
+    "No method superiority claim is made in E13."
+  ]
+}
