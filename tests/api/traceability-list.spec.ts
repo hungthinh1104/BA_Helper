@@ -34,7 +34,7 @@ describe('Traceability list mapping', () => {
           },
         ],
       },
-    ]);
+    ] as any);
 
     expect(result).toEqual([
       {

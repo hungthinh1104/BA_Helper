@@ -1,11 +1,28 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
+
+export type TraceabilityLinkWithArtifactAndReviewDecision = Prisma.TraceabilityLinkGetPayload<{
+  include: {
+    artifact: true;
+    evidenceLinks: {
+      include: {
+        evidence: {
+          include: {
+            artifact: true;
+          };
+        };
+      };
+    };
+    reviewDecision: true;
+  };
+}>;
 
 @Injectable()
 export class TraceabilityRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listByAnalysis(impactAnalysisId: string) {
+  async listByAnalysis(impactAnalysisId: string): Promise<TraceabilityLinkWithArtifactAndReviewDecision[]> {
     return this.prisma.traceabilityLink.findMany({
       where: { impactAnalysisId },
       include: {

@@ -61,23 +61,27 @@ export class ApprovedReportProjectionService {
       reviewRequired: linkAnnotations.filter(l => l.annotation.label === 'REVIEW_REQUIRED').length,
     };
 
-    const evidenceQualityItems = linkAnnotations.map(item => ({
-      linkId: item.link.id,
-      artifact: item.link.artifact?.filePath || item.link.artifact?.name || 'Unknown',
-      quality: item.annotation.label,
-      reasons: item.annotation.reasons,
-      reviewDecision: (item.link as any).reviewDecision
-        ? {
-            id: (item.link as any).reviewDecision.id,
-            analysisId: (item.link as any).reviewDecision.analysisId,
-            traceabilityLinkId: (item.link as any).reviewDecision.traceabilityLinkId,
-            decision: (item.link as any).reviewDecision.decision,
-            note: (item.link as any).reviewDecision.note,
-            reviewedByUserId: (item.link as any).reviewDecision.reviewedByUserId,
-            reviewedAt: (item.link as any).reviewDecision.reviewedAt.toISOString(),
-          }
-        : undefined,
-    }));
+    const evidenceQualityItems = linkAnnotations.map(item => {
+      const decision = item.link.reviewDecision;
+      
+      return {
+        linkId: item.link.id,
+        artifact: item.link.artifact?.filePath || item.link.artifact?.name || 'Unknown',
+        quality: item.annotation.label,
+        reasons: item.annotation.reasons,
+        reviewDecision: decision
+          ? {
+              id: decision.id,
+              analysisId: decision.analysisId,
+              traceabilityLinkId: decision.traceabilityLinkId,
+              decision: decision.decision,
+              note: decision.note,
+              reviewedByUserId: decision.reviewedByUserId,
+              reviewedAt: decision.reviewedAt.toISOString(),
+            }
+          : null,
+      };
+    });
 
     return {
       report,
