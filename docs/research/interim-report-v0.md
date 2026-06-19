@@ -48,9 +48,9 @@ Both measured methods are deterministic lexical baselines only. They do not use:
 | Method | Aggregate | Cases | Macro Recall@10 | Macro Precision@10 | Macro F1@10 | Macro Review Burden@10 | No-hit Cases@10 |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | `keyword-baseline-v0` | E2E all cases | 6 | 0.5555 | 0.3869 | 0.4212 | 1.4583 | 2 |
-| `keyword-baseline-v0` | Clean retrieval subset | 5 | 0.4667 | 0.2643 | 0.3054 | 1.5500 | 2 |
+| `keyword-baseline-v0` | Clean retrieval subset | 6 | 0.5555 | 0.3869 | 0.4212 | 1.4583 | 2 |
 | `bm25-baseline-v0` | E2E all cases | 6 | 0.5555 | 0.3869 | 0.4212 | 1.4583 | 2 |
-| `bm25-baseline-v0` | Clean retrieval subset | 5 | 0.4667 | 0.2643 | 0.3054 | 1.5500 | 2 |
+| `bm25-baseline-v0` | Clean retrieval subset | 6 | 0.5555 | 0.3869 | 0.4212 | 1.4583 | 2 |
 
 Source: `evaluation/results/metrics.v0.json`
 
@@ -72,8 +72,8 @@ Per measured lexical method:
 
 | Method | PASS_FULL | PASS_PARTIAL | FAIL_MISS |
 | --- | ---: | ---: | ---: |
-| `keyword-baseline-v0` | 2 | 1 | 2 |
-| `bm25-baseline-v0` | 2 | 1 | 2 |
+| `keyword-baseline-v0` | 3 | 1 | 2 |
+| `bm25-baseline-v0` | 3 | 1 | 2 |
 
 Observed lexical-baseline issue categories:
 
@@ -97,7 +97,6 @@ Current vector-readiness facts:
 
 - a vector provider gate exists
 - fake, hash, random, and keyword-derived vector sources are prohibited
-- vector path probe result is currently `selectedPath = NONE`
 - DB snapshot readiness has one profile-ready aligned candidate for Case 006
 - `evaluation/results/vector-baseline.v0.json` does not exist
 
@@ -113,7 +112,8 @@ Current-hybrid research posture:
 - `CURRENT_HYBRID` exporter exists
 - it is designed to fail safely when DB state is unavailable
 - one DB-backed current-hybrid benchmark export exists for Case 006 only
-- Case 006 is labeled `E2E_SCANNER_COVERAGE_FAILURE`, so Recall@10=0 should be read as scanner coverage / E2E failure, not pure retrieval failure
+- Case 006 is now clean-retrieval eligible after file-level scanner fallback and re-indexing
+- the Case 006 current-hybrid export retrieves the proxy ground-truth file at rank 1, with ground-truth artifact coverage `OK`
 
 ## Allowed Claims Now
 
@@ -123,7 +123,7 @@ The following claims are evidence-bound and allowed:
 - Deterministic lexical baselines are implemented and measured.
 - `keyword-baseline-v0` and `bm25-baseline-v0` achieve the reported file-level metrics on dataset v0.
 - BM25 ties keyword on aggregate dataset v0 metrics.
-- One guarded current-hybrid benchmark export exists for Case 006, but it is an E2E scanner coverage failure case.
+- One guarded current-hybrid benchmark export exists for Case 006 and retrieves the proxy ground-truth file at rank 1.
 - Failure analysis identifies lexical mismatch and data/indirect dependency misses as observed lexical-baseline issues.
 - Vector gating and readiness probes exist and currently block vector claims in this workspace.
 
@@ -154,4 +154,4 @@ The following claims are not supported by current evidence:
 - Evaluation is file-level only.
 - Only lexical baselines have been measured so far.
 - No vector-only or R1 structured-embedding result has been measured yet.
-- Current-hybrid has been measured only for Case 006, which is explicitly a scanner coverage / E2E failure case.
+- Current-hybrid has been measured only for Case 006. This single-case result must not be generalized to aggregate current-hybrid performance.

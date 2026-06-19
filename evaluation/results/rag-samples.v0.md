@@ -1,6 +1,6 @@
 # ReqImpact RAG Sample Export v0
 
-- Run ID: rag-sample:case_only:reqimpact-case-006-squareboat-default-includes:2026-06-18T12-42-09-987Z
+- Run ID: rag-sample:case_only:reqimpact-case-006-squareboat-default-includes:2026-06-19T06-51-35-327Z
 - Mode: CASE_ONLY
 - Case ID: reqimpact-case-006-squareboat-default-includes
 - Repo: squareboat/nestjs-boilerplate
@@ -28,7 +28,7 @@ Changed files are proxy ground truth. This smoke export is not a final benchmark
 
 | Rank | File | Type | Kind | Score | Final | Lexical | Vector | Graph | Kind Boost | Domain Boost | Signals | Evidence | Location-only | Code-like | Preview |
 | ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- | --- | --- | --- |
-| 1 | libs/boat/src/transformers/transformer.ts | TRANSFORMER_FILE | DOMAIN_SERVICE | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |  | no | no | no |  |
+| 1 | libs/boat/src/transformers/transformer.ts | FILE | UNKNOWN | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |  | no | no | no |  |
 | 2 | libs/boat/src/rest/explorer.ts | SERVICE_METHOD | DOMAIN_SERVICE | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |  | no | no | no |  |
 | 3 | libs/boat/src/rest/explorer.ts | SERVICE_METHOD | DOMAIN_SERVICE | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |  | no | no | no |  |
 | 4 | libs/boat/src/rest/guards.ts | SERVICE_METHOD | DOMAIN_SERVICE | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |  | no | no | no |  |

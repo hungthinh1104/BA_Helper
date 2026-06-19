@@ -1,6 +1,6 @@
 # Keyword Baseline v0
 
-Generated at: 2026-06-19T06:21:35.809Z
+Generated at: 2026-06-19T06:51:34.245Z
 
 This is a deterministic keyword baseline, not ReqImpact hybrid retrieval.
 Changed files are proxy ground truth.
@@ -121,7 +121,7 @@ Requirement: fix: default includes in transformer class
 
 | Rank | Artifact | File | Type | Score | Matched Tokens |
 | ---: | --- | --- | --- | ---: | --- |
-| 1 | `file:libs/boat/src/transformers/transformer.ts` | `libs/boat/src/transformers/transformer.ts` | `TRANSFORMER_FILE` | 9.00 | transformer |
+| 1 | `file:libs.boat.src.transformers.transformer.ts` | `libs/boat/src/transformers/transformer.ts` | `FILE` | 7.50 | transformer |
 
 Missed ground-truth files: None
 

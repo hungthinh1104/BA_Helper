@@ -1,20 +1,22 @@
 # Case Snapshot Alignment v0
 
-Generated at: 2026-06-19T06:38:46.654Z
+Generated at: 2026-06-19T06:54:08.637Z
 
 - Cases: 6
 - ALIGNED_VECTOR_READY: 1
 - ALIGNED_LEXICAL_ONLY: 1
 - SNAPSHOT_MISSING: 4
-- Clean retrieval eligible: 0
-- Scanner coverage failures: 2
+- Clean retrieval eligible: 1
+- Scanner coverage failures: 1
 
 This registry does not run retrieval.
-Only ALIGNED_VECTOR_READY cases are eligible for current-hybrid benchmark export.
+Only ALIGNED_VECTOR_READY cases with clean retrieval eligibility are clean benchmark candidates.
+Vector-ready E2E cases without indexed ground-truth coverage are useful for scanner coverage failure analysis, not clean retrieval aggregates.
 
 ## Status Meaning
 
 - `ALIGNED_VECTOR_READY`: case baseSha matches a mapped snapshot commit, and the snapshot has usable non-fake vector state.
+- `Clean Retrieval`: all proxy ground-truth files are materialized as indexed `CodeArtifact` rows for the mapped snapshot.
 - `ALIGNED_LEXICAL_ONLY`: case baseSha matches a mapped snapshot commit, but usable vector state is not available.
 - `SNAPSHOT_MISSING`: no local mapped snapshot exists yet for this case.
 - `SNAPSHOT_COMMIT_MISMATCH`: do not run benchmark export; create/select a snapshot at the exact case baseSha.
@@ -29,7 +31,7 @@ Only ALIGNED_VECTOR_READY cases are eligible for current-hybrid benchmark export
 | reqimpact-case-003-realworld-auth-middleware-user-object | lujakob/nestjs-realworld-example-app | a0edadd2812bea5f1ad00e4074ffb048d80df105 | SNAPSHOT_MISSING | no | no | UNKNOWN | none | none | none | 0 | none | none | none | Create/index snapshot at case baseSha. |
 | reqimpact-case-004-nest-post-sse-empty-response | nestjs/nest | 02f804159841a2771755c382832a7938b904c420 | ALIGNED_LEXICAL_ONLY | no | yes | GROUND_TRUTH_NOT_INDEXED | packages/core/router/router-response-controller.ts | ef931de3-5b6e-4465-91c2-f7d6b46e6eed | VECTOR_FAILED | 0 | none | none | none | Selected embedding profile UNKNOWN is missing from snapshot chunks. |
 | reqimpact-case-005-realworld-proper-error-object | lujakob/nestjs-realworld-example-app | 78e92f57b21038bbce0cde740dcbaeca68412c72 | SNAPSHOT_MISSING | no | no | UNKNOWN | none | none | none | 0 | none | none | none | Create/index snapshot at case baseSha. |
-| reqimpact-case-006-squareboat-default-includes | squareboat/nestjs-boilerplate | 33ca78792610f1b0ece552767ef370bcb1978205 | ALIGNED_VECTOR_READY | no | yes | GROUND_TRUTH_NOT_INDEXED | libs/boat/src/transformers/transformer.ts | b8676c81-b19b-4c97-93a5-38125b9b525b | VECTOR_READY | 14 | google-gemini-001-1536 | google-gemini-001-1536 | gemini-embedding-001 | Vector-ready for E2E, but clean retrieval aggregate is blocked until ground-truth files are indexed as CodeArtifact rows. |
+| reqimpact-case-006-squareboat-default-includes | squareboat/nestjs-boilerplate | 33ca78792610f1b0ece552767ef370bcb1978205 | ALIGNED_VECTOR_READY | yes | yes | OK | none | b8676c81-b19b-4c97-93a5-38125b9b525b | VECTOR_READY | 67 | google-gemini-001-1536 | google-gemini-001-1536 | gemini-embedding-001 | Eligible for future CURRENT_HYBRID benchmark export when real query embedding is enabled. |
 
 ## Future CURRENT_HYBRID Command Template
 
@@ -44,4 +46,5 @@ pnpm exec ts-node --project tsconfig.json evaluation/scripts/export-rag-samples.
 ## Warnings
 
 - This registry does not run retrieval.
-- Only ALIGNED_VECTOR_READY cases are eligible for current-hybrid benchmark export.
+- Only ALIGNED_VECTOR_READY cases with cleanRetrievalEligible=true are eligible for clean current-hybrid retrieval aggregates.
+- ALIGNED_VECTOR_READY cases with e2eEligible=true but cleanRetrievalEligible=false are reserved for scanner coverage or end-to-end failure analysis.

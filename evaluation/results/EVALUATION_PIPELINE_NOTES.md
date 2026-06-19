@@ -7,7 +7,8 @@
 - `CURRENT_HYBRID_SMOKE` output is not benchmark evidence and must not be aggregated as a measured method.
 - `CURRENT_HYBRID_BENCHMARK` is allowed only when repo/baseSha/snapshot alignment and real query embedding gates all pass.
 - As of the current branch state, Case 006 has one legal `CURRENT_HYBRID_BENCHMARK` export at `evaluation/results/rag-samples.current-hybrid.v0.json`.
-- Case 006 is labeled `E2E_SCANNER_COVERAGE_FAILURE`: its changed ground-truth file was not persisted as a retrievable `CodeArtifact`, so current-hybrid Recall@10=0 must not be interpreted as a clean retrieval-only miss.
+- Case 006 is now clean-retrieval eligible after file-level scanner fallback and re-indexing. Its changed ground-truth file is persisted as a `FILE` `CodeArtifact`.
+- The current-hybrid Case 006 export is a single aligned benchmark sample only. It shows a rank-1 file-level hit for `libs/boat/src/transformers/transformer.ts`, but it is not an aggregate current-hybrid result.
 - A future vector-only baseline must not use fake embeddings, hash vectors, random vectors, or keyword-derived pseudo-semantic vectors as evidence.
 - No `vector-baseline.v0.json` should exist until real embeddings are used with documented provider provenance.
 - `db-snapshot-readiness.v0.json` is a read-only environment/state probe only. It is not a retrieval benchmark result and must not be added to metrics aggregation.

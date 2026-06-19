@@ -1,6 +1,6 @@
 # ReqImpact RAG Sample Export v0
 
-- Run ID: rag-sample:current_hybrid:reqimpact-case-006-squareboat-default-includes:2026-06-18T14-44-41-057Z
+- Run ID: rag-sample:current_hybrid:reqimpact-case-006-squareboat-default-includes:2026-06-19T06-51-49-353Z
 - Mode: CURRENT_HYBRID_BENCHMARK
 - Case ID: reqimpact-case-006-squareboat-default-includes
 - Repo: squareboat/nestjs-boilerplate
@@ -37,87 +37,56 @@ Changed files are proxy ground truth. This single-case current-hybrid benchmark 
 - Artifact Embedding Model: gemini-embedding-001
 - Artifact Dimensions: 1536
 - Artifact Config Hash: ae7b397d6b6fce4573794e52c1daa56d7daed714bdc75898b8a54e4d588565d5
-- Chunk count: 14
+- Chunk count: 67
 - Artifact embedding models: gemini-embedding-001
 - Chunker versions: artifact-chunker@0.1.0
 - Alignment verified: yes
 
+## Ground Truth Artifact Coverage
+
+- Status: OK
+- Indexed ground-truth files: libs/boat/src/transformers/transformer.ts
+- Missing indexed ground-truth files: none
+
 ## Summary
 
-- Top-K count: 10
-- Ground-truth hits in top-K: 0
-- Recall@10: 0
+- Top-K count: 4
+- Ground-truth hits in top-K: 1
+- Recall@10: 1
 - Evidence coverage: 1
 - Location-only evidence count: 0
-- Code-like evidence count: 10
-- Missed ground-truth files: libs/boat/src/transformers/transformer.ts
-- Unexpected top-K files: libs/boat/src/rest/guards.ts, libs/boat/src/validator/basevalidator.ts, libs/boat/src/validator/basevalidator.ts, libs/boat/src/rest/guards.ts, libs/boat/src/rest/explorer.ts, libs/boat/src/rest/explorer.ts, libs/boat/src/validator/decorators/isValueFromConfig.ts, libs/boat/src/rest/guards.ts, libs/boat/src/validator/decorators/isValueFromConfig.ts, src/user/controllers/user.ts
+- Code-like evidence count: 4
+- Missed ground-truth files: none
+- Unexpected top-K files: libs/boat/src/interfaces/transformer.ts, src/transformer/user/detail.ts, libs/boat/src/rest/restController.ts
 
 ## Top-K
 
 | Rank | File | Type | Kind | Score | Final | Lexical | Vector | Graph | Kind Boost | Domain Boost | Signals | Evidence | Location-only | Code-like | Preview |
 | ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- | --- | --- | --- |
-| 1 | libs/boat/src/rest/guards.ts | SERVICE_METHOD | DOMAIN_SERVICE | 0.3906 | 0.3906 | 0.0000 | 0.6875 | 1.0000 | 0.0000 | 0.0000 | VECTOR, GRAPH | yes | no | yes | bindRequestHelpers(request: any): any {
-    const all = function (): Record<string, any> {
-      const inputs = { ...request.query, ...request.body, ...request.params };
+| 1 | libs/boat/src/transformers/transformer.ts | FILE | UNKNOWN | 0.4266 | 0.4266 | 0.0000 | 0.7904 | 1.0000 | 0.0000 | 0.0000 | VECTOR, GRAPH | yes | no | yes | import { Transformer$IncludeMethodOptions } from '../interfaces';
+import { Context } from '../utils/context';
+import { ExpParser } from '../utils/expParser';
 
-      ... |
-| 2 | libs/boat/src/validator/basevalidator.ts | SERVICE_METHOD | DOMAIN_SERVICE | 0.3778 | 0.3778 | 0.0000 | 0.6508 | 1.0000 | 0.0000 | 0.0000 | VECTOR, GRAPH | yes | no | yes | async fire<T>(inputs: Record<string, any>, schemaMeta: Type<T>): Promise<T> {
-    const schema: T = plainToClass(schemaMeta, inputs);
-    const errors = await validate(schema as... |
-| 3 | libs/boat/src/validator/basevalidator.ts | SERVICE_METHOD | DOMAIN_SERVICE | 0.3770 | 0.3770 | 0.0000 | 0.6485 | 1.0000 | 0.0000 | 0.0000 | VECTOR, GRAPH | yes | no | yes | parseError(error) {
-    const children = [];
-    for (const child of error.children \|\| []) {
-      children.push(this.parseError(child));
-    }
+export abstract cl... |
+| 2 | libs/boat/src/interfaces/transformer.ts | FILE | UNKNOWN | 0.4203 | 0.4203 | 0.0000 | 0.7722 | 1.0000 | 0.0000 | 0.0000 | VECTOR, GRAPH | yes | no | yes | export class Transformer$IncludeMethodOptions {
+  include?: string[];
+} |
+| 3 | src/transformer/user/detail.ts | FILE | UNKNOWN | 0.4111 | 0.4111 | 0.0000 | 0.7460 | 1.0000 | 0.0000 | 0.0000 | VECTOR, GRAPH | yes | no | yes | import { Transformer } from '@libs/boat';
 
-    const messages = [];
-    for... |
-| 4 | libs/boat/src/rest/guards.ts | SERVICE_METHOD | DOMAIN_SERVICE | 0.3768 | 0.3768 | 0.0000 | 0.6480 | 1.0000 | 0.0000 | 0.0000 | VECTOR, GRAPH | yes | no | yes | canActivate(
-    context: ExecutionContext,
-  ): boolean \| Promise<boolean> \| Observable<boolean> {
-    this.bindRequestHelpers(context.switchToHttp().getRequest());
-    this.bi... |
-| 5 | libs/boat/src/rest/explorer.ts | SERVICE_METHOD | DOMAIN_SERVICE | 0.3765 | 0.3765 | 0.0000 | 0.6471 | 1.0000 | 0.0000 | 0.0000 | VECTOR, GRAPH | yes | no | yes | onModuleInit() {
-    HttpMetadata.setBaseUrl(this.config.get('app.url'));
+export class UserDetailTransformer extends Transformer {
+  availableIncludes = ['extra', 'address', 'pin'];
+  defaultIncludes = ['pin'... |
+| 4 | libs/boat/src/rest/restController.ts | FILE | UNKNOWN | 0.4023 | 0.4023 | 0.0000 | 0.7207 | 1.0000 | 0.0000 | 0.0000 | VECTOR, GRAPH | yes | no | yes | import { Transformer } from '../transformers/transformer';
+import { get } from 'lodash';
 
-    const wrappers = this.discovery.getControllers();
-
-    wrappers.forEach((w) => {
-      const { ins... |
-| 6 | libs/boat/src/rest/explorer.ts | SERVICE_METHOD | DOMAIN_SERVICE | 0.3764 | 0.3764 | 0.0000 | 0.6467 | 1.0000 | 0.0000 | 0.0000 | VECTOR, GRAPH | yes | no | yes | lookupListeners(
-    instance: Record<string, GenericFunction>,
-    key: string,
-    baseRoute?: string,
-  ) {
-    baseRoute = baseRoute \|\| '';
-    const hasRouteName = Reflect.... |
-| 7 | libs/boat/src/validator/decorators/isValueFromConfig.ts | SERVICE_METHOD | DOMAIN_SERVICE | 0.3743 | 0.3743 | 0.0000 | 0.6409 | 1.0000 | 0.0000 | 0.0000 | VECTOR, GRAPH | yes | no | yes | defaultMessage(args: ValidationArguments) {
-    const [options] = args.constraints;
-    const validValues = this.getValues(options.key);
-    return `${args.property} should have... |
-| 8 | libs/boat/src/rest/guards.ts | SERVICE_METHOD | DOMAIN_SERVICE | 0.3739 | 0.3739 | 0.0000 | 0.6397 | 1.0000 | 0.0000 | 0.0000 | VECTOR, GRAPH | yes | no | yes | bindResponseHelpers(response: any): any {
-    const success = function (
-      data: Record<string, any> \| Array<any> \| string,
-      status = 200,
-    ) {
-      return response... |
-| 9 | libs/boat/src/validator/decorators/isValueFromConfig.ts | SERVICE_METHOD | DOMAIN_SERVICE | 0.3715 | 0.3715 | 0.0000 | 0.6328 | 1.0000 | 0.0000 | 0.0000 | VECTOR, GRAPH | yes | no | yes | validate(value: string, args: ValidationArguments): boolean {
-    const [options] = args.constraints;
-    const validValues = this.getValues(options.key);
-
-    if (isEmpty(valid... |
-| 10 | src/user/controllers/user.ts | API_ROUTE | API_ENDPOINT | 0.3706 | 0.3706 | 0.0000 | 0.6304 | 1.0000 | 0.0000 | 0.0000 | VECTOR, GRAPH | yes | no | yes | @Get('/profile')
-  async getProfile(
-    @Req() req: Request,
-    @Res() res: Response,
-  ): Promise<Response> {
-    const user = await this.service.get();
-    return res.succes... |
+export class RestController {
+  /**
+   * Transform a object
+   *
+   * @param obj
+   * @... |
 
 ## Warnings
 
 - Changed files are proxy ground truth. This export is not a final research conclusion.
 - CURRENT_HYBRID benchmark mode alignment was verified.
-- The changed ground-truth file libs/boat/src/transformers/transformer.ts was not persisted as a CodeArtifact in the aligned base snapshot. Therefore current-hybrid cannot retrieve the ground-truth artifact. This case is valid as an end-to-end scanner coverage failure, but must not be interpreted as a clean retrieval-only miss.
-- Recall@10=0 for this case should be interpreted as scanner coverage / E2E failure, not pure retrieval failure.

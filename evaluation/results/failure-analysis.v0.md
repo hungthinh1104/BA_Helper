@@ -1,6 +1,6 @@
 # Failure Analysis v0 — Lexical Baselines
 
-Generated at: 2026-06-19T06:21:52.721Z
+Generated at: 2026-06-19T06:54:10.034Z
 
 This analyzes deterministic lexical baselines only.
 Changed files are proxy ground truth.
@@ -160,24 +160,22 @@ Repo: `squareboat/nestjs-boilerplate`
 
 | Method | Outcome | R@10 | P@10 | F1@10 | Categories |
 | --- | --- | ---: | ---: | ---: | --- |
-| keyword-baseline-v0 | PASS_FULL | 1.0000 | 1.0000 | 1.0000 | SCANNER_MISSING_ARTIFACT |
+| keyword-baseline-v0 | PASS_FULL | 1.0000 | 1.0000 | 1.0000 | None |
 
 - keyword-baseline-v0 hit files: libs/boat/src/transformers/transformer.ts
 - keyword-baseline-v0 missed files: None
 - keyword-baseline-v0 unexpected files: None
-- keyword-baseline-v0 explanation: This case is labeled as an end-to-end scanner coverage failure, so retrieval metrics must not be read as clean retrieval-only performance. Lexical ranking retrieved 1 ground-truth file(s). Top ranked files were: libs/boat/src/transformers/transformer.ts.
+- keyword-baseline-v0 explanation: All proxy ground-truth files were retrieved within top-10 by exact file-path match.
 - keyword-baseline-v0 future hypotheses:
-  - [DB_SNAPSHOT] Dataset candidates or snapshot-export completeness should be verified before comparing stronger retrieval methods.
   - [CURRENT_HYBRID] Precision and review burden should be compared against later baselines because lexical ranking can retrieve nearby support files even when recall is high.
 
-| bm25-baseline-v0 | PASS_FULL | 1.0000 | 1.0000 | 1.0000 | SCANNER_MISSING_ARTIFACT |
+| bm25-baseline-v0 | PASS_FULL | 1.0000 | 1.0000 | 1.0000 | None |
 
 - bm25-baseline-v0 hit files: libs/boat/src/transformers/transformer.ts
 - bm25-baseline-v0 missed files: None
 - bm25-baseline-v0 unexpected files: None
-- bm25-baseline-v0 explanation: This case is labeled as an end-to-end scanner coverage failure, so retrieval metrics must not be read as clean retrieval-only performance. Lexical ranking retrieved 1 ground-truth file(s). Top ranked files were: libs/boat/src/transformers/transformer.ts.
+- bm25-baseline-v0 explanation: All proxy ground-truth files were retrieved within top-10 by exact file-path match.
 - bm25-baseline-v0 future hypotheses:
-  - [DB_SNAPSHOT] Dataset candidates or snapshot-export completeness should be verified before comparing stronger retrieval methods.
   - [CURRENT_HYBRID] Precision and review burden should be compared against later baselines because lexical ranking can retrieve nearby support files even when recall is high.
 
 ## Implications

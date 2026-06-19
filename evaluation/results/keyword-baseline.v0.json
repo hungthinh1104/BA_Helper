@@ -1,6 +1,6 @@
 {
   "runId": "keyword-baseline-v0-10",
-  "generatedAt": "2026-06-19T06:21:35.809Z",
+  "generatedAt": "2026-06-19T06:51:34.245Z",
   "method": "keyword-baseline-v0",
   "topK": 10,
   "cases": [
@@ -362,14 +362,14 @@
       "results": [
         {
           "rank": 1,
-          "artifactKey": "file:libs/boat/src/transformers/transformer.ts",
+          "artifactKey": "file:libs.boat.src.transformers.transformer.ts",
           "filePath": "libs/boat/src/transformers/transformer.ts",
-          "artifactType": "TRANSFORMER_FILE",
-          "score": 9,
+          "artifactType": "FILE",
+          "score": 7.5,
           "matchedTokens": [
             "transformer"
           ],
-          "retrievalReason": "keyword overlap: transformer(artifactName,artifactKey,filePath,artifactType)"
+          "retrievalReason": "keyword overlap: transformer(artifactName,artifactKey,filePath)"
         }
       ],
       "summary": {

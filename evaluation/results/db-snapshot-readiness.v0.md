@@ -1,6 +1,6 @@
 # DB Snapshot Readiness v0
 
-Generated at: 2026-06-19T06:38:38.836Z
+Generated at: 2026-06-19T06:50:09.461Z
 
 Status: READY_CANDIDATES_FOUND
 
@@ -23,7 +23,7 @@ No vector-baseline.v0.json was created.
 
 | Project | Repository | Snapshot | Commit | Index Status | Chunks | Profiles | Providers | Models | Dims | Chunkers | Classification | Usable For | Warnings |
 | --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- | --- | --- | --- | --- |
-| a89660ef-6a15-4f65-a53d-2dbb1218a2ea | b8687312-ed36-4bca-b519-32b6e49b31f4 | b8676c81-b19b-4c97-93a5-38125b9b525b | 33ca78792610f1b0ece552767ef370bcb1978205 | VECTOR_READY | 14 | google-gemini-001-1536 | google | gemini-embedding-001 | 1536 | artifact-chunker@0.1.0 | VECTOR_READY_CANDIDATE | VECTOR_BASELINE, CURRENT_HYBRID_EXPORT | none |
+| a89660ef-6a15-4f65-a53d-2dbb1218a2ea | b8687312-ed36-4bca-b519-32b6e49b31f4 | b8676c81-b19b-4c97-93a5-38125b9b525b | 33ca78792610f1b0ece552767ef370bcb1978205 | VECTOR_READY | 67 | google-gemini-001-1536 | google | gemini-embedding-001 | 1536 | artifact-chunker@0.1.0 | VECTOR_READY_CANDIDATE | VECTOR_BASELINE, CURRENT_HYBRID_EXPORT | none |
 | 3744b50c-9cda-4c15-93df-0b4a9d21bff2 | 643d9d25-ae49-4c2e-835c-22e5e9458ec4 | ba8d4eb8-e713-4bcf-ae31-12af1690b614 | d10b46097021e9d1fe8286995a0b685c8a444dfe | VECTOR_READY | 14 | none | none | gemini-embedding-001 | none | artifact-chunker@0.1.0 | LEGACY_PROFILE_MISSING | none | EmbeddingChunk rows exist but embeddingProfileId metadata is missing; treat these rows as legacy and not benchmark-ready. |
 | 84bdbbc6-d70c-4f1f-b17c-a379a3682952 | 6e99eeb1-02b2-422b-939d-d9d5174ac77a | ef931de3-5b6e-4465-91c2-f7d6b46e6eed | 02f804159841a2771755c382832a7938b904c420 | VECTOR_FAILED | 0 | none | none | none | none | none | LEXICAL_ONLY_CANDIDATE | CURRENT_HYBRID_EXPORT | Snapshot indexStatus is VECTOR_FAILED; vector retrieval may be absent or incomplete. ; No EmbeddingChunk rows exist for this snapshot. |
 | ff6fd8e0-8ded-46bf-adfe-0e02b586977f | 40772cf0-8f58-49c4-8a97-df2c6730a759 | 5d7d7147-5410-4ea0-993c-a16e3732c175 | mock-commit-sha | NOT_INDEXED | 0 | none | none | none | none | none | LEXICAL_ONLY_CANDIDATE | CURRENT_HYBRID_EXPORT | Snapshot indexStatus is NOT_INDEXED; vector retrieval may be absent or incomplete. ; No EmbeddingChunk rows exist for this snapshot. |

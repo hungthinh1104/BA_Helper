@@ -101,13 +101,19 @@ describe('validateCasesDataset', () => {
     ]);
   });
 
-  it('labels Case 006 as scanner coverage failure metadata', () => {
+  it('labels Case 006 as scanner-aligned clean retrieval metadata', () => {
     const dataset = loadDataset('evaluation/datasets/cases.v0.json');
     const case006 = dataset.cases.find(
       (item) => item.id === 'reqimpact-case-006-squareboat-default-includes',
     );
 
-    expect(case006?.evaluationScope).toBe('E2E_SCANNER_COVERAGE_FAILURE');
-    expect(case006?.scannerCoverageNote).toMatch(/not persisted as a CodeArtifact/i);
+    expect(case006?.evaluationScope).toBeUndefined();
+    expect(case006?.scannerCoverageNote).toMatch(/persisted as a FILE CodeArtifact/i);
+    expect(case006?.candidateArtifacts[0]).toEqual(
+      expect.objectContaining({
+        artifactKey: 'file:libs.boat.src.transformers.transformer.ts',
+        artifactType: 'FILE',
+      }),
+    );
   });
 });

@@ -453,11 +453,11 @@
       },
       "candidateArtifacts": [
         {
-          "artifactKey": "file:libs/boat/src/transformers/transformer.ts",
+          "artifactKey": "file:libs.boat.src.transformers.transformer.ts",
           "filePath": "libs/boat/src/transformers/transformer.ts",
           "artifactName": "transformer.ts",
-          "artifactType": "TRANSFORMER_FILE",
-          "universalKind": "DOMAIN_SERVICE"
+          "artifactType": "FILE",
+          "universalKind": "UNKNOWN"
         },
         {
           "artifactKey": "service-method:explorer.lookupListeners",
@@ -523,9 +523,8 @@
           "universalKind": "DOMAIN_SERVICE"
         }
       ],
-      "evaluationScope": "E2E_SCANNER_COVERAGE_FAILURE",
-      "scannerCoverageNote": "The changed ground-truth file libs/boat/src/transformers/transformer.ts was not persisted as a CodeArtifact in the aligned base snapshot. Therefore current-hybrid cannot retrieve the ground-truth artifact. This case is valid as an end-to-end scanner coverage failure, but must not be interpreted as a clean retrieval-only miss.",
-      "notes": "External public backend bugfix from squareboat/nestjs-boilerplate PR #37. Candidate pool mixes extracted pre-change artifacts with the changed transformer file and nearby manual file-level neighbors because the scanner did not persist transformer.ts as a CodeArtifact at this base snapshot."
+      "scannerCoverageNote": "After scanner file-level fallback and re-indexing, libs/boat/src/transformers/transformer.ts is persisted as a FILE CodeArtifact in the aligned base snapshot. This case is now eligible for clean file-level retrieval evaluation.",
+      "notes": "External public backend bugfix from squareboat/nestjs-boilerplate PR #37. Candidate pool mixes extracted pre-change artifacts with the file-level fallback artifact for transformer.ts and nearby non-ground-truth candidates."
     }
   ]
 }

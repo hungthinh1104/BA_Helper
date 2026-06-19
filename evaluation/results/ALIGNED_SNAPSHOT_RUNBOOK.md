@@ -298,7 +298,7 @@ The runtime API result was:
 
 - `snapshot.commitSha == 33ca78792610f1b0ece552767ef370bcb1978205`
 - `snapshot.indexStatus = VECTOR_READY`
-- `chunkCount = 14`
+- `chunkCount = 67`
 - All persisted chunks for this snapshot now have:
   - `embeddingProfileId = google-gemini-001-1536`
   - `embeddingProvider = google`
@@ -318,21 +318,18 @@ The runtime API result was:
 - `cases.v0.json` contains 6 cases.
 - `case-snapshot-alignment.v0.*` reports Case 006 as `ALIGNED_VECTOR_READY`.
 - `rag-samples.current-hybrid.v0.*` contains one Case 006 benchmark export.
-- Case 006 is labeled `E2E_SCANNER_COVERAGE_FAILURE`.
-- current-hybrid Recall@10=0 for Case 006 is a scanner coverage / E2E failure,
-  not a clean retrieval-only miss.
+- Case 006 is now clean-retrieval eligible after file-level scanner fallback and
+  re-indexing.
+- `libs/boat/src/transformers/transformer.ts` is persisted as a `FILE`
+  `CodeArtifact` and included in indexed ground-truth coverage.
+- current-hybrid retrieves the proxy ground-truth file at rank 1 for this
+  single aligned case.
 - no `vector-baseline.v0.json` was created.
 
 ### Follow-up after scanner fix
 
-Phase 4H should change scanner materialization so:
-
-- full 40-character commit SHA refs are not treated as branch names
-- the repository can be cloned/fetched first
-- the exact historical commit can be checked out in detached `HEAD`
-- `snapshot.commitSha` is verified against the requested dataset `baseSha`
-
-Only after that fix should Phase 4G be rerun for the Squareboat candidate.
+The scanner fallback and re-indexing path has now been verified for Case 006.
+The next clean step is a real vector-only baseline, not R1.
 
 ## Phase 4H Exact Commit Checkout Fix
 

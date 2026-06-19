@@ -1,6 +1,6 @@
 {
-  "runId": "rag-sample:case_only:reqimpact-case-006-squareboat-default-includes:2026-06-18T12-42-09-987Z",
-  "generatedAt": "2026-06-18T12:42:09.987Z",
+  "runId": "rag-sample:case_only:reqimpact-case-006-squareboat-default-includes:2026-06-19T06-51-35-327Z",
+  "generatedAt": "2026-06-19T06:51:35.327Z",
   "mode": "CASE_ONLY",
   "caseId": "reqimpact-case-006-squareboat-default-includes",
   "repo": "squareboat/nestjs-boilerplate",
@@ -11,9 +11,9 @@
   "topK": [
     {
       "rank": 1,
-      "artifactKey": "file:libs/boat/src/transformers/transformer.ts",
+      "artifactKey": "file:libs.boat.src.transformers.transformer.ts",
       "filePath": "libs/boat/src/transformers/transformer.ts",
-      "artifactType": "TRANSFORMER_FILE",
+      "artifactType": "FILE",
       "retrievalSignals": [],
       "retrievalReason": "CASE_ONLY mode does not run retrieval; candidateArtifacts are exported in dataset order.",
       "evidence": {
@@ -23,7 +23,7 @@
         "isLocationOnly": false,
         "isCodeLike": false
       },
-      "universalKind": "DOMAIN_SERVICE"
+      "universalKind": "UNKNOWN"
     },
     {
       "rank": 2,

@@ -1,6 +1,6 @@
 {
   "runId": "bm25-baseline-v0-10",
-  "generatedAt": "2026-06-19T06:21:35.883Z",
+  "generatedAt": "2026-06-19T06:51:34.473Z",
   "method": "bm25-baseline-v0",
   "topK": 10,
   "cases": [
@@ -362,10 +362,10 @@
       "results": [
         {
           "rank": 1,
-          "artifactKey": "file:libs/boat/src/transformers/transformer.ts",
+          "artifactKey": "file:libs.boat.src.transformers.transformer.ts",
           "filePath": "libs/boat/src/transformers/transformer.ts",
-          "artifactType": "TRANSFORMER_FILE",
-          "score": 3.356907,
+          "artifactType": "FILE",
+          "score": 3.193166,
           "matchedTokens": [
             "transformer"
           ],

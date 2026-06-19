@@ -1,12 +1,12 @@
 {
   "runId": "case-snapshot-alignment-v0",
-  "generatedAt": "2026-06-19T06:38:46.654Z",
+  "generatedAt": "2026-06-19T06:54:08.637Z",
   "caseCount": 6,
   "alignedVectorReadyCount": 1,
   "alignedLexicalOnlyCount": 1,
   "snapshotMissingCount": 4,
-  "cleanRetrievalEligibleCount": 0,
-  "scannerCoverageFailureCount": 2,
+  "cleanRetrievalEligibleCount": 1,
+  "scannerCoverageFailureCount": 1,
   "cases": [
     {
       "caseId": "reqimpact-case-001-backend-reliability-semantics",
@@ -143,7 +143,7 @@
       "snapshotId": "b8676c81-b19b-4c97-93a5-38125b9b525b",
       "snapshotCommitSha": "33ca78792610f1b0ece552767ef370bcb1978205",
       "indexStatus": "VECTOR_READY",
-      "chunkCount": 14,
+      "chunkCount": 67,
       "selectedEmbeddingProfileId": "google-gemini-001-1536",
       "embeddingProfileIds": [
         "google-gemini-001-1536"
@@ -160,20 +160,19 @@
       "embeddingConfigHashes": [
         "ae7b397d6b6fce4573794e52c1daa56d7daed714bdc75898b8a54e4d588565d5"
       ],
-      "cleanRetrievalEligible": false,
+      "cleanRetrievalEligible": true,
       "e2eEligible": true,
-      "scannerCoverageStatus": "GROUND_TRUTH_NOT_INDEXED",
-      "missingIndexedGroundTruthFiles": [
-        "libs/boat/src/transformers/transformer.ts"
-      ],
+      "scannerCoverageStatus": "OK",
+      "missingIndexedGroundTruthFiles": [],
       "warnings": [],
       "notes": "https://github.com/squareboat/nestjs-boilerplate",
       "status": "ALIGNED_VECTOR_READY",
-      "requiredNextAction": "Vector-ready for E2E, but clean retrieval aggregate is blocked until ground-truth files are indexed as CodeArtifact rows."
+      "requiredNextAction": "Eligible for future CURRENT_HYBRID benchmark export when real query embedding is enabled."
     }
   ],
   "warnings": [
     "This registry does not run retrieval.",
-    "Only ALIGNED_VECTOR_READY cases are eligible for current-hybrid benchmark export."
+    "Only ALIGNED_VECTOR_READY cases with cleanRetrievalEligible=true are eligible for clean current-hybrid retrieval aggregates.",
+    "ALIGNED_VECTOR_READY cases with e2eEligible=true but cleanRetrievalEligible=false are reserved for scanner coverage or end-to-end failure analysis."
   ]
 }

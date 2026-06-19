@@ -397,7 +397,8 @@ export function buildCaseSnapshotAlignmentRegistry(params?: {
     cases,
     warnings: [
       'This registry does not run retrieval.',
-      'Only ALIGNED_VECTOR_READY cases are eligible for current-hybrid benchmark export.',
+      'Only ALIGNED_VECTOR_READY cases with cleanRetrievalEligible=true are eligible for clean current-hybrid retrieval aggregates.',
+      'ALIGNED_VECTOR_READY cases with e2eEligible=true but cleanRetrievalEligible=false are reserved for scanner coverage or end-to-end failure analysis.',
       ...(readiness ? [] : ['DB readiness file was not found. Cases remain snapshot-missing until mappings and readiness data exist.']),
       ...(overrides.mappings.length === 0
         ? ['No case-snapshot override mappings were provided.']
@@ -422,11 +423,13 @@ export function renderCaseSnapshotAlignmentMarkdown(
     `- Scanner coverage failures: ${registry.scannerCoverageFailureCount}`,
     '',
     'This registry does not run retrieval.',
-    'Only ALIGNED_VECTOR_READY cases are eligible for current-hybrid benchmark export.',
+    'Only ALIGNED_VECTOR_READY cases with clean retrieval eligibility are clean benchmark candidates.',
+    'Vector-ready E2E cases without indexed ground-truth coverage are useful for scanner coverage failure analysis, not clean retrieval aggregates.',
     '',
     '## Status Meaning',
     '',
     '- `ALIGNED_VECTOR_READY`: case baseSha matches a mapped snapshot commit, and the snapshot has usable non-fake vector state.',
+    '- `Clean Retrieval`: all proxy ground-truth files are materialized as indexed `CodeArtifact` rows for the mapped snapshot.',
     '- `ALIGNED_LEXICAL_ONLY`: case baseSha matches a mapped snapshot commit, but usable vector state is not available.',
     '- `SNAPSHOT_MISSING`: no local mapped snapshot exists yet for this case.',
     '- `SNAPSHOT_COMMIT_MISMATCH`: do not run benchmark export; create/select a snapshot at the exact case baseSha.',

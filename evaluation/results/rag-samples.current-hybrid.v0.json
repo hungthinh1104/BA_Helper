@@ -1,6 +1,6 @@
 {
-  "runId": "rag-sample:current_hybrid:reqimpact-case-006-squareboat-default-includes:2026-06-18T14-44-41-057Z",
-  "generatedAt": "2026-06-18T14:44:41.057Z",
+  "runId": "rag-sample:current_hybrid:reqimpact-case-006-squareboat-default-includes:2026-06-19T06-51-49-353Z",
+  "generatedAt": "2026-06-19T06:51:49.353Z",
   "mode": "CURRENT_HYBRID_BENCHMARK",
   "caseId": "reqimpact-case-006-squareboat-default-includes",
   "repo": "squareboat/nestjs-boilerplate",
@@ -21,7 +21,7 @@
     "createdAt": "2026-06-18T07:13:24.588Z"
   },
   "embeddingState": {
-    "chunkCount": 14,
+    "chunkCount": 67,
     "embeddingProfileIds": [
       "google-gemini-001-1536"
     ],
@@ -47,7 +47,7 @@
         "embeddingModel": "gemini-embedding-001",
         "embeddingDimensions": 1536,
         "embeddingConfigHash": "ae7b397d6b6fce4573794e52c1daa56d7daed714bdc75898b8a54e4d588565d5",
-        "chunkCount": 14
+        "chunkCount": 67
       }
     ],
     "queryEmbeddingProfileId": "google-gemini-001-1536",
@@ -65,17 +65,24 @@
     ],
     "alignmentVerified": true
   },
+  "groundTruthCoverage": {
+    "status": "OK",
+    "indexedGroundTruthFiles": [
+      "libs/boat/src/transformers/transformer.ts"
+    ],
+    "missingIndexedGroundTruthFiles": []
+  },
   "topK": [
     {
       "rank": 1,
-      "artifactKey": "service-method:guards.bindRequestHelpers",
-      "filePath": "libs/boat/src/rest/guards.ts",
-      "artifactType": "SERVICE_METHOD",
-      "universalKind": "DOMAIN_SERVICE",
-      "score": 0.390616064704422,
-      "finalScore": 0.390616064704422,
+      "artifactKey": "file:libs.boat.src.transformers.transformer.ts",
+      "filePath": "libs/boat/src/transformers/transformer.ts",
+      "artifactType": "FILE",
+      "universalKind": "UNKNOWN",
+      "score": 0.42664254238136246,
+      "finalScore": 0.42664254238136246,
       "lexicalScore": 0,
-      "vectorScore": 0.687474470584063,
+      "vectorScore": 0.79040726394675,
       "graphScore": 1,
       "kindBoost": 0,
       "domainBoost": 0,
@@ -83,17 +90,17 @@
         "VECTOR",
         "GRAPH"
       ],
-      "retrievalReason": "semantic match (0.69); graph seed",
+      "retrievalReason": "semantic match (0.79); graph seed",
       "strategyVersion": "hybrid-retrieval-v1",
       "retrievalDiagnostics": {
         "version": "retrieval-diagnostics@0.1.0",
         "lexicalScoreNorm": 0,
-        "vectorScoreNorm": 0.687474470584063,
+        "vectorScoreNorm": 0.79040726394675,
         "graphBoostNorm": 1,
         "kindBoostNorm": 0,
         "domainBoostNorm": 0,
         "matchedIntentLabels": [],
-        "universalKind": "DOMAIN_SERVICE",
+        "universalKind": "UNKNOWN",
         "repositoryProfile": {
           "domain": "UNKNOWN",
           "framework": "NESTJS",
@@ -101,26 +108,27 @@
           "domainProfileFallback": true
         },
         "matchedDomainTerms": [],
-        "finalScore": 0.390616064704422
+        "queryRedacted": false,
+        "finalScore": 0.42664254238136246
       },
       "evidence": {
         "hasEvidence": true,
-        "excerptLength": 440,
-        "excerptPreview": "bindRequestHelpers(request: any): any {\n    const all = function (): Record<string, any> {\n      const inputs = { ...request.query, ...request.body, ...request.params };\n\n      ...",
+        "excerptLength": 2528,
+        "excerptPreview": "import { Transformer$IncludeMethodOptions } from '../interfaces';\nimport { Context } from '../utils/context';\nimport { ExpParser } from '../utils/expParser';\n\nexport abstract cl...",
         "isLocationOnly": false,
         "isCodeLike": true
       }
     },
     {
       "rank": 2,
-      "artifactKey": "service-method:basevalidator.fire",
-      "filePath": "libs/boat/src/validator/basevalidator.ts",
-      "artifactType": "SERVICE_METHOD",
-      "universalKind": "DOMAIN_SERVICE",
-      "score": 0.37778918229905323,
-      "finalScore": 0.37778918229905323,
+      "artifactKey": "file:libs.boat.src.interfaces.transformer.ts",
+      "filePath": "libs/boat/src/interfaces/transformer.ts",
+      "artifactType": "FILE",
+      "universalKind": "UNKNOWN",
+      "score": 0.42025536862713087,
+      "finalScore": 0.42025536862713087,
       "lexicalScore": 0,
-      "vectorScore": 0.6508262351401521,
+      "vectorScore": 0.7721581960775167,
       "graphScore": 1,
       "kindBoost": 0,
       "domainBoost": 0,
@@ -128,17 +136,17 @@
         "VECTOR",
         "GRAPH"
       ],
-      "retrievalReason": "semantic match (0.65); graph seed",
+      "retrievalReason": "semantic match (0.77); graph seed",
       "strategyVersion": "hybrid-retrieval-v1",
       "retrievalDiagnostics": {
         "version": "retrieval-diagnostics@0.1.0",
         "lexicalScoreNorm": 0,
-        "vectorScoreNorm": 0.6508262351401521,
+        "vectorScoreNorm": 0.7721581960775167,
         "graphBoostNorm": 1,
         "kindBoostNorm": 0,
         "domainBoostNorm": 0,
         "matchedIntentLabels": [],
-        "universalKind": "DOMAIN_SERVICE",
+        "universalKind": "UNKNOWN",
         "repositoryProfile": {
           "domain": "UNKNOWN",
           "framework": "NESTJS",
@@ -146,26 +154,27 @@
           "domainProfileFallback": true
         },
         "matchedDomainTerms": [],
-        "finalScore": 0.37778918229905323
+        "queryRedacted": false,
+        "finalScore": 0.42025536862713087
       },
       "evidence": {
         "hasEvidence": true,
-        "excerptLength": 824,
-        "excerptPreview": "async fire<T>(inputs: Record<string, any>, schemaMeta: Type<T>): Promise<T> {\n    const schema: T = plainToClass(schemaMeta, inputs);\n    const errors = await validate(schema as...",
+        "excerptLength": 71,
+        "excerptPreview": "export class Transformer$IncludeMethodOptions {\n  include?: string[];\n}",
         "isLocationOnly": false,
         "isCodeLike": true
       }
     },
     {
       "rank": 3,
-      "artifactKey": "service-method:basevalidator.parseError",
-      "filePath": "libs/boat/src/validator/basevalidator.ts",
-      "artifactType": "SERVICE_METHOD",
-      "universalKind": "DOMAIN_SERVICE",
-      "score": 0.37697511991784344,
-      "finalScore": 0.37697511991784344,
+      "artifactKey": "file:src.transformer.user.detail.ts",
+      "filePath": "src/transformer/user/detail.ts",
+      "artifactType": "FILE",
+      "universalKind": "UNKNOWN",
+      "score": 0.41110565844493097,
+      "finalScore": 0.41110565844493097,
       "lexicalScore": 0,
-      "vectorScore": 0.6485003426224099,
+      "vectorScore": 0.7460161669855171,
       "graphScore": 1,
       "kindBoost": 0,
       "domainBoost": 0,
@@ -173,17 +182,17 @@
         "VECTOR",
         "GRAPH"
       ],
-      "retrievalReason": "semantic match (0.65); graph seed",
+      "retrievalReason": "semantic match (0.75); graph seed",
       "strategyVersion": "hybrid-retrieval-v1",
       "retrievalDiagnostics": {
         "version": "retrieval-diagnostics@0.1.0",
         "lexicalScoreNorm": 0,
-        "vectorScoreNorm": 0.6485003426224099,
+        "vectorScoreNorm": 0.7460161669855171,
         "graphBoostNorm": 1,
         "kindBoostNorm": 0,
         "domainBoostNorm": 0,
         "matchedIntentLabels": [],
-        "universalKind": "DOMAIN_SERVICE",
+        "universalKind": "UNKNOWN",
         "repositoryProfile": {
           "domain": "UNKNOWN",
           "framework": "NESTJS",
@@ -191,26 +200,27 @@
           "domainProfileFallback": true
         },
         "matchedDomainTerms": [],
-        "finalScore": 0.37697511991784344
+        "queryRedacted": false,
+        "finalScore": 0.41110565844493097
       },
       "evidence": {
         "hasEvidence": true,
-        "excerptLength": 630,
-        "excerptPreview": "parseError(error) {\n    const children = [];\n    for (const child of error.children || []) {\n      children.push(this.parseError(child));\n    }\n\n    const messages = [];\n    for...",
+        "excerptLength": 758,
+        "excerptPreview": "import { Transformer } from '@libs/boat';\n\nexport class UserDetailTransformer extends Transformer {\n  availableIncludes = ['extra', 'address', 'pin'];\n  defaultIncludes = ['pin'...",
         "isLocationOnly": false,
         "isCodeLike": true
       }
     },
     {
       "rank": 4,
-      "artifactKey": "service-method:guards.canActivate",
-      "filePath": "libs/boat/src/rest/guards.ts",
-      "artifactType": "SERVICE_METHOD",
-      "universalKind": "DOMAIN_SERVICE",
-      "score": 0.3768152572755593,
-      "finalScore": 0.3768152572755593,
+      "artifactKey": "file:libs.boat.src.rest.restController.ts",
+      "filePath": "libs/boat/src/rest/restController.ts",
+      "artifactType": "FILE",
+      "universalKind": "UNKNOWN",
+      "score": 0.4022573473760308,
+      "finalScore": 0.4022573473760308,
       "lexicalScore": 0,
-      "vectorScore": 0.6480435922158838,
+      "vectorScore": 0.7207352782172309,
       "graphScore": 1,
       "kindBoost": 0,
       "domainBoost": 0,
@@ -218,17 +228,17 @@
         "VECTOR",
         "GRAPH"
       ],
-      "retrievalReason": "semantic match (0.65); graph seed",
+      "retrievalReason": "semantic match (0.72); graph seed",
       "strategyVersion": "hybrid-retrieval-v1",
       "retrievalDiagnostics": {
         "version": "retrieval-diagnostics@0.1.0",
         "lexicalScoreNorm": 0,
-        "vectorScoreNorm": 0.6480435922158838,
+        "vectorScoreNorm": 0.7207352782172309,
         "graphBoostNorm": 1,
         "kindBoostNorm": 0,
         "domainBoostNorm": 0,
         "matchedIntentLabels": [],
-        "universalKind": "DOMAIN_SERVICE",
+        "universalKind": "UNKNOWN",
         "repositoryProfile": {
           "domain": "UNKNOWN",
           "framework": "NESTJS",
@@ -236,314 +246,34 @@
           "domainProfileFallback": true
         },
         "matchedDomainTerms": [],
-        "finalScore": 0.3768152572755593
+        "queryRedacted": false,
+        "finalScore": 0.4022573473760308
       },
       "evidence": {
         "hasEvidence": true,
-        "excerptLength": 255,
-        "excerptPreview": "canActivate(\n    context: ExecutionContext,\n  ): boolean | Promise<boolean> | Observable<boolean> {\n    this.bindRequestHelpers(context.switchToHttp().getRequest());\n    this.bi...",
-        "isLocationOnly": false,
-        "isCodeLike": true
-      }
-    },
-    {
-      "rank": 5,
-      "artifactKey": "service-method:explorer.onModuleInit",
-      "filePath": "libs/boat/src/rest/explorer.ts",
-      "artifactType": "SERVICE_METHOD",
-      "universalKind": "DOMAIN_SERVICE",
-      "score": 0.3764805950665652,
-      "finalScore": 0.3764805950665652,
-      "lexicalScore": 0,
-      "vectorScore": 0.6470874144759007,
-      "graphScore": 1,
-      "kindBoost": 0,
-      "domainBoost": 0,
-      "retrievalSignals": [
-        "VECTOR",
-        "GRAPH"
-      ],
-      "retrievalReason": "semantic match (0.65); graph seed",
-      "strategyVersion": "hybrid-retrieval-v1",
-      "retrievalDiagnostics": {
-        "version": "retrieval-diagnostics@0.1.0",
-        "lexicalScoreNorm": 0,
-        "vectorScoreNorm": 0.6470874144759007,
-        "graphBoostNorm": 1,
-        "kindBoostNorm": 0,
-        "domainBoostNorm": 0,
-        "matchedIntentLabels": [],
-        "universalKind": "DOMAIN_SERVICE",
-        "repositoryProfile": {
-          "domain": "UNKNOWN",
-          "framework": "NESTJS",
-          "language": "TYPESCRIPT",
-          "domainProfileFallback": true
-        },
-        "matchedDomainTerms": [],
-        "finalScore": 0.3764805950665652
-      },
-      "evidence": {
-        "hasEvidence": true,
-        "excerptLength": 642,
-        "excerptPreview": "onModuleInit() {\n    HttpMetadata.setBaseUrl(this.config.get('app.url'));\n\n    const wrappers = this.discovery.getControllers();\n\n    wrappers.forEach((w) => {\n      const { ins...",
-        "isLocationOnly": false,
-        "isCodeLike": true
-      }
-    },
-    {
-      "rank": 6,
-      "artifactKey": "service-method:explorer.lookupListeners",
-      "filePath": "libs/boat/src/rest/explorer.ts",
-      "artifactType": "SERVICE_METHOD",
-      "universalKind": "DOMAIN_SERVICE",
-      "score": 0.3763574071633044,
-      "finalScore": 0.3763574071633044,
-      "lexicalScore": 0,
-      "vectorScore": 0.6467354490380126,
-      "graphScore": 1,
-      "kindBoost": 0,
-      "domainBoost": 0,
-      "retrievalSignals": [
-        "VECTOR",
-        "GRAPH"
-      ],
-      "retrievalReason": "semantic match (0.65); graph seed",
-      "strategyVersion": "hybrid-retrieval-v1",
-      "retrievalDiagnostics": {
-        "version": "retrieval-diagnostics@0.1.0",
-        "lexicalScoreNorm": 0,
-        "vectorScoreNorm": 0.6467354490380126,
-        "graphBoostNorm": 1,
-        "kindBoostNorm": 0,
-        "domainBoostNorm": 0,
-        "matchedIntentLabels": [],
-        "universalKind": "DOMAIN_SERVICE",
-        "repositoryProfile": {
-          "domain": "UNKNOWN",
-          "framework": "NESTJS",
-          "language": "TYPESCRIPT",
-          "domainProfileFallback": true
-        },
-        "matchedDomainTerms": [],
-        "finalScore": 0.3763574071633044
-      },
-      "evidence": {
-        "hasEvidence": true,
-        "excerptLength": 451,
-        "excerptPreview": "lookupListeners(\n    instance: Record<string, GenericFunction>,\n    key: string,\n    baseRoute?: string,\n  ) {\n    baseRoute = baseRoute || '';\n    const hasRouteName = Reflect....",
-        "isLocationOnly": false,
-        "isCodeLike": true
-      }
-    },
-    {
-      "rank": 7,
-      "artifactKey": "service-method:isValueFromConfig.defaultMessage",
-      "filePath": "libs/boat/src/validator/decorators/isValueFromConfig.ts",
-      "artifactType": "SERVICE_METHOD",
-      "universalKind": "DOMAIN_SERVICE",
-      "score": 0.3743217580222568,
-      "finalScore": 0.3743217580222568,
-      "lexicalScore": 0,
-      "vectorScore": 0.6409193086350196,
-      "graphScore": 1,
-      "kindBoost": 0,
-      "domainBoost": 0,
-      "retrievalSignals": [
-        "VECTOR",
-        "GRAPH"
-      ],
-      "retrievalReason": "semantic match (0.64); graph seed",
-      "strategyVersion": "hybrid-retrieval-v1",
-      "retrievalDiagnostics": {
-        "version": "retrieval-diagnostics@0.1.0",
-        "lexicalScoreNorm": 0,
-        "vectorScoreNorm": 0.6409193086350196,
-        "graphBoostNorm": 1,
-        "kindBoostNorm": 0,
-        "domainBoostNorm": 0,
-        "matchedIntentLabels": [],
-        "universalKind": "DOMAIN_SERVICE",
-        "repositoryProfile": {
-          "domain": "UNKNOWN",
-          "framework": "NESTJS",
-          "language": "TYPESCRIPT",
-          "domainProfileFallback": true
-        },
-        "matchedDomainTerms": [],
-        "finalScore": 0.3743217580222568
-      },
-      "evidence": {
-        "hasEvidence": true,
-        "excerptLength": 241,
-        "excerptPreview": "defaultMessage(args: ValidationArguments) {\n    const [options] = args.constraints;\n    const validValues = this.getValues(options.key);\n    return `${args.property} should have...",
-        "isLocationOnly": false,
-        "isCodeLike": true
-      }
-    },
-    {
-      "rank": 8,
-      "artifactKey": "service-method:guards.bindResponseHelpers",
-      "filePath": "libs/boat/src/rest/guards.ts",
-      "artifactType": "SERVICE_METHOD",
-      "universalKind": "DOMAIN_SERVICE",
-      "score": 0.37390733432493617,
-      "finalScore": 0.37390733432493617,
-      "lexicalScore": 0,
-      "vectorScore": 0.6397352409283892,
-      "graphScore": 1,
-      "kindBoost": 0,
-      "domainBoost": 0,
-      "retrievalSignals": [
-        "VECTOR",
-        "GRAPH"
-      ],
-      "retrievalReason": "semantic match (0.64); graph seed",
-      "strategyVersion": "hybrid-retrieval-v1",
-      "retrievalDiagnostics": {
-        "version": "retrieval-diagnostics@0.1.0",
-        "lexicalScoreNorm": 0,
-        "vectorScoreNorm": 0.6397352409283892,
-        "graphBoostNorm": 1,
-        "kindBoostNorm": 0,
-        "domainBoostNorm": 0,
-        "matchedIntentLabels": [],
-        "universalKind": "DOMAIN_SERVICE",
-        "repositoryProfile": {
-          "domain": "UNKNOWN",
-          "framework": "NESTJS",
-          "language": "TYPESCRIPT",
-          "domainProfileFallback": true
-        },
-        "matchedDomainTerms": [],
-        "finalScore": 0.37390733432493617
-      },
-      "evidence": {
-        "hasEvidence": true,
-        "excerptLength": 1232,
-        "excerptPreview": "bindResponseHelpers(response: any): any {\n    const success = function (\n      data: Record<string, any> | Array<any> | string,\n      status = 200,\n    ) {\n      return response...",
-        "isLocationOnly": false,
-        "isCodeLike": true
-      }
-    },
-    {
-      "rank": 9,
-      "artifactKey": "service-method:isValueFromConfig.validate",
-      "filePath": "libs/boat/src/validator/decorators/isValueFromConfig.ts",
-      "artifactType": "SERVICE_METHOD",
-      "universalKind": "DOMAIN_SERVICE",
-      "score": 0.37148504151270173,
-      "finalScore": 0.37148504151270173,
-      "lexicalScore": 0,
-      "vectorScore": 0.632814404322005,
-      "graphScore": 1,
-      "kindBoost": 0,
-      "domainBoost": 0,
-      "retrievalSignals": [
-        "VECTOR",
-        "GRAPH"
-      ],
-      "retrievalReason": "semantic match (0.63); graph seed",
-      "strategyVersion": "hybrid-retrieval-v1",
-      "retrievalDiagnostics": {
-        "version": "retrieval-diagnostics@0.1.0",
-        "lexicalScoreNorm": 0,
-        "vectorScoreNorm": 0.632814404322005,
-        "graphBoostNorm": 1,
-        "kindBoostNorm": 0,
-        "domainBoostNorm": 0,
-        "matchedIntentLabels": [],
-        "universalKind": "DOMAIN_SERVICE",
-        "repositoryProfile": {
-          "domain": "UNKNOWN",
-          "framework": "NESTJS",
-          "language": "TYPESCRIPT",
-          "domainProfileFallback": true
-        },
-        "matchedDomainTerms": [],
-        "finalScore": 0.37148504151270173
-      },
-      "evidence": {
-        "hasEvidence": true,
-        "excerptLength": 326,
-        "excerptPreview": "validate(value: string, args: ValidationArguments): boolean {\n    const [options] = args.constraints;\n    const validValues = this.getValues(options.key);\n\n    if (isEmpty(valid...",
-        "isLocationOnly": false,
-        "isCodeLike": true
-      }
-    },
-    {
-      "rank": 10,
-      "artifactKey": "api:user.getProfile",
-      "filePath": "src/user/controllers/user.ts",
-      "artifactType": "API_ROUTE",
-      "universalKind": "API_ENDPOINT",
-      "score": 0.3706354165834689,
-      "finalScore": 0.3706354165834689,
-      "lexicalScore": 0,
-      "vectorScore": 0.6303869045241969,
-      "graphScore": 1,
-      "kindBoost": 0,
-      "domainBoost": 0,
-      "retrievalSignals": [
-        "VECTOR",
-        "GRAPH"
-      ],
-      "retrievalReason": "semantic match (0.63); graph seed",
-      "strategyVersion": "hybrid-retrieval-v1",
-      "retrievalDiagnostics": {
-        "version": "retrieval-diagnostics@0.1.0",
-        "lexicalScoreNorm": 0,
-        "vectorScoreNorm": 0.6303869045241969,
-        "graphBoostNorm": 1,
-        "kindBoostNorm": 0,
-        "domainBoostNorm": 0,
-        "matchedIntentLabels": [],
-        "universalKind": "API_ENDPOINT",
-        "repositoryProfile": {
-          "domain": "UNKNOWN",
-          "framework": "NESTJS",
-          "language": "TYPESCRIPT",
-          "domainProfileFallback": true
-        },
-        "matchedDomainTerms": [],
-        "finalScore": 0.3706354165834689
-      },
-      "evidence": {
-        "hasEvidence": true,
-        "excerptLength": 262,
-        "excerptPreview": "@Get('/profile')\n  async getProfile(\n    @Req() req: Request,\n    @Res() res: Response,\n  ): Promise<Response> {\n    const user = await this.service.get();\n    return res.succes...",
+        "excerptLength": 1863,
+        "excerptPreview": "import { Transformer } from '../transformers/transformer';\nimport { get } from 'lodash';\n\nexport class RestController {\n  /**\n   * Transform a object\n   *\n   * @param obj\n   * @...",
         "isLocationOnly": false,
         "isCodeLike": true
       }
     }
   ],
   "summary": {
-    "topKCount": 10,
-    "groundTruthHitCount": 0,
-    "recallAt10": 0,
+    "topKCount": 4,
+    "groundTruthHitCount": 1,
+    "recallAt10": 1,
     "evidenceCoverage": 1,
     "locationOnlyEvidenceCount": 0,
-    "codeLikeEvidenceCount": 10,
-    "missedGroundTruthFiles": [
-      "libs/boat/src/transformers/transformer.ts"
-    ],
+    "codeLikeEvidenceCount": 4,
+    "missedGroundTruthFiles": [],
     "unexpectedTopKFiles": [
-      "libs/boat/src/rest/guards.ts",
-      "libs/boat/src/validator/basevalidator.ts",
-      "libs/boat/src/validator/basevalidator.ts",
-      "libs/boat/src/rest/guards.ts",
-      "libs/boat/src/rest/explorer.ts",
-      "libs/boat/src/rest/explorer.ts",
-      "libs/boat/src/validator/decorators/isValueFromConfig.ts",
-      "libs/boat/src/rest/guards.ts",
-      "libs/boat/src/validator/decorators/isValueFromConfig.ts",
-      "src/user/controllers/user.ts"
+      "libs/boat/src/interfaces/transformer.ts",
+      "src/transformer/user/detail.ts",
+      "libs/boat/src/rest/restController.ts"
     ]
   },
   "warnings": [
     "Changed files are proxy ground truth. This export is not a final research conclusion.",
-    "CURRENT_HYBRID benchmark mode alignment was verified.",
-    "The changed ground-truth file libs/boat/src/transformers/transformer.ts was not persisted as a CodeArtifact in the aligned base snapshot. Therefore current-hybrid cannot retrieve the ground-truth artifact. This case is valid as an end-to-end scanner coverage failure, but must not be interpreted as a clean retrieval-only miss.",
-    "Recall@10=0 for this case should be interpreted as scanner coverage / E2E failure, not pure retrieval failure."
+    "CURRENT_HYBRID benchmark mode alignment was verified."
   ]
 }

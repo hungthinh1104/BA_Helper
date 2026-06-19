@@ -1,6 +1,6 @@
 # BM25 Baseline v0
 
-Generated at: 2026-06-19T06:21:35.883Z
+Generated at: 2026-06-19T06:51:34.473Z
 
 This is a deterministic BM25 lexical baseline, not vector retrieval.
 Changed files are proxy ground truth.
@@ -124,7 +124,7 @@ Requirement: fix: default includes in transformer class
 
 | Rank | Artifact | File | Type | Score | Matched Tokens |
 | ---: | --- | --- | --- | ---: | --- |
-| 1 | `file:libs/boat/src/transformers/transformer.ts` | `libs/boat/src/transformers/transformer.ts` | `TRANSFORMER_FILE` | 3.3569 | transformer |
+| 1 | `file:libs.boat.src.transformers.transformer.ts` | `libs/boat/src/transformers/transformer.ts` | `FILE` | 3.1932 | transformer |
 
 Missed ground-truth files: None
 

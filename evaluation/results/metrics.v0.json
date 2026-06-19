@@ -1,9 +1,9 @@
 {
   "runId": "metrics-v0-2",
-  "generatedAt": "2026-06-19T06:21:52.263Z",
+  "generatedAt": "2026-06-19T06:54:08.250Z",
   "dataset": {
     "caseCount": 6,
-    "scannerCoverageFailureCaseCount": 1,
+    "scannerCoverageFailureCaseCount": 0,
     "groundTruthType": "changed-files-proxy",
     "evaluationLevel": "file"
   },
@@ -240,18 +240,18 @@
         "totalFalseNegativeFilesAt10": 18
       },
       "cleanRetrievalAggregate": {
-        "macroRecallAt5": 0.4167,
-        "macroRecallAt10": 0.4667,
-        "macroPrecisionAt5": 0.3,
-        "macroPrecisionAt10": 0.2643,
-        "macroF1At5": 0.3276,
-        "macroF1At10": 0.3054,
-        "macroReviewBurdenAt5": 1.2333,
-        "macroReviewBurdenAt10": 1.55,
+        "macroRecallAt5": 0.5139,
+        "macroRecallAt10": 0.5555,
+        "macroPrecisionAt5": 0.4167,
+        "macroPrecisionAt10": 0.3869,
+        "macroF1At5": 0.4397,
+        "macroF1At10": 0.4212,
+        "macroReviewBurdenAt5": 1.1945,
+        "macroReviewBurdenAt10": 1.4583,
         "noHitCaseCountAt10": 2,
-        "totalCases": 5,
-        "totalGroundTruthFiles": 26,
-        "totalTruePositiveFilesAt10": 8,
+        "totalCases": 6,
+        "totalGroundTruthFiles": 27,
+        "totalTruePositiveFilesAt10": 9,
         "totalFalsePositiveFilesAt10": 11,
         "totalFalseNegativeFilesAt10": 18
       }
@@ -488,18 +488,18 @@
         "totalFalseNegativeFilesAt10": 18
       },
       "cleanRetrievalAggregate": {
-        "macroRecallAt5": 0.4167,
-        "macroRecallAt10": 0.4667,
-        "macroPrecisionAt5": 0.3,
-        "macroPrecisionAt10": 0.2643,
-        "macroF1At5": 0.3276,
-        "macroF1At10": 0.3054,
-        "macroReviewBurdenAt5": 1.2333,
-        "macroReviewBurdenAt10": 1.55,
+        "macroRecallAt5": 0.5139,
+        "macroRecallAt10": 0.5555,
+        "macroPrecisionAt5": 0.4167,
+        "macroPrecisionAt10": 0.3869,
+        "macroF1At5": 0.4397,
+        "macroF1At10": 0.4212,
+        "macroReviewBurdenAt5": 1.1945,
+        "macroReviewBurdenAt10": 1.4583,
         "noHitCaseCountAt10": 2,
-        "totalCases": 5,
-        "totalGroundTruthFiles": 26,
-        "totalTruePositiveFilesAt10": 8,
+        "totalCases": 6,
+        "totalGroundTruthFiles": 27,
+        "totalTruePositiveFilesAt10": 9,
         "totalFalsePositiveFilesAt10": 11,
         "totalFalseNegativeFilesAt10": 18
       }
@@ -508,8 +508,6 @@
   "warnings": [
     "Changed files are proxy ground truth, not absolute impacted files.",
     "Metrics are file-level only, not method-level.",
-    "Clean retrieval aggregate excludes scanner coverage failure case(s): reqimpact-case-006-squareboat-default-includes.",
-    "E2E aggregate includes all cases, including scanner coverage failures.",
     "Included benchmark result: keyword-baseline.v0.json",
     "Included benchmark result: bm25-baseline.v0.json",
     "Excluded non-benchmark result file: rag-samples.v0.json",
