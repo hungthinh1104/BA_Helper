@@ -176,9 +176,7 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send();
       
-    if (snapRes.status !== 201) {
-      console.log(snapRes.body);
-    }
+
     expect(snapRes.status).toBe(201);
 
     // 3. Review completion gate
@@ -226,9 +224,7 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(400);
 
-    if (res.body.code !== 'REVIEW_COMPLETION_REQUIRED') {
-      console.log('UNEXPECTED RES BODY:', res.body);
-    }
+
     expect(res.body.code).toBe('REVIEW_COMPLETION_REQUIRED');
     expect(res.body.details?.blockingReasons || res.body.metadata?.blockingReasons).toContain('UNREVIEWED_TRACEABILITY_LINKS');
   });
@@ -257,9 +253,7 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(400);
 
-    if (res.body.code !== 'REVIEW_COMPLETION_REQUIRED') {
-      console.log('UNEXPECTED RES BODY:', res.body);
-    }
+
     expect(res.body.code).toBe('REVIEW_COMPLETION_REQUIRED');
     expect(res.body.details?.blockingReasons || res.body.metadata?.blockingReasons).toContain('REVIEWED_SNAPSHOT_MISSING');
   });
