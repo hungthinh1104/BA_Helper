@@ -5,6 +5,8 @@
   "packageManager": "pnpm@11.5.1+sha512.93f7b57422ea7068257235b4c16eb60762eb68e1dc23723199cc739043ea9be2c4143274a399d8c6defa2b1176226d9ca1c4b63482d6200c1a8fbaa78c1d1485",
   "scripts": {
     "build": "pnpm -r build",
+    "db:migrate": "pnpm --dir apps/api exec prisma migrate deploy",
+    "db:seed:demo": "pnpm --dir apps/api exec tsx prisma/seed.demo.ts",
     "demo:golden-path": "jest --config jest.config.ts --runInBand tests/demo/golden-path-demo.spec.ts",
     "dev:api": "pnpm --dir apps/api dev",
     "dev:web": "pnpm --dir apps/web dev",
