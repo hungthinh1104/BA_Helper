@@ -21,7 +21,7 @@ BA Helper automates the heavy lifting of traceability while enforcing strict hum
 6. **Export:** A deterministic, human-reviewed final report is generated strictly from the locked snapshot.
 
 ## 5. Audit Workflow Explanation
-BA Helper enforces an **audit-style workflow**. It does not allow users to simply "generate and download" an AI hallucination. Instead, the final output is gated by a mathematical `ReviewCompletionGate`. The gate ensures that every single traceability link has been reviewed and that an immutable snapshot of those decisions has been captured in the database. Only then does the system permit the download of the final human-reviewed report.
+BA Helper enforces an **audit-style workflow**. It does not allow users to simply "generate and download" an AI hallucination. Instead, the final output is gated by a deterministic `ReviewCompletionGate`. The gate ensures that every single traceability link has been reviewed and that an immutable snapshot of those decisions has been captured in the database. Only then does the system permit the download of the final human-reviewed report.
 
 ## 6. Why This Is Not a Generic AI Repo Chatbot
 Generic repository chatbots answer ad-hoc questions without verifiable boundaries or state persistence. BA Helper is fundamentally different:
@@ -41,7 +41,7 @@ The system creates a deterministic graph mapping Requirements → Impacts → Ar
 Every node is backed by real code lines (e.g., `booking.service.ts: L45-60`). If the extraction parser cannot find evidence, the system defaults to flagging the impact as an `UNKNOWN` or a risk, rather than inventing fake evidence.
 
 ## 9. Human Review & Final Report Guarantees
-The system guarantees that the **Final Reviewed Report** is mathematically immutable.
+The system guarantees that the **Final Reviewed Report** is strictly tied to an immutable reviewed snapshot.
 When a "Snapshot" is taken, all live decisions are deeply copied into a `ReviewedReportSnapshot`. The final report is derived *exclusively* from this snapshot. Post-snapshot decision drift (if a user continues editing) does not mutate the historical snapshot, ensuring the downloaded `.md` file is a perfect, deterministic reflection of the audited state at the exact millisecond the snapshot was taken.
 
 ## 10. Testing Story (E17A + E17B)
@@ -63,4 +63,4 @@ The optimal way to demonstrate BA Helper is sequentially:
 - **Language Lock-in:** Currently, deep parser confidence is limited to TypeScript/NestJS repositories.
 - **Vector Boundaries:** Embedding retrieval is strictly scoped by commit SHA.
 - **No Production AI Modification:** The LLM does not write or push code. It acts strictly as an analytical reader to propose traceability links.
-- **Not a Formal Verification Engine:** While the workflow ensures human oversight and immutable snapshotting, the underlying extraction relies on heuristics and LLM mapping, making it a robust BA assistance tool, not a mathematically proven formal verification engine.
+- **Not a Formal Verification Engine:** While the workflow ensures human oversight and immutable snapshotting, the underlying extraction relies on heuristics and LLM mapping, making it a robust BA assistance tool, not a strictly proven formal verification engine.

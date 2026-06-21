@@ -35,6 +35,9 @@ You can run the definitive automated integration test for the focused TypeScript
 pnpm demo:golden-path
 ```
 
+**Visual Case Study:**
+For a step-by-step visual walkthrough of this workflow, see the [Demo Case Study](docs/portfolio/case-study.md).
+
 **Sample Requirement:**
 > "When a paid booking is cancelled, the system must refund the tenant, prevent double refunds, update booking/payment state, and notify relevant parties."
 
