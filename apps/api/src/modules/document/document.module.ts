@@ -5,6 +5,7 @@ import { GetApprovedReportUseCase } from './application/get-approved-report.usec
 import { ExportApprovedReportUseCase } from './application/export-approved-report.usecase';
 import { CreateReviewedReportSnapshotUseCase } from './application/create-reviewed-report-snapshot.usecase';
 import { GetLatestReviewedReportSnapshotUseCase } from './application/get-latest-reviewed-report-snapshot.usecase';
+import { GetFinalReviewedReportUseCase } from './application/get-final-reviewed-report.usecase';
 import { DocumentRepository } from './infrastructure/document.repository';
 import { MarkdownImpactReportBuilder } from './application/markdown-impact-report.builder';
 import { MermaidImpactDiagramBuilder } from './application/mermaid-impact-diagram.builder';
@@ -67,6 +68,7 @@ import { EvaluationContextAdapter } from './application/evaluation-context.adapt
     MarkdownImpactReportBuilder,
     CreateReviewedReportSnapshotUseCase,
     GetLatestReviewedReportSnapshotUseCase,
+    GetFinalReviewedReportUseCase,
   ],
   exports: [
     DocumentRepository,
@@ -75,6 +77,7 @@ import { EvaluationContextAdapter } from './application/evaluation-context.adapt
     PdfExportRenderer,
     CreateReviewedReportSnapshotUseCase,
     GetLatestReviewedReportSnapshotUseCase,
+    GetFinalReviewedReportUseCase,
   ],
 })
 export class DocumentModule {}

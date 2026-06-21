@@ -5,7 +5,13 @@ import { GetApprovedReportUseCase } from '../application/get-approved-report.use
 import { ExportApprovedReportUseCase } from '../application/export-approved-report.usecase';
 import { CreateReviewedReportSnapshotUseCase } from '../application/create-reviewed-report-snapshot.usecase';
 import { GetLatestReviewedReportSnapshotUseCase } from '../application/get-latest-reviewed-report-snapshot.usecase';
-import { approvedImpactReportResponseSchema, reviewedReportSnapshotSchema, RequestUser } from '@ba-helper/contracts';
+import { GetFinalReviewedReportUseCase } from '../application/get-final-reviewed-report.usecase';
+import { 
+  approvedImpactReportResponseSchema, 
+  reviewedReportSnapshotSchema, 
+  finalReviewedReportResponseSchema,
+  RequestUser 
+} from '@ba-helper/contracts';
 import { DocumentMapper } from './document.mapper';
 import { Res } from '@nestjs/common';
 import { CurrentUser } from '../../auth/api/current-user.decorator';
@@ -19,6 +25,7 @@ export class DocumentController {
     private readonly exportApprovedReport: ExportApprovedReportUseCase,
     private readonly createReviewedReportSnapshot: CreateReviewedReportSnapshotUseCase,
     private readonly getLatestReviewedReportSnapshot: GetLatestReviewedReportSnapshotUseCase,
+    private readonly getFinalReviewedReport: GetFinalReviewedReportUseCase,
     private readonly permissions: ProjectPermissionService,
   ) {}
 
@@ -137,5 +144,17 @@ export class DocumentController {
     const snapshot = await this.getLatestReviewedReportSnapshot.execute(analysisId);
 
     return reviewedReportSnapshotSchema.parse(snapshot);
+  }
+
+  @Get('/impact-analyses/:analysisId/final-reviewed-report')
+  async getFinalReviewedReportGate(
+    @Param('analysisId') analysisId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadAnalysis(actor, analysisId);
+    
+    const result = await this.getFinalReviewedReport.execute(analysisId);
+    
+    return finalReviewedReportResponseSchema.parse(result);
   }
 }

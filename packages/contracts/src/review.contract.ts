@@ -18,3 +18,17 @@ export const reviewCompletionResponseSchema = z.object({
 });
 
 export type ReviewCompletionResponse = z.infer<typeof reviewCompletionResponseSchema>;
+
+export const finalReviewedReportResponseSchema = z.object({
+  analysisId: z.string().min(1),
+  snapshotId: z.string().min(1),
+  markdown: z.string(),
+  createdAt: z.string(),
+  reviewCompletion: reviewCompletionResponseSchema,
+  reviewDecisionsSnapshot: z.unknown(),
+  evidenceQualitySummarySnapshot: z.unknown(),
+  evaluationContextSnapshot: z.unknown().nullable(),
+  createdByUserId: z.string().min(1).nullable().optional(),
+});
+
+export type FinalReviewedReportResponse = z.infer<typeof finalReviewedReportResponseSchema>;
