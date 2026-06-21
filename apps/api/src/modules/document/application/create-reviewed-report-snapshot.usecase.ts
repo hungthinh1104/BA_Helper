@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GetApprovedReportUseCase } from './get-approved-report.usecase';
-import { ApprovedReportProjectionService } from './approved-report-projection.service';
+
 import { EventLogService } from '../../event-log/application/event-log.service';
 import { AppError } from '../../../shared/app-error';
 
@@ -10,12 +10,10 @@ export class CreateReviewedReportSnapshotUseCase {
   constructor(
     private readonly prisma: PrismaService,
     private readonly getApprovedReport: GetApprovedReportUseCase,
-    private readonly projectionService: ApprovedReportProjectionService,
     private readonly eventLog: EventLogService,
   ) {}
 
   async execute(params: { analysisId: string; createdByUserId?: string }) {
-    try {
       // 1. Get the structured approved report.
       const projected = await this.getApprovedReport.execute(params.analysisId);
 
@@ -51,13 +49,5 @@ export class CreateReviewedReportSnapshotUseCase {
       });
 
       return snapshot;
-    } catch (err: any) {
-      process.stdout.write('---- CATCH BLOCK TRIGGERED ----\n');
-      if (err) {
-        process.stdout.write(String(err.name) + '\n');
-        process.stdout.write(String(err.message) + '\n');
-      }
-      throw err;
-    }
   }
 }
