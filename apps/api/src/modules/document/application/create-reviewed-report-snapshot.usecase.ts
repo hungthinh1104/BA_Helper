@@ -15,43 +15,49 @@ export class CreateReviewedReportSnapshotUseCase {
   ) {}
 
   async execute(params: { analysisId: string; createdByUserId?: string }) {
-    // 1. Get the raw approved report.
-    const rawReport = await this.getApprovedReport.execute(params.analysisId);
+    try {
+      // 1. Get the structured approved report.
+      const projected = await this.getApprovedReport.execute(params.analysisId);
 
-    // 2. Project it to get the structured metadata (including decisions).
-    const projected = await this.projectionService.project(rawReport);
+      // 3. Extract necessary snapshots.
+      const markdown = projected.report.content;
+      const reviewDecisionsSnapshot = projected.evidenceQualityItems || [];
+      const evidenceQualitySummarySnapshot = projected.evidenceQualitySummary || {};
+      const evaluationContextSnapshot = projected.evaluationContext || undefined;
 
-    // 3. Extract necessary snapshots.
-    const markdown = projected.report.content;
-    const reviewDecisionsSnapshot = projected.evidenceQualityItems || [];
-    const evidenceQualitySummarySnapshot = projected.evidenceQualitySummary || {};
-    const evaluationContextSnapshot = projected.evaluationContext || null;
+      // 4. Create the snapshot in DB.
+      const snapshot = await this.prisma.reviewedReportSnapshot.create({
+        data: {
+          analysisId: params.analysisId,
+          approvedDocumentId: projected.report.id,
+          markdown,
+          reviewDecisionsSnapshot,
+          evidenceQualitySummarySnapshot,
+          evaluationContextSnapshot,
+          createdByUserId: params.createdByUserId || null,
+        },
+      });
 
-    // 4. Create the snapshot in DB.
-    const snapshot = await this.prisma.reviewedReportSnapshot.create({
-      data: {
-        analysisId: params.analysisId,
-        approvedDocumentId: projected.report.id,
-        markdown,
-        reviewDecisionsSnapshot,
-        evidenceQualitySummarySnapshot,
-        evaluationContextSnapshot,
-        createdByUserId: params.createdByUserId || null,
-      },
-    });
+      // 5. Emit event.
+      await this.eventLog.recordEvent({
+        eventType: 'REVIEWED_REPORT_SNAPSHOT_CREATED',
+        idempotencyKey: `reviewed-report-snapshot:${snapshot.id}:created:${Date.now()}`,
+        payload: {
+          snapshotId: snapshot.id,
+          analysisId: params.analysisId,
+          approvedDocumentId: snapshot.approvedDocumentId,
+          createdByUserId: snapshot.createdByUserId,
+        },
+      });
 
-    // 5. Emit event.
-    await this.eventLog.recordEvent({
-      eventType: 'REVIEWED_REPORT_SNAPSHOT_CREATED',
-      idempotencyKey: `reviewed-report-snapshot:${snapshot.id}:created:${Date.now()}`,
-      payload: {
-        snapshotId: snapshot.id,
-        analysisId: params.analysisId,
-        approvedDocumentId: snapshot.approvedDocumentId,
-        createdByUserId: snapshot.createdByUserId,
-      },
-    });
-
-    return snapshot;
+      return snapshot;
+    } catch (err: any) {
+      process.stdout.write('---- CATCH BLOCK TRIGGERED ----\n');
+      if (err) {
+        process.stdout.write(String(err.name) + '\n');
+        process.stdout.write(String(err.message) + '\n');
+      }
+      throw err;
+    }
   }
 }

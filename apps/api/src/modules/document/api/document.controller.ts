@@ -131,7 +131,8 @@ export class DocumentController {
       createdByUserId: actor.id,
     });
 
-    return reviewedReportSnapshotSchema.parse(snapshot);
+    const mapped = DocumentMapper.toReviewedReportSnapshotResponse(snapshot);
+    return reviewedReportSnapshotSchema.parse(mapped);
   }
 
   @Get('/impact-analyses/:analysisId/reviewed-report-snapshot/latest')
@@ -143,7 +144,8 @@ export class DocumentController {
     
     const snapshot = await this.getLatestReviewedReportSnapshot.execute(analysisId);
 
-    return reviewedReportSnapshotSchema.parse(snapshot);
+    const mapped = DocumentMapper.toReviewedReportSnapshotResponse(snapshot);
+    return reviewedReportSnapshotSchema.parse(mapped);
   }
 
   @Get('/impact-analyses/:analysisId/final-reviewed-report')
