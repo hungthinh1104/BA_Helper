@@ -1,8 +1,11 @@
 import { useState } from "react"
 import { useReviewCompletion } from "@/hooks/api/use-review-completion"
 import { Button } from "@/components/ui/button"
-import { ShieldCheck, ShieldAlert, Loader2, FileCheck2 } from "lucide-react"
+import { ShieldCheck, ShieldAlert, Loader2, FileCheck2, Download } from "lucide-react"
 import { FinalReviewedReportViewer } from "./final-reviewed-report-viewer"
+import { apiGet } from "@/lib/api-client"
+import { finalReviewedReportResponseSchema } from "@ba-helper/contracts"
+import { toast } from "sonner"
 
 interface FinalReviewGatePanelProps {
   analysisId: string
@@ -11,6 +14,37 @@ interface FinalReviewGatePanelProps {
 export function FinalReviewGatePanel({ analysisId }: FinalReviewGatePanelProps) {
   const { data: completion, isLoading, error } = useReviewCompletion(analysisId)
   const [viewerOpen, setViewerOpen] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
+
+  const handleDownloadMarkdown = async () => {
+    try {
+      setIsDownloading(true)
+      const report = await apiGet(
+        `/api/v1/impact-analyses/${analysisId}/final-reviewed-report`,
+        finalReviewedReportResponseSchema
+      )
+
+      const blob = new Blob([report.markdown], { type: "text/markdown;charset=utf-8" })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `final-reviewed-report-${analysisId}-${report.snapshotId}.md`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      toast.success("Markdown downloaded successfully", {
+        description: `File: ${a.download}`,
+      })
+    } catch (err) {
+      toast.error("Download failed", {
+        description: err instanceof Error ? err.message : "Could not fetch final reviewed report.",
+      })
+    } finally {
+      setIsDownloading(false)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -117,14 +151,25 @@ export function FinalReviewGatePanel({ analysisId }: FinalReviewGatePanelProps) 
               </span>
             )}
             
-            <Button
-              disabled={!isComplete}
-              onClick={() => setViewerOpen(true)}
-              className="w-full md:w-auto font-medium"
-            >
-              <FileCheck2 className="w-4 h-4 mr-2" />
-              View Final Reviewed Report
-            </Button>
+            <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+              <Button
+                variant="outline"
+                disabled={!isComplete || isDownloading}
+                onClick={handleDownloadMarkdown}
+                className="w-full md:w-auto font-medium"
+              >
+                {isDownloading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                Download .md
+              </Button>
+              <Button
+                disabled={!isComplete}
+                onClick={() => setViewerOpen(true)}
+                className="w-full md:w-auto font-medium"
+              >
+                <FileCheck2 className="w-4 h-4 mr-2" />
+                View Final Reviewed Report
+              </Button>
+            </div>
             
             {!isComplete && (
               <span className="text-[11px] text-muted-foreground max-w-[200px] text-right">
