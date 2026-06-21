@@ -1,6 +1,6 @@
 # BA Helper: 5-7 Minute Interviewer Demo Script
 
-**Objective:** Demonstrate that BA Helper is not a simple AI wrapper, but a stateful, strictly-gated audit workflow that enforces human verification and mathematically guarantees immutable final reports.
+**Objective:** Demonstrate that BA Helper is not a simple AI wrapper, but a stateful, strictly-gated audit workflow that enforces human verification and guarantees an immutable reviewed snapshot.
 
 ---
 
@@ -38,7 +38,7 @@ Interact with the traceability links. Transition a link's status from `NEEDS_REV
 **What to say:**
 "Because we can't blindly trust LLMs, the system acts as a workflow gatekeeper. It forces a human-in-the-loop validation process. 
 As an analyst, my job is to review these machine-proposed impacts. For this link, the evidence is correct, so I mark it `ACCEPTED`. For this one, the AI hallucinated or misunderstood a boundary, so I mark it `REJECTED`. 
-I am required to make a decision on every single link. The system will mathematically block the final export until this is 100% complete."
+I am required to make a decision on every single link. The system's deterministic review gate will block the final export until this is 100% complete."
 
 ---
 
@@ -64,7 +64,7 @@ Click to view the Final Reviewed Report. Then click "Download .md".
 **What to say:**
 "Because the gate criteria are met—0 unreviewed links and a locked snapshot—the system unlocks the Final Export.
 This final export pipeline is completely walled off from the AI. There is no LLM running here, and no live vector retrieval. It is a deterministic payload rendered directly from the frozen database snapshot. 
-When I download the markdown file, I have a mathematically guaranteed, human-audited impact report that QA can use to build acceptance criteria, with zero risk of silent drift or unverified AI hallucinations."
+When I download the markdown file, I have a human-reviewed export that QA can use to build acceptance criteria, with zero risk of silent drift or unverified AI hallucinations."
 
 ---
 
