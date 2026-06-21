@@ -26,6 +26,13 @@ Our analysis is strictly constrained to prevent hallucinations and fabricated cl
 - **Gated Exports:** The system strictly blocks final exports if unreviewed links exist or if the snapshot is missing.
 - **No AI in Final Export:** The final markdown report is generated strictly from the frozen database payload, with zero active LLM calls or retrieval processes during the export phase.
 
+## 5. Live Preview
+A read-only portfolio demonstration is available at:
+👉 **[Placeholder: Insert Vercel URL here]**
+
+> **Note:** This preview is protected by a password and uses deterministic seeded data and fake AI providers to ensure a fast, consistent, and secure demonstration of the Audit Workflow. If you are reviewing this portfolio, please reach out for the preview password.
+
+
 ## 5. Demo Workflow
 The primary golden path demo validates the core evidence-first pipeline (`scan → impact analysis → evidence → review → report → drift visibility`).
 
@@ -132,14 +139,14 @@ pnpm --dir apps/api exec prisma generate
 pnpm --dir apps/api exec prisma migrate deploy --schema prisma/schema.prisma
 ```
 
-### 6. Run the Visual Demo (Recommended)
+### 7. Run the Visual Demo (Recommended)
 We provide an idempotent seed script to populate a realistic "Booking Cancellation" scenario directly into the database. This is the fastest way to experience the Human Review Gate and Export workflow without external LLM keys.
 
 1. See the [Local Demo Runbook](docs/demo/run-local-demo.md) for full setup.
 2. Run `pnpm db:migrate` and `pnpm db:seed:demo`.
 3. Follow the [Demo Acceptance Checklist](docs/demo/demo-acceptance-checklist.md) to walk through the UI.
 
-### 7. Run Golden-Path Pipeline Test (Automated)
+### 8. Run Golden-Path Pipeline Test (Automated)
 Run the automated integration test to verify the deterministic, end-to-end impact analyzer flow programmatically using a fake LLM provider.
 
 ```bash

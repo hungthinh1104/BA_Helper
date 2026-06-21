@@ -16,6 +16,8 @@ export interface RuntimeConfig {
   nodeEnv: string;
   port: number;
   workspaceMode: string;
+  publicPreviewMode: boolean;
+  aiProvider: string;
 }
 
 export function isProductionLikeEnv(nodeEnv?: string): boolean {
@@ -117,10 +119,12 @@ export function getRuntimeConfig(
     nodeEnv,
     port: Number(env.PORT ?? '3001'),
     workspaceMode: env.WORKSPACE_MODE ?? DEFAULT_WORKSPACE_MODE,
+    publicPreviewMode: env.PUBLIC_PREVIEW_MODE === 'true',
+    aiProvider: env.AI_PROVIDER || 'fake',
   };
 }
 
-export function validateRuntimeConfig(config: RuntimeConfig): void {
+export function validateRuntimeConfig(config: RuntimeConfig, env: NodeJS.ProcessEnv = process.env): void {
   if (Number.isNaN(config.port) || config.port <= 0) {
     throw new Error(`Invalid PORT: ${config.port}`);
   }
@@ -129,6 +133,16 @@ export function validateRuntimeConfig(config: RuntimeConfig): void {
     throw new Error(
       'CORS_ALLOWED_ORIGINS must be configured for production-like deploys.',
     );
+  }
+
+  if (config.publicPreviewMode) {
+    if (config.aiProvider !== 'fake') {
+      throw new Error(`BOOT GUARD: PUBLIC_PREVIEW_MODE is active, but AI_PROVIDER is '${config.aiProvider}'. It must be 'fake'.`);
+    }
+    if (env.OPENAI_API_KEY) throw new Error('BOOT GUARD: OPENAI_API_KEY is forbidden in PUBLIC_PREVIEW_MODE.');
+    if (env.GEMINI_API_KEY || env.GOOGLE_API_KEY) throw new Error('BOOT GUARD: GEMINI/GOOGLE API keys are forbidden in PUBLIC_PREVIEW_MODE.');
+    if (env.ANTHROPIC_API_KEY) throw new Error('BOOT GUARD: ANTHROPIC_API_KEY is forbidden in PUBLIC_PREVIEW_MODE.');
+    if (env.DEEPSEEK_API_KEY) throw new Error('BOOT GUARD: DEEPSEEK_API_KEY is forbidden in PUBLIC_PREVIEW_MODE.');
   }
 }
 
