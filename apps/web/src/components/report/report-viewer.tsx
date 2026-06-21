@@ -16,6 +16,7 @@ import { EvaluationContextCard } from "./evaluation-context-card"
 import { EvidenceQualitySummary } from "./evidence-quality-summary"
 import { EvidenceQualityTable } from "./evidence-quality-table"
 import { ReviewedSnapshotPanel } from "./reviewed-snapshot-panel"
+import { FinalReviewGatePanel } from "./final-review-gate-panel"
 
 interface ReportViewerProps {
   analysisId: string;
@@ -238,6 +239,8 @@ export function ReportViewer({ analysisId }: ReportViewerProps) {
       </div>
 
       <ReviewedSnapshotPanel analysisId={analysisId} />
+      
+      <FinalReviewGatePanel analysisId={analysisId} />
     </div>
   )
 }
