@@ -132,8 +132,15 @@ pnpm --dir apps/api exec prisma generate
 pnpm --dir apps/api exec prisma migrate deploy --schema prisma/schema.prisma
 ```
 
-### 6. Run Golden-Path Demo (Automated)
-Run the automated integration test to verify the deterministic, end-to-end impact analyzer flow.
+### 6. Run the Visual Demo (Recommended)
+We provide an idempotent seed script to populate a realistic "Booking Cancellation" scenario directly into the database. This is the fastest way to experience the Human Review Gate and Export workflow without external LLM keys.
+
+1. See the [Local Demo Runbook](docs/demo/run-local-demo.md) for full setup.
+2. Run `pnpm db:migrate` and `pnpm db:seed:demo`.
+3. Follow the [Demo Acceptance Checklist](docs/demo/demo-acceptance-checklist.md) to walk through the UI.
+
+### 7. Run Golden-Path Pipeline Test (Automated)
+Run the automated integration test to verify the deterministic, end-to-end impact analyzer flow programmatically using a fake LLM provider.
 
 ```bash
 pnpm demo:golden-path
