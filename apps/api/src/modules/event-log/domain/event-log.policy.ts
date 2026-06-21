@@ -43,6 +43,9 @@ export const EventLogPolicy = {
       'PROJECT_MEMBER_UPSERTED',
       'PROJECT_MEMBER_UPDATED',
       'PROJECT_MEMBER_REMOVED',
+      'TRACEABILITY_REVIEW_DECISION_UPDATED',
+      'TRACEABILITY_REVIEW_DECISION_DELETED',
+      'REVIEWED_REPORT_SNAPSHOT_CREATED',
     ];
 
     if (!knownEventTypes.includes(params.eventType)) {

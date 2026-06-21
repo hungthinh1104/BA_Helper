@@ -22,6 +22,7 @@ export class AppExceptionFilter implements ExceptionFilter {
     response.status(status).json({
       code: exception.code,
       message: exception.message,
+      ...(exception.details ? { details: exception.details } : {}),
     });
   }
 
@@ -39,6 +40,7 @@ export class AppExceptionFilter implements ExceptionFilter {
       case 'UNSUPPORTED_DOMAIN':
       case 'UNSUPPORTED_FRAMEWORK':
       case 'REPORT_NOT_EXPORTABLE':
+      case 'REVIEW_COMPLETION_REQUIRED':
         return HttpStatus.BAD_REQUEST;
       case 'REPO_LIMIT_EXCEEDED':
         return HttpStatus.PAYLOAD_TOO_LARGE;

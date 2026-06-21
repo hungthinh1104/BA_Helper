@@ -50,4 +50,18 @@ export class DocumentMapper {
       },
     };
   }
+
+  static toReviewedReportSnapshotResponse(snapshot: any) {
+    return {
+      id: snapshot.id,
+      analysisId: snapshot.analysisId,
+      approvedDocumentId: snapshot.approvedDocumentId || null,
+      markdown: snapshot.markdown,
+      reviewDecisionsSnapshot: snapshot.reviewDecisionsSnapshot,
+      evidenceQualitySummarySnapshot: snapshot.evidenceQualitySummarySnapshot,
+      evaluationContextSnapshot: snapshot.evaluationContextSnapshot || null,
+      createdByUserId: snapshot.createdByUserId || null,
+      createdAt: snapshot.createdAt.toISOString(),
+    };
+  }
 }
