@@ -78,14 +78,16 @@ export function ReviewDecisionControls({ analysisId, linkId, currentDecision }: 
       }
       setOpen(val)
     }}>
-      <DialogTrigger asChild>
-        <button className="focus:outline-none transition-opacity hover:opacity-80 disabled:opacity-50" disabled={isLoading}>
-          <Badge {...getDecisionBadgeProps(currentDecision?.decision || null)} className={`rounded-sm px-2 py-0.5 text-[11px] font-mono tracking-wide cursor-pointer ${getDecisionBadgeProps(currentDecision?.decision || null).className}`}>
-            {isLoading ? <Loader2 className="w-3 h-3 animate-spin mr-1 inline" /> : null}
-            {formatDecisionLabel(currentDecision?.decision || null)}
-          </Badge>
-        </button>
-      </DialogTrigger>
+      <DialogTrigger
+        render={
+          <button className="focus:outline-none transition-opacity hover:opacity-80 disabled:opacity-50" disabled={isLoading}>
+            <Badge {...getDecisionBadgeProps(currentDecision?.decision || null)} className={`rounded-sm px-2 py-0.5 text-[11px] font-mono tracking-wide cursor-pointer ${getDecisionBadgeProps(currentDecision?.decision || null).className}`}>
+              {isLoading ? <Loader2 className="w-3 h-3 animate-spin mr-1 inline" /> : null}
+              {formatDecisionLabel(currentDecision?.decision || null)}
+            </Badge>
+          </button>
+        }
+      />
       
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
@@ -131,11 +133,13 @@ export function ReviewDecisionControls({ analysisId, linkId, currentDecision }: 
             Clear Decision
           </Button>
           <div className="flex gap-2">
-            <DialogClose asChild>
-              <Button type="button" variant="outline" className="text-[13px] h-8">
-                Cancel
-              </Button>
-            </DialogClose>
+            <DialogClose
+              render={
+                <Button type="button" variant="outline" className="text-[13px] h-8">
+                  Cancel
+                </Button>
+              }
+            />
             <Button
               type="button"
               onClick={handleSave}

@@ -1,11 +1,14 @@
 import { Body, Controller, Get, Param, Post, Put, Delete } from '@nestjs/common';
 import {
+  TraceabilityReviewRequest,
   traceabilityLinkListResponseSchema,
   traceabilityReviewRequestSchema,
   updateTraceabilityReviewDecisionRequestSchema,
+  reviewCompletionResponseSchema,
   RequestUser,
 } from '@ba-helper/contracts';
 import { ListTraceabilityUseCase } from '../application/list-traceability.usecase';
+import { GetReviewCompletionUseCase } from '../application/get-review-completion.usecase';
 import { ReviewTraceabilityUseCase } from '../application/review-traceability.usecase';
 import { UpdateTraceabilityReviewDecisionUseCase } from '../application/update-traceability-review-decision.usecase';
 import { DeleteTraceabilityReviewDecisionUseCase } from '../application/delete-traceability-review-decision.usecase';
@@ -20,6 +23,7 @@ export class TraceabilityController {
     private readonly reviewTraceability: ReviewTraceabilityUseCase,
     private readonly updateReviewDecisionUseCase: UpdateTraceabilityReviewDecisionUseCase,
     private readonly deleteReviewDecisionUseCase: DeleteTraceabilityReviewDecisionUseCase,
+    private readonly getReviewCompletion: GetReviewCompletionUseCase,
     private readonly permissions: ProjectPermissionService,
   ) {}
 
@@ -95,6 +99,18 @@ export class TraceabilityController {
       'review:write',
     );
     await this.deleteReviewDecisionUseCase.execute({ linkId });
-    return { ok: true };
+    return { success: true };
+  }
+
+  @Get('/impact-analyses/:analysisId/review-completion')
+  async getReviewCompletionGate(
+    @Param('analysisId') analysisId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadAnalysis(actor, analysisId);
+    
+    const result = await this.getReviewCompletion.execute(analysisId);
+    
+    return reviewCompletionResponseSchema.parse(result);
   }
 }

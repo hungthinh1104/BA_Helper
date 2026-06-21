@@ -35,7 +35,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 }
 
 async function requestJson<T>(
-  method: "GET" | "POST" | "PATCH" | "DELETE",
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
   path: string,
   body?: unknown,
   schema?: z.ZodType<T>,
@@ -143,6 +143,10 @@ export async function apiGet<T>(path: string, schema?: z.ZodType<T>, headers?: R
 
 export async function apiPost<T>(path: string, body: unknown, schema?: z.ZodType<T>, headers?: Record<string, string>): Promise<T> {
   return requestJson("POST", path, body, schema, headers)
+}
+
+export async function apiPut<T>(path: string, body: unknown, schema?: z.ZodType<T>, headers?: Record<string, string>): Promise<T> {
+  return requestJson("PUT", path, body, schema, headers)
 }
 
 export async function apiPatch<T>(path: string, body: unknown, schema?: z.ZodType<T>, headers?: Record<string, string>): Promise<T> {
