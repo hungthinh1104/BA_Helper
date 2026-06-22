@@ -111,6 +111,7 @@ export class AppError extends Error {
   constructor(
     public readonly code: AppErrorCode,
     message: string,
+    public readonly details?: Record<string, unknown>,
   ) {
     super(message);
   }
