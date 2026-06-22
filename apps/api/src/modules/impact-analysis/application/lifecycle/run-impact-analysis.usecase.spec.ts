@@ -1,4 +1,7 @@
 import { RunImpactAnalysisUseCase } from './run-impact-analysis.usecase';
+import { ImpactEvidenceCollectionStep } from './steps/impact-evidence-collection.step';
+import { ImpactDiagnosticPropagationStep } from './steps/impact-diagnostic-propagation.step';
+import { ImpactAiReasoningStep } from './steps/impact-ai-reasoning.step';
 import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
 import { ArtifactRepository } from '../../../artifact/infrastructure/artifact.repository';
 import { EvidenceRepository } from '../../../evidence/infrastructure/evidence.repository';
@@ -71,15 +74,22 @@ describe('RunImpactAnalysisUseCase', () => {
         }),
     } as unknown as jest.Mocked<DomainPackRegistry>;
 
-    useCase = new RunImpactAnalysisUseCase(
-      impactRepo,
+    const evidenceStep = new ImpactEvidenceCollectionStep(
       artifactRepo,
       evidenceRepo,
-      insightRepo,
       traceabilityRepo,
-      llmProvider,
       retrievalService,
+    );
+    const diagnosticStep = new ImpactDiagnosticPropagationStep();
+    const aiReasoningStep = new ImpactAiReasoningStep(llmProvider);
+
+    useCase = new RunImpactAnalysisUseCase(
+      impactRepo,
+      insightRepo,
       domainPackRegistry,
+      evidenceStep,
+      diagnosticStep,
+      aiReasoningStep,
     );
 
     (renderPrompt as jest.Mock).mockReturnValue({

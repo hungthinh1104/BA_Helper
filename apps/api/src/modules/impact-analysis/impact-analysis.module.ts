@@ -5,6 +5,9 @@ import { GetImpactAnalysisUseCase } from './application/lifecycle/get-impact-ana
 import { FinalizeImpactAnalysisUseCase } from './application/lifecycle/finalize-impact-analysis.usecase';
 import { ListImpactAnalysesUseCase } from './application/lifecycle/list-impact-analyses.usecase';
 import { RunImpactAnalysisUseCase } from './application/lifecycle/run-impact-analysis.usecase';
+import { ImpactEvidenceCollectionStep } from './application/lifecycle/steps/impact-evidence-collection.step';
+import { ImpactDiagnosticPropagationStep } from './application/lifecycle/steps/impact-diagnostic-propagation.step';
+import { ImpactAiReasoningStep } from './application/lifecycle/steps/impact-ai-reasoning.step';
 import { GetImpactGraphUseCase } from './application/queries/get-impact-graph.usecase';
 import { GetQaCoverageUseCase } from './application/qa/get-qa-coverage.usecase';
 import { QaCoverageDeriver } from './application/qa/qa-coverage.deriver';
@@ -100,6 +103,9 @@ import { DomainPackModule } from '../domain-pack/domain-pack.module';
     GetLatestMergedMultiRepoReportReviewDecisionUseCase,
     MergedMultiRepoReportDraftBuilder,
     FinalizeImpactAnalysisUseCase,
+    ImpactEvidenceCollectionStep,
+    ImpactDiagnosticPropagationStep,
+    ImpactAiReasoningStep,
     RunImpactAnalysisUseCase,
     ImpactGraphReadModelBuilder,
     GetImpactGraphUseCase,
