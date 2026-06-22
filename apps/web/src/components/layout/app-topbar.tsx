@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
+import { AppSidebar } from "./app-sidebar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ChevronRight, ChevronsUpDown, FolderKanban } from "lucide-react"
+import { ChevronRight, ChevronsUpDown, FolderKanban, Menu, UserCircle } from "lucide-react"
 import { useSystemHealth } from "@/hooks/api/use-system"
 import { useAuth } from "@/hooks/use-auth"
 import { useWorkspaceRuntime } from "@/lib/project-context"
@@ -45,11 +47,9 @@ function getBreadcrumb(pathname: string) {
   return { label: "Workspace" }
 }
 
-export function AppTopbar() {
+export function AppTopbar({ isMobile }: { isMobile?: boolean }) {
   const pathname = usePathname() ?? ""
   const breadcrumb = getBreadcrumb(pathname)
-  const isAnalysisDetail = pathname.startsWith("/analyses/") && pathname !== "/analyses"
-  const analysisId = isAnalysisDetail ? pathname.split("/")[2] : null
   const workspace = useWorkspaceRuntime()
   const health = useSystemHealth()
   const { user, logout } = useAuth()
@@ -61,29 +61,44 @@ export function AppTopbar() {
       : "API ok"
 
   return (
-    <header className="app-topbar">
-      <div className="flex items-center gap-2 text-sm">
+    <header className="app-topbar gap-2 sm:gap-4">
+      {isMobile && (
+        <Sheet>
+          <SheetTrigger
+            render={<Button variant="ghost" size="icon" className="size-8 shrink-0" />}
+          >
+            <Menu className="size-4" />
+            <span className="sr-only">Toggle menu</span>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-64 p-0">
+            <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+            <AppSidebar />
+          </SheetContent>
+        </Sheet>
+      )}
+
+      <div className="flex min-w-0 flex-1 items-center gap-2 text-sm">
         {breadcrumb.parent ? (
           <>
-            <Link href={breadcrumb.parent.href} className="text-muted-foreground hover:text-foreground transition-colors">
+            <Link href={breadcrumb.parent.href} className="text-muted-foreground hover:text-foreground transition-colors shrink-0">
               {breadcrumb.parent.label}
             </Link>
-            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50" />
-            <span className="font-medium text-foreground">{breadcrumb.label}</span>
+            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 shrink-0" />
+            <span className="font-medium text-foreground truncate">{breadcrumb.label}</span>
           </>
         ) : (
-          <span className="font-medium text-foreground">{breadcrumb.label}</span>
+          <span className="font-medium text-foreground truncate">{breadcrumb.label}</span>
         )}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 shrink-0">
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 min-w-44 justify-between shadow-none"
+                className="h-8 min-w-0 max-w-[42vw] justify-between shadow-none sm:min-w-44 sm:max-w-56"
                 disabled={workspace.switchingProjectId !== null}
               />
             }
@@ -113,7 +128,7 @@ export function AppTopbar() {
                 >
                   <span className="flex min-w-0 flex-1 items-center justify-between gap-3">
                     <span className="truncate">{project.name}</span>
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    <span className="text-xs uppercase text-muted-foreground">
                       {project.membershipRole}
                     </span>
                   </span>
@@ -126,47 +141,112 @@ export function AppTopbar() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        <Badge variant="outline" className="h-6 rounded-md px-2 text-[10px] uppercase tracking-wider">
-          {workspace.mode}
-        </Badge>
-        {workspace.membershipRole && (
-          <Badge variant="outline" className="h-6 rounded-md px-2 text-[10px] uppercase tracking-wider">
-            {workspace.membershipRole}
-          </Badge>
-        )}
-        {user && (
-          <>
-            <Badge variant="outline" className="h-6 rounded-md px-2 text-[10px] uppercase tracking-wider">
-              {user.role}
-            </Badge>
-            <span className="hidden text-sm text-muted-foreground md:inline">
-              {user.name ?? user.email}
-            </span>
-          </>
-        )}
-        <Badge
-          variant="outline"
-          className={`h-6 rounded-md px-2 text-[10px] uppercase tracking-wider ${
-            health.isError
-              ? "border-destructive/30 text-destructive"
-              : health.isSuccess
-                ? "border-success/30 text-success"
-                : "border-border text-muted-foreground"
-          }`}
-        >
-          {healthLabel}
-        </Badge>
-        <ThemeToggle />
-        <Button variant="outline" size="sm" className="h-8 shadow-none" onClick={() => void logout()}>
-          Sign out
-        </Button>
-        {isAnalysisDetail && (
-          <>
 
-            <Link href={analysisId ? `/reports?analysisId=${analysisId}` : "/reports"}>
-              <Button size="sm" className="h-8 shadow-none">Export Report</Button>
-            </Link>
+        {!isMobile ? (
+          <>
+            <Badge variant="outline" className="h-6 rounded-md px-2 text-xs uppercase">
+              {workspace.mode}
+            </Badge>
+            {workspace.membershipRole && (
+              <Badge variant="outline" className="h-6 rounded-md px-2 text-xs uppercase">
+                {workspace.membershipRole}
+              </Badge>
+            )}
+            {user && (
+              <>
+                <Badge variant="outline" className="h-6 rounded-md px-2 text-xs uppercase">
+                  {user.role}
+                </Badge>
+                <span className="hidden text-sm text-muted-foreground md:inline">
+                  {user.name ?? user.email}
+                </span>
+              </>
+            )}
+            <Badge
+              variant="outline"
+              className={`h-6 rounded-md px-2 text-xs uppercase ${
+                health.isError
+                  ? "border-destructive/30 text-destructive"
+                  : health.isSuccess
+                    ? "border-success/30 text-success"
+                    : "border-border text-muted-foreground"
+              }`}
+            >
+              {healthLabel}
+            </Badge>
+            <ThemeToggle />
+            <Button variant="outline" size="sm" className="h-8 shadow-none" onClick={() => void logout()}>
+              Sign out
+            </Button>
           </>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="size-8 shrink-0"
+                  aria-label="Open account menu"
+                />
+              }
+            >
+              <UserCircle className="size-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                {user?.name ?? user?.email ?? "Account"}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <div className="flex flex-col gap-2 p-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs">Theme</span>
+                  <ThemeToggle />
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs">Health</span>
+                  <Badge
+                    variant="outline"
+                    className={`h-5 rounded px-1.5 text-xs uppercase ${
+                      health.isError
+                        ? "border-destructive/30 text-destructive"
+                        : health.isSuccess
+                          ? "border-success/30 text-success"
+                          : "border-border text-muted-foreground"
+                    }`}
+                  >
+                    {healthLabel}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs">Mode</span>
+                  <Badge variant="outline" className="h-5 rounded px-1.5 text-xs uppercase">
+                    {workspace.mode}
+                  </Badge>
+                </div>
+                {workspace.membershipRole && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs">Project Role</span>
+                    <Badge variant="outline" className="h-5 rounded px-1.5 text-xs uppercase">
+                      {workspace.membershipRole}
+                    </Badge>
+                  </div>
+                )}
+                {user?.role && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs">System Role</span>
+                    <Badge variant="outline" className="h-5 rounded px-1.5 text-xs uppercase">
+                      {user.role}
+                    </Badge>
+                  </div>
+                )}
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => void logout()}>
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
     </header>

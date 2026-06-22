@@ -76,9 +76,14 @@ describe('FinalReviewedReportViewer', () => {
             },
             reviewDecisionsSnapshot: [
               {
+                linkId: 'link-1',
                 artifact: 'test-artifact.ts',
                 quality: 'EVIDENCED',
+                reasons: ['Persisted code evidence'],
                 reviewDecision: {
+                  id: '00000000-0000-4000-8000-000000000001',
+                  analysisId: '00000000-0000-4000-8000-000000000002',
+                  traceabilityLinkId: '00000000-0000-4000-8000-000000000003',
                   decision: 'ACCEPTED',
                   note: 'Looks good',
                   reviewedAt: new Date('2026-06-21T01:00:00Z').toISOString()

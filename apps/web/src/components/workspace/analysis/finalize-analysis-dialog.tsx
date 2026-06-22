@@ -65,7 +65,7 @@ export function FinalizeAnalysisDialog({ children, analysisId, commitSha, stats,
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger render={children as React.ReactElement} />
-      <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-background/70 backdrop-blur-3xl shadow-[0_8px_40px_-12px_rgba(0,0,0,0.3)] ring-1 ring-white/10 dark:ring-white/5" showCloseButton={false}>
+      <DialogContent className="overflow-hidden bg-background p-0 shadow-xl sm:max-w-md" showCloseButton={false}>
         <DialogHeader className="px-6 pt-5 pb-4 border-b border-border/60">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">

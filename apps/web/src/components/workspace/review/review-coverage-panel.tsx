@@ -5,32 +5,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useReviewCoverage } from "@/hooks/api/use-review-coverage"
 import { ReviewCoverageGate } from "@ba-helper/contracts"
+import { MetricCard } from "@/components/workspace/shared/primitives"
 
-function SummaryCard({
-  label,
-  value,
-  tone = "muted",
-}: {
-  label: string
-  value: string | number
-  tone?: "muted" | "success" | "warning" | "destructive"
-}) {
-  const toneClass =
-    tone === "success"
-      ? "border-[var(--success-soft)] text-[var(--success)] bg-[var(--success-soft)]"
-      : tone === "warning"
-        ? "border-[var(--warning-soft)] text-[var(--warning)] bg-[var(--warning-soft)]"
-        : tone === "destructive"
-          ? "border-[var(--danger-soft)] text-[var(--danger)] bg-[var(--danger-soft)]"
-          : "border-[var(--border)] text-[var(--text-primary)] bg-[var(--surface-muted)]"
-
-  return (
-    <div className={`rounded-lg border px-3 py-2 ${toneClass}`}>
-      <div className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">{label}</div>
-      <div className="mt-1 text-[16px] font-semibold">{value}</div>
-    </div>
-  )
-}
 
 function GateStatusBadge({ status }: { status: "PASS" | "WARN" | "FAIL" }) {
   if (status === "PASS") {
@@ -177,28 +153,28 @@ export function ReviewCoveragePanel({ runId }: { runId: string }) {
         </div>
 
         <div className="p-4">
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6 mb-6">
-            <SummaryCard label="Repos Accepted" value={data.summary.acceptedRepositories} tone="muted" />
-            <SummaryCard label="Impacted Artifacts" value={data.summary.impactedArtifacts} tone="muted" />
-            <SummaryCard 
-              label="Uncovered Artifacts" 
-              value={data.summary.uncoveredArtifacts} 
-              tone={data.summary.uncoveredArtifacts > 0 ? "warning" : "success"} 
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3 mb-6">
+            <MetricCard label="Repos Accepted" value={data.summary.acceptedRepositories} />
+            <MetricCard label="Impacted Artifacts" value={data.summary.impactedArtifacts} />
+            <MetricCard
+              label="Uncovered Artifacts"
+              value={data.summary.uncoveredArtifacts}
+              accent={data.summary.uncoveredArtifacts > 0 ? "warning" : "success"}
             />
-            <SummaryCard 
-              label="Risks Without QA" 
-              value={data.summary.risksWithoutQa} 
-              tone={data.summary.risksWithoutQa > 0 ? "warning" : "success"} 
+            <MetricCard
+              label="Risks Without QA"
+              value={data.summary.risksWithoutQa}
+              accent={data.summary.risksWithoutQa > 0 ? "warning" : "success"}
             />
-            <SummaryCard 
-              label="Warning Gates" 
-              value={data.summary.warningGates} 
-              tone={data.summary.warningGates > 0 ? "warning" : "success"} 
+            <MetricCard
+              label="Warning Gates"
+              value={data.summary.warningGates}
+              accent={data.summary.warningGates > 0 ? "warning" : "success"}
             />
-            <SummaryCard 
-              label="Blocking Gates" 
-              value={data.summary.blockingGates} 
-              tone={data.summary.blockingGates > 0 ? "destructive" : "success"} 
+            <MetricCard
+              label="Blocking Gates"
+              value={data.summary.blockingGates}
+              accent={data.summary.blockingGates > 0 ? "danger" : "success"}
             />
           </div>
 
@@ -223,4 +199,3 @@ export function ReviewCoveragePanel({ runId }: { runId: string }) {
     </div>
   )
 }
-

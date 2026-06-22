@@ -108,17 +108,6 @@ export function AnalysisTabBar({
         </div>
 
         {/* Global banners */}
-        {analysis.status === "COMPLETED" && (
-          <div className="mt-3 flex items-center gap-3 rounded-lg border border-primary/25 bg-primary/10 px-4 py-2.5 text-sm font-medium text-primary">
-            <div className="flex items-center gap-3">
-              <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                <span className="text-xs">✓</span>
-              </div>
-              This analysis has been finalized. Open the report view to confirm approved-report availability and stale state.
-            </div>
-          </div>
-        )}
-
         {analysis.freshness.isStale && analysis.status === "WAITING_FOR_REVIEW" && (
           <div className="mt-3 flex items-center gap-3 px-4 py-2.5 bg-warning/10 border border-warning/25 rounded-lg text-sm text-warning font-medium">
             <AlertCircle className="w-5 h-5" />
