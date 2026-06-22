@@ -289,6 +289,76 @@ describe('RunScanJobUseCase', () => {
     );
   });
 
+  it('currently ignores scanner dependencyEdges while persisting artifacts and evidence, and enqueues embedding', async () => {
+    (fs.mkdtemp as jest.Mock).mockResolvedValue('/tmp/ba-scan-deps');
+    (fs.rm as jest.Mock).mockResolvedValue(undefined);
+    analyzer.GitHubUrlValidator.validate.mockReturnValue({ isValid: true });
+    analyzer.GitRepositoryFetcher.fetch.mockResolvedValue({ commitSha: 'new-commit' });
+    analyzer.FrameworkDetector.detect.mockResolvedValue({ isSupported: true, language: 'typescript', framework: 'nestjs' });
+    analyzer.RepositoryProfileDetector.detect.mockResolvedValue({ domain: 'BOOKING', language: 'TYPESCRIPT', framework: 'NESTJS' });
+    analyzer.SafeFileEnumerator.mockImplementation(() => ({
+      enumerate: jest.fn().mockResolvedValue({ tsFiles: [], allFiles: [], diagnostics: [], isPartial: false }),
+    }));
+    
+    // Scanner mock returns dependencyEdges, but usecase currently ignores them
+    analyzer.scanProject.mockReturnValue({
+      analyzerVersion: '0.2.0',
+      artifacts: [
+        {
+          stableId: 'api:booking.controller.cancel',
+          type: 'API_ROUTE',
+          filePath: 'src/booking/booking.controller.ts',
+          symbolName: 'BookingController.cancel',
+          startLine: 10,
+          endLine: 20,
+          excerpt: 'cancel() {}',
+          contentHash: 'hash-123',
+        },
+      ],
+      dependencyEdges: [
+        { sourceStableId: 'api:booking.controller.cancel', targetStableId: 'api:booking.service.cancel', type: 'CALLS' }
+      ],
+      coverage: { status: 'READY', skippedSummary: {} },
+    });
+
+    await useCase.execute({ jobId: 'job-1' });
+
+    // 1. Assert exact domain-critical fields in Artifact persistence
+    expect(artifactRepository.createMany).toHaveBeenCalledWith([
+      expect.objectContaining({
+        artifactKey: 'api:booking.controller.cancel',
+        artifactType: 'API_ROUTE',
+        universalKind: expect.any(String),
+        filePath: 'src/booking/booking.controller.ts',
+        contentHash: 'hash-123',
+      })
+    ]);
+
+    // 2. Assert exact domain-critical fields in Evidence persistence
+    expect(evidenceRepo.upsertMany).toHaveBeenCalledWith([
+      expect.objectContaining({
+        provenanceKey: 'snapshot:snapshot-1:artifact:api:booking.controller.cancel',
+        sourceType: 'CODE',
+        sourcePath: 'src/booking/booking.controller.ts',
+        isRedacted: false,
+      })
+    ]);
+
+    // 3. Assert snapshot is marked LEXICAL_READY
+    expect(prisma.repositorySnapshot.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'snapshot-1' },
+        data: expect.objectContaining({ indexStatus: 'LEXICAL_READY' }),
+      }),
+    );
+
+    // 4. Assert enqueueSnapshotEmbedding is called
+    expect(queueService.enqueueSnapshotEmbedding).toHaveBeenCalledWith('snapshot-1');
+
+    // Note: dependencyEdges are currently ignored. There is no dependencyEdgeRepository usage.
+    // The test naturally passes despite dependencyEdges being present in the scanner payload.
+  });
+
   it('removes temp workspace on clone failure without masking the original error', async () => {
     (fs.mkdtemp as jest.Mock).mockResolvedValue('/tmp/ba-scan-fail');
     (fs.rm as jest.Mock).mockRejectedValue(new Error('cleanup failed'));
