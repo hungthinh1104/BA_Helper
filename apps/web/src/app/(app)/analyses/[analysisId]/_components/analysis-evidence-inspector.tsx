@@ -86,8 +86,7 @@ export function AnalysisEvidenceInspector({
       ["CONTROLLER", "API_ROUTE", "SERVICE", "SERVICE_METHOD", "ENTITY", "TEST"].includes(
         selectedGraphNode.type,
       )
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const coverage = qaCoverageData.find((c: any) =>
+    const coverage = qaCoverageData.find((c) =>
       c.artifactId === selectedGraphNode.id.replace("artifact-", ""),
     )
 

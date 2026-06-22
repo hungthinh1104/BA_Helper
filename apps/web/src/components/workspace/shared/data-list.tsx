@@ -4,7 +4,7 @@ import Link from "next/link"
 
 export function DataList({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("flex flex-col border border-border/60 rounded-xl overflow-hidden bg-surface shadow-sm", className)}>
+    <div className={cn("flex flex-col border border-border/60 rounded-xl bg-surface shadow-sm relative", className)}>
       {children}
     </div>
   )
@@ -21,7 +21,7 @@ export function DataListHeader({
 }) {
   return (
     <div 
-      className={cn("grid items-center gap-4 px-6 py-3 bg-surface-muted/30 text-[11px] font-medium tracking-wider uppercase text-muted-foreground border-b border-border", className)}
+      className={cn("grid items-center gap-4 px-6 py-3 bg-surface-muted/30 text-xs font-medium uppercase text-muted-foreground border-b border-border max-sm:hidden", className)}
       style={{ gridTemplateColumns: gridCols }}
     >
       {children}
@@ -45,7 +45,7 @@ export function DataListRow({
       <Link 
         href={href}
         className={cn(
-          "grid items-center gap-4 px-6 py-3 transition-colors group relative border-b border-border last:border-0 hover:bg-surface-soft/80 cursor-pointer", 
+          "grid items-center gap-4 px-6 py-3 transition-colors group relative border-b border-border last:border-0 hover:bg-surface-soft/80 cursor-pointer max-sm:flex max-sm:flex-col max-sm:items-start max-sm:gap-2 max-sm:px-4 max-sm:py-4",
           className
         )}
         style={{ gridTemplateColumns: gridCols }}
@@ -58,7 +58,7 @@ export function DataListRow({
   return (
     <div 
       className={cn(
-        "grid items-center gap-4 px-6 py-3 transition-colors group relative border-b border-border last:border-0 hover:bg-surface-soft/40", 
+        "grid items-center gap-4 px-6 py-3 transition-colors group relative border-b border-border last:border-0 hover:bg-surface-soft/40 max-sm:flex max-sm:flex-col max-sm:items-start max-sm:gap-2 max-sm:px-4 max-sm:py-4",
         className
       )}
       style={{ gridTemplateColumns: gridCols }}

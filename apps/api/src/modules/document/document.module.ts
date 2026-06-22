@@ -3,6 +3,9 @@ import { DocumentController } from './api/document.controller';
 import { ListDocumentsUseCase } from './application/list-documents.usecase';
 import { GetApprovedReportUseCase } from './application/get-approved-report.usecase';
 import { ExportApprovedReportUseCase } from './application/export-approved-report.usecase';
+import { CreateReviewedReportSnapshotUseCase } from './application/create-reviewed-report-snapshot.usecase';
+import { GetLatestReviewedReportSnapshotUseCase } from './application/get-latest-reviewed-report-snapshot.usecase';
+import { GetFinalReviewedReportUseCase } from './application/get-final-reviewed-report.usecase';
 import { DocumentRepository } from './infrastructure/document.repository';
 import { MarkdownImpactReportBuilder } from './application/markdown-impact-report.builder';
 import { MermaidImpactDiagramBuilder } from './application/mermaid-impact-diagram.builder';
@@ -13,9 +16,12 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { EventLogModule } from '../event-log/event-log.module';
 import { EventLogService } from '../event-log/application/event-log.service';
 import { ProjectModule } from '../project/project.module';
+import { TraceabilityModule } from '../traceability/traceability.module';
+
+import { EvaluationContextAdapter } from './application/evaluation-context.adapter';
 
 @Module({
-  imports: [PrismaModule, EventLogModule, ProjectModule],
+  imports: [PrismaModule, EventLogModule, ProjectModule, TraceabilityModule],
   controllers: [DocumentController],
   providers: [
     DocumentRepository,
@@ -57,14 +63,21 @@ import { ProjectModule } from '../project/project.module';
         PdfExportRenderer,
       ],
     },
+    EvaluationContextAdapter,
     MermaidImpactDiagramBuilder,
     MarkdownImpactReportBuilder,
+    CreateReviewedReportSnapshotUseCase,
+    GetLatestReviewedReportSnapshotUseCase,
+    GetFinalReviewedReportUseCase,
   ],
   exports: [
     DocumentRepository,
     MarkdownImpactReportBuilder,
     MarkdownExportRenderer,
     PdfExportRenderer,
+    CreateReviewedReportSnapshotUseCase,
+    GetLatestReviewedReportSnapshotUseCase,
+    GetFinalReviewedReportUseCase,
   ],
 })
 export class DocumentModule {}

@@ -1,61 +1,65 @@
-# Requirement-to-Code Impact Analyzer
+# BA Helper: Requirement-to-Code Impact Analyzer
 
-Map requirement changes to impacted backend code, evidence, unknowns/risks, QA scenarios, review coverage, and traceability reports.
+**BA Helper** is a specialized impact analyzer for backend teams. It bridges the gap between changing business requirements and backend architecture. In research contexts, the engine is referred to as **ReqImpact**.
 
-**BA Helper** is a requirement-to-code impact analyzer for backend teams.
+## 1. The Problem
+When a business requirement changes (e.g., "allow users to cancel paid bookings for a refund"), Technical Business Analysts (BAs) and QA Engineers must manually trace how that change cascades through the backend codebase. This process is historically slow, heavily reliant on tribal knowledge, and lacks an immutable audit trail—often resulting in missed edge cases and unhandled regression risks.
 
-## The Problem
-When a business requirement changes, backend systems are highly susceptible to hidden impacts. Traditional impact analysis is either entirely manual (relying on tribal knowledge) or requires heavy, proprietary integration. Generic AI chatbots lack repository-wide context and fail to provide auditable evidence of *why* specific code blocks are impacted, leading to brittle updates and missed QA regressions.
+## 2. The Solution
+BA Helper automates the heavy lifting of traceability while enforcing strict human oversight. Given a requirement change and a codebase snapshot, the system provides a complete audited workflow:
+1. **Extraction:** Parses backend code and constructs an evidence-first impact graph.
+2. **Analysis:** Exposes unknowns, risks, and targeted QA scenarios.
+3. **Human Review:** Forces an analyst to explicitly accept or reject every proposed traceability link.
+4. **Snapshot:** Freezes the reviewed decisions into a mathematically immutable snapshot.
+5. **Final Export:** Generates a deterministic, audited markdown report directly from the locked snapshot.
 
-## What It Does
-Given a requirement change, the system securely scans backend repositories and provides a complete flow:
-- Requirement change
-- Impacted backend code artifacts
-- Evidence
-- Unknowns / Risks / QA scenarios
-- Human review
-- Traceability / Report
-- Drift / Freshness warning
+## 3. Why It Is Different from a Repo Chatbot
+Unlike generic AI coding assistants or repo chatbots:
+- **No Hallucinated Claims:** Every insight must link to a persisted code `Evidence` record.
+- **Stateful & Persistent:** It generates structured, queryable entities (Traceability Links, Evidence, Decisions).
+- **Human-in-the-Loop:** It does not blindly trust AI output. The LLM acts as an analytical reader, and a human acts as the mandatory approver.
+- **Audit-Style Gating:** You cannot download a final report until every single link is manually reviewed and a snapshot is locked.
 
-## What It Is Not
-- **Not a generic repo chatbot**
-- **Not a generic AI coding agent**
-- **Not a code generator**
-- **Not a public benchmark**
-
-## Why It Is Trustworthy
+## 4. Trust & Audit Guarantees
 Our analysis is strictly constrained to prevent hallucinations and fabricated claims:
-- **Evidence-backed impacts:** Every claim links to extracted code.
-- **Scan health:** Explicit READY/PARTIAL scan limits prevent silent omissions.
-- **Review coverage:** Human review gating ensures humans are accountable for finalization.
-- **Snapshot drift:** Analyzes frozen commits and provides clear staleness warnings if code changes.
-- **Bounded diagnostics:** Output size and structure are strictly bounded.
-- **Domain packs as hints only:** Domain packs influence retrieval but do not generate un-evidenced claims.
-- **No evidence fabrication:** Only explicit parser-derived code excerpts can be cited as evidence.
+- **Immutable Snapshots:** Once a snapshot is taken, the historical record cannot be altered by subsequent live edits.
+- **Gated Exports:** The system strictly blocks final exports if unreviewed links exist or if the snapshot is missing.
+- **No AI in Final Export:** The final markdown report is generated strictly from the frozen database payload, with zero active LLM calls or retrieval processes during the export phase.
 
-## Golden Path Demo
-Run the definitive automated integration test for the focused TypeScript/NestJS demo path:
+## 5. Live Preview
+A read-only portfolio demonstration is available at:
+👉 **[Placeholder: Insert Vercel URL here]**
+
+> **Note:** This preview is protected by a password and uses deterministic seeded data and fake AI providers to ensure a fast, consistent, and secure demonstration of the Audit Workflow. If you are reviewing this portfolio, please reach out for the preview password.
+
+
+## 5. Demo Workflow
+The primary golden path demo validates the core evidence-first pipeline (`scan → impact analysis → evidence → review → report → drift visibility`).
+
+You can run the definitive automated integration test for the focused TypeScript/NestJS demo path:
 
 ```bash
 pnpm demo:golden-path
 ```
 
-This demo validates the core evidence-first pipeline:
-`scan → impact analysis → evidence → review → report → drift visibility`
+**Visual Case Study:**
+For a step-by-step visual walkthrough of this workflow, see the [Demo Case Study](docs/portfolio/case-study.md).
 
-**Demo Details:**
-- **Fixture:** `nestjs-booking-with-payment`
-- **Domain Pack:** `booking@0.1.0`
-- **External Dependencies:** External LLM/embedding calls are mocked/fake for deterministic CI runs.
-- **Scanner maturity:** TypeScript/NestJS is the primary `STABLE` demo stack; other adapters are capability proof, not the main demo story.
-- **Drift:** The drift check is at a smoke-level.
+**Sample Requirement:**
+> "When a paid booking is cancelled, the system must refund the tenant, prevent double refunds, update booking/payment state, and notify relevant parties."
 
-## Sample Requirement
-Read the [Sample Requirement Docs](docs/demo/sample-requirement-change.md) or use this text directly:
+## 6. Tech Stack
+Built as a TypeScript modular monolith to balance speed of development with eventual microservice readiness:
+- **Frontend:** Next.js App Router, Tailwind CSS, Shadcn UI (React 19).
+- **Backend API:** NestJS HTTP API serving frontend requests.
+- **Workers:** NestJS BullMQ background processors for heavy analysis and extraction.
+- **Persistence:** PostgreSQL (Prisma) for relational state and pgvector for embeddings. Redis for job queues.
+- **Contracts:** Shared Zod API schemas bounding the frontend and backend.
 
-```text
-When a paid booking is cancelled, the system must refund the tenant, prevent double refunds, update booking/payment state, and notify relevant parties.
-```
+## 7. Test Coverage
+This absolute immutability is proven by comprehensive invariant test suites:
+- **E17A Backend Tests:** Asserts that missing snapshots and unreviewed links block the gate at the API level, and that final reports are derived purely from snapshot payloads.
+- **E17B Frontend Tests:** MSW/JSDOM UI test suites assert that incomplete gate states visually disable export functionality, and complete states correctly dispatch the frozen markdown Blob to the user.
 
 ## Visual Overview
 
@@ -135,8 +139,15 @@ pnpm --dir apps/api exec prisma generate
 pnpm --dir apps/api exec prisma migrate deploy --schema prisma/schema.prisma
 ```
 
-### 6. Run Golden-Path Demo (Automated)
-Run the automated integration test to verify the deterministic, end-to-end impact analyzer flow.
+### 7. Run the Visual Demo (Recommended)
+We provide an idempotent seed script to populate a realistic "Booking Cancellation" scenario directly into the database. This is the fastest way to experience the Human Review Gate and Export workflow without external LLM keys.
+
+1. See the [Local Demo Runbook](docs/demo/run-local-demo.md) for full setup.
+2. Run `pnpm db:migrate` and `pnpm db:seed:demo`.
+3. Follow the [Demo Acceptance Checklist](docs/demo/demo-acceptance-checklist.md) to walk through the UI.
+
+### 8. Run Golden-Path Pipeline Test (Automated)
+Run the automated integration test to verify the deterministic, end-to-end impact analyzer flow programmatically using a fake LLM provider.
 
 ```bash
 pnpm demo:golden-path

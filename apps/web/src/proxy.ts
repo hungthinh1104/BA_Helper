@@ -5,6 +5,39 @@ import { buildLoginRedirect, getSafeNext, isProtectedAppPath, isPublicWebPath } 
 const DEFAULT_NEXTAUTH_SECRET = "dev-super-secret-key-nextauth"
 
 export async function proxy(request: NextRequest) {
+  // --- PREVIEW BASIC AUTH GUARD ---
+  if (process.env.PREVIEW_AUTH_ENABLED === 'true') {
+    const basicAuth = request.headers.get('authorization');
+    const expectedUser = process.env.PREVIEW_USERNAME || 'demo';
+    const expectedPwd = process.env.PREVIEW_PASSWORD;
+
+    if (!expectedPwd) {
+      console.error('PREVIEW_AUTH_ENABLED is true, but PREVIEW_PASSWORD is not set.');
+      return new NextResponse('Configuration Error: Password not set', { status: 500 });
+    }
+
+    let isAuthenticated = false;
+    if (basicAuth) {
+      const authValue = basicAuth.split(' ')[1];
+      if (authValue) {
+        const [user, pwd] = atob(authValue).split(':');
+        if (user === expectedUser && pwd === expectedPwd) {
+          isAuthenticated = true;
+        }
+      }
+    }
+
+    if (!isAuthenticated) {
+      return new NextResponse('Authentication Required', {
+        status: 401,
+        headers: {
+          'WWW-Authenticate': 'Basic realm="Secure BA Helper Preview Area"',
+        },
+      });
+    }
+  }
+  // --- END PREVIEW BASIC AUTH GUARD ---
+
   const { pathname, search } = request.nextUrl
 
   if (isPublicWebPath(pathname)) {

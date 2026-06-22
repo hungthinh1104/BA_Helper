@@ -18,7 +18,7 @@ export function WorkspacePageHeader({ title, description, children, className }:
         )}
       </div>
       {children && (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 max-sm:w-full">
           {children}
         </div>
       )}

@@ -2,6 +2,9 @@ import { Module } from '@nestjs/common';
 import { TraceabilityController } from './api/traceability.controller';
 import { ListTraceabilityUseCase } from './application/list-traceability.usecase';
 import { ReviewTraceabilityUseCase } from './application/review-traceability.usecase';
+import { UpdateTraceabilityReviewDecisionUseCase } from './application/update-traceability-review-decision.usecase';
+import { DeleteTraceabilityReviewDecisionUseCase } from './application/delete-traceability-review-decision.usecase';
+import { GetReviewCompletionUseCase } from './application/get-review-completion.usecase';
 import { TraceabilityRepository } from './infrastructure/traceability.repository';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PrismaService } from '../prisma/prisma.service';
@@ -29,6 +32,25 @@ import { ProjectModule } from '../project/project.module';
         new ReviewTraceabilityUseCase(repo, eventLog),
       inject: [TraceabilityRepository, EventLogService],
     },
+    {
+      provide: UpdateTraceabilityReviewDecisionUseCase,
+      useFactory: (repo: TraceabilityRepository, eventLog: EventLogService) =>
+        new UpdateTraceabilityReviewDecisionUseCase(repo, eventLog),
+      inject: [TraceabilityRepository, EventLogService],
+    },
+    {
+      provide: DeleteTraceabilityReviewDecisionUseCase,
+      useFactory: (repo: TraceabilityRepository, eventLog: EventLogService) =>
+        new DeleteTraceabilityReviewDecisionUseCase(repo, eventLog),
+      inject: [TraceabilityRepository, EventLogService],
+    },
+    {
+      provide: GetReviewCompletionUseCase,
+      useFactory: (prisma: PrismaService, repo: TraceabilityRepository) =>
+        new GetReviewCompletionUseCase(prisma, repo),
+      inject: [PrismaService, TraceabilityRepository],
+    },
   ],
+  exports: [TraceabilityRepository, GetReviewCompletionUseCase],
 })
 export class TraceabilityModule {}

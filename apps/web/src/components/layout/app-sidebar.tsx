@@ -14,7 +14,7 @@ export function AppSidebar({ isCollapsed, onToggle }: AppSidebarProps) {
   const active = (prefix: string) => pathname?.startsWith(prefix) ? "true" : undefined
 
   return (
-    <aside className="app-sidebar h-full flex flex-col transition-all duration-300 overflow-hidden">
+    <aside className="app-sidebar flex h-full flex-col overflow-hidden">
       <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-2 px-2"} mb-8 relative`}>
         <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center shrink-0">
           <Workflow className="w-3.5 h-3.5 text-primary-foreground" />
@@ -26,6 +26,7 @@ export function AppSidebar({ isCollapsed, onToggle }: AppSidebarProps) {
             onClick={onToggle}
             className={`absolute right-1 w-6 h-6 rounded-md hover:bg-surface-soft flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors ${isCollapsed ? 'hidden' : ''}`}
             title="Collapse Sidebar"
+            aria-label="Collapse Sidebar"
           >
             <PanelLeftClose className="w-4 h-4" />
           </button>
@@ -82,6 +83,7 @@ export function AppSidebar({ isCollapsed, onToggle }: AppSidebarProps) {
             onClick={onToggle}
             className="w-8 h-8 rounded-md hover:bg-surface-soft flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
             title="Expand Sidebar"
+            aria-label="Expand Sidebar"
           >
             <PanelLeftOpen className="w-4 h-4" />
           </button>

@@ -4,10 +4,9 @@ import { use } from "react"
 
 import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
 import { Button } from "@/components/ui/button"
-import { GitBranch, Play, AlertTriangle, AlertCircle, ShieldAlert, Layers, Server, Box, Database, Beaker, Activity } from "lucide-react"
+import { GitBranch, Play, AlertCircle } from "lucide-react"
 import { useCurrentWorkspace, useOptionalProjectId } from "@/lib/project-context"
 import { canRunScan } from "@/lib/permissions"
-import { ScanJobProgress } from "@/components/workspace/repository/scan-job-progress"
 import { NewAnalysisDialog } from "@/components/workspace/analysis/new-analysis/new-analysis-dialog"
 import { ScanDiagnosticsPanel } from "@/components/workspace/analysis/scan-diagnostics-panel"
 import { ScanHealthCard } from "@/components/workspace/repository/scan-health-card"
@@ -20,36 +19,15 @@ import { useRepositoryStatusWatcher } from "@/hooks/ui/use-status-watcher"
 import { DiagnosticItem } from "@ba-helper/contracts"
 import { Skeleton } from "@/components/ui/skeleton"
 import { v4 as uuidv4 } from "uuid"
-import type { RepositoryProfileResponse } from "@ba-helper/contracts"
-import { MaturityBadge } from "@/components/workspace/shared/status-badges"
+
+import { RepositorySnapshotBanner } from "./_components/repository-snapshot-banner"
+import { RepositoryScannerProfile } from "./_components/repository-scanner-profile"
+import { RepositoryArtifactAnalytics } from "./_components/repository-artifact-analytics"
 
 interface PageProps {
   params: Promise<{ repositoryId: string }>
 }
 
-function getFailureGuidance(errorCode?: string, message?: string) {
-  if (errorCode === "CLONE_FAILED" && message?.includes("spawn git ENOENT")) {
-    return "Scanner runtime is missing the git binary. Rebuild or restart the API/worker runtime with git installed, then rerun the scan."
-  }
-
-  if (errorCode === "UNSUPPORTED_FRAMEWORK") {
-    return "This repository uses an unsupported language or framework. The analyzer currently supports TypeScript/NestJS (STABLE) and Java/Spring Boot (PARTIAL). Other frameworks are considered EXPERIMENTAL capability proofs."
-  }
-
-  if (errorCode === "SECURITY_RISK_BLOCKED") {
-    return "The repository was blocked by security guardrails. Check diagnostics to see which rule stopped ingestion before retrying."
-  }
-
-  return "Check the diagnostics below, fix the runtime or repository issue, and rerun the scan."
-}
-
-function getScannerMaturity(profile?: RepositoryProfileResponse) {
-  if (!profile) return null
-  if ((profile.language as string) === "TYPESCRIPT" && (profile.framework as string) === "NESTJS") return "STABLE"
-  if ((profile.language as string) === "JAVA" && (profile.framework as string) === "SPRING_BOOT") return "PARTIAL"
-  if (profile.framework !== "UNKNOWN") return "EXPERIMENTAL"
-  return "UNKNOWN"
-}
 export default function RepositoryDetailsPage({ params }: PageProps) {
   // Since Next.js 15, params is a Promise that needs to be unwrapped with React.use
   const { repositoryId } = use(params)
@@ -126,12 +104,9 @@ export default function RepositoryDetailsPage({ params }: PageProps) {
   const hasBlocker = diagnostics.some((diagnostic) => diagnostic.severity === "BLOCKER")
   const isBlocked = job?.status === "FAILED" && hasBlocker
   const primaryDiagnostic = diagnostics[0]
-  const failureGuidance = getFailureGuidance(job?.error?.code, job?.error?.message ?? primaryDiagnostic?.message)
-
   const scanHealthDiag = diagnostics.find(d => d.code === "SCAN_HEALTH")
   const regularDiagnostics = diagnostics.filter(d => d.code !== "SCAN_HEALTH")
   const profile = repo.latestSnapshot?.profile
-  const scannerMaturity = getScannerMaturity(profile)
 
   const handleRetryScan = async () => {
     try {
@@ -173,117 +148,18 @@ export default function RepositoryDetailsPage({ params }: PageProps) {
 
         <div className="flex flex-col gap-8">
           
-          {/* Snapshot Status Banner */}
-          <div className="flex flex-col gap-3 p-5 rounded-xl border border-border/40 bg-surface/50 backdrop-blur-xl shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col gap-1 w-full max-w-sm">
-                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Current Snapshot</span>
-                <div className="mt-1">
-                  {job ? (
-                    <ScanJobProgress job={job} snapshot={repo.latestSnapshot} />
-                  ) : (
-                    <span className="text-[12px] font-medium text-muted-foreground">No jobs</span>
-                  )}
-                </div>
-              </div>
-              {isPartial && !isBlocked && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-warning/10 border border-warning/25 rounded-lg shrink-0">
-                  <AlertTriangle className="w-4 h-4 text-warning" />
-                  <div className="flex flex-col">
-                    <span className="text-[12px] font-bold text-warning">PARTIAL Coverage</span>
-                  </div>
-                </div>
-              )}
-              {isBlocked && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-danger/10 border border-danger/25 rounded-lg shrink-0">
-                  <ShieldAlert className="w-4 h-4 text-danger" />
-                  <div className="flex flex-col">
-                    <span className="text-[12px] font-bold text-danger">BLOCKED</span>
-                  </div>
-                </div>
-              )}
-            </div>
+          <RepositorySnapshotBanner
+            job={job}
+            latestSnapshot={repo.latestSnapshot}
+            isPartial={isPartial}
+            isBlocked={isBlocked}
+            canScan={canScan}
+            isRetrying={isRetrying}
+            primaryDiagnostic={primaryDiagnostic}
+            onRetryScan={handleRetryScan}
+          />
 
-            {isPartial && !isBlocked && (
-              <p className="text-[12px] text-warning/90 mt-1 px-1">
-                Partial snapshot: some files were skipped due to scan limits or security rules. The analysis may miss impacts in skipped files.
-              </p>
-            )}
-
-            {isBlocked && (
-              <p className="text-[12px] font-medium text-danger/90 mt-1 px-1">
-                Scan blocked for security risk. No repository content was sent to LLM or embedding providers.
-              </p>
-            )}
-
-            {job?.status === "FAILED" && (
-              <div className="mt-2 flex items-center justify-between p-3 rounded-lg border border-danger/30 bg-danger/5">
-                <div className="flex items-center gap-3">
-                  <AlertCircle className="w-4 h-4 text-danger shrink-0" />
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[13px] text-danger/90 font-medium">
-                      {job.error?.code ? `Scan failed: ${job.error.code}` : "Scan failed"}
-                    </span>
-                    <span className="text-[12px] text-danger/80">
-                      {job.error?.message || primaryDiagnostic?.message || "Please check diagnostics or try again."}
-                    </span>
-                  </div>
-                </div>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className={`h-8 border-danger/20 ${!canScan ? 'opacity-50 cursor-not-allowed text-danger' : 'hover:bg-danger/10 hover:text-danger text-danger'}`}
-                  onClick={() => canScan && handleRetryScan()}
-                  disabled={isRetrying || !canScan}
-                  title={!canScan ? "Maintainer role required to run scans." : undefined}
-                >
-                  {isRetrying ? "Retrying..." : "Rerun Scan"}
-                </Button>
-              </div>
-            )}
-
-            {job?.status === "FAILED" && (
-              <div className="rounded-lg border border-warning/20 bg-warning/5 p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-warning mb-1">
-                  Recommended action
-                </p>
-                <p className="text-[12px] text-foreground/85">
-                  {failureGuidance}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {profile && (
-            <div className="flex flex-col gap-3 p-5 rounded-xl border border-border/40 bg-surface/50 backdrop-blur-xl shadow-sm">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-[14px] font-semibold text-foreground flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-muted-foreground" />
-                    Detected Scanner Profile
-                  </h2>
-                  <p className="mt-1 text-[12px] text-muted-foreground">
-                    Profile is persisted on the published snapshot and only describes scanner capability, not production-grade language coverage.
-                  </p>
-                </div>
-                {scannerMaturity && (
-                  <MaturityBadge maturity={scannerMaturity} className="text-[11px] px-2 py-1" />
-                )}
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <ProfileStat label="Language" value={profile.language} />
-                <ProfileStat label="Framework" value={profile.framework} />
-                <ProfileStat label="Architecture" value={profile.architectureStyle} />
-                <ProfileStat label="Domain" value={profile.domain} />
-              </div>
-              {(profile.sourceRoots.length > 0 || profile.testRoots.length > 0) && (
-                <p className="text-[11px] text-muted-foreground">
-                  Source roots: {profile.sourceRoots.length > 0 ? profile.sourceRoots.join(", ") : "—"} · Test roots:{" "}
-                  {profile.testRoots.length > 0 ? profile.testRoots.join(", ") : "—"}
-                </p>
-              )}
-            </div>
-          )}
+          {profile && <RepositoryScannerProfile profile={profile} />}
 
           {scanHealthDiag && (
             <ScanHealthCard payload={scanHealthDiag.payload} />
@@ -314,45 +190,10 @@ export default function RepositoryDetailsPage({ params }: PageProps) {
             </div>
           )}
 
-          {/* Artifact Analytics */}
-          <div className="flex flex-col gap-4">
-            <h2 className="text-[14px] font-semibold text-foreground flex items-center gap-2">
-              <Layers className="w-4 h-4 text-muted-foreground" />
-              Artifact Analytics
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <ArtifactStatCard icon={<Server />} label="Controllers" count={repo.artifactStats?.controllers || 0} />
-              <ArtifactStatCard icon={<Box />} label="Services" count={repo.artifactStats?.services || 0} />
-              <ArtifactStatCard icon={<Database />} label="Entities" count={repo.artifactStats?.entities || 0} />
-              <ArtifactStatCard icon={<Beaker />} label="Tests" count={repo.artifactStats?.tests || 0} />
-            </div>
-          </div>
+          <RepositoryArtifactAnalytics stats={repo.artifactStats} />
 
         </div>
       </div>
-    </div>
-  )
-}
-
-function ArtifactStatCard({ label, count, icon }: { label: string; count: number; icon: React.ReactNode }) {
-  return (
-    <div className="flex flex-col p-4 rounded-xl border border-border/40 bg-surface/40 backdrop-blur-md shadow-sm transition-colors hover:bg-surface-soft/60">
-      <div className="flex items-center justify-between mb-3">
-        <div className="text-muted-foreground [&>svg]:w-4 [&>svg]:h-4">
-          {icon}
-        </div>
-        <span className="text-xl font-bold text-foreground">{count}</span>
-      </div>
-      <span className="text-[12px] font-medium text-muted-foreground">{label}</span>
-    </div>
-  )
-}
-
-function ProfileStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-border/40 bg-surface-soft/40 p-3">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className="mt-1 truncate text-[12px] font-mono text-foreground">{value}</p>
     </div>
   )
 }

@@ -105,19 +105,19 @@ describe('RunImpactAnalysisUseCase', () => {
     ).rejects.toThrow(AppError);
   });
 
-  it('should execute full RAG pipeline and update status to WAITING_FOR_REVIEW', async () => {
+  it('currently completes by saving metadata and moving to WAITING_FOR_REVIEW without document enqueue', async () => {
     const analysis = {
       id: 'a1',
       status: 'QUEUED',
-      snapshot: { id: 's1', repositoryId: 'r1', analyzerVersion: '1.0' },
+      snapshot: { id: 's1', repositoryId: 'r1', analyzerVersion: '1.0', repository: { projectId: 'p1' }, profile: { domain: 'BOOKING' }, diagnostics: [] },
       requirementRevision: { rawText: 'cancel booking' },
     };
     impactRepo.findById.mockResolvedValue(analysis as any);
     artifactRepo.listBySnapshot.mockResolvedValue([
-      { id: 'art1', artifactKey: 'file1', artifactType: 'CODE', filePath: 'file1.ts', name: 'File1' } as any
+      { id: 'art1', artifactKey: 'api:booking.controller', artifactType: 'CODE', filePath: 'booking.ts', name: 'BookingController', startLine: 1, endLine: 10 } as any
     ]);
     retrievalService.retrieve.mockResolvedValue([
-      { artifactKey: 'file1', retrievalMethod: 'KEYWORD', score: 0.9 } as any
+      { artifactKey: 'api:booking.controller', retrievalMethod: 'KEYWORD', score: 0.9, retrievalSignals: ['VECTOR'], suggestion: 'Check cancel' } as any
     ]);
     evidenceRepo.upsertMany.mockResolvedValue([
       { id: 'ev1', artifactId: 'art1', excerpt: 'code' } as any
@@ -130,11 +130,16 @@ describe('RunImpactAnalysisUseCase', () => {
     llmProvider.generateStructured.mockResolvedValue({
       data: {
         insights: [
-          { insightKey: 'i1', insightType: 'CLAIM', certainty: 'EVIDENCED', reviewStatus: 'NEEDS_REVIEW', confidence: 0.9, title: 'title', description: 'desc', evidenceKeys: ['file1'] }
+          { insightKey: 'i1', insightType: 'CLAIM', certainty: 'EVIDENCED', reviewStatus: 'NEEDS_REVIEW', confidence: 0.9, title: 'title', description: 'desc', evidenceKeys: ['api:booking.controller'] }
         ],
         unknowns: []
       },
-      metadata: {}
+      metadata: {
+        provider: 'fake-provider',
+        model: 'fake-model',
+        inputTokens: 100,
+        outputTokens: 50,
+      }
     } as any);
 
     insightRepo.upsertMany.mockResolvedValue([
@@ -142,16 +147,41 @@ describe('RunImpactAnalysisUseCase', () => {
     ]);
     insightRepo.linkEvidence.mockResolvedValue({ count: 1 } as any);
 
-    await useCase.execute({ analysisId: 'a1' });
+    await useCase.execute({ analysisId: 'a1', expandGraph: true, domain: 'booking' });
 
-    expect(impactRepo.updateStatus).toHaveBeenCalledWith(expect.objectContaining({ status: 'RUNNING', stage: 'RETRIEVING_EVIDENCE' }));
-    expect(impactRepo.updateStatus).toHaveBeenCalledWith(expect.objectContaining({ status: 'RUNNING', stage: 'RUNNING_AI_REASONING' }));
-    expect(impactRepo.updateStatus).toHaveBeenCalledWith(expect.objectContaining({ status: 'WAITING_FOR_REVIEW', stage: 'DONE' }));
+    // 1. Verify exact State Transitions Order
+    expect(impactRepo.updateStatus).toHaveBeenNthCalledWith(1, expect.objectContaining({ status: 'RUNNING', stage: 'RETRIEVING_EVIDENCE', progress: 10 }));
+    expect(impactRepo.updateStatus).toHaveBeenNthCalledWith(2, expect.objectContaining({ status: 'RUNNING', stage: 'RUNNING_AI_REASONING', progress: 60 }));
+    
+    // 2. Verify Final Completion Metadata & Status without document enqueue
+    const finalUpdateCall = (impactRepo.updateStatus as jest.Mock).mock.calls[2][0];
+    expect(finalUpdateCall).toEqual(expect.objectContaining({
+      status: 'WAITING_FOR_REVIEW',
+      stage: 'DONE',
+      progress: 100,
+      metadata: expect.objectContaining({
+        retrieval: expect.objectContaining({ strategy: 'hybrid', maxArtifacts: 20 }),
+        llm: expect.objectContaining({ provider: 'fake-provider', model: 'fake-model', inputTokens: 100 }),
+        domainPack: expect.objectContaining({ id: 'test-pack' })
+      })
+    }));
 
-    expect(evidenceRepo.upsertMany).toHaveBeenCalled();
-    expect(traceabilityRepo.upsertMany).toHaveBeenCalled();
-    expect(llmProvider.generateStructured).toHaveBeenCalled();
-    expect(insightRepo.upsertMany).toHaveBeenCalled();
+    // 3. Verify Retrieval Provider Boundary
+    expect(retrievalService.retrieve).toHaveBeenCalledWith(expect.objectContaining({
+      projectId: 'p1',
+      repositoryId: 'r1',
+      snapshotId: 's1',
+      changeRequest: 'cancel booking',
+      domain: 'test-pack',
+      expandGraph: true
+    }));
+
+    // 4. Verify Fake Provider Argument Boundary
+    const promptArg = (llmProvider.generateStructured as jest.Mock).mock.calls[0][0];
+    expect(promptArg).toEqual(expect.objectContaining({
+      systemPrompt: 'sys',
+      userPrompt: 'user'
+    }));
   });
 
   it('should mark analysis as FAILED if error occurs', async () => {

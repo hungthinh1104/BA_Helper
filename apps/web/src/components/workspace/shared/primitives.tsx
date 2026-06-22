@@ -2,16 +2,27 @@ import type { ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
 
+interface PageShellProps {
+  children: ReactNode
+  className?: string
+  width?: "compact" | "default" | "wide" | "full"
+}
+
 export function PageShell({
   children,
   className,
-}: {
-  children: ReactNode
-  className?: string
-}) {
+  width = "default",
+}: PageShellProps) {
+  const widthClass = {
+    compact: "max-w-3xl",
+    default: "max-w-6xl",
+    wide: "max-w-[1400px]",
+    full: "max-w-none",
+  }[width]
+
   return (
     <div className="app-page-scroll">
-      <div className={cn("mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-4 pb-16", className)}>
+      <div className={cn("mx-auto flex w-full flex-col gap-6 md:gap-8 p-4 md:p-8 pb-16 md:pb-20", widthClass, className)}>
         {children}
       </div>
     </div>

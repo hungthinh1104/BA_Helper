@@ -4,25 +4,28 @@ import { useApprovedReport } from "@/hooks/api/use-approved-report"
 import { useAnalysisDetail } from "@/hooks/api/use-analyses"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AlertCircle, FileWarning, Copy, Download, CheckCircle2, Loader2, Printer } from "lucide-react"
-import ReactMarkdown from "react-markdown"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
-import { MermaidRenderer } from "@/components/workspace/shared/mermaid-renderer"
-import remarkGfm from "remark-gfm"
 import { apiGetFile } from "@/lib/api-client"
 import { toast } from "sonner"
 import { AnalysisStatusBadge } from "@/components/workspace/shared/status-badges"
+import { EvaluationContextCard } from "./evaluation-context-card"
+import { EvidenceQualitySummary } from "./evidence-quality-summary"
+import { EvidenceQualityTable } from "./evidence-quality-table"
+import { ReviewedSnapshotPanel } from "./reviewed-snapshot-panel"
+import { FinalReviewGatePanel } from "./final-review-gate-panel"
+import { ReportMarkdown } from "./report-markdown"
 
 interface ReportViewerProps {
-  analysisId: string;
+  analysisId: string
+  printMode?: boolean
 }
 
-export function ReportViewer({ analysisId }: ReportViewerProps) {
+export function ReportViewer({ analysisId, printMode = false }: ReportViewerProps) {
   const { data: analysis, isLoading: analysisLoading } = useAnalysisDetail(analysisId)
   const { data: report, isLoading: reportLoading, error } = useApprovedReport(analysisId, analysis?.status)
   const [copied, setCopied] = useState(false)
   const [exportingFormat, setExportingFormat] = useState<"md" | "pdf" | null>(null)
-  const printRootId = `report-print-root-${analysisId}`
 
   const handleCopy = async () => {
     if (!report?.markdown) return
@@ -65,14 +68,19 @@ export function ReportViewer({ analysisId }: ReportViewerProps) {
   };
 
   const handlePrint = () => {
-    const printRoot = document.getElementById(printRootId)
-    if (!printRoot) {
-      toast.error("Print unavailable", {
-        description: "The printable report surface is not ready yet.",
+    if (printMode) {
+      window.print()
+      return
+    }
+
+    const printWindow = window.open(`/reports/${analysisId}/print`, "_blank")
+    if (!printWindow) {
+      toast.error("Print preview blocked", {
+        description: "Allow pop-ups for this site, then open the print preview again.",
       })
       return
     }
-    window.print()
+    printWindow.opener = null
   }
 
   if (analysisLoading || reportLoading) {
@@ -104,16 +112,24 @@ export function ReportViewer({ analysisId }: ReportViewerProps) {
   }
 
   return (
-    <div id={printRootId} className="report-print-root flex flex-col bg-background p-6 md:p-8">
+    <div
+      className={`report-print-page flex flex-col bg-background p-6 md:p-8 ${
+        printMode
+          ? "mx-auto min-h-[297mm] w-full max-w-[210mm] shadow-sm print:min-h-0 print:max-w-none print:shadow-none"
+          : ""
+      }`}
+    >
       {/* Report Header Metadata */}
-      <div className="mb-10 pb-8 border-b border-border/50">
+      <header className="report-document-header mb-10 border-b border-border/50 pb-8">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
           <h1 className="text-2xl font-bold text-foreground tracking-tight">{analysis?.requirement.revisionTitle || "Impact Analysis Report"}</h1>
           <div className="flex flex-wrap items-center gap-2 print:hidden shrink-0">
-            <Button size="sm" variant="outline" className="h-8 gap-1.5 shadow-none" onClick={handleCopy}>
-              {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
-              {copied ? 'Copied!' : 'Copy .md'}
-            </Button>
+            {!printMode && (
+              <Button size="sm" variant="outline" className="h-8 gap-1.5 shadow-none" onClick={handleCopy}>
+                {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
+                {copied ? "Copied!" : "Copy .md"}
+              </Button>
+            )}
             <Button
               size="sm"
               variant="outline"
@@ -121,30 +137,34 @@ export function ReportViewer({ analysisId }: ReportViewerProps) {
               onClick={handlePrint}
             >
               <Printer className="w-3.5 h-3.5" />
-              Print
+              {printMode ? "Print / Save PDF" : "Open Print Preview"}
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 gap-1.5 shadow-none"
-              onClick={() => handleDownload("md")}
-              disabled={report.isStale || exportingFormat !== null}
-              title={report.isStale ? "Report is stale; rerun/finalize again before export" : undefined}
-            >
-              {exportingFormat === "md" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-              Export Markdown
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 gap-1.5 shadow-none"
-              onClick={() => handleDownload("pdf")}
-              disabled={report.isStale || exportingFormat !== null}
-              title={report.isStale ? "Report is stale; rerun/finalize again before export" : undefined}
-            >
-              {exportingFormat === "pdf" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-              Export PDF
-            </Button>
+            {!printMode && (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 gap-1.5 shadow-none"
+                  onClick={() => handleDownload("md")}
+                  disabled={report.isStale || exportingFormat !== null}
+                  title={report.isStale ? "Report is stale; rerun/finalize again before export" : undefined}
+                >
+                  {exportingFormat === "md" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                  Export Markdown
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 gap-1.5 shadow-none"
+                  onClick={() => handleDownload("pdf")}
+                  disabled={report.isStale || exportingFormat !== null}
+                  title={report.isStale ? "Report is stale; rerun/finalize again before export" : undefined}
+                >
+                  {exportingFormat === "pdf" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                  Export PDF
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
@@ -153,7 +173,7 @@ export function ReportViewer({ analysisId }: ReportViewerProps) {
         </div>
         
         {report.isStale && (
-          <div className="mb-6 flex items-start gap-3 rounded-lg border border-warning/25 bg-warning/10 p-4 text-warning">
+          <div className="report-stale-warning mb-6 flex items-start gap-3 rounded-lg border border-warning/25 bg-warning/10 p-4 text-warning">
             <FileWarning className="w-5 h-5 shrink-0 mt-0.5" />
             <div className="flex flex-col gap-1">
               <span className="font-semibold text-[13px] uppercase tracking-wider">Stale Report Warning</span>
@@ -167,7 +187,7 @@ export function ReportViewer({ analysisId }: ReportViewerProps) {
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-y-3 gap-x-6 text-[13px] text-muted-foreground mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6 text-[13px] text-muted-foreground mb-8">
           {analysis?.requirement.id && (
             <div><strong className="text-foreground/80 font-medium">Requirement ID:</strong> <span className="font-mono ml-2">{analysis.requirement.id}</span></div>
           )}
@@ -183,46 +203,26 @@ export function ReportViewer({ analysisId }: ReportViewerProps) {
             &quot;{analysis.requirement.rawText}&quot;
           </div>
         )}
-      </div>
+      </header>
 
       {/* Markdown Content */}
-      <article className="report">
-        <ReactMarkdown 
-          remarkPlugins={[remarkGfm]}
-          components={{
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
-            code({ node, inline, className, children, ...props }: any) {
-              const match = /language-(\w+)/.exec(className || '')
-              if (!inline && match && match[1] === 'mermaid') {
-                return <MermaidRenderer chart={String(children).replace(/\n$/, '')} />
-              }
-              if (!inline) {
-                return (
-                  <pre className="report-pre">
-                    <code className={className} {...props}>
-                      {children}
-                    </code>
-                  </pre>
-                )
-              }
-              return (
-                <code className={className} {...props}>
-                  {children}
-                </code>
-              )
-            },
-            table({ children }) {
-              return (
-                <div className="report-table-wrap">
-                  <table>{children}</table>
-                </div>
-              )
-            }
-          }}
-        >
-          {report.markdown}
-        </ReactMarkdown>
-      </article>
+      <ReportMarkdown markdown={report.markdown} />
+
+      {/* Structured Evidence Quality and Evaluation Context */}
+      {!printMode && (
+        <>
+          <div className="mt-12 space-y-8 border-t border-border/50 pt-8 print:hidden">
+            <EvidenceQualitySummary summary={report.evidenceQualitySummary} />
+            {report.evidenceQualityItems && report.evidenceQualityItems.length > 0 && (
+              <EvidenceQualityTable analysisId={analysisId} items={report.evidenceQualityItems} />
+            )}
+            <EvaluationContextCard context={report.evaluationContext} />
+          </div>
+
+          <ReviewedSnapshotPanel analysisId={analysisId} />
+          <FinalReviewGatePanel analysisId={analysisId} />
+        </>
+      )}
     </div>
   )
 }

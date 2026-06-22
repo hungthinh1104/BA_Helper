@@ -11,6 +11,7 @@ import {
   AnalysisStatusBadge,
   CoverageStatusBadge,
 } from "@/components/workspace/shared/status-badges"
+import { MetricCard } from "@/components/workspace/shared/primitives"
 
 interface AnalysisHeaderProps {
   analysis: ImpactAnalysisResponse
@@ -25,20 +26,6 @@ interface AnalysisHeaderProps {
   }
 }
 
-function SummaryMetric({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
-  return (
-    <div className="min-w-[112px] rounded-lg border border-border/60 bg-surface-muted/40 px-3 py-2">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-foreground">{value}</p>
-    </div>
-  )
-}
 
 export function AnalysisHeader({ analysis, blockingRemaining, stats }: AnalysisHeaderProps) {
   const router = useRouter()
@@ -102,10 +89,10 @@ export function AnalysisHeader({ analysis, blockingRemaining, stats }: AnalysisH
         {!finalized ? <CoverageStatusBadge status={analysis.snapshot.coverageStatus ?? "UNKNOWN"} /> : null}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <SummaryMetric label="Coverage" value={analysis.snapshot.coverageStatus ?? "Unknown"} />
-        <SummaryMetric label="Review Remaining" value={`${blockingRemaining}`} />
-        <SummaryMetric label="Risk / Unknown" value={`${stats.unknowns + stats.conflicts}`} />
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3">
+        <MetricCard label="Coverage" value={analysis.snapshot.coverageStatus ?? "Unknown"} />
+        <MetricCard label="Review Remaining" value={`${blockingRemaining}`} />
+        <MetricCard label="Risk / Unknown" value={`${stats.unknowns + stats.conflicts}`} />
       </div>
     </div>
   )

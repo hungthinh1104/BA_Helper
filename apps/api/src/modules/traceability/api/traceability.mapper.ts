@@ -1,35 +1,8 @@
 import { retrievalMetadataSchema } from '@ba-helper/contracts';
 import { Logger } from '@nestjs/common';
+import { TraceabilityLinkWithArtifactAndReviewDecision } from '../infrastructure/traceability.repository';
 
-export const mapTraceabilityList = (items: Array<{
-  id: string;
-  artifactId: string;
-  artifact: {
-    name: string;
-    artifactKey: string;
-    filePath: string;
-    universalKind: string;
-  };
-  linkType: string;
-  linkBasis: string;
-  reviewStatus: string;
-  confidence: number | null;
-  retrievalMetadata?: unknown;
-    evidenceLinks: Array<{
-      evidence: {
-        id: string;
-        sourceType: string;
-        sourcePath: string | null;
-        startLine: number | null;
-        endLine: number | null;
-        excerpt: string;
-        artifactId?: string | null;
-        artifact?: {
-          artifactKey?: string | null;
-        } | null;
-      };
-    }>;
-}>) =>
+export const mapTraceabilityList = (items: TraceabilityLinkWithArtifactAndReviewDecision[]) =>
   items.map((link) => {
     const rawRetrieval = link.retrievalMetadata;
     const parsedRetrieval = rawRetrieval ? retrievalMetadataSchema.safeParse(rawRetrieval) : undefined;
@@ -59,8 +32,19 @@ export const mapTraceabilityList = (items: Array<{
         endLine: evidenceLink.evidence.endLine,
         excerpt: evidenceLink.evidence.excerpt,
         artifactId: evidenceLink.evidence.artifactId ?? undefined,
-        artifactKey: (evidenceLink.evidence as any).artifact?.artifactKey ?? undefined,
+        artifactKey: evidenceLink.evidence.artifact?.artifactKey ?? undefined,
         retrieval,
       })),
+      reviewDecision: link.reviewDecision
+        ? {
+            id: link.reviewDecision.id,
+            analysisId: link.reviewDecision.analysisId,
+            traceabilityLinkId: link.reviewDecision.traceabilityLinkId,
+            decision: link.reviewDecision.decision,
+            note: link.reviewDecision.note,
+            reviewedByUserId: link.reviewDecision.reviewedByUserId,
+            reviewedAt: link.reviewDecision.reviewedAt.toISOString(),
+          }
+        : undefined,
     };
   });

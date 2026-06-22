@@ -82,10 +82,12 @@ describe('FinalizeImpactAnalysisUseCase', () => {
     } as unknown as jest.Mocked<PrismaService>;
 
     const mermaidBuilder = {
-      build: jest.fn().mockReturnValue({ mermaid: '```mermaid\nflowchart TD\n```', isTruncated: false }),
+      build: jest.fn().mockReturnValue({ mermaid: 'diagram', isTruncated: false }),
     } as unknown as jest.Mocked<MermaidImpactDiagramBuilder>;
-
-    reportBuilder = new MarkdownImpactReportBuilder(mermaidBuilder);
+    const evalContextAdapter = {
+      getEvaluationContext: jest.fn().mockReturnValue(null),
+    } as any;
+    reportBuilder = new MarkdownImpactReportBuilder(mermaidBuilder, evalContextAdapter);
 
     useCase = new FinalizeImpactAnalysisUseCase(
       impactRepo,

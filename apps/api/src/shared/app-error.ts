@@ -103,6 +103,7 @@ export type AppErrorCode =
   | 'UNKNOWN_EVENT_TYPE'
   | 'INVALID_IDEMPOTENCY_KEY'
   | 'MISSING_IDEMPOTENCY_KEY'
+  | 'REVIEW_COMPLETION_REQUIRED'
   | 'SNAPSHOT_DIAGNOSTICS_INCOMPLETE';
 
 
@@ -110,6 +111,7 @@ export class AppError extends Error {
   constructor(
     public readonly code: AppErrorCode,
     message: string,
+    public readonly details?: Record<string, unknown>,
   ) {
     super(message);
   }
