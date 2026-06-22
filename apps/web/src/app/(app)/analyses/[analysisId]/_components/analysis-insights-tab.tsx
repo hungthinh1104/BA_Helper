@@ -76,7 +76,7 @@ export function AnalysisInsightsTab({
             size="sm"
             className="h-8 shadow-none shrink-0"
           >
-            Start Review ({blockingRemaining})
+            {blockingRemaining > 0 ? `Start Review (${blockingRemaining})` : "Review Complete"}
           </Button>
         )}
       </div>

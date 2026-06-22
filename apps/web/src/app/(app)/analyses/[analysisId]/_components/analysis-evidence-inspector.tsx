@@ -92,11 +92,11 @@ export function AnalysisEvidenceInspector({
 
     return (
       <div className="h-full flex flex-col">
-        {isKnownType && (
+        {!isKnownType && (
           <div className="mb-4 flex items-start gap-2.5 p-3 bg-warning/10 border border-warning/20 rounded-lg text-sm text-warning">
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
             <p className="leading-snug">
-              This graph node points to an entity that is no longer available in the current workspace.
+              This graph node type is not fully supported. It may represent an inferred or scanner-diagnostic entity.
             </p>
           </div>
         )}

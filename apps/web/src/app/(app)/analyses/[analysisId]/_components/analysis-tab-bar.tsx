@@ -62,7 +62,7 @@ export function AnalysisTabBar({
           <div className="pb-1 pt-2">
             <E2ETimeline
               repoConnected={true}
-              scanJobStatus={analysis.snapshot.coverageStatus ? "COMPLETED" : "RUNNING"}
+              scanJobStatus={analysis.snapshot.coverageStatus === 'READY' || analysis.snapshot.coverageStatus === 'PARTIAL' ? "COMPLETED" : "RUNNING"}
               snapshotCoverage={analysis.snapshot.coverageStatus}
               snapshotIndex={analysis.snapshot.indexStatus}
               analysisStatus={analysis.status}
@@ -100,7 +100,7 @@ export function AnalysisTabBar({
               Impact Diff
             </button>
           )}
-          {!analysis.derivedFromAnalysisId ? null : (
+          {analysis.derivedFromAnalysisId && (
             <button role="tab" aria-selected={activeTab === "lineage"} onClick={() => onTabChange("lineage")} className={tabClass("lineage")}>
               Lineage
             </button>
