@@ -32,4 +32,20 @@ export class GraphRepository {
     // Returning just the expansion or the whole set
     return Array.from(expandedIds);
   }
+
+  async createDependencyEdges(edges: {
+    snapshotId: string;
+    fromArtifactId: string;
+    toArtifactId: string;
+    type: import('@prisma/client').DependencyEdgeType;
+  }[]): Promise<void> {
+    if (!edges || edges.length === 0) {
+      return;
+    }
+
+    await this.prisma.dependencyEdge.createMany({
+      data: edges,
+      skipDuplicates: true,
+    });
+  }
 }

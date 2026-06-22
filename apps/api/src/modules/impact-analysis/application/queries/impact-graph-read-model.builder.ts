@@ -133,24 +133,58 @@ export class ImpactGraphReadModelBuilder {
       }
     }
 
-    // 3. Fetch Dependency Edges between affected artifacts
+    // 3. Fetch Dependency Edges (1-hop neighbors of affected artifacts)
     if (affectedArtifactIds.size > 0 && edges.length < maxEdges) {
       const deps = await this.prisma.dependencyEdge.findMany({
         where: {
           snapshotId: analysis.snapshotId,
-          fromArtifactId: { in: Array.from(affectedArtifactIds) },
-          toArtifactId: { in: Array.from(affectedArtifactIds) },
+          OR: [
+            { fromArtifactId: { in: Array.from(affectedArtifactIds) } },
+            { toArtifactId: { in: Array.from(affectedArtifactIds) } },
+          ],
+        },
+        include: {
+          fromArtifact: true,
+          toArtifact: true,
         }
       });
 
       for (const dep of deps) {
         if (edges.length >= maxEdges) break;
 
+        // Ensure 1-hop neighbor nodes are added to the graph
+        if (!affectedArtifactIds.has(dep.fromArtifactId) && nodes.length < maxNodes) {
+          affectedArtifactIds.add(dep.fromArtifactId);
+          nodes.push({
+            id: `artifact-${dep.fromArtifactId}`,
+            type: this.mapGraphNodeType(dep.fromArtifact),
+            label: dep.fromArtifact.name,
+            filePath: dep.fromArtifact.filePath,
+            artifactKey: dep.fromArtifact.artifactKey,
+            commitSha: analysis.snapshot.commitSha,
+            source: 'DEPENDENCY',
+            rank: 4,
+          });
+        }
+        if (!affectedArtifactIds.has(dep.toArtifactId) && nodes.length < maxNodes) {
+          affectedArtifactIds.add(dep.toArtifactId);
+          nodes.push({
+            id: `artifact-${dep.toArtifactId}`,
+            type: this.mapGraphNodeType(dep.toArtifact),
+            label: dep.toArtifact.name,
+            filePath: dep.toArtifact.filePath,
+            artifactKey: dep.toArtifact.artifactKey,
+            commitSha: analysis.snapshot.commitSha,
+            source: 'DEPENDENCY',
+            rank: 4,
+          });
+        }
+
         let edgeType: GraphEdgeType = 'CALLS';
         if (dep.type === 'CALLS') edgeType = 'CALLS';
-        else if (dep.type === 'REFERENCES') edgeType = 'USES';
+        else if (dep.type === 'REFERENCES') edgeType = 'REFERENCES' as any;
         else if (dep.type === 'TESTS') edgeType = 'TESTS';
-        else if (dep.type === 'IMPORTS') edgeType = 'USES';
+        else if (dep.type === 'IMPORTS') edgeType = 'IMPORTS' as any;
 
         // Swap TESTS edge direction for top-down layout readability.
         // Semantic meaning: Test → Service; Visual layout: Service → Test.

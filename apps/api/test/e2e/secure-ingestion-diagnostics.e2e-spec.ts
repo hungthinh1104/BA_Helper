@@ -210,7 +210,13 @@ describe('Secure Ingestion Diagnostics (E2E)', () => {
     }));
     analyzer.scanProject.mockReturnValue({
       analyzerVersion: '0.1.0',
-      artifacts: [],
+      artifacts: [
+        { stableId: 'art-1', type: 'CONTROLLER', symbolName: 'MyController', filePath: 'src/c.ts', startLine: 1, endLine: 10, excerpt: 'class MyController {}' },
+        { stableId: 'art-2', type: 'SERVICE', symbolName: 'MyService', filePath: 'src/s.ts', startLine: 1, endLine: 10, excerpt: 'class MyService {}' },
+      ],
+      dependencyEdges: [
+        { fromArtifactId: 'art-1', toArtifactId: 'art-2', type: 'USES' },
+      ],
       coverage: { 
         status: 'PARTIAL', 
         skippedFiles: [{ path: 'src/huge.ts', reason: 'REPO_LIMIT_EXCEEDED' }],
@@ -313,14 +319,19 @@ describe('Secure Ingestion Diagnostics (E2E)', () => {
       },
     });
     expect(completedEvent.payload).toMatchObject({
-      jobId: scanJob.id,
+      scanJobId: scanJob.id,
       repositoryId,
-      commitSha: '0123456789abcdef0123456789abcdef01234567',
-      coverageStatus: 'PARTIAL',
-      diagnostics: expect.objectContaining({
-        codes: expect.arrayContaining(['REPO_LIMIT_EXCEEDED']),
-      }),
+      previousStatus: 'RUNNING',
+      nextStatus: 'COMPLETED',
+      indexStatus: 'LEXICAL_READY',
+      artifactCount: 2,
     });
+
+    const edges = await prisma.dependencyEdge.findMany();
+    expect(edges.length).toBe(1);
+    expect(edges[0].type).toBe('REFERENCES');
+    expect(edges[0].fromArtifactId).toBeDefined();
+    expect(edges[0].toArtifactId).toBeDefined();
   });
 
   it('surfaces FAILED scan error code and blocker diagnostics for unsupported framework', async () => {
@@ -432,12 +443,11 @@ describe('Secure Ingestion Diagnostics (E2E)', () => {
       },
     });
     expect(failedEvent.payload).toMatchObject({
-      jobId: scanJob.id,
+      scanJobId: scanJob.id,
       repositoryId: repository.id,
+      previousStatus: 'RUNNING',
+      nextStatus: 'FAILED',
       errorCode: 'UNSUPPORTED_FRAMEWORK',
-      diagnostics: expect.objectContaining({
-        codes: ['UNSUPPORTED_FRAMEWORK'],
-      }),
     });
   });
 });

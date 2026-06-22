@@ -9,6 +9,8 @@ import { ImpactDiagnosticPropagationStep } from './steps/impact-diagnostic-propa
 import { ImpactAiReasoningStep } from './steps/impact-ai-reasoning.step';
 import { InsightRecord } from './steps/impact-analysis-step.types';
 
+import { EventLogService } from '../../../event-log/application/event-log.service';
+
 @Injectable()
 export class RunImpactAnalysisUseCase {
   private readonly logger = new Logger(RunImpactAnalysisUseCase.name);
@@ -20,6 +22,7 @@ export class RunImpactAnalysisUseCase {
     private readonly evidenceStep: ImpactEvidenceCollectionStep,
     private readonly diagnosticStep: ImpactDiagnosticPropagationStep,
     private readonly aiReasoningStep: ImpactAiReasoningStep,
+    private readonly eventLogService: EventLogService,
   ) {}
 
   async execute(params: { analysisId: string; expandGraph?: boolean; domain?: string }) {
@@ -43,6 +46,26 @@ export class RunImpactAnalysisUseCase {
       progress: 10,
     });
 
+    const triggeredByUserId = (analysis as any).multiRepoRun?.createdByUserId || null;
+
+    await this.eventLogService.recordEvent({
+      eventType: 'ANALYSIS_STARTED',
+      idempotencyKey: `analysis:${analysis.id}:started`,
+      actorUserId: 'system',
+      payload: {
+        actorType: 'SYSTEM',
+        actorId: 'system',
+        actorName: 'BA Helper Worker',
+        triggeredByUserId,
+        analysisId: analysis.id,
+        repositoryId: analysis.snapshot.repositoryId,
+        projectId: (analysis as any).requirementRevision?.requirement?.projectId,
+        previousStatus: analysis.status,
+        nextStatus: 'RUNNING',
+        phase: 'RETRIEVING_EVIDENCE',
+      },
+    });
+
     try {
       const snapshotDomain = (analysis.snapshot as any).profile?.domain;
       const domainPackSelection = this.domainPackRegistry.selectPack({
@@ -62,6 +85,26 @@ export class RunImpactAnalysisUseCase {
         status: 'RUNNING',
         stage: 'RUNNING_AI_REASONING',
         progress: 60,
+      });
+
+      await this.eventLogService.recordEvent({
+        eventType: 'ANALYSIS_EVIDENCE_RETRIEVED',
+        idempotencyKey: `analysis:${analysis.id}:evidence-retrieved`,
+        actorUserId: 'system',
+        payload: {
+          actorType: 'SYSTEM',
+          actorId: 'system',
+          actorName: 'BA Helper Worker',
+          triggeredByUserId,
+          analysisId: analysis.id,
+          repositoryId: analysis.snapshot.repositoryId,
+          projectId: (analysis as any).requirementRevision?.requirement?.projectId,
+          previousStatus: 'RUNNING',
+          nextStatus: 'RUNNING',
+          phase: 'RUNNING_AI_REASONING',
+          evidenceCount: evidenceResult.evidenceByKey.size,
+          traceabilityLinkCount: evidenceResult.traceabilityLinks.length,
+        },
       });
 
       // Step 2: Run AI Reasoning
@@ -117,9 +160,30 @@ export class RunImpactAnalysisUseCase {
           }),
       );
 
+      await this.eventLogService.recordEvent({
+        eventType: 'ANALYSIS_AI_REASONING_COMPLETED',
+        idempotencyKey: `analysis:${analysis.id}:ai-reasoning-completed`,
+        actorUserId: 'system',
+        payload: {
+          actorType: 'SYSTEM',
+          actorId: 'system',
+          actorName: 'BA Helper Worker',
+          triggeredByUserId,
+          analysisId: analysis.id,
+          repositoryId: analysis.snapshot.repositoryId,
+          projectId: (analysis as any).requirementRevision?.requirement?.projectId,
+          previousStatus: 'RUNNING',
+          nextStatus: 'RUNNING',
+          phase: 'DONE',
+          insightCount: insights.length,
+          provider: aiResult.llmMetadata?.provider || 'unknown',
+          tokenUsage: (aiResult.llmMetadata?.inputTokens || 0) + (aiResult.llmMetadata?.outputTokens || 0),
+        },
+      });
+
       const domainPack = domainPackSelection.pack;
 
-      return this.impactRepo.updateStatus({
+      const result = await this.impactRepo.updateStatus({
         id: analysis.id,
         status: 'WAITING_FOR_REVIEW',
         stage: 'DONE',
@@ -163,6 +227,26 @@ export class RunImpactAnalysisUseCase {
           ],
         },
       });
+
+      await this.eventLogService.recordEvent({
+        eventType: 'ANALYSIS_WAITING_FOR_REVIEW',
+        idempotencyKey: `analysis:${analysis.id}:waiting-for-review`,
+        actorUserId: 'system',
+        payload: {
+          actorType: 'SYSTEM',
+          actorId: 'system',
+          actorName: 'BA Helper Worker',
+          triggeredByUserId,
+          analysisId: analysis.id,
+          repositoryId: analysis.snapshot.repositoryId,
+          projectId: (analysis as any).requirementRevision?.requirement?.projectId,
+          previousStatus: 'RUNNING',
+          nextStatus: 'WAITING_FOR_REVIEW',
+          phase: 'DONE',
+        },
+      });
+
+      return result;
     } catch (e: any) {
       const safeError = {
         message: e instanceof Error ? e.message : String(e),
@@ -202,6 +286,27 @@ export class RunImpactAnalysisUseCase {
           ...(errorDetails ? { details: errorDetails } : {}),
         },
       });
+
+      const triggeredByUserId = (analysis as any).multiRepoRun?.createdByUserId || null;
+      await this.eventLogService.recordEvent({
+        eventType: 'ANALYSIS_FAILED',
+        idempotencyKey: `analysis:${analysis.id}:failed`,
+        actorUserId: 'system',
+        payload: {
+          actorType: 'SYSTEM',
+          actorId: 'system',
+          actorName: 'BA Helper Worker',
+          triggeredByUserId,
+          analysisId: analysis.id,
+          repositoryId: analysis.snapshot.repositoryId,
+          projectId: (analysis as any).requirementRevision?.requirement?.projectId,
+          previousStatus: analysis.status,
+          nextStatus: 'FAILED',
+          errorCode,
+          errorMessage,
+        },
+      });
+
       throw e;
     }
   }

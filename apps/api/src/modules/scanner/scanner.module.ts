@@ -15,9 +15,10 @@ import { QueueModule } from '../queue/queue.module';
 import { QueueService } from '../queue/queue.service';
 import { EvidenceModule } from '../evidence/evidence.module';
 import { ProjectModule } from '../project/project.module';
+import { GraphModule } from '../graph/graph.module';
 
 @Module({
-  imports: [PrismaModule, EventLogModule, RepositoryModule, ArtifactModule, QueueModule, EvidenceModule, ProjectModule],
+  imports: [PrismaModule, EventLogModule, RepositoryModule, ArtifactModule, QueueModule, EvidenceModule, ProjectModule, GraphModule],
   controllers: [ScanJobController],
   providers: [
     {

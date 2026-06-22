@@ -2,8 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ScanJobRepository } from '../infrastructure/scan-job.repository';
 import { EventLogService } from '../../event-log/application/event-log.service';
 import { AppError } from '../../../shared/app-error';
-import { ScanJobStatus, ScanJobStage } from '@prisma/client';
+import { ScanJobStatus, ScanJobStage, DependencyEdgeType } from '@prisma/client';
 import { ArtifactRepository } from '../../artifact/infrastructure/artifact.repository';
+import { GraphRepository } from '../../graph/infrastructure/graph.repository';
 import { normalizeArtifactKind } from '../../artifact/domain/universal-artifact-kind';
 import { 
   scanFixture, 
@@ -89,6 +90,22 @@ const toProfileLanguageHint = (language?: string): DetectedRepositoryProfile['la
   return undefined;
 };
 
+function mapScannerEdgeType(type: string): DependencyEdgeType | null {
+  switch (type) {
+    case 'CALLS':
+      return 'CALLS';
+    case 'IMPORTS':
+      return 'IMPORTS';
+    case 'TESTS':
+      return 'TESTS';
+    case 'USES':
+    case 'REFERENCES':
+      return 'REFERENCES';
+    default:
+      return null;
+  }
+}
+
 @Injectable()
 export class RunScanJobUseCase {
   private readonly logger = new Logger(RunScanJobUseCase.name);
@@ -98,6 +115,7 @@ export class RunScanJobUseCase {
   constructor(
     private readonly scanJobRepository: ScanJobRepository,
     private readonly artifactRepository: ArtifactRepository,
+    private readonly graphRepository: GraphRepository,
     private readonly eventLogService: EventLogService,
     private readonly evidenceRepo: EvidenceRepository,
     private readonly prisma: PrismaService,
@@ -119,6 +137,21 @@ export class RunScanJobUseCase {
       status: ScanJobStatus.RUNNING,
       stage: ScanJobStage.EXTRACTING_ARTIFACTS,
       progress: 10,
+    });
+
+    await this.eventLogService.recordEvent({
+      eventType: 'SCAN_STARTED',
+      idempotencyKey: `scan-job:${job.id}:started`,
+      actorUserId: 'system',
+      payload: {
+        actorType: 'SYSTEM',
+        actorId: 'system',
+        actorName: 'BA Helper Worker',
+        scanJobId: job.id,
+        repositoryId: job.repositoryId,
+        previousStatus: 'QUEUED',
+        nextStatus: 'RUNNING',
+      },
     });
 
     let cleanupDir: string | undefined;
@@ -242,6 +275,7 @@ export class RunScanJobUseCase {
         scanResult = {
           analyzerVersion: adapter.adapterVersion,
           artifacts: adapterResult.artifacts,
+          dependencyEdges: adapterResult.dependencyEdges,
           coverage: scanCoverage,
           sourceRoot: tempDir,
         };
@@ -454,6 +488,21 @@ export class RunScanJobUseCase {
           })),
         );
 
+        await this.eventLogService.recordEvent({
+          eventType: 'SCAN_ARTIFACTS_EXTRACTED',
+          idempotencyKey: `scan-job:${job.id}:artifacts-extracted`,
+          actorUserId: 'system',
+          payload: {
+            actorType: 'SYSTEM',
+            actorId: 'system',
+            actorName: 'BA Helper Worker',
+            scanJobId: job.id,
+            repositoryId: job.repositoryId,
+            snapshotId: snapshot.id,
+            artifactCount: scanResult.artifacts.length,
+          },
+        });
+
         // Fetch back artifacts to insert their excerpts into Evidence
         const persistedArtifacts = await this.artifactRepository.listBySnapshot(snapshot.id);
         const evidenceInputs = scanResult.artifacts.map((artifact: ScanArtifact) => {
@@ -481,6 +530,65 @@ export class RunScanJobUseCase {
             };
         }).filter((e): e is NonNullable<typeof e> => e !== null);
         
+        // --- Dependency Edge Persistence ---
+        const artifactIdByStableId = new Map(
+          persistedArtifacts.map((artifact) => [artifact.artifactKey, artifact.id]),
+        );
+
+        const edgesToPersist: {
+          snapshotId: string;
+          fromArtifactId: string;
+          toArtifactId: string;
+          type: DependencyEdgeType;
+        }[] = [];
+        let droppedEdgeCount = 0;
+
+        for (const edge of scanResult.dependencyEdges || []) {
+          const mappedType = mapScannerEdgeType(edge.type);
+          if (!mappedType) {
+            droppedEdgeCount++;
+            continue;
+          }
+
+          const fromId = artifactIdByStableId.get(edge.fromArtifactId);
+          const toId = artifactIdByStableId.get(edge.toArtifactId);
+
+          if (!fromId || !toId) {
+            droppedEdgeCount++;
+            continue;
+          }
+
+          edgesToPersist.push({
+            snapshotId: snapshot.id,
+            fromArtifactId: fromId,
+            toArtifactId: toId,
+            type: mappedType,
+          });
+        }
+
+        if (droppedEdgeCount > 0) {
+          this.logger.debug(`Dropped ${droppedEdgeCount} unresolved or unsupported dependency edges.`);
+        }
+
+        await this.graphRepository.createDependencyEdges(edgesToPersist);
+
+        await this.eventLogService.recordEvent({
+          eventType: 'SCAN_DEPENDENCY_EDGES_PERSISTED',
+          idempotencyKey: `scan-job:${job.id}:edges-persisted`,
+          actorUserId: 'system',
+          payload: {
+            actorType: 'SYSTEM',
+            actorId: 'system',
+            actorName: 'BA Helper Worker',
+            scanJobId: job.id,
+            repositoryId: job.repositoryId,
+            snapshotId: snapshot.id,
+            dependencyEdgeCount: edgesToPersist.length,
+            skippedEdgeCount: droppedEdgeCount,
+          },
+        });
+        // -----------------------------------
+        
         if (evidenceInputs.some(e => e.isRedacted)) {
             collector.addSecretRedacted('source files');
             await this.prisma.repositorySnapshot.update({
@@ -506,18 +614,21 @@ export class RunScanJobUseCase {
       });
 
       await this.eventLogService.recordEvent({
-        eventType: 'SCAN_JOB_COMPLETED',
+        eventType: 'SCAN_COMPLETED',
         idempotencyKey: `scan-job:${job.id}:completed`,
+        actorUserId: 'system',
         payload: {
-          jobId: job.id,
+          actorType: 'SYSTEM',
+          actorId: 'system',
+          actorName: 'BA Helper Worker',
+          scanJobId: job.id,
           repositoryId: job.repositoryId,
-          requestedRef: job.requestedRef ?? 'main',
-          sourceTargetId: target.id,
           snapshotId: snapshot.id,
-          commitSha,
-          analyzerVersion: scanResult.analyzerVersion,
-          coverageStatus,
-          diagnostics: summarizeDiagnostics(collector.getItems() as DiagnosticItem[]),
+          previousStatus: 'RUNNING',
+          nextStatus: 'COMPLETED',
+          indexStatus: 'LEXICAL_READY',
+          // Note: using artifacts.length might be inaccurate if not provided here, but it's okay for payload
+          artifactCount: scanResult?.artifacts?.length ?? 0,
         },
       });
       this.logger.log(
@@ -591,17 +702,19 @@ export class RunScanJobUseCase {
 
       try {
         await this.eventLogService.recordEvent({
-          eventType: 'SCAN_JOB_FAILED',
+          eventType: 'SCAN_FAILED',
           idempotencyKey: `scan-job:${job.id}:failed`,
+          actorUserId: 'system',
           payload: {
-            jobId: job.id,
+            actorType: 'SYSTEM',
+            actorId: 'system',
+            actorName: 'BA Helper Worker',
+            scanJobId: job.id,
             repositoryId: job.repositoryId,
-            requestedRef: job.requestedRef ?? 'main',
-            stage: currentStage,
-            commitSha,
+            previousStatus: 'RUNNING',
+            nextStatus: 'FAILED',
             errorCode,
             errorMessage: errorMsg,
-            diagnostics: summarizeDiagnostics(collector.getItems() as DiagnosticItem[]),
           },
         });
       } catch (persistError) {

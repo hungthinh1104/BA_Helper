@@ -189,9 +189,14 @@ describe('RunScanJobUseCase', () => {
       enqueueSnapshotEmbedding: jest.fn().mockResolvedValue(undefined),
     };
 
+    const graphRepository = {
+      createDependencyEdges: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
     useCase = new RunScanJobUseCase(
       scanJobRepository,
       artifactRepository,
+      graphRepository,
       eventLogService,
       evidenceRepo,
       prisma,
@@ -274,16 +279,15 @@ describe('RunScanJobUseCase', () => {
     });
     expect(eventLogService.recordEvent).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        eventType: 'SCAN_JOB_COMPLETED',
+        eventType: 'SCAN_COMPLETED',
         payload: expect.objectContaining({
-          jobId: 'job-1',
+          scanJobId: 'job-1',
           repositoryId: 'repo-1',
-          commitSha: '0123456789abcdef0123456789abcdef01234567',
-          diagnostics: expect.objectContaining({
-            // SCAN_HEALTH + SCANNER_CAPABILITY_SUMMARY + INCREMENTAL_SCAN_SUMMARY + EMBEDDING_REUSE_PLAN
-            total: 4,
-            bySeverity: { BLOCKER: 0, ERROR: 0, WARN: 0, INFO: 4 },
-          }),
+          snapshotId: 'snapshot-1',
+          previousStatus: 'RUNNING',
+          nextStatus: 'COMPLETED',
+          indexStatus: 'LEXICAL_READY',
+          artifactCount: 1,
         }),
       }),
     );
@@ -394,9 +398,9 @@ describe('RunScanJobUseCase', () => {
     });
     expect(eventLogService.recordEvent).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        eventType: 'SCAN_JOB_FAILED',
+        eventType: 'SCAN_FAILED',
         payload: expect.objectContaining({
-          jobId: 'job-1',
+          scanJobId: 'job-1',
           repositoryId: 'repo-1',
           errorCode: 'CLONE_FAILED',
           errorMessage: 'network down',
@@ -533,9 +537,9 @@ describe('RunScanJobUseCase', () => {
     expect(finalState?.status).toBe(ScanJobStatus.FAILED);
     expect(finalState?.errorCode).toBe('UNSUPPORTED_FRAMEWORK');
 
-    // No SCAN_JOB_COMPLETED event emitted
+    // No SCAN_COMPLETED event emitted
     const completedCall = eventLogService.recordEvent.mock.calls.find(
-      (c: any[]) => c[0]?.eventType === 'SCAN_JOB_COMPLETED',
+      (c: any[]) => c[0]?.eventType === 'SCAN_COMPLETED',
     );
     expect(completedCall).toBeUndefined();
 
@@ -621,9 +625,9 @@ describe('RunScanJobUseCase', () => {
     const finalState = scanJobRepository.updateState.mock.calls.at(-1)?.[0];
     expect(finalState?.status).toBe(ScanJobStatus.FAILED);
 
-    // No SCAN_JOB_COMPLETED event should have been emitted
+    // No SCAN_COMPLETED event should have been emitted
     const completedCall = eventLogService.recordEvent.mock.calls.find(
-      (c: any[]) => c[0]?.eventType === 'SCAN_JOB_COMPLETED',
+      (c: any[]) => c[0]?.eventType === 'SCAN_COMPLETED',
     );
     expect(completedCall).toBeUndefined();
   });

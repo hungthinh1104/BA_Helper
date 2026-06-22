@@ -125,6 +125,7 @@ export type DetectedRepositoryProfile = {
 export type ScanResult = {
   analyzerVersion: string;
   artifacts: ScanArtifact[];
+  dependencyEdges?: DependencyEdge[];
   coverage: ScanCoverage;
   sourceRoot?: string;
   diagnostics?: DiagnosticItem[];

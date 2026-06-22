@@ -18,7 +18,8 @@ export const graphNodeTypeSchema = z.enum([
 export const graphEdgeTypeSchema = z.enum([
   'AFFECTS',
   'CALLS',
-  'USES',
+  'REFERENCES',
+  'IMPORTS',
   'TESTS',
   'EVIDENCES',
   'RAISES_UNKNOWN',
