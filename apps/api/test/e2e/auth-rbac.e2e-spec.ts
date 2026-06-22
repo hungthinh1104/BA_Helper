@@ -422,15 +422,13 @@ describe('Auth and RBAC (e2e)', () => {
       .expect(201);
 
     await request(app.getHttpServer())
-      .post(`/api/v1/traceability-links/${linkId}/review`)
+      .post(`/api/v1/traceability-links/${linkId}/confirm`)
       .set('Authorization', `Bearer ${viewerToken}`)
-      .send({ reviewStatus: 'CONFIRMED' })
       .expect(403);
 
     await request(app.getHttpServer())
-      .post(`/api/v1/traceability-links/${linkId}/review`)
+      .post(`/api/v1/traceability-links/${linkId}/confirm`)
       .set('Authorization', `Bearer ${reviewerToken}`)
-      .send({ reviewStatus: 'CONFIRMED' })
       .expect(201);
   });
 
