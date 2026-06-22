@@ -3,12 +3,11 @@
 import { use } from "react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { AlertCircle, CheckCircle2, Download, FileWarning, Loader2, MessageSquareWarning, ShieldCheck, XCircle } from "lucide-react"
+import { AlertCircle, CheckCircle2, FileWarning, MessageSquareWarning, XCircle } from "lucide-react"
 import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Textarea } from "@/components/ui/textarea"
 import { useApprovedMultiRepoReport, useCreateMergedMultiRepoReportReviewDecision, useFinalizeMultiRepoReport, useLatestMergedMultiRepoReportReviewDecision, useMergedMultiRepoReportReviewDecisions, useMultiRepoAnalysisRunDetail } from "@/hooks/api/use-analyses"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
@@ -17,6 +16,8 @@ import { canFinalizeAnalysis, canReview as canReviewPermission } from "@/lib/per
 import { useCurrentWorkspace } from "@/lib/project-context"
 import { useState } from "react"
 import { ReportMarkdown } from "@/components/report/report-markdown"
+import { MergedReportActions } from "./_components/merged-report-actions"
+import { MergedReportReviewPanel } from "./_components/merged-report-review-panel"
 
 export default function ApprovedMultiRepoReportPage({
   params,
@@ -33,8 +34,6 @@ export default function ApprovedMultiRepoReportPage({
   const { role } = useAuth()
   const workspace = useCurrentWorkspace()
   const [exportingFormat, setExportingFormat] = useState<"md" | "pdf" | null>(null)
-  const [decision, setDecision] = useState<"ACCEPTED" | "REJECTED" | "NEEDS_MORE_CLARIFICATION" | null>(null)
-  const [note, setNote] = useState("")
 
   const status = (error as { status?: number } | undefined)?.status
   const code = (error as { code?: string } | undefined)?.code
@@ -87,23 +86,15 @@ export default function ApprovedMultiRepoReportPage({
     }
   }
 
-  const handleSubmitReview = async (event: React.FormEvent) => {
-    event.preventDefault()
-    if (!decision) {
-      toast.error("Select a merged report review decision.")
-      return
-    }
-
+  const handleSubmitReview = async (formData: { decision: "ACCEPTED" | "REJECTED" | "NEEDS_MORE_CLARIFICATION"; note: string }) => {
     try {
       await createReviewDecision.mutateAsync({
         data: {
-          decision,
-          note: note.trim() || undefined,
+          decision: formData.decision,
+          note: formData.note.trim() || undefined,
         },
       })
       toast.success("Merged report review decision recorded.")
-      setDecision(null)
-      setNote("")
     } catch (error) {
       toast.error("Failed to submit merged report review decision.", {
         description: error instanceof Error ? error.message : "Unknown error",
@@ -212,153 +203,27 @@ export default function ApprovedMultiRepoReportPage({
                   <Badge variant="outline" className="h-6">Pending</Badge>
                 )}
               </span>
-              <div className="ml-auto flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 shadow-none"
-                  onClick={() => void handleExport("md")}
-                  disabled={!canExport || exportingFormat !== null}
-                  title={data.isStale ? "Merged report is stale; refresh the snapshot before export." : undefined}
-                >
-                  {exportingFormat === "md" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                  Export Markdown
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 shadow-none"
-                  onClick={() => void handleExport("pdf")}
-                  disabled={!canExport || exportingFormat !== null}
-                  title={data.isStale ? "Merged report is stale; refresh the snapshot before export." : undefined}
-                >
-                  {exportingFormat === "pdf" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                  Export PDF
-                </Button>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 shadow-none"
-                onClick={() => void handleFinalize()}
-                disabled={!canFinalize || finalizeReport.isPending}
-              >
-                {finalizeReport.isPending ? "Refreshing..." : "Refresh snapshot"}
-              </Button>
+              <MergedReportActions
+                isStale={data.isStale}
+                canExport={canExport}
+                canFinalize={canFinalize}
+                isFinalizing={finalizeReport.isPending}
+                exportingFormat={exportingFormat}
+                onExport={handleExport}
+                onRefresh={handleFinalize}
+              />
             </div>
 
-            <section className="mb-6 rounded-xl border border-border/50 bg-surface-muted/20 p-4">
-              <div className="mb-4 flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-sm font-semibold text-foreground">Merged Report Review</h2>
-                  <p className="text-[12px] text-muted-foreground">
-                    Append-only decision history for the approved merged report snapshot.
-                  </p>
-                </div>
-                {!data.isStale && latestReviewedDecision && (
-                  <div className="text-right text-[12px] text-muted-foreground">
-                    <div>Latest decision by {latestReviewedDecision.reviewedBy}</div>
-                    <div>{new Date(latestReviewedDecision.createdAt).toLocaleString("en-US")}</div>
-                  </div>
-                )}
-              </div>
-
-              {data.isStale && (
-                <div className="mb-4 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-[12px] text-warning">
-                  Review submission is blocked while the approved merged report is stale. Refresh and approve the snapshot again first.
-                </div>
-              )}
-
-              <div className="mb-4 space-y-2">
-                {reviewDecisionsLoading && <Skeleton className="h-16 w-full" />}
-                {!reviewDecisionsLoading && reviewDecisions.length === 0 && (
-                  <div className="rounded-lg border border-dashed border-border/60 px-3 py-4 text-[12px] text-muted-foreground">
-                    No merged report review decisions yet.
-                  </div>
-                )}
-                {reviewDecisions.map((item: import("@ba-helper/contracts").MergedMultiRepoReportReviewDecisionResponse) => (
-                  <div key={item.id} className="rounded-lg border border-border/50 bg-background/60 px-3 py-3">
-                    <div className="mb-1 flex flex-wrap items-center gap-2 text-[12px]">
-                      <Badge
-                        variant={
-                          item.decision === "ACCEPTED"
-                            ? "default"
-                            : item.decision === "REJECTED"
-                              ? "destructive"
-                              : "secondary"
-                        }
-                      >
-                        {item.decision}
-                      </Badge>
-                      <span className="text-muted-foreground">by {item.reviewedBy}</span>
-                      <span className="text-muted-foreground">{new Date(item.createdAt).toLocaleString("en-US")}</span>
-                    </div>
-                    {item.note && (
-                      <p className="text-[13px] text-foreground whitespace-pre-wrap">{item.note}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              <form onSubmit={handleSubmitReview} className="space-y-3">
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { value: "ACCEPTED", label: "Accept", icon: ShieldCheck },
-                    { value: "REJECTED", label: "Reject", icon: XCircle },
-                    { value: "NEEDS_MORE_CLARIFICATION", label: "Needs Clarification", icon: MessageSquareWarning },
-                  ].map((option) => {
-                    const Icon = option.icon
-                    const selected = decision === option.value
-                    return (
-                      <Button
-                        key={option.value}
-                        type="button"
-                        size="sm"
-                        variant={selected ? "default" : "outline"}
-                        className="h-8 shadow-none"
-                        onClick={() => setDecision(option.value as typeof decision)}
-                        disabled={!canReview || createReviewDecision.isPending}
-                      >
-                        <Icon className="w-3.5 h-3.5" />
-                        {option.label}
-                      </Button>
-                    )
-                  })}
-                </div>
-                <Textarea
-                  value={note}
-                  onChange={(event) => setNote(event.target.value)}
-                  placeholder="Optional review note"
-                  maxLength={2000}
-                  disabled={!canReview || createReviewDecision.isPending}
-                  className="min-h-24"
-                />
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-[12px] text-muted-foreground">
-                    {canReview
-                      ? "Review decisions are append-only. Existing entries are preserved."
-                      : !canReviewPermission(workspace?.membershipRole ?? null)
-                        ? "You have view-only access. Reviewer or Analyst role required."
-                        : "Only admin/reviewer review posture can submit merged report decisions in the current UI."}
-                  </span>
-                  <Button
-                    type="submit"
-                    size="sm"
-                    className="h-8 shadow-none"
-                    disabled={!canReview || createReviewDecision.isPending || !decision}
-                    title={
-                      data.isStale
-                        ? "Refresh and approve the merged report again before submitting a new review decision."
-                        : !decision
-                          ? "Select a decision first."
-                          : undefined
-                    }
-                  >
-                    {createReviewDecision.isPending ? "Submitting..." : "Submit review"}
-                  </Button>
-                </div>
-              </form>
-            </section>
+            <MergedReportReviewPanel
+              isStale={data.isStale}
+              latestReviewedDecision={latestReviewedDecision}
+              reviewDecisions={reviewDecisions}
+              reviewDecisionsLoading={reviewDecisionsLoading}
+              canReview={canReview}
+              hasReviewPermission={canReviewPermission(workspace?.membershipRole ?? null)}
+              isSubmitting={createReviewDecision.isPending}
+              onSubmitReview={handleSubmitReview}
+            />
 
             <ReportMarkdown markdown={data.markdown} />
           </div>
