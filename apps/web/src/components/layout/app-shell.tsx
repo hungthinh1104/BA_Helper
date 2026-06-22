@@ -11,6 +11,7 @@ interface AppShellProps {
 
 import { useRef, useState, useCallback } from "react"
 import { Group, Panel, Separator, PanelImperativeHandle } from "react-resizable-panels"
+import { useMediaQuery } from "@/hooks/ui/use-media-query"
 
 export function AppShell({ children }: AppShellProps) {
   return (
@@ -39,6 +40,8 @@ function AppShellInner({ children }: AppShellProps) {
       setIsSidebarCollapsed(sidebarRef.current.isCollapsed())
     }
   }, [])
+
+  const isDesktop = useMediaQuery("(min-width: 1100px)")
 
   if (status.status === "loading") {
     return (
@@ -69,31 +72,40 @@ function AppShellInner({ children }: AppShellProps) {
 
   return (
     <div className="app-shell">
-      <Group orientation="horizontal" id="app-shell-panels" className="h-full w-full">
-        <Panel
-          panelRef={sidebarRef}
-          defaultSize="248px"
-          minSize="200px"
-          maxSize="400px"
-          collapsible={true}
-          collapsedSize="64px"
-          onResize={handleSidebarResize}
-          className="h-full border-r border-border bg-surface transition-all duration-300 ease-in-out"
-        >
-          <AppSidebar isCollapsed={isSidebarCollapsed} onToggle={toggleSidebar} />
-        </Panel>
+      {isDesktop ? (
+        <Group orientation="horizontal" id="app-shell-panels" className="h-full w-full">
+          <Panel
+            panelRef={sidebarRef}
+            defaultSize="248px"
+            minSize="200px"
+            maxSize="400px"
+            collapsible={true}
+            collapsedSize="64px"
+            onResize={handleSidebarResize}
+            className="h-full border-r border-border bg-surface transition-colors duration-200"
+          >
+            <AppSidebar isCollapsed={isSidebarCollapsed} onToggle={toggleSidebar} />
+          </Panel>
 
-        <Separator className="w-1.5 flex items-center justify-center cursor-col-resize shrink-0 group outline-none hover:bg-transparent">
-          <div className="h-full w-[1px] bg-border group-hover:bg-accent/60 group-active:bg-accent transition-colors" />
-        </Separator>
+          <Separator className="w-1.5 flex items-center justify-center cursor-col-resize shrink-0 group outline-none hover:bg-transparent">
+            <div className="h-full w-[1px] bg-border group-hover:bg-accent/60 group-active:bg-accent transition-colors" />
+          </Separator>
 
-        <Panel className="flex flex-col h-full min-w-0">
-          <AppTopbar />
+          <Panel className="flex flex-col h-full min-w-0">
+            <AppTopbar />
+            <main className="app-main flex-1 min-h-0">
+              {children}
+            </main>
+          </Panel>
+        </Group>
+      ) : (
+        <div className="flex flex-col h-full w-full">
+          <AppTopbar isMobile={true} />
           <main className="app-main flex-1 min-h-0">
             {children}
           </main>
-        </Panel>
-      </Group>
+        </div>
+      )}
     </div>
   )
 }

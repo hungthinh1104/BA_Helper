@@ -5,12 +5,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
-import { MermaidRenderer } from "@/components/workspace/shared/mermaid-renderer"
 import { Badge } from "@/components/ui/badge"
 import { EvidenceQualityBadge } from "./evidence-quality-table"
 import { AlertCircle, Loader2 } from "lucide-react"
+import { ReportMarkdown } from "./report-markdown"
+import { parseReviewSnapshotItems } from "./review-snapshot"
 
 interface FinalReviewedReportViewerProps {
   analysisId: string
@@ -43,50 +42,11 @@ export function FinalReviewedReportViewer({ analysisId, open, onOpenChange }: Fi
       )
     }
 
-    const decisions = Array.isArray(finalReport.reviewDecisionsSnapshot) 
-      ? finalReport.reviewDecisionsSnapshot 
-      : []
+    const decisions = parseReviewSnapshotItems(finalReport.reviewDecisionsSnapshot)
 
     return (
       <div className="flex-1 overflow-y-auto bg-background p-6 md:p-8 space-y-12">
-        {/* Read Only Markdown */}
-        <article className="report opacity-95">
-          <ReactMarkdown 
-            remarkPlugins={[remarkGfm]}
-            components={{
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
-              code({ node, inline, className, children, ...props }: any) {
-                const match = /language-(\w+)/.exec(className || '')
-                if (!inline && match && match[1] === 'mermaid') {
-                  return <MermaidRenderer chart={String(children).replace(/\n$/, '')} />
-                }
-                if (!inline) {
-                  return (
-                    <pre className="report-pre">
-                      <code className={className} {...props}>
-                        {children}
-                      </code>
-                    </pre>
-                  )
-                }
-                return (
-                  <code className={className} {...props}>
-                    {children}
-                  </code>
-                )
-              },
-              table({ children }) {
-                return (
-                  <div className="report-table-wrap">
-                    <table>{children}</table>
-                  </div>
-                )
-              }
-            }}
-          >
-            {finalReport.markdown}
-          </ReactMarkdown>
-        </article>
+        <ReportMarkdown markdown={finalReport.markdown} className="opacity-95" />
 
         {/* Decisions Table */}
         {decisions.length > 0 && (
@@ -105,8 +65,8 @@ export function FinalReviewedReportViewer({ analysisId, open, onOpenChange }: Fi
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/40 bg-surface">
-                    {decisions.map((item: any, idx: number) => (
-                      <tr key={idx} className="hover:bg-muted/30 transition-colors opacity-95">
+                    {decisions.map((item) => (
+                      <tr key={item.linkId} className="hover:bg-muted/30 transition-colors opacity-95">
                         <td className="px-4 py-3 font-mono text-foreground/90 whitespace-nowrap break-all align-top">
                           {item.artifact || 'Unknown'}
                         </td>

@@ -1,17 +1,17 @@
 # Audit Workflow & Invariants
 
-This document outlines the invariants, lifecycle policies, and trust model for the Audited Report Workflow. This system guarantees that final exports are 100% human-verified and mathematically immutable after the final audit gate is passed.
+This document outlines the invariants, lifecycle policies, and trust model for the Audited Report Workflow. This system guarantees that final exports are 100% human-verified and strictly tied to an immutable reviewed snapshot after the final audit gate is passed.
 
 ## Core Invariants and Trust Model
 
-The overarching reliability story of this architecture is built on absolute immutability and enforced human review. The system does not blindly trust machine output. Instead, it forces human review, captures that review context in a frozen mathematical snapshot, and uses that strict snapshot as the sole basis for final artifact generation.
+The overarching reliability story of this architecture is built on absolute immutability and enforced human review. The system does not blindly trust machine output. Instead, it forces human review, captures that review context in a frozen deterministic snapshot, and uses that strict snapshot as the sole basis for final artifact generation.
 
 ### 1. Source-of-Truth Matrix
 
 | Stage | Source of Truth | Mutable? |
 | :--- | :--- | :--- |
 | **Draft approved report** | `GeneratedDocument` | **Yes** / can become stale |
-| **Reviewed snapshot** | `ReviewedReportSnapshot` | **No** (mathematically immutable) |
+| **Reviewed snapshot** | `ReviewedReportSnapshot` | **No** (immutable reviewed snapshot) |
 | **Final reviewed report API** | `ReviewedReportSnapshot` | **No** (derived from snapshot only) |
 | **Downloaded .md** | Final reviewed report API | **No** local mutation by system |
 
@@ -46,7 +46,7 @@ The gate evaluates two primary assertions:
 2. A valid, matching `ReviewedReportSnapshot` exists for the current analysis.
 
 ### Final Reviewed Report Source-of-Truth Rule
-When generating the final markdown, the system **bypasses all live `GeneratedDocument` data**. Instead, it looks exclusively at the mathematical state captured inside the `ReviewedReportSnapshot`. This guarantees that what the human downloaded on Friday matches exactly what they reviewed on Thursday, even if the underlying `ScanJob` was rerun on Saturday.
+When generating the final markdown, the system **bypasses all live `GeneratedDocument` data**. Instead, it looks exclusively at the deterministic state captured inside the `ReviewedReportSnapshot`. This guarantees that what the human downloaded on Friday matches exactly what they reviewed on Thursday, even if the underlying `ScanJob` was rerun on Saturday.
 
 ### Export/Download Rule
 The exported markdown file (`final-reviewed-report-{analysisId}-{snapshotId}.md`) is deterministic. It is constructed entirely from the frozen snapshot context and directly served as a raw Blob. The frontend component acts merely as a gateway, fetching the JSON payload and generating the `.md` file download trigger without any interim mutations or state derivations.

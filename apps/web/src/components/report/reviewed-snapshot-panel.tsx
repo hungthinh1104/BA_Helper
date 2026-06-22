@@ -6,7 +6,7 @@ import { LockedSnapshotViewer } from "./locked-snapshot-viewer"
 import { toast } from "sonner"
 
 export function ReviewedSnapshotPanel({ analysisId }: { analysisId: string }) {
-  const { data: snapshot, isLoading: isLoadingSnapshot, isError } = useLatestReviewedReportSnapshot(analysisId)
+  const { data: snapshot, isLoading: isLoadingSnapshot } = useLatestReviewedReportSnapshot(analysisId)
   const createMutation = useCreateReviewedReportSnapshot(analysisId)
   
   const [viewerOpen, setViewerOpen] = useState(false)

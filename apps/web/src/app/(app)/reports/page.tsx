@@ -119,14 +119,14 @@ function ReportsPageContent() {
                       </span>
                     </DataListCell>
                     <DataListCell>
-                      <DocumentStatusBadge status="COMPLETED" isStale={doc.isStale} />
+                      <AnalysisStatusBadge status={doc.isStale ? "STALE" : "COMPLETED"} />
                     </DataListCell>
                     <DataListCell>
                       <span className="text-[12px] text-muted-foreground">
                         {new Date(doc.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       </span>
                     </DataListCell>
-                    <DataListCell className="text-right opacity-0 group-hover:opacity-100 transition-opacity">
+                    <DataListCell className="text-right lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                       <span className="text-[12px] font-medium text-accent">View Report &rarr;</span>
                     </DataListCell>
                   </DataListRow>
@@ -140,11 +140,16 @@ function ReportsPageContent() {
                       <span className="font-semibold text-sm text-foreground line-clamp-1">
                         {selectedDoc?.requirementRevisionTitle ?? "Report View"}
                       </span>
-                      {selectedDoc && <DocumentStatusPill status="COMPLETED" isStale={selectedDoc.isStale} />}
+                      {selectedDoc && (
+                        <AnalysisStatusBadge status={selectedDoc.isStale ? "STALE" : "COMPLETED"} />
+                      )}
                     </div>
                     <div className="flex items-center gap-4">
-                      <DialogClose className="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-surface-muted transition-colors">
-                        <X className="w-4 h-4" />
+                      <DialogClose
+                        className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-muted hover:text-foreground"
+                        aria-label="Close report preview"
+                      >
+                        <X className="size-4" />
                       </DialogClose>
                     </div>
                   </div>
@@ -173,12 +178,4 @@ export default function ReportsPage() {
       <ReportsPageContent />
     </Suspense>
   )
-}
-
-function DocumentStatusBadge({ status, isStale }: { status: string; isStale: boolean }) {
-  return <AnalysisStatusBadge status={isStale ? "STALE" : status} />
-}
-
-function DocumentStatusPill({ status, isStale }: { status: string; isStale: boolean }) {
-  return <AnalysisStatusBadge status={isStale ? "STALE" : status} />
 }

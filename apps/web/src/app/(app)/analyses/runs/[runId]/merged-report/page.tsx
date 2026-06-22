@@ -4,8 +4,6 @@ import { use } from "react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { AlertCircle, CheckCircle2, Download, FileWarning, Loader2, MessageSquareWarning, ShieldCheck, XCircle } from "lucide-react"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
 import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
@@ -18,6 +16,7 @@ import { apiGetFile } from "@/lib/api-client"
 import { canFinalizeAnalysis, canReview as canReviewPermission } from "@/lib/permissions"
 import { useCurrentWorkspace } from "@/lib/project-context"
 import { useState } from "react"
+import { ReportMarkdown } from "@/components/report/report-markdown"
 
 export default function ApprovedMultiRepoReportPage({
   params,
@@ -361,11 +360,7 @@ export default function ApprovedMultiRepoReportPage({
               </form>
             </section>
 
-            <article className="prose prose-sm md:prose-base prose-zinc dark:prose-invert max-w-none prose-headings:tracking-tight prose-a:text-primary">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {data.markdown}
-              </ReactMarkdown>
-            </article>
+            <ReportMarkdown markdown={data.markdown} />
           </div>
         )}
       </div>

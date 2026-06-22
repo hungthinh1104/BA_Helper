@@ -61,11 +61,12 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
+  border: 1px solid var(--border);
   border-radius: 0.375rem;
   background: var(--code-bg);
   color: var(--code-text);
-  padding: 0.125rem 0.375rem;
-  font-size: 0.92em;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.9em;
 }
 
 .report-pre,
@@ -134,31 +135,51 @@
 
 @media print {
   @page {
-    margin: 14mm 12mm;
+    size: A4 portrait;
+    margin: 16mm 14mm;
   }
 
-  body * {
-    visibility: hidden !important;
+  html,
+  body {
+    min-height: auto !important;
+    background: white !important;
+    color: #111 !important;
+    color-scheme: light;
   }
 
   body {
+    display: block !important;
     background: white !important;
   }
 
-  .report-print-root,
-  .report-print-root * {
-    visibility: visible !important;
+  .report-print-controls,
+  .print\:hidden {
+    display: none !important;
   }
 
-  .report-print-root {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
+  .report-print-route,
+  .report-print-page {
+    min-height: 0 !important;
+    max-width: none !important;
+    width: auto !important;
     background: white !important;
     color: black !important;
     padding: 0 !important;
     margin: 0 !important;
+    box-shadow: none !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .report-document-header,
+  .report-document-header * {
+    color: #111 !important;
+  }
+
+  .report-stale-warning {
+    background: #fff8e6 !important;
+    border-color: #9a6700 !important;
+    color: #5f4200 !important;
   }
 
   .report {
@@ -197,6 +218,12 @@
   }
 
   .report p,
+  .report li {
+    orphans: 3;
+    widows: 3;
+  }
+
+  .report p,
   .report li,
   .report th,
   .report td {
@@ -205,10 +232,24 @@
 
   .report pre,
   .report-pre,
-  .report table,
-  .report blockquote {
+  .report table {
+    page-break-inside: auto;
+    break-inside: auto;
+  }
+
+  .report tr,
+  .report blockquote,
+  .report-mermaid {
     page-break-inside: avoid;
     break-inside: avoid;
+  }
+
+  .report thead {
+    display: table-header-group;
+  }
+
+  .report tfoot {
+    display: table-footer-group;
   }
 
   .report table {
@@ -220,15 +261,30 @@
     overflow: visible !important;
   }
 
-  .report-print-root .print\:hidden {
-    display: none !important;
+  .report pre,
+  .report-pre {
+    max-height: none !important;
+    overflow: visible !important;
+    white-space: pre-wrap !important;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .report-mermaid-preview {
-    display: none !important;
+    display: flex !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    background: white !important;
   }
 
   .report-mermaid-fallback {
-    display: block !important;
+    display: none !important;
+  }
+
+  .report-mermaid-preview svg {
+    display: block;
+    max-width: 100% !important;
+    height: auto !important;
   }
 }

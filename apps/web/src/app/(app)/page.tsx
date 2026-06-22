@@ -148,7 +148,7 @@ export default function DashboardPage() {
         className="mb-0"
       />
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3">
         <MetricCard
           label="Repositories"
           value={`${repos.length}`}

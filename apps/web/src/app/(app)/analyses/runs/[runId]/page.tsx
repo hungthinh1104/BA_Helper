@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { useApprovedMultiRepoReport, useMultiRepoAnalysisRunDetail, useFinalizeMultiRepoReport } from "@/hooks/api/use-analyses"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { MetricCard } from "@/components/workspace/shared/primitives"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ImpactMatrixTable } from "@/components/workspace/matrix/impact-matrix-table"
@@ -49,33 +50,6 @@ function formatDate(iso: string) {
     minute: "2-digit",
   })
 }
-
-function SummaryCard({
-  label,
-  value,
-  tone = "muted",
-}: {
-  label: string
-  value: string | number
-  tone?: "muted" | "success" | "warning" | "destructive"
-}) {
-  const toneClass =
-    tone === "success"
-      ? "border-[var(--success-soft)] text-[var(--success)] bg-[var(--success-soft)]"
-      : tone === "warning"
-        ? "border-[var(--warning-soft)] text-[var(--warning)] bg-[var(--warning-soft)]"
-        : tone === "destructive"
-          ? "border-[var(--danger-soft)] text-[var(--danger)] bg-[var(--danger-soft)]"
-          : "border-[var(--border)] text-[var(--text-primary)] bg-[var(--surface-muted)]"
-
-  return (
-    <div className={`rounded-lg border px-3 py-2 ${toneClass}`}>
-      <div className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">{label}</div>
-      <div className="mt-1 text-[16px] font-semibold">{value}</div>
-    </div>
-  )
-}
-
 
 
 export default function MultiRepoAnalysisRunDetailPage({
@@ -183,17 +157,17 @@ export default function MultiRepoAnalysisRunDetailPage({
 
         {data && (
           <div className="mb-4 space-y-4">
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
-              <SummaryCard label="Total" value={data.runReadiness.totalAnalyses} />
-              <SummaryCard label="Completed" value={data.runReadiness.completedAnalyses} tone="success" />
-              <SummaryCard label="Failed" value={data.runReadiness.failedAnalyses} tone={data.runReadiness.hasFailures ? "destructive" : "muted"} />
-              <SummaryCard label="Needs Review" value={data.runReadiness.waitingForReviewAnalyses} tone={data.runReadiness.waitingForReviewAnalyses > 0 ? "warning" : "muted"} />
-              <SummaryCard label="Accepted" value={data.childReviewSummary.accepted} tone="success" />
-              <SummaryCard label="Pending Review" value={data.childReviewSummary.pendingReview} tone={data.childReviewSummary.pendingReview > 0 ? "warning" : "muted"} />
-              <SummaryCard
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3">
+              <MetricCard label="Total" value={data.runReadiness.totalAnalyses} />
+              <MetricCard label="Completed" value={data.runReadiness.completedAnalyses} accent="success" />
+              <MetricCard label="Failed" value={data.runReadiness.failedAnalyses} accent={data.runReadiness.hasFailures ? "danger" : "default"} />
+              <MetricCard label="Needs Review" value={data.runReadiness.waitingForReviewAnalyses} accent={data.runReadiness.waitingForReviewAnalyses > 0 ? "warning" : "default"} />
+              <MetricCard label="Accepted" value={data.childReviewSummary.accepted} accent="success" />
+              <MetricCard label="Pending Review" value={data.childReviewSummary.pendingReview} accent={data.childReviewSummary.pendingReview > 0 ? "warning" : "default"} />
+              <MetricCard
                 label="Merged Ready"
                 value={data.runReadiness.canStartMergedReport ? "Yes" : "No"}
-                tone={data.runReadiness.canStartMergedReport ? "success" : "muted"}
+                accent={data.runReadiness.canStartMergedReport ? "success" : "default"}
               />
             </div>
 

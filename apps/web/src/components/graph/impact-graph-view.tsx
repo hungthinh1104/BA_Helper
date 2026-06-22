@@ -102,7 +102,7 @@ export function ImpactGraphView({ nodes: rawNodes, edges: rawEdges, isTruncated,
   }, [onNodeSelect])
 
   return (
-    <div className="relative h-full w-full rounded-xl overflow-hidden border border-border/40">
+    <div className="relative h-full w-full bg-surface">
       {isTruncated && (
         <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 px-2.5 py-1.5 bg-warning/10 border border-warning/30 rounded-lg text-[11px] text-warning font-medium shadow-sm">
           ⚠ Graph truncated — showing most relevant nodes
