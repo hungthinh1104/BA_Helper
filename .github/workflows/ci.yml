@@ -67,7 +67,7 @@ jobs:
         run: pnpm typecheck
 
       - name: Web production build
-        run: pnpm --dir apps/web build
+        run: pnpm --filter web... build
 
       - name: Analyzer tests
         run: pnpm test:analyzer
