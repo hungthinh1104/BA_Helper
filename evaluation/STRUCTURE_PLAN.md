@@ -37,6 +37,9 @@ evaluation/
 ```
 
 ## Legacy Aliases Map
+
+> **Note:** Legacy flat aliases were retired after canonical v0 artifacts became the source of truth.
+
 - `evaluation/results/db-snapshot-readiness.v0.json` -> `evaluation/results/v0/probes/db-snapshot-readiness.v0.json`
 - `evaluation/results/case-snapshot-alignment.v0.json` -> `evaluation/results/v0/alignment/case-snapshot-alignment.v0.json`
 - `evaluation/results/rag-samples.current-hybrid.v0.json` -> `evaluation/results/v0/samples/current-hybrid/case006.v0.json`
