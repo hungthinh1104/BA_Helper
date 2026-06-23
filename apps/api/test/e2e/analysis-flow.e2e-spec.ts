@@ -18,17 +18,20 @@ import {
   impactAnalysisResponseSchema,
   approvedImpactReportResponseSchema,
 } from '@ba-helper/contracts';
+import { RunDocumentJobUseCase } from '../../src/modules/document/application/run-document-job.usecase';
 
 describe('Analysis Flow (E2E)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let jwtService: JwtService;
   let adminToken: string;
+  let runDocumentJob: RunDocumentJobUseCase;
 
   beforeAll(async () => {
     app = await createTestApp();
     prisma = app.get(PrismaService);
     jwtService = app.get(JwtService);
+    runDocumentJob = app.get(RunDocumentJobUseCase);
   });
 
   afterAll(async () => {
@@ -192,6 +195,13 @@ describe('Analysis Flow (E2E)', () => {
     expect(finalizeRes.status).toBe(201);
 
     expect(finalizeRes.body.status).toBe('COMPLETED');
+
+    // Step 10.5: Run async document generation worker
+    const documentJob = await prisma.documentJob.findFirst({
+      where: { analysisId, documentType: 'IMPACT_REPORT' },
+    });
+    expect(documentJob).toBeDefined();
+    await runDocumentJob.execute({ documentJobId: documentJob!.id });
 
     // Step 11: GET /api/v1/impact-analyses/:id/approved-report
     const exportRes = await request(app.getHttpServer())

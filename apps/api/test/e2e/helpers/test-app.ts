@@ -19,6 +19,7 @@ export async function createTestApp(): Promise<INestApplication> {
   }).compile();
 
   const app = moduleFixture.createNestApplication();
+  app.useLogger(false);
   app.useGlobalFilters(new AppExceptionFilter());
   await app.init();
   return app;

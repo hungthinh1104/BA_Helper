@@ -49,6 +49,9 @@ const createPrismaStub = (hooks?: {
       domainEvent: {
         upsert: async () => ({ id: 'event-1' }),
       },
+      reviewedReportSnapshot: {
+        create: async () => ({ id: 'snap-1' }),
+      },
     }),
 });
 
@@ -58,8 +61,8 @@ describe('FinalizeImpactAnalysisUseCase', () => {
       createStubRepo({ insights: [{ reviewStatus: 'NEEDS_REVIEW' }] }) as any,
       { listByAnalysis: async () => [] } as any,
       createPrismaStub() as any,
-      { execute: async () => ({ id: 'snap-1' }) } as any,
-      { execute: async () => {} } as any,
+      { buildSnapshotCreateData: async () => ({}), recordCreatedEvent: async () => {} } as any,
+      { createOrReuseQueuedJobForSnapshot: async () => ({ job: { id: 'job-1' } }), enqueueExistingJob: async () => {} } as any,
     );
 
     await expect(
@@ -74,8 +77,8 @@ describe('FinalizeImpactAnalysisUseCase', () => {
       createStubRepo({ insights: [{ reviewStatus: 'CONFIRMED' }] }) as any,
       { listByAnalysis: async () => [{ reviewStatus: 'NEEDS_REVIEW' }] } as any,
       createPrismaStub() as any,
-      { execute: async () => ({ id: 'snap-1' }) } as any,
-      { execute: async () => {} } as any,
+      { buildSnapshotCreateData: async () => ({}), recordCreatedEvent: async () => {} } as any,
+      { createOrReuseQueuedJobForSnapshot: async () => ({ job: { id: 'job-1' } }), enqueueExistingJob: async () => {} } as any,
     );
 
     await expect(
@@ -91,8 +94,8 @@ describe('FinalizeImpactAnalysisUseCase', () => {
       createStubRepo({ insights: [{ reviewStatus: 'NEEDS_REVIEW' }] }) as any,
       { listByAnalysis: async () => [{ reviewStatus: 'NEEDS_REVIEW' }] } as any,
       createPrismaStub() as any,
-      { execute: async () => ({ id: 'snap-1' }) } as any,
-      { execute: async () => { enqueueCalled = true; } } as any,
+      { buildSnapshotCreateData: async () => ({}), recordCreatedEvent: async () => {} } as any,
+      { createOrReuseQueuedJobForSnapshot: async () => ({ job: { id: 'job-1' } }), enqueueExistingJob: async () => { enqueueCalled = true; } } as any,
     );
 
     const result = await useCase.execute({ analysisId: 'analysis-1', acknowledgeUnreviewed: true, userId: 'b0e6a1e4-3993-47cb-b0bb-26477e8a9462' });
@@ -105,8 +108,8 @@ describe('FinalizeImpactAnalysisUseCase', () => {
       createStubRepo() as any,
       { listByAnalysis: async () => [] } as any,
       createPrismaStub() as any,
-      { execute: async () => { throw new Error('Snapshot crashed'); } } as any,
-      { execute: async () => {} } as any,
+      { buildSnapshotCreateData: async () => { throw new Error('Snapshot crashed'); } } as any,
+      { createOrReuseQueuedJobForSnapshot: async () => ({ job: { id: 'job-1' } }), enqueueExistingJob: async () => {} } as any,
     );
 
     await expect(
