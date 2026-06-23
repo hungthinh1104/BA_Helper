@@ -37,32 +37,20 @@ describe('FinalizeImpactAnalysisUseCase staleness guard', () => {
     const useCase = new FinalizeImpactAnalysisUseCase(
       new StubImpactRepo() as any,
       { listByAnalysis: async () => [] } as any,
-      { listByAnalysis: async () => [] } as any,
-      { listBySnapshot: async () => [] } as any,
-      { findByAnalysisId: () => Promise.resolve([]) } as any,
-      { listByAnalysisId: () => Promise.resolve([]) } as any,
-      new StubDocumentRepo() as any,
-      { build: () => 'markdown' } as any,
-      { listByAnalysisId: async () => [] } as any,
-      { computeForAnalysis: async () => ({ computable: true, diff: {} }) } as any,
       {
         $transaction: async (callback: (tx: any) => Promise<unknown>) =>
           callback({
             impactAnalysis: {
               updateMany: async () => ({ count: 0 }),
             },
-            generatedDocument: {
-              upsert: async () => ({ id: 'doc-1' }),
-            },
-            domainEvent: {
-              upsert: async () => ({ id: 'event-1' }),
-            },
           }),
       } as any,
+      { execute: async () => ({ id: 'snap-1' }) } as any,
+      { execute: async () => {} } as any,
     );
 
     await expect(
-      useCase.execute({ analysisId: 'analysis-1', acknowledgeUnreviewed: true }),
+      useCase.execute({ analysisId: 'analysis-1', acknowledgeUnreviewed: true, userId: 'b0e6a1e4-3993-47cb-b0bb-26477e8a9462' }),
     ).rejects.toMatchObject({
       code: 'ANALYSIS_STALE',
     });

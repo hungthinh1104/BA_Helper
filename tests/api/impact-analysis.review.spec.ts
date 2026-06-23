@@ -57,19 +57,13 @@ describe('FinalizeImpactAnalysisUseCase', () => {
     const useCase = new FinalizeImpactAnalysisUseCase(
       createStubRepo({ insights: [{ reviewStatus: 'NEEDS_REVIEW' }] }) as any,
       { listByAnalysis: async () => [] } as any,
-      { listByAnalysis: async () => [] } as any,
-      { listBySnapshot: async () => [] } as any,
-      { findByAnalysisId: () => Promise.resolve([]) } as any,
-      { listByAnalysisId: () => Promise.resolve([]) } as any,
-      { findApprovedReportByAnalysisId: async () => null, upsertApproved: () => Promise.resolve() } as any,
-      { build: () => 'markdown' } as any,
-      { listByAnalysisId: async () => [] } as any,
-      { computeForAnalysis: async () => ({ computable: true, diff: {} }) } as any,
       createPrismaStub() as any,
+      { execute: async () => ({ id: 'snap-1' }) } as any,
+      { execute: async () => {} } as any,
     );
 
     await expect(
-      useCase.execute({ analysisId: 'analysis-1', acknowledgeUnreviewed: false }),
+      useCase.execute({ analysisId: 'analysis-1', acknowledgeUnreviewed: false, userId: 'b0e6a1e4-3993-47cb-b0bb-26477e8a9462' }),
     ).rejects.toMatchObject({
       code: 'FINALIZE_REQUIRES_REVIEW_ACK',
     });
@@ -78,72 +72,45 @@ describe('FinalizeImpactAnalysisUseCase', () => {
   it('requires acknowledgeUnreviewed when traceability links remain unreviewed', async () => {
     const useCase = new FinalizeImpactAnalysisUseCase(
       createStubRepo({ insights: [{ reviewStatus: 'CONFIRMED' }] }) as any,
-      { listByAnalysis: async () => [] } as any,
       { listByAnalysis: async () => [{ reviewStatus: 'NEEDS_REVIEW' }] } as any,
-      { listBySnapshot: async () => [] } as any,
-      { findByAnalysisId: () => Promise.resolve([]) } as any,
-      { listByAnalysisId: () => Promise.resolve([]) } as any,
-      { findApprovedReportByAnalysisId: async () => null, upsertApproved: () => Promise.resolve() } as any,
-      { build: () => 'markdown' } as any,
-      { listByAnalysisId: async () => [] } as any,
-      { computeForAnalysis: async () => ({ computable: true, diff: {} }) } as any,
       createPrismaStub() as any,
+      { execute: async () => ({ id: 'snap-1' }) } as any,
+      { execute: async () => {} } as any,
     );
 
     await expect(
-      useCase.execute({ analysisId: 'analysis-1', acknowledgeUnreviewed: false }),
+      useCase.execute({ analysisId: 'analysis-1', acknowledgeUnreviewed: false, userId: 'b0e6a1e4-3993-47cb-b0bb-26477e8a9462' }),
     ).rejects.toMatchObject({
       code: 'FINALIZE_REQUIRES_REVIEW_ACK',
     });
   });
 
   it('allows finalization when unreviewed items are acknowledged', async () => {
-    let upsertCalled = false;
+    let enqueueCalled = false;
     const useCase = new FinalizeImpactAnalysisUseCase(
       createStubRepo({ insights: [{ reviewStatus: 'NEEDS_REVIEW' }] }) as any,
-      { listByAnalysis: async () => [] } as any,
       { listByAnalysis: async () => [{ reviewStatus: 'NEEDS_REVIEW' }] } as any,
-      { listBySnapshot: async () => [] } as any,
-      { findByAnalysisId: () => Promise.resolve([]) } as any,
-      { listByAnalysisId: () => Promise.resolve([]) } as any,
-      { 
-        findApprovedReportByAnalysisId: async () => null,
-        upsertApproved: async () => { upsertCalled = true; return { id: 'some-id', createdAt: new Date(), updatedAt: new Date() }; } 
-      } as any,
-      { build: () => 'markdown' } as any,
-      { listByAnalysisId: async () => [] } as any,
-      { computeForAnalysis: async () => ({ computable: true, diff: {} }) } as any,
-      createPrismaStub({ onUpsert: async () => { upsertCalled = true; } }) as any,
+      createPrismaStub() as any,
+      { execute: async () => ({ id: 'snap-1' }) } as any,
+      { execute: async () => { enqueueCalled = true; } } as any,
     );
 
-    const result = await useCase.execute({ analysisId: 'analysis-1', acknowledgeUnreviewed: true });
+    const result = await useCase.execute({ analysisId: 'analysis-1', acknowledgeUnreviewed: true, userId: 'b0e6a1e4-3993-47cb-b0bb-26477e8a9462' });
     expect(result.id).toEqual('analysis-1');
-    expect(upsertCalled).toBe(true);
+    expect(enqueueCalled).toBe(true);
   });
 
   it('does not leave a placeholder report if the builder fails', async () => {
-    let upsertCalls = 0;
     const useCase = new FinalizeImpactAnalysisUseCase(
       createStubRepo() as any,
       { listByAnalysis: async () => [] } as any,
-      { listByAnalysis: async () => [] } as any,
-      { listBySnapshot: async () => [] } as any,
-      { findByAnalysisId: () => Promise.resolve([]) } as any,
-      { listByAnalysisId: () => Promise.resolve([]) } as any,
-      { 
-        findApprovedReportByAnalysisId: async () => null,
-        upsertApproved: async () => { upsertCalls++; } 
-      } as any,
-      { build: () => { throw new Error('Builder crashed'); } } as any,
-      { listByAnalysisId: async () => [] } as any,
-      { computeForAnalysis: async () => ({ computable: true, diff: {} }) } as any,
-      createPrismaStub({ onUpsert: async () => { upsertCalls++; } }) as any,
+      createPrismaStub() as any,
+      { execute: async () => { throw new Error('Snapshot crashed'); } } as any,
+      { execute: async () => {} } as any,
     );
 
     await expect(
-      useCase.execute({ analysisId: 'analysis-1', acknowledgeUnreviewed: false }),
-    ).rejects.toThrow('Builder crashed');
-    
-    expect(upsertCalls).toBe(0); // Upsert should not be called at all since builder throws before
+      useCase.execute({ analysisId: 'analysis-1', acknowledgeUnreviewed: false, userId: 'b0e6a1e4-3993-47cb-b0bb-26477e8a9462' }),
+    ).rejects.toThrow('Snapshot crashed');
   });
 });
