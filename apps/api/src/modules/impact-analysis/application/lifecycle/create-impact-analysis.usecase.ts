@@ -73,9 +73,6 @@ export class CreateImpactAnalysisUseCase {
       if (!params.derivedFromAnalysisId) {
         throw new AppError('INVALID_LINEAGE', 'derivedFromAnalysisId must be provided.');
       }
-      if (!params.sourceClarificationId && !params.reviewClarificationRequestId) {
-        throw new AppError('INVALID_LINEAGE', 'Either sourceClarificationId or reviewClarificationRequestId must be provided.');
-      }
       
       if (params.sourceClarificationId) {
         const clarification = await this.prisma.clarificationItem.findUnique({

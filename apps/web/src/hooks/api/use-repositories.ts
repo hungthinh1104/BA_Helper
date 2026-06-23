@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { apiGet, apiPost } from "@/lib/api-client"
 import { queryKeys } from "@/lib/api/query-keys"
-import { 
-  RepositoryListResponse, 
-  RepositoryDetailResponse, 
-  RepositoryCreateRequest, 
+import {
+  RepositoryListResponse,
+  RepositoryDetailResponse,
+  RepositoryCreateRequest,
   RepositoryCreateResponse,
   repositoryListResponseSchema,
   repositoryDetailResponseSchema,
@@ -66,5 +66,46 @@ export function useCreateRepository(projectId?: string) {
         queryKey: queryKeys.repositories.list(projectQueryKey),
       })
     },
+  })
+}
+
+export function useSnapshotDrift(
+  projectId: string | undefined,
+  repositoryId: string | undefined,
+  baseSnapshotId: string | undefined,
+  targetCommitSha?: string,
+  options?: { enabled?: boolean }
+) {
+  const activeProjectId = useOptionalProjectId()
+  const effectiveProjectId = projectId ?? activeProjectId
+
+  const isEnabled = Boolean(
+    effectiveProjectId &&
+    repositoryId &&
+    baseSnapshotId &&
+    (options?.enabled ?? true)
+  )
+
+  return useQuery({
+    queryKey: [
+      ...queryKeys.repositories.detail(repositoryId ?? ''),
+      "snapshots",
+      baseSnapshotId,
+      "drift",
+      targetCommitSha,
+    ],
+    queryFn: async () => {
+      const url = new URL(
+        `/api/v1/projects/${effectiveProjectId}/repositories/${repositoryId}/snapshots/${baseSnapshotId}/drift`,
+        window.location.origin
+      )
+      if (targetCommitSha) {
+        url.searchParams.set('targetCommitSha', targetCommitSha)
+      }
+
+      const { repositorySnapshotDriftResponseSchema } = await import("@ba-helper/contracts")
+      return apiGet(url.pathname + url.search, repositorySnapshotDriftResponseSchema)
+    },
+    enabled: isEnabled,
   })
 }

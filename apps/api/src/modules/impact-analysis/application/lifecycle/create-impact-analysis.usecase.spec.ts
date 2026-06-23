@@ -278,14 +278,7 @@ describe('CreateImpactAnalysisUseCase', () => {
       });
     });
 
-    it('rejects derivedFromAnalysisId without sourceClarificationId', async () => {
-      mockValidState();
-      await expect(
-        useCase.execute({ ...lineageParams, sourceClarificationId: undefined })
-      ).rejects.toMatchObject({
-        code: 'INVALID_LINEAGE',
-      });
-    });
+
 
     it('rejects missing source clarification', async () => {
       mockValidClarification();

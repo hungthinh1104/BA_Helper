@@ -1,0 +1,136 @@
+"use client"
+
+import * as React from "react"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
+import { useSnapshotDrift } from "@/hooks/api/use-repositories"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { FilePlus, FileMinus, FileEdit, HelpCircle, Loader2 } from "lucide-react"
+
+interface DriftDetailsDrawerProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  projectId: string | undefined
+  repositoryId: string | undefined
+  baseSnapshotId: string | undefined
+  targetCommitSha?: string
+}
+
+export function DriftDetailsDrawer({
+  open,
+  onOpenChange,
+  projectId,
+  repositoryId,
+  baseSnapshotId,
+  targetCommitSha,
+}: DriftDetailsDrawerProps) {
+  // We only enable the query when the drawer is open to fetch lazily
+  const { data: drift, isLoading, isError } = useSnapshotDrift(
+    projectId,
+    repositoryId,
+    baseSnapshotId,
+    targetCommitSha,
+    { enabled: open }
+  )
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="sm:max-w-xl overflow-hidden flex flex-col">
+        <SheetHeader className="pb-4 border-b">
+          <SheetTitle>Snapshot Drift Details</SheetTitle>
+          <SheetDescription>
+            Changes in the repository since the analysis was created.
+          </SheetDescription>
+        </SheetHeader>
+
+        <ScrollArea className="flex-1 py-4">
+          {isLoading && (
+            <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+              <Loader2 className="w-6 h-6 animate-spin mb-2" />
+              <p>Loading drift details...</p>
+            </div>
+          )}
+
+          {isError && (
+            <div className="text-destructive text-sm py-4">
+              Failed to load drift details.
+            </div>
+          )}
+
+          {drift && (
+            <div className="space-y-6">
+              <div className="text-sm">
+                <p><strong>Base Commit:</strong> {drift.versionComparison.baseCommitSha}</p>
+                <p><strong>Target Commit:</strong> {drift.versionComparison.targetCommitSha}</p>
+              </div>
+
+              {drift.addedArtifacts.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-sm flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                    <FilePlus className="w-4 h-4" /> Added Artifacts ({drift.addedArtifacts.length})
+                  </h4>
+                  <ul className="text-sm space-y-1 pl-6">
+                    {drift.addedArtifacts.map((art) => (
+                      <li key={art.artifactKey} className="text-muted-foreground">{art.artifactKey}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {drift.removedArtifacts.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-sm flex items-center gap-2 text-rose-600 dark:text-rose-400">
+                    <FileMinus className="w-4 h-4" /> Removed Artifacts ({drift.removedArtifacts.length})
+                  </h4>
+                  <ul className="text-sm space-y-1 pl-6">
+                    {drift.removedArtifacts.map((art) => (
+                      <li key={art.artifactKey} className="text-muted-foreground line-through">{art.artifactKey}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {drift.changedArtifacts.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-sm flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                    <FileEdit className="w-4 h-4" /> Changed Artifacts ({drift.changedArtifacts.length})
+                  </h4>
+                  <ul className="text-sm space-y-1 pl-6">
+                    {drift.changedArtifacts.map((art) => (
+                      <li key={art.artifactKey} className="text-muted-foreground">{art.artifactKey}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {drift.unknownChangedArtifacts.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-sm flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                    <HelpCircle className="w-4 h-4" /> Hash Unavailable / Unknown Changes ({drift.unknownChangedArtifacts.length})
+                  </h4>
+                  <ul className="text-sm space-y-1 pl-6">
+                    {drift.unknownChangedArtifacts.map((art) => (
+                      <li key={art.artifactKey} className="text-muted-foreground">{art.artifactKey}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {drift.addedArtifacts.length === 0 &&
+                drift.removedArtifacts.length === 0 &&
+                drift.changedArtifacts.length === 0 &&
+                drift.unknownChangedArtifacts.length === 0 && (
+                <p className="text-sm text-muted-foreground italic">No artifact changes detected.</p>
+              )}
+            </div>
+          )}
+        </ScrollArea>
+      </SheetContent>
+    </Sheet>
+  )
+}
