@@ -42,6 +42,8 @@ export default function RepositoryDetailsPage({ params }: PageProps) {
   const workspace = useCurrentWorkspace()
   const canScan = workspace ? canRunScan(workspace.membershipRole) : false
 
+  const { data: scanEventsData, isLoading: isLoadingEvents } = useScanJobEvents(repositoryId, repo?.latestScanJob?.id)
+
   // Watch for scan job completion/failure to show toast notifications
   useRepositoryStatusWatcher(undefined, repositoryId)
 
@@ -93,8 +95,6 @@ export default function RepositoryDetailsPage({ params }: PageProps) {
   const snapshots = snapshotList?.items || []
   const latestUsable = snapshots[0]
   const previousUsable = snapshots[1]
-
-  const { data: scanEventsData, isLoading: isLoadingEvents } = useScanJobEvents(repositoryId, job?.id)
 
   const isReady = job?.status === "COMPLETED" && repo.latestSnapshot?.id
   const isPartial = repo.latestSnapshot?.coverageStatus === "PARTIAL"

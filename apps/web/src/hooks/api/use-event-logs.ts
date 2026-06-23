@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api-client';
+import { apiGet } from '@/lib/api-client';
 import { EventLogListResponse } from '@ba-helper/contracts';
 
 // Query keys
@@ -13,7 +13,7 @@ export function useScanJobEvents(repositoryId: string, jobId: string | undefined
   return useQuery({
     queryKey: eventLogKeys.scanJob(jobId || ''),
     queryFn: async () => {
-      const { data } = await api.get<EventLogListResponse>(
+      const data = await apiGet<EventLogListResponse>(
         `/api/v1/repositories/${repositoryId}/scan-jobs/${jobId}/events`
       );
       return data;
@@ -26,7 +26,7 @@ export function useAnalysisEvents(analysisId: string | undefined) {
   return useQuery({
     queryKey: eventLogKeys.analysis(analysisId || ''),
     queryFn: async () => {
-      const { data } = await api.get<EventLogListResponse>(
+      const data = await apiGet<EventLogListResponse>(
         `/api/v1/impact-analyses/${analysisId}/events`
       );
       return data;
