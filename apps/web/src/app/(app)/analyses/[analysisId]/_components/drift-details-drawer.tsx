@@ -64,67 +64,62 @@ export function DriftDetailsDrawer({
 
           {drift && (
             <div className="space-y-6">
-              <div className="text-sm">
-                <p><strong>Base Commit:</strong> {drift.versionComparison.baseCommitSha}</p>
-                <p><strong>Target Commit:</strong> {drift.versionComparison.targetCommitSha}</p>
-              </div>
-
-              {drift.addedArtifacts.length > 0 && (
+              {drift.samples.addedArtifacts.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="font-semibold text-sm flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-                    <FilePlus className="w-4 h-4" /> Added Artifacts ({drift.addedArtifacts.length})
+                    <FilePlus className="w-4 h-4" /> Added Artifacts ({drift.samples.addedArtifacts.length})
                   </h4>
                   <ul className="text-sm space-y-1 pl-6">
-                    {drift.addedArtifacts.map((art) => (
+                    {drift.samples.addedArtifacts.map((art) => (
                       <li key={art.artifactKey} className="text-muted-foreground">{art.artifactKey}</li>
                     ))}
                   </ul>
                 </div>
               )}
 
-              {drift.removedArtifacts.length > 0 && (
+              {drift.samples.removedArtifacts.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="font-semibold text-sm flex items-center gap-2 text-rose-600 dark:text-rose-400">
-                    <FileMinus className="w-4 h-4" /> Removed Artifacts ({drift.removedArtifacts.length})
+                    <FileMinus className="w-4 h-4" /> Removed Artifacts ({drift.samples.removedArtifacts.length})
                   </h4>
                   <ul className="text-sm space-y-1 pl-6">
-                    {drift.removedArtifacts.map((art) => (
+                    {drift.samples.removedArtifacts.map((art) => (
                       <li key={art.artifactKey} className="text-muted-foreground line-through">{art.artifactKey}</li>
                     ))}
                   </ul>
                 </div>
               )}
 
-              {drift.changedArtifacts.length > 0 && (
+              {drift.samples.changedArtifacts.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="font-semibold text-sm flex items-center gap-2 text-blue-600 dark:text-blue-400">
-                    <FileEdit className="w-4 h-4" /> Changed Artifacts ({drift.changedArtifacts.length})
+                    <FileEdit className="w-4 h-4" /> Changed Artifacts ({drift.samples.changedArtifacts.length})
                   </h4>
                   <ul className="text-sm space-y-1 pl-6">
-                    {drift.changedArtifacts.map((art) => (
+                    {drift.samples.changedArtifacts.map((art) => (
                       <li key={art.artifactKey} className="text-muted-foreground">{art.artifactKey}</li>
                     ))}
                   </ul>
                 </div>
               )}
 
-              {drift.unknownChangedArtifacts.length > 0 && (
+              {drift.samples.unknownChangedArtifacts.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="font-semibold text-sm flex items-center gap-2 text-amber-600 dark:text-amber-400">
-                    <HelpCircle className="w-4 h-4" /> Hash Unavailable / Unknown Changes ({drift.unknownChangedArtifacts.length})
+                    <HelpCircle className="w-4 h-4" /> Hash Unavailable / Unknown Changes ({drift.samples.unknownChangedArtifacts.length})
                   </h4>
                   <ul className="text-sm space-y-1 pl-6">
-                    {drift.unknownChangedArtifacts.map((art) => (
+                    {drift.samples.unknownChangedArtifacts.map((art) => (
                       <li key={art.artifactKey} className="text-muted-foreground">{art.artifactKey}</li>
                     ))}
                   </ul>
                 </div>
               )}
 
-              {drift.addedArtifacts.length === 0 &&
-                drift.removedArtifacts.length === 0 &&
-                drift.changedArtifacts.length === 0 &&
-                drift.unknownChangedArtifacts.length === 0 && (
+              {drift.samples.addedArtifacts.length === 0 &&
+                drift.samples.removedArtifacts.length === 0 &&
+                drift.samples.changedArtifacts.length === 0 &&
+                drift.samples.unknownChangedArtifacts.length === 0 && (
                 <p className="text-sm text-muted-foreground italic">No artifact changes detected.</p>
               )}
             </div>
