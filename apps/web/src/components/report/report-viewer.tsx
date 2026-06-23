@@ -206,7 +206,7 @@ export function ReportViewer({ analysisId, printMode = false }: ReportViewerProp
       </header>
 
       {/* Markdown Content */}
-      <ReportMarkdown markdown={report.markdown} />
+      <ReportMarkdown markdown={report.markdown || ""} />
 
       {/* Structured Evidence Quality and Evaluation Context */}
       {!printMode && (
