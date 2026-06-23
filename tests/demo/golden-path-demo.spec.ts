@@ -9,7 +9,7 @@ import { FinalizeImpactAnalysisUseCase } from '../../apps/api/src/modules/impact
 import { GetRepositorySnapshotDriftUseCase } from '../../apps/api/src/modules/repository/application/get-repository-snapshot-drift.usecase';
 import { ScanJobStatus } from '@prisma/client';
 import { resolve } from 'node:path';
-import { DocumentJobWorker } from '../../apps/api/src/modules/impact-analysis/worker/document-job.worker';
+import { RunDocumentJobUseCase } from '../../apps/api/src/modules/document/application/run-document-job.usecase';
 
 describe('Golden Path Demo', () => {
   let app: any;
@@ -18,6 +18,7 @@ describe('Golden Path Demo', () => {
   let runImpactAnalysis: RunImpactAnalysisUseCase;
   let finalizeImpactAnalysis: FinalizeImpactAnalysisUseCase;
   let getSnapshotDrift: GetRepositorySnapshotDriftUseCase;
+  let runDocumentJob: RunDocumentJobUseCase;
   
   // State for the flow
   let projectId: string;
@@ -46,6 +47,7 @@ describe('Golden Path Demo', () => {
     runImpactAnalysis = app.get(RunImpactAnalysisUseCase);
     finalizeImpactAnalysis = app.get(FinalizeImpactAnalysisUseCase);
     getSnapshotDrift = app.get(GetRepositorySnapshotDriftUseCase);
+    runDocumentJob = app.get(RunDocumentJobUseCase);
   });
 
   afterAll(async () => {
@@ -228,8 +230,11 @@ describe('Golden Path Demo', () => {
       orderBy: { createdAt: 'desc' },
     });
     
-    const docWorker = app.get(DocumentJobWorker);
-    await docWorker.process({ data: { snapshotId: reviewSnapshot.id, documentType: 'IMPACT_REPORT' } } as any);
+    const documentJob = await prisma.documentJob.findFirstOrThrow({
+      where: { snapshotId: reviewSnapshot.id, documentType: 'IMPACT_REPORT' },
+      orderBy: { createdAt: 'desc' },
+    });
+    await runDocumentJob.execute({ documentJobId: documentJob.id });
 
     const finalizedAnalysis = await prisma.impactAnalysis.findUniqueOrThrow({ where: { id: analysisId } });
     expect(finalizedAnalysis.status).toBe('COMPLETED');

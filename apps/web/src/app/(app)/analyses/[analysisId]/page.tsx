@@ -146,7 +146,7 @@ export default function ImpactAnalysisDetailPage({
       {/* app-page-scroll no longer has default padding. Add explicit padding for normal tabs. */}
       <div className={`app-page-scroll flex h-full min-h-0 flex-col gap-3 ${isFullHeightTab ? "overflow-hidden" : "p-4 md:p-6"}`}>
         <div className={isFullHeightTab ? "shrink-0 px-4 pt-4 flex flex-col gap-3" : "contents"}>
-          <AnalysisDriftWarning projectId={ws.activeProjectId} analysisId={analysisId} />
+          <AnalysisDriftWarning projectId={ws.activeProjectId} analysisId={analysisId} analysis={ws.analysis} />
 
           <AnalysisTabBar
             analysis={ws.analysis}

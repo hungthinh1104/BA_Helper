@@ -24,7 +24,7 @@ export function FinalReviewGatePanel({ analysisId }: FinalReviewGatePanelProps) 
         finalReviewedReportResponseSchema
       )
 
-      const blob = new Blob([report.markdown], { type: "text/markdown;charset=utf-8" })
+      const blob = new Blob([report.markdown || ""], { type: "text/markdown;charset=utf-8" })
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url

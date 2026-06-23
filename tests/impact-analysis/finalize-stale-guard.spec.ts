@@ -45,7 +45,7 @@ describe('FinalizeImpactAnalysisUseCase staleness guard', () => {
             },
           }),
       } as any,
-      { execute: async () => ({ id: 'snap-1' }) } as any,
+      { buildSnapshotCreateData: async () => ({}), recordCreatedEvent: async () => {} } as any,
       { execute: async () => {} } as any,
     );
 

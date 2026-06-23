@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { QueueService } from '../../queue/queue.service';
 import { AppError } from '../../../shared/app-error';
+
+type DocumentJobTx = Prisma.TransactionClient | PrismaService;
 
 @Injectable()
 export class EnqueueDocumentJobUseCase {
@@ -11,6 +14,23 @@ export class EnqueueDocumentJobUseCase {
   ) {}
 
   async execute(params: {
+    analysisId: string;
+    documentType: 'IMPACT_REPORT';
+    requestKey?: string;
+    retry?: boolean;
+  }) {
+    const { job, shouldEnqueue } = await this.createOrReuseQueuedJob(params);
+    if (shouldEnqueue) {
+      await this.enqueueExistingJob(job.id);
+    }
+    return job;
+  }
+
+  async enqueueExistingJob(documentJobId: string) {
+    await this.queueService.enqueueDocumentJob(documentJobId);
+  }
+
+  async createOrReuseQueuedJob(params: {
     analysisId: string;
     documentType: 'IMPACT_REPORT';
     requestKey?: string;
@@ -54,58 +74,65 @@ export class EnqueueDocumentJobUseCase {
       throw new AppError('SNAPSHOT_NOT_FOUND' as any, 'Reviewed report snapshot not found.');
     }
 
-    return await this.prisma.$transaction(async (tx) => {
-      let job = await tx.documentJob.findUnique({
-        where: {
-          snapshotId_documentType: {
-            snapshotId: snapshot.id,
-            documentType: params.documentType,
-          },
+    return this.prisma.$transaction((tx) =>
+      this.createOrReuseQueuedJobForSnapshot(tx, {
+        analysisId: analysis.id,
+        snapshotId: snapshot.id,
+        documentType: params.documentType,
+        requestKey: params.requestKey,
+        retry: params.retry,
+      }),
+    );
+  }
+
+  async createOrReuseQueuedJobForSnapshot(
+    tx: DocumentJobTx,
+    params: {
+      analysisId: string;
+      snapshotId: string;
+      documentType: 'IMPACT_REPORT';
+      requestKey?: string;
+      retry?: boolean;
+    },
+  ) {
+    let job = await tx.documentJob.findUnique({
+      where: {
+        snapshotId_documentType: {
+          snapshotId: params.snapshotId,
+          documentType: params.documentType,
+        },
+      },
+    });
+
+    if (!job) {
+      job = await tx.documentJob.create({
+        data: {
+          analysisId: params.analysisId,
+          snapshotId: params.snapshotId,
+          documentType: params.documentType,
+          status: 'QUEUED',
+          requestKey: params.requestKey,
+          attemptCount: 1,
         },
       });
+      return { job, shouldEnqueue: true };
+    }
 
-      if (!job) {
-        // Create new job
-        job = await tx.documentJob.create({
-          data: {
-            analysisId: analysis.id,
-            snapshotId: snapshot.id,
-            documentType: params.documentType,
-            status: 'QUEUED',
-            requestKey: params.requestKey,
-            attemptCount: 1,
-          },
-        });
-        await this.queueService.enqueueDocumentJob({
-          snapshotId: snapshot.id,
-          documentType: params.documentType,
-          requestKey: params.requestKey,
-        });
-        return job;
-      }
+    if (job.status === 'FAILED' && params.retry) {
+      job = await tx.documentJob.update({
+        where: { id: job.id },
+        data: {
+          status: 'QUEUED',
+          progress: 0,
+          attemptCount: { increment: 1 },
+          error: Prisma.DbNull,
+          failedAt: null,
+          ...(params.requestKey ? { requestKey: params.requestKey } : {}),
+        },
+      });
+      return { job, shouldEnqueue: true };
+    }
 
-      // Job exists
-      if (job.status === 'FAILED' && params.retry) {
-        job = await tx.documentJob.update({
-          where: { id: job.id },
-          data: {
-            status: 'QUEUED',
-            attemptCount: { increment: 1 },
-            error: require('@prisma/client').Prisma.DbNull,
-            failedAt: null,
-            // Only update requestKey if provided
-            ...(params.requestKey ? { requestKey: params.requestKey } : {}),
-          },
-        });
-        await this.queueService.enqueueDocumentJob({
-          snapshotId: snapshot.id,
-          documentType: params.documentType,
-          requestKey: params.requestKey,
-        });
-        return job;
-      }
-
-      return job;
-    });
+    return { job, shouldEnqueue: job.status === 'QUEUED' };
   }
 }

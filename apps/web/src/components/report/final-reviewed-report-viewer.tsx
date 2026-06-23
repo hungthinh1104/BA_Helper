@@ -46,7 +46,7 @@ export function FinalReviewedReportViewer({ analysisId, open, onOpenChange }: Fi
 
     return (
       <div className="flex-1 overflow-y-auto bg-background p-6 md:p-8 space-y-12">
-        <ReportMarkdown markdown={finalReport.markdown} className="opacity-95" />
+        <ReportMarkdown markdown={finalReport.markdown || ""} className="opacity-95" />
 
         {/* Decisions Table */}
         {decisions.length > 0 && (

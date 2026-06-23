@@ -11,7 +11,7 @@ import { ScanJobStatus } from '@prisma/client';
 import { resolve, join } from 'node:path';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
-import { DocumentJobWorker } from '../../apps/api/src/modules/impact-analysis/worker/document-job.worker';
+import { RunDocumentJobUseCase } from '../../apps/api/src/modules/document/application/run-document-job.usecase';
 
 const safeRm = async (targetPath: string) => {
   await fs.rm(targetPath, { recursive: true, force: true }).catch(() => {});
@@ -23,6 +23,7 @@ describe('Multi-Language End-to-End Regression Gate', () => {
   let runScanJob: RunScanJobUseCase;
   let runImpactAnalysis: RunImpactAnalysisUseCase;
   let finalizeImpactAnalysis: FinalizeImpactAnalysisUseCase;
+  let runDocumentJob: RunDocumentJobUseCase;
   
   let tempDirs: string[] = [];
 
@@ -42,6 +43,7 @@ describe('Multi-Language End-to-End Regression Gate', () => {
     runScanJob = app.get(RunScanJobUseCase);
     runImpactAnalysis = app.get(RunImpactAnalysisUseCase);
     finalizeImpactAnalysis = app.get(FinalizeImpactAnalysisUseCase);
+    runDocumentJob = app.get(RunDocumentJobUseCase);
   });
 
   afterAll(async () => {
@@ -260,8 +262,11 @@ func getRefunds(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) }`
         orderBy: { createdAt: 'desc' },
       });
       
-      const docWorker = app.get(DocumentJobWorker);
-      await docWorker.process({ data: { snapshotId: reviewSnapshot.id, documentType: 'IMPACT_REPORT' } } as any);
+      const documentJob = await prisma.documentJob.findFirstOrThrow({
+        where: { snapshotId: reviewSnapshot.id, documentType: 'IMPACT_REPORT' },
+        orderBy: { createdAt: 'desc' },
+      });
+      await runDocumentJob.execute({ documentJobId: documentJob.id });
 
       const snapshot = await prisma.repositorySnapshot.findUniqueOrThrow({ where: { id: snapshotId } });
       const profile = await prisma.repositoryProfile.findUniqueOrThrow({ where: { snapshotId } });

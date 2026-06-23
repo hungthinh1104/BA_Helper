@@ -1,10 +1,20 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventLogService } from '../../event-log/application/event-log.service';
-import { AppError } from '../../../shared/app-error';
 import { TraceabilityRepository } from '../../traceability/infrastructure/traceability.repository';
 import { EvidenceQualityAnnotator } from './evidence-quality.annotator';
 import { EvaluationContextAdapter } from './evaluation-context.adapter';
+
+type ReviewedReportSnapshotCreateData = {
+  analysisId: string;
+  approvedDocumentId: null;
+  markdown: null;
+  reviewDecisionsSnapshot: Prisma.InputJsonValue;
+  evidenceQualitySummarySnapshot: Prisma.InputJsonValue;
+  evaluationContextSnapshot: Prisma.InputJsonValue | typeof Prisma.DbNull;
+  createdByUserId: string | null;
+};
 
 @Injectable()
 export class CreateReviewedReportSnapshotUseCase {
@@ -16,70 +26,82 @@ export class CreateReviewedReportSnapshotUseCase {
   ) {}
 
   async execute(params: { analysisId: string; createdByUserId?: string }) {
-      const evaluationContextSnapshot = this.evalContextAdapter.getEvaluationContext();
-      
-      const traceabilityLinks = await this.traceabilityRepo.listByAnalysis(params.analysisId);
+    const data = await this.buildSnapshotCreateData(params);
+    const snapshot = await this.prisma.reviewedReportSnapshot.create({ data });
+    await this.recordCreatedEvent(snapshot);
+    return snapshot;
+  }
 
-      const linkAnnotations = traceabilityLinks.map(link => ({
-        link,
-        annotation: EvidenceQualityAnnotator.annotate(link as any),
-      }));
+  async buildSnapshotCreateData(params: {
+    analysisId: string;
+    createdByUserId?: string;
+  }): Promise<ReviewedReportSnapshotCreateData> {
+    const evaluationContextSnapshot = this.evalContextAdapter.getEvaluationContext();
+    const traceabilityLinks = await this.traceabilityRepo.listByAnalysis(params.analysisId);
 
-      const evidenceQualitySummarySnapshot = {
-        evidenced: linkAnnotations.filter(l => l.annotation.label === 'EVIDENCED').length,
-        inferred: linkAnnotations.filter(l => l.annotation.label === 'INFERRED').length,
-        weakEvidence: linkAnnotations.filter(l => l.annotation.label === 'WEAK_EVIDENCE').length,
-        missingEvidence: linkAnnotations.filter(l => l.annotation.label === 'MISSING_EVIDENCE').length,
-        reviewRequired: linkAnnotations.filter(l => l.annotation.label === 'REVIEW_REQUIRED').length,
+    const linkAnnotations = traceabilityLinks.map((link) => ({
+      link,
+      annotation: EvidenceQualityAnnotator.annotate(link),
+    }));
+
+    const evidenceQualitySummarySnapshot = {
+      evidenced: linkAnnotations.filter((item) => item.annotation.label === 'EVIDENCED').length,
+      inferred: linkAnnotations.filter((item) => item.annotation.label === 'INFERRED').length,
+      weakEvidence: linkAnnotations.filter((item) => item.annotation.label === 'WEAK_EVIDENCE').length,
+      missingEvidence: linkAnnotations.filter((item) => item.annotation.label === 'MISSING_EVIDENCE').length,
+      reviewRequired: linkAnnotations.filter((item) => item.annotation.label === 'REVIEW_REQUIRED').length,
+    };
+
+    const reviewDecisionsSnapshot = linkAnnotations.map((item) => {
+      const decision = item.link.reviewDecision;
+
+      return {
+        linkId: item.link.id,
+        artifact: item.link.artifact?.filePath || item.link.artifact?.name || 'Unknown',
+        quality: item.annotation.label,
+        reasons: item.annotation.reasons,
+        reviewDecision: decision
+          ? {
+              id: decision.id,
+              analysisId: decision.analysisId,
+              traceabilityLinkId: decision.traceabilityLinkId,
+              decision: decision.decision,
+              note: decision.note,
+              reviewedByUserId: decision.reviewedByUserId,
+              reviewedAt: decision.reviewedAt.toISOString(),
+            }
+          : null,
       };
+    });
 
-      const reviewDecisionsSnapshot = linkAnnotations.map(item => {
-        const decision = item.link.reviewDecision;
-        
-        return {
-          linkId: item.link.id,
-          artifact: item.link.artifact?.filePath || item.link.artifact?.name || 'Unknown',
-          quality: item.annotation.label,
-          reasons: item.annotation.reasons,
-          reviewDecision: decision
-            ? {
-                id: decision.id,
-                analysisId: decision.analysisId,
-                traceabilityLinkId: decision.traceabilityLinkId,
-                decision: decision.decision,
-                note: decision.note,
-                reviewedByUserId: decision.reviewedByUserId,
-                reviewedAt: decision.reviewedAt.toISOString(),
-              }
-            : null,
-        };
-      });
+    return {
+      analysisId: params.analysisId,
+      approvedDocumentId: null,
+      markdown: null,
+      reviewDecisionsSnapshot: reviewDecisionsSnapshot as Prisma.InputJsonValue,
+      evidenceQualitySummarySnapshot: evidenceQualitySummarySnapshot as Prisma.InputJsonValue,
+      evaluationContextSnapshot: evaluationContextSnapshot
+        ? (evaluationContextSnapshot as Prisma.InputJsonValue)
+        : Prisma.DbNull,
+      createdByUserId: params.createdByUserId || null,
+    };
+  }
 
-      // Create the snapshot in DB.
-      const snapshot = await this.prisma.reviewedReportSnapshot.create({
-        data: {
-          analysisId: params.analysisId,
-          approvedDocumentId: null,
-          markdown: null,
-          reviewDecisionsSnapshot: reviewDecisionsSnapshot as any,
-          evidenceQualitySummarySnapshot: evidenceQualitySummarySnapshot as any,
-          evaluationContextSnapshot: evaluationContextSnapshot ? (evaluationContextSnapshot as any) : require('@prisma/client').Prisma.DbNull,
-          createdByUserId: params.createdByUserId || null,
-        },
-      });
-
-      // Emit event.
-      await this.eventLog.recordEvent({
-        eventType: 'REVIEWED_REPORT_SNAPSHOT_CREATED',
-        idempotencyKey: `reviewed-report-snapshot:${snapshot.id}:created:${Date.now()}`,
-        payload: {
-          snapshotId: snapshot.id,
-          analysisId: params.analysisId,
-          approvedDocumentId: snapshot.approvedDocumentId,
-          createdByUserId: snapshot.createdByUserId,
-        },
-      });
-
-      return snapshot;
+  async recordCreatedEvent(snapshot: {
+    id: string;
+    analysisId: string;
+    approvedDocumentId: string | null;
+    createdByUserId: string | null;
+  }) {
+    await this.eventLog.recordEvent({
+      eventType: 'REVIEWED_REPORT_SNAPSHOT_CREATED',
+      idempotencyKey: `reviewed-report-snapshot:${snapshot.id}:created:${Date.now()}`,
+      payload: {
+        snapshotId: snapshot.id,
+        analysisId: snapshot.analysisId,
+        approvedDocumentId: snapshot.approvedDocumentId,
+        createdByUserId: snapshot.createdByUserId,
+      },
+    });
   }
 }

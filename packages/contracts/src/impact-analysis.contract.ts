@@ -10,21 +10,6 @@ export const impactAnalysisCreateRequestSchema = z.object({
 	requestKey: z.string().uuid(),
 	derivedFromAnalysisId: z.string().uuid().optional(),
 	sourceClarificationId: z.string().uuid().optional(),
-}).superRefine((data, ctx) => {
-	if (data.derivedFromAnalysisId && !data.sourceClarificationId) {
-		ctx.addIssue({
-			code: z.ZodIssueCode.custom,
-			message: 'sourceClarificationId must be provided when derivedFromAnalysisId is provided',
-			path: ['sourceClarificationId'],
-		});
-	}
-	if (!data.derivedFromAnalysisId && data.sourceClarificationId) {
-		ctx.addIssue({
-			code: z.ZodIssueCode.custom,
-			message: 'derivedFromAnalysisId must be provided when sourceClarificationId is provided',
-			path: ['derivedFromAnalysisId'],
-		});
-	}
 });
 
 export const multiRepoImpactAnalysisCreateRequestSchema = z.object({

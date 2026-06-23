@@ -7,6 +7,7 @@ import { CreateReviewedReportSnapshotUseCase } from './application/create-review
 import { GetLatestReviewedReportSnapshotUseCase } from './application/get-latest-reviewed-report-snapshot.usecase';
 import { GetFinalReviewedReportUseCase } from './application/get-final-reviewed-report.usecase';
 import { EnqueueDocumentJobUseCase } from './application/enqueue-document-job.usecase';
+import { RunDocumentJobUseCase } from './application/run-document-job.usecase';
 import { DocumentRepository } from './infrastructure/document.repository';
 import { MarkdownImpactReportBuilder } from './application/markdown-impact-report.builder';
 import { MermaidImpactDiagramBuilder } from './application/mermaid-impact-diagram.builder';
@@ -18,12 +19,27 @@ import { EventLogModule } from '../event-log/event-log.module';
 import { EventLogService } from '../event-log/application/event-log.service';
 import { ProjectModule } from '../project/project.module';
 import { TraceabilityModule } from '../traceability/traceability.module';
+import { InsightModule } from '../insight/insight.module';
+import { GraphModule } from '../graph/graph.module';
+import { ClarificationModule } from '../clarification/clarification.module';
+import { ReviewNoteRepository } from '../impact-analysis/infrastructure/review-note.repository';
+import { ReviewDecisionRepository } from '../impact-analysis/infrastructure/review-decision.repository';
+import { GetImpactDiffUseCase } from '../impact-analysis/application/queries/get-impact-diff.usecase';
 
 import { EvaluationContextAdapter } from './application/evaluation-context.adapter';
 import { QueueModule } from '../queue/queue.module';
 
 @Module({
-  imports: [PrismaModule, EventLogModule, ProjectModule, TraceabilityModule, QueueModule],
+  imports: [
+    PrismaModule,
+    EventLogModule,
+    ProjectModule,
+    TraceabilityModule,
+    InsightModule,
+    GraphModule,
+    ClarificationModule,
+    QueueModule,
+  ],
   controllers: [DocumentController],
   providers: [
     DocumentRepository,
@@ -72,6 +88,10 @@ import { QueueModule } from '../queue/queue.module';
     GetLatestReviewedReportSnapshotUseCase,
     GetFinalReviewedReportUseCase,
     EnqueueDocumentJobUseCase,
+    RunDocumentJobUseCase,
+    ReviewNoteRepository,
+    ReviewDecisionRepository,
+    GetImpactDiffUseCase,
   ],
   exports: [
     DocumentRepository,
@@ -82,6 +102,7 @@ import { QueueModule } from '../queue/queue.module';
     GetLatestReviewedReportSnapshotUseCase,
     GetFinalReviewedReportUseCase,
     EnqueueDocumentJobUseCase,
+    RunDocumentJobUseCase,
   ],
 })
 export class DocumentModule {}

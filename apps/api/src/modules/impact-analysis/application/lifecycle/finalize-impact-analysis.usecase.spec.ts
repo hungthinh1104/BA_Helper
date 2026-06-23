@@ -13,6 +13,9 @@ describe('FinalizeImpactAnalysisUseCase', () => {
   let createSnapshot: jest.Mocked<CreateReviewedReportSnapshotUseCase>;
   let enqueueJob: jest.Mocked<EnqueueDocumentJobUseCase>;
   let txImpactUpdateMany: jest.Mock;
+  let txSnapshotCreate: jest.Mock;
+  let txDocumentJobFindUnique: jest.Mock;
+  let txDocumentJobCreate: jest.Mock;
 
   beforeEach(() => {
     impactRepo = {
@@ -23,22 +26,76 @@ describe('FinalizeImpactAnalysisUseCase', () => {
       listByAnalysis: jest.fn().mockResolvedValue([]),
     } as unknown as jest.Mocked<TraceabilityRepository>;
 
-    txImpactUpdateMany = jest.fn().mockResolvedValue({ count: 1 })
+    txImpactUpdateMany = jest.fn().mockResolvedValue({ count: 1 });
+    txSnapshotCreate = jest.fn().mockResolvedValue({
+      id: 'reviewed-snapshot-1',
+      analysisId: 'analysis-1',
+      approvedDocumentId: null,
+      createdByUserId: 'user-1',
+    });
+    txDocumentJobFindUnique = jest.fn().mockResolvedValue(null);
+    txDocumentJobCreate = jest.fn().mockResolvedValue({
+      id: 'document-job-1',
+      analysisId: 'analysis-1',
+      snapshotId: 'reviewed-snapshot-1',
+      documentType: 'IMPACT_REPORT',
+      status: 'QUEUED',
+    });
 
     prisma = {
       $transaction: jest.fn(async (callback: (tx: any) => unknown) =>
         callback({
           impactAnalysis: { updateMany: txImpactUpdateMany },
+          reviewedReportSnapshot: { create: txSnapshotCreate },
+          documentJob: {
+            findUnique: txDocumentJobFindUnique,
+            create: txDocumentJobCreate,
+          },
         }),
       ),
+      documentJob: {
+        update: jest.fn(),
+      },
     } as unknown as jest.Mocked<PrismaService>;
 
     createSnapshot = {
-      execute: jest.fn().mockResolvedValue({ id: 'snapshot-1' }),
+      buildSnapshotCreateData: jest.fn().mockResolvedValue({
+        analysisId: 'analysis-1',
+        approvedDocumentId: null,
+        markdown: null,
+        reviewDecisionsSnapshot: [],
+        evidenceQualitySummarySnapshot: {},
+        evaluationContextSnapshot: null,
+        createdByUserId: 'user-1',
+      }),
+      recordCreatedEvent: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<CreateReviewedReportSnapshotUseCase>;
 
     enqueueJob = {
-      execute: jest.fn().mockResolvedValue({}),
+      createOrReuseQueuedJobForSnapshot: jest.fn(async (tx: any, params: any) => {
+        const existing = await tx.documentJob.findUnique({
+          where: {
+            snapshotId_documentType: {
+              snapshotId: params.snapshotId,
+              documentType: params.documentType,
+            },
+          },
+        });
+        if (existing) {
+          return { job: existing, shouldEnqueue: true };
+        }
+        const job = await tx.documentJob.create({
+          data: {
+            analysisId: params.analysisId,
+            snapshotId: params.snapshotId,
+            documentType: params.documentType,
+            status: 'QUEUED',
+            attemptCount: 1,
+          },
+        });
+        return { job, shouldEnqueue: true };
+      }),
+      enqueueExistingJob: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<EnqueueDocumentJobUseCase>;
 
     useCase = new FinalizeImpactAnalysisUseCase(
@@ -100,14 +157,56 @@ describe('FinalizeImpactAnalysisUseCase', () => {
     expect(result.id).toBe('analysis-1');
     expect(prisma.$transaction).toHaveBeenCalled();
     expect(txImpactUpdateMany).toHaveBeenCalled();
-    expect(createSnapshot.execute).toHaveBeenCalledWith({
+    expect(createSnapshot.buildSnapshotCreateData).toHaveBeenCalledWith({
       analysisId: 'analysis-1',
       createdByUserId: 'user-1',
     });
-    expect(enqueueJob.execute).toHaveBeenCalledWith({
-      analysisId: 'analysis-1',
-      documentType: 'IMPACT_REPORT',
+    expect(txSnapshotCreate).toHaveBeenCalled();
+    expect(enqueueJob.createOrReuseQueuedJobForSnapshot).toHaveBeenCalledWith(
+      expect.anything(),
+      {
+        analysisId: 'analysis-1',
+        snapshotId: 'reviewed-snapshot-1',
+        documentType: 'IMPACT_REPORT',
+      },
+    );
+    expect(enqueueJob.enqueueExistingJob).toHaveBeenCalledWith('document-job-1');
+  });
+
+  it('leaves a queued document job recorded when BullMQ enqueue fails after commit', async () => {
+    mockValidState();
+    enqueueJob.enqueueExistingJob.mockRejectedValueOnce(new Error('Redis down'));
+
+    await useCase.execute(validParams);
+
+    expect(prisma.documentJob.update).toHaveBeenCalledWith({
+      where: { id: 'document-job-1' },
+      data: {
+        error: {
+          stage: 'QUEUE_ENQUEUE',
+          message: 'Redis down',
+        },
+      },
     });
+  });
+
+  it('creates reviewed snapshot and document job in the same transaction', async () => {
+    mockValidState();
+
+    await useCase.execute(validParams);
+
+    expect(txSnapshotCreate).toHaveBeenCalledWith({
+      data: {
+        analysisId: 'analysis-1',
+        approvedDocumentId: null,
+        markdown: null,
+        reviewDecisionsSnapshot: [],
+        evidenceQualitySummarySnapshot: {},
+        evaluationContextSnapshot: null,
+        createdByUserId: 'user-1',
+      },
+    });
+    expect(txDocumentJobCreate).toHaveBeenCalled();
   });
 
   it('UC07-B: Finalize with unreviewed items without ack throws FINALIZE_REQUIRES_REVIEW_ACK', async () => {
@@ -166,7 +265,7 @@ describe('FinalizeImpactAnalysisUseCase', () => {
     await useCase.execute({ analysisId: 'analysis-1', acknowledgeUnreviewed: true, userId: 'user-1' });
 
     expect(txImpactUpdateMany).toHaveBeenCalled();
-    expect(createSnapshot.execute).toHaveBeenCalled();
-    expect(enqueueJob.execute).toHaveBeenCalled();
+    expect(createSnapshot.buildSnapshotCreateData).toHaveBeenCalled();
+    expect(enqueueJob.enqueueExistingJob).toHaveBeenCalled();
   });
 });

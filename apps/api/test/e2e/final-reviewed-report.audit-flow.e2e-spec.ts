@@ -147,11 +147,11 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       ],
     });
 
-    return { analysisId, link1Id, link2Id };
+    return { analysisId, link1Id, link2Id, docId };
   }
 
   it('complete reviewed flow returns final report', async () => {
-    const { analysisId, link1Id, link2Id } = await setupBasicAnalysisWithLinks();
+    const { analysisId, link1Id, link2Id, docId } = await setupBasicAnalysisWithLinks();
 
     // 1. Assign ACCEPTED to both links
     const putRes = await request(app.getHttpServer())
@@ -178,6 +178,10 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       
 
     expect(snapRes.status).toBe(201);
+    await prisma.reviewedReportSnapshot.update({
+      where: { id: snapRes.body.id },
+      data: { approvedDocumentId: docId },
+    });
 
     // 3. Review completion gate
     const compRes = await request(app.getHttpServer())
@@ -259,7 +263,7 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
   });
 
   it('snapshot remains immutable after review decision changes', async () => {
-    const { analysisId, link1Id, link2Id } = await setupBasicAnalysisWithLinks();
+    const { analysisId, link1Id, link2Id, docId } = await setupBasicAnalysisWithLinks();
 
     // 1. Assign ACCEPTED to both links
     await request(app.getHttpServer())
@@ -275,11 +279,15 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       .expect(200);
 
     // 2. Create snapshot
-    await request(app.getHttpServer())
+    const snapshotRes = await request(app.getHttpServer())
       .post(`/api/v1/impact-analyses/${analysisId}/reviewed-report-snapshot`)
       .set('Authorization', `Bearer ${adminToken}`)
       .send()
       .expect(201);
+    await prisma.reviewedReportSnapshot.update({
+      where: { id: snapshotRes.body.id },
+      data: { approvedDocumentId: docId },
+    });
 
     // 3. Mutate one link to REJECTED after snapshot
     await request(app.getHttpServer())
