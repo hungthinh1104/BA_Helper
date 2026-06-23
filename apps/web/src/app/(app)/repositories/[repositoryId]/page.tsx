@@ -20,6 +20,8 @@ import { DiagnosticItem } from "@ba-helper/contracts"
 import { Skeleton } from "@/components/ui/skeleton"
 import { v4 as uuidv4 } from "uuid"
 
+import { useScanJobEvents } from "@/hooks/api/use-event-logs"
+import { AuditTimeline } from "@/components/workspace/shared/audit-timeline"
 import { RepositorySnapshotBanner } from "./_components/repository-snapshot-banner"
 import { RepositoryScannerProfile } from "./_components/repository-scanner-profile"
 import { RepositoryArtifactAnalytics } from "./_components/repository-artifact-analytics"
@@ -91,6 +93,8 @@ export default function RepositoryDetailsPage({ params }: PageProps) {
   const snapshots = snapshotList?.items || []
   const latestUsable = snapshots[0]
   const previousUsable = snapshots[1]
+
+  const { data: scanEventsData, isLoading: isLoadingEvents } = useScanJobEvents(repositoryId, job?.id)
 
   const isReady = job?.status === "COMPLETED" && repo.latestSnapshot?.id
   const isPartial = repo.latestSnapshot?.coverageStatus === "PARTIAL"
@@ -191,6 +195,14 @@ export default function RepositoryDetailsPage({ params }: PageProps) {
           )}
 
           <RepositoryArtifactAnalytics stats={repo.artifactStats} />
+
+          {job && (
+            <AuditTimeline
+              title="Scan Activity"
+              events={scanEventsData?.items || []}
+              isLoading={isLoadingEvents}
+            />
+          )}
 
         </div>
       </div>

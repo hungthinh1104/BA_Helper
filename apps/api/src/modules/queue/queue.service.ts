@@ -9,6 +9,8 @@ export class QueueService {
     private readonly embeddingQueue: Queue,
     @InjectQueue('scan-job')
     private readonly scanJobQueue: Queue,
+    @InjectQueue('document-job')
+    private readonly documentJobQueue: Queue,
   ) {}
 
   async enqueueImpactAnalysis(analysisId: string) {
@@ -36,6 +38,25 @@ export class QueueService {
       'scan',
       { jobId },
       { jobId: `scan-${jobId}` },
+    );
+  }
+
+  async enqueueDocumentJob(params: { snapshotId: string; documentType: string; requestKey?: string }) {
+    // We use a deterministic BullMQ jobId so BullMQ can deduplicate if needed,
+    // though Prisma DocumentJob is the true idempotency source of truth.
+    const uniqueJobId = `doc-${params.snapshotId}-${params.documentType}`;
+    await this.documentJobQueue.add(
+      'generate',
+      {
+        snapshotId: params.snapshotId,
+        documentType: params.documentType,
+        requestKey: params.requestKey,
+      },
+      { 
+        jobId: uniqueJobId,
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 2000 }
+      },
     );
   }
 

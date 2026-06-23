@@ -20,6 +20,8 @@ import { useAnalysisWorkspace } from "./_hooks/use-analysis-workspace"
 import { AnalysisInspectorMapper } from "./_components/analysis-inspector-mapper"
 import { toast } from "sonner"
 import { v4 as uuidv4 } from "uuid"
+import { AuditTimeline } from "@/components/workspace/shared/audit-timeline"
+import { useAnalysisEvents } from "@/hooks/api/use-event-logs"
 
 // Dynamic import so React Flow CSS loads correctly in Next.js app router
 const ImpactGraphView = dynamic(
@@ -34,6 +36,7 @@ export default function ImpactAnalysisDetailPage({
 }) {
   const { analysisId } = use(params)
   const ws = useAnalysisWorkspace(analysisId)
+  const { data: analysisEventsData, isLoading: isLoadingEvents } = useAnalysisEvents(analysisId)
 
   // ── Loading state ──
   if (ws.analysisLoading || ws.insightsLoading || ws.linksLoading) {
@@ -270,6 +273,16 @@ export default function ImpactAnalysisDetailPage({
           )}
 
         </div>
+
+        {!isFullHeightTab && (
+          <div className="mt-8 pb-12">
+            <AuditTimeline
+              title="Analysis Activity"
+              events={analysisEventsData?.items || []}
+              isLoading={isLoadingEvents}
+            />
+          </div>
+        )}
       </div>
     </AnalysisInspectorMapper>
   )

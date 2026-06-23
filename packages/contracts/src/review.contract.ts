@@ -22,7 +22,7 @@ export type ReviewCompletionResponse = z.infer<typeof reviewCompletionResponseSc
 export const finalReviewedReportResponseSchema = z.object({
   analysisId: z.string().min(1),
   snapshotId: z.string().min(1),
-  markdown: z.string(),
+  markdown: z.string().nullable().optional(),
   createdAt: z.string(),
   reviewCompletion: reviewCompletionResponseSchema,
   reviewDecisionsSnapshot: z.unknown(),

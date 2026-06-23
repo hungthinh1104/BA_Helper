@@ -20,4 +20,20 @@ export class EventLogRepository {
       update: {},
     });
   }
+
+  async findEventsByPrefixes(prefixes: string[]): Promise<any[]> {
+    if (prefixes.length === 0) return [];
+
+    return this.prisma.domainEvent.findMany({
+      where: {
+        OR: prefixes.map(prefix => ({
+          idempotencyKey: { startsWith: prefix }
+        }))
+      },
+      orderBy: [
+        { createdAt: 'asc' },
+        { id: 'asc' }
+      ]
+    });
+  }
 }

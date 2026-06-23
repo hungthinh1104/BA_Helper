@@ -129,6 +129,7 @@ describe('Diagnostic Risk Propagation', () => {
       evidenceStep,
       diagnosticStep,
       aiReasoningStep,
+      { recordEvent: jest.fn() } as any
     );
   });
 

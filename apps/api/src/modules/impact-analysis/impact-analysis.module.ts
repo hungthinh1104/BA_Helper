@@ -72,6 +72,7 @@ import { ProjectModule } from '../project/project.module';
 import { RepositoryModule } from '../repository/repository.module';
 import { GetAnalysisDriftFreshnessUseCase } from './application/queries/get-analysis-drift-freshness.usecase';
 import { DomainPackModule } from '../domain-pack/domain-pack.module';
+import { DocumentJobWorker } from './worker/document-job.worker';
 
 @Module({
   imports: [PrismaModule, EventLogModule, DocumentModule, QueueModule, AiModule, RetrievalModule, GraphModule, ClarificationModule, ProjectModule, RepositoryModule, DomainPackModule],
@@ -128,6 +129,7 @@ import { DomainPackModule } from '../domain-pack/domain-pack.module';
     GetImpactAnalysisLineageUseCase,
     GetReviewCoverageUseCase,
     GetAnalysisDriftFreshnessUseCase,
+    DocumentJobWorker,
     {
       provide: ProjectRepository,
       useFactory: (prisma: PrismaService) => new ProjectRepository(prisma),

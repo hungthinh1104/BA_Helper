@@ -49,6 +49,7 @@ describe('ImpactAnalysisController - driftFreshness', () => {
       null as any, // getReviewCoverage
       getAnalysisDriftFreshness,
       permissions,
+      null as any, // eventLogService
     );
   });
 

@@ -13,6 +13,7 @@ import { requireEnv } from '../../bootstrap/runtime-config';
     BullModule.registerQueue({ name: 'impact-analysis' }),
     BullModule.registerQueue({ name: 'embedding' }),
     BullModule.registerQueue({ name: 'scan-job' }),
+    BullModule.registerQueue({ name: 'document-job' }),
   ],
   providers: [QueueService],
   exports: [QueueService],

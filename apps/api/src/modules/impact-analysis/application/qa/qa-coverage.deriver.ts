@@ -48,7 +48,7 @@ export class QaCoverageDeriver {
       
       // Find all nodes called/referenced by `current`.
       const outgoingDeps = edges.filter(e => 
-        (e.type === "CALLS" || e.type === "USES") && 
+        (e.type === "CALLS" || e.type === "REFERENCES") && 
         e.source === current
       );
 

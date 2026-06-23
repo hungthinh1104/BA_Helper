@@ -3,6 +3,9 @@ import { resolve } from 'node:path';
 import { RunImpactAnalysisUseCase } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/run-impact-analysis.usecase';
 import { FakeLlmProvider } from '../../apps/api/src/modules/ai/infrastructure/fake-ai.provider';
 import { DomainPackRegistry } from '../../apps/api/src/modules/domain-pack/application/domain-pack.registry';
+import { ImpactEvidenceCollectionStep } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/steps/impact-evidence-collection.step';
+import { ImpactDiagnosticPropagationStep } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/steps/impact-diagnostic-propagation.step';
+import { ImpactAiReasoningStep } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/steps/impact-ai-reasoning.step';
 
 class StubImpactRepo {
   findById = async () => ({
@@ -204,15 +207,23 @@ describe('impact analysis fixture output', () => {
     const traceabilityRepo = new StubTraceabilityRepo();
     const llmProvider = new FakeLlmProvider();
 
-    const useCase = new RunImpactAnalysisUseCase(
-      new StubImpactRepo() as any,
+    const evidenceStep = new ImpactEvidenceCollectionStep(
       new StubArtifactRepo() as any,
       new StubEvidenceRepo() as any,
-      insightRepo as any,
       traceabilityRepo as any,
-      llmProvider as any,
-      new StubRetrievalService() as any,
-      new DomainPackRegistry()
+      new StubRetrievalService() as any
+    );
+    const diagnosticStep = new ImpactDiagnosticPropagationStep();
+    const aiReasoningStep = new ImpactAiReasoningStep(llmProvider as any);
+
+    const useCase = new RunImpactAnalysisUseCase(
+      new StubImpactRepo() as any,
+      insightRepo as any,
+      new DomainPackRegistry(),
+      evidenceStep as any,
+      diagnosticStep as any,
+      aiReasoningStep as any,
+      { recordEvent: jest.fn() } as any
     );
 
     await useCase.execute({ analysisId: 'analysis-1', domain: 'BOOKING' });

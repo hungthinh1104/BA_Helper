@@ -121,7 +121,7 @@ describe('GetQaCoverageUseCase', () => {
       ],
       edges: [
         createEdge("e1", "artifact-2", "artifact-test", "TESTS"),
-        createEdge("e2", "artifact-2", "artifact-4", "USES")
+        createEdge("e2", "artifact-2", "artifact-4", "REFERENCES")
       ]
     };
     mockBuilder.buildGraph.mockResolvedValue(graphData);

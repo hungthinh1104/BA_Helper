@@ -6,6 +6,7 @@ import { ExportApprovedReportUseCase } from './application/export-approved-repor
 import { CreateReviewedReportSnapshotUseCase } from './application/create-reviewed-report-snapshot.usecase';
 import { GetLatestReviewedReportSnapshotUseCase } from './application/get-latest-reviewed-report-snapshot.usecase';
 import { GetFinalReviewedReportUseCase } from './application/get-final-reviewed-report.usecase';
+import { EnqueueDocumentJobUseCase } from './application/enqueue-document-job.usecase';
 import { DocumentRepository } from './infrastructure/document.repository';
 import { MarkdownImpactReportBuilder } from './application/markdown-impact-report.builder';
 import { MermaidImpactDiagramBuilder } from './application/mermaid-impact-diagram.builder';
@@ -19,9 +20,10 @@ import { ProjectModule } from '../project/project.module';
 import { TraceabilityModule } from '../traceability/traceability.module';
 
 import { EvaluationContextAdapter } from './application/evaluation-context.adapter';
+import { QueueModule } from '../queue/queue.module';
 
 @Module({
-  imports: [PrismaModule, EventLogModule, ProjectModule, TraceabilityModule],
+  imports: [PrismaModule, EventLogModule, ProjectModule, TraceabilityModule, QueueModule],
   controllers: [DocumentController],
   providers: [
     DocumentRepository,
@@ -69,6 +71,7 @@ import { EvaluationContextAdapter } from './application/evaluation-context.adapt
     CreateReviewedReportSnapshotUseCase,
     GetLatestReviewedReportSnapshotUseCase,
     GetFinalReviewedReportUseCase,
+    EnqueueDocumentJobUseCase,
   ],
   exports: [
     DocumentRepository,
@@ -78,6 +81,7 @@ import { EvaluationContextAdapter } from './application/evaluation-context.adapt
     CreateReviewedReportSnapshotUseCase,
     GetLatestReviewedReportSnapshotUseCase,
     GetFinalReviewedReportUseCase,
+    EnqueueDocumentJobUseCase,
   ],
 })
 export class DocumentModule {}

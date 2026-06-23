@@ -10,6 +10,7 @@ import { AppError } from '../../../shared/app-error';
 import { CurrentUser } from '../../auth/api/current-user.decorator';
 import { RequestUser } from '@ba-helper/contracts';
 import { ProjectPermissionService } from '../../project/application/project-permission.service';
+import { EventLogService } from '../../event-log/application/event-log.service';
 
 @Controller('/api/v1/repositories/:repositoryId/scan-jobs')
 export class ScanJobController {
@@ -17,6 +18,7 @@ export class ScanJobController {
     private readonly createScanJob: CreateScanJobUseCase,
     private readonly scanJobRepository: ScanJobRepository,
     private readonly permissions: ProjectPermissionService,
+    private readonly eventLogService: EventLogService,
   ) {}
 
   private toResponse(job: any) {
@@ -58,6 +60,22 @@ export class ScanJobController {
     }
 
     return this.toResponse(job);
+  }
+
+  @Get('/:scanJobId/events')
+  async getEvents(
+    @Param('scanJobId') scanJobId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadScanJob(actor, scanJobId);
+    // ensure job exists
+    const job = await this.scanJobRepository.findById(scanJobId);
+    if (!job) {
+      throw new AppError('SCAN_JOB_NOT_FOUND', 'Scan job not found.');
+    }
+
+    const events = await this.eventLogService.getScanJobEvents(scanJobId);
+    return { items: events };
   }
 
   @Post()

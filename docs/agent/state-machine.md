@@ -229,6 +229,32 @@ APPROVED output does not present unreviewed insights as approved facts.
 APPROVED output may include unreviewed items in an explicitly labeled appendix.
 ```
 
+## Document Job
+
+Asynchronous generation of APPROVED outputs runs through `DocumentJob`:
+
+```text
+Status: QUEUED, RUNNING, COMPLETED, FAILED
+```
+
+Allowed lifecycle transitions:
+
+```text
+QUEUED    -> RUNNING | FAILED
+RUNNING   -> COMPLETED | FAILED
+FAILED    -> QUEUED    // explicit retry only
+COMPLETED -> none
+```
+
+A `DocumentJob` takes a single `ReviewedReportSnapshot` as its deterministic input.
+`COMPLETED` is terminal.
+`FAILED` can only return to `QUEUED` through explicit retry.
+Retry reuses the same `DocumentJob` identity and increments `attemptCount`.
+Retry must not create a second job for same `snapshotId` + `documentType`.
+
+A FAILED job never mutates the `ReviewedReportSnapshot`. Re-enqueueing a job for the same snapshot and document type simply returns the existing job, unless explicitly requested as a retry.
+
+
 ## Traceability Link Review
 
 Traceability links only exist for supported or inferred artifact impact:

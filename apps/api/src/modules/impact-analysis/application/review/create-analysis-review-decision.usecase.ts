@@ -8,7 +8,8 @@ import { TraceabilityRepository } from '../../../traceability/infrastructure/tra
 import { GraphRepository } from '../../../graph/infrastructure/graph.repository';
 import { ReviewNoteRepository } from '../../infrastructure/review-note.repository';
 import { ClarificationRepository } from '../../../clarification/infrastructure/clarification.repository';
-import { MarkdownImpactReportBuilder } from '../../../document/application/markdown-impact-report.builder';
+import { CreateReviewedReportSnapshotUseCase } from '../../../document/application/create-reviewed-report-snapshot.usecase';
+import { EnqueueDocumentJobUseCase } from '../../../document/application/enqueue-document-job.usecase';
 import { AppError } from '../../../../shared/app-error';
 import { AnalysisReviewDecisionValue } from '@prisma/client';
 import { RequestUser } from '@ba-helper/contracts';
@@ -24,8 +25,8 @@ export class CreateAnalysisReviewDecisionUseCase {
     private readonly graphRepo: GraphRepository,
     private readonly reviewNoteRepo: ReviewNoteRepository,
     private readonly clarificationRepo: ClarificationRepository,
-    private readonly documentRepo: DocumentRepository,
-    private readonly reportBuilder: MarkdownImpactReportBuilder,
+    private readonly createSnapshot: CreateReviewedReportSnapshotUseCase,
+    private readonly enqueueJob: EnqueueDocumentJobUseCase,
   ) {}
 
   async execute(params: {
@@ -66,81 +67,28 @@ export class CreateAnalysisReviewDecisionUseCase {
     });
 
     // Step 2: Regenerate report outside database transaction
-    const regenResult = await this.regenerateReport(params.analysisId);
-
-    return {
-      decision,
-      reportRegenerated: regenResult.success,
-      reportRegenerationError: regenResult.error,
-    };
-  }
-
-  private async regenerateReport(analysisId: string): Promise<{ success: boolean; error?: string }> {
+    // We now just create a new snapshot and enqueue a job.
     try {
-      const analysis = await this.impactRepo.findById(analysisId);
-      if (!analysis) {
-        return { success: false, error: 'Analysis not found' };
-      }
-
-      const insights = await this.insightRepo.listByAnalysis(analysisId);
-      const traceabilityLinks = await this.traceabilityRepo.listByAnalysis(analysisId);
-      const reviewNotes = await this.reviewNoteRepo.findByAnalysisId(analysisId);
-      const dependencyEdges = await this.graphRepo.listBySnapshot(analysis.snapshot.id);
-      const clarifications = await this.clarificationRepo.listByAnalysisId(analysisId);
-      const reviewDecisions = await this.decisionRepo.listByAnalysisId(analysisId);
-
-      let diff: any = undefined;
-      if (analysis.derivedFromAnalysisId) {
-        const diffResult = await this.getDiffUseCase.computeForAnalysis(analysisId);
-        if (diffResult.computable) {
-          diff = diffResult.diff;
-        }
-      }
-
-      const hasUnreviewed = analysis.insights?.some(
-        (insight: { reviewStatus: string }) =>
-          insight.reviewStatus === 'NEEDS_REVIEW',
-      );
-
-      const persistedReport = await this.documentRepo.upsertApproved({
-        impactAnalysisId: analysisId,
-        content: '# Pending approved report regeneration',
+      await this.createSnapshot.execute({
+        analysisId: params.analysisId,
+        createdByUserId: params.actor.id,
       });
 
-      const markdown = this.reportBuilder.build({
-        analysis: analysis as any,
-        insights,
-        traceabilityLinks: traceabilityLinks as any[],
-        reviewNotes,
-        hasUnreviewedItems: !!hasUnreviewed,
-        dependencyEdges: dependencyEdges as any[],
-        clarifications: clarifications as any[],
-        reviewDecisions,
-        diff,
-        metadata: {
-          analysisId: analysis.id,
-          title: analysis.requirementRevision.title,
-          projectId: analysis.snapshot.repository.projectId,
-          repositoryId: analysis.snapshot.repositoryId,
-          targetRef: analysis.sourceTarget.requestedRef,
-          commitSha: analysis.snapshot.commitSha,
-          snapshotId: analysis.snapshot.id,
-          analyzerVersion: analysis.snapshot.analyzerVersion,
-          generatedDocumentId: persistedReport.id,
-          generatedAt: persistedReport.createdAt.toISOString(),
-          finalizedAt: persistedReport.updatedAt.toISOString(),
-          staleStatusAtReadTime: false,
-        },
+      await this.enqueueJob.execute({
+        analysisId: params.analysisId,
+        documentType: 'IMPACT_REPORT',
       });
 
-      await this.documentRepo.upsertApproved({
-        impactAnalysisId: analysisId,
-        content: markdown,
-      });
-
-      return { success: true };
+      return {
+        decision,
+        reportRegenerated: true,
+      };
     } catch (e: any) {
-      return { success: false, error: e.message || String(e) };
+      return {
+        decision,
+        reportRegenerated: false,
+        reportRegenerationError: e.message || String(e),
+      };
     }
   }
 }
