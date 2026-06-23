@@ -37,7 +37,7 @@ export function LockedSnapshotViewer({ snapshot, open, onOpenChange }: LockedSna
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto bg-background p-6 md:p-8 space-y-12">
-          <ReportMarkdown markdown={snapshot.markdown} className="opacity-90" />
+          <ReportMarkdown markdown={snapshot.markdown || ""} className="opacity-90" />
 
           {/* Decisions Table */}
           {decisions.length > 0 && (
