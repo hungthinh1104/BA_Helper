@@ -25,6 +25,7 @@ describe('ScanJobController', () => {
       {
         assertCanReadScanJob: jest.fn().mockResolvedValue(undefined),
       } as any,
+      {} as any,
     );
 
     const result = await controller.get('scan-job-1', {

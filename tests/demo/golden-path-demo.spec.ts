@@ -9,6 +9,7 @@ import { FinalizeImpactAnalysisUseCase } from '../../apps/api/src/modules/impact
 import { GetRepositorySnapshotDriftUseCase } from '../../apps/api/src/modules/repository/application/get-repository-snapshot-drift.usecase';
 import { ScanJobStatus } from '@prisma/client';
 import { resolve } from 'node:path';
+import { DocumentJobWorker } from '../../apps/api/src/modules/impact-analysis/worker/document-job.worker';
 
 describe('Golden Path Demo', () => {
   let app: any;
@@ -56,6 +57,14 @@ describe('Golden Path Demo', () => {
     await resetDatabase(prisma);
 
     // 0. Seed a base workspace
+    await prisma.user.create({
+      data: {
+        id: 'b0e6a1e4-3993-47cb-b0bb-26477e8a9462',
+        email: 'test@example.com',
+        name: 'Test User',
+      }
+    });
+
     const project = await prisma.project.create({
       data: {
         name: 'Demo Project',
@@ -211,7 +220,16 @@ describe('Golden Path Demo', () => {
     // ==========================================
     // STEP 6: Finalization and Report
     // ==========================================
-    await finalizeImpactAnalysis.execute({ analysisId, acknowledgeUnreviewed: false });
+    await finalizeImpactAnalysis.execute({ analysisId, acknowledgeUnreviewed: false, userId: 'b0e6a1e4-3993-47cb-b0bb-26477e8a9462' });
+
+    // Process the enqueued DocumentJob synchronously for the test
+    const reviewSnapshot = await prisma.reviewedReportSnapshot.findFirstOrThrow({
+      where: { analysisId },
+      orderBy: { createdAt: 'desc' },
+    });
+    
+    const docWorker = app.get(DocumentJobWorker);
+    await docWorker.process({ data: { snapshotId: reviewSnapshot.id, documentType: 'IMPACT_REPORT' } } as any);
 
     const finalizedAnalysis = await prisma.impactAnalysis.findUniqueOrThrow({ where: { id: analysisId } });
     expect(finalizedAnalysis.status).toBe('COMPLETED');

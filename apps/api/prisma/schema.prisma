@@ -150,6 +150,13 @@ enum DocumentStatus {
   STALE
 }
 
+enum DocumentJobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
 enum ClarificationStatus {
   OPEN
   ANSWERED
@@ -507,6 +514,7 @@ model ImpactAnalysis {
   insights                    BaInsight[]
   traceabilityLinks           TraceabilityLink[]
   documents                   GeneratedDocument[]
+  documentJobs                DocumentJob[]
   metadata                    Json?
   error                       Json?
   createdAt                   DateTime                     @default(now())
@@ -638,16 +646,47 @@ model GeneratedDocument {
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   reviewedSnapshots ReviewedReportSnapshot[]
+  documentJobs      DocumentJob[]
 
   @@unique([impactAnalysisId, type, status])
   @@index([impactAnalysisId, status])
+}
+
+model DocumentJob {
+  id                  String            @id @default(uuid())
+  analysisId          String            @map("analysis_id")
+  snapshotId          String            @map("snapshot_id")
+  documentType        DocumentType      @map("document_type")
+  status              DocumentJobStatus
+  progress            Int               @default(0)
+  requestKey          String?           @map("request_key")
+  attemptCount        Int               @default(0) @map("attempt_count")
+  error               Json?
+
+  generatedDocumentId String?           @map("generated_document_id")
+
+  analysis            ImpactAnalysis          @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  snapshot            ReviewedReportSnapshot  @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  generatedDocument   GeneratedDocument?      @relation(fields: [generatedDocumentId], references: [id], onDelete: SetNull)
+
+  lastStartedAt       DateTime?         @map("last_started_at")
+  completedAt         DateTime?         @map("completed_at")
+  failedAt            DateTime?         @map("failed_at")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+
+  @@unique([snapshotId, documentType])
+  @@index([analysisId])
+  @@index([status])
+  @@index([requestKey])
+  @@map("document_job")
 }
 
 model ReviewedReportSnapshot {
   id                             String   @id @default(uuid())
   analysisId                     String   @map("analysis_id")
   approvedDocumentId             String?  @map("approved_document_id")
-  markdown                       String
+  markdown                       String?
   reviewDecisionsSnapshot        Json     @map("review_decisions_snapshot")
   evidenceQualitySummarySnapshot Json     @map("evidence_quality_summary_snapshot")
   evaluationContextSnapshot      Json?    @map("evaluation_context_snapshot")
@@ -657,6 +696,7 @@ model ReviewedReportSnapshot {
   analysis         ImpactAnalysis     @relation(fields: [analysisId], references: [id], onDelete: Cascade)
   approvedDocument GeneratedDocument? @relation(fields: [approvedDocumentId], references: [id], onDelete: SetNull)
   createdByUser    User?              @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  documentJobs     DocumentJob[]
 
   @@index([analysisId, createdAt])
   @@map("reviewed_report_snapshot")

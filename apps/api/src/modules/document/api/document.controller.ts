@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post } from '@nestjs/common';
+import { Controller, Get, Param, Post, Body, Res } from '@nestjs/common';
 import { documentListResponseSchema } from '@ba-helper/contracts';
 import { ListDocumentsUseCase } from '../application/list-documents.usecase';
 import { GetApprovedReportUseCase } from '../application/get-approved-report.usecase';
@@ -6,14 +6,15 @@ import { ExportApprovedReportUseCase } from '../application/export-approved-repo
 import { CreateReviewedReportSnapshotUseCase } from '../application/create-reviewed-report-snapshot.usecase';
 import { GetLatestReviewedReportSnapshotUseCase } from '../application/get-latest-reviewed-report-snapshot.usecase';
 import { GetFinalReviewedReportUseCase } from '../application/get-final-reviewed-report.usecase';
+import { EnqueueDocumentJobUseCase } from '../application/enqueue-document-job.usecase';
 import { 
   approvedImpactReportResponseSchema, 
   reviewedReportSnapshotSchema, 
   finalReviewedReportResponseSchema,
+  documentJobSchema,
   RequestUser 
 } from '@ba-helper/contracts';
 import { DocumentMapper } from './document.mapper';
-import { Res } from '@nestjs/common';
 import { CurrentUser } from '../../auth/api/current-user.decorator';
 import { ProjectPermissionService } from '../../project/application/project-permission.service';
 
@@ -26,6 +27,7 @@ export class DocumentController {
     private readonly createReviewedReportSnapshot: CreateReviewedReportSnapshotUseCase,
     private readonly getLatestReviewedReportSnapshot: GetLatestReviewedReportSnapshotUseCase,
     private readonly getFinalReviewedReport: GetFinalReviewedReportUseCase,
+    private readonly enqueueDocumentJob: EnqueueDocumentJobUseCase,
     private readonly permissions: ProjectPermissionService,
   ) {}
 
@@ -158,5 +160,39 @@ export class DocumentController {
     const result = await this.getFinalReviewedReport.execute(analysisId);
     
     return finalReviewedReportResponseSchema.parse(result);
+  }
+
+  @Post('/impact-analyses/:analysisId/document-jobs')
+  async enqueueJob(
+    @Param('analysisId') analysisId: string,
+    @CurrentUser() actor: RequestUser,
+    @Body() body: any,
+  ) {
+    await this.permissions.assertPermissionForAnalysis(actor, analysisId, 'report:export');
+    
+    const job = await this.enqueueDocumentJob.execute({
+      analysisId,
+      documentType: 'IMPACT_REPORT',
+      requestKey: body?.requestKey,
+      retry: body?.retry === true,
+    });
+
+    return documentJobSchema.parse({
+      id: job.id,
+      analysisId: job.analysisId,
+      snapshotId: job.snapshotId,
+      documentType: job.documentType,
+      status: job.status,
+      progress: job.progress,
+      requestKey: job.requestKey,
+      attemptCount: job.attemptCount,
+      error: job.error,
+      generatedDocumentId: job.generatedDocumentId,
+      lastStartedAt: job.lastStartedAt?.toISOString(),
+      completedAt: job.completedAt?.toISOString(),
+      failedAt: job.failedAt?.toISOString(),
+      createdAt: job.createdAt.toISOString(),
+      updatedAt: job.updatedAt.toISOString(),
+    });
   }
 }

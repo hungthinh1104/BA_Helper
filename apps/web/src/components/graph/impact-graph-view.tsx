@@ -62,7 +62,8 @@ function getLayoutedElements(
       stroke:
         edge.type === "AFFECTS" ? "var(--accent)" :
         edge.type === "CALLS"   ? "var(--info)" :
-        edge.type === "USES"    ? "var(--success)" :
+        edge.type === "REFERENCES" ? "var(--success)" :
+        edge.type === "IMPORTS" ? "var(--success)" :
         edge.type === "TESTS"   ? "var(--warning)" :
         "var(--text-tertiary)",
       strokeWidth: edge.sourceKind === "DEPENDENCY" ? 1.5 : 2,

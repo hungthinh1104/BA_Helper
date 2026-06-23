@@ -1,61 +1,15 @@
-import { Injectable, Logger } from "@nestjs/common";
-
-import { createHash } from 'node:crypto';
+import { Injectable, Logger } from '@nestjs/common';
 import { AppError } from '../../../../shared/app-error';
 import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
-import { ArtifactRepository } from '../../../artifact/infrastructure/artifact.repository';
-import { EvidenceRepository } from '../../../evidence/infrastructure/evidence.repository';
 import { InsightRepository } from '../../../insight/infrastructure/insight.repository';
-import { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
-import { LlmProvider } from '../../../ai/domain/llm-provider.interface';
-import { renderPrompt } from '../../../ai/domain/prompt-registry';
-import { buildCompactDomainContext } from '../../../domain-profile';
-import { impactAnalysisAiSchema } from '../../../ai/domain/ai.schema';
-import { DiagnosticRiskEvaluator } from '../risks/diagnostic-risk.evaluator';
-import { HybridRetrievalService } from '../../../retrieval/application/hybrid-retrieval.service';
-import { EvidencePackFormatter, EvidenceCandidate } from '../../../ai/application/evidence-pack.formatter';
 import { DomainPackRegistry } from '../../../domain-pack/application/domain-pack.registry';
-import { z } from 'zod';
 import { AiOutputError } from '../../../ai/domain/ai.errors';
+import { ImpactEvidenceCollectionStep } from './steps/impact-evidence-collection.step';
+import { ImpactDiagnosticPropagationStep } from './steps/impact-diagnostic-propagation.step';
+import { ImpactAiReasoningStep } from './steps/impact-ai-reasoning.step';
+import { InsightRecord } from './steps/impact-analysis-step.types';
 
-type PersistedArtifact = {
-  id: string;
-  artifactKey: string;
-  artifactType: string;
-  name: string;
-  filePath: string;
-  startLine: number | null;
-  endLine: number | null;
-};
-
-
-type ScanArtifact = {
-  stableId: string;
-  type: string;
-  filePath: string;
-  symbolName: string;
-  startLine: number;
-  endLine: number;
-};
-
-type EvidenceRecord = {
-  id: string;
-  artifactId: string | null;
-  excerpt: string;
-};
-
-type InsightRecord = {
-  id: string;
-  insightKey: string;
-  certainty: 'EVIDENCED' | 'INFERRED' | 'UNKNOWN' | 'CONFLICTING';
-};
-const toEvidenceSourceType = (artifactType: string) =>
-  artifactType === 'TEST' ? 'TEST' : 'CODE';
-
-const buildExcerpt = (artifact: ScanArtifact) =>
-  `${artifact.filePath}:${artifact.startLine}-${artifact.endLine} (${artifact.symbolName})`;
-
-
+import { EventLogService } from '../../../event-log/application/event-log.service';
 
 @Injectable()
 export class RunImpactAnalysisUseCase {
@@ -63,23 +17,19 @@ export class RunImpactAnalysisUseCase {
 
   constructor(
     private readonly impactRepo: ImpactAnalysisRepository,
-    private readonly artifactRepo: ArtifactRepository,
-    private readonly evidenceRepo: EvidenceRepository,
     private readonly insightRepo: InsightRepository,
-    private readonly traceabilityRepo: TraceabilityRepository,
-    private readonly llmProvider: LlmProvider,
-    private readonly retrievalService: HybridRetrievalService,
     private readonly domainPackRegistry: DomainPackRegistry,
+    private readonly evidenceStep: ImpactEvidenceCollectionStep,
+    private readonly diagnosticStep: ImpactDiagnosticPropagationStep,
+    private readonly aiReasoningStep: ImpactAiReasoningStep,
+    private readonly eventLogService: EventLogService,
   ) {}
 
   async execute(params: { analysisId: string; expandGraph?: boolean; domain?: string }) {
     const analysis = await this.impactRepo.findById(params.analysisId);
 
     if (!analysis) {
-      throw new AppError(
-        'IMPACT_ANALYSIS_NOT_FOUND',
-        'Impact analysis not found.',
-      );
+      throw new AppError('IMPACT_ANALYSIS_NOT_FOUND', 'Impact analysis not found.');
     }
 
     if (analysis.status !== 'QUEUED' && analysis.status !== 'RUNNING') {
@@ -96,128 +46,38 @@ export class RunImpactAnalysisUseCase {
       progress: 10,
     });
 
-    try {
-      const snapshotId = analysis.snapshot.id;
-      const artifacts = await this.artifactRepo.listBySnapshot(snapshotId);
+    const triggeredByUserId = (analysis as any).multiRepoRun?.createdByUserId || null;
 
+    await this.eventLogService.recordEvent({
+      eventType: 'ANALYSIS_STARTED',
+      idempotencyKey: `analysis:${analysis.id}:started`,
+      actorUserId: 'system',
+      payload: {
+        actorType: 'SYSTEM',
+        actorId: 'system',
+        actorName: 'BA Helper Worker',
+        triggeredByUserId,
+        analysisId: analysis.id,
+        repositoryId: analysis.snapshot.repositoryId,
+        projectId: (analysis as any).requirementRevision?.requirement?.projectId,
+        previousStatus: analysis.status,
+        nextStatus: 'RUNNING',
+        phase: 'RETRIEVING_EVIDENCE',
+      },
+    });
+
+    try {
       const snapshotDomain = (analysis.snapshot as any).profile?.domain;
       const domainPackSelection = this.domainPackRegistry.selectPack({
         manualPackId: params.domain,
         repositoryProfileDomain: snapshotDomain,
       });
 
-      // Retrieve using Hybrid RAG — domain scopes keyword expansion via DomainProfile
-      const retrievedArtifacts = await this.retrievalService.retrieve({
-        projectId: (analysis.snapshot as any).repository?.projectId ?? 'unknown',
-        repositoryId: analysis.snapshot.repositoryId,
-        snapshotId,
-        changeRequest: analysis.requirementRevision.rawText,
-        domain: domainPackSelection.normalizedPackId,
-        expandGraph: params.expandGraph ?? true,
-        maxResults: 20,
-      });
-
-      const artifactByKey = new Map(
-        artifacts.map((artifact) => [artifact.artifactKey, artifact]),
-      );
-
-      const evidenceInputs = retrievedArtifacts
-        .map((retrieved: any) => {
-          const persistedArtifact = artifactByKey.get(retrieved.artifactKey);
-          if (!persistedArtifact) {
-            return null;
-          }
-          
-          // Ensure type compatibility for buildExcerpt
-          const artifactToExcerpt = {
-            stableId: persistedArtifact.artifactKey,
-            type: persistedArtifact.artifactType,
-            filePath: persistedArtifact.filePath,
-            symbolName: persistedArtifact.name,
-            startLine: persistedArtifact.startLine ?? 0,
-            endLine: persistedArtifact.endLine ?? 0,
-          };
-          
-          const excerpt = buildExcerpt(artifactToExcerpt);
-          const contentHash = createHash('sha256').update(excerpt).digest('hex');
-          return {
-            provenanceKey: `snapshot:${snapshotId}:artifact:${persistedArtifact.artifactKey}`,
-            sourceType: toEvidenceSourceType(persistedArtifact.artifactType),
-            snapshotId,
-            artifactId: persistedArtifact.id,
-            sourcePath: persistedArtifact.filePath,
-            startLine: persistedArtifact.startLine,
-            endLine: persistedArtifact.endLine,
-            excerpt,
-            contentHash,
-            isRedacted: false,
-            redactionMetadata: null as Record<string, unknown> | null,
-          };
-        })
-        .filter((entry: any): entry is NonNullable<typeof entry> => entry !== null);
-
-      const evidence = await this.evidenceRepo.upsertMany(evidenceInputs);
-
-      const evidenceByArtifactId = new Map<string, EvidenceRecord>(
-        (evidence as EvidenceRecord[])
-          .filter((item) => item.artifactId)
-          .map((item) => [item.artifactId as string, item]),
-      );
-
-      const evidenceByArtifactKey = new Map<string, EvidenceRecord>();
-      for (const [artifactKey, artifact] of artifactByKey.entries()) {
-        const evidenceRecord = evidenceByArtifactId.get(artifact.id);
-        if (evidenceRecord) {
-          evidenceByArtifactKey.set(artifactKey, evidenceRecord);
-        }
-      }
-
-      const affectedLinks = retrievedArtifacts
-        .filter((retrieved: any) => retrieved.retrievalMethod !== 'GRAPH')
-        .map((retrieved: any) => {
-          const artifact = artifactByKey.get(retrieved.artifactKey);
-          if (!artifact) return null;
-          return { artifact, retrieved };
-        })
-        .filter((pair: any): pair is any => Boolean(pair));
-
-      const traceabilityLinks = await this.traceabilityRepo.upsertMany(
-        affectedLinks.map(({ artifact, retrieved }: any) => ({
-          impactAnalysisId: analysis.id,
-          artifactId: artifact.id,
-          linkType: 'AFFECTED',
-          linkBasis: 'EVIDENCED',
-          reviewStatus: 'NEEDS_REVIEW',
-          confidence: 1,
-          retrievalMetadata: {
-            method: retrieved.retrievalMethod,
-            signals: retrieved.retrievalSignals ?? [],
-            reason: retrieved.retrievalReason,
-            strategyVersion: retrieved.strategyVersion,
-            score: {
-              final: retrieved.score ?? retrieved.finalScore ?? 0,
-              lexical: retrieved.lexicalScore,
-              graph: retrieved.graphScore,
-              vector: retrieved.vectorScore,
-              domain: retrieved.domainBoost,
-            },
-            diagnostics: retrieved.retrievalDiagnostics,
-            suggestion: retrieved.suggestion,
-          },
-        })),
-      );
-
-      await Promise.all(
-        traceabilityLinks.map((link: { id: string; artifactId: string }) => {
-          const evidenceRecord = evidenceByArtifactId.get(link.artifactId);
-          if (!evidenceRecord) {
-            return Promise.resolve([]);
-          }
-          return this.traceabilityRepo.linkEvidence({
-            linkId: link.id,
-            evidenceIds: [evidenceRecord.id],
-          });
-        }),
+      // Step 1: Collect Evidence and Traceability Links
+      const evidenceResult = await this.evidenceStep.execute(
+        analysis,
+        domainPackSelection,
+        params.expandGraph ?? true,
       );
 
       await this.impactRepo.updateStatus({
@@ -227,222 +87,69 @@ export class RunImpactAnalysisUseCase {
         progress: 60,
       });
 
-      const MAX_EVIDENCE_ITEMS_FOR_LLM = 12;
-      const MAX_TOTAL_EVIDENCE_CHARS = 30000;
-      let evidenceTruncated = false;
-      let totalEvidenceChars = 0;
-
-      const evidenceCandidates: EvidenceCandidate[] = [];
-
-      for (const retrieved of retrievedArtifacts) {
-        if (evidenceCandidates.length >= MAX_EVIDENCE_ITEMS_FOR_LLM) {
-          break;
-        }
-
-        const persistedArtifact = artifactByKey.get(retrieved.artifactKey);
-        if (!persistedArtifact) continue;
-        
-        const evidenceRecord = evidenceByArtifactId.get(persistedArtifact.id);
-        let excerpt = evidenceRecord?.excerpt || '';
-
-        if (totalEvidenceChars + excerpt.length > MAX_TOTAL_EVIDENCE_CHARS) {
-          const remainingSpace = MAX_TOTAL_EVIDENCE_CHARS - totalEvidenceChars;
-          if (remainingSpace > 500) {
-            excerpt = excerpt.substring(0, remainingSpace) + '\n... [TRUNCATED DUE TO TOKEN LIMITS]';
-            evidenceTruncated = true;
-          } else {
-            break;
-          }
-        }
-
-        totalEvidenceChars += excerpt.length;
-
-        evidenceCandidates.push({
-          artifactKey: persistedArtifact.artifactKey,
-          symbolName: persistedArtifact.name,
-          filePath: persistedArtifact.filePath,
-          artifactType: persistedArtifact.artifactType,
-          excerpt,
-          retrievalMethod: retrieved.retrievalMethod,
-          retrievalReason: `Score: ${retrieved.score}`,
-        } as unknown as EvidenceCandidate);
-      }
-
-      const domainPack = domainPackSelection.pack;
-      const domainContext = buildCompactDomainContext(domainPackSelection.normalizedPackId);
-
-      const { systemPrompt, userPrompt, version } = renderPrompt('IMPACT_ANALYSIS', {
-        changeRequest: analysis.requirementRevision.rawText,
-        snapshotId: analysis.snapshot.id,
-        analyzerVersion: analysis.snapshot.analyzerVersion,
-        evidenceExcerpts: EvidencePackFormatter.format(evidenceCandidates),
-        domainContext,
+      await this.eventLogService.recordEvent({
+        eventType: 'ANALYSIS_EVIDENCE_RETRIEVED',
+        idempotencyKey: `analysis:${analysis.id}:evidence-retrieved`,
+        actorUserId: 'system',
+        payload: {
+          actorType: 'SYSTEM',
+          actorId: 'system',
+          actorName: 'BA Helper Worker',
+          triggeredByUserId,
+          analysisId: analysis.id,
+          repositoryId: analysis.snapshot.repositoryId,
+          projectId: (analysis as any).requirementRevision?.requirement?.projectId,
+          previousStatus: 'RUNNING',
+          nextStatus: 'RUNNING',
+          phase: 'RUNNING_AI_REASONING',
+          evidenceCount: evidenceResult.evidenceByKey.size,
+          traceabilityLinkCount: evidenceResult.traceabilityLinks.length,
+        },
       });
 
-      const { data: llmResponse, metadata } = await this.llmProvider.generateStructured(
-        { systemPrompt, userPrompt, options: { promptVersion: version } },
-        impactAnalysisAiSchema,
+      // Step 2: Run AI Reasoning
+      const aiResult = await this.aiReasoningStep.execute(
+        analysis,
+        evidenceResult,
+        domainPackSelection,
       );
 
-      const insightInputs = [] as Array<{
-        impactAnalysisId: string;
-        insightKey: string;
-        insightType: 'CLAIM' | 'UNKNOWN' | 'QUESTION' | 'ACCEPTANCE_CRITERIA' | 'QA_SCENARIO';
-        certainty: 'EVIDENCED' | 'INFERRED' | 'UNKNOWN' | 'CONFLICTING';
-        reviewStatus: 'NEEDS_REVIEW' | 'CONFIRMED' | 'REJECTED';
-        confidence: number | null;
-        title: string;
-        description: string;
-        reasoning?: string | null;
-        metadata?: any;
-      }>;
+      // Step 3: Diagnostic Risk Propagation
+      // Keep exact order from E20E-0: Evaluated after LLM call, but persisted together
+      const diagnosticInsights = this.diagnosticStep.execute(analysis, evidenceResult);
 
-      const evidencedInsightMap: Array<{ insightKey: string; artifactKeys: string[] }> = [];
-      const resolvableEvidencedInsightKeys = new Set<string>();
+      const insightInputs = [...aiResult.insightInputs, ...diagnosticInsights];
 
-      for (const insight of llmResponse.insights) {
-        let certainty = insight.certainty;
-        let metadata: Record<string, unknown> | undefined;
-        const requestedEvidenceKeys = insight.evidenceKeys ?? [];
-
-        if (insight.certainty === 'EVIDENCED') {
-          const resolvableArtifactKeys = requestedEvidenceKeys.filter((artifactKey) =>
-            evidenceByArtifactKey.has(artifactKey),
-          );
-
-          if (resolvableArtifactKeys.length === 0) {
-            certainty = requestedEvidenceKeys.length > 0 ? 'INFERRED' : 'UNKNOWN';
-            metadata = {
-              evidenceIntegrity:
-                'EVIDENCED_DOWNGRADED_NO_PERSISTED_EVIDENCE',
-              originalCertainty: 'EVIDENCED',
-              requestedEvidenceKeys,
-            };
-            this.logger.warn(
-              `Downgraded insight ${insight.insightKey} from EVIDENCED because no persisted evidence could be resolved.`,
-            );
-          } else {
-            resolvableEvidencedInsightKeys.add(insight.insightKey);
-            evidencedInsightMap.push({
-              insightKey: insight.insightKey,
-              artifactKeys: resolvableArtifactKeys,
-            });
-          }
-        }
-
-        insightInputs.push({
-          impactAnalysisId: analysis.id,
-          insightKey: insight.insightKey,
-          insightType: insight.insightType,
-          certainty,
-          reviewStatus: 'NEEDS_REVIEW',
-          confidence: insight.confidence,
-          title: insight.title,
-          description: insight.description,
-          reasoning: insight.reasoning,
-          metadata,
-        });
-      }
-
-      // Propagate unsupported scanner diagnostics as risks
-      const snapshotDiagnostics = (analysis.snapshot.diagnostics as any[]) || [];
-      const requirementText = analysis.requirementRevision.rawText;
-      const retrievedFilePaths = new Set(retrievedArtifacts.map((r: any) => artifactByKey.get(r.artifactKey)?.filePath).filter(Boolean));
-
-      const diagnosticRisks = snapshotDiagnostics
-        .filter((d: any) => d.severity === 'WARN' || d.severity === 'ERROR')
-        .filter((d: any) => {
-          const propagationMode = DiagnosticRiskEvaluator.getPropagationMode(d);
-          if (propagationMode === 'NONE') {
-            return false;
-          }
-
-          if (
-            propagationMode === 'LEXICAL' &&
-            d.payload?.candidateTerms &&
-            DiagnosticRiskEvaluator.isRelevant(requirementText, d.payload.candidateTerms)
-          ) {
-            return true;
-          }
-
-          if (propagationMode === 'CONTEXT') {
-            const filePath = d.payload?.relativePath || (d.samplePaths && d.samplePaths[0]);
-            if (filePath && retrievedFilePaths.has(filePath)) {
-              return true;
-            }
-          }
-          return false;
-        });
-
-      const uniqueDiagnosticRisks = new Map<string, any>();
-      for (const diag of diagnosticRisks) {
-        const key = DiagnosticRiskEvaluator.buildStructuredInsightKey(diag);
-        if (!uniqueDiagnosticRisks.has(key)) {
-          uniqueDiagnosticRisks.set(key, diag);
-        }
-      }
-
-      for (const diag of uniqueDiagnosticRisks.values()) {
-        const structuredKey = DiagnosticRiskEvaluator.buildStructuredInsightKey(diag);
-        insightInputs.push({
-          impactAnalysisId: analysis.id,
-          insightKey: `diag_risk_${diag.code.toLowerCase()}_${createHash('sha256').update(structuredKey).digest('hex').substring(0, 8)}`,
-          insightType: 'UNKNOWN',
-          certainty: 'UNKNOWN',
-          reviewStatus: 'NEEDS_REVIEW',
-          confidence: null,
-          title: `Unsupported Scanner Pattern: ${diag.code}`,
-          description: diag.message,
-          reasoning: `The scanner detected an unsupported pattern in ${diag.payload?.relativePath || (diag.samplePaths && diag.samplePaths[0]) || 'a file'}. This pattern is relevant to the requirement or affected files and must be reviewed manually.`,
-          metadata: {
-            origin: 'SCANNER_DIAGNOSTIC',
-            evidenceMode: 'DIAGNOSTIC_ONLY',
-            diagnosticRiskCategory: DiagnosticRiskEvaluator.getPropagationMode(diag),
-            diagnosticPayload: diag.payload || {},
-          } as any
-        });
-      }
-
-      insightInputs.push(
-        ...llmResponse.unknowns.map((unknown) => ({
-          impactAnalysisId: analysis.id,
-          insightKey: unknown.insightKey,
-          insightType: 'UNKNOWN' as const,
-          certainty: 'UNKNOWN' as const,
-          reviewStatus: 'NEEDS_REVIEW' as const,
-          confidence: null,
-          title: unknown.description,
-          description: unknown.description,
-          reasoning: unknown.reasoning,
-        })),
-      );
-
+      // Persist all insights
       const insights = (await this.insightRepo.upsertMany(
         insightInputs,
       )) as InsightRecord[];
 
+      // Link evidence to AI EVIDENCED insights
       await Promise.all(
         insights
           .filter(
             (insight) =>
               insight.certainty === 'EVIDENCED' &&
-              resolvableEvidencedInsightKeys.has(insight.insightKey),
+              aiResult.resolvableEvidencedInsightKeys.has(insight.insightKey),
           )
           .map((insight) => {
-            const mapping = evidencedInsightMap.find(
+            const mapping = aiResult.evidencedInsightMap.find(
               (item) => item.insightKey === insight.insightKey,
             );
-            
+
             if (!mapping || mapping.artifactKeys.length === 0) {
               return Promise.resolve([]);
             }
-            
+
             const evidenceIds = mapping.artifactKeys
-              .map(key => evidenceByArtifactKey.get(key)?.id)
+              .map((key) => evidenceResult.evidenceByKey.get(key)?.id)
               .filter((id): id is string => Boolean(id));
 
             if (evidenceIds.length === 0) {
-              this.logger.warn(`Could not resolve any evidence IDs for insight ${insight.insightKey}`);
+              this.logger.warn(
+                `Could not resolve any evidence IDs for insight ${insight.insightKey}`,
+              );
               return Promise.resolve([]);
             }
 
@@ -453,29 +160,47 @@ export class RunImpactAnalysisUseCase {
           }),
       );
 
-      return this.impactRepo.updateStatus({
+      await this.eventLogService.recordEvent({
+        eventType: 'ANALYSIS_AI_REASONING_COMPLETED',
+        idempotencyKey: `analysis:${analysis.id}:ai-reasoning-completed`,
+        actorUserId: 'system',
+        payload: {
+          actorType: 'SYSTEM',
+          actorId: 'system',
+          actorName: 'BA Helper Worker',
+          triggeredByUserId,
+          analysisId: analysis.id,
+          repositoryId: analysis.snapshot.repositoryId,
+          projectId: (analysis as any).requirementRevision?.requirement?.projectId,
+          previousStatus: 'RUNNING',
+          nextStatus: 'RUNNING',
+          phase: 'DONE',
+          insightCount: insights.length,
+          provider: aiResult.llmMetadata?.provider || 'unknown',
+          tokenUsage: (aiResult.llmMetadata?.inputTokens || 0) + (aiResult.llmMetadata?.outputTokens || 0),
+        },
+      });
+
+      const domainPack = domainPackSelection.pack;
+
+      const result = await this.impactRepo.updateStatus({
         id: analysis.id,
         status: 'WAITING_FOR_REVIEW',
         stage: 'DONE',
         progress: 100,
         metadata: {
-          retrieval: {
-            strategy: 'hybrid',
-            maxArtifacts: 20,
-            artifactCount: evidenceInputs.length,
-            vectorSignalCount: retrievedArtifacts.filter((r: any) => r.retrievalSignals?.includes('VECTOR') || r.retrievalSignals?.has?.('VECTOR')).length,
-          },
+          retrieval: evidenceResult.retrievalMetadata,
           llm: {
-            provider: metadata?.provider || 'unknown',
-            model: metadata?.model || 'unknown',
-            promptVersion: version,
-            parseMode: metadata?.parseMode || 'raw',
-            inputTokens: metadata?.inputTokens || null,
-            outputTokens: metadata?.outputTokens || null,
+            provider: aiResult.llmMetadata?.provider || 'unknown',
+            model: aiResult.llmMetadata?.model || 'unknown',
+            promptVersion: aiResult.promptVersion,
+            parseMode: aiResult.llmMetadata?.parseMode || 'raw',
+            inputTokens: aiResult.llmMetadata?.inputTokens || null,
+            outputTokens: aiResult.llmMetadata?.outputTokens || null,
             estimatedCostUsd: null,
-            evidenceItems: evidenceCandidates.length,
-            evidenceChars: totalEvidenceChars,
-            evidenceTruncated,
+            evidenceItems: aiResult.evidenceCandidatesLength,
+            evidenceChars: aiResult.totalEvidenceChars,
+            evidenceTruncated: aiResult.evidenceTruncated,
             domainContextUsed: domainPackSelection.normalizedPackId,
           },
           domainPack: {
@@ -497,11 +222,31 @@ export class RunImpactAnalysisUseCase {
                 riskTemplateCount: domainPack.riskTemplates.length,
                 qaTemplateCount: domainPack.qaTemplates.length,
                 unknownTemplateCount: domainPack.unknownTemplates.length,
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
       });
+
+      await this.eventLogService.recordEvent({
+        eventType: 'ANALYSIS_WAITING_FOR_REVIEW',
+        idempotencyKey: `analysis:${analysis.id}:waiting-for-review`,
+        actorUserId: 'system',
+        payload: {
+          actorType: 'SYSTEM',
+          actorId: 'system',
+          actorName: 'BA Helper Worker',
+          triggeredByUserId,
+          analysisId: analysis.id,
+          repositoryId: analysis.snapshot.repositoryId,
+          projectId: (analysis as any).requirementRevision?.requirement?.projectId,
+          previousStatus: 'RUNNING',
+          nextStatus: 'WAITING_FOR_REVIEW',
+          phase: 'DONE',
+        },
+      });
+
+      return result;
     } catch (e: any) {
       const safeError = {
         message: e instanceof Error ? e.message : String(e),
@@ -509,7 +254,10 @@ export class RunImpactAnalysisUseCase {
         name: e instanceof Error ? e.name : 'UnknownError',
         stack: e instanceof Error ? e.stack : undefined,
       };
-      this.logger.error(`RunImpactAnalysisUseCase execution failed: ${safeError.message}`, safeError.stack);
+      this.logger.error(
+        `RunImpactAnalysisUseCase execution failed: ${safeError.message}`,
+        safeError.stack,
+      );
 
       const errorCode =
         e instanceof AppError
@@ -536,8 +284,29 @@ export class RunImpactAnalysisUseCase {
           stage: analysis.stage,
           retryable: true,
           ...(errorDetails ? { details: errorDetails } : {}),
-        }
+        },
       });
+
+      const triggeredByUserId = (analysis as any).multiRepoRun?.createdByUserId || null;
+      await this.eventLogService.recordEvent({
+        eventType: 'ANALYSIS_FAILED',
+        idempotencyKey: `analysis:${analysis.id}:failed`,
+        actorUserId: 'system',
+        payload: {
+          actorType: 'SYSTEM',
+          actorId: 'system',
+          actorName: 'BA Helper Worker',
+          triggeredByUserId,
+          analysisId: analysis.id,
+          repositoryId: analysis.snapshot.repositoryId,
+          projectId: (analysis as any).requirementRevision?.requirement?.projectId,
+          previousStatus: analysis.status,
+          nextStatus: 'FAILED',
+          errorCode,
+          errorMessage,
+        },
+      });
+
       throw e;
     }
   }

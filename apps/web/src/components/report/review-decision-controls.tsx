@@ -51,13 +51,13 @@ export function ReviewDecisionControls({ analysisId, linkId, currentDecision }: 
   const getDecisionBadgeProps = (decision: DecisionValue | null) => {
     switch (decision) {
       case "ACCEPTED":
-        return { variant: "default" as const, className: "bg-green-600/20 text-green-500 hover:bg-green-600/30 border-green-600/30" }
+        return { variant: "default" as const, className: "bg-success/15 text-success hover:bg-success/25 border-success/30" }
       case "REJECTED":
         return { variant: "destructive" as const, className: "" }
       case "NEEDS_REVIEW":
-        return { variant: "outline" as const, className: "border-blue-500/50 text-blue-500 hover:bg-blue-500/10" }
+        return { variant: "outline" as const, className: "border-primary/40 text-primary hover:bg-primary/10" }
       case "NEEDS_MORE_EVIDENCE":
-        return { variant: "outline" as const, className: "border-orange-500/50 text-orange-500 hover:bg-orange-500/10" }
+        return { variant: "outline" as const, className: "border-warning/50 text-warning hover:bg-warning/10" }
       default:
         return { variant: "outline" as const, className: "border-dashed text-muted-foreground" }
     }
@@ -103,7 +103,15 @@ export function ReviewDecisionControls({ analysisId, linkId, currentDecision }: 
                   key={d}
                   type="button"
                   variant={selectedDecision === d ? "default" : "outline"}
-                  className={`justify-start text-[12px] h-8 ${selectedDecision === d && d === 'ACCEPTED' ? 'bg-green-600 hover:bg-green-700 text-white' : ''} ${selectedDecision === d && d === 'REJECTED' ? 'bg-destructive hover:bg-destructive/90 text-white' : ''}`}
+                  className={`justify-start text-[12px] h-8 ${
+                    selectedDecision === d && d === 'ACCEPTED' ? 'bg-success hover:bg-success/90 text-white border-success' : ''
+                  } ${
+                    selectedDecision === d && d === 'REJECTED' ? 'bg-destructive hover:bg-destructive/90 text-white' : ''
+                  } ${
+                    selectedDecision === d && d === 'NEEDS_REVIEW' ? 'bg-primary hover:bg-primary/90 text-white border-primary' : ''
+                  } ${
+                    selectedDecision === d && d === 'NEEDS_MORE_EVIDENCE' ? 'bg-warning hover:bg-warning/90 text-white border-warning' : ''
+                  }`}
                   onClick={() => setSelectedDecision(d)}
                 >
                   {formatDecisionLabel(d)}

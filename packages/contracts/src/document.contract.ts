@@ -13,6 +13,31 @@ export const documentListResponseSchema = z.object({
 	items: z.array(documentSchema),
 });
 
+export const documentJobStatusSchema = z.enum([
+	'QUEUED',
+	'RUNNING',
+	'COMPLETED',
+	'FAILED',
+]);
+
+export const documentJobSchema = z.object({
+	id: z.string().uuid(),
+	analysisId: z.string().uuid(),
+	snapshotId: z.string().uuid(),
+	documentType: z.enum(['IMPACT_REPORT']),
+	status: documentJobStatusSchema,
+	progress: z.number().int().min(0).max(100),
+	requestKey: z.string().nullable().optional(),
+	attemptCount: z.number().int().min(0),
+	error: z.any().nullable().optional(),
+	generatedDocumentId: z.string().uuid().nullable().optional(),
+	lastStartedAt: z.string().nullable().optional(),
+	completedAt: z.string().nullable().optional(),
+	failedAt: z.string().nullable().optional(),
+	createdAt: z.string(),
+	updatedAt: z.string(),
+});
+
 export const finalizeImpactAnalysisRequestSchema = z.object({
 	acknowledgeUnreviewed: z.boolean().default(false),
 });
@@ -88,7 +113,7 @@ export const reviewedReportSnapshotSchema = z.object({
 	id: z.string().uuid(),
 	analysisId: z.string().uuid(),
 	approvedDocumentId: z.string().uuid().nullable().optional(),
-	markdown: z.string(),
+	markdown: z.string().nullable().optional(),
 	reviewDecisionsSnapshot: z.any(),
 	evidenceQualitySummarySnapshot: z.any(),
 	evaluationContextSnapshot: z.any().nullable().optional(),
@@ -97,6 +122,8 @@ export const reviewedReportSnapshotSchema = z.object({
 });
 
 export type DocumentListResponse = z.infer<typeof documentListResponseSchema>;
+export type DocumentJobStatus = z.infer<typeof documentJobStatusSchema>;
+export type DocumentJob = z.infer<typeof documentJobSchema>;
 export type FinalizeImpactAnalysisRequest = z.infer<typeof finalizeImpactAnalysisRequestSchema>;
 export type ApprovedImpactReportResponse = z.infer<typeof approvedImpactReportResponseSchema>;
 export type ReviewedReportSnapshotResponse = z.infer<typeof reviewedReportSnapshotSchema>;

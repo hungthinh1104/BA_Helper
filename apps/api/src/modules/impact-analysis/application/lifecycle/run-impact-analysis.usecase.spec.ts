@@ -1,4 +1,7 @@
 import { RunImpactAnalysisUseCase } from './run-impact-analysis.usecase';
+import { ImpactEvidenceCollectionStep } from './steps/impact-evidence-collection.step';
+import { ImpactDiagnosticPropagationStep } from './steps/impact-diagnostic-propagation.step';
+import { ImpactAiReasoningStep } from './steps/impact-ai-reasoning.step';
 import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
 import { ArtifactRepository } from '../../../artifact/infrastructure/artifact.repository';
 import { EvidenceRepository } from '../../../evidence/infrastructure/evidence.repository';
@@ -22,6 +25,7 @@ describe('RunImpactAnalysisUseCase', () => {
   let llmProvider: jest.Mocked<LlmProvider>;
   let retrievalService: jest.Mocked<HybridRetrievalService>;
   let domainPackRegistry: jest.Mocked<DomainPackRegistry>;
+  let eventLogService: any;
 
   beforeEach(() => {
     impactRepo = {
@@ -71,15 +75,27 @@ describe('RunImpactAnalysisUseCase', () => {
         }),
     } as unknown as jest.Mocked<DomainPackRegistry>;
 
-    useCase = new RunImpactAnalysisUseCase(
-      impactRepo,
+    const evidenceStep = new ImpactEvidenceCollectionStep(
       artifactRepo,
       evidenceRepo,
-      insightRepo,
       traceabilityRepo,
-      llmProvider,
       retrievalService,
+    );
+    const diagnosticStep = new ImpactDiagnosticPropagationStep();
+    const aiReasoningStep = new ImpactAiReasoningStep(llmProvider);
+
+    eventLogService = {
+      recordEvent: jest.fn().mockResolvedValue(undefined),
+    };
+
+    useCase = new RunImpactAnalysisUseCase(
+      impactRepo,
+      insightRepo,
       domainPackRegistry,
+      evidenceStep,
+      diagnosticStep,
+      aiReasoningStep,
+      eventLogService,
     );
 
     (renderPrompt as jest.Mock).mockReturnValue({
@@ -182,6 +198,12 @@ describe('RunImpactAnalysisUseCase', () => {
       systemPrompt: 'sys',
       userPrompt: 'user'
     }));
+
+    // 5. Verify Event Logs
+    expect(eventLogService.recordEvent).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'ANALYSIS_STARTED' }));
+    expect(eventLogService.recordEvent).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'ANALYSIS_EVIDENCE_RETRIEVED' }));
+    expect(eventLogService.recordEvent).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'ANALYSIS_AI_REASONING_COMPLETED' }));
+    expect(eventLogService.recordEvent).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'ANALYSIS_WAITING_FOR_REVIEW' }));
   });
 
   it('should mark analysis as FAILED if error occurs', async () => {
@@ -197,6 +219,8 @@ describe('RunImpactAnalysisUseCase', () => {
       status: 'FAILED',
       error: expect.objectContaining({ message: 'DB Error' })
     }));
+
+    expect(eventLogService.recordEvent).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'ANALYSIS_FAILED' }));
   });
 
   it('downgrades evidenced insights when no persisted evidence can be resolved', async () => {

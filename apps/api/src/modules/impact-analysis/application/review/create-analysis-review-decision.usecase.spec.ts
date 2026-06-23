@@ -2,13 +2,13 @@ import { CreateAnalysisReviewDecisionUseCase } from './create-analysis-review-de
 import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
 import { ReviewDecisionRepository } from '../../infrastructure/review-decision.repository';
 import { GetImpactDiffUseCase } from '../queries/get-impact-diff.usecase';
-import { DocumentRepository } from '../../../document/infrastructure/document.repository';
 import { InsightRepository } from '../../../insight/infrastructure/insight.repository';
 import { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
 import { GraphRepository } from '../../../graph/infrastructure/graph.repository';
 import { ReviewNoteRepository } from '../../infrastructure/review-note.repository';
 import { ClarificationRepository } from '../../../clarification/infrastructure/clarification.repository';
-import { MarkdownImpactReportBuilder } from '../../../document/application/markdown-impact-report.builder';
+import { CreateReviewedReportSnapshotUseCase } from '../../../document/application/create-reviewed-report-snapshot.usecase';
+import { EnqueueDocumentJobUseCase } from '../../../document/application/enqueue-document-job.usecase';
 import { AppError } from '../../../../shared/app-error';
 
 describe('CreateAnalysisReviewDecisionUseCase', () => {
@@ -21,8 +21,8 @@ describe('CreateAnalysisReviewDecisionUseCase', () => {
   let graphRepo: jest.Mocked<GraphRepository>;
   let reviewNoteRepo: jest.Mocked<ReviewNoteRepository>;
   let clarificationRepo: jest.Mocked<ClarificationRepository>;
-  let documentRepo: jest.Mocked<DocumentRepository>;
-  let reportBuilder: jest.Mocked<MarkdownImpactReportBuilder>;
+  let createSnapshot: jest.Mocked<CreateReviewedReportSnapshotUseCase>;
+  let enqueueJob: jest.Mocked<EnqueueDocumentJobUseCase>;
 
   beforeEach(() => {
     impactRepo = {
@@ -58,18 +58,13 @@ describe('CreateAnalysisReviewDecisionUseCase', () => {
       listByAnalysisId: jest.fn().mockResolvedValue([]),
     } as unknown as jest.Mocked<ClarificationRepository>;
 
-    documentRepo = {
-      upsertApproved: jest.fn(),
-    } as unknown as jest.Mocked<DocumentRepository>;
-    documentRepo.upsertApproved.mockResolvedValue({
-      id: 'document-1',
-      createdAt: new Date('2026-06-06T00:00:00.000Z'),
-      updatedAt: new Date('2026-06-06T00:00:00.000Z'),
-    } as any);
+    createSnapshot = {
+      execute: jest.fn().mockResolvedValue({ id: 'snapshot-1' }),
+    } as unknown as jest.Mocked<CreateReviewedReportSnapshotUseCase>;
 
-    reportBuilder = {
-      build: jest.fn().mockReturnValue('mock markdown report'),
-    } as unknown as jest.Mocked<MarkdownImpactReportBuilder>;
+    enqueueJob = {
+      execute: jest.fn().mockResolvedValue({}),
+    } as unknown as jest.Mocked<EnqueueDocumentJobUseCase>;
 
     useCase = new CreateAnalysisReviewDecisionUseCase(
       impactRepo,
@@ -80,8 +75,8 @@ describe('CreateAnalysisReviewDecisionUseCase', () => {
       graphRepo,
       reviewNoteRepo,
       clarificationRepo,
-      documentRepo,
-      reportBuilder,
+      createSnapshot,
+      enqueueJob,
     );
   });
 
@@ -151,7 +146,8 @@ describe('CreateAnalysisReviewDecisionUseCase', () => {
 
     expect(result.decision.id).toBe('decision-1');
     expect(getDiffUseCase.computeForAnalysis).not.toHaveBeenCalled();
-    expect(documentRepo.upsertApproved).toHaveBeenCalled();
+    expect(createSnapshot.execute).toHaveBeenCalled();
+    expect(enqueueJob.execute).toHaveBeenCalled();
   });
 
   it('should check computability and accept derived analysis if diff is computable', async () => {
@@ -222,10 +218,10 @@ describe('CreateAnalysisReviewDecisionUseCase', () => {
     });
 
     expect(result.decision.id).toBe('decision-1');
-    expect(result.reportRegenerated).toBe(true); // report is regenerated (without diff because computable: false)
+    expect(result.reportRegenerated).toBe(true);
   });
 
-  it('should continue and save decision even if report regeneration fails', async () => {
+  it('should continue and save decision even if enqueueing job fails', async () => {
     impactRepo.findById.mockResolvedValue({
       ...makeCompletedAnalysis(),
     } as any);
@@ -239,12 +235,12 @@ describe('CreateAnalysisReviewDecisionUseCase', () => {
       createdAt: new Date(),
     } as any);
 
-    documentRepo.upsertApproved.mockRejectedValue(new Error('DB failure during report saving'));
+    enqueueJob.execute.mockRejectedValue(new Error('Queue failure'));
 
     const result = await useCase.execute(validParams);
 
     expect(result.decision.id).toBe('decision-1');
     expect(result.reportRegenerated).toBe(false);
-    expect(result.reportRegenerationError).toBe('DB failure during report saving');
+    expect(result.reportRegenerationError).toBe('Queue failure');
   });
 });

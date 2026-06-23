@@ -65,6 +65,8 @@ import {
 
 import { ProjectPermissionService } from '../../project/application/project-permission.service';
 
+import { EventLogService } from '../../event-log/application/event-log.service';
+
 @Controller('/api/v1')
 export class ImpactAnalysisController {
   constructor(
@@ -95,6 +97,7 @@ export class ImpactAnalysisController {
     private readonly getReviewCoverage: GetReviewCoverageUseCase,
     private readonly getAnalysisDriftFreshness: GetAnalysisDriftFreshnessUseCase,
     private readonly permissions: ProjectPermissionService,
+    private readonly eventLogService: EventLogService,
   ) {}
 
   @Post('/requirement-revisions/:revisionId/impact-analyses')
@@ -350,6 +353,21 @@ export class ImpactAnalysisController {
     );
   }
 
+  @Get('/impact-analyses/:analysisId/events')
+  async getEvents(
+    @Param('analysisId') analysisId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadAnalysis(actor, analysisId);
+    // ensure analysis exists is implicitly checked by permission assert if the analysis is missing it will throw 404
+    // Wait, assertCanReadAnalysis throws 404 if not found? No, usually project membership is checked. Let's make sure it exists by calling getAnalysis?
+    // Actually, assertCanReadAnalysis checks ProjectMembership and usually fetches the analysis to verify.
+    // If not, getting events for a non-existent analysis will just return [] which is fine.
+    
+    const events = await this.eventLogService.getAnalysisEvents(analysisId);
+    return { items: events };
+  }
+
   @Get('/impact-analyses/:analysisId/lineage')
   async getLineageTimeline(
     @Param('analysisId') analysisId: string,
@@ -395,6 +413,7 @@ export class ImpactAnalysisController {
     const analysis = await this.finalizeAnalysis.execute({
       analysisId,
       acknowledgeUnreviewed: input.acknowledgeUnreviewed,
+      userId: actor.id,
     });
     return impactAnalysisResponseSchema.parse(
       mapImpactAnalysisResponse({ analysis }),

@@ -1,6 +1,8 @@
 import { RunImpactAnalysisUseCase } from '../lifecycle/run-impact-analysis.usecase';
+import { ImpactEvidenceCollectionStep } from '../lifecycle/steps/impact-evidence-collection.step';
+import { ImpactDiagnosticPropagationStep } from '../lifecycle/steps/impact-diagnostic-propagation.step';
+import { ImpactAiReasoningStep } from '../lifecycle/steps/impact-ai-reasoning.step';
 import { InsightRepository } from '../../../insight/infrastructure/insight.repository';
-import { ScanJobRepository } from '../../../scanner/infrastructure/scan-job.repository';
 import { FakeLlmProvider } from '../../../ai/infrastructure/fake-ai.provider';
 import { PrismaClient } from '@prisma/client';
 import { DiagnosticItem } from '@ba-helper/analyzer';
@@ -9,19 +11,17 @@ describe('Diagnostic Risk Propagation', () => {
   let useCase: RunImpactAnalysisUseCase;
   let mockImpactRepo: any;
   let mockInsightRepo: jest.Mocked<InsightRepository>;
-  let mockScanJobRepo: jest.Mocked<ScanJobRepository>; // Wait, scanJobRepo is not in the constructor! Let's just remove it.
   let mockPrisma: any;
   let mockTraceabilityRepo: any;
   let fakeLlmProvider: FakeLlmProvider;
+  let mockArtifactRepo: any;
+  let mockEvidenceRepo: any;
+  let mockHybridRetrievalService: any;
 
   beforeEach(() => {
     mockInsightRepo = {
       upsertMany: jest.fn().mockResolvedValue([]),
       deleteByAnalysisId: jest.fn().mockResolvedValue(undefined),
-    } as any;
-
-    mockScanJobRepo = {
-      updateJobStatus: jest.fn().mockResolvedValue(undefined),
     } as any;
 
     mockPrisma = {
@@ -83,11 +83,11 @@ describe('Diagnostic Risk Propagation', () => {
       upsertMany: jest.fn().mockResolvedValue([]),
     };
 
-    const mockArtifactRepo = {
+    mockArtifactRepo = {
       listBySnapshot: jest.fn().mockResolvedValue([]),
     };
 
-    const mockEvidenceRepo = {
+    mockEvidenceRepo = {
       listBySnapshotId: jest.fn().mockResolvedValue([]),
       upsertMany: jest.fn().mockResolvedValue([]),
     };
@@ -109,19 +109,27 @@ describe('Diagnostic Risk Propagation', () => {
       }),
     };
 
-    const mockHybridRetrievalService = {
+    mockHybridRetrievalService = {
       retrieve: jest.fn().mockResolvedValue([]),
     };
 
-    useCase = new RunImpactAnalysisUseCase(
-      mockImpactRepo,
+    const evidenceStep = new ImpactEvidenceCollectionStep(
       mockArtifactRepo as any,
       mockEvidenceRepo as any,
-      mockInsightRepo,
       mockTraceabilityRepo as any,
-      fakeLlmProvider,
-      mockHybridRetrievalService as any, // hybridRetrievalService
+      mockHybridRetrievalService as any,
+    );
+    const diagnosticStep = new ImpactDiagnosticPropagationStep();
+    const aiReasoningStep = new ImpactAiReasoningStep(fakeLlmProvider);
+
+    useCase = new RunImpactAnalysisUseCase(
+      mockImpactRepo,
+      mockInsightRepo,
       mockDomainPackRegistry as any,
+      evidenceStep,
+      diagnosticStep,
+      aiReasoningStep,
+      { recordEvent: jest.fn() } as any
     );
   });
 
@@ -279,11 +287,9 @@ describe('Diagnostic Risk Propagation', () => {
 
   it('attaches METHOD_NOT_EXTRACTED only to existing artifact context', async () => {
     // We mock that 'src/refund.controller.ts' is a retrieved artifact
-    const mockHybridRetrievalService = useCase['retrievalService'] as any;
     mockHybridRetrievalService.retrieve.mockResolvedValue([
       { artifactKey: 'api:refund' }
     ]);
-    const mockArtifactRepo = useCase['artifactRepo'] as any;
     mockArtifactRepo.listBySnapshot.mockResolvedValue([
       { artifactKey: 'api:refund', filePath: 'src/refund.controller.ts' }
     ]);

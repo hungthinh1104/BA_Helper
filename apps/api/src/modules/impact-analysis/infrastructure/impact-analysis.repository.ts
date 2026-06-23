@@ -9,8 +9,13 @@ const IMPACT_ANALYSIS_INCLUDE = {
     },
   },
   sourceTarget: true,
-  requirementRevision: true,
+  requirementRevision: {
+    include: {
+      requirement: true,
+    },
+  },
   insights: true,
+  multiRepoRun: true,
 } as const;
 
 @Injectable()

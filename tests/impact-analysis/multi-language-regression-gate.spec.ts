@@ -11,6 +11,7 @@ import { ScanJobStatus } from '@prisma/client';
 import { resolve, join } from 'node:path';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
+import { DocumentJobWorker } from '../../apps/api/src/modules/impact-analysis/worker/document-job.worker';
 
 const safeRm = async (targetPath: string) => {
   await fs.rm(targetPath, { recursive: true, force: true }).catch(() => {});
@@ -182,6 +183,14 @@ func getRefunds(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) }`
     const runDeterministicGate = async (fixturePath: string) => {
       await resetDatabase(prisma);
 
+      await prisma.user.create({
+        data: {
+          id: 'b0e6a1e4-3993-47cb-b0bb-26477e8a9462',
+          email: 'test@example.com',
+          name: 'Test User',
+        }
+      });
+
       const project = await prisma.project.create({ data: { name: 'Regression Gate' } });
       const repo = await prisma.repository.create({ data: { projectId: project.id, canonicalUrl: fixturePath } });
 
@@ -243,7 +252,16 @@ func getRefunds(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) }`
         data: { reviewStatus: 'CONFIRMED' },
       });
 
-      await finalizeImpactAnalysis.execute({ analysisId: analysis.id, acknowledgeUnreviewed: true });
+      await finalizeImpactAnalysis.execute({ analysisId: analysis.id, acknowledgeUnreviewed: true, userId: 'b0e6a1e4-3993-47cb-b0bb-26477e8a9462' });
+
+      // Process the enqueued DocumentJob synchronously for the test
+      const reviewSnapshot = await prisma.reviewedReportSnapshot.findFirstOrThrow({
+        where: { analysisId: analysis.id },
+        orderBy: { createdAt: 'desc' },
+      });
+      
+      const docWorker = app.get(DocumentJobWorker);
+      await docWorker.process({ data: { snapshotId: reviewSnapshot.id, documentType: 'IMPACT_REPORT' } } as any);
 
       const snapshot = await prisma.repositorySnapshot.findUniqueOrThrow({ where: { id: snapshotId } });
       const profile = await prisma.repositoryProfile.findUniqueOrThrow({ where: { snapshotId } });

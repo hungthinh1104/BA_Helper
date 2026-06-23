@@ -90,8 +90,8 @@ export function AnalysisInspectorMapper({
       }
       inspectorSubtitle={
         isFullHeightTab ? undefined :
-        selectedInsight ? selectedInsight.statement :
-        selectedLink ? (selectedLink.evidence[0]?.filePath ?? "Artifact") :
+        selectedInsight ? (selectedInsight.category ?? undefined) :
+        selectedLink ? (selectedLink.evidence[0]?.startLine != null ? `Line ${selectedLink.evidence[0].startLine}` : undefined) :
         undefined
       }
       inspectorCategory={isFullHeightTab ? undefined : selectedInsight?.category}
