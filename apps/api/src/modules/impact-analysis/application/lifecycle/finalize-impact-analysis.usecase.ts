@@ -47,8 +47,12 @@ export class FinalizeImpactAnalysisUseCase {
       params.acknowledgeUnreviewed
     );
 
-    // 1. Mark analysis as COMPLETED
-    await this.prisma.$transaction(async (tx) => {
+    const snapshotData = await this.createSnapshot.buildSnapshotCreateData({
+      analysisId: analysis.id,
+      createdByUserId: params.userId,
+    });
+
+    const { snapshot, documentJob } = await this.prisma.$transaction(async (tx) => {
       const finalizeResult = await tx.impactAnalysis.updateMany({
         where: {
           id: analysis.id,
@@ -73,19 +77,34 @@ export class FinalizeImpactAnalysisUseCase {
           'Analysis became stale during finalization.',
         );
       }
+
+      const snapshot = await tx.reviewedReportSnapshot.create({
+        data: snapshotData,
+      });
+
+      const { job } = await this.enqueueJob.createOrReuseQueuedJobForSnapshot(tx, {
+        analysisId: analysis.id,
+        snapshotId: snapshot.id,
+        documentType: 'IMPACT_REPORT',
+      });
+
+      return { snapshot, documentJob: job };
     });
 
-    // 2. Create ReviewedReportSnapshot
-    const snapshot = await this.createSnapshot.execute({
-      analysisId: analysis.id,
-      createdByUserId: params.userId,
-    });
-
-    // 3. Enqueue Document Job
-    await this.enqueueJob.execute({
-      analysisId: analysis.id,
-      documentType: 'IMPACT_REPORT',
-    });
+    await this.createSnapshot.recordCreatedEvent(snapshot);
+    try {
+      await this.enqueueJob.enqueueExistingJob(documentJob.id);
+    } catch (error) {
+      await this.prisma.documentJob.update({
+        where: { id: documentJob.id },
+        data: {
+          error: {
+            stage: 'QUEUE_ENQUEUE',
+            message: error instanceof Error ? error.message : String(error),
+          },
+        },
+      });
+    }
 
     const finalizedAnalysis = await this.impactRepo.findById(analysis.id);
     return finalizedAnalysis!;

@@ -1,6 +1,6 @@
 # BA Helper: Impact Analysis Case Study
 
-This case study visually demonstrates the end-to-end workflow of BA Helper, proving how it enforces an audit-style traceability process from raw requirement to immutable final report.
+This case study visually demonstrates the end-to-end workflow of BA Helper and shows how it enforces an audit-style traceability process from raw requirement to reviewed final report.
 
 ## 1. The Problem
 When business logic changes, Technical BAs and QA engineers historically rely on manual codebase searches or tribal knowledge to map backend impacts. This process is brittle, un-auditable, and prone to costly QA regressions.

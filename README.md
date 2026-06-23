@@ -10,7 +10,7 @@ BA Helper automates the heavy lifting of traceability while enforcing strict hum
 1. **Extraction:** Parses backend code and constructs an evidence-first impact graph.
 2. **Analysis:** Exposes unknowns, risks, and targeted QA scenarios.
 3. **Human Review:** Forces an analyst to explicitly accept or reject every proposed traceability link.
-4. **Snapshot:** Freezes the reviewed decisions into a mathematically immutable snapshot.
+4. **Snapshot:** Freezes the reviewed decisions into an immutable reviewed snapshot.
 5. **Final Export:** Generates a deterministic, audited markdown report directly from the locked snapshot.
 
 ## 3. Why It Is Different from a Repo Chatbot
@@ -25,13 +25,6 @@ Our analysis is strictly constrained to prevent hallucinations and fabricated cl
 - **Immutable Snapshots:** Once a snapshot is taken, the historical record cannot be altered by subsequent live edits.
 - **Gated Exports:** The system strictly blocks final exports if unreviewed links exist or if the snapshot is missing.
 - **No AI in Final Export:** The final markdown report is generated strictly from the frozen database payload, with zero active LLM calls or retrieval processes during the export phase.
-
-## 5. Live Preview
-A read-only portfolio demonstration is available at:
-👉 **[Placeholder: Insert Vercel URL here]**
-
-> **Note:** This preview is protected by a password and uses deterministic seeded data and fake AI providers to ensure a fast, consistent, and secure demonstration of the Audit Workflow. If you are reviewing this portfolio, please reach out for the preview password.
-
 
 ## 5. Demo Workflow
 The primary golden path demo validates the core evidence-first pipeline (`scan → impact analysis → evidence → review → report → drift visibility`).
@@ -57,7 +50,7 @@ Built as a TypeScript modular monolith to balance speed of development with even
 - **Contracts:** Shared Zod API schemas bounding the frontend and backend.
 
 ## 7. Test Coverage
-This absolute immutability is proven by comprehensive invariant test suites:
+This reviewed snapshot behavior is covered by invariant test suites:
 - **E17A Backend Tests:** Asserts that missing snapshots and unreviewed links block the gate at the API level, and that final reports are derived purely from snapshot payloads.
 - **E17B Frontend Tests:** MSW/JSDOM UI test suites assert that incomplete gate states visually disable export functionality, and complete states correctly dispatch the frozen markdown Blob to the user.
 
@@ -139,14 +132,14 @@ pnpm --dir apps/api exec prisma generate
 pnpm --dir apps/api exec prisma migrate deploy --schema prisma/schema.prisma
 ```
 
-### 7. Run the Visual Demo (Recommended)
+### 6. Run the Visual Demo (Recommended)
 We provide an idempotent seed script to populate a realistic "Booking Cancellation" scenario directly into the database. This is the fastest way to experience the Human Review Gate and Export workflow without external LLM keys.
 
 1. See the [Local Demo Runbook](docs/demo/run-local-demo.md) for full setup.
 2. Run `pnpm db:migrate` and `pnpm db:seed:demo`.
 3. Follow the [Demo Acceptance Checklist](docs/demo/demo-acceptance-checklist.md) to walk through the UI.
 
-### 8. Run Golden-Path Pipeline Test (Automated)
+### 7. Run Golden-Path Pipeline Test (Automated)
 Run the automated integration test to verify the deterministic, end-to-end impact analyzer flow programmatically using a fake LLM provider.
 
 ```bash
@@ -155,13 +148,13 @@ pnpm demo:golden-path
 ```
 *Note: This automated command runs entirely locally using `FakeLlmProvider` and `FakeEmbeddingProvider` so CI stays deterministic. The manual UI demo uses Gemini when `AI_PROVIDER=google` and `GEMINI_API_KEY` or `GOOGLE_API_KEY` is set.*
 
-### 7. Run Evaluation Tests (Optional)
+### 8. Run Evaluation Tests (Optional)
 If you wish to test the retrieval and domain matching logic explicitly:
 ```bash
 pnpm test tests/evaluation/impact-evaluation.spec.ts
 ```
 
-### 8. Start the Application (Optional)
+### 9. Start the Application (Optional)
 If you wish to run the full UI and Backend locally:
 ```bash
 # Start backend API (Port 3001)
@@ -175,7 +168,7 @@ pnpm dev:web
 ```
 Open `http://localhost:3000/login` and sign in using the dev-login bypass.
 
-### 9. Real Runtime Smoke Lanes
+### 10. Real Runtime Smoke Lanes
 The default CI and golden path stay on fake providers. Real-provider smoke is explicit and manual:
 
 ```bash

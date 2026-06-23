@@ -41,17 +41,13 @@ export class QueueService {
     );
   }
 
-  async enqueueDocumentJob(params: { snapshotId: string; documentType: string; requestKey?: string }) {
+  async enqueueDocumentJob(documentJobId: string) {
     // We use a deterministic BullMQ jobId so BullMQ can deduplicate if needed,
     // though Prisma DocumentJob is the true idempotency source of truth.
-    const uniqueJobId = `doc-${params.snapshotId}-${params.documentType}`;
+    const uniqueJobId = `doc-${documentJobId}`;
     await this.documentJobQueue.add(
       'generate',
-      {
-        snapshotId: params.snapshotId,
-        documentType: params.documentType,
-        requestKey: params.requestKey,
-      },
+      { documentJobId },
       { 
         jobId: uniqueJobId,
         attempts: 3,
