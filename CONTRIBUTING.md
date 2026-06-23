@@ -22,6 +22,18 @@ This project is in **Public Beta**. To maintain the integrity of our impact anal
 
 ## Development Workflow
 
+### Branch Naming Convention
+
+Please follow this format when creating branches: `[type]/[optional-ticket-id]-[short-description]`
+
+Allowed `type` prefixes:
+- `feat/`: New features or significant capabilities (e.g., `feat/p4-snapshot-drift`)
+- `fix/`: Bug fixes (e.g., `fix/123-ui-alignment`)
+- `refactor/`: Code improvements without behavior changes (e.g., `refactor/analyzer-extraction`)
+- `chore/`: Maintenance, dependency updates, or pipeline adjustments (e.g., `chore/update-eslint`)
+- `docs/`: Documentation updates only (e.g., `docs/update-readme`)
+- `release/`: Release preparation branches (e.g., `release/v1.2.0`)
+
 Before submitting a Pull Request, ensure you verify your changes:
 
 1. **Typecheck**:
