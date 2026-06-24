@@ -87,13 +87,7 @@ export function useSnapshotDrift(
   )
 
   return useQuery({
-    queryKey: [
-      ...queryKeys.repositories.detail(repositoryId ?? ''),
-      "snapshots",
-      baseSnapshotId,
-      "drift",
-      targetCommitSha,
-    ],
+    queryKey: queryKeys.repositories.snapshotDrift(repositoryId || "", baseSnapshotId || "", targetCommitSha),
     queryFn: async () => {
       const url = new URL(
         `/api/v1/projects/${effectiveProjectId}/repositories/${repositoryId}/snapshots/${baseSnapshotId}/drift`,

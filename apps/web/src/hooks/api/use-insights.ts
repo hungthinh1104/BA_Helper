@@ -13,7 +13,7 @@ import {
 
 export function useAnalysisInsights(analysisId: string) {
   return useQuery({
-    queryKey: [...queryKeys.analyses.detail(analysisId), "insights"],
+    queryKey: queryKeys.analyses.insights(analysisId),
     queryFn: async () => {
       return apiGet<InsightListResponse>(`/api/v1/impact-analyses/${analysisId}/insights`, insightListResponseSchema)
     },
@@ -23,7 +23,7 @@ export function useAnalysisInsights(analysisId: string) {
 
 export function useAnalysisTraceability(analysisId: string) {
   return useQuery({
-    queryKey: [...queryKeys.analyses.detail(analysisId), "traceability"],
+    queryKey: queryKeys.analyses.traceability(analysisId),
     queryFn: async () => {
       return apiGet<TraceabilityLinkListResponse>(`/api/v1/impact-analyses/${analysisId}/traceability`, traceabilityLinkListResponseSchema)
     },
@@ -43,7 +43,7 @@ export function useReviewInsight(projectId: string | undefined, analysisId: stri
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: [...queryKeys.analyses.detail(analysisId), "insights"],
+        queryKey: queryKeys.analyses.insights(analysisId),
       })
       queryClient.invalidateQueries({
         queryKey: queryKeys.analyses.detail(analysisId),

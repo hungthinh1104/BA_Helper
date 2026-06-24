@@ -79,7 +79,7 @@ export * from "./use-reports"
 
 export function useAnalysisLineage(analysisId: string) {
   return useQuery({
-    queryKey: [...queryKeys.analyses.detail(analysisId), "lineage"],
+    queryKey: queryKeys.analyses.lineage(analysisId),
     queryFn: async () => {
       const { lineageTimelineResponseSchema } = await import("@ba-helper/contracts")
       return apiGet(

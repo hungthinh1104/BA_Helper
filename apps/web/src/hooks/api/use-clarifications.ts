@@ -113,7 +113,7 @@ export function useConvertClarification(analysisId: string) {
 
 export function useReviewClarifications(analysisId: string) {
   return useQuery({
-    queryKey: [...queryKeys.analyses.detail(analysisId), "review-clarifications"],
+    queryKey: queryKeys.analyses.reviewClarifications(analysisId),
     queryFn: async () => {
       const { reviewClarificationListResponseSchema } = await import("@ba-helper/contracts")
       return apiGet(
@@ -139,7 +139,7 @@ export function useCreateReviewClarification(analysisId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: [...queryKeys.analyses.detail(analysisId), "review-clarifications"],
+        queryKey: queryKeys.analyses.reviewClarifications(analysisId),
       })
     },
   })
@@ -159,7 +159,7 @@ export function useAnswerReviewClarification(analysisId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: [...queryKeys.analyses.detail(analysisId), "review-clarifications"],
+        queryKey: queryKeys.analyses.reviewClarifications(analysisId),
       })
     },
   })
@@ -180,7 +180,7 @@ export function useCreateDerivedAnalysisFromClarification(analysisId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: [...queryKeys.analyses.detail(analysisId), "review-clarifications"],
+        queryKey: queryKeys.analyses.reviewClarifications(analysisId),
       })
       queryClient.invalidateQueries({
         queryKey: queryKeys.analyses.list(activeProjectId ?? "__workspace-pending__"),

@@ -1,3 +1,4 @@
+import { queryKeys } from "@/lib/api/query-keys"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { apiGet, apiPost } from "@/lib/api-client"
 import { ReviewedReportSnapshotResponse } from "@ba-helper/contracts"
@@ -6,7 +7,7 @@ const SNAPSHOT_QUERY_KEY = "reviewed-report-snapshot"
 
 export function useLatestReviewedReportSnapshot(analysisId: string | undefined) {
   return useQuery({
-    queryKey: [SNAPSHOT_QUERY_KEY, analysisId],
+    queryKey: queryKeys.documents.reviewedReportSnapshot(analysisId),
     queryFn: async () => {
       if (!analysisId) throw new Error("Analysis ID is required")
       const result = await apiGet(`/api/v1/impact-analyses/${analysisId}/reviewed-report-snapshot/latest`)

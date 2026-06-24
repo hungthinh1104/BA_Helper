@@ -28,7 +28,7 @@ export function useUpdateTraceabilityReviewDecision(analysisId: string, linkId: 
         queryKey: queryKeys.analyses.detail(analysisId),
       })
       queryClient.invalidateQueries({
-        queryKey: [...queryKeys.analyses.detail(analysisId), "traceability"],
+        queryKey: queryKeys.analyses.traceability(analysisId),
       })
     },
   })
@@ -51,7 +51,7 @@ export function useDeleteTraceabilityReviewDecision(analysisId: string, linkId: 
         queryKey: queryKeys.analyses.detail(analysisId),
       })
       queryClient.invalidateQueries({
-        queryKey: [...queryKeys.analyses.detail(analysisId), "traceability"],
+        queryKey: queryKeys.analyses.traceability(analysisId),
       })
     },
   })

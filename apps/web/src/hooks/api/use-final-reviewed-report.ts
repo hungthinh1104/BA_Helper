@@ -1,10 +1,11 @@
+import { queryKeys } from "@/lib/api/query-keys"
 import { useQuery } from "@tanstack/react-query"
 import { apiGet } from "@/lib/api-client"
 import { finalReviewedReportResponseSchema } from "@ba-helper/contracts"
 
 export function useFinalReviewedReport(analysisId: string, options?: { enabled?: boolean }) {
   return useQuery({
-    queryKey: ["final-reviewed-report", analysisId],
+    queryKey: queryKeys.documents.finalReviewedReport(analysisId),
     queryFn: () =>
       apiGet(
         `/api/v1/impact-analyses/${analysisId}/final-reviewed-report`,
