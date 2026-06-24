@@ -27,7 +27,8 @@ Our analysis is strictly constrained to prevent hallucinations and fabricated cl
 - **No AI in Final Export:** The final markdown report is generated strictly from the frozen database payload, with zero active LLM calls or retrieval processes during the export phase.
 
 ## 5. Demo Workflow
-The primary golden path demo validates the core evidence-first pipeline (`scan → impact analysis → evidence → review → report → drift visibility`).
+The primary golden path demo validates the core evidence-first pipeline. The complete audited workflow involves:
+`scan → impact analysis → evidence → review → snapshot → async report → drift → rerun lineage`.
 
 You can run the definitive automated integration test for the focused TypeScript/NestJS demo path:
 
@@ -36,7 +37,7 @@ pnpm demo:golden-path
 ```
 
 **Visual Case Study:**
-For a step-by-step visual walkthrough of this workflow, see the [Demo Case Study](docs/portfolio/case-study.md).
+For a step-by-step visual walkthrough of this workflow, see the [Demo Case Study](docs/portfolio/case-study.md), which features an 8-screen proof pack demonstrating the full end-to-end audit and lifecycle process.
 
 **Sample Requirement:**
 > "When a paid booking is cancelled, the system must refund the tenant, prevent double refunds, update booking/payment state, and notify relevant parties."
@@ -229,7 +230,7 @@ Built as a TypeScript modular monolith to balance speed of development with even
 - **Primary demo stack:** TypeScript/NestJS is the strongest and `STABLE` scanner path.
 - **Pilot scanner adapters:** Java/Spring Boot is `PARTIAL`; Go `net/http`, Go/Gin, Python/FastAPI, C#/ASP.NET Core, PHP/Laravel, and Ruby/Rails are `EXPERIMENTAL` capability proofs.
 - **Capability metadata:** Every scan exposes `SCANNER_CAPABILITY_SUMMARY` so reviewers can see whether a result came from a `STABLE`, `PARTIAL`, or `EXPERIMENTAL` adapter.
-- **Output generation:** Impact matrices, QA scenarios, unknown/risk tracking, human review, Markdown/PDF exports, and drift-aware traceability reports.
+- **Output generation:** Impact matrices, QA scenarios, unknown/risk tracking, human review gates, deterministic snapshot-sourced Markdown/PDF exports, and drift-aware lineage reports.
 
 ## Known Limits
 - TypeScript/NestJS is the strongest scanner path.
