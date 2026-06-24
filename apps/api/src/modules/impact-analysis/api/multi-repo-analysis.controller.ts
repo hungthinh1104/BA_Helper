@@ -68,14 +68,11 @@ import { ProjectPermissionService } from '../../project/application/project-perm
 import { EventLogService } from '../../event-log/application/event-log.service';
 
 @Controller('/api/v1')
-export class ImpactAnalysisController {
+export class MultiRepoAnalysisController {
   constructor(
-    private readonly createAnalysis: CreateImpactAnalysisUseCase,
     private readonly createMultiRepoAnalyses: CreateMultiRepoImpactAnalysesUseCase,
-    private readonly getAnalysis: GetImpactAnalysisUseCase,
     private readonly getMultiRepoRun: GetMultiRepoAnalysisRunUseCase,
     private readonly getMultiRepoImpactMatrix: BuildMultiRepoImpactMatrixReadModel,
-    private readonly getMatrixRowDetail: GetMatrixRowDetailUseCase,
     private readonly getMergedMultiRepoReportDraft: GetMergedMultiRepoReportDraftUseCase,
     private readonly finalizeMultiRepoReport: FinalizeMultiRepoReportUseCase,
     private readonly getApprovedMultiRepoReport: GetApprovedMultiRepoReportUseCase,
@@ -84,48 +81,8 @@ export class ImpactAnalysisController {
     private readonly createMergedReportReviewDecision: CreateMergedMultiRepoReportReviewDecisionUseCase,
     private readonly listMergedReportReviewDecisions: ListMergedMultiRepoReportReviewDecisionsUseCase,
     private readonly getLatestMergedReportReviewDecision: GetLatestMergedMultiRepoReportReviewDecisionUseCase,
-    private readonly finalizeAnalysis: FinalizeImpactAnalysisUseCase,
-    private readonly listAnalyses: ListImpactAnalysesUseCase,
-    private readonly getImpactGraph: GetImpactGraphUseCase,
-    private readonly getQaCoverage: GetQaCoverageUseCase,
-    private readonly getReviewQueue: GetReviewQueueUseCase,
-    private readonly getImpactDiff: GetImpactDiffUseCase,
-    private readonly createReviewDecision: CreateAnalysisReviewDecisionUseCase,
-    private readonly listReviewDecisions: ListReviewDecisionsUseCase,
-    private readonly getLatestReviewDecision: GetLatestReviewDecisionUseCase,
-    private readonly getLineage: GetImpactAnalysisLineageUseCase,
-    private readonly getReviewCoverage: GetReviewCoverageUseCase,
-    private readonly getAnalysisDriftFreshness: GetAnalysisDriftFreshnessUseCase,
     private readonly permissions: ProjectPermissionService,
-    private readonly eventLogService: EventLogService,
   ) {}
-
-  @Post('/requirement-revisions/:revisionId/impact-analyses')
-  async create(
-    @Param('revisionId') revisionId: string,
-    @Body() body: unknown,
-    @CurrentUser() actor: RequestUser,
-  ) {
-    await this.permissions.assertPermissionForRequirementRevision(
-      actor,
-      revisionId,
-      'analysis:create',
-    );
-    const input = impactAnalysisCreateRequestSchema.parse(body);
-    const analysis = await this.createAnalysis.execute({
-      requirementRevisionId: revisionId,
-      snapshotId: input.snapshotId,
-      sourceTargetId: input.sourceTargetId,
-      allowPartialSnapshot: input.allowPartialSnapshot,
-      requestKey: input.requestKey,
-    });
-
-    const response = impactAnalysisResponseSchema.parse(
-      mapImpactAnalysisResponse({ analysis }),
-    );
-
-    return response;
-  }
 
   @Post('/projects/:projectId/multi-repo-analyses')
   async createMultiRepo(
@@ -164,16 +121,6 @@ export class ImpactAnalysisController {
     );
   }
 
-  @Get('/multi-repo-runs/:runId/review-coverage')
-  async getReviewCoverageEndpoint(
-    @Param('runId') runId: string,
-    @CurrentUser() actor: RequestUser,
-  ) {
-    // Permission is checked within the use case
-    const result = await this.getReviewCoverage.execute(actor, runId);
-    return result; // result is already validated by contract schema format implicitly, or we can use reviewCoverageResponseSchema.parse
-  }
-
   @Get('/multi-repo-runs/:runId/impact-matrix')
   async getMultiRepoRunImpactMatrix(
     @Param('runId') runId: string,
@@ -182,19 +129,6 @@ export class ImpactAnalysisController {
     await this.permissions.assertCanReadMultiRepoRun(actor, runId);
     const result = await this.getMultiRepoImpactMatrix.execute(runId);
     return multiRepoImpactMatrixResponseSchema.parse(result);
-  }
-
-  @Get('/multi-repo-runs/:runId/impact-matrix/analyses/:analysisId/details')
-  async getMatrixRowDetailEndpoint(
-    @Param('runId') runId: string,
-    @Param('analysisId') analysisId: string,
-    @CurrentUser() actor: RequestUser,
-  ) {
-    await this.permissions.assertCanReadMultiRepoRun(actor, runId);
-    // Extra guard: analysis membership to project is naturally enforced because actor must have access to runId,
-    // and the use case itself validates that analysisId belongs to runId.
-    const result = await this.getMatrixRowDetail.execute(runId, analysisId);
-    return result; // result is already built to schema shape
   }
 
   @Get('/multi-repo-runs/:runId/merged-report-draft')
@@ -339,187 +273,5 @@ export class ImpactAnalysisController {
     return multiRepoAnalysisRunListResponseSchema.parse({
       items: runs.map((run) => mapMultiRepoAnalysisRunListItem(run)),
     });
-  }
-
-  @Get('/impact-analyses/:analysisId')
-  async get(
-    @Param('analysisId') analysisId: string,
-    @CurrentUser() actor: RequestUser,
-  ) {
-    await this.permissions.assertCanReadAnalysis(actor, analysisId);
-    const analysis = await this.getAnalysis.execute(analysisId);
-    return impactAnalysisResponseSchema.parse(
-      mapImpactAnalysisResponse({ analysis }),
-    );
-  }
-
-  @Get('/impact-analyses/:analysisId/events')
-  async getEvents(
-    @Param('analysisId') analysisId: string,
-    @CurrentUser() actor: RequestUser,
-  ) {
-    await this.permissions.assertCanReadAnalysis(actor, analysisId);
-    // ensure analysis exists is implicitly checked by permission assert if the analysis is missing it will throw 404
-    // Wait, assertCanReadAnalysis throws 404 if not found? No, usually project membership is checked. Let's make sure it exists by calling getAnalysis?
-    // Actually, assertCanReadAnalysis checks ProjectMembership and usually fetches the analysis to verify.
-    // If not, getting events for a non-existent analysis will just return [] which is fine.
-    
-    const events = await this.eventLogService.getAnalysisEvents(analysisId);
-    return { items: events };
-  }
-
-  @Get('/impact-analyses/:analysisId/lineage')
-  async getLineageTimeline(
-    @Param('analysisId') analysisId: string,
-    @CurrentUser() actor: RequestUser,
-  ) {
-    await this.permissions.assertCanReadAnalysis(actor, analysisId);
-    const lineage = await this.getLineage.execute(analysisId);
-    return lineageTimelineResponseSchema.parse(lineage);
-  }
-
-  @Get('/projects/:projectId/analyses')
-  async list(
-    @Param('projectId') projectId: string,
-    @Query() query: unknown,
-    @CurrentUser() actor: RequestUser,
-  ) {
-    await this.permissions.assertCanReadProject(actor, projectId);
-    const parsedQuery = paginationQuerySchema.safeParse(query);
-    if (!parsedQuery.success) {
-      throw new BadRequestException(parsedQuery.error.errors);
-    }
-    const { limit, offset } = parsedQuery.data;
-
-    const analyses = await this.listAnalyses.execute({ projectId, limit, offset });
-
-    return impactAnalysisListResponseSchema.parse({
-      items: analyses.map((analysis) => mapImpactAnalysisListItem(analysis as unknown as Parameters<typeof mapImpactAnalysisListItem>[0])),
-    });
-  }
-
-  @Post('/impact-analyses/:analysisId/finalize')
-  async finalize(
-    @Param('analysisId') analysisId: string,
-    @Body() body: unknown,
-    @CurrentUser() actor: RequestUser,
-  ) {
-    await this.permissions.assertPermissionForAnalysis(
-      actor,
-      analysisId,
-      'analysis:finalize',
-    );
-    const input = finalizeImpactAnalysisRequestSchema.parse(body);
-    const analysis = await this.finalizeAnalysis.execute({
-      analysisId,
-      acknowledgeUnreviewed: input.acknowledgeUnreviewed,
-      userId: actor.id,
-    });
-    return impactAnalysisResponseSchema.parse(
-      mapImpactAnalysisResponse({ analysis }),
-    );
-  }
-
-  @Get('/impact-analyses/:analysisId/graph')
-  async graph(
-    @Param('analysisId') analysisId: string,
-    @CurrentUser() actor: RequestUser,
-  ) {
-    await this.permissions.assertCanReadAnalysis(actor, analysisId);
-    const result = await this.getImpactGraph.execute(analysisId);
-    return impactGraphResponseSchema.parse(result);
-  }
-
-  @Get('/impact-analyses/:analysisId/qa-coverage')
-  async qaCoverage(
-    @Param('analysisId') analysisId: string,
-    @CurrentUser() actor: RequestUser,
-  ) {
-    await this.permissions.assertCanReadAnalysis(actor, analysisId);
-    const result = await this.getQaCoverage.execute(analysisId);
-    return qaCoverageResponseSchema.parse(result);
-  }
-
-  @Get('/impact-analyses/:analysisId/review-queue')
-  async reviewQueue(
-    @Param('analysisId') analysisId: string,
-    @CurrentUser() actor: RequestUser,
-  ) {
-    await this.permissions.assertCanReadAnalysis(actor, analysisId);
-    const result = await this.getReviewQueue.execute(analysisId);
-    return reviewQueueResponseSchema.parse(result);
-  }
-
-  @Get('/impact-analyses/:analysisId/diff')
-  async diff(
-    @Param('analysisId') analysisId: string,
-    @CurrentUser() actor: RequestUser,
-  ) {
-    await this.permissions.assertCanReadAnalysis(actor, analysisId);
-    const result = await this.getImpactDiff.execute(analysisId);
-    return impactAnalysisDiffResponseSchema.parse(result);
-  }
-
-  @Get('/projects/:projectId/analyses/:analysisId/drift-freshness')
-  async driftFreshness(
-    @Param('projectId') projectId: string,
-    @Param('analysisId') analysisId: string,
-    @CurrentUser() actor: RequestUser,
-  ) {
-    await this.permissions.assertCanReadAnalysis(actor, analysisId);
-    const result = await this.getAnalysisDriftFreshness.execute(projectId, analysisId);
-    return driftFreshnessRecommendationSchema.parse(result);
-  }
-
-  @Post('/impact-analyses/:analysisId/review-decisions')
-  async createReviewDecisionEndpoint(
-    @Param('analysisId') analysisId: string,
-    @Body() body: unknown,
-    @CurrentUser() actor: RequestUser,
-  ) {
-    await this.permissions.assertPermissionForAnalysis(
-      actor,
-      analysisId,
-      'review:write',
-    );
-    const input = reviewDecisionRequestSchema.parse(body);
-
-    const result = await this.createReviewDecision.execute({
-      analysisId,
-      decision: input.decision,
-      note: input.note,
-      actor,
-    });
-
-    return reviewDecisionCreateResponseSchema.parse({
-      decision: mapReviewDecision(result.decision),
-      reportRegenerated: result.reportRegenerated,
-      reportRegenerationError: result.reportRegenerationError,
-    });
-  }
-
-  @Get('/impact-analyses/:analysisId/review-decisions')
-  async listReviewDecisionsEndpoint(
-    @Param('analysisId') analysisId: string,
-    @CurrentUser() actor: RequestUser,
-  ) {
-    await this.permissions.assertCanReadAnalysis(actor, analysisId);
-    const result = await this.listReviewDecisions.execute(analysisId);
-    return reviewDecisionListResponseSchema.parse({
-      items: result.items.map(mapReviewDecision),
-    });
-  }
-
-  @Get('/impact-analyses/:analysisId/review-decisions/latest')
-  async getLatestReviewDecisionEndpoint(
-    @Param('analysisId') analysisId: string,
-    @CurrentUser() actor: RequestUser,
-  ) {
-    await this.permissions.assertCanReadAnalysis(actor, analysisId);
-    const result = await this.getLatestReviewDecision.execute(analysisId);
-    if (!result) {
-      throw new NotFoundException('No review decisions found for this analysis.');
-    }
-    return reviewDecisionResponseSchema.parse(mapReviewDecision(result));
   }
 }

@@ -1,12 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ImpactAnalysisController } from './impact-analysis.controller';
+import { ImpactAnalysisReadModelController } from './impact-analysis-read-model.controller';
 import { ProjectPermissionService } from '../../project/application/project-permission.service';
 import { GetAnalysisDriftFreshnessUseCase } from '../application/queries/get-analysis-drift-freshness.usecase';
 import { UnauthorizedException, NotFoundException } from '@nestjs/common';
 import { RequestUser } from '@ba-helper/contracts';
 
-describe('ImpactAnalysisController - driftFreshness', () => {
-  let controller: ImpactAnalysisController;
+describe('ImpactAnalysisReadModelController - driftFreshness', () => {
+  let controller: ImpactAnalysisReadModelController;
   let permissions: jest.Mocked<ProjectPermissionService>;
   let getAnalysisDriftFreshness: jest.Mocked<GetAnalysisDriftFreshnessUseCase>;
 
@@ -21,35 +21,15 @@ describe('ImpactAnalysisController - driftFreshness', () => {
       execute: jest.fn(),
     } as any;
 
-    controller = new ImpactAnalysisController(
-      null as any, // createAnalysis
-      null as any, // createMultiRepoAnalyses
-      null as any, // getAnalysis
-      null as any, // getMultiRepoRun
-      null as any, // getMultiRepoImpactMatrix
+    controller = new ImpactAnalysisReadModelController(
       null as any, // getMatrixRowDetail
-      null as any, // getMergedMultiRepoReportDraft
-      null as any, // finalizeMultiRepoReport
-      null as any, // getApprovedMultiRepoReport
-      null as any, // exportApprovedMultiRepoReport
-      null as any, // listMultiRepoRuns
-      null as any, // createMergedReportReviewDecision
-      null as any, // listMergedReportReviewDecisions
-      null as any, // getLatestMergedReportReviewDecision
-      null as any, // finalizeAnalysis
-      null as any, // listAnalyses
       null as any, // getImpactGraph
       null as any, // getQaCoverage
       null as any, // getReviewQueue
       null as any, // getImpactDiff
-      null as any, // createReviewDecision
-      null as any, // listReviewDecisions
-      null as any, // getLatestReviewDecision
       null as any, // getLineage
-      null as any, // getReviewCoverage
       getAnalysisDriftFreshness,
       permissions,
-      null as any, // eventLogService
     );
   });
 
