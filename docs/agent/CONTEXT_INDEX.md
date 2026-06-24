@@ -21,6 +21,8 @@ Read these first for any BA_Helper task:
 - `docs/agent/architecture.md`
 - `docs/agent/testing-strategy.md`
 - `docs/agent/done-checklist.md`
+- `docs/agent/security-hardening-model.md`
+- `docs/agent/scale-and-performance-model.md`
 
 ## Historical docs
 
@@ -60,6 +62,21 @@ Read:
 - `use-cases.md`
 - `architecture.md`
 - `input-quality.md`
+
+### Security / hardening
+
+Read:
+- `security-hardening-model.md`
+- `input-quality.md`
+- `ai-rules.md`
+- `auth-permissions.md`
+
+### Scale / performance
+
+Read:
+- `scale-and-performance-model.md`
+- `architecture.md`
+- `testing-strategy.md`
 
 ### Docs cleanup
 
