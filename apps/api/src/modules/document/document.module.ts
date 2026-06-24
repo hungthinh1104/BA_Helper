@@ -8,6 +8,7 @@ import { GetLatestReviewedReportSnapshotUseCase } from './application/get-latest
 import { GetFinalReviewedReportUseCase } from './application/get-final-reviewed-report.usecase';
 import { EnqueueDocumentJobUseCase } from './application/enqueue-document-job.usecase';
 import { RunDocumentJobUseCase } from './application/run-document-job.usecase';
+import { ReviewedSnapshotReportContextAdapter } from './application/render/reviewed-snapshot-report-context.adapter';
 import { DocumentRepository } from './infrastructure/document.repository';
 import { MarkdownImpactReportBuilder } from './application/markdown-impact-report.builder';
 import { MermaidImpactDiagramBuilder } from './application/mermaid-impact-diagram.builder';
@@ -92,6 +93,7 @@ import { QueueModule } from '../queue/queue.module';
     ReviewNoteRepository,
     ReviewDecisionRepository,
     GetImpactDiffUseCase,
+    ReviewedSnapshotReportContextAdapter,
   ],
   exports: [
     DocumentRepository,
@@ -103,6 +105,7 @@ import { QueueModule } from '../queue/queue.module';
     GetFinalReviewedReportUseCase,
     EnqueueDocumentJobUseCase,
     RunDocumentJobUseCase,
+    ReviewedSnapshotReportContextAdapter,
   ],
 })
 export class DocumentModule {}

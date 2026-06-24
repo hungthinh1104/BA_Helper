@@ -61,34 +61,54 @@ export function renderImpactedAreas(context: MarkdownReportRenderContext): strin
 }
 
 export function renderEvidenceQuality(context: MarkdownReportRenderContext): string[] {
-  const { traceabilityLinks } = context;
+  const { traceabilityLinks, reviewDecisionsSnapshot, evidenceQualitySummarySnapshot } = context;
   const lines: string[] = [];
 
   if (traceabilityLinks.length === 0) {
     return lines;
   }
 
-  const linkAnnotations = traceabilityLinks.map(link => ({
-    link,
-    annotation: EvidenceQualityAnnotator.annotate(link as any)
-  }));
-
-  const evidencedCount = linkAnnotations.filter(l => l.annotation.label === 'EVIDENCED' || l.annotation.label === 'WEAK_EVIDENCE').length;
-  const inferredCount = linkAnnotations.filter(l => l.annotation.label === 'INFERRED').length;
-  const reviewRequiredCount = linkAnnotations.filter(l => l.annotation.label === 'REVIEW_REQUIRED').length;
-
   lines.push('## Evidence Quality & Dataset Readiness');
   lines.push('');
-  lines.push(`- Evidence-backed links: ${evidencedCount}`);
-  lines.push(`- Inferred links: ${inferredCount}`);
-  lines.push(`- Review required: ${reviewRequiredCount}`);
+
+  if (evidenceQualitySummarySnapshot) {
+    const summary = evidenceQualitySummarySnapshot;
+    lines.push(`- Evidence-backed links: ${summary.evidenced + summary.weakEvidence}`);
+    lines.push(`- Inferred links: ${summary.inferred}`);
+    lines.push(`- Review required: ${summary.reviewRequired}`);
+  } else {
+    const linkAnnotations = traceabilityLinks.map(link => ({
+      link,
+      annotation: EvidenceQualityAnnotator.annotate(link as any)
+    }));
+
+    const evidencedCount = linkAnnotations.filter(l => l.annotation.label === 'EVIDENCED' || l.annotation.label === 'WEAK_EVIDENCE').length;
+    const inferredCount = linkAnnotations.filter(l => l.annotation.label === 'INFERRED').length;
+    const reviewRequiredCount = linkAnnotations.filter(l => l.annotation.label === 'REVIEW_REQUIRED').length;
+
+    lines.push(`- Evidence-backed links: ${evidencedCount}`);
+    lines.push(`- Inferred links: ${inferredCount}`);
+    lines.push(`- Review required: ${reviewRequiredCount}`);
+  }
+
   lines.push('');
   lines.push('| Artifact | Quality | Reason |');
   lines.push('|---|---|---|');
   
-  for (const item of linkAnnotations) {
-    const artifactName = item.link.artifact?.filePath ? `\`${item.link.artifact.filePath}\`` : (item.link.artifact?.name || 'Unknown');
-    lines.push(`| ${artifactName} | ${item.annotation.label} | ${item.annotation.reasons.join(', ')} |`);
+  if (reviewDecisionsSnapshot) {
+    for (const item of reviewDecisionsSnapshot) {
+      lines.push(`| \`${item.artifact}\` | ${item.quality} | ${item.reasons.join(', ')} |`);
+    }
+  } else {
+    const linkAnnotations = traceabilityLinks.map(link => ({
+      link,
+      annotation: EvidenceQualityAnnotator.annotate(link as any)
+    }));
+
+    for (const item of linkAnnotations) {
+      const artifactName = item.link.artifact?.filePath ? `\`${item.link.artifact.filePath}\`` : (item.link.artifact?.name || 'Unknown');
+      lines.push(`| ${artifactName} | ${item.annotation.label} | ${item.annotation.reasons.join(', ')} |`);
+    }
   }
   lines.push('');
 

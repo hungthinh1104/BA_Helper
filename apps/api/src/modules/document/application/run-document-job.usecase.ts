@@ -10,6 +10,7 @@ import { ClarificationRepository } from '../../clarification/infrastructure/clar
 import { ReviewDecisionRepository } from '../../impact-analysis/infrastructure/review-decision.repository';
 import { GetImpactDiffUseCase } from '../../impact-analysis/application/queries/get-impact-diff.usecase';
 import { DocumentRepository } from '../infrastructure/document.repository';
+import { ReviewedSnapshotReportContextAdapter } from './render/reviewed-snapshot-report-context.adapter';
 import { AppError } from '../../../shared/app-error';
 
 @Injectable()
@@ -17,14 +18,8 @@ export class RunDocumentJobUseCase {
   constructor(
     private readonly prisma: PrismaService,
     private readonly reportBuilder: MarkdownImpactReportBuilder,
-    private readonly insightRepo: InsightRepository,
-    private readonly traceabilityRepo: TraceabilityRepository,
-    private readonly reviewNoteRepo: ReviewNoteRepository,
-    private readonly graphRepo: GraphRepository,
-    private readonly clarificationRepo: ClarificationRepository,
-    private readonly decisionRepo: ReviewDecisionRepository,
-    private readonly getDiffUseCase: GetImpactDiffUseCase,
     private readonly documentRepo: DocumentRepository,
+    private readonly contextAdapter: ReviewedSnapshotReportContextAdapter,
   ) {}
 
   async execute(params: { documentJobId: string }) {
@@ -51,7 +46,8 @@ export class RunDocumentJobUseCase {
         throw new AppError('IMPACT_ANALYSIS_NOT_FOUND', 'Impact analysis not found.');
       }
 
-      const markdown = await this.buildMarkdown(analysis);
+      const context = await this.contextAdapter.buildContext(snapshot, analysis);
+      const markdown = this.reportBuilder.build(context);
       const persistedReport = await this.documentRepo.upsertApproved({
         impactAnalysisId: analysis.id,
         content: markdown,
@@ -112,53 +108,7 @@ export class RunDocumentJobUseCase {
     });
   }
 
-  private async buildMarkdown(analysis: any) {
-    const analysisId = analysis.id;
-    const insights = await this.insightRepo.listByAnalysis(analysisId);
-    const traceabilityLinks = await this.traceabilityRepo.listByAnalysis(analysisId);
-    const reviewNotes = await this.reviewNoteRepo.findByAnalysisId(analysisId);
-    const dependencyEdges = await this.graphRepo.listBySnapshot(analysis.snapshot.id);
-    const clarifications = await this.clarificationRepo.listByAnalysisId(analysisId);
-    const reviewDecisions = await this.decisionRepo.listByAnalysisId(analysisId);
 
-    let diff: any = undefined;
-    if (analysis.derivedFromAnalysisId) {
-      const diffResult = await this.getDiffUseCase.computeForAnalysis(analysisId);
-      if (diffResult.computable) {
-        diff = diffResult.diff;
-      }
-    }
-
-    const hasUnreviewed = analysis.insights?.some(
-      (insight: { reviewStatus: string }) => insight.reviewStatus === 'NEEDS_REVIEW',
-    );
-
-    return this.reportBuilder.build({
-      analysis,
-      insights,
-      traceabilityLinks: traceabilityLinks as any[],
-      reviewNotes,
-      hasUnreviewedItems: !!hasUnreviewed,
-      dependencyEdges: dependencyEdges as any[],
-      clarifications: clarifications as any[],
-      reviewDecisions,
-      diff,
-      metadata: {
-        analysisId: analysis.id,
-        title: analysis.requirementRevision.title,
-        projectId: analysis.snapshot.repository.projectId,
-        repositoryId: analysis.snapshot.repositoryId,
-        targetRef: analysis.sourceTarget.requestedRef,
-        commitSha: analysis.snapshot.commitSha,
-        snapshotId: analysis.snapshot.id,
-        analyzerVersion: analysis.snapshot.analyzerVersion,
-        generatedDocumentId: 'pending',
-        generatedAt: new Date().toISOString(),
-        finalizedAt: analysis.updatedAt.toISOString(),
-        staleStatusAtReadTime: false,
-      },
-    });
-  }
 
   private toErrorJson(error: unknown) {
     if (error instanceof Error) {

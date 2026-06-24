@@ -311,4 +311,58 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
     expect(decisionsArray).toHaveLength(2);
     expect(decisionsArray.every(d => d.reviewDecision?.decision === 'ACCEPTED')).toBe(true);
   });
+
+  it('GeneratedDocument markdown reflects the snapshot payload, not the live mutated state', async () => {
+    const { analysisId, link1Id, link2Id } = await setupBasicAnalysisWithLinks();
+    const runDocumentJob = app.get(require('../../src/modules/document/application/run-document-job.usecase').RunDocumentJobUseCase);
+
+    // 1. Assign ACCEPTED to both links
+    await request(app.getHttpServer())
+      .put(`/api/v1/traceability-links/${link1Id}/review-decision`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ decision: 'ACCEPTED', note: 'Looks good' })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .put(`/api/v1/traceability-links/${link2Id}/review-decision`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ decision: 'ACCEPTED', note: 'Looks good' })
+      .expect(200);
+
+    // 2. Finalize to create Snapshot AND DocumentJob
+    const finalizeRes = await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${analysisId}/finalize`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ acknowledgeUnreviewed: true })
+      .expect(201);
+
+    expect(finalizeRes.body.status).toBe('COMPLETED');
+
+    // 3. Mutate live DB (change one decision to REJECTED) AFTER snapshot is created
+    // We must bypass the API because the analysis is COMPLETED and the API will reject it.
+    await prisma.traceabilityReviewDecision.updateMany({
+      where: { traceabilityLinkId: link2Id },
+      data: { decision: 'REJECTED', note: 'Actually no' },
+    });
+
+    // 4. Run the DocumentJob (this simulates the async worker)
+    const documentJob = await prisma.documentJob.findFirst({
+      where: { analysisId, documentType: 'IMPACT_REPORT' },
+    });
+    expect(documentJob).toBeDefined();
+    await runDocumentJob.execute({ documentJobId: documentJob!.id });
+
+    // 5. Fetch the finalized document markdown
+    const exportRes = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/approved-report/export.md`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const markdown = exportRes.text;
+
+    // The markdown should contain the original ACCEPTED decisions from the snapshot
+    expect(markdown).toContain('Confirmed'); // Corresponds to ACCEPTED in traceability section
+    expect(markdown).not.toContain('REJECTED'); // Should not reflect the live mutation
+    expect(markdown).not.toContain('Actually no'); // Should not reflect the live mutated note
+  });
 });
