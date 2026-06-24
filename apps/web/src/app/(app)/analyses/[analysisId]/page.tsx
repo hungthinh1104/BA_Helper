@@ -8,7 +8,7 @@ import { AlertCircle, Network } from "lucide-react"
 import { AnalysisProgress } from "@/components/workspace/analysis/analysis-progress"
 import { isAnalysisActive } from "@/lib/status-helpers"
 import dynamic from "next/dynamic"
-import { QaCoveragePanel } from "@/components/workspace/shared/qa/qa-coverage-panel"
+import { QaCoveragePanel } from "@/components/workspace/analysis/qa/qa-coverage-panel"
 import { ReviewQueuePanel } from "@/components/workspace/review/review-queue-panel"
 import { AnalysisTabBar } from "./_components/analysis-tab-bar"
 import { AnalysisInsightsTab } from "./_components/analysis-insights-tab"
@@ -21,7 +21,7 @@ import { AnalysisInspectorMapper } from "./_components/analysis-inspector-mapper
 import { toast } from "sonner"
 import { v4 as uuidv4 } from "uuid"
 import { AuditTimeline } from "@/components/workspace/shared/audit-timeline"
-import { useAnalysisEvents } from "@/hooks/api/use-event-logs"
+import { useAnalysisEventLogs } from "@/hooks/api/use-event-logs"
 
 // Dynamic import so React Flow CSS loads correctly in Next.js app router
 const ImpactGraphView = dynamic(
@@ -36,7 +36,7 @@ export default function ImpactAnalysisDetailPage({
 }) {
   const { analysisId } = use(params)
   const ws = useAnalysisWorkspace(analysisId)
-  const { data: analysisEventsData, isLoading: isLoadingEvents } = useAnalysisEvents(analysisId)
+  const { data: analysisEventsData, isLoading: isLoadingEvents } = useAnalysisEventLogs(analysisId)
 
   // ── Loading state ──
   if (ws.analysisLoading || ws.insightsLoading || ws.linksLoading) {

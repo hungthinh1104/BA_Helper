@@ -2,10 +2,10 @@
 
 import { ImpactGraphNode } from "@ba-helper/contracts"
 import { X } from "lucide-react"
-import { RetrievalSuggestion } from "@/components/workspace/shared/retrieval/retrieval-suggestion"
+import { RetrievalSuggestion } from "@/components/workspace/analysis/retrieval/retrieval-suggestion"
 
 import { QaCoverageItem } from "@ba-helper/contracts"
-import { QaCoverageBadge } from "@/components/workspace/shared/qa/qa-coverage-badge"
+import { QaCoverageBadge } from "@/components/workspace/analysis/qa/qa-coverage-badge"
 
 interface Props {
   node: ImpactGraphNode
