@@ -1,4 +1,4 @@
-import { useFinalReviewedReport } from "@/hooks/api/use-final-reviewed-report"
+import { useFinalReviewedReport } from "@/hooks/api/use-documents"
 import {
   Dialog,
   DialogContent,

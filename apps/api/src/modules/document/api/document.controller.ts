@@ -1,12 +1,12 @@
 import { Controller, Get, Param, Post, Body, Res } from '@nestjs/common';
 import { documentListResponseSchema } from '@ba-helper/contracts';
-import { ListDocumentsUseCase } from '../application/list-documents.usecase';
+import { ListDocumentsUseCase } from '../application/queries/list-documents.usecase';
 import { GetApprovedReportUseCase } from '../application/get-approved-report.usecase';
 import { ExportApprovedReportUseCase } from '../application/export-approved-report.usecase';
-import { CreateReviewedReportSnapshotUseCase } from '../application/create-reviewed-report-snapshot.usecase';
-import { GetLatestReviewedReportSnapshotUseCase } from '../application/get-latest-reviewed-report-snapshot.usecase';
-import { GetFinalReviewedReportUseCase } from '../application/get-final-reviewed-report.usecase';
-import { EnqueueDocumentJobUseCase } from '../application/enqueue-document-job.usecase';
+import { CreateReviewedReportSnapshotUseCase } from '../application/commands/create-reviewed-report-snapshot.usecase';
+import { GetLatestReviewedReportSnapshotUseCase } from '../application/queries/get-latest-reviewed-report-snapshot.usecase';
+import { GetFinalReviewedReportUseCase } from '../application/queries/get-final-reviewed-report.usecase';
+import { EnqueueDocumentJobUseCase } from '../application/commands/enqueue-document-job.usecase';
 import { 
   approvedImpactReportResponseSchema, 
   reviewedReportSnapshotSchema, 

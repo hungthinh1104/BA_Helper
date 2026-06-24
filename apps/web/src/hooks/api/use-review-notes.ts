@@ -1,10 +1,11 @@
+import { queryKeys } from "@/lib/api/query-keys"
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CreateReviewNoteRequest, ReviewNoteResponse } from '@ba-helper/contracts';
 import { apiGet, apiPost } from '@/lib/api-client';
 
 export function useReviewNotes(analysisId: string) {
   return useQuery({
-    queryKey: ['impact-analyses', analysisId, 'review-notes'],
+    queryKey: queryKeys.analyses.reviewNotes(analysisId),
     queryFn: async (): Promise<{ items: ReviewNoteResponse[] }> => {
       // Assuming apiGet returns the payload directly and handles errors
       return apiGet<{ items: ReviewNoteResponse[] }>(`/api/v1/impact-analyses/${analysisId}/review-notes`);
@@ -21,9 +22,9 @@ export function useSaveReviewNote(analysisId: string) {
       return apiPost<ReviewNoteResponse>(`/api/v1/impact-analyses/${analysisId}/review-notes`, req);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['impact-analyses', analysisId, 'review-notes'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.analyses.reviewNotes(analysisId) });
       // Invalidate review queue if necessary
-      queryClient.invalidateQueries({ queryKey: ['impact-analyses', analysisId, 'review-queue'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.analyses.reviewQueue(analysisId) });
     },
   });
 }

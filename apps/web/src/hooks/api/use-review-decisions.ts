@@ -17,7 +17,7 @@ import {
 
 export function useReviewDecisions(analysisId: string) {
   return useQuery({
-    queryKey: [...queryKeys.analyses.detail(analysisId), "review-decisions"],
+    queryKey: queryKeys.analyses.reviewDecisions(analysisId),
     queryFn: async () => {
       return apiGet<ReviewDecisionListResponse>(
         `/api/v1/impact-analyses/${analysisId}/review-decisions`,
@@ -41,7 +41,7 @@ export function useCreateReviewDecision(analysisId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: [...queryKeys.analyses.detail(analysisId), "review-decisions"],
+        queryKey: queryKeys.analyses.reviewDecisions(analysisId),
       })
       queryClient.invalidateQueries({
         queryKey: queryKeys.analyses.detail(analysisId),

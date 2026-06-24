@@ -7,8 +7,8 @@ import { ReviewPolicy } from '../../../review/domain/review.policy';
 import { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
 import { PrismaService } from '../../../prisma/prisma.service';
 
-import { CreateReviewedReportSnapshotUseCase } from '../../../document/application/create-reviewed-report-snapshot.usecase';
-import { EnqueueDocumentJobUseCase } from '../../../document/application/enqueue-document-job.usecase';
+import { CreateReviewedReportSnapshotUseCase } from '../../../document/application/commands/create-reviewed-report-snapshot.usecase';
+import { EnqueueDocumentJobUseCase } from '../../../document/application/commands/enqueue-document-job.usecase';
 
 @Injectable()
 export class FinalizeImpactAnalysisUseCase {

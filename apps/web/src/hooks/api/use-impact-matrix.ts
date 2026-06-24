@@ -4,7 +4,7 @@ import { queryKeys } from "@/lib/api/query-keys"
 
 export function useMultiRepoImpactMatrix(runId: string) {
   return useQuery({
-    queryKey: [...queryKeys.analyses.runs.detail(runId), "impact-matrix"],
+    queryKey: queryKeys.analyses.runs.impactMatrix(runId),
     queryFn: async () => {
       const { multiRepoImpactMatrixResponseSchema } = await import("@ba-helper/contracts")
       return apiGet<import("@ba-helper/contracts").MultiRepoImpactMatrixResponse>(
@@ -19,7 +19,7 @@ export function useMultiRepoImpactMatrix(runId: string) {
 
 export function useMatrixRowDetail(runId: string, analysisId: string | null) {
   return useQuery({
-    queryKey: ["multi-repo-run", runId, "impact-matrix-row-detail", analysisId],
+    queryKey: queryKeys.analyses.runs.impactMatrixRowDetail(runId, analysisId || ""),
     queryFn: async () => {
       if (!analysisId) throw new Error("analysisId is required")
       const { matrixRowDetailResponseSchema } = await import("@ba-helper/contracts")

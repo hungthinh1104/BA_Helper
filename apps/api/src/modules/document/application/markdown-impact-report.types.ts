@@ -41,6 +41,8 @@ export type MarkdownReportRenderContext = {
   dependencyEdges: ReportDependencyEdge[];
   clarifications: ClarificationItemDto[];
   reviewDecisions: any[];
+  reviewDecisionsSnapshot?: any[];
+  evidenceQualitySummarySnapshot?: any;
   diff?: any;
   metadata?: ApprovedReportMetadata;
 };

@@ -1,6 +1,6 @@
 "use client"
 
-import { useAnalysisDiff } from "@/hooks/api/use-analysis-diff"
+import { useAnalysisDiff } from "@/hooks/api/use-analyses"
 import { useReviewDecisions } from "@/hooks/api/use-review-decisions"
 import { ImpactAnalysisDetailResponse } from "@ba-helper/contracts"
 import { Loader2, AlertCircle, RefreshCw } from "lucide-react"

@@ -67,8 +67,8 @@ export function useAnalysisStatusWatcher(projectId: string | undefined, analysis
       if (currentStatus === "WAITING_FOR_REVIEW") {
         toast.success("Analysis ready for review.", { id: toastId })
         // Invalidate review related queries
-        queryClient.invalidateQueries({ queryKey: [...queryKeys.analyses.detail(analysisId), "insights"] })
-        queryClient.invalidateQueries({ queryKey: [...queryKeys.analyses.detail(analysisId), "traceability"] })
+        queryClient.invalidateQueries({ queryKey: queryKeys.analyses.insights(analysisId) })
+        queryClient.invalidateQueries({ queryKey: queryKeys.analyses.traceability(analysisId) })
       } else if (currentStatus === "COMPLETED") {
         toast.success("Analysis finalized.", { id: toastId })
         queryClient.invalidateQueries({ queryKey: queryKeys.analyses.report(analysisId) })

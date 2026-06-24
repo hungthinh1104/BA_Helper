@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useLatestReviewedReportSnapshot, useCreateReviewedReportSnapshot } from "@/hooks/api/use-reviewed-report-snapshot"
+import { useLatestReviewedReportSnapshot, useCreateReviewedReportSnapshot } from "@/hooks/api/use-documents"
 import { Button } from "@/components/ui/button"
 import { Lock, Loader2, CheckCircle, FileText } from "lucide-react"
 import { LockedSnapshotViewer } from "./locked-snapshot-viewer"

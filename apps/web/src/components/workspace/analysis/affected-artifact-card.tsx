@@ -1,5 +1,5 @@
 import { TraceabilityLinkListResponse } from "@ba-helper/contracts"
-import { RetrievalSignalBadge } from "@/components/workspace/shared/retrieval/retrieval-signals"
+import { RetrievalSignalBadge } from "@/components/workspace/analysis/retrieval/retrieval-signals"
 
 type TraceabilityLink = TraceabilityLinkListResponse["items"][number]
 

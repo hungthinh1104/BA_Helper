@@ -1,5 +1,5 @@
 import { MatrixRowArtifactDetail } from "@ba-helper/contracts"
-import { CodeEvidenceBlock } from "@/components/workspace/shared/retrieval/code-evidence-block"
+import { CodeEvidenceBlock } from "@/components/workspace/analysis/retrieval/code-evidence-block"
 
 interface MatrixEvidenceListProps {
   artifact: MatrixRowArtifactDetail

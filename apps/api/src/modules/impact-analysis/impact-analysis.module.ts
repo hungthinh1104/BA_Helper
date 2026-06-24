@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { ImpactAnalysisController } from './api/impact-analysis.controller';
 import { CreateImpactAnalysisUseCase } from './application/lifecycle/create-impact-analysis.usecase';
 import { GetImpactAnalysisUseCase } from './application/lifecycle/get-impact-analysis.usecase';
 import { FinalizeImpactAnalysisUseCase } from './application/lifecycle/finalize-impact-analysis.usecase';
@@ -39,6 +38,10 @@ import { GetLatestMergedMultiRepoReportReviewDecisionUseCase } from './applicati
 import { MergedMultiRepoReportDraftBuilder } from './application/multi-repo/merged-multi-repo-report-draft.builder';
 import { ReviewNoteController } from './api/review-note.controller';
 import { ReviewClarificationController } from './api/review-clarification.controller';
+import { ImpactAnalysisLifecycleController } from './api/impact-analysis-lifecycle.controller';
+import { ImpactAnalysisReadModelController } from './api/impact-analysis-read-model.controller';
+import { ImpactAnalysisReviewController } from './api/impact-analysis-review.controller';
+import { MultiRepoAnalysisController } from './api/multi-repo-analysis.controller';
 import { ReviewNoteRepository } from './infrastructure/review-note.repository';
 import { ReviewDecisionRepository } from './infrastructure/review-decision.repository';
 import { ReviewClarificationRepository } from './infrastructure/review-clarification.repository';
@@ -75,7 +78,14 @@ import { DomainPackModule } from '../domain-pack/domain-pack.module';
 
 @Module({
   imports: [PrismaModule, EventLogModule, DocumentModule, QueueModule, AiModule, RetrievalModule, GraphModule, ClarificationModule, ProjectModule, RepositoryModule, DomainPackModule],
-  controllers: [ImpactAnalysisController, ReviewNoteController, ReviewClarificationController],
+  controllers: [
+    ImpactAnalysisLifecycleController,
+    ImpactAnalysisReadModelController,
+    ImpactAnalysisReviewController,
+    MultiRepoAnalysisController,
+    ReviewNoteController,
+    ReviewClarificationController,
+  ],
   providers: [
     ImpactAnalysisRepository,
     MultiRepoAnalysisRunRepository,

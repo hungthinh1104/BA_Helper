@@ -9,7 +9,7 @@ import { FinalizeImpactAnalysisUseCase } from '../../apps/api/src/modules/impact
 import { GetRepositorySnapshotDriftUseCase } from '../../apps/api/src/modules/repository/application/get-repository-snapshot-drift.usecase';
 import { ScanJobStatus } from '@prisma/client';
 import { resolve } from 'node:path';
-import { RunDocumentJobUseCase } from '../../apps/api/src/modules/document/application/run-document-job.usecase';
+import { RunDocumentJobUseCase } from '../../apps/api/src/modules/document/application/jobs/run-document-job.usecase';
 
 describe('Golden Path Demo', () => {
   let app: any;

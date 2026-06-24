@@ -115,7 +115,7 @@ Rules:
 
 - The worker calls an application use case; it does not implement analysis.
 - The AI adapter returns validated structured output; it does not persist.
-- Document code, and later diagram code, consumes persisted impact data.
+- Document code, and later diagram code, consumes persisted impact data. Specifically, Document generation strictly derives its context from the immutable `ReviewedReportSnapshot` payload to ensure audit correctness, independent of subsequent live data mutations.
 - A module writes its own records; cross-module writes happen via its public
   application service or use case.
 - Controllers do not call Prisma or external SDKs directly.

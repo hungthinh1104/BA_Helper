@@ -1,6 +1,6 @@
 "use client"
 
-import { CodeEvidenceBlock } from "@/components/workspace/shared/retrieval/code-evidence-block"
+import { CodeEvidenceBlock } from "@/components/workspace/analysis/retrieval/code-evidence-block"
 import { ImpactGraphInspector } from "@/components/graph/impact-graph-inspector"
 import { AlertCircle, FileCode2 } from "lucide-react"
 import { ClarificationWidget } from "@/components/workspace/analysis/clarification/clarification-widget"

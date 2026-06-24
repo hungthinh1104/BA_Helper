@@ -10,14 +10,14 @@ import {
   useReviewTraceabilityLink,
   useCreateAnalysis
 } from "@/hooks/api/use-analyses"
-import { useImpactGraph } from "@/hooks/api/use-impact-graph"
+import { useImpactGraph } from "@/hooks/api/use-analyses"
 import { useQaCoverage } from "@/hooks/api/use-qa-coverage"
-import { useReviewQueue } from "@/hooks/api/use-review-queue"
+import { useReviewQueue } from "@/hooks/api/use-analyses"
 import { useCurrentWorkspace, useOptionalProjectId } from "@/lib/project-context"
 import { canFinalizeAnalysis, canReview as canReviewPermission, canRunAnalysis, canViewReviewQueue } from "@/lib/permissions"
 import { queryKeys } from "@/lib/api/query-keys"
 import { InsightListResponse, TraceabilityLinkListResponse, ImpactGraphNode } from "@ba-helper/contracts"
-import { type InsightFilterValue } from "@/components/workspace/shared/insight/insight-filter-bar"
+import { type InsightFilterValue } from "@/components/workspace/analysis/insight/insight-filter-bar"
 
 type Insight = InsightListResponse["items"][number]
 type TraceabilityLink = TraceabilityLinkListResponse["items"][number]

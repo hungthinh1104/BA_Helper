@@ -20,7 +20,7 @@ import { DiagnosticItem } from "@ba-helper/contracts"
 import { Skeleton } from "@/components/ui/skeleton"
 import { v4 as uuidv4 } from "uuid"
 
-import { useScanJobEvents } from "@/hooks/api/use-event-logs"
+import { useScanJobEventLogs } from "@/hooks/api/use-event-logs"
 import { AuditTimeline } from "@/components/workspace/shared/audit-timeline"
 import { RepositorySnapshotBanner } from "./_components/repository-snapshot-banner"
 import { RepositoryScannerProfile } from "./_components/repository-scanner-profile"
@@ -42,7 +42,7 @@ export default function RepositoryDetailsPage({ params }: PageProps) {
   const workspace = useCurrentWorkspace()
   const canScan = workspace ? canRunScan(workspace.membershipRole) : false
 
-  const { data: scanEventsData, isLoading: isLoadingEvents } = useScanJobEvents(repositoryId, repo?.latestScanJob?.id)
+  const { data: scanEventsData, isLoading: isLoadingEvents } = useScanJobEventLogs(repositoryId, repo?.latestScanJob?.id)
 
   // Watch for scan job completion/failure to show toast notifications
   useRepositoryStatusWatcher(undefined, repositoryId)
