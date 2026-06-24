@@ -23,6 +23,7 @@ export const queryKeys = {
     all: ["impact-analyses"] as const,
     list: (projectId: string, params?: { limit?: number; offset?: number }) => ["impact-analyses", "list", projectId, params] as const,
     detail: (analysisId: string) => ["impact-analyses", "detail", analysisId] as const,
+    workspace: (analysisId: string) => ["impact-analyses", "workspace", analysisId] as const,
     runs: {
       list: (projectId: string) => ["impact-analyses", "runs", "list", projectId] as const,
       detail: (runId: string) => ["impact-analyses", "runs", "detail", runId] as const,

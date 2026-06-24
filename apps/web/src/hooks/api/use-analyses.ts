@@ -12,8 +12,10 @@ import {
   ImpactAnalysisDetailResponse,
   ImpactAnalysisCreateRequest,
   ImpactAnalysisResponse,
+  AnalysisWorkspaceResponse,
   impactAnalysisListResponseSchema,
   impactAnalysisResponseSchema,
+  analysisWorkspaceResponseSchema,
   impactGraphResponseSchema, 
   ImpactGraphResponse,
 } from "@ba-helper/contracts"
@@ -48,6 +50,20 @@ export function useAnalysisDetail(analysisId: string) {
       const data = query.state.data;
       return data && canPollAnalysisDetail(data) ? 3000 : false;
     },
+  })
+}
+
+export function useAnalysisWorkspace(analysisId: string) {
+  return useQuery({
+    queryKey: queryKeys.analyses.workspace(analysisId),
+    queryFn: async () => {
+      return apiGet<AnalysisWorkspaceResponse>(
+        `/api/v1/impact-analyses/${analysisId}/workspace`,
+        analysisWorkspaceResponseSchema,
+      )
+    },
+    enabled: Boolean(analysisId),
+    refetchOnWindowFocus: true,
   })
 }
 
