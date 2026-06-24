@@ -1,46 +1,62 @@
 "use client"
 
 import type { AnalysisWorkspaceResponse } from "@ba-helper/contracts"
+import {
+  driftStatusLabels,
+  exportStatusLabels,
+  getLocalizedLabel,
+  reportStatusLabels,
+  type SupportedLocale,
+} from "@/lib/i18n/status-labels"
+import type { AnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
 
-export function OverviewTab({ workspace }: { workspace: AnalysisWorkspaceResponse }) {
+export function OverviewTab({
+  workspace,
+  locale,
+  labels,
+}: {
+  workspace: AnalysisWorkspaceResponse
+  locale: SupportedLocale
+  labels: AnalysisWorkspaceLabels["overview"]
+}) {
   const { overview, reportStatus, driftStatus } = workspace
   const counts = overview.counts
 
   return (
     <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
       <div className="rounded-lg border border-border/60 bg-surface p-4">
-        <h2 className="text-sm font-semibold text-foreground">Current State</h2>
+        <h2 className="text-sm font-semibold text-foreground">{labels.currentState}</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <InfoRow label="Requirement revision" value={overview.requirement.revisionId} mono />
-          <InfoRow label="Language" value={overview.requirement.language} />
-          <InfoRow label="Domain profile" value={overview.requirement.domainProfileId} />
-          <InfoRow label="Snapshot" value={overview.snapshot.snapshotId} mono />
-          <InfoRow label="Commit" value={overview.snapshot.commitSha} mono />
-          <InfoRow label="Analyzer" value={overview.snapshot.analyzerVersion} />
+          <InfoRow label={labels.requirementRevision} value={overview.requirement.revisionId} mono />
+          <InfoRow label={labels.language} value={overview.requirement.language} />
+          <InfoRow label={labels.domainProfile} value={overview.requirement.domainProfileId} />
+          <InfoRow label={labels.snapshot} value={overview.snapshot.snapshotId} mono />
+          <InfoRow label={labels.commit} value={overview.snapshot.commitSha} mono />
+          <InfoRow label={labels.analyzer} value={overview.snapshot.analyzerVersion} />
         </div>
       </div>
 
       <div className="rounded-lg border border-border/60 bg-surface p-4">
-        <h2 className="text-sm font-semibold text-foreground">Backend Counts</h2>
+        <h2 className="text-sm font-semibold text-foreground">{labels.backendCounts}</h2>
         <div className="mt-4 grid grid-cols-2 gap-3">
-          <Metric label="Impacted artifacts" value={counts.impactedArtifacts} />
-          <Metric label="Evidence items" value={counts.evidenceItems} />
-          <Metric label="Risks" value={counts.risks} />
-          <Metric label="Unknowns" value={counts.unknowns} />
-          <Metric label="QA scenarios" value={counts.qaScenarios} />
-          <Metric label="Pending review" value={counts.pendingReviewItems} />
+          <Metric label={labels.impactedArtifacts} value={counts.impactedArtifacts} />
+          <Metric label={labels.evidenceItems} value={counts.evidenceItems} />
+          <Metric label={labels.risks} value={counts.risks} />
+          <Metric label={labels.unknowns} value={counts.unknowns} />
+          <Metric label={labels.qaScenarios} value={counts.qaScenarios} />
+          <Metric label={labels.pendingReview} value={counts.pendingReviewItems} />
         </div>
       </div>
 
       <div className="rounded-lg border border-border/60 bg-surface p-4 xl:col-span-2">
-        <h2 className="text-sm font-semibold text-foreground">Report & Drift</h2>
+        <h2 className="text-sm font-semibold text-foreground">{labels.reportAndDrift}</h2>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
-          <InfoRow label="Report status" value={reportStatus.status} />
-          <InfoRow label="Can export" value={reportStatus.canExport ? "yes" : "no"} />
-          <InfoRow label="Drift status" value={driftStatus.status} />
-          <InfoRow label="Freshness basis" value={driftStatus.basis} />
-          <InfoRow label="Snapshot commit" value={driftStatus.snapshotCommitSha} mono />
-          <InfoRow label="Latest observed commit" value={driftStatus.latestObservedCommitSha ?? "n/a"} mono />
+          <InfoRow label={labels.reportStatus} value={getLocalizedLabel(reportStatusLabels, reportStatus.status, locale)} />
+          <InfoRow label={labels.canExport} value={getLocalizedLabel(exportStatusLabels, reportStatus.canExport ? "yes" : "no", locale)} />
+          <InfoRow label={labels.driftStatus} value={getLocalizedLabel(driftStatusLabels, driftStatus.status, locale)} />
+          <InfoRow label={labels.freshnessBasis} value={driftStatus.basis} />
+          <InfoRow label={labels.snapshotCommit} value={driftStatus.snapshotCommitSha} mono />
+          <InfoRow label={labels.latestObservedCommit} value={driftStatus.latestObservedCommitSha ?? getLocalizedLabel(exportStatusLabels, "not_applicable", locale)} mono />
         </div>
       </div>
     </section>

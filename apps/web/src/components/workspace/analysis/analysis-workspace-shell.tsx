@@ -3,6 +3,15 @@
 import { useMemo, useState } from "react"
 import type { AnalysisWorkspaceResponse } from "@ba-helper/contracts"
 import { cn } from "@/lib/utils"
+import {
+  DEFAULT_ANALYSIS_WORKSPACE_LOCALE,
+  analysisStatusLabels,
+  driftStatusLabels,
+  getLocalizedLabel,
+  reviewStatusLabels,
+  type SupportedLocale,
+} from "@/lib/i18n/status-labels"
+import { getAnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
 import { OverviewTab } from "./overview-tab"
 import { ImpactMapTab } from "./impact-map-tab"
 import { EvidenceTab } from "./evidence-tab"
@@ -11,20 +20,22 @@ import { ReviewReportTab } from "./review-report-tab"
 
 type WorkspaceTab = "overview" | "impact" | "evidence" | "risks-qa" | "review-report"
 
-const tabs: Array<{ id: WorkspaceTab; label: string }> = [
-  { id: "overview", label: "Overview" },
-  { id: "impact", label: "Impact Map" },
-  { id: "evidence", label: "Evidence" },
-  { id: "risks-qa", label: "Risks & QA" },
-  { id: "review-report", label: "Review & Report" },
-]
-
 export function AnalysisWorkspaceShell({
   workspace,
+  locale = DEFAULT_ANALYSIS_WORKSPACE_LOCALE,
 }: {
   workspace: AnalysisWorkspaceResponse
+  locale?: SupportedLocale
 }) {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("overview")
+  const labels = getAnalysisWorkspaceLabels(locale)
+  const tabs: Array<{ id: WorkspaceTab; label: string }> = [
+    { id: "overview", label: labels.tabs.overview },
+    { id: "impact", label: labels.tabs.impact },
+    { id: "evidence", label: labels.tabs.evidence },
+    { id: "risks-qa", label: labels.tabs.risksQa },
+    { id: "review-report", label: labels.tabs.reviewReport },
+  ]
   const stats = useMemo(() => {
     const reviewed = workspace.reviewQueue.filter(
       (item) => item.currentDecision !== "needs_review",
@@ -48,7 +59,7 @@ export function AnalysisWorkspaceShell({
         <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Analysis Workspace
+              {labels.title}
             </p>
             <h1 className="mt-1 truncate text-xl font-semibold text-foreground">
               {workspace.overview.requirement.title}
@@ -58,14 +69,23 @@ export function AnalysisWorkspaceShell({
             </p>
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
-            <StatusPill label="Analysis" value={workspace.overview.status.analysisStatus} />
-            <StatusPill label="Review" value={workspace.overview.status.reviewStatus} />
-            <StatusPill label="Drift" value={workspace.overview.status.driftStatus} />
+            <StatusPill
+              label={labels.status.analysis}
+              value={getLocalizedLabel(analysisStatusLabels, workspace.overview.status.analysisStatus, locale)}
+            />
+            <StatusPill
+              label={labels.status.review}
+              value={getLocalizedLabel(reviewStatusLabels, workspace.overview.status.reviewStatus, locale)}
+            />
+            <StatusPill
+              label={labels.status.drift}
+              value={getLocalizedLabel(driftStatusLabels, workspace.overview.status.driftStatus, locale)}
+            />
           </div>
         </div>
 
         <nav
-          aria-label="Analysis workspace sections"
+          aria-label={labels.navLabel}
           className="flex gap-1 overflow-x-auto"
         >
           {tabs.map((tab) => (
@@ -86,20 +106,24 @@ export function AnalysisWorkspaceShell({
         </nav>
       </header>
 
-      {activeTab === "overview" && <OverviewTab workspace={workspace} />}
-      {activeTab === "impact" && <ImpactMapTab groups={workspace.impactGroups} />}
-      {activeTab === "evidence" && <EvidenceTab evidenceCards={workspace.evidenceCards} />}
+      {activeTab === "overview" && <OverviewTab workspace={workspace} locale={locale} labels={labels.overview} />}
+      {activeTab === "impact" && <ImpactMapTab groups={workspace.impactGroups} locale={locale} labels={labels.impactMap} />}
+      {activeTab === "evidence" && <EvidenceTab evidenceCards={workspace.evidenceCards} labels={labels.evidence} />}
       {activeTab === "risks-qa" && (
         <RisksQaTab
           risks={workspace.risks}
           unknowns={workspace.unknowns}
           qaScenarios={workspace.qaScenarios}
+          locale={locale}
+          labels={labels.risksQa}
         />
       )}
       {activeTab === "review-report" && (
         <ReviewReportTab
           workspace={workspace}
           finalizeStats={stats}
+          locale={locale}
+          labels={labels.reviewReport}
         />
       )}
     </div>
@@ -113,7 +137,7 @@ function StatusPill({ label, value }: { label: string; value: string }) {
         {label}
       </div>
       <div className="mt-1 truncate text-xs font-medium text-foreground">
-        {value.replace(/_/g, " ")}
+        {value}
       </div>
     </div>
   )

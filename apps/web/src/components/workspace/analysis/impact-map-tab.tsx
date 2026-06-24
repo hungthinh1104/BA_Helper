@@ -2,12 +2,22 @@
 
 import type { AnalysisWorkspaceResponse } from "@ba-helper/contracts"
 import { ArtifactKindBadge } from "@/components/workspace/shared/status-badges"
+import { evidenceBasisLabels, getLocalizedLabel, reviewDecisionLabels, type SupportedLocale } from "@/lib/i18n/status-labels"
+import type { AnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
 
 type ImpactGroup = AnalysisWorkspaceResponse["impactGroups"][number]
 
-export function ImpactMapTab({ groups }: { groups: ImpactGroup[] }) {
+export function ImpactMapTab({
+  groups,
+  locale,
+  labels,
+}: {
+  groups: ImpactGroup[]
+  locale: SupportedLocale
+  labels: AnalysisWorkspaceLabels["impactMap"]
+}) {
   if (groups.length === 0) {
-    return <EmptyState title="No impacted artifacts" />
+    return <EmptyState title={labels.empty} />
   }
 
   return (
@@ -37,9 +47,9 @@ export function ImpactMapTab({ groups }: { groups: ImpactGroup[] }) {
                 </div>
                 <p className="mt-3 text-sm text-muted-foreground">{artifact.impactReason}</p>
                 <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                  <span>Basis: {artifact.impactBasis}</span>
-                  <span>Evidence: {artifact.evidenceIds.length}</span>
-                  <span>Review: {artifact.reviewDecision}</span>
+                  <span>{labels.basis}: {getLocalizedLabel(evidenceBasisLabels, artifact.impactBasis, locale)}</span>
+                  <span>{labels.evidence}: {artifact.evidenceIds.length}</span>
+                  <span>{labels.review}: {getLocalizedLabel(reviewDecisionLabels, artifact.reviewDecision, locale)}</span>
                 </div>
               </article>
             ))}
