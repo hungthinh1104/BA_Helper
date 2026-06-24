@@ -97,6 +97,9 @@ const INITIAL_SKIPPED_SUMMARY: Record<ScanSkipReason, number> = {
   UNSUPPORTED_LANGUAGE: 0,
 };
 
+const BINARY_SNIFF_BYTES = 8192;
+const BINARY_CONTROL_BYTE_RATIO = 0.3;
+
 export class SafeFileEnumerator {
   private skippedFiles: Array<{ path: string; reason: ScanSkipReason }> = [];
   private skippedSummary: Record<ScanSkipReason, number> = { ...INITIAL_SKIPPED_SUMMARY };
@@ -220,6 +223,12 @@ export class SafeFileEnumerator {
               continue;
             }
 
+            if (await this.isBinaryFile(fullPath, stat.size)) {
+              diagnostics.push({ code: 'BINARY_SKIPPED', severity: 'INFO', message: 'Binary file skipped', filePath: relativePath });
+              this.recordSkip(relativePath, 'BINARY_FILE');
+              continue;
+            }
+
             totalSizeBytes += stat.size;
             const totalSizeMb = totalSizeBytes / (1024 * 1024);
             if (this.limitsPolicy.isRepoSizeExceeded(totalSizeMb)) {
@@ -298,4 +307,33 @@ export class SafeFileEnumerator {
       limitHits,
     };
   }
+
+  private async isBinaryFile(filePath: string, fileSize: number): Promise<boolean> {
+    if (fileSize === 0) return false;
+
+    const handle = await fs.open(filePath, 'r');
+    try {
+      const length = Math.min(fileSize, BINARY_SNIFF_BYTES);
+      const buffer = Buffer.alloc(length);
+      const { bytesRead } = await handle.read(buffer, 0, length, 0);
+      return isBinaryBuffer(buffer.subarray(0, bytesRead));
+    } finally {
+      await handle.close();
+    }
+  }
+}
+
+function isBinaryBuffer(buffer: Buffer): boolean {
+  if (buffer.length === 0) return false;
+  if (buffer.includes(0)) return true;
+
+  let controlBytes = 0;
+  for (const byte of buffer) {
+    const isAllowedWhitespace = byte === 9 || byte === 10 || byte === 12 || byte === 13;
+    if (byte < 32 && !isAllowedWhitespace) {
+      controlBytes++;
+    }
+  }
+
+  return controlBytes / buffer.length > BINARY_CONTROL_BYTE_RATIO;
 }
