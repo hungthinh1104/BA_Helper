@@ -19,7 +19,7 @@ export function useMultiRepoImpactMatrix(runId: string) {
 
 export function useMatrixRowDetail(runId: string, analysisId: string | null) {
   return useQuery({
-    queryKey: queryKeys.analyses.runs.impactMatrixRowDetail(runId, analysisId),
+    queryKey: queryKeys.analyses.runs.impactMatrixRowDetail(runId, analysisId || ""),
     queryFn: async () => {
       if (!analysisId) throw new Error("analysisId is required")
       const { matrixRowDetailResponseSchema } = await import("@ba-helper/contracts")
