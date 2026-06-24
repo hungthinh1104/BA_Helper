@@ -22,6 +22,7 @@ export type ImpactAnalysisMetadata = {
   domainPack?: {
     id: string;
     version: string;
+    status: 'STABLE' | 'PARTIAL' | 'EXPERIMENTAL' | 'FALLBACK';
     selectedBy: string;
   };
   diagnostics?: Array<{

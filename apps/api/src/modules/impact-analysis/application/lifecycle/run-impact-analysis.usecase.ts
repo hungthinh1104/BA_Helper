@@ -206,6 +206,7 @@ export class RunImpactAnalysisUseCase {
           domainPack: {
             id: domainPack.id,
             version: domainPack.version,
+            status: domainPack.status,
             selectedBy: domainPackSelection.selectedBy,
           },
           diagnostics: [
@@ -216,6 +217,7 @@ export class RunImpactAnalysisUseCase {
               payload: {
                 domainPackId: domainPack.id,
                 domainPackVersion: domainPack.version,
+                domainPackStatus: domainPack.status,
                 selectedBy: domainPackSelection.selectedBy,
                 conceptCount: domainPack.concepts.length,
                 retrievalHintCount: domainPack.retrievalHints.length,

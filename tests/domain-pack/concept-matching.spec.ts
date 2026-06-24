@@ -11,6 +11,11 @@ describe('Domain Pack Concept Matching', () => {
   describe('booking@0.1.0', () => {
     const pack = BookingDomainPack;
 
+    it('is the only stable domain profile in the current registry', () => {
+      expect(pack.status).toBe('STABLE');
+      expect(pack.glossaryMetadata.map((item) => item.locale)).toEqual(['en', 'vi']);
+    });
+
     it('"money back" maps to refund', () => {
       const keys = registry.matchConcepts('user wants their money back', pack);
       expect(keys).toContain('refund');
@@ -52,6 +57,7 @@ describe('Domain Pack Concept Matching', () => {
   describe('general@0.0.0 (fallback)', () => {
     it('general@0.0.0 has no booking-specific concepts/hints', () => {
       const pack = registry.getPackById('general');
+      expect(pack.status).toBe('FALLBACK');
       expect(pack.concepts.length).toBe(0);
       expect(pack.retrievalHints.length).toBe(0);
 

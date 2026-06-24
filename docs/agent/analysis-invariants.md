@@ -73,6 +73,10 @@ generated reports.
 - Domain packs must not create `EVIDENCED` impacts by themselves.
 - Every public domain pack must expose status: `STABLE`, `PARTIAL`,
   `EXPERIMENTAL`, or `FALLBACK`.
+- `booking@0.1.0` is the current `STABLE` profile.
+- `general@0.0.0` is the safe `FALLBACK` profile and must not contain
+  booking-specific concepts, retrieval hints, risks, QA templates, or unknown
+  templates.
 - Booking remains the stable MVP domain; broad multi-domain claims are out of
   scope until each pack has status, limits, and evaluation cases.
 

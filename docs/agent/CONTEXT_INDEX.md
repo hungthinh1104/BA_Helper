@@ -63,6 +63,14 @@ Read:
 - `architecture.md`
 - `input-quality.md`
 
+### Domain packs / domain profiles
+
+Read:
+- `domain-packs.md`
+- `analysis-invariants.md`
+- `localization-and-domain-glossary.md`
+- `testing-strategy.md`
+
 ### Security / hardening
 
 Read:

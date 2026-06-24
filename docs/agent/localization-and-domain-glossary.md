@@ -32,6 +32,10 @@ Glossary JSON files under `packages/domain-packs` are terminology references.
 They are allowed to describe domain terms such as booking, cancellation, refund,
 inventory release, and payment state in multiple locales.
 
+The domain pack registry may expose bounded glossary metadata such as locale,
+asset status, version, and term count. It must not expose glossary term bodies
+as evidence or as a runtime language mode.
+
 They are not executable analyzer rules:
 
 - do not inject these glossary files into prompts in this phase
