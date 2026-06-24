@@ -1,6 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { apiGet, apiPost } from "@/lib/api-client"
 import { queryKeys } from "@/lib/api/query-keys"
+import { canPollAnalysisDetail } from "@/lib/status-helpers"
+import { useOptionalProjectId } from "@/lib/project-context"
+import { useQuery } from "@tanstack/react-query"
+import { apiGet } from "@/lib/api-client"
+import { impactGraphResponseSchema, ImpactGraphResponse } from "@ba-helper/contracts"
+import { useQuery } from '@tanstack/react-query'
+import { apiGet } from '@/lib/api-client'
+import { queryKeys } from '@/lib/api/query-keys'
+import { ReviewQueueResponse, reviewQueueResponseSchema } from '@ba-helper/contracts'
+import { ImpactAnalysisDiffResponse, impactAnalysisDiffResponseSchema } from "@ba-helper/contracts"
+
 import {
   ImpactAnalysisListResponse,
   ImpactAnalysisDetailResponse,
@@ -10,8 +21,6 @@ import {
   impactAnalysisResponseSchema,
 } from "@ba-helper/contracts"
 
-import { canPollAnalysisDetail } from "@/lib/status-helpers"
-import { useOptionalProjectId } from "@/lib/project-context"
 
 export function useAnalyses(params?: { projectId?: string; limit?: number; offset?: number }) {
   const activeProjectId = useOptionalProjectId()
@@ -102,5 +111,44 @@ export function useAnalysisDriftFreshness(projectId: string | undefined, analysi
       )
     },
     enabled: Boolean(projectId && analysisId),
+  })
+}
+
+export function useImpactGraph(analysisId: string | undefined, options?: { enabled?: boolean }) {
+  return useQuery<ImpactGraphResponse>({
+    queryKey: queryKeys.analyses.graph(analysisId ?? ""),
+    queryFn: () =>
+      apiGet<ImpactGraphResponse>(
+        `/api/v1/impact-analyses/${analysisId}/graph`,
+        impactGraphResponseSchema,
+      ),
+    enabled: Boolean(analysisId) && (options?.enabled ?? true),
+    staleTime: 30_000,
+  })
+}
+
+export function useReviewQueue(analysisId: string | undefined, options?: { enabled?: boolean }) {
+  return useQuery<ReviewQueueResponse>({
+    queryKey: queryKeys.analyses.reviewQueue(analysisId ?? ''),
+    queryFn: () =>
+      apiGet<ReviewQueueResponse>(
+        `/api/v1/impact-analyses/${analysisId}/review-queue`,
+        reviewQueueResponseSchema,
+      ),
+    enabled: Boolean(analysisId) && (options?.enabled ?? true),
+  })
+}
+
+export function useAnalysisDiff(analysisId: string, enabled: boolean = true) {
+  return useQuery({
+    queryKey: queryKeys.analyses.diff(analysisId),
+    queryFn: async () => {
+      return apiGet<ImpactAnalysisDiffResponse>(
+        `/api/v1/impact-analyses/${analysisId}/diff`,
+        impactAnalysisDiffResponseSchema
+      )
+    },
+    enabled: Boolean(analysisId) && enabled,
+    refetchOnWindowFocus: true,
   })
 }
