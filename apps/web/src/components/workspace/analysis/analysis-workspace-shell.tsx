@@ -17,8 +17,9 @@ import { ImpactMapTab } from "./impact-map-tab"
 import { EvidenceTab } from "./evidence-tab"
 import { RisksQaTab } from "./risks-qa-tab"
 import { ReviewReportTab } from "./review-report-tab"
+import { LineageDiffTab } from "./lineage-diff-tab"
 
-type WorkspaceTab = "overview" | "impact" | "evidence" | "risks-qa" | "review-report"
+type WorkspaceTab = "overview" | "impact" | "evidence" | "risks-qa" | "review-report" | "lineage-diff"
 
 export function AnalysisWorkspaceShell({
   workspace,
@@ -35,6 +36,7 @@ export function AnalysisWorkspaceShell({
     { id: "evidence", label: labels.tabs.evidence },
     { id: "risks-qa", label: labels.tabs.risksQa },
     { id: "review-report", label: labels.tabs.reviewReport },
+    { id: "lineage-diff", label: labels.tabs.lineageDiff },
   ]
   const stats = useMemo(() => {
     const reviewed = workspace.reviewQueue.filter(
@@ -124,6 +126,13 @@ export function AnalysisWorkspaceShell({
           finalizeStats={stats}
           locale={locale}
           labels={labels.reviewReport}
+        />
+      )}
+      {activeTab === "lineage-diff" && (
+        <LineageDiffTab
+          workspace={workspace}
+          locale={locale}
+          labels={labels.lineageDiff}
         />
       )}
     </div>

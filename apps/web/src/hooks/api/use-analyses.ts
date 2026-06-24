@@ -5,7 +5,12 @@ import { canPollAnalysisDetail } from "@/lib/status-helpers"
 import { useOptionalProjectId } from "@/lib/project-context"
 
 import { ReviewQueueResponse, reviewQueueResponseSchema } from '@ba-helper/contracts'
-import { ImpactAnalysisDiffResponse, impactAnalysisDiffResponseSchema } from "@ba-helper/contracts"
+import {
+  ImpactAnalysisDiffResponse,
+  LineageTimelineResponse,
+  impactAnalysisDiffResponseSchema,
+  lineageTimelineResponseSchema,
+} from "@ba-helper/contracts"
 
 import {
   ImpactAnalysisListResponse,
@@ -103,8 +108,7 @@ export function useAnalysisLineage(analysisId: string) {
   return useQuery({
     queryKey: queryKeys.analyses.lineage(analysisId),
     queryFn: async () => {
-      const { lineageTimelineResponseSchema } = await import("@ba-helper/contracts")
-      return apiGet(
+      return apiGet<LineageTimelineResponse>(
         `/api/v1/impact-analyses/${analysisId}/lineage`,
         lineageTimelineResponseSchema
       )
@@ -153,7 +157,7 @@ export function useReviewQueue(analysisId: string | undefined, options?: { enabl
 }
 
 export function useAnalysisDiff(analysisId: string, enabled: boolean = true) {
-  return useQuery({
+  return useQuery<ImpactAnalysisDiffResponse>({
     queryKey: queryKeys.analyses.diff(analysisId),
     queryFn: async () => {
       return apiGet<ImpactAnalysisDiffResponse>(
