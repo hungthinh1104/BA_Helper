@@ -65,6 +65,12 @@ Input quality is part of domain correctness. Invalid repository URLs,
 unsupported frameworks, and non-actionable change requests do not enter impact
 analysis; see [input-quality.md](input-quality.md).
 
+Analysis output must follow the product model in
+[analysis-output-taxonomy.md](analysis-output-taxonomy.md) and the audit rules
+in [analysis-invariants.md](analysis-invariants.md). These docs define the
+fixed analysis groups, evidence boundaries, reviewed snapshot semantics, and
+presentation boundary for later workspace read models.
+
 ## Backend Boundaries
 
 Use modules by capability, not by generic technical layer:

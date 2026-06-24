@@ -38,12 +38,11 @@ Read:
 - `auth-permissions.md`
 - `api-contracts.md`
 - `current-state.md`
-- `scoped-authorization-audit.md`
 
 ### Report / export
 
 Read:
-- `audit-workflow.md` — Audit invariants for reviewed report snapshots, review completion gate, final reviewed report export, and failure modes.
+- `analysis-invariants.md` — Audit invariants for reviewed report snapshots, review completion gate, final reviewed report export, and failure modes.
 - `api-contracts.md`
 - `use-cases.md`
 - `current-state.md`
