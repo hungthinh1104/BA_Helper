@@ -25,6 +25,7 @@ import {
   reviewDecisionResponseSchema,
   lineageTimelineResponseSchema,
   driftFreshnessRecommendationSchema,
+  analysisWorkspaceResponseSchema,
   RequestUser,
 } from '@ba-helper/contracts';
 import { CurrentUser } from '../../auth/api/current-user.decorator';
@@ -54,6 +55,7 @@ import { GetLatestReviewDecisionUseCase } from '../application/review/get-latest
 import { GetImpactAnalysisLineageUseCase } from '../application/queries/get-impact-analysis-lineage.usecase';
 import { GetReviewCoverageUseCase } from '../application/review/get-review-coverage.usecase';
 import { GetAnalysisDriftFreshnessUseCase } from '../application/queries/get-analysis-drift-freshness.usecase';
+import { GetAnalysisWorkspaceUseCase } from '../application/queries/get-analysis-workspace.usecase';
 import {
   mapImpactAnalysisListItem,
   mapImpactAnalysisResponse,
@@ -77,6 +79,7 @@ export class ImpactAnalysisReadModelController {
     private readonly getImpactDiff: GetImpactDiffUseCase,
     private readonly getLineage: GetImpactAnalysisLineageUseCase,
     private readonly getAnalysisDriftFreshness: GetAnalysisDriftFreshnessUseCase,
+    private readonly getAnalysisWorkspace: GetAnalysisWorkspaceUseCase,
     private readonly permissions: ProjectPermissionService,
   ) {}
 
@@ -111,6 +114,16 @@ export class ImpactAnalysisReadModelController {
     await this.permissions.assertCanReadAnalysis(actor, analysisId);
     const result = await this.getImpactGraph.execute(analysisId);
     return impactGraphResponseSchema.parse(result);
+  }
+
+  @Get('/impact-analyses/:analysisId/workspace')
+  async workspace(
+    @Param('analysisId') analysisId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertCanReadAnalysis(actor, analysisId);
+    const result = await this.getAnalysisWorkspace.execute(analysisId);
+    return analysisWorkspaceResponseSchema.parse(result);
   }
 
   @Get('/impact-analyses/:analysisId/qa-coverage')

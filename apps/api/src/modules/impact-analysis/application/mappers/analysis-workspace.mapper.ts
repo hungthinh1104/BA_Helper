@@ -1,0 +1,255 @@
+import {
+	AnalysisWorkspaceResponse,
+	analysisWorkspaceResponseSchema,
+} from '@ba-helper/contracts';
+import {
+	KIND_GROUPS,
+	WorkspaceAnalysis,
+	WorkspaceEvidence,
+	WorkspaceInsight,
+	WorkspaceTraceabilityLink,
+} from './analysis-workspace.mapper.types';
+import {
+	buildDomainProfileId,
+	buildDriftStatus,
+	buildReportStatus,
+	deriveReviewStatus,
+	deriveRiskSeverity,
+	detectRequirementLanguage,
+	evidenceArtifactKeys,
+	impactGroupDescription,
+	impactGroupTitle,
+	isRiskInsight,
+	normalizeUniversalKind,
+	parseQaSteps,
+	pushMap,
+	readMetadata,
+	reviewItemTypeForInsight,
+	toEvidenceBasis,
+	toReviewDecision,
+	uniqueCount,
+} from './analysis-workspace.mapper.helpers';
+
+export function mapAnalysisWorkspace(
+	analysis: WorkspaceAnalysis,
+): AnalysisWorkspaceResponse {
+	const evidenceCards = buildEvidenceCards(analysis);
+	const risks = analysis.insights.filter(isRiskInsight).map(mapRisk);
+	const unknowns = analysis.insights
+		.filter((insight) => insight.insightType === 'UNKNOWN')
+		.map(mapUnknown);
+	const qaScenarios = analysis.insights
+		.filter((insight) => insight.insightType === 'QA_SCENARIO')
+		.map(mapQaScenario);
+	const reviewQueue = buildReviewQueue(analysis);
+	const reportStatus = buildReportStatus(analysis);
+	const driftStatus = buildDriftStatus(analysis);
+
+	const response: AnalysisWorkspaceResponse = {
+		overview: {
+			analysisId: analysis.id,
+			requirement: {
+				revisionId: analysis.requirementRevision.id,
+				title: analysis.requirementRevision.title,
+				summary: analysis.requirementRevision.normalizedText,
+				language: detectRequirementLanguage(
+					analysis.requirementRevision.rawText,
+					analysis.requirementRevision.normalizedText,
+				),
+				domainProfileId: buildDomainProfileId(analysis.snapshot.profile),
+			},
+			snapshot: {
+				snapshotId: analysis.snapshot.id,
+				repositoryId: analysis.snapshot.repositoryId,
+				commitSha: analysis.snapshot.commitSha,
+				analyzerVersion: analysis.snapshot.analyzerVersion,
+				profileVersion: analysis.snapshot.profile?.profileVersion,
+			},
+			status: {
+				analysisStatus: analysis.status as AnalysisWorkspaceResponse['overview']['status']['analysisStatus'],
+				reviewStatus: deriveReviewStatus(analysis),
+				snapshotStatus: 'locked',
+				reportStatus: reportStatus.status,
+				driftStatus: driftStatus.status,
+			},
+			counts: {
+				impactedArtifacts: uniqueCount(
+					analysis.traceabilityLinks.map((link) => link.artifact.artifactKey),
+				),
+				evidenceItems: evidenceCards.length,
+				risks: risks.length,
+				unknowns: unknowns.length,
+				qaScenarios: qaScenarios.length,
+				pendingReviewItems: reviewQueue.length,
+			},
+		},
+		impactGroups: buildImpactGroups(analysis.traceabilityLinks),
+		evidenceCards,
+		risks,
+		unknowns,
+		qaScenarios,
+		reviewQueue,
+		reportStatus,
+		driftStatus,
+	};
+
+	return analysisWorkspaceResponseSchema.parse(response);
+}
+
+function buildImpactGroups(
+	links: WorkspaceTraceabilityLink[],
+): AnalysisWorkspaceResponse['impactGroups'] {
+	const grouped = new Map<
+		AnalysisWorkspaceResponse['impactGroups'][number]['group'],
+		AnalysisWorkspaceResponse['impactGroups'][number]['artifacts']
+	>();
+
+	for (const link of links) {
+		const group = KIND_GROUPS[link.artifact.universalKind] ?? 'unknown';
+		const artifacts = grouped.get(group) ?? [];
+		artifacts.push({
+			artifactId: link.artifact.id,
+			artifactKey: link.artifact.artifactKey,
+			name: link.artifact.name,
+			filePath: link.artifact.filePath,
+			universalKind: normalizeUniversalKind(link.artifact.universalKind),
+			impactBasis: toEvidenceBasis(link.linkBasis),
+			impactReason: `Traceability link ${link.id} is ${link.linkBasis.toLowerCase()}.`,
+			traceabilityLinkIds: [link.id],
+			evidenceIds: link.evidenceLinks.map((item) => item.evidenceId),
+			reviewDecision: toReviewDecision(
+				link.reviewDecision?.decision ?? link.reviewStatus,
+			),
+		});
+		grouped.set(group, artifacts);
+	}
+
+	return Array.from(grouped.entries()).map(([group, artifacts]) => ({
+		group,
+		title: impactGroupTitle(group),
+		description: impactGroupDescription(group),
+		artifacts,
+	}));
+}
+
+function buildEvidenceCards(
+	analysis: WorkspaceAnalysis,
+): AnalysisWorkspaceResponse['evidenceCards'] {
+	const insightLinks = new Map<string, string[]>();
+	const traceabilityLinks = new Map<string, string[]>();
+	const evidence = new Map<string, WorkspaceEvidence>();
+
+	for (const insight of analysis.insights) {
+		for (const link of insight.evidenceLinks) {
+			evidence.set(link.evidenceId, link.evidence);
+			pushMap(insightLinks, link.evidenceId, insight.id);
+		}
+	}
+
+	for (const traceability of analysis.traceabilityLinks) {
+		for (const link of traceability.evidenceLinks) {
+			evidence.set(link.evidenceId, link.evidence);
+			pushMap(traceabilityLinks, link.evidenceId, traceability.id);
+		}
+	}
+
+	return Array.from(evidence.values()).map((item) => ({
+		evidenceId: item.id,
+		sourceType: item.sourceType.toLowerCase() as AnalysisWorkspaceResponse['evidenceCards'][number]['sourceType'],
+		filePath: item.sourcePath,
+		lineRange: {
+			startLine: item.startLine,
+			endLine: item.endLine,
+		},
+		excerpt: item.excerpt,
+		relevanceReason: 'Linked to analysis insight or traceability evidence.',
+		artifactId: item.artifactId,
+		artifactKey: item.artifact?.artifactKey ?? null,
+		linkedInsightIds: insightLinks.get(item.id) ?? [],
+		linkedTraceabilityLinkIds: traceabilityLinks.get(item.id) ?? [],
+	}));
+}
+
+function mapRisk(
+	insight: WorkspaceInsight,
+): AnalysisWorkspaceResponse['risks'][number] {
+	return {
+		riskId: insight.insightKey,
+		sourceInsightId: insight.id,
+		title: insight.title,
+		severity: deriveRiskSeverity(insight),
+		category: String(readMetadata(insight.metadata, 'category') ?? insight.insightType),
+		whyItMatters: insight.reasoning ?? insight.description,
+		relatedArtifactKeys: evidenceArtifactKeys(insight),
+		relatedEvidenceIds: insight.evidenceLinks.map((link) => link.evidenceId),
+		relatedUnknownIds: [],
+		reviewDecision: toReviewDecision(insight.reviewStatus),
+	};
+}
+
+function mapUnknown(
+	insight: WorkspaceInsight,
+): AnalysisWorkspaceResponse['unknowns'][number] {
+	return {
+		unknownId: insight.insightKey,
+		sourceInsightId: insight.id,
+		title: insight.title,
+		question: insight.description,
+		whyItMatters: insight.reasoning ?? insight.description,
+		relatedArtifactKeys: evidenceArtifactKeys(insight),
+		relatedEvidenceIds: insight.evidenceLinks.map((link) => link.evidenceId),
+		reviewDecision: toReviewDecision(insight.reviewStatus),
+	};
+}
+
+function mapQaScenario(
+	insight: WorkspaceInsight,
+): AnalysisWorkspaceResponse['qaScenarios'][number] {
+	const steps = parseQaSteps(insight.description);
+	return {
+		scenarioId: insight.insightKey,
+		sourceInsightId: insight.id,
+		title: insight.title,
+		given: steps.given,
+		when: steps.when,
+		then: steps.then,
+		regressionTarget: insight.reasoning ?? insight.title,
+		relatedRiskIds: [],
+		relatedUnknownIds: [],
+		relatedArtifactKeys: evidenceArtifactKeys(insight),
+		relatedEvidenceIds: insight.evidenceLinks.map((link) => link.evidenceId),
+		reviewDecision: toReviewDecision(insight.reviewStatus),
+	};
+}
+
+function buildReviewQueue(
+	analysis: WorkspaceAnalysis,
+): AnalysisWorkspaceResponse['reviewQueue'] {
+	const insightItems = analysis.insights
+		.filter((insight) => insight.reviewStatus === 'NEEDS_REVIEW')
+		.map((insight) => ({
+			itemId: insight.id,
+			itemType: reviewItemTypeForInsight(insight),
+			title: insight.title,
+			currentDecision: toReviewDecision(insight.reviewStatus),
+			evidenceCount: insight.evidenceLinks.length,
+			linkedArtifactKeys: evidenceArtifactKeys(insight),
+			linkedEvidenceIds: insight.evidenceLinks.map((link) => link.evidenceId),
+			blockingFinalize: true,
+		}));
+
+	const linkItems = analysis.traceabilityLinks
+		.filter((link) => link.reviewStatus === 'NEEDS_REVIEW')
+		.map((link) => ({
+			itemId: link.id,
+			itemType: 'impact' as const,
+			title: `Review impact link: ${link.artifact.name}`,
+			currentDecision: toReviewDecision(link.reviewStatus),
+			evidenceCount: link.evidenceLinks.length,
+			linkedArtifactKeys: [link.artifact.artifactKey],
+			linkedEvidenceIds: link.evidenceLinks.map((item) => item.evidenceId),
+			blockingFinalize: true,
+		}));
+
+	return [...insightItems, ...linkItems];
+}
