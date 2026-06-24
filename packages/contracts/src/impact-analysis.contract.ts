@@ -334,6 +334,7 @@ export const impactAnalysisDiffResponseSchema = z.object({
 		baseCommitSha: z.string().optional(),
 		currentCommitSha: z.string().optional(),
 		sourceClarificationId: z.string().uuid().optional(),
+		reviewClarificationRequestId: z.string().uuid().optional(),
 	}),
 
 	summary: z.object({
