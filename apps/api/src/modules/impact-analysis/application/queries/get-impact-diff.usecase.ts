@@ -78,6 +78,7 @@ export class GetImpactDiffUseCase {
       baseCommitSha: baseAnalysis.snapshot.commitSha,
       currentCommitSha: currentAnalysis.snapshot.commitSha,
       sourceClarificationId: currentAnalysis.sourceClarificationId ?? undefined,
+      reviewClarificationRequestId: currentAnalysis.reviewClarificationRequestId ?? undefined,
     };
 
     // 2. Diff TraceabilityLinks (Impacted Artifacts)

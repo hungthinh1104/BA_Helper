@@ -31,6 +31,7 @@ describe('GetImpactDiffUseCase', () => {
     status: 'COMPLETED',
     derivedFromAnalysisId: 'base-analysis',
     sourceClarificationId: 'clar-1',
+    reviewClarificationRequestId: '00000000-0000-4000-8000-000000000111',
     snapshot: { commitSha: 'def5678' },
   };
 
@@ -113,6 +114,8 @@ describe('GetImpactDiffUseCase', () => {
     expect(result.comparisonContext.snapshotChanged).toBe(true);
     expect(result.comparisonContext.baseCommitSha).toBe('abc1234');
     expect(result.comparisonContext.currentCommitSha).toBe('def5678');
+    expect(result.comparisonContext.sourceClarificationId).toBe('clar-1');
+    expect(result.comparisonContext.reviewClarificationRequestId).toBe('00000000-0000-4000-8000-000000000111');
 
     expect(result.summary.addedImpacts).toBe(1);
     expect(result.summary.removedImpacts).toBe(1);
