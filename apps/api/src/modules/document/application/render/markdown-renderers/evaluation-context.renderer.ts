@@ -1,4 +1,4 @@
-import { EvaluationContextAdapter } from '../evaluation-context.adapter';
+import { EvaluationContextAdapter } from '../../evaluation-context.adapter';
 
 export function renderEvaluationContext(evalContext: ReturnType<EvaluationContextAdapter['getEvaluationContext']>): string[] {
   const lines: string[] = [];

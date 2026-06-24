@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from '../../prisma/prisma.service';
-import { QueueService } from '../../queue/queue.service';
-import { AppError } from '../../../shared/app-error';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { QueueService } from '../../../queue/queue.service';
+import { AppError } from '../../../../shared/app-error';
 
 type DocumentJobTx = Prisma.TransactionClient | PrismaService;
 

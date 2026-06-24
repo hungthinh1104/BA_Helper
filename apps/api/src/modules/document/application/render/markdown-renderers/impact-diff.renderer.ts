@@ -1,4 +1,4 @@
-import { MarkdownReportRenderContext } from '../markdown-impact-report.types';
+import { MarkdownReportRenderContext } from '../../markdown-impact-report.types';
 import { formatArtifactType } from './markdown-render-utils';
 
 export function renderImpactDiff(context: MarkdownReportRenderContext): string[] {

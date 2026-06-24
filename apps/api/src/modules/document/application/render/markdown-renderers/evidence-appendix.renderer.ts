@@ -1,4 +1,4 @@
-import { MarkdownReportRenderContext } from '../markdown-impact-report.types';
+import { MarkdownReportRenderContext } from '../../markdown-impact-report.types';
 
 export function renderEvidenceAppendix(context: MarkdownReportRenderContext): string[] {
   const { insights } = context;

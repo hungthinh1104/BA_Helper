@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { DocumentJobStatus } from '@prisma/client';
-import { AppError } from '../../../shared/app-error';
-import { GetReviewCompletionUseCase } from '../../traceability/application/get-review-completion.usecase';
+import { AppError } from '../../../../shared/app-error';
+import { GetReviewCompletionUseCase } from '../../../traceability/application/get-review-completion.usecase';
 import { GetLatestReviewedReportSnapshotUseCase } from './get-latest-reviewed-report-snapshot.usecase';
 import { FinalReviewedReportResponse } from '@ba-helper/contracts';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../../prisma/prisma.service';
 
 @Injectable()
 export class GetFinalReviewedReportUseCase {

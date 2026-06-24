@@ -1,4 +1,4 @@
-import { MarkdownReportRenderContext } from '../markdown-impact-report.types';
+import { MarkdownReportRenderContext } from '../../markdown-impact-report.types';
 import { formatCertainty } from './markdown-render-utils';
 
 export function renderImpactsAndAc(context: MarkdownReportRenderContext): string[] {

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { MermaidImpactDiagramBuilder } from './mermaid-impact-diagram.builder';
-import { EvaluationContextAdapter } from './evaluation-context.adapter';
-import { MarkdownReportRenderContext } from './markdown-impact-report.types';
+import { MermaidImpactDiagramBuilder } from '../mermaid-impact-diagram.builder';
+import { EvaluationContextAdapter } from '../evaluation-context.adapter';
+import { MarkdownReportRenderContext } from '../markdown-impact-report.types';
 import { renderReportHeader } from './markdown-renderers/report-header.renderer';
 import { renderExecutiveSummary } from './markdown-renderers/executive-summary.renderer';
 import { renderImpactedAreas, renderEvidenceQuality } from './markdown-renderers/traceability-section.renderer';

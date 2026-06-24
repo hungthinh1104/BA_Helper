@@ -8,8 +8,8 @@ import { TraceabilityRepository } from '../../../traceability/infrastructure/tra
 import { GraphRepository } from '../../../graph/infrastructure/graph.repository';
 import { ReviewNoteRepository } from '../../infrastructure/review-note.repository';
 import { ClarificationRepository } from '../../../clarification/infrastructure/clarification.repository';
-import { CreateReviewedReportSnapshotUseCase } from '../../../document/application/create-reviewed-report-snapshot.usecase';
-import { EnqueueDocumentJobUseCase } from '../../../document/application/enqueue-document-job.usecase';
+import { CreateReviewedReportSnapshotUseCase } from '../../../document/application/commands/create-reviewed-report-snapshot.usecase';
+import { EnqueueDocumentJobUseCase } from '../../../document/application/commands/enqueue-document-job.usecase';
 import { AppError } from '../../../../shared/app-error';
 import { AnalysisReviewDecisionValue } from '@prisma/client';
 import { RequestUser } from '@ba-helper/contracts';

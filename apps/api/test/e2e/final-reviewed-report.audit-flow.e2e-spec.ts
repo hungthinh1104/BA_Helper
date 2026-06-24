@@ -314,7 +314,7 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
 
   it('GeneratedDocument markdown reflects the snapshot payload, not the live mutated state', async () => {
     const { analysisId, link1Id, link2Id } = await setupBasicAnalysisWithLinks();
-    const runDocumentJob = app.get(require('../../src/modules/document/application/run-document-job.usecase').RunDocumentJobUseCase);
+    const runDocumentJob = app.get(require('../../src/modules/document/application/jobs/run-document-job.usecase').RunDocumentJobUseCase);
 
     // 1. Assign ACCEPTED to both links
     await request(app.getHttpServer())

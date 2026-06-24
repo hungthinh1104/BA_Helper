@@ -1,4 +1,4 @@
-import { MarkdownReportRenderContext } from '../markdown-impact-report.types';
+import { MarkdownReportRenderContext } from '../../markdown-impact-report.types';
 import { resolveArtifactDisplayType } from './markdown-render-utils';
 
 export function renderExecutiveSummary(context: MarkdownReportRenderContext, diagramResult: { mermaid: string; isTruncated: boolean }): string[] {

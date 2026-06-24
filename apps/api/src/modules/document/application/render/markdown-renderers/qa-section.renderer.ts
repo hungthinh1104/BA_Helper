@@ -1,4 +1,4 @@
-import { MarkdownReportRenderContext } from '../markdown-impact-report.types';
+import { MarkdownReportRenderContext } from '../../markdown-impact-report.types';
 import { parseQaScenarioParts } from './markdown-render-utils';
 
 export function renderQaSection(context: MarkdownReportRenderContext): string[] {

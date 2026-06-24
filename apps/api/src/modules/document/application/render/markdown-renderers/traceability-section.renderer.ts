@@ -1,6 +1,6 @@
-import { MarkdownReportRenderContext } from '../markdown-impact-report.types';
+import { MarkdownReportRenderContext } from '../../markdown-impact-report.types';
 import { resolveArtifactDisplayType } from './markdown-render-utils';
-import { EvidenceQualityAnnotator } from '../evidence-quality.annotator';
+import { EvidenceQualityAnnotator } from '../../evidence-quality.annotator';
 
 export function renderImpactedAreas(context: MarkdownReportRenderContext): string[] {
   const { analysis, traceabilityLinks, reviewNotes } = context;

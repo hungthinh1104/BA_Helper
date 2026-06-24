@@ -1,4 +1,4 @@
-import { MarkdownReportRenderContext } from '../markdown-impact-report.types';
+import { MarkdownReportRenderContext } from '../../markdown-impact-report.types';
 
 export function renderReportHeader(context: MarkdownReportRenderContext): string[] {
   const { analysis, metadata } = context;
