@@ -18,7 +18,7 @@ import {
   impactAnalysisResponseSchema,
   approvedImpactReportResponseSchema,
 } from '@ba-helper/contracts';
-import { RunDocumentJobUseCase } from '../../src/modules/document/application/run-document-job.usecase';
+import { RunDocumentJobUseCase } from '../../src/modules/document/application/jobs/run-document-job.usecase';
 
 describe('Analysis Flow (E2E)', () => {
   let app: INestApplication;

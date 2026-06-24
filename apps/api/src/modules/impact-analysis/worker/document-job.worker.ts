@@ -1,6 +1,6 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
-import { RunDocumentJobUseCase } from '../../document/application/run-document-job.usecase';
+import { RunDocumentJobUseCase } from '../../document/application/jobs/run-document-job.usecase';
 
 @Processor('document-job')
 export class DocumentJobWorker extends WorkerHost {
