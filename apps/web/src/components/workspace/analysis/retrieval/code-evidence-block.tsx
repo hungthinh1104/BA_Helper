@@ -3,8 +3,8 @@
 import { useState, useCallback } from "react"
 import { Code2, Copy, Check } from "lucide-react"
 
-import { RetrievalSignalBadge, RetrievalReason, RetrievalDebugPanel } from "@/components/workspace/shared/retrieval/retrieval-signals"
-import { RetrievalSuggestion } from "@/components/workspace/shared/retrieval/retrieval-suggestion"
+import { RetrievalSignalBadge, RetrievalReason, RetrievalDebugPanel } from "@/components/workspace/analysis/retrieval/retrieval-signals"
+import { RetrievalSuggestion } from "@/components/workspace/analysis/retrieval/retrieval-suggestion"
 import { RetrievalMetadata } from "@ba-helper/contracts"
 
 // Basic syntax highlighting for TS/JS

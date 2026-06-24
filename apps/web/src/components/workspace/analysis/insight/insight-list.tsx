@@ -1,5 +1,5 @@
 import { InsightListResponse } from "@ba-helper/contracts"
-import { InsightCard } from "@/components/workspace/shared/insight/insight-card"
+import { InsightCard } from "@/components/workspace/analysis/insight/insight-card"
 
 type Insight = InsightListResponse["items"][number]
 
