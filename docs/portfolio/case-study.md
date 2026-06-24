@@ -57,7 +57,7 @@ This audit workflow is not just conceptual; it is strictly enforced by our CI/CD
 - **E17B Frontend Tests:** Asserts the UI correctly disables export functions and serves deterministic Blob downloads when the gate is passed.
 
 ## 12. Known Limits
-- The system is an impact analyzer, not a formal verification engine.
+- The system is an impact analyzer, not a proof system.
 - AI proposals are hints; human review is always required.
 - Current deep parser support is optimized for TypeScript/NestJS repositories.
 - Pilot language adapters demonstrate extraction contracts, not full compiler-level semantic analysis.
