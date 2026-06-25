@@ -146,7 +146,7 @@ export function ConfirmationStep({
           )}
           {oldAnalysisSnapshotCommit &&
             selectedRepo?.latestSnapshot?.commitSha !== oldAnalysisSnapshotCommit && (
-              <div className="px-4 py-3 flex gap-2 items-start bg-blue-500/10 text-blue-500/90 text-[12px] leading-snug">
+              <div className="px-4 py-3 flex gap-2 items-start bg-info-soft text-info/90 text-[12px] leading-snug">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <p>
                   This analysis will use a newer repository snapshot (

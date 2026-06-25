@@ -79,12 +79,12 @@ export function FinalReviewGatePanel({ analysisId }: FinalReviewGatePanelProps) 
 
   return (
     <div className="mt-8 border-t border-border/50 pt-8 print:hidden">
-      <div className={`p-6 rounded-lg border ${isComplete ? 'bg-green-500/5 border-green-500/20' : 'bg-surface border-border/50'} relative overflow-hidden`}>
+      <div className={`p-6 rounded-lg border ${isComplete ? 'bg-success-soft border-success/20' : 'bg-surface border-border/50'} relative overflow-hidden`}>
         
         {/* Subtle background decoration */}
         {isComplete && (
           <div className="absolute -right-12 -top-12 opacity-5 pointer-events-none">
-            <ShieldCheck className="w-64 h-64 text-green-500" />
+            <ShieldCheck className="w-64 h-64 text-success" />
           </div>
         )}
 
@@ -92,9 +92,9 @@ export function FinalReviewGatePanel({ analysisId }: FinalReviewGatePanelProps) 
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               {isComplete ? (
-                <ShieldCheck className="w-5 h-5 text-green-500" />
+                <ShieldCheck className="w-5 h-5 text-success" />
               ) : (
-                <ShieldAlert className="w-5 h-5 text-orange-500" />
+                <ShieldAlert className="w-5 h-5 text-warning" />
               )}
               <h3 className="text-base font-semibold text-foreground tracking-tight">Final Review Gate</h3>
             </div>
@@ -110,7 +110,7 @@ export function FinalReviewGatePanel({ analysisId }: FinalReviewGatePanelProps) 
               </div>
               <div className="bg-background rounded-md border border-border/50 p-3">
                 <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">Accepted</div>
-                <div className="font-mono text-base text-green-500">{accepted}</div>
+                <div className="font-mono text-base text-success">{accepted}</div>
               </div>
               <div className="bg-background rounded-md border border-border/50 p-3">
                 <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">Rejected</div>
@@ -118,26 +118,26 @@ export function FinalReviewGatePanel({ analysisId }: FinalReviewGatePanelProps) 
               </div>
               <div className="bg-background rounded-md border border-border/50 p-3">
                 <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">Needs Rev.</div>
-                <div className="font-mono text-base text-blue-500">{needsReview}</div>
+                <div className="font-mono text-base text-info">{needsReview}</div>
               </div>
               <div className="bg-background rounded-md border border-border/50 p-3">
                 <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">More Evid.</div>
-                <div className="font-mono text-base text-orange-500">{needsMoreEvidence}</div>
+                <div className="font-mono text-base text-warning">{needsMoreEvidence}</div>
               </div>
-              <div className={`bg-background rounded-md border p-3 ${unreviewed > 0 ? 'border-orange-500/30' : 'border-border/50'}`}>
+              <div className={`bg-background rounded-md border p-3 ${unreviewed > 0 ? 'border-warning/30' : 'border-border/50'}`}>
                 <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">Unreviewed</div>
-                <div className={`font-mono text-base ${unreviewed > 0 ? 'text-orange-500' : 'text-muted-foreground'}`}>{unreviewed}</div>
+                <div className={`font-mono text-base ${unreviewed > 0 ? 'text-warning' : 'text-muted-foreground'}`}>{unreviewed}</div>
               </div>
             </div>
 
             <div className="mt-4 flex flex-col gap-2">
               {!isComplete && blockingReasons.map(reason => (
-                <div key={reason} className="flex items-center text-[12px] text-orange-500 font-medium bg-orange-500/10 w-fit px-2 py-1 rounded-sm border border-orange-500/20">
+                <div key={reason} className="flex items-center text-[12px] text-warning font-medium bg-warning-soft w-fit px-2 py-1 rounded-sm border border-warning/20">
                   <span className="mr-2">•</span> {formatBlockingReason(reason)}
                 </div>
               ))}
               {!isComplete && !hasReviewedSnapshot && !blockingReasons.includes('REVIEWED_SNAPSHOT_MISSING') && (
-                <div className="flex items-center text-[12px] text-orange-500 font-medium bg-orange-500/10 w-fit px-2 py-1 rounded-sm border border-orange-500/20">
+                <div className="flex items-center text-[12px] text-warning font-medium bg-warning-soft w-fit px-2 py-1 rounded-sm border border-warning/20">
                   <span className="mr-2">•</span> Blocked: reviewed snapshot is missing
                 </div>
               )}
@@ -146,7 +146,7 @@ export function FinalReviewGatePanel({ analysisId }: FinalReviewGatePanelProps) 
           
           <div className="flex flex-col items-end shrink-0 gap-3">
             {isComplete && (
-              <span className="text-[12px] font-medium text-green-500 tracking-wide uppercase">
+              <span className="text-[12px] font-medium text-success tracking-wide uppercase">
                 Ready for audited export
               </span>
             )}
