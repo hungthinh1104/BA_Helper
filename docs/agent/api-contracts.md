@@ -55,6 +55,7 @@ GET  /api/v1/multi-repo-runs/:runId/merged-report/export.pdf
 
 GET  /api/v1/projects/:projectId/analyses
 GET  /api/v1/impact-analyses/:analysisId
+GET  /api/v1/impact-analyses/:analysisId/workspace
 GET  /api/v1/impact-analyses/:analysisId/insights
 GET  /api/v1/impact-analyses/:analysisId/evidence
 POST /api/v1/impact-analyses/:analysisId/finalize
@@ -68,6 +69,7 @@ GET  /api/v1/impact-analyses/:analysisId/documents
 GET  /api/v1/impact-analyses/:analysisId/approved-report
 GET  /api/v1/impact-analyses/:analysisId/approved-report/export.md
 GET  /api/v1/impact-analyses/:analysisId/approved-report/export.pdf
+GET  /api/v1/impact-analyses/:analysisId/final-reviewed-report?locale=en|vi
 ```
 
 Deferred until after the Markdown report/review completion gate:
@@ -411,6 +413,31 @@ or duplicate transition logic. `freshness.isStale` belongs to the analysis
 view against its selected target, not to immutable snapshot identity. If the
 analysis becomes known stale while waiting for review, `canReview` and
 `canFinalize` are false by default; the user reruns against a current snapshot.
+
+`GET /api/v1/impact-analyses/:analysisId/workspace` returns the presentation
+read model for the analysis workspace. The response validates against
+`analysisWorkspaceResponseSchema` in `packages/contracts` and contains:
+
+```text
+overview
+impactGroups
+evidenceCards
+risks
+unknowns
+qaScenarios
+reviewQueue
+reportStatus
+driftStatus
+```
+
+Rules:
+
+```text
+All status fields are backend-derived.
+progress === 100 does not imply review complete, report generated, or drift clean.
+Cards preserve analysis, requirement revision, snapshot, artifact, evidence, insight, traceability, reviewed report snapshot, document job, and source target ids where applicable.
+The endpoint is a read model projection; it does not mutate analysis behavior or replace lower-level resources.
+```
 
 ## Deploy Troubleshooting
 

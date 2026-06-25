@@ -1,9 +1,11 @@
 import { MarkdownReportRenderContext } from '../../markdown-impact-report.types';
 import { resolveArtifactDisplayType } from './markdown-render-utils';
 import { EvidenceQualityAnnotator } from '../../evidence-quality.annotator';
+import { getReportLabels } from '../report-localization';
 
 export function renderImpactedAreas(context: MarkdownReportRenderContext): string[] {
   const { analysis, traceabilityLinks, reviewNotes } = context;
+  const labels = getReportLabels(context.locale);
   const lines: string[] = [];
 
   if (traceabilityLinks.length === 0) {
@@ -13,40 +15,52 @@ export function renderImpactedAreas(context: MarkdownReportRenderContext): strin
   const diagnostics = (analysis.snapshot.diagnostics as any as any[]) || [];
   const capabilitySummary = diagnostics.find(d => d.code === 'SCANNER_CAPABILITY_SUMMARY');
 
-  lines.push('## Impacted Areas');
+  lines.push(`## ${labels.impactedAreas}`);
   lines.push('');
-  lines.push('| Area | Artifact | File | Review Status |');
-  lines.push('|---|---|---|---|');
-  
+  // Group links by type
+  const groupedLinks = new Map<string, typeof traceabilityLinks>();
   const sortedLinks = [...traceabilityLinks].sort((a, b) => a.reviewStatus.localeCompare(b.reviewStatus));
+  
   for (const link of sortedLinks) {
     const type = resolveArtifactDisplayType(link.artifact);
-    const nameRaw = link.artifact?.name ? `\`${link.artifact.name}\`` : 'Unknown';
-    let maturityLabel = '';
-    if (capabilitySummary?.payload) {
-      const p = capabilitySummary.payload;
-      if (p.status && p.status !== 'STABLE') {
-        maturityLabel = ` (${p.status})`;
-      }
-    } else if (link.artifact?.artifactKey?.startsWith('go_') || link.artifact?.artifactKey?.startsWith('java_')) {
-      maturityLabel = link.artifact.artifactKey.startsWith('go_') ? ' (EXPERIMENTAL)' : ' (PARTIAL)';
+    if (!groupedLinks.has(type)) {
+      groupedLinks.set(type, []);
     }
-    
-    let methodLabel = '';
-    if (link.artifact?.name?.includes('UNKNOWN')) {
-      methodLabel = ' **[Method: UNKNOWN]**';
-    }
-
-    const name = nameRaw + maturityLabel + methodLabel;
-    const file = link.artifact?.filePath ? `\`${link.artifact.filePath}\`` : 'Unknown';
-    const status = link.reviewStatus === 'CONFIRMED' ? 'Confirmed' : link.reviewStatus === 'NEEDS_REVIEW' ? 'Needs Review' : link.reviewStatus;
-    lines.push(`| ${type} | ${name} | ${file} | ${status} |`);
+    groupedLinks.get(type)!.push(link);
   }
-  lines.push('');
+
+  for (const [type, links] of groupedLinks.entries()) {
+    lines.push(`### ${type}`);
+    lines.push('');
+    for (const link of links) {
+      const nameRaw = link.artifact?.name ? `\`${link.artifact.name}\`` : labels.unknown;
+      let maturityLabel = '';
+      if (capabilitySummary?.payload) {
+        const p = capabilitySummary.payload;
+        if (p.status && p.status !== 'STABLE') {
+          maturityLabel = ` (${p.status})`;
+        }
+      } else if (link.artifact?.artifactKey?.startsWith('go_') || link.artifact?.artifactKey?.startsWith('java_')) {
+        maturityLabel = link.artifact.artifactKey.startsWith('go_') ? ' (EXPERIMENTAL)' : ' (PARTIAL)';
+      }
+      
+      let methodLabel = '';
+      if (link.artifact?.name?.includes('UNKNOWN')) {
+        methodLabel = ` **[${labels.methodUnknown}]**`;
+      }
+
+      const name = nameRaw + maturityLabel + methodLabel;
+      const file = link.artifact?.filePath ? `\`${link.artifact.filePath}\`` : labels.unknown;
+      const status = link.reviewStatus === 'CONFIRMED' ? labels.confirmed : link.reviewStatus === 'NEEDS_REVIEW' ? labels.needsReview : link.reviewStatus;
+      
+      lines.push(`- ${name} in ${file} — **${status}**`);
+    }
+    lines.push('');
+  }
 
   const linkNotes = reviewNotes.filter(n => n.traceabilityLinkId && traceabilityLinks.some(l => l.id === n.traceabilityLinkId));
   if (linkNotes.length > 0) {
-    lines.push('### Reviewer Notes on Impacted Areas');
+    lines.push(`### ${labels.reviewerNotesOnImpactedAreas}`);
     lines.push('');
     for (const note of linkNotes) {
       const link = traceabilityLinks.find(l => l.id === note.traceabilityLinkId);
@@ -62,20 +76,21 @@ export function renderImpactedAreas(context: MarkdownReportRenderContext): strin
 
 export function renderEvidenceQuality(context: MarkdownReportRenderContext): string[] {
   const { traceabilityLinks, reviewDecisionsSnapshot, evidenceQualitySummarySnapshot } = context;
+  const labels = getReportLabels(context.locale);
   const lines: string[] = [];
 
   if (traceabilityLinks.length === 0) {
     return lines;
   }
 
-  lines.push('## Evidence Quality & Dataset Readiness');
+  lines.push(`## ${labels.evidenceQuality}`);
   lines.push('');
 
   if (evidenceQualitySummarySnapshot) {
     const summary = evidenceQualitySummarySnapshot;
-    lines.push(`- Evidence-backed links: ${summary.evidenced + summary.weakEvidence}`);
-    lines.push(`- Inferred links: ${summary.inferred}`);
-    lines.push(`- Review required: ${summary.reviewRequired}`);
+    lines.push(`- ${labels.evidenceBackedLinks}: ${summary.evidenced + summary.weakEvidence}`);
+    lines.push(`- ${labels.inferredLinks}: ${summary.inferred}`);
+    lines.push(`- ${labels.reviewRequired}: ${summary.reviewRequired}`);
   } else {
     const linkAnnotations = traceabilityLinks.map(link => ({
       link,
@@ -86,13 +101,13 @@ export function renderEvidenceQuality(context: MarkdownReportRenderContext): str
     const inferredCount = linkAnnotations.filter(l => l.annotation.label === 'INFERRED').length;
     const reviewRequiredCount = linkAnnotations.filter(l => l.annotation.label === 'REVIEW_REQUIRED').length;
 
-    lines.push(`- Evidence-backed links: ${evidencedCount}`);
-    lines.push(`- Inferred links: ${inferredCount}`);
-    lines.push(`- Review required: ${reviewRequiredCount}`);
+    lines.push(`- ${labels.evidenceBackedLinks}: ${evidencedCount}`);
+    lines.push(`- ${labels.inferredLinks}: ${inferredCount}`);
+    lines.push(`- ${labels.reviewRequired}: ${reviewRequiredCount}`);
   }
 
   lines.push('');
-  lines.push('| Artifact | Quality | Reason |');
+  lines.push(`| ${labels.artifact} | ${labels.quality} | ${labels.reason} |`);
   lines.push('|---|---|---|');
   
   if (reviewDecisionsSnapshot) {
@@ -106,7 +121,7 @@ export function renderEvidenceQuality(context: MarkdownReportRenderContext): str
     }));
 
     for (const item of linkAnnotations) {
-      const artifactName = item.link.artifact?.filePath ? `\`${item.link.artifact.filePath}\`` : (item.link.artifact?.name || 'Unknown');
+      const artifactName = item.link.artifact?.filePath ? `\`${item.link.artifact.filePath}\`` : (item.link.artifact?.name || labels.unknown);
       lines.push(`| ${artifactName} | ${item.annotation.label} | ${item.annotation.reasons.join(', ')} |`);
     }
   }

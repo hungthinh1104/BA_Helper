@@ -45,16 +45,16 @@ flowchart TD
 
 ## Executive Summary
 
-This analysis identified 1 evidence-backed impacts, 1 QA scenarios, and 1 open questions.
-The primary impacted areas are service layers.
+This analysis identified **1** evidence-backed impacts, **1** QA scenarios, and **1** open questions.
+The primary impacted areas are **service** layers.
 
 > This report was finalized with unreviewed items acknowledged.
 
 ## Impacted Areas
 
-| Area | Artifact | File | Review Status |
-|---|---|---|---|
-| Service | \`GoldenService\` | \`src/golden.ts\` | Confirmed |
+### Service
+
+- \`GoldenService\` in \`src/golden.ts\` — **Confirmed**
 
 ### Reviewer Notes on Impacted Areas
 
@@ -64,9 +64,9 @@ The primary impacted areas are service layers.
 
 ### 1. This is a golden claim
 
-**Certainty:** Evidenced  
-**Reviewer Note:** Reviewed the golden claim  
-**Reasoning:** Because it is golden  
+> **Certainty:** Evidenced  
+> **Reviewer Note:** Reviewed the golden claim  
+> **Reasoning:** Because it is golden  
 
 **Evidence:**
 - \`src/golden.ts\`
@@ -78,19 +78,21 @@ The primary impacted areas are service layers.
 
 ## QA Scenarios
 
-| Scenario | Precondition | Action | Expected Result |
-|---|---|---|---|
-| Golden QA | golden | testing | pass |
+### Golden QA
+
+- **Given:** golden
+- **When:** testing
+- **Then:** pass
 
 ## Open Questions / Unknowns
 
 ### Golden Unknown
 
-**Question:** Why is it golden?
-
-**Why this matters:** Need to investigate
-
-_Derived from scanner diagnostic_
+> **Question:** Why is it golden?
+>  
+> **Why this matters:** Need to investigate
+>  
+> _Derived from scanner diagnostic_
 
 ## Clarifications
 

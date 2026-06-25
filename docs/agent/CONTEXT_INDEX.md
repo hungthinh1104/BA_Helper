@@ -7,20 +7,22 @@ the narrow route that matches the task.
 
 Read these first for any BA_Helper task:
 
-1. [current-state.md](current-state.md)
+
 2. [auth-permissions.md](auth-permissions.md)
 3. [api-contracts.md](api-contracts.md)
 4. [use-cases.md](use-cases.md)
 
 ## Canonical current docs
 
-- `docs/agent/current-state.md`
+
 - `docs/agent/auth-permissions.md`
 - `docs/agent/api-contracts.md`
 - `docs/agent/use-cases.md`
 - `docs/agent/architecture.md`
 - `docs/agent/testing-strategy.md`
 - `docs/agent/done-checklist.md`
+- `docs/agent/security-hardening-model.md`
+- `docs/agent/scale-and-performance-model.md`
 
 ## Historical docs
 
@@ -37,23 +39,22 @@ if they conflict.
 Read:
 - `auth-permissions.md`
 - `api-contracts.md`
-- `current-state.md`
-- `scoped-authorization-audit.md`
+
 
 ### Report / export
 
 Read:
-- `audit-workflow.md` — Audit invariants for reviewed report snapshots, review completion gate, final reviewed report export, and failure modes.
+- `analysis-invariants.md` — Audit invariants for reviewed report snapshots, review completion gate, final reviewed report export, and failure modes.
 - `api-contracts.md`
 - `use-cases.md`
-- `current-state.md`
+
 
 ### Frontend route gating
 
 Read:
 - `auth-permissions.md`
 - `api-contracts.md`
-- `current-state.md`
+
 
 ### Backend use cases
 
@@ -62,10 +63,33 @@ Read:
 - `architecture.md`
 - `input-quality.md`
 
+### Domain packs / domain profiles
+
+Read:
+- `domain-packs.md`
+- `analysis-invariants.md`
+- `localization-and-domain-glossary.md`
+- `testing-strategy.md`
+
+### Security / hardening
+
+Read:
+- `security-hardening-model.md`
+- `input-quality.md`
+- `ai-rules.md`
+- `auth-permissions.md`
+
+### Scale / performance
+
+Read:
+- `scale-and-performance-model.md`
+- `architecture.md`
+- `testing-strategy.md`
+
 ### Docs cleanup
 
 Read:
-- `current-state.md`
+
 - `done-checklist.md`
 - this index
 
@@ -75,7 +99,7 @@ Read:
 - `../demo/walkthrough.md`
 - `../demo/public-demo-checklist.md`
 - `../deployment/smoke-checklist.md`
-- `current-state.md`
+
 
 ### Tests
 

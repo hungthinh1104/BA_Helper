@@ -1,14 +1,16 @@
 import { queryKeys } from "@/lib/api/query-keys"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { apiGet, apiPost } from "@/lib/api-client"
-import { finalReviewedReportResponseSchema, ReviewedReportSnapshotResponse } from "@ba-helper/contracts"
+import { finalReviewedReportResponseSchema, ReviewedReportSnapshotResponse, type ReportLocale } from "@ba-helper/contracts"
 
-export function useFinalReviewedReport(analysisId: string, options?: { enabled?: boolean }) {
+export function useFinalReviewedReport(analysisId: string, options?: { enabled?: boolean; locale?: ReportLocale }) {
+  const locale = options?.locale ?? "en"
+
   return useQuery({
-    queryKey: queryKeys.documents.finalReviewedReport(analysisId),
+    queryKey: queryKeys.documents.finalReviewedReport(analysisId, locale),
     queryFn: () =>
       apiGet(
-        `/api/v1/impact-analyses/${analysisId}/final-reviewed-report`,
+        `/api/v1/impact-analyses/${analysisId}/final-reviewed-report?locale=${locale}`,
         finalReviewedReportResponseSchema,
       ),
     enabled: options?.enabled,

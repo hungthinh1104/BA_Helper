@@ -1,0 +1,17 @@
+{
+  "domain": "rental",
+  "locale": "en",
+  "status": "foundation",
+  "version": "1.0.0",
+  "terms": {
+    "rentalContract": "rental contract",
+    "deposit": "deposit",
+    "roomAvailability": "room availability",
+    "bookingRequest": "booking request",
+    "tenant": "tenant",
+    "landlord": "landlord",
+    "paymentRecord": "payment record",
+    "contractTransition": "contract transition",
+    "maintenanceRequest": "maintenance request"
+  }
+}

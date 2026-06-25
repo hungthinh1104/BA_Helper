@@ -45,6 +45,19 @@ describe('SafeFileEnumerator', () => {
     expect(result.diagnostics.some(d => d.code === 'BINARY_SKIPPED')).toBe(true);
   });
 
+  it('skips binary content even when the extension looks supported', async () => {
+    await fs.writeFile(path.join(tmpDir, 'malicious.ts'), Buffer.from([0x00, 0x01, 0x02, 0x03]));
+    await fs.writeFile(path.join(tmpDir, 'main.ts'), 'const value = 1;');
+
+    const enumerator = new SafeFileEnumerator(tmpDir);
+    const result = await enumerator.enumerate();
+
+    expect(result.tsFiles).toHaveLength(1);
+    expect(result.tsFiles[0].endsWith('main.ts')).toBe(true);
+    expect(result.allFiles.some(file => file.endsWith('malicious.ts'))).toBe(false);
+    expect(result.skippedSummary.BINARY_FILE).toBeGreaterThanOrEqual(1);
+  });
+
   it('skips files exceeding MAX_FILE_SIZE_KB', async () => {
     const limits: ScanLimits = {
       MAX_REPO_SIZE_MB: 100,

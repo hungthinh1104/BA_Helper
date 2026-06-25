@@ -2,10 +2,11 @@ import { Prisma, ReviewNote } from '@prisma/client';
 import { ClarificationItemDto } from '@ba-helper/contracts';
 import { ApprovedReportMetadata } from '../domain/approved-report-metadata';
 import { ReportDependencyEdge } from './mermaid-impact-diagram.builder';
+import { ReportLocale } from './render/report-localization';
 
 export type AnalysisSnapshot = Prisma.ImpactAnalysisGetPayload<{
   include: {
-    snapshot: { include: { repository: true } };
+    snapshot: { include: { repository: true; profile: true } };
     sourceTarget: true;
     requirementRevision: true;
   };
@@ -34,6 +35,7 @@ export type TraceabilityLinkWithArtifact = Prisma.TraceabilityLinkGetPayload<{
 
 export type MarkdownReportRenderContext = {
   analysis: AnalysisSnapshot;
+  locale: ReportLocale;
   insights: InsightWithEvidence[];
   traceabilityLinks: TraceabilityLinkWithArtifact[];
   reviewNotes: ReviewNote[];

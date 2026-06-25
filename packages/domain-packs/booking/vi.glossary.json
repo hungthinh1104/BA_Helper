@@ -1,0 +1,14 @@
+{
+  "domain": "booking",
+  "locale": "vi",
+  "status": "foundation",
+  "version": "1.0.0",
+  "terms": {
+    "booking": "đơn đặt phòng",
+    "cancellation": "hủy đặt phòng",
+    "refund": "hoàn tiền",
+    "doubleRefund": "hoàn tiền trùng",
+    "inventoryRelease": "giải phóng tồn phòng",
+    "paymentState": "trạng thái thanh toán"
+  }
+}

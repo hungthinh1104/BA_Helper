@@ -82,6 +82,94 @@ The Evaluation summary also explicitly asserts the following deterministic safet
 3. **General Fallback Integrity:** General pack strictly has no `booking` hints leaked.
 4. **Diagnostic Boundedness:** Guarantees `DOMAIN_PACK_APPLIED` never blows out memory via payload template leakage.
 
+## Booking STABLE Coverage (P7C)
+P7C adds deterministic booking-domain cases that justify the current
+`booking@0.1.0` `STABLE` registry status with fixture-backed expectations.
+
+The stable set covers:
+
+- cancellation through the paid-booking refund flow
+- duplicate cancellation / double-refund prevention
+- slot inventory release after cancellation
+- payment transaction state changing from `PAID` to `REFUNDED`
+- refund policy hints that must remain unknown until source evidence or
+  stakeholder confirmation exists
+
+These cases assert expected impacted artifacts, unknowns, risks, and QA
+scenarios against the `nestjs-booking-with-payment` fixture. Every expected
+impacted artifact must map to a scanner fixture artifact with a source file,
+line range, and raw code excerpt. Domain pack retrieval hints, risk templates,
+QA templates, unknown templates, and glossary terms are terminology hints only;
+they cannot satisfy evidence requirements and cannot become impacted artifact
+keys.
+
+Known limits:
+
+- The evaluation proves deterministic fixture coverage, not broad booking
+  product support.
+- It does not add new scanner behavior, retrieval behavior, or AI behavior.
+- It does not translate code, artifact keys, paths, or evidence excerpts.
+- It does not promote any additional domain to `PARTIAL` or `STABLE`.
+
+## General FALLBACK Coverage (P7D)
+P7D adds defensive evaluation coverage for `general@0.0.0`. The goal is to
+prove the fallback profile stays conservative when no supported domain applies.
+
+The fallback set covers:
+
+- generic lifecycle state change
+- generic external transaction reversal
+- downstream availability side effects
+- outbound side effects
+
+The expected outputs deliberately use empty domain concept expectations and
+uncertain wording:
+
+- unknowns start with `unknown:`
+- risks start with `inferred risk:`
+- QA scenarios start with `uncertain qa:`
+
+The fallback profile must not contain booking concepts, retrieval hints, risk
+templates, QA templates, unknown templates, or glossary metadata. Its bounded
+diagnostic metadata must include `domainPackStatus: FALLBACK` with only counts
+and identifiers, not template bodies or source excerpts.
+
+Known limits:
+
+- `general@0.0.0` is not a broad domain pack and does not claim multi-domain
+  support.
+- It can preserve raw source artifact names and evidence excerpts from the
+  analyzed repository, but it must not inject booking-specific business
+  terminology from domain-pack metadata.
+- It cannot create `EVIDENCED` claims from generic hints or fallback status.
+
+## Rental PARTIAL Coverage (P7E)
+P7E adds one additional domain profile, `rental@0.1.0`, with `PARTIAL` status.
+This proves the registry/status model can represent a bounded non-booking
+domain without claiming broad multi-domain support.
+
+The partial rental set covers:
+
+- deposit payment update affecting rental contract and payment-record
+  consistency
+- room availability update through a booking request flow
+- rental contract cancellation affecting payment records and tenant/landlord
+  notification
+
+The rental fixture is intentionally small and source-backed. Every expected
+impacted artifact must come from scanner output over
+`tests/fixtures/nestjs-rental-partial`; rental glossary terms, retrieval hints,
+risk templates, QA templates, and unknown templates cannot satisfy evidence
+requirements and cannot become impacted artifact keys.
+
+Known limits:
+
+- `rental@0.1.0` is `PARTIAL`, not `STABLE`.
+- Maintenance-request terminology exists only as bounded terminology/noise
+  coverage in this revision.
+- No scanner, retrieval, or LLM behavior is expanded by P7E.
+- This is not a broad multi-domain product claim.
+
 ## How to Add a New Case
 1. Ensure the requirement matches an existing fixture in `tests/fixtures/`.
 2. Create a new `.ts` file under `tests/evaluation/cases/`.

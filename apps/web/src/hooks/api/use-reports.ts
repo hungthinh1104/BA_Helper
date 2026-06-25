@@ -74,6 +74,9 @@ export function useFinalizeAnalysis(projectId: string | undefined, analysisId: s
         queryKey: queryKeys.analyses.detail(analysisId),
       })
       queryClient.invalidateQueries({
+        queryKey: queryKeys.analyses.workspace(analysisId),
+      })
+      queryClient.invalidateQueries({
         queryKey: queryKeys.analyses.list(projectQueryKey),
       })
       queryClient.invalidateQueries({

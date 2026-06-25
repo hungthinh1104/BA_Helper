@@ -4,7 +4,22 @@ export const BookingDomainPack: DomainPack = {
   id: 'booking',
   name: 'Booking',
   version: '0.1.0',
+  status: 'STABLE',
   description: 'Core domain pack for booking, payment, and refund lifecycle systems.',
+  glossaryMetadata: [
+    {
+      locale: 'en',
+      status: 'foundation',
+      version: '1.0.0',
+      termCount: 6,
+    },
+    {
+      locale: 'vi',
+      status: 'foundation',
+      version: '1.0.0',
+      termCount: 6,
+    },
+  ],
   
   concepts: [
     {

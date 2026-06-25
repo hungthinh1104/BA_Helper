@@ -8,6 +8,7 @@ import { GraphRepository } from '../../../graph/infrastructure/graph.repository'
 import { ClarificationRepository } from '../../../clarification/infrastructure/clarification.repository';
 import { ReviewDecisionRepository } from '../../../impact-analysis/infrastructure/review-decision.repository';
 import { GetImpactDiffUseCase } from '../../../impact-analysis/application/queries/get-impact-diff.usecase';
+import { DEFAULT_REPORT_LOCALE, ReportLocale } from './report-localization';
 
 @Injectable()
 export class ReviewedSnapshotReportContextAdapter {
@@ -22,7 +23,11 @@ export class ReviewedSnapshotReportContextAdapter {
     private readonly getDiffUseCase: GetImpactDiffUseCase,
   ) {}
 
-  async buildContext(snapshot: any, analysis: any): Promise<MarkdownReportRenderContext> {
+  async buildContext(
+    snapshot: any,
+    analysis: any,
+    locale: ReportLocale = DEFAULT_REPORT_LOCALE,
+  ): Promise<MarkdownReportRenderContext> {
     const analysisId = analysis.id;
     
     // 1. Fetch live elements
@@ -77,6 +82,7 @@ export class ReviewedSnapshotReportContextAdapter {
 
     return {
       analysis,
+      locale,
       insights,
       traceabilityLinks: traceabilityLinks as any[],
       reviewNotes,

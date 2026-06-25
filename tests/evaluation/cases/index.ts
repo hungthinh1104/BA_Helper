@@ -6,7 +6,24 @@ import { case05 } from './05-block-cancel-completed-booking';
 import { case06 } from './06-require-cancel-reason';
 import { case07 } from './07-admin-manual-refund';
 import { case08 } from './08-payment-callback-retry';
+import { bookingStableEvaluationCases } from './booking-stable';
+import { generalFallbackEvaluationCases } from './general-fallback';
+import { rentalPartialEvaluationCases } from './rental-partial';
+
+export { bookingStableEvaluationCases } from './booking-stable';
+export { generalFallbackEvaluationCases } from './general-fallback';
+export { rentalPartialEvaluationCases } from './rental-partial';
 
 export const ALL_EVALUATION_CASES = [
-  case01, case02, case03, case04, case05, case06, case07, case08
+  case01,
+  case02,
+  case03,
+  case04,
+  case05,
+  case06,
+  case07,
+  case08,
+  ...bookingStableEvaluationCases,
+  ...generalFallbackEvaluationCases,
+  ...rentalPartialEvaluationCases,
 ];

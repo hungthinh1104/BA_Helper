@@ -140,10 +140,10 @@ export function CodeEvidenceBlock({ evidence, index, total }: CodeEvidenceBlockP
       </div>
 
       {/* ── Code block ── */}
-      <pre className="code-block relative group/code bg-surface-muted/30">
+      <pre className="evidence-code-block relative group/code bg-surface-muted/30">
         {lines.map((line, i) => (
-          <div key={i} className="code-line hover:bg-foreground/[0.02] transition-colors rounded-sm">
-            <div className="code-line-number opacity-40 select-none text-right w-8 text-[11px] font-mono">{startLine + i}</div>
+          <div key={i} className="evidence-code-line hover:bg-foreground/[0.02] transition-colors rounded-sm">
+            <div className="evidence-code-line-number opacity-40 select-none text-right w-8 text-[11px] font-mono">{startLine + i}</div>
             <div className="whitespace-pre text-[12px] font-mono" dangerouslySetInnerHTML={{ __html: highlightLine(line) }} />
           </div>
         ))}

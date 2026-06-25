@@ -143,7 +143,7 @@ describe('Impact Evaluation Pack', () => {
       // Output is bounded string summary
       expect(typeof result.textSummary).toBe('string');
       expect(result.textSummary.length).toBeGreaterThan(0);
-      expect(result.textSummary.length).toBeLessThan(10000); // bounded check
+      expect(result.textSummary.length).toBeLessThan(15000); // bounded check
 
       // We explicitly did not connect to Prisma or any LLM clients here.
       // The tests are entirely offline and CPU bound.

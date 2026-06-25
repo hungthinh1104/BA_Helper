@@ -1,3 +1,5 @@
+import { ReportLocale } from '../report-localization';
+
 export function formatArtifactType(type: string): string {
   return type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 }
@@ -9,7 +11,17 @@ export function resolveArtifactDisplayType(artifact?: { artifactType?: string | 
   return 'Unknown';
 }
 
-export function formatCertainty(certainty: string): string {
+export function formatCertainty(certainty: string, locale: ReportLocale = 'en'): string {
+  if (locale === 'vi') {
+    switch (certainty) {
+      case 'EVIDENCED': return 'Có bằng chứng';
+      case 'INFERRED': return 'Suy luận';
+      case 'UNKNOWN': return 'Không rõ';
+      case 'CONFLICTING': return 'Mâu thuẫn';
+      default: return certainty;
+    }
+  }
+
   switch (certainty) {
     case 'EVIDENCED': return 'Evidenced';
     case 'INFERRED': return 'Inferred';

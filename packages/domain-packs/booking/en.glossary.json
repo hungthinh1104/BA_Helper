@@ -1,0 +1,14 @@
+{
+  "domain": "booking",
+  "locale": "en",
+  "status": "foundation",
+  "version": "1.0.0",
+  "terms": {
+    "booking": "booking",
+    "cancellation": "cancellation",
+    "refund": "refund",
+    "doubleRefund": "double refund",
+    "inventoryRelease": "inventory release",
+    "paymentState": "payment state"
+  }
+}

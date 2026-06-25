@@ -36,7 +36,7 @@ The system relies on rigorous backend engineering principles:
 - **Scanner & Artifact Model:** Deep AST extraction for TypeScript/NestJS plus bounded pilot adapters with explicit capability metadata.
 - **Evidence Hierarchy:** Strict schema constraints enforce that no `EVIDENCED` impact claim exists without an explicit `Evidence` relation.
 - **Deterministic Diagnostics:** Bounded metrics like `SCAN_HEALTH`, `INCREMENTAL_SCAN_SUMMARY`, and `DOMAIN_PACK_APPLIED` are fully observable.
-- **Evaluation Harness:** Custom test runner that mathematically calculates precision/recall of domain pack retrievals to prevent regression.
+- **Evaluation Harness:** Custom test runner that computes precision/recall of domain pack retrievals to prevent regression.
 - **Embedding Reuse Safety:** Vectors are strictly scoped to specific snapshot commits; leakage between versions is structurally impossible.
 - **Domain Pack Registry:** A versioned concept-matching registry that safely falls back to `general@0.0.0` if unsupported packs are requested.
 - **Golden Path Integration Test:** A deterministic suite asserting the complete TypeScript/NestJS flow from scan to final report generation.

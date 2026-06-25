@@ -12,6 +12,7 @@ import {
 import {
   impactAnalysisListResponseSchema,
   impactAnalysisResponseSchema,
+  analysisWorkspaceResponseSchema,
   projectCreateResponseSchema,
   repositoryCreateResponseSchema,
   requirementCreateResponseSchema,
@@ -113,6 +114,17 @@ describe('Analysis List (E2E)', () => {
     const analysis = impactAnalysisResponseSchema.parse(createAnalysisRes.body);
 
     await seedImpactAnalysisCompletion(prisma, analysis.id);
+
+    const workspaceRes = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysis.id}/workspace`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const workspace = analysisWorkspaceResponseSchema.parse(workspaceRes.body);
+    expect(workspace.overview.analysisId).toBe(analysis.id);
+    expect(workspace.overview.status.reportStatus).toBe('missing');
+    expect(workspace.overview.status.driftStatus).toBe('fresh');
+    expect(workspace.reviewQueue).toHaveLength(1);
 
     const listRes = await request(app.getHttpServer())
       .get(`/api/v1/projects/${project.projectId}/analyses`)

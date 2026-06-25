@@ -98,13 +98,14 @@ describe('Diagnostic Risk Propagation', () => {
         pack: {
           id: 'test-pack',
           version: '1.0',
+          status: 'EXPERIMENTAL',
           concepts: [],
           retrievalHints: [],
           riskTemplates: [],
           qaTemplates: [],
           unknownTemplates: [],
         },
-        selectedBy: 'default',
+        selectedBy: 'safe_default',
         normalizedPackId: 'test-pack',
       }),
     };

@@ -5,15 +5,22 @@ import { canPollAnalysisDetail } from "@/lib/status-helpers"
 import { useOptionalProjectId } from "@/lib/project-context"
 
 import { ReviewQueueResponse, reviewQueueResponseSchema } from '@ba-helper/contracts'
-import { ImpactAnalysisDiffResponse, impactAnalysisDiffResponseSchema } from "@ba-helper/contracts"
+import {
+  ImpactAnalysisDiffResponse,
+  LineageTimelineResponse,
+  impactAnalysisDiffResponseSchema,
+  lineageTimelineResponseSchema,
+} from "@ba-helper/contracts"
 
 import {
   ImpactAnalysisListResponse,
   ImpactAnalysisDetailResponse,
   ImpactAnalysisCreateRequest,
   ImpactAnalysisResponse,
+  AnalysisWorkspaceResponse,
   impactAnalysisListResponseSchema,
   impactAnalysisResponseSchema,
+  analysisWorkspaceResponseSchema,
   impactGraphResponseSchema, 
   ImpactGraphResponse,
 } from "@ba-helper/contracts"
@@ -48,6 +55,20 @@ export function useAnalysisDetail(analysisId: string) {
       const data = query.state.data;
       return data && canPollAnalysisDetail(data) ? 3000 : false;
     },
+  })
+}
+
+export function useAnalysisWorkspace(analysisId: string) {
+  return useQuery({
+    queryKey: queryKeys.analyses.workspace(analysisId),
+    queryFn: async () => {
+      return apiGet<AnalysisWorkspaceResponse>(
+        `/api/v1/impact-analyses/${analysisId}/workspace`,
+        analysisWorkspaceResponseSchema,
+      )
+    },
+    enabled: Boolean(analysisId),
+    refetchOnWindowFocus: true,
   })
 }
 
@@ -87,8 +108,7 @@ export function useAnalysisLineage(analysisId: string) {
   return useQuery({
     queryKey: queryKeys.analyses.lineage(analysisId),
     queryFn: async () => {
-      const { lineageTimelineResponseSchema } = await import("@ba-helper/contracts")
-      return apiGet(
+      return apiGet<LineageTimelineResponse>(
         `/api/v1/impact-analyses/${analysisId}/lineage`,
         lineageTimelineResponseSchema
       )
@@ -137,7 +157,7 @@ export function useReviewQueue(analysisId: string | undefined, options?: { enabl
 }
 
 export function useAnalysisDiff(analysisId: string, enabled: boolean = true) {
-  return useQuery({
+  return useQuery<ImpactAnalysisDiffResponse>({
     queryKey: queryKeys.analyses.diff(analysisId),
     queryFn: async () => {
       return apiGet<ImpactAnalysisDiffResponse>(

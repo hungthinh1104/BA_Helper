@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils"
+import { getDomainCapabilityBadge, type SupportedLocale } from "@/lib/i18n/status-labels"
 
 type BadgeTone = "neutral" | "success" | "warning" | "danger" | "info" | "muted"
 
@@ -206,4 +207,30 @@ export function ScanStatusBadge({ status, className }: { status: string; classNa
 
 export function CoverageStatusBadge({ status, className }: { status: string; className?: string }) {
   return renderBadge(getCoverageStatusMeta(status), className)
+}
+
+export function DomainStatusBadge({ 
+  domainProfileId, 
+  domainPackStatus, 
+  locale,
+  className 
+}: { 
+  domainProfileId?: string | null
+  domainPackStatus?: string | null
+  locale?: SupportedLocale
+  className?: string 
+}) {
+  const badgeData = getDomainCapabilityBadge({ domainProfileId, domainPackStatus, locale })
+  
+  let tone: BadgeTone = "muted"
+  if (badgeData.status === "STABLE") tone = "success"
+  else if (badgeData.status === "PARTIAL") tone = "warning"
+  else if (badgeData.status === "FALLBACK") tone = "muted"
+  else if (badgeData.status === "EXPERIMENTAL") tone = "info"
+  
+  return renderBadge({
+    label: badgeData.label,
+    tone,
+    description: badgeData.tooltip
+  }, className)
 }

@@ -63,4 +63,4 @@ The optimal way to demonstrate BA Helper is sequentially:
 - **Language Lock-in:** Currently, deep parser confidence is limited to TypeScript/NestJS repositories.
 - **Vector Boundaries:** Embedding retrieval is strictly scoped by commit SHA.
 - **No Production AI Modification:** The LLM does not write or push code. It acts strictly as an analytical reader to propose traceability links.
-- **Not a Formal Verification Engine:** While the workflow ensures human oversight and immutable snapshotting, the underlying extraction relies on heuristics and LLM mapping, making it a robust BA assistance tool, not a strictly proven formal verification engine.
+- **Not a Proof System:** While the workflow ensures human oversight and immutable snapshotting, the underlying extraction relies on heuristics and LLM mapping, making it a robust BA assistance tool, not compiler-grade correctness machinery.

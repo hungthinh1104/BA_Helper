@@ -66,7 +66,7 @@ export function DriftDetailsDrawer({
             <div className="space-y-6">
               {drift.samples.addedArtifacts.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="font-semibold text-sm flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                  <h4 className="font-semibold text-sm flex items-center gap-2 text-success">
                     <FilePlus className="w-4 h-4" /> Added Artifacts ({drift.samples.addedArtifacts.length})
                   </h4>
                   <ul className="text-sm space-y-1 pl-6">
@@ -79,7 +79,7 @@ export function DriftDetailsDrawer({
 
               {drift.samples.removedArtifacts.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="font-semibold text-sm flex items-center gap-2 text-rose-600 dark:text-rose-400">
+                  <h4 className="font-semibold text-sm flex items-center gap-2 text-danger">
                     <FileMinus className="w-4 h-4" /> Removed Artifacts ({drift.samples.removedArtifacts.length})
                   </h4>
                   <ul className="text-sm space-y-1 pl-6">
@@ -92,7 +92,7 @@ export function DriftDetailsDrawer({
 
               {drift.samples.changedArtifacts.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="font-semibold text-sm flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                  <h4 className="font-semibold text-sm flex items-center gap-2 text-info">
                     <FileEdit className="w-4 h-4" /> Changed Artifacts ({drift.samples.changedArtifacts.length})
                   </h4>
                   <ul className="text-sm space-y-1 pl-6">
@@ -105,7 +105,7 @@ export function DriftDetailsDrawer({
 
               {drift.samples.unknownChangedArtifacts.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="font-semibold text-sm flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                  <h4 className="font-semibold text-sm flex items-center gap-2 text-warning">
                     <HelpCircle className="w-4 h-4" /> Hash Unavailable / Unknown Changes ({drift.samples.unknownChangedArtifacts.length})
                   </h4>
                   <ul className="text-sm space-y-1 pl-6">

@@ -8,6 +8,7 @@ export * from './graph.contract';
 export * from './evidence.contract';
 export * from './requirement.contract';
 export * from './impact-analysis.contract';
+export * from './analysis-workspace.contract';
 export * from './insight.contract';
 export * from './retrieval.contract';
 export * from './review-queue.contract';

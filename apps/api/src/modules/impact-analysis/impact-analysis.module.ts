@@ -74,6 +74,7 @@ import { CreateRequirementRevisionUseCase } from '../requirement/application/cre
 import { ProjectModule } from '../project/project.module';
 import { RepositoryModule } from '../repository/repository.module';
 import { GetAnalysisDriftFreshnessUseCase } from './application/queries/get-analysis-drift-freshness.usecase';
+import { GetAnalysisWorkspaceUseCase } from './application/queries/get-analysis-workspace.usecase';
 import { DomainPackModule } from '../domain-pack/domain-pack.module';
 
 @Module({
@@ -138,6 +139,7 @@ import { DomainPackModule } from '../domain-pack/domain-pack.module';
     GetImpactAnalysisLineageUseCase,
     GetReviewCoverageUseCase,
     GetAnalysisDriftFreshnessUseCase,
+    GetAnalysisWorkspaceUseCase,
     {
       provide: ProjectRepository,
       useFactory: (prisma: PrismaService) => new ProjectRepository(prisma),

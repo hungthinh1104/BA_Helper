@@ -6,6 +6,8 @@ describe('GetFinalReviewedReportUseCase', () => {
   let getReviewCompletionMock: any;
   let getLatestSnapshotMock: any;
   let prismaMock: any;
+  let contextAdapterMock: any;
+  let reportBuilderMock: any;
 
   beforeEach(() => {
     getReviewCompletionMock = {
@@ -21,12 +23,23 @@ describe('GetFinalReviewedReportUseCase', () => {
       documentJob: {
         findFirst: jest.fn(),
       },
+      impactAnalysis: {
+        findUnique: jest.fn(),
+      },
+    };
+    contextAdapterMock = {
+      buildContext: jest.fn(),
+    };
+    reportBuilderMock = {
+      build: jest.fn(),
     };
 
     useCase = new GetFinalReviewedReportUseCase(
       getReviewCompletionMock as any,
       getLatestSnapshotMock as any,
       prismaMock as any,
+      contextAdapterMock as any,
+      reportBuilderMock as any,
     );
   });
 
@@ -88,6 +101,7 @@ describe('GetFinalReviewedReportUseCase', () => {
     expect(result).toEqual({
       analysisId: 'analysis-123',
       snapshotId: 'snap-1',
+      locale: 'en',
       markdown: '# Generated Document Markdown',
       createdAt: '2026-01-01T00:00:00.000Z',
       reviewCompletion: mockCompletion,
@@ -122,6 +136,45 @@ describe('GetFinalReviewedReportUseCase', () => {
     const result = await useCase.execute('analysis-123');
 
     expect(result.markdown).toBe('# Job Document');
+    expect(result.locale).toBe('en');
+  });
+
+  it('renders localized markdown from the reviewed snapshot after default document readiness is satisfied', async () => {
+    const mockCompletion = {
+      isComplete: true,
+      blockingReasons: [],
+    };
+    const mockSnapshot = {
+      id: 'snap-1',
+      analysisId: 'analysis-123',
+      approvedDocumentId: 'doc-1',
+      markdown: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      reviewDecisionsSnapshot: [],
+      evidenceQualitySummarySnapshot: {},
+      evaluationContextSnapshot: null,
+      createdByUserId: null,
+    };
+    const mockAnalysis = { id: 'analysis-123' };
+    const mockContext = { locale: 'vi' };
+
+    getReviewCompletionMock.execute.mockResolvedValue(mockCompletion);
+    getLatestSnapshotMock.execute.mockResolvedValue(mockSnapshot);
+    prismaMock.generatedDocument.findUnique.mockResolvedValue({
+      id: 'doc-1',
+      content: '# English persisted document',
+    });
+    prismaMock.impactAnalysis.findUnique.mockResolvedValue(mockAnalysis);
+    contextAdapterMock.buildContext.mockResolvedValue(mockContext);
+    reportBuilderMock.build.mockReturnValue('# Bao cao tieng Viet\n```ts\nconsole.log("raw evidence");\n```');
+
+    const result = await useCase.execute('analysis-123', { locale: 'vi' });
+
+    expect(result.locale).toBe('vi');
+    expect(result.markdown).toContain('# Bao cao tieng Viet');
+    expect(result.markdown).toContain('console.log("raw evidence");');
+    expect(contextAdapterMock.buildContext).toHaveBeenCalledWith(mockSnapshot, mockAnalysis, 'vi');
+    expect(reportBuilderMock.build).toHaveBeenCalledWith(mockContext);
   });
 
   it('throws a document readiness error when the async document job is still queued', async () => {

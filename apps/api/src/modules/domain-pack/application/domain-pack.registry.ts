@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { DomainPack } from '@ba-helper/contracts';
+import { DomainPack, DomainProfileRegistryEntry } from '@ba-helper/contracts';
 import { GeneralDomainPack } from '../packs/general.v0.0.0';
 import { BookingDomainPack } from '../packs/booking.v0.1.0';
+import { RentalDomainPack } from '../packs/rental.v0.1.0';
 import { AppError } from '../../../shared/app-error';
 
 export type DomainPackSelectionInput = {
@@ -22,6 +23,7 @@ export class DomainPackRegistry {
   constructor() {
     this.register(GeneralDomainPack);
     this.register(BookingDomainPack);
+    this.register(RentalDomainPack);
   }
 
   /**
@@ -29,6 +31,16 @@ export class DomainPackRegistry {
    */
   private register(pack: DomainPack): void {
     this.builtInPacks.set(pack.id, pack);
+  }
+
+  listProfiles(): DomainProfileRegistryEntry[] {
+    return Array.from(this.builtInPacks.values())
+      .map((pack) => this.toProfileEntry(pack))
+      .sort((a, b) => a.id.localeCompare(b.id));
+  }
+
+  getProfileById(id?: string | null): DomainProfileRegistryEntry {
+    return this.toProfileEntry(this.getPackById(id));
   }
 
   /**
@@ -39,11 +51,21 @@ export class DomainPackRegistry {
     if (!id) {
       return GeneralDomainPack;
     }
-    
-    // Convert to lowercase to ensure matching works even if repository.domain is capitalized
+
     const normalizedId = id.toLowerCase();
-    
+
     return this.builtInPacks.get(normalizedId) ?? GeneralDomainPack;
+  }
+
+  private toProfileEntry(pack: DomainPack): DomainProfileRegistryEntry {
+    return {
+      id: pack.id,
+      name: pack.name,
+      version: pack.version,
+      status: pack.status,
+      description: pack.description,
+      glossaryMetadata: pack.glossaryMetadata,
+    };
   }
 
   /**
@@ -63,21 +85,14 @@ export class DomainPackRegistry {
    * 3. safe_default (general)
    */
   selectPack(input: DomainPackSelectionInput): DomainPackSelectionResult {
-    // 1. Manual Config
     if (input.manualPackId) {
       const normalized = this.normalizePackId(input.manualPackId);
-      
-      // If version was explicitly provided in manual config, we must ensure it matches
-      // the registered version. For now, since we only have one version per pack,
-      // we just check if it exists in builtInPacks. If a user provided booking@0.2.0,
-      // but we only have booking@0.1.0, wait, the requirement says "unsupported version behavior is explicit and tested".
-      // Let's see what the registry has.
       const foundPack = this.builtInPacks.get(normalized);
+
       if (!foundPack) {
         throw new AppError('UNSUPPORTED_DOMAIN_PACK', `Unsupported manual domain pack: ${input.manualPackId}`);
       }
-      
-      // Check exact version match if version is provided
+
       if (input.manualPackId.includes('@')) {
         const providedVersion = input.manualPackId.split('@')[1];
         if (providedVersion !== foundPack.version) {
@@ -92,11 +107,9 @@ export class DomainPackRegistry {
       };
     }
 
-    // 2. Repository Profile Domain
     if (input.repositoryProfileDomain) {
       const normalized = this.normalizePackId(input.repositoryProfileDomain);
-      
-      // We map UNKNOWN to general
+
       if (normalized === 'unknown') {
         return {
           pack: GeneralDomainPack,
@@ -115,7 +128,6 @@ export class DomainPackRegistry {
       }
     }
 
-    // 3. Safe Default
     return {
       pack: GeneralDomainPack,
       normalizedPackId: 'general',
@@ -148,9 +160,6 @@ export class DomainPackRegistry {
       }
     }
 
-    // Convert Set to array. 
-    // It's deterministic because Set iterates in insertion order,
-    // and we iterate over pack.concepts in their defined order.
     return Array.from(matchedKeys);
   }
 }

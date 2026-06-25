@@ -24,12 +24,12 @@
 }
 
 @media (max-width: 1000px) {
-  .product-mockup-body {
+  .landing-product-mockup-body {
     grid-template-columns: 1fr;
   }
 
-  .mockup-sidebar,
-  .mockup-inspector {
+  .landing-mockup-sidebar,
+  .landing-mockup-inspector {
     display: none;
   }
 }

@@ -1,5 +1,11 @@
 import { z } from 'zod';
 
+export const reportLocaleSchema = z.enum(['en', 'vi']);
+
+export const localeAwareReportQuerySchema = z.object({
+  locale: reportLocaleSchema.default('en'),
+});
+
 export const reviewCompletionResponseSchema = z.object({
   analysisId: z.string().min(1),
   totalLinks: z.number().int().nonnegative(),
@@ -18,10 +24,13 @@ export const reviewCompletionResponseSchema = z.object({
 });
 
 export type ReviewCompletionResponse = z.infer<typeof reviewCompletionResponseSchema>;
+export type ReportLocale = z.infer<typeof reportLocaleSchema>;
+export type LocaleAwareReportQuery = z.infer<typeof localeAwareReportQuerySchema>;
 
 export const finalReviewedReportResponseSchema = z.object({
   analysisId: z.string().min(1),
   snapshotId: z.string().min(1),
+  locale: reportLocaleSchema.default('en'),
   markdown: z.string().nullable().optional(),
   createdAt: z.string(),
   reviewCompletion: reviewCompletionResponseSchema,

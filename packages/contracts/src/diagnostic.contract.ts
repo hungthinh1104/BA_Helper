@@ -130,6 +130,7 @@ export type EmbeddingReuseExecutionSummaryPayload = z.infer<
 export const domainPackAppliedDiagnosticPayloadSchema = z.object({
   domainPackId: z.string(),
   domainPackVersion: z.string(),
+  domainPackStatus: z.enum(['STABLE', 'PARTIAL', 'EXPERIMENTAL', 'FALLBACK']),
   selectedBy: z.enum(['repository_profile', 'manual_config', 'safe_default']),
   conceptCount: z.number().int().nonnegative(),
   retrievalHintCount: z.number().int().nonnegative(),
