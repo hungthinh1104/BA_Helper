@@ -69,6 +69,7 @@ GET  /api/v1/impact-analyses/:analysisId/documents
 GET  /api/v1/impact-analyses/:analysisId/approved-report
 GET  /api/v1/impact-analyses/:analysisId/approved-report/export.md
 GET  /api/v1/impact-analyses/:analysisId/approved-report/export.pdf
+GET  /api/v1/impact-analyses/:analysisId/final-reviewed-report?locale=en|vi
 ```
 
 Deferred until after the Markdown report/review completion gate:

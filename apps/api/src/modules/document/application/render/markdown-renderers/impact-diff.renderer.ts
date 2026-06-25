@@ -1,25 +1,27 @@
 import { MarkdownReportRenderContext } from '../../markdown-impact-report.types';
 import { formatArtifactType } from './markdown-render-utils';
+import { getReportLabels } from '../report-localization';
 
 export function renderImpactDiff(context: MarkdownReportRenderContext): string[] {
   const { diff } = context;
+  const labels = getReportLabels(context.locale);
   const lines: string[] = [];
 
   if (diff) {
-    lines.push('## Impact Diff Snapshot');
+    lines.push(`## ${labels.impactDiffSnapshot}`);
     lines.push('');
-    lines.push(`This analysis was derived from baseline analysis: \`${diff.baseAnalysisId}\``);
+    lines.push(`${labels.derivedFromBaseline}: \`${diff.baseAnalysisId}\``);
     lines.push('');
-    lines.push('### Summary');
-    lines.push(`- Added code impacts: ${diff.summary.addedImpacts}`);
-    lines.push(`- Removed code impacts: ${diff.summary.removedImpacts}`);
-    lines.push(`- Resolved unknowns: ${diff.summary.resolvedUnknowns}`);
-    lines.push(`- New unknowns: ${diff.summary.newUnknowns}`);
-    lines.push(`- Added QA scenarios: ${diff.summary.addedQaScenarios}`);
+    lines.push(`### ${labels.summary}`);
+    lines.push(`- ${labels.addedCodeImpacts}: ${diff.summary.addedImpacts}`);
+    lines.push(`- ${labels.removedCodeImpacts}: ${diff.summary.removedImpacts}`);
+    lines.push(`- ${labels.resolvedUnknowns}: ${diff.summary.resolvedUnknowns}`);
+    lines.push(`- ${labels.newUnknowns}: ${diff.summary.newUnknowns}`);
+    lines.push(`- ${labels.addedQaScenarios}: ${diff.summary.addedQaScenarios}`);
     lines.push('');
 
     if (diff.addedArtifacts && diff.addedArtifacts.length > 0) {
-      lines.push('### Added Code Impacts');
+      lines.push(`### ${formatDiffHeading(labels.addedCodeImpacts, context.locale)}`);
       lines.push('');
       for (const art of diff.addedArtifacts) {
         lines.push(`- \`${art.name}\` (${formatArtifactType(art.artifactType)}) in \`${art.filePath}\``);
@@ -28,7 +30,7 @@ export function renderImpactDiff(context: MarkdownReportRenderContext): string[]
     }
 
     if (diff.removedArtifacts && diff.removedArtifacts.length > 0) {
-      lines.push('### Removed Code Impacts');
+      lines.push(`### ${formatDiffHeading(labels.removedCodeImpacts, context.locale)}`);
       lines.push('');
       for (const art of diff.removedArtifacts) {
         lines.push(`- \`${art.name}\` (${formatArtifactType(art.artifactType)}) in \`${art.filePath}\``);
@@ -37,7 +39,7 @@ export function renderImpactDiff(context: MarkdownReportRenderContext): string[]
     }
 
     if (diff.resolvedUnknowns && diff.resolvedUnknowns.length > 0) {
-      lines.push('### Resolved Unknowns');
+      lines.push(`### ${formatDiffHeading(labels.resolvedUnknowns, context.locale)}`);
       lines.push('');
       for (const unk of diff.resolvedUnknowns) {
         lines.push(`- ${unk.statement}`);
@@ -46,7 +48,7 @@ export function renderImpactDiff(context: MarkdownReportRenderContext): string[]
     }
 
     if (diff.newUnknowns && diff.newUnknowns.length > 0) {
-      lines.push('### New Unknowns');
+      lines.push(`### ${formatDiffHeading(labels.newUnknowns, context.locale)}`);
       lines.push('');
       for (const unk of diff.newUnknowns) {
         lines.push(`- ${unk.statement}`);
@@ -55,7 +57,7 @@ export function renderImpactDiff(context: MarkdownReportRenderContext): string[]
     }
 
     if (diff.addedQaScenarios && diff.addedQaScenarios.length > 0) {
-      lines.push('### Added QA Scenarios');
+      lines.push(`### ${formatDiffHeading(labels.addedQaScenarios, context.locale)}`);
       lines.push('');
       for (const qa of diff.addedQaScenarios) {
         lines.push(`- **${qa.insightKey || qa.statement}**: ${qa.statement}`);
@@ -65,4 +67,15 @@ export function renderImpactDiff(context: MarkdownReportRenderContext): string[]
   }
 
   return lines;
+}
+
+function formatDiffHeading(value: string, locale: string): string {
+  if (locale !== 'en') {
+    return value;
+  }
+
+  return value
+    .split(' ')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
 }

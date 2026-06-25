@@ -179,6 +179,54 @@ describe('MarkdownImpactReportBuilder', () => {
     expect(report).toContain('> Secrets were redacted');
   });
 
+  it('renders Vietnamese report chrome while preserving raw evidence and source text', () => {
+    const viAnalysis = {
+      ...mockAnalysis,
+      snapshot: {
+        ...mockAnalysis.snapshot,
+        profile: { domain: 'BOOKING' },
+      },
+    };
+    const rawEvidence = 'booking.status = BookingStatus.CANCELLED;';
+
+    const report = builder.build({
+      locale: 'vi',
+      analysis: viAnalysis,
+      insights: [
+        {
+          insightType: 'CLAIM',
+          reviewStatus: 'CONFIRMED',
+          certainty: 'EVIDENCED',
+          title: 'Booking reaches CANCELLED status',
+          description: 'Booking reaches CANCELLED status',
+          evidenceLinks: [
+            {
+              evidence: {
+                id: 'ev-vi-1',
+                sourcePath: 'src/booking/booking.service.ts',
+                startLine: 12,
+                endLine: 14,
+                excerpt: rawEvidence,
+              },
+            },
+          ],
+        },
+      ] as unknown as any[],
+      traceabilityLinks: [],
+      hasUnreviewedItems: false,
+    });
+
+    expect(report).toContain('# Báo cáo phân tích tác động: Paid booking cancellation refund');
+    expect(report).toContain('## Yêu cầu');
+    expect(report).toContain('## Thuật ngữ domain');
+    expect(report).toContain('- refund: hoàn tiền');
+    expect(report).toContain('## Tác động có bằng chứng');
+    expect(report).toContain('## Phụ lục bằng chứng');
+    expect(report).toContain('**File:** `src/booking/booking.service.ts`');
+    expect(report).toContain(rawEvidence);
+    expect(report).toContain('> Allow users to cancel paid bookings and receive refund.');
+  });
+
   it('adds unreviewed acknowledged note if hasUnreviewedItems is true', () => {
     const report = builder.build({
       analysis: mockAnalysis,

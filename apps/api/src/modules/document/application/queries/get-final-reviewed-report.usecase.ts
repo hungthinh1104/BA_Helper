@@ -5,6 +5,9 @@ import { GetReviewCompletionUseCase } from '../../../traceability/application/ge
 import { GetLatestReviewedReportSnapshotUseCase } from './get-latest-reviewed-report-snapshot.usecase';
 import { FinalReviewedReportResponse } from '@ba-helper/contracts';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { ReviewedSnapshotReportContextAdapter } from '../render/reviewed-snapshot-report-context.adapter';
+import { MarkdownImpactReportBuilder } from '../render/markdown-impact-report.builder';
+import { DEFAULT_REPORT_LOCALE, ReportLocale } from '../render/report-localization';
 
 @Injectable()
 export class GetFinalReviewedReportUseCase {
@@ -12,9 +15,15 @@ export class GetFinalReviewedReportUseCase {
     private readonly getReviewCompletion: GetReviewCompletionUseCase,
     private readonly getLatestSnapshot: GetLatestReviewedReportSnapshotUseCase,
     private readonly prisma: PrismaService,
+    private readonly contextAdapter: ReviewedSnapshotReportContextAdapter,
+    private readonly reportBuilder: MarkdownImpactReportBuilder,
   ) {}
 
-  async execute(analysisId: string): Promise<FinalReviewedReportResponse> {
+  async execute(
+    analysisId: string,
+    params: { locale?: ReportLocale } = {},
+  ): Promise<FinalReviewedReportResponse> {
+    const locale = params.locale ?? DEFAULT_REPORT_LOCALE;
     const completion = await this.getReviewCompletion.execute(analysisId);
 
     if (!completion.isComplete) {
@@ -33,11 +42,12 @@ export class GetFinalReviewedReportUseCase {
       );
     }
 
-    const markdown = await this.resolveSnapshotMarkdown(snapshot);
+    const markdown = await this.resolveSnapshotMarkdown(snapshot, locale);
 
     return {
       analysisId,
       snapshotId: snapshot.id,
+      locale,
       markdown,
       createdAt: snapshot.createdAt.toISOString(),
       reviewCompletion: completion,
@@ -49,6 +59,20 @@ export class GetFinalReviewedReportUseCase {
   }
 
   private async resolveSnapshotMarkdown(snapshot: {
+    id: string;
+    analysisId: string;
+    approvedDocumentId: string | null;
+    markdown: string | null;
+  }, locale: ReportLocale) {
+    const defaultMarkdown = await this.resolveDefaultSnapshotMarkdown(snapshot);
+    if (locale === DEFAULT_REPORT_LOCALE) {
+      return defaultMarkdown;
+    }
+
+    return this.renderLocalizedSnapshotMarkdown(snapshot, locale);
+  }
+
+  private async resolveDefaultSnapshotMarkdown(snapshot: {
     id: string;
     approvedDocumentId: string | null;
     markdown: string | null;
@@ -97,5 +121,27 @@ export class GetFinalReviewedReportUseCase {
       'Final reviewed report document has not been generated yet.',
       { status: 'MISSING' },
     );
+  }
+
+  private async renderLocalizedSnapshotMarkdown(snapshot: {
+    id: string;
+    analysisId: string;
+  }, locale: ReportLocale) {
+    const analysis = await this.prisma.impactAnalysis.findUnique({
+      where: { id: snapshot.analysisId },
+      include: {
+        snapshot: { include: { repository: true, profile: true } },
+        sourceTarget: true,
+        requirementRevision: { include: { requirement: true } },
+        insights: true,
+      },
+    });
+
+    if (!analysis) {
+      throw new AppError('IMPACT_ANALYSIS_NOT_FOUND', 'Impact analysis not found.');
+    }
+
+    const context = await this.contextAdapter.buildContext(snapshot, analysis, locale);
+    return this.reportBuilder.build(context);
   }
 }

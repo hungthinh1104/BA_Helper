@@ -36,7 +36,7 @@ export class RunDocumentJobUseCase {
       const analysis = await this.prisma.impactAnalysis.findUnique({
         where: { id: snapshot.analysisId },
         include: {
-          snapshot: { include: { repository: true } },
+          snapshot: { include: { repository: true, profile: true } },
           sourceTarget: true,
           requirementRevision: { include: { requirement: true } },
           insights: true,

@@ -6,13 +6,20 @@ import { AlertCircle } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AnalysisWorkspaceShell } from "@/components/workspace/analysis/analysis-workspace-shell"
 import { useAnalysisWorkspace } from "@/hooks/api/use-analyses"
+import { DEFAULT_ANALYSIS_WORKSPACE_LOCALE, type SupportedLocale } from "@/lib/i18n/status-labels"
 
 export default function ImpactAnalysisDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ analysisId: string }>
+  searchParams: Promise<{ locale?: string | string[] }>
 }) {
   const { analysisId } = use(params)
+  const query = use(searchParams)
+  const candidateLocale = Array.isArray(query.locale) ? query.locale[0] : query.locale
+  const locale: SupportedLocale =
+    candidateLocale === "vi" ? "vi" : DEFAULT_ANALYSIS_WORKSPACE_LOCALE
   const {
     data: workspace,
     isLoading,
@@ -47,5 +54,5 @@ export default function ImpactAnalysisDetailPage({
     )
   }
 
-  return <AnalysisWorkspaceShell workspace={workspace} />
+  return <AnalysisWorkspaceShell workspace={workspace} locale={locale} />
 }

@@ -15,6 +15,16 @@ PR5E establishes the foundation only:
 
 This is not a full Vietnamese product mode and not multi-domain runtime support.
 
+P7B adds explicit locale-aware rendering for presentation chrome:
+
+- analysis workspace shell labels may render from `locale=en|vi`
+- final reviewed report reads accept `locale=en|vi`
+- default locale remains `en`
+- `vi` renders report headings, table headers, fixed notices, and terminology
+  references only
+- generated statements, evidence excerpts, code, file paths, artifact keys,
+  provenance IDs, commit SHAs, and source line ranges remain raw
+
 ## Invariants
 
 - Contracts, enum values, database values, and API payload keys stay English.
@@ -35,6 +45,11 @@ inventory release, and payment state in multiple locales.
 The domain pack registry may expose bounded glossary metadata such as locale,
 asset status, version, and term count. It must not expose glossary term bodies
 as evidence or as a runtime language mode.
+
+Locale-aware report rendering may display a bounded terminology section derived
+from the static booking glossary. This remains a terminology aid only; it must
+not change retrieval, analysis reasoning, evidence links, or persisted report
+truth.
 
 They are not executable analyzer rules:
 

@@ -11,6 +11,7 @@ import { renderEvidenceAppendix } from './markdown-renderers/evidence-appendix.r
 import { renderReviewHistory } from './markdown-renderers/review-history.renderer';
 import { renderEvaluationContext } from './markdown-renderers/evaluation-context.renderer';
 import { renderImpactDiff } from './markdown-renderers/impact-diff.renderer';
+import { DEFAULT_REPORT_LOCALE } from './report-localization';
 
 @Injectable()
 export class MarkdownImpactReportBuilder {
@@ -19,9 +20,10 @@ export class MarkdownImpactReportBuilder {
     private readonly evalContextAdapter: EvaluationContextAdapter
   ) {}
 
-  build(params: Omit<MarkdownReportRenderContext, 'reviewNotes' | 'dependencyEdges' | 'clarifications' | 'reviewDecisions'> & Partial<Pick<MarkdownReportRenderContext, 'reviewNotes' | 'dependencyEdges' | 'clarifications' | 'reviewDecisions'>>): string {
+  build(params: Omit<MarkdownReportRenderContext, 'locale' | 'reviewNotes' | 'dependencyEdges' | 'clarifications' | 'reviewDecisions'> & Partial<Pick<MarkdownReportRenderContext, 'locale' | 'reviewNotes' | 'dependencyEdges' | 'clarifications' | 'reviewDecisions'>>): string {
     const context: MarkdownReportRenderContext = {
       ...params,
+      locale: params.locale || DEFAULT_REPORT_LOCALE,
       reviewNotes: params.reviewNotes || [],
       dependencyEdges: params.dependencyEdges || [],
       clarifications: params.clarifications || [],
@@ -47,7 +49,7 @@ export class MarkdownImpactReportBuilder {
       ...renderEvidenceAppendix(context),
       ...renderReviewHistory(context),
       ...renderEvidenceQuality(context),
-      ...renderEvaluationContext(evalContext),
+      ...renderEvaluationContext(evalContext, context.locale),
       ...renderImpactDiff(context),
     ];
 
