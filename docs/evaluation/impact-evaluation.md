@@ -111,6 +111,38 @@ Known limits:
 - It does not translate code, artifact keys, paths, or evidence excerpts.
 - It does not promote any additional domain to `PARTIAL` or `STABLE`.
 
+## General FALLBACK Coverage (P7D)
+P7D adds defensive evaluation coverage for `general@0.0.0`. The goal is to
+prove the fallback profile stays conservative when no supported domain applies.
+
+The fallback set covers:
+
+- generic lifecycle state change
+- generic external transaction reversal
+- downstream availability side effects
+- outbound side effects
+
+The expected outputs deliberately use empty domain concept expectations and
+uncertain wording:
+
+- unknowns start with `unknown:`
+- risks start with `inferred risk:`
+- QA scenarios start with `uncertain qa:`
+
+The fallback profile must not contain booking concepts, retrieval hints, risk
+templates, QA templates, unknown templates, or glossary metadata. Its bounded
+diagnostic metadata must include `domainPackStatus: FALLBACK` with only counts
+and identifiers, not template bodies or source excerpts.
+
+Known limits:
+
+- `general@0.0.0` is not a broad domain pack and does not claim multi-domain
+  support.
+- It can preserve raw source artifact names and evidence excerpts from the
+  analyzed repository, but it must not inject booking-specific business
+  terminology from domain-pack metadata.
+- It cannot create `EVIDENCED` claims from generic hints or fallback status.
+
 ## How to Add a New Case
 1. Ensure the requirement matches an existing fixture in `tests/fixtures/`.
 2. Create a new `.ts` file under `tests/evaluation/cases/`.

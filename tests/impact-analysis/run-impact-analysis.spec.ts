@@ -437,6 +437,8 @@ describe('RunImpactAnalysisUseCase', () => {
     const diagnostic = finalUpdateCall![0].metadata.diagnostics.find((d: any) => d.code === 'DOMAIN_PACK_APPLIED');
 
     expect(diagnostic.payload.domainPackId).toBe('general');
+    expect(diagnostic.payload.domainPackVersion).toBe('0.0.0');
+    expect(diagnostic.payload.domainPackStatus).toBe('FALLBACK');
     expect(diagnostic.payload.selectedBy).toBe('safe_default');
   });
 

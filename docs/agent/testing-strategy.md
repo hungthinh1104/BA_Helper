@@ -109,6 +109,19 @@ the fixture explicitly encodes that behavior.
 
 ## Required Test Layers
 
+### Local execution note
+
+Do not run the full Jest suite and `pnpm demo:golden-path` concurrently when
+they share the same test database or schema. Both paths reset and seed test
+data, so concurrent execution can create false failures from duplicate fixed
+fixture IDs. Run them as separate commands when validating a release or phase
+handoff:
+
+```bash
+pnpm test
+pnpm demo:golden-path
+```
+
 ### Scanner fixture tests
 
 Verify routes, controller/service methods, entities/models, tests, line ranges,
