@@ -12,6 +12,7 @@ import {
   type SupportedLocale,
 } from "@/lib/i18n/status-labels"
 import { getAnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
+import { DomainStatusBadge } from "./../shared/status-badges"
 import { OverviewTab } from "./overview-tab"
 import { ImpactMapTab } from "./impact-map-tab"
 import { EvidenceTab } from "./evidence-tab"
@@ -60,9 +61,15 @@ export function AnalysisWorkspaceShell({
       <header className="flex flex-col gap-3 border-b border-border/50 pb-4">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {labels.title}
-            </p>
+            <div className="flex items-center gap-3 mb-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {labels.title}
+              </p>
+              <DomainStatusBadge 
+                domainProfileId={workspace.overview.requirement.domainProfileId} 
+                locale={locale} 
+              />
+            </div>
             <h1 className="mt-1 truncate text-xl font-semibold text-foreground">
               {workspace.overview.requirement.title}
             </h1>

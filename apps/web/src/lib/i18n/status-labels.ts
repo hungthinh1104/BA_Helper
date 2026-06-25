@@ -150,3 +150,65 @@ export function getLocalizedLabel(
 export function formatFallbackLabel(value: string) {
   return value.replace(/_/g, " ").trim()
 }
+
+export type DomainPackStatusType = "STABLE" | "PARTIAL" | "FALLBACK" | "EXPERIMENTAL" | "UNKNOWN"
+
+export const domainPackStatusLabels = {
+  en: {
+    STABLE: "Stable coverage",
+    PARTIAL: "Partial coverage",
+    FALLBACK: "Generic fallback",
+    EXPERIMENTAL: "Experimental coverage",
+    UNKNOWN: "Unknown capability",
+  },
+  vi: {
+    STABLE: "Phạm vi ổn định",
+    PARTIAL: "Phạm vi một phần",
+    FALLBACK: "Suy luận tổng quát",
+    EXPERIMENTAL: "Phạm vi thử nghiệm",
+    UNKNOWN: "Capability chưa rõ",
+  },
+} as const satisfies LocalizedLabelMap
+
+export const domainPackStatusTooltips = {
+  en: {
+    STABLE: "Covered by tested domain evaluation cases.",
+    PARTIAL: "Limited tested coverage. Treat domain-specific hints conservatively.",
+    FALLBACK: "Generic heuristics only. Domain-specific certainty is limited.",
+    EXPERIMENTAL: "Experimental domain pack. May produce inaccurate results.",
+    UNKNOWN: "Domain capability is unknown.",
+  },
+  vi: {
+    STABLE: "Được cover bởi các evaluation case đã test.",
+    PARTIAL: "Phạm vi test giới hạn. Nên thận trọng với các gợi ý riêng của domain này.",
+    FALLBACK: "Chỉ dùng generic heuristics. Mức độ chắc chắn về domain thấp.",
+    EXPERIMENTAL: "Domain thử nghiệm. Có thể chưa ổn định.",
+    UNKNOWN: "Trạng thái capability chưa rõ.",
+  },
+} as const satisfies LocalizedLabelMap
+
+export function getDomainCapabilityBadge({
+  domainProfileId,
+  domainPackStatus,
+  locale = DEFAULT_ANALYSIS_WORKSPACE_LOCALE,
+}: {
+  domainProfileId?: string | null
+  domainPackStatus?: string | null
+  locale?: SupportedLocale
+}) {
+  let resolvedStatus = (domainPackStatus as DomainPackStatusType | undefined | null) || "UNKNOWN"
+  
+  if (resolvedStatus === "UNKNOWN" && domainProfileId) {
+    if (domainProfileId.includes("booking")) resolvedStatus = "STABLE"
+    else if (domainProfileId.includes("rental")) resolvedStatus = "PARTIAL"
+    else if (domainProfileId.includes("general")) resolvedStatus = "FALLBACK"
+  }
+
+  const safeStatus = (domainPackStatusLabels[locale] as Record<string, string>)[resolvedStatus] ? resolvedStatus : "UNKNOWN"
+
+  return {
+    status: safeStatus,
+    label: domainPackStatusLabels[locale][safeStatus],
+    tooltip: domainPackStatusTooltips[locale][safeStatus],
+  }
+}

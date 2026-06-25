@@ -77,17 +77,14 @@ export function buildLineageDiffSummary(params: {
   }
 }
 
-export function hasMaterialDiff(diff: ImpactAnalysisDiffResponse | undefined) {
+export function hasMaterialLineageChanges(diff: ImpactAnalysisDiffResponse | undefined) {
   if (!diff) return false
-  return (
-    diff.addedArtifacts.length +
-      diff.removedArtifacts.length +
-      diff.resolvedUnknowns.length +
-      diff.removedUnknowns.length +
-      diff.newUnknowns.length +
-      diff.addedQaScenarios.length >
-    0
-  )
+  
+  const hasImpacts = diff.summary.addedImpacts > 0 || diff.summary.removedImpacts > 0
+  const hasUnknowns = diff.summary.newUnknowns > 0 || diff.summary.resolvedUnknowns > 0 || diff.summary.removedUnknowns > 0
+  const hasQa = diff.summary.addedQaScenarios > 0
+
+  return hasImpacts || hasUnknowns || hasQa
 }
 
 export function evidenceDiffUnavailableMessage() {

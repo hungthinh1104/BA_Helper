@@ -13,18 +13,26 @@ export function renderQaSection(context: MarkdownReportRenderContext): string[] 
   if (qaScenarios.length > 0) {
     lines.push(`## ${labels.qaScenarios}`);
     lines.push('');
-    lines.push(`| ${labels.scenario} | ${labels.precondition} | ${labels.action} | ${labels.expectedResult} |`);
-    lines.push('|---|---|---|---|');
-    
     for (const qa of qaScenarios) {
+      lines.push(`### ${qa.title}`);
+      lines.push('');
       const parts = parseQaScenarioParts(qa.description || qa.title);
-      lines.push(`| ${qa.title} | ${parts.precondition} | ${parts.action} | ${parts.expected} |`);
+      
+      if (parts.precondition !== '-' && parts.action !== '-' && parts.expected !== '-') {
+        lines.push(`- **Given:** ${parts.precondition}`);
+        lines.push(`- **When:** ${parts.action}`);
+        lines.push(`- **Then:** ${parts.expected}`);
+      } else {
+        lines.push(`- ${qa.description || qa.title}`);
+      }
+      
+      lines.push('');
       const qaNote = reviewNotes.find(n => n.insightId === qa.id);
       if (qaNote) {
-        lines.push(`| _${labels.reviewerNote}_ | ${qaNote.body} | - | - |`);
+        lines.push(`> **${labels.reviewerNote}:** ${qaNote.body}`);
+        lines.push('');
       }
     }
-    lines.push('');
   }
 
   return lines;

@@ -106,8 +106,8 @@ const REPORT_LABELS: Record<ReportLocale, ReportLabels> = {
     unreviewedAcknowledged: 'This report was finalized with unreviewed items acknowledged.',
     diagramTruncated: 'Diagram truncated to the most relevant impacted artifacts. See the Impacted Areas and Evidence Appendix for full details.',
     executiveSummaryLine: (claims, qaScenarios, openQuestions) =>
-      `This analysis identified ${claims} evidence-backed impacts, ${qaScenarios} QA scenarios, and ${openQuestions} open questions.`,
-    primaryImpactedAreas: (areas) => `The primary impacted areas are ${areas.toLowerCase()} layers.`,
+      `This analysis identified **${claims}** evidence-backed impacts, **${qaScenarios}** QA scenarios, and **${openQuestions}** open questions.`,
+    primaryImpactedAreas: (areas) => `The primary impacted areas are **${areas.toLowerCase()}** layers.`,
   },
   vi: {
     titlePrefix: 'Báo cáo phân tích tác động',
@@ -208,8 +208,8 @@ const REPORT_LABELS: Record<ReportLocale, ReportLabels> = {
     unreviewedAcknowledged: 'Report này được finalize với các item chưa review đã được acknowledge.',
     diagramTruncated: 'Sơ đồ đã được rút gọn vào các artifact tác động quan trọng nhất. Xem Khu vực bị tác động và Phụ lục bằng chứng để biết đầy đủ.',
     executiveSummaryLine: (claims, qaScenarios, openQuestions) =>
-      `Analysis này xác định ${claims} tác động có bằng chứng, ${qaScenarios} kịch bản QA, và ${openQuestions} câu hỏi mở.`,
-    primaryImpactedAreas: (areas) => `Khu vực tác động chính là các layer ${areas.toLowerCase()}.`,
+      `Analysis này xác định **${claims}** tác động có bằng chứng, **${qaScenarios}** kịch bản QA, và **${openQuestions}** câu hỏi mở.`,
+    primaryImpactedAreas: (areas) => `Khu vực tác động chính là các layer **${areas.toLowerCase()}**.`,
   },
 };
 

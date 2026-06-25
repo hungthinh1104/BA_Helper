@@ -17,34 +17,46 @@ export function renderImpactedAreas(context: MarkdownReportRenderContext): strin
 
   lines.push(`## ${labels.impactedAreas}`);
   lines.push('');
-  lines.push(`| ${labels.area} | ${labels.artifact} | ${labels.file} | ${labels.reviewStatus} |`);
-  lines.push('|---|---|---|---|');
-  
+  // Group links by type
+  const groupedLinks = new Map<string, typeof traceabilityLinks>();
   const sortedLinks = [...traceabilityLinks].sort((a, b) => a.reviewStatus.localeCompare(b.reviewStatus));
+  
   for (const link of sortedLinks) {
     const type = resolveArtifactDisplayType(link.artifact);
-    const nameRaw = link.artifact?.name ? `\`${link.artifact.name}\`` : labels.unknown;
-    let maturityLabel = '';
-    if (capabilitySummary?.payload) {
-      const p = capabilitySummary.payload;
-      if (p.status && p.status !== 'STABLE') {
-        maturityLabel = ` (${p.status})`;
-      }
-    } else if (link.artifact?.artifactKey?.startsWith('go_') || link.artifact?.artifactKey?.startsWith('java_')) {
-      maturityLabel = link.artifact.artifactKey.startsWith('go_') ? ' (EXPERIMENTAL)' : ' (PARTIAL)';
+    if (!groupedLinks.has(type)) {
+      groupedLinks.set(type, []);
     }
-    
-    let methodLabel = '';
-    if (link.artifact?.name?.includes('UNKNOWN')) {
-      methodLabel = ` **[${labels.methodUnknown}]**`;
-    }
-
-    const name = nameRaw + maturityLabel + methodLabel;
-    const file = link.artifact?.filePath ? `\`${link.artifact.filePath}\`` : labels.unknown;
-    const status = link.reviewStatus === 'CONFIRMED' ? labels.confirmed : link.reviewStatus === 'NEEDS_REVIEW' ? labels.needsReview : link.reviewStatus;
-    lines.push(`| ${type} | ${name} | ${file} | ${status} |`);
+    groupedLinks.get(type)!.push(link);
   }
-  lines.push('');
+
+  for (const [type, links] of groupedLinks.entries()) {
+    lines.push(`### ${type}`);
+    lines.push('');
+    for (const link of links) {
+      const nameRaw = link.artifact?.name ? `\`${link.artifact.name}\`` : labels.unknown;
+      let maturityLabel = '';
+      if (capabilitySummary?.payload) {
+        const p = capabilitySummary.payload;
+        if (p.status && p.status !== 'STABLE') {
+          maturityLabel = ` (${p.status})`;
+        }
+      } else if (link.artifact?.artifactKey?.startsWith('go_') || link.artifact?.artifactKey?.startsWith('java_')) {
+        maturityLabel = link.artifact.artifactKey.startsWith('go_') ? ' (EXPERIMENTAL)' : ' (PARTIAL)';
+      }
+      
+      let methodLabel = '';
+      if (link.artifact?.name?.includes('UNKNOWN')) {
+        methodLabel = ` **[${labels.methodUnknown}]**`;
+      }
+
+      const name = nameRaw + maturityLabel + methodLabel;
+      const file = link.artifact?.filePath ? `\`${link.artifact.filePath}\`` : labels.unknown;
+      const status = link.reviewStatus === 'CONFIRMED' ? labels.confirmed : link.reviewStatus === 'NEEDS_REVIEW' ? labels.needsReview : link.reviewStatus;
+      
+      lines.push(`- ${name} in ${file} — **${status}**`);
+    }
+    lines.push('');
+  }
 
   const linkNotes = reviewNotes.filter(n => n.traceabilityLinkId && traceabilityLinks.some(l => l.id === n.traceabilityLinkId));
   if (linkNotes.length > 0) {

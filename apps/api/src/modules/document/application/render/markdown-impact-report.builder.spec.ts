@@ -109,15 +109,16 @@ describe('MarkdownImpactReportBuilder', () => {
 
     // Items should be in right places
     expect(report).toContain('Claim 1 desc');
-    expect(report).toContain('| X | Y | Z |');
+    expect(report).toContain('- **Given:** X');
+    expect(report).toContain('- **When:** Y');
+    expect(report).toContain('- **Then:** Z');
     expect(report).toContain('Question 1 desc');
     expect(report).toContain('Unknown 1 desc');
     expect(report).toContain('AC 1 desc');
 
-    // QA Scenario table formatting
-    expect(report).toContain('| Scenario | Precondition | Action | Expected Result |');
-    expect(report).toContain('|---|---|---|---|');
-    expect(report).toContain('| QA 1 | X | Y | Z |');
+    // QA Scenario formatting
+    expect(report).not.toContain('| Scenario | Precondition | Action | Expected Result |');
+    expect(report).toContain('- **Given:** X');
   });
 
   it('handles missing evidence gracefully', () => {
@@ -258,8 +259,8 @@ describe('MarkdownImpactReportBuilder', () => {
       hasUnreviewedItems: false,
     });
 
-    expect(report).toContain('The primary impacted areas are data model layers.');
-    expect(report).toContain('| Data Model | `BookingAggregate` | `src/booking.aggregate.ts` | Confirmed |');
+    expect(report).toContain('The primary impacted areas are **data model** layers.');
+    expect(report).toContain('- `BookingAggregate` in `src/booking.aggregate.ts` — **Confirmed**');
   });
 
   it('includes a provenance block when metadata is provided', () => {

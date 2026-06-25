@@ -14,7 +14,7 @@ import { getLocalizedLabel, reviewDecisionLabels, type SupportedLocale } from "@
 import { useAnalysisDiff, useAnalysisLineage } from "@/hooks/api/use-analyses"
 import {
   buildLineageDiffSummary,
-  hasMaterialDiff,
+  hasMaterialLineageChanges,
   isNoBaselineDiffError,
 } from "./lineage-diff-view-model"
 
@@ -93,7 +93,7 @@ export function LineageDiffTab({
             value={summary.sourceReviewClarificationRequestId ?? labels.none}
             mono
           />
-          <InfoRow label={labels.oldSnapshotCommit} value={summary.previousSnapshot?.commitSha ?? labels.none} mono />
+          <InfoRow label={labels.baselineSnapshotCommit} value={summary.previousSnapshot?.commitSha ?? labels.none} mono />
           <InfoRow label={labels.newSnapshotCommit} value={summary.currentSnapshot?.commitSha ?? workspace.overview.snapshot.commitSha} mono />
         </div>
       </div>
@@ -117,8 +117,11 @@ export function LineageDiffTab({
             </div>
           ) : null}
 
-          {!hasMaterialDiff(diff) ? (
-            <EmptyPanel title={labels.noMaterialChanges} />
+          {!hasMaterialLineageChanges(diff) ? (
+            <EmptyPanel 
+              title={labels.noMaterialChanges} 
+              description="This revision did not yield any new architectural or QA impact compared to its baseline."
+            />
           ) : null}
 
           <ArtifactDiffSection diff={diff} locale={locale} labels={labels} />

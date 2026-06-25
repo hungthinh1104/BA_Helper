@@ -17,13 +17,13 @@ export function renderImpactsAndAc(context: MarkdownReportRenderContext): string
     claims.forEach((claim, index) => {
       lines.push(`### ${index + 1}. ${claim.description || claim.title}`);
       lines.push('');
-      lines.push(`**${labels.certainty}:** ${formatCertainty(claim.certainty, context.locale)}  `);
+      lines.push(`> **${labels.certainty}:** ${formatCertainty(claim.certainty, context.locale)}  `);
       const claimNote = reviewNotes.find(n => n.insightId === claim.id);
       if (claimNote) {
-        lines.push(`**${labels.reviewerNote}:** ${claimNote.body}  `);
+        lines.push(`> **${labels.reviewerNote}:** ${claimNote.body}  `);
       }
       if (claim.reasoning) {
-        lines.push(`**${labels.reasoning}:** ${claim.reasoning}  `);
+        lines.push(`> **${labels.reasoning}:** ${claim.reasoning}  `);
       }
       lines.push('');
       
@@ -71,22 +71,23 @@ export function renderQuestionsAndClarifications(context: MarkdownReportRenderCo
     for (const q of openQuestions) {
       lines.push(`### ${q.title}`);
       lines.push('');
-      lines.push(`**${labels.question}:** ${q.description || q.title}`);
-      lines.push('');
+      lines.push(`> **${labels.question}:** ${q.description || q.title}`);
+      
       const qNote = reviewNotes.find(n => n.insightId === q.id);
       if (qNote) {
-        lines.push(`**${labels.reviewerNote}:** ${qNote.body}`);
-        lines.push('');
+        lines.push(`>  `);
+        lines.push(`> **${labels.reviewerNote}:** ${qNote.body}`);
       }
       if (q.reasoning) {
-        lines.push(`**${labels.whyThisMatters}:** ${q.reasoning}`);
-        lines.push('');
+        lines.push(`>  `);
+        lines.push(`> **${labels.whyThisMatters}:** ${q.reasoning}`);
       }
       
       if (q.metadata && typeof q.metadata === 'object' && (q.metadata as any).origin === 'SCANNER_DIAGNOSTIC') {
-        lines.push(labels.derivedFromScannerDiagnostic);
-        lines.push('');
+        lines.push(`>  `);
+        lines.push(`> ${labels.derivedFromScannerDiagnostic}`);
       }
+      lines.push('');
     }
   }
 
