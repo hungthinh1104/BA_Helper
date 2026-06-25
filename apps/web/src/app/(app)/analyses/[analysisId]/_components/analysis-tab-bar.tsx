@@ -6,6 +6,7 @@ import { FinalizeAnalysisDialog } from "@/components/workspace/analysis/finalize
 import { AnalysisHeader } from "@/components/workspace/analysis/analysis-header"
 import { E2ETimeline } from "@/components/workspace/analysis/e2e-timeline"
 import type { ImpactAnalysisResponse } from "@ba-helper/contracts"
+import { getAnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
 
 type TabValue = "insights" | "graph" | "traceability-matrix" | "qa-coverage" | "review-queue" | "diff" | "lineage"
 
@@ -35,6 +36,8 @@ export function AnalysisTabBar({
   onTabChange,
   blockingRemaining,
 }: AnalysisTabBarProps) {
+  const labels = getAnalysisWorkspaceLabels().reviewReport.finalizeDialog
+
   const tabClass = (tab: TabValue) =>
     `min-h-10 shrink-0 px-3 py-2 text-sm font-medium border-b-2 transition-colors -mb-px flex items-center gap-1.5 whitespace-nowrap
      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-t ${
@@ -144,6 +147,7 @@ export function AnalysisTabBar({
                 commitSha={analysis.snapshot.commitSha}
                 stats={stats}
                 isStale={analysis.freshness.isStale}
+                labels={labels}
               >
                 <Button
                   size="sm"
