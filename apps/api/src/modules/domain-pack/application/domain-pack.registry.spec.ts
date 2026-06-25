@@ -39,6 +39,15 @@ describe('DomainPackRegistry', () => {
       expect(result.selectedBy).toBe('repository_profile');
     });
 
+    it('selects repository RENTAL as rental@0.1.0 PARTIAL', () => {
+      const result = registry.selectPack({ repositoryProfileDomain: 'RENTAL' });
+      expect(result.pack.id).toBe('rental');
+      expect(result.pack.version).toBe('0.1.0');
+      expect(result.pack.status).toBe('PARTIAL');
+      expect(result.normalizedPackId).toBe('rental');
+      expect(result.selectedBy).toBe('repository_profile');
+    });
+
     it('manual config overrides repository profile', () => {
       const result = registry.selectPack({
         manualPackId: 'booking',
@@ -105,6 +114,15 @@ describe('DomainPackRegistry', () => {
           version: '0.0.0',
           status: 'FALLBACK',
           glossaryMetadata: [],
+        }),
+        expect.objectContaining({
+          id: 'rental',
+          version: '0.1.0',
+          status: 'PARTIAL',
+          glossaryMetadata: [
+            { locale: 'en', status: 'foundation', version: '1.0.0', termCount: 9 },
+            { locale: 'vi', status: 'foundation', version: '1.0.0', termCount: 9 },
+          ],
         }),
       ]);
     });

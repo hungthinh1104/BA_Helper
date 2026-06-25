@@ -49,6 +49,7 @@ Current profiles:
 | --- | --- | --- |
 | `booking@0.1.0` | `STABLE` | MVP Booking / Payment / Refund domain with P7C fixture-backed coverage for cancellation, refund, double-refund prevention, inventory release, and payment state. |
 | `general@0.0.0` | `FALLBACK` | Empty safe default with P7D defensive coverage; no booking-specific hints. |
+| `rental@0.1.0` | `PARTIAL` | Bounded rental lifecycle profile with P7E fixture-backed coverage for deposits, room availability, and contract cancellation. |
 
 Do not claim broad multi-domain support until each new profile has status,
 limits, evaluation cases, and fallback behavior documented.
@@ -63,6 +64,13 @@ templates, and no glossary metadata. Fallback diagnostics may expose bounded
 metadata such as id, version, status, selectedBy, and counts, but must not
 expose template bodies, prompt payloads, source code, or evidence excerpts.
 
+`rental@0.1.0` `PARTIAL` means the registry can identify bounded rental
+terminology and evaluation cases, but the product does not claim full rental
+domain support. Current coverage is limited to deposit payment consistency,
+room availability through a booking request, and contract cancellation effects
+on payment records plus tenant/landlord notification. Maintenance request terms
+exist only as terminology/noise coverage in this revision.
+
 ## Glossary Metadata
 
 Booking has static English and Vietnamese glossary assets under:
@@ -72,9 +80,18 @@ packages/domain-packs/booking/en.glossary.json
 packages/domain-packs/booking/vi.glossary.json
 ```
 
+Rental has static English and Vietnamese glossary assets under:
+
+```text
+packages/domain-packs/rental/profile.json
+packages/domain-packs/rental/en.glossary.json
+packages/domain-packs/rental/vi.glossary.json
+```
+
 The registry exposes only metadata for these assets: locale, glossary status,
-version, and term count. Glossary assets remain terminology references. P7A does
-not introduce Vietnamese runtime output, scanner changes, or new AI behavior.
+version, and term count. Glossary assets remain terminology references. Domain
+profile additions do not introduce Vietnamese runtime output, scanner changes,
+or new AI behavior.
 
 ## Adding A Profile
 

@@ -74,6 +74,8 @@ generated reports.
 - Every public domain pack must expose status: `STABLE`, `PARTIAL`,
   `EXPERIMENTAL`, or `FALLBACK`.
 - `booking@0.1.0` is the current `STABLE` profile.
+- `rental@0.1.0` is a `PARTIAL` profile with bounded fixture-backed coverage;
+  it must not be described as full rental-domain support.
 - `general@0.0.0` is the safe `FALLBACK` profile and must not contain
   booking-specific concepts, retrieval hints, risks, QA templates, or unknown
   templates.

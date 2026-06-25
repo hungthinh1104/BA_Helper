@@ -1,5 +1,6 @@
 import { DomainPackRegistry } from '../../apps/api/src/modules/domain-pack/application/domain-pack.registry';
 import { BookingDomainPack } from '../../apps/api/src/modules/domain-pack/packs/booking.v0.1.0';
+import { RentalDomainPack } from '../../apps/api/src/modules/domain-pack/packs/rental.v0.1.0';
 
 describe('Domain Pack Concept Matching', () => {
   let registry: DomainPackRegistry;
@@ -51,6 +52,44 @@ describe('Domain Pack Concept Matching', () => {
       // If we match multiple things, they should appear in the order defined in the pack
       const keys = registry.matchConcepts('user will cancel booking and request money back for payment', pack);
       expect(keys).toEqual(['booking', 'payment', 'refund', 'cancellation']); 
+    });
+  });
+
+  describe('rental@0.1.0 (partial)', () => {
+    const pack = RentalDomainPack;
+
+    it('is explicitly partial with English and Vietnamese glossary metadata', () => {
+      expect(pack.status).toBe('PARTIAL');
+      expect(pack.glossaryMetadata.map((item) => item.locale)).toEqual(['en', 'vi']);
+      expect(pack.glossaryMetadata.map((item) => item.termCount)).toEqual([9, 9]);
+    });
+
+    it('maps deposit payment update to rental concepts', () => {
+      const keys = registry.matchConcepts(
+        'tenant deposit payment updates rental contract transition and payment record',
+        pack,
+      );
+
+      expect(keys).toEqual([
+        'rental_contract',
+        'deposit',
+        'tenant',
+        'payment_record',
+        'contract_transition',
+      ]);
+    });
+
+    it('maps room availability booking request to bounded concepts', () => {
+      const keys = registry.matchConcepts('booking request changes room availability', pack);
+
+      expect(keys).toEqual(['room_availability', 'booking_request']);
+    });
+
+    it('maps maintenance request without implying full rental support', () => {
+      const keys = registry.matchConcepts('maintenance request opens a repair ticket', pack);
+
+      expect(keys).toEqual(['maintenance_request']);
+      expect(pack.status).toBe('PARTIAL');
     });
   });
 

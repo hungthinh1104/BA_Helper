@@ -143,6 +143,33 @@ Known limits:
   terminology from domain-pack metadata.
 - It cannot create `EVIDENCED` claims from generic hints or fallback status.
 
+## Rental PARTIAL Coverage (P7E)
+P7E adds one additional domain profile, `rental@0.1.0`, with `PARTIAL` status.
+This proves the registry/status model can represent a bounded non-booking
+domain without claiming broad multi-domain support.
+
+The partial rental set covers:
+
+- deposit payment update affecting rental contract and payment-record
+  consistency
+- room availability update through a booking request flow
+- rental contract cancellation affecting payment records and tenant/landlord
+  notification
+
+The rental fixture is intentionally small and source-backed. Every expected
+impacted artifact must come from scanner output over
+`tests/fixtures/nestjs-rental-partial`; rental glossary terms, retrieval hints,
+risk templates, QA templates, and unknown templates cannot satisfy evidence
+requirements and cannot become impacted artifact keys.
+
+Known limits:
+
+- `rental@0.1.0` is `PARTIAL`, not `STABLE`.
+- Maintenance-request terminology exists only as bounded terminology/noise
+  coverage in this revision.
+- No scanner, retrieval, or LLM behavior is expanded by P7E.
+- This is not a broad multi-domain product claim.
+
 ## How to Add a New Case
 1. Ensure the requirement matches an existing fixture in `tests/fixtures/`.
 2. Create a new `.ts` file under `tests/evaluation/cases/`.

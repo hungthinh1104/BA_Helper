@@ -491,6 +491,57 @@ describe('RunImpactAnalysisUseCase', () => {
     expect(diagnostic.payload.selectedBy).toBe('repository_profile');
   });
 
+  it('rental profile emits rental@0.1.0 as PARTIAL', async () => {
+    class RentalProfileRepo extends StubImpactRepo {
+      findById = async () => ({
+        id: 'analysis-1',
+        status: 'QUEUED',
+        stage: 'WAITING',
+        progress: 0,
+        snapshot: {
+          id: 'snap-1',
+          analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
+          coverageStatus: 'READY',
+          profile: { domain: 'RENTAL' },
+        },
+        requirementRevision: {
+          rawText: 'Update tenant deposit payment for rental contract.',
+        },
+      });
+    }
+
+    const impactRepo = new RentalProfileRepo();
+    const updateSpy = jest.spyOn(impactRepo, 'updateStatus');
+    const evidenceStep = new ImpactEvidenceCollectionStep(
+      new StubArtifactRepo([]) as any,
+      new StubEvidenceRepo() as any,
+      new StubTraceabilityRepo() as any,
+      new class { retrieve = async () => [] }() as any
+    );
+    const diagnosticStep = new ImpactDiagnosticPropagationStep();
+    const aiReasoningStep = new ImpactAiReasoningStep(new FakeLlmProvider() as any);
+
+    const useCase = new RunImpactAnalysisUseCase(
+      impactRepo as any,
+      new StubInsightRepo() as any,
+      new DomainPackRegistry(),
+      evidenceStep as any,
+      diagnosticStep as any,
+      aiReasoningStep as any,
+      { recordEvent: jest.fn() } as any
+    );
+
+    await useCase.execute({ analysisId: 'analysis-1' });
+
+    const finalUpdateCall = updateSpy.mock.calls.find(call => call[0].stage === 'DONE');
+    const diagnostic = finalUpdateCall![0].metadata.diagnostics.find((d: any) => d.code === 'DOMAIN_PACK_APPLIED');
+
+    expect(diagnostic.payload.domainPackId).toBe('rental');
+    expect(diagnostic.payload.domainPackVersion).toBe('0.1.0');
+    expect(diagnostic.payload.domainPackStatus).toBe('PARTIAL');
+    expect(diagnostic.payload.selectedBy).toBe('repository_profile');
+  });
+
   it('rejects non-runnable analyses', async () => {
     class LockedImpactRepo extends StubImpactRepo {
       findById = async () => ({

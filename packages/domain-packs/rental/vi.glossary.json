@@ -1,0 +1,17 @@
+{
+  "domain": "rental",
+  "locale": "vi",
+  "status": "foundation",
+  "version": "1.0.0",
+  "terms": {
+    "rentalContract": "hợp đồng thuê phòng",
+    "deposit": "tiền cọc",
+    "roomAvailability": "tình trạng phòng trống",
+    "bookingRequest": "yêu cầu đặt phòng",
+    "tenant": "người thuê",
+    "landlord": "chủ nhà",
+    "paymentRecord": "bản ghi thanh toán",
+    "contractTransition": "chuyển trạng thái hợp đồng",
+    "maintenanceRequest": "yêu cầu bảo trì"
+  }
+}

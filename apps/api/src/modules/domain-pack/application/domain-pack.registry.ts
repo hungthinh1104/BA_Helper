@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DomainPack, DomainProfileRegistryEntry } from '@ba-helper/contracts';
 import { GeneralDomainPack } from '../packs/general.v0.0.0';
 import { BookingDomainPack } from '../packs/booking.v0.1.0';
+import { RentalDomainPack } from '../packs/rental.v0.1.0';
 import { AppError } from '../../../shared/app-error';
 
 export type DomainPackSelectionInput = {
@@ -22,6 +23,7 @@ export class DomainPackRegistry {
   constructor() {
     this.register(GeneralDomainPack);
     this.register(BookingDomainPack);
+    this.register(RentalDomainPack);
   }
 
   /**
