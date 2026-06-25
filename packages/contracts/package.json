@@ -6,9 +6,9 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "lint": "echo \"lint contracts\"",
-    "test": "echo \"test contracts\"",
-    "typecheck": "echo \"typecheck contracts\""
+    "lint": "eslint \"src/**/*.ts\"",
+    "test": "jest --passWithNoTests",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "zod": "3.23.8"

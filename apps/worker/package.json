@@ -6,9 +6,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "dotenv -e ../../.env -- pnpm exec ts-node -r tsconfig-paths/register --project tsconfig.json src/main.ts",
-    "lint": "echo \"lint worker\"",
-    "test": "echo \"test worker\"",
-    "typecheck": "echo \"typecheck worker\""
+    "lint": "eslint \"src/**/*.ts\"",
+    "test": "jest --passWithNoTests",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.99.0",

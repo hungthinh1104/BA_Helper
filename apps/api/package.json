@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "dotenv -e ../../.env -- pnpm exec ts-node -r tsconfig-paths/register --project tsconfig.json src/main.ts",
-    "lint": "echo \"lint api\"",
+    "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
     "smoke:public-github": "dotenv -e ../../.env -- tsx src/smoke-e2e.ts",
     "smoke:public-github:real-llm": "dotenv -e ../../.env -v REAL_LLM_SMOKE=true -- tsx src/smoke-e2e.ts",
     "smoke:public-github:real-path": "dotenv -e ../../.env -v REAL_PATH_SMOKE=true -- tsx src/smoke-e2e.ts",

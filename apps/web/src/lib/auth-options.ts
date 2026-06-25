@@ -9,7 +9,7 @@ import {
 import { ApiError } from "@/lib/api-error"
 import { normalizeAuthErrorCode } from "@/lib/auth-errors"
 import { getApiBaseUrl } from "@/lib/runtime-config"
-
+import { resolveNextAuthSecret } from "@/lib/auth-secret"
 type AuthorizedUser = {
   id: string
   name: string | null
@@ -146,5 +146,5 @@ export const authOptions: AuthOptions = {
     strategy: "jwt",
     maxAge: 24 * 60 * 60,
   },
-  secret: process.env.NEXTAUTH_SECRET || "dev-super-secret-key-nextauth",
+  secret: resolveNextAuthSecret(),
 }

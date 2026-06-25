@@ -18,6 +18,7 @@ export interface RuntimeConfig {
   workspaceMode: string;
   publicPreviewMode: boolean;
   aiProvider: string;
+  enableDevLogin: boolean;
 }
 
 export function isProductionLikeEnv(nodeEnv?: string): boolean {
@@ -121,6 +122,7 @@ export function getRuntimeConfig(
     workspaceMode: env.WORKSPACE_MODE ?? DEFAULT_WORKSPACE_MODE,
     publicPreviewMode: env.PUBLIC_PREVIEW_MODE === 'true',
     aiProvider: env.AI_PROVIDER || 'fake',
+    enableDevLogin: env.ENABLE_DEV_LOGIN === 'true',
   };
 }
 
@@ -143,6 +145,18 @@ export function validateRuntimeConfig(config: RuntimeConfig, env: NodeJS.Process
     if (env.GEMINI_API_KEY || env.GOOGLE_API_KEY) throw new Error('BOOT GUARD: GEMINI/GOOGLE API keys are forbidden in PUBLIC_PREVIEW_MODE.');
     if (env.ANTHROPIC_API_KEY) throw new Error('BOOT GUARD: ANTHROPIC_API_KEY is forbidden in PUBLIC_PREVIEW_MODE.');
     if (env.DEEPSEEK_API_KEY) throw new Error('BOOT GUARD: DEEPSEEK_API_KEY is forbidden in PUBLIC_PREVIEW_MODE.');
+  }
+
+  if (config.enableDevLogin) {
+    if (config.isProductionLike) {
+      throw new Error('BOOT GUARD: ENABLE_DEV_LOGIN=true is forbidden in production/staging environments.');
+    }
+    if (config.publicPreviewMode) {
+      throw new Error('BOOT GUARD: ENABLE_DEV_LOGIN=true is forbidden in PUBLIC_PREVIEW_MODE.');
+    }
+    if (config.workspaceMode !== DEFAULT_WORKSPACE_MODE) {
+      throw new Error(`BOOT GUARD: ENABLE_DEV_LOGIN=true is forbidden when workspace mode is '${config.workspaceMode}'.`);
+    }
   }
 }
 

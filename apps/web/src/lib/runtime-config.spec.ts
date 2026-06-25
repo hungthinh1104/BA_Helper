@@ -2,8 +2,11 @@ import { ApiError } from "./api-error"
 import { getApiBaseUrl } from "./runtime-config"
 
 describe("runtime-config", () => {
-  it("uses localhost fallback in non-production env when API URL is missing", () => {
-    expect(getApiBaseUrl({ nodeEnv: "development" })).toBe("http://localhost:3000")
+  it("throws API_URL_MISSING when API URL is missing", () => {
+    expect(() => getApiBaseUrl({ nodeEnv: "development" })).toThrow(ApiError)
+    expect(() => getApiBaseUrl({ nodeEnv: "development" })).toThrow(
+      "API URL is missing. Set INTERNAL_API_URL for server-side calls or NEXT_PUBLIC_API_URL for browser-visible calls.",
+    )
   })
 
   it("prefers INTERNAL_API_URL when provided", () => {
@@ -19,7 +22,7 @@ describe("runtime-config", () => {
   it("requires explicit API URL in production", () => {
     expect(() => getApiBaseUrl({ nodeEnv: "production" })).toThrow(ApiError)
     expect(() => getApiBaseUrl({ nodeEnv: "production" })).toThrow(
-      "NEXT_PUBLIC_API_URL is required",
+      "API URL is missing. Set INTERNAL_API_URL for server-side calls or NEXT_PUBLIC_API_URL for browser-visible calls.",
     )
   })
 

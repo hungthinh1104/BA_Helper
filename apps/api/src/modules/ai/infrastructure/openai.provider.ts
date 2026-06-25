@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { LlmProvider, LlmRequest, LlmResult } from '../domain/llm-provider.interface';
 import { AiConfig, AI_CONFIG_TOKEN } from '../domain/ai-config';
 import { parseStructuredLlmOutput } from './structured-output';
+import { AiPolicy } from '../domain/ai.policy';
 
 @Injectable()
 export class OpenAiLlmProvider extends LlmProvider {
@@ -23,6 +24,10 @@ export class OpenAiLlmProvider extends LlmProvider {
     const model = request.options?.model ?? this.config.defaultModel;
     const start = Date.now();
 
+    const safeUserPrompt = this.config.redactSecrets
+      ? AiPolicy.redactPayload(request.userPrompt).redactedPayload
+      : request.userPrompt;
+
     let response;
     try {
       response = await this.client.chat.completions.create({
@@ -32,7 +37,7 @@ export class OpenAiLlmProvider extends LlmProvider {
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: request.systemPrompt },
-          { role: 'user', content: request.userPrompt },
+          { role: 'user', content: safeUserPrompt },
         ],
       });
     } catch (error: any) {

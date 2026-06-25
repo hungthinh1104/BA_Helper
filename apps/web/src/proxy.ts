@@ -2,8 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { getToken } from "next-auth/jwt"
 import { buildLoginRedirect, getSafeNext, isProtectedAppPath, isPublicWebPath } from "@/lib/auth-routing"
 
-const DEFAULT_NEXTAUTH_SECRET = "dev-super-secret-key-nextauth"
-
+import { resolveNextAuthSecret } from "@/lib/auth-secret"
 export async function proxy(request: NextRequest) {
   // --- PREVIEW BASIC AUTH GUARD ---
   if (process.env.PREVIEW_AUTH_ENABLED === 'true') {
@@ -44,7 +43,7 @@ export async function proxy(request: NextRequest) {
     if (pathname === "/login") {
       const token = await getToken({
         req: request,
-        secret: process.env.NEXTAUTH_SECRET || DEFAULT_NEXTAUTH_SECRET,
+        secret: resolveNextAuthSecret(),
       })
 
       if (token) {
@@ -62,7 +61,7 @@ export async function proxy(request: NextRequest) {
 
   const token = await getToken({
     req: request,
-    secret: process.env.NEXTAUTH_SECRET || DEFAULT_NEXTAUTH_SECRET,
+    secret: resolveNextAuthSecret(),
   })
 
   if (!token) {

@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Public } from '../application/jwt-auth.guard';
 import { CurrentUser } from './current-user.decorator';
+import { getRuntimeConfig } from '../../../bootstrap/runtime-config';
 import { loginRequestSchema, RequestUser, type LoginRequest, type LoginResponse } from '@ba-helper/contracts';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
@@ -19,8 +20,9 @@ export class AuthController {
   @ApiOperation({ summary: 'Login or create a dev user (MVP only)' })
   @ApiResponse({ status: 200, description: 'Returns JWT and user profile' })
   async devLogin(@Body() body: unknown): Promise<LoginResponse> {
-    if (process.env.ENABLE_DEV_LOGIN !== 'true') {
-      throw new ForbiddenException('Dev login is disabled');
+    const config = getRuntimeConfig();
+    if (!config.enableDevLogin) {
+      throw new ForbiddenException('Dev login is disabled by runtime policy. Set ENABLE_DEV_LOGIN=true and ensure mode allows it.');
     }
 
     const parsed = loginRequestSchema.safeParse(body);
