@@ -1,4 +1,4 @@
-# Visual Demo Proof Pack
+# Visual Demo Proof Pack [PARTIAL]
 
 This document contains text-based and Mermaid visual artifacts to help reviewers understand the Requirement-to-Code Impact Analyzer in under 60 seconds without relying on external image hosting.
 
@@ -68,13 +68,13 @@ The following visual assets demonstrate the finalized UI flows and capabilities:
   ![Impact Analysis Result](../assets/demo/02-impact-analysis-result.png)
 
 - **evidence appendix/report**: Detailed view of specific code lines cited by the LLM.
-  ![Evidence-Backed Artifacts](../assets/demo/03-evidence-backed-artifacts.png)
+  *[PENDING: 03-evidence-backed-artifacts.png]*
 
 - **unknown/risk diagnostics**: View showing unknown components properly isolated.
-  ![Unknown Risk Diagnostics](../assets/demo/04-unknown-risk-diagnostics.png)
+  *[PENDING: 04-unknown-risk-diagnostics.png]*
 
 - **human review panel**: Reviewer gate for confirming/rejecting insights.
-  ![Human Review Panel](../assets/demo/05-human-review-panel.png)
+  *[PENDING: 05-human-review-panel.png]*
 
 - **traceability report preview**: Approved markdown report.
   ![Traceability Report](../assets/demo/06-traceability-report.png)

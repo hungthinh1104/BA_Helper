@@ -37,7 +37,7 @@ pnpm demo:golden-path
 ```
 
 **Visual Case Study:**
-For a step-by-step visual walkthrough of this workflow, see the [Demo Case Study](docs/portfolio/case-study.md), which features an 8-screen proof pack demonstrating the full end-to-end audit and lifecycle process.
+For a step-by-step visual walkthrough of this workflow, see the [Demo Case Study](docs/portfolio/case-study.md), which features a partial visual proof pack demonstrating key milestones of the audit and lifecycle process.
 
 **Sample Requirement:**
 > "When a paid booking is cancelled, the system must refund the tenant, prevent double refunds, update booking/payment state, and notify relevant parties."
@@ -112,8 +112,7 @@ pnpm install
 Create the environment files from their examples. The examples contain safe, pre-configured local placeholders (including a fake AI provider).
 
 ```bash
-cp apps/api/.env.example apps/api/.env
-cp apps/web/.env.example apps/web/.env.local
+cp .env.example .env
 ```
 
 For containerized web runtime, keep two URLs straight:
