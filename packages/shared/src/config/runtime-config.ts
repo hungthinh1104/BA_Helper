@@ -1,5 +1,23 @@
 const DEFAULT_WORKSPACE_MODE = 'dev-single-user' as const;
 const DEFAULT_API_VERSION = process.env.APP_VERSION ?? '0.1.0';
+
+export type AuthMode = 'dev-login' | 'unsupported';
+
+export function resolveAuthMode(env: NodeJS.ProcessEnv = process.env): AuthMode {
+  const nodeEnv = env.NODE_ENV;
+  const isLocalDev = nodeEnv === 'development' || nodeEnv === 'test';
+  const previewEnabled = env.PREVIEW_AUTH_ENABLED === 'true' || env.PUBLIC_PREVIEW_MODE === 'true';
+  const explicitEnable = env.ENABLE_DEV_LOGIN === 'true';
+  const explicitDisable = env.ENABLE_DEV_LOGIN === 'false';
+
+  if (previewEnabled) return 'unsupported';
+  if (!isLocalDev) return 'unsupported';
+  if (explicitDisable) return 'unsupported';
+  if (explicitEnable || isLocalDev) return 'dev-login';
+
+  return 'unsupported';
+}
+
 const DEFAULT_DEV_CORS_ALLOWED_ORIGINS = [
   'http://localhost:3000',
   'http://localhost:3001',
@@ -122,7 +140,7 @@ export function getRuntimeConfig(
     workspaceMode: env.WORKSPACE_MODE ?? DEFAULT_WORKSPACE_MODE,
     publicPreviewMode: env.PUBLIC_PREVIEW_MODE === 'true',
     aiProvider: env.AI_PROVIDER || 'fake',
-    enableDevLogin: env.ENABLE_DEV_LOGIN === 'true',
+    enableDevLogin: resolveAuthMode(env) === 'dev-login',
   };
 }
 
@@ -147,13 +165,18 @@ export function validateRuntimeConfig(config: RuntimeConfig, env: NodeJS.Process
     if (env.DEEPSEEK_API_KEY) throw new Error('BOOT GUARD: DEEPSEEK_API_KEY is forbidden in PUBLIC_PREVIEW_MODE.');
   }
 
-  if (config.enableDevLogin) {
+  const isExplicitlyEnabled = env.ENABLE_DEV_LOGIN === 'true';
+
+  if (isExplicitlyEnabled || config.enableDevLogin) {
     if (config.isProductionLike) {
       throw new Error('BOOT GUARD: ENABLE_DEV_LOGIN=true is forbidden in production/staging environments.');
     }
     if (config.publicPreviewMode) {
       throw new Error('BOOT GUARD: ENABLE_DEV_LOGIN=true is forbidden in PUBLIC_PREVIEW_MODE.');
     }
+  }
+
+  if (config.enableDevLogin) {
     if (config.workspaceMode !== DEFAULT_WORKSPACE_MODE) {
       throw new Error(`BOOT GUARD: ENABLE_DEV_LOGIN=true is forbidden when workspace mode is '${config.workspaceMode}'.`);
     }

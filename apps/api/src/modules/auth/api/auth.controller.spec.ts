@@ -54,12 +54,19 @@ describe('AuthController', () => {
       }
     });
 
-    it('should throw ForbiddenException if ENABLE_DEV_LOGIN is not true', async () => {
+    it('should throw ForbiddenException if explicitly disabled', async () => {
       process.env.ENABLE_DEV_LOGIN = 'false';
       await expect(controller.devLogin({ email: 'test@example.com' })).rejects.toThrow(ForbiddenException);
+    });
 
+    it('should throw ForbiddenException if not enabled and not in local dev', async () => {
       delete process.env.ENABLE_DEV_LOGIN;
+      const originalNodeEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+      
       await expect(controller.devLogin({ email: 'test@example.com' })).rejects.toThrow(ForbiddenException);
+      
+      process.env.NODE_ENV = originalNodeEnv;
     });
 
     it('should create user and issue token if ENABLE_DEV_LOGIN is true', async () => {

@@ -1,5 +1,6 @@
 export {
   WorkspaceMode,
+  AuthMode,
   RuntimeConfig,
   isProductionLikeEnv,
   isWeakSecret,
@@ -7,5 +8,6 @@ export {
   normalizeOrigin,
   parseCorsAllowedOrigins,
   getRuntimeConfig,
-  validateRuntimeConfig
+  validateRuntimeConfig,
+  resolveAuthMode
 } from '@ba-helper/shared';
