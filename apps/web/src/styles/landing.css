@@ -60,7 +60,7 @@
   color: var(--accent);
 }
 
-.hero-content {
+.landing-hero-content {
   position: relative;
   z-index: 1;
   max-width: 900px;
@@ -68,7 +68,7 @@
   text-align: center;
 }
 
-.hero-eyebrow {
+.landing-hero-eyebrow {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -81,7 +81,7 @@
   box-shadow: var(--shadow-card);
 }
 
-.hero-subtitle {
+.landing-hero-subtitle {
   max-width: 680px;
   margin: 24px auto 0;
   color: var(--text-secondary);
@@ -89,7 +89,7 @@
   line-height: 1.5;
 }
 
-.hero-actions {
+.landing-hero-actions {
   display: flex;
   justify-content: center;
   gap: 12px;
@@ -97,7 +97,7 @@
   flex-wrap: wrap;
 }
 
-.hero-mockup {
+.landing-hero-mockup {
   position: relative;
   z-index: 1;
   width: min(100% - 32px, 1120px);
@@ -108,7 +108,7 @@
    PRODUCT MOCKUP
    ========================================================= */
 
-.product-mockup {
+.landing-product-mockup {
   overflow: hidden;
   border-radius: 32px;
   background: var(--surface);
@@ -116,7 +116,7 @@
   box-shadow: var(--shadow-xl);
 }
 
-.product-mockup-header {
+.landing-product-mockup-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -126,39 +126,39 @@
   background: var(--surface);
 }
 
-.product-mockup-dots {
+.landing-product-mockup-dots {
   display: flex;
   gap: 7px;
 }
 
-.product-mockup-dot {
+.landing-product-mockup-dot {
   width: 10px;
   height: 10px;
   border-radius: 9999px;
   background: var(--border);
 }
 
-.product-mockup-body {
+.landing-product-mockup-body {
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr) 320px;
   min-height: 520px;
   background: var(--surface-muted);
 }
 
-.mockup-sidebar {
+.landing-mockup-sidebar {
   padding: 18px;
   border-right: 1px solid var(--border-subtle);
   background: var(--surface);
 }
 
-.mockup-main {
+.landing-mockup-main {
   padding: 18px;
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
 
-.mockup-inspector {
+.landing-mockup-inspector {
   padding: 18px;
   border-left: 1px solid var(--border-subtle);
   background: var(--inspector-bg);

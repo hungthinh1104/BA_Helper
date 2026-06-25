@@ -33,45 +33,45 @@ export function AppSidebar({ isCollapsed, onToggle }: AppSidebarProps) {
         )}
       </div>
 
-      <nav className={`nav-section ${isCollapsed ? "items-center" : ""}`}>
-        {!isCollapsed && <div className="nav-label">Workspace</div>}
-        <Link href="/" className={`nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={pathname === "/" ? "true" : undefined} title="Dashboard">
+      <nav className={`app-nav-section ${isCollapsed ? "items-center" : ""}`}>
+        {!isCollapsed && <div className="app-nav-label">Workspace</div>}
+        <Link href="/" className={`app-nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={pathname === "/" ? "true" : undefined} title="Dashboard">
           <Workflow className="w-4 h-4 shrink-0" />
           {!isCollapsed && <span>Dashboard</span>}
         </Link>
-        <Link href="/repositories" className={`nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/repositories")} title="Repositories">
+        <Link href="/repositories" className={`app-nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/repositories")} title="Repositories">
           <Database className="w-4 h-4 shrink-0" />
           {!isCollapsed && <span>Repositories</span>}
         </Link>
-        <Link href="/requirements" className={`nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/requirements")} title="Requirements">
+        <Link href="/requirements" className={`app-nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/requirements")} title="Requirements">
           <FileText className="w-4 h-4 shrink-0" />
           {!isCollapsed && <span>Requirements</span>}
         </Link>
-        <Link href="/analyses" className={`nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/analyses")} title="Impact Analyses">
+        <Link href="/analyses" className={`app-nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/analyses")} title="Impact Analyses">
           <Activity className="w-4 h-4 shrink-0" />
           {!isCollapsed && <span>Impact Analyses</span>}
         </Link>
-        <Link href="/reports" className={`nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/reports")} title="Finalized Analyses">
+        <Link href="/reports" className={`app-nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/reports")} title="Finalized Analyses">
           <BarChart2 className="w-4 h-4 shrink-0" />
           {!isCollapsed && <span>Finalized Analyses</span>}
         </Link>
       </nav>
 
-      <nav className={`nav-section mt-8 ${isCollapsed ? "items-center" : ""}`}>
-        {!isCollapsed && <div className="nav-label">Advanced / Experimental</div>}
-        <Link href="/analyses/runs" className={`nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/analyses/runs")} title="Multi-repo Runs">
+      <nav className={`app-nav-section mt-8 ${isCollapsed ? "items-center" : ""}`}>
+        {!isCollapsed && <div className="app-nav-label">Advanced / Experimental</div>}
+        <Link href="/analyses/runs" className={`app-nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/analyses/runs")} title="Multi-repo Runs">
           <Database className="w-4 h-4 shrink-0" />
           {!isCollapsed && <span>Multi-repo Runs</span>}
         </Link>
       </nav>
 
-      <nav className={`nav-section mt-8 ${isCollapsed ? "items-center" : ""}`}>
-        {!isCollapsed && <div className="nav-label">Settings & Diagnostics</div>}
-        <Link href="/settings/profile" className={`nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={pathname === "/settings/profile" ? "true" : undefined} title="Diagnostics">
+      <nav className={`app-nav-section mt-8 ${isCollapsed ? "items-center" : ""}`}>
+        {!isCollapsed && <div className="app-nav-label">Settings & Diagnostics</div>}
+        <Link href="/settings/profile" className={`app-nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={pathname === "/settings/profile" ? "true" : undefined} title="Diagnostics">
           <Activity className="w-4 h-4 shrink-0" />
           {!isCollapsed && <span>Diagnostics</span>}
         </Link>
-        <Link href="/settings/members" className={`nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={pathname === "/settings/members" ? "true" : undefined} title="Members">
+        <Link href="/settings/members" className={`app-nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={pathname === "/settings/members" ? "true" : undefined} title="Members">
           <Users className="w-4 h-4 shrink-0" />
           {!isCollapsed && <span>Members</span>}
         </Link>

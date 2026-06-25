@@ -81,14 +81,14 @@
 
 
 
-.nav-section {
+.app-nav-section {
   display: flex;
   flex-direction: column;
   gap: 4px;
   margin-top: var(--spacing-workspace);
 }
 
-.nav-label {
+.app-nav-label {
   padding: 0 8px;
   margin-bottom: 4px;
   color: var(--text-disabled);
@@ -97,7 +97,7 @@
   letter-spacing: 0.04em;
 }
 
-.nav-item {
+.app-nav-item {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -108,8 +108,8 @@
   font-size: 14px;
 }
 
-.nav-item:hover,
-.nav-item[data-active="true"] {
+.app-nav-item:hover,
+.app-nav-item[data-active="true"] {
   background: var(--surface-soft);
   color: var(--text-primary);
 }
@@ -149,14 +149,14 @@
   color: var(--text-tertiary);
 }
 
-.panel {
+.analysis-panel {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: var(--shadow-card);
 }
 
-.panel-header {
+.analysis-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -165,23 +165,23 @@
   border-bottom: 1px solid var(--border);
 }
 
-.panel-title {
+.analysis-panel-title {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
 }
 
-.panel-body {
+.analysis-panel-body {
   padding: 14px;
 }
 
-.artifact-list {
+.analysis-artifact-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.artifact-item {
+.analysis-artifact-item {
   display: grid;
   grid-template-columns: 90px minmax(0, 1fr) auto;
   align-items: center;
@@ -192,7 +192,7 @@
   background: var(--surface-muted);
 }
 
-.artifact-name {
+.analysis-artifact-name {
   min-width: 0;
   color: var(--text-primary);
   font-weight: 500;
@@ -201,7 +201,7 @@
   white-space: nowrap;
 }
 
-.artifact-path {
+.analysis-artifact-path {
   margin-top: 2px;
   color: var(--text-tertiary);
   font-family: var(--font-mono);
@@ -234,7 +234,7 @@
   font-size: 12px;
 }
 
-.code-block {
+.evidence-code-block {
   margin: 0;
   padding: 12px;
   overflow: auto;
@@ -245,13 +245,13 @@
   line-height: 1.5;
 }
 
-.code-line {
+.evidence-code-line {
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr);
   gap: 12px;
 }
 
-.code-line-number {
+.evidence-code-line-number {
   color: var(--text-disabled);
   user-select: none;
   text-align: right;
