@@ -1,4 +1,4 @@
-import { EmbeddingPolicy } from '../../apps/api/src/modules/embedding/domain/embedding.policy';
+import { EmbeddingPolicy } from '@ba-helper/application';
 import { AiPolicy } from '@ba-helper/shared';
 
 describe('EmbeddingPolicy', () => {

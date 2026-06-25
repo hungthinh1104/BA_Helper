@@ -1,5 +1,5 @@
 import { describe, it, expect } from '@jest/globals';
-import { ArtifactChunkBuilder } from '../../apps/api/src/modules/embedding/domain/artifact-chunk.builder';
+import { ArtifactChunkBuilder } from '@ba-helper/application';
 import { CodeArtifact, Evidence } from '@prisma/client';
 
 describe('ArtifactChunkBuilder', () => {

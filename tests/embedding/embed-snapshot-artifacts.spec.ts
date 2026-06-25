@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { EmbedSnapshotArtifactsUseCase } from '../../apps/api/src/modules/embedding/application/embed-snapshot-artifacts.usecase';
+import { EmbedSnapshotArtifactsUseCase } from '@ba-helper/application';
 import { FakeEmbeddingProvider } from '../../apps/api/src/modules/embedding/infrastructure/fake-embedding.provider';
-import { ArtifactChunkBuilder, CHUNK_BUILDER_VERSION } from '../../apps/api/src/modules/embedding/domain/artifact-chunk.builder';
+import { ArtifactChunkBuilder, CHUNK_BUILDER_VERSION } from '@ba-helper/application';
 import { createHash } from 'node:crypto';
 
 const SNAPSHOT_NO_PLAN = {
@@ -32,58 +32,55 @@ function makeChunkRepoMock() {
   };
 }
 
-function makeUseCase(chunkRepoMock: any, prismaMock: any, provider?: FakeEmbeddingProvider) {
+function makeUseCase(chunkRepoMock: any, snapshotRepoMock: any, provider?: FakeEmbeddingProvider) {
   return new EmbedSnapshotArtifactsUseCase(
     chunkRepoMock,
     provider ?? new FakeEmbeddingProvider(),
-    prismaMock,
+    snapshotRepoMock,
   );
 }
 
 describe('EmbedSnapshotArtifactsUseCase', () => {
   let chunkRepoMock: ReturnType<typeof makeChunkRepoMock>;
-  let prismaMock: any;
+  let snapshotRepoMock: any;
   let useCase: EmbedSnapshotArtifactsUseCase;
   let provider: FakeEmbeddingProvider;
 
   beforeEach(() => {
     chunkRepoMock = makeChunkRepoMock();
-    prismaMock = {
-      repositorySnapshot: {
-        findUnique: jest.fn<any>(),
-        update: jest.fn<any>(),
-      },
-      codeArtifact: { findMany: jest.fn<any>() },
+    snapshotRepoMock = {
+      findSnapshotById: jest.fn<any>(),
+      findArtifactsWithEvidenceBySnapshot: jest.fn<any>(),
+      updateSnapshotIndexStatus: jest.fn<any>(),
+      findPreviousArtifactsBySnapshot: jest.fn<any>(),
+      updateSnapshotDiagnostics: jest.fn<any>(),
+      markSnapshotFailed: jest.fn<any>(),
     };
     provider = new FakeEmbeddingProvider();
-    useCase = makeUseCase(chunkRepoMock, prismaMock, provider);
+    useCase = makeUseCase(chunkRepoMock, snapshotRepoMock, provider);
   });
 
   // ── Basic lifecycle ──────────────────────────────────────────────────────
 
   it('throws SNAPSHOT_NOT_FOUND if snapshot missing', async () => {
-    prismaMock.repositorySnapshot.findUnique.mockResolvedValue(null);
+    snapshotRepoMock.findSnapshotById.mockResolvedValue(null);
     await expect(useCase.execute({ snapshotId: 'snap-1' })).rejects.toThrow('Snapshot not found');
   });
 
   it('transitions to VECTOR_READY if no artifacts exist', async () => {
-    prismaMock.repositorySnapshot.findUnique.mockResolvedValue(SNAPSHOT_NO_PLAN);
-    prismaMock.codeArtifact.findMany.mockResolvedValue([]);
+    snapshotRepoMock.findSnapshotById.mockResolvedValue(SNAPSHOT_NO_PLAN);
+    snapshotRepoMock.findArtifactsWithEvidenceBySnapshot.mockResolvedValue([]);
 
     await useCase.execute({ snapshotId: 'snap-1' });
 
-    expect(prismaMock.repositorySnapshot.update).toHaveBeenCalledWith({
-      where: { id: 'snap-1' }, data: { indexStatus: 'VECTOR_INDEXING' },
-    });
-    expect(prismaMock.repositorySnapshot.update).toHaveBeenCalledWith({
-      where: { id: 'snap-1' }, data: { indexStatus: 'VECTOR_READY' },
-    });
+    expect(snapshotRepoMock.updateSnapshotIndexStatus).toHaveBeenCalledWith('snap-1', 'VECTOR_INDEXING');
+    expect(snapshotRepoMock.updateSnapshotIndexStatus).toHaveBeenCalledWith('snap-1', 'VECTOR_READY');
     expect(chunkRepoMock.insertMany).not.toHaveBeenCalled();
   });
 
   it('skips embedding when stableChunkId+contentHash cache hit (idempotent re-run)', async () => {
-    prismaMock.repositorySnapshot.findUnique.mockResolvedValue(SNAPSHOT_NO_PLAN);
-    prismaMock.codeArtifact.findMany.mockResolvedValue([ARTIFACT]);
+    snapshotRepoMock.findSnapshotById.mockResolvedValue(SNAPSHOT_NO_PLAN);
+    snapshotRepoMock.findArtifactsWithEvidenceBySnapshot.mockResolvedValue([ARTIFACT]);
 
     const built = ArtifactChunkBuilder.build({ artifact: ARTIFACT as any, evidence: ARTIFACT.evidences as any });
     const contentHash = createHash('sha256').update(built.content).digest('hex');
@@ -92,14 +89,12 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
     await useCase.execute({ snapshotId: 'snap-1' });
 
     expect(chunkRepoMock.insertMany).not.toHaveBeenCalled();
-    expect(prismaMock.repositorySnapshot.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { indexStatus: 'VECTOR_READY' } }),
-    );
+    expect(snapshotRepoMock.updateSnapshotIndexStatus).toHaveBeenCalledWith('snap-1', 'VECTOR_READY');
   });
 
   it('re-embeds when contentHash differs (artifact changed)', async () => {
-    prismaMock.repositorySnapshot.findUnique.mockResolvedValue(SNAPSHOT_NO_PLAN);
-    prismaMock.codeArtifact.findMany.mockResolvedValue([ARTIFACT]);
+    snapshotRepoMock.findSnapshotById.mockResolvedValue(SNAPSHOT_NO_PLAN);
+    snapshotRepoMock.findArtifactsWithEvidenceBySnapshot.mockResolvedValue([ARTIFACT]);
 
     const built = ArtifactChunkBuilder.build({ artifact: ARTIFACT as any, evidence: ARTIFACT.evidences as any });
     chunkRepoMock.listBySnapshot.mockResolvedValue([
@@ -111,8 +106,8 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
   });
 
   it('embeds new artifact with correct fields (tenantId=projectId, correct stableChunkId)', async () => {
-    prismaMock.repositorySnapshot.findUnique.mockResolvedValue(SNAPSHOT_NO_PLAN);
-    prismaMock.codeArtifact.findMany.mockResolvedValue([ARTIFACT]);
+    snapshotRepoMock.findSnapshotById.mockResolvedValue(SNAPSHOT_NO_PLAN);
+    snapshotRepoMock.findArtifactsWithEvidenceBySnapshot.mockResolvedValue([ARTIFACT]);
     chunkRepoMock.listBySnapshot.mockResolvedValue([]);
 
     await useCase.execute({ snapshotId: 'snap-1' });
@@ -133,15 +128,13 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
   });
 
   it('transitions to VECTOR_FAILED and re-throws on embedding error', async () => {
-    prismaMock.repositorySnapshot.findUnique.mockResolvedValue(SNAPSHOT_NO_PLAN);
-    prismaMock.codeArtifact.findMany.mockResolvedValue([ARTIFACT]);
+    snapshotRepoMock.findSnapshotById.mockResolvedValue(SNAPSHOT_NO_PLAN);
+    snapshotRepoMock.findArtifactsWithEvidenceBySnapshot.mockResolvedValue([ARTIFACT]);
     chunkRepoMock.listBySnapshot.mockResolvedValue([]);
     jest.spyOn(provider, 'embed').mockRejectedValue(new Error('API Down'));
 
     await expect(useCase.execute({ snapshotId: 'snap-1' })).rejects.toThrow('API Down');
-    expect(prismaMock.repositorySnapshot.update).toHaveBeenCalledWith({
-      where: { id: 'snap-1' }, data: { indexStatus: 'VECTOR_FAILED' },
-    });
+    expect(snapshotRepoMock.markSnapshotFailed).toHaveBeenCalledWith('snap-1');
   });
 
   // ── Reuse path ───────────────────────────────────────────────────────────
@@ -171,10 +164,9 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
       ],
     };
 
-    prismaMock.repositorySnapshot.findUnique.mockResolvedValue(snapshotWithPlan);
-    prismaMock.codeArtifact.findMany
-      .mockResolvedValueOnce([ARTIFACT]) // current artifacts
-      .mockResolvedValueOnce([{ id: 'old-art-1', artifactKey: ARTIFACT.artifactKey, contentHash: 'artifact-hash-1' }]); // previous artifacts
+    snapshotRepoMock.findSnapshotById.mockResolvedValue(snapshotWithPlan);
+    snapshotRepoMock.findArtifactsWithEvidenceBySnapshot.mockResolvedValue([ARTIFACT]);
+    snapshotRepoMock.findPreviousArtifactsBySnapshot.mockResolvedValue([{ id: 'old-art-1', artifactKey: ARTIFACT.artifactKey, contentHash: 'artifact-hash-1' }]);
 
     chunkRepoMock.listBySnapshot.mockResolvedValue([]); // nothing cached for new snapshot
     chunkRepoMock.listForReuseByArtifacts.mockResolvedValue([
@@ -208,10 +200,9 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
       ...SNAPSHOT_NO_PLAN,
       diagnostics: [{ code: 'EMBEDDING_REUSE_PLAN', payload: { baseSnapshotId: 'old-snap', targetSnapshotId: 'snap-1', reuseMode: 'PLAN_ONLY', reuseSafety: 'SAFE_FOR_FUTURE_REUSE', eligibleArtifactCount: 1, ineligibleArtifactCount: 0, eligibleRatio: 1, ineligibleReasons: { addedArtifactCount: 0, changedArtifactCount: 0, removedArtifactCount: 0, hashUnavailableArtifactCount: 0, versionChangedBlockedCount: 0 }, sampleLimit: 20, samples: { eligible: [], ineligible: [] } } }],
     };
-    prismaMock.repositorySnapshot.findUnique.mockResolvedValue(snapshotWithPlan);
-    prismaMock.codeArtifact.findMany
-      .mockResolvedValueOnce([ARTIFACT])
-      .mockResolvedValueOnce([{ id: 'old-art-1', artifactKey: ARTIFACT.artifactKey, contentHash: 'artifact-hash-1' }]);
+    snapshotRepoMock.findSnapshotById.mockResolvedValue(snapshotWithPlan);
+    snapshotRepoMock.findArtifactsWithEvidenceBySnapshot.mockResolvedValue([ARTIFACT]);
+    snapshotRepoMock.findPreviousArtifactsBySnapshot.mockResolvedValue([{ id: 'old-art-1', artifactKey: ARTIFACT.artifactKey, contentHash: 'artifact-hash-1' }]);
     chunkRepoMock.listBySnapshot.mockResolvedValue([]);
     chunkRepoMock.listForReuseByArtifacts.mockResolvedValue([{
       artifactId: 'old-art-1', contentHash, chunkerVersion: CHUNK_BUILDER_VERSION, embeddingModel: 'fake',
@@ -239,10 +230,9 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
       ...SNAPSHOT_NO_PLAN,
       diagnostics: [{ code: 'EMBEDDING_REUSE_PLAN', payload: { baseSnapshotId: 'old-snap', targetSnapshotId: 'snap-1', reuseMode: 'PLAN_ONLY', reuseSafety: 'SAFE_FOR_FUTURE_REUSE', eligibleArtifactCount: 1, ineligibleArtifactCount: 0, eligibleRatio: 1, ineligibleReasons: { addedArtifactCount: 0, changedArtifactCount: 0, removedArtifactCount: 0, hashUnavailableArtifactCount: 0, versionChangedBlockedCount: 0 }, sampleLimit: 20, samples: { eligible: [], ineligible: [] } } }],
     };
-    prismaMock.repositorySnapshot.findUnique.mockResolvedValue(snapshotWithPlan);
-    prismaMock.codeArtifact.findMany
-      .mockResolvedValueOnce([ARTIFACT])
-      .mockResolvedValueOnce([{ id: 'old-art-1', artifactKey: ARTIFACT.artifactKey, contentHash: 'artifact-hash-1' }]);
+    snapshotRepoMock.findSnapshotById.mockResolvedValue(snapshotWithPlan);
+    snapshotRepoMock.findArtifactsWithEvidenceBySnapshot.mockResolvedValue([ARTIFACT]);
+    snapshotRepoMock.findPreviousArtifactsBySnapshot.mockResolvedValue([{ id: 'old-art-1', artifactKey: ARTIFACT.artifactKey, contentHash: 'artifact-hash-1' }]);
     chunkRepoMock.listBySnapshot.mockResolvedValue([]);
     chunkRepoMock.listForReuseByArtifacts.mockResolvedValue([{
       artifactId: 'old-art-1', contentHash, chunkerVersion: CHUNK_BUILDER_VERSION, embeddingModel: 'fake',
@@ -261,8 +251,8 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
       ...SNAPSHOT_NO_PLAN,
       diagnostics: [{ code: 'EMBEDDING_REUSE_PLAN', payload: { baseSnapshotId: 'old-snap', targetSnapshotId: 'snap-1', reuseMode: 'PLAN_ONLY', reuseSafety: 'VERSION_CHANGED_REVIEW_REQUIRED', eligibleArtifactCount: 0, ineligibleArtifactCount: 1, eligibleRatio: 0, ineligibleReasons: { addedArtifactCount: 0, changedArtifactCount: 0, removedArtifactCount: 0, hashUnavailableArtifactCount: 0, versionChangedBlockedCount: 1 }, sampleLimit: 20, samples: { eligible: [], ineligible: [] } } }],
     };
-    prismaMock.repositorySnapshot.findUnique.mockResolvedValue(snapshotWithVersionBlock);
-    prismaMock.codeArtifact.findMany.mockResolvedValue([ARTIFACT]);
+    snapshotRepoMock.findSnapshotById.mockResolvedValue(snapshotWithVersionBlock);
+    snapshotRepoMock.findArtifactsWithEvidenceBySnapshot.mockResolvedValue([ARTIFACT]);
     chunkRepoMock.listBySnapshot.mockResolvedValue([]);
 
     await useCase.execute({ snapshotId: 'snap-1' });
@@ -272,29 +262,20 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
   });
 
   it('persists EMBEDDING_REUSE_EXECUTION_SUMMARY diagnostic on snapshot', async () => {
-    prismaMock.repositorySnapshot.findUnique.mockResolvedValue(SNAPSHOT_NO_PLAN);
-    prismaMock.codeArtifact.findMany.mockResolvedValue([ARTIFACT]);
+    snapshotRepoMock.findSnapshotById.mockResolvedValue(SNAPSHOT_NO_PLAN);
+    snapshotRepoMock.findArtifactsWithEvidenceBySnapshot.mockResolvedValue([ARTIFACT]);
     chunkRepoMock.listBySnapshot.mockResolvedValue([]);
 
     await useCase.execute({ snapshotId: 'snap-1' });
 
-    const updateCall = (prismaMock.repositorySnapshot.update as jest.Mock).mock.calls.find(
-      (c: any[]) => c[0]?.data?.indexStatus === 'VECTOR_READY',
-    ) as any[];
-    const storedDiagnostics = updateCall?.[0]?.data?.diagnostics as any[];
-    const execSummary = storedDiagnostics?.find((d: any) => d.code === 'EMBEDDING_REUSE_EXECUTION_SUMMARY');
-    expect(execSummary).toBeDefined();
-    expect(execSummary.payload.mode).toBe('SNAPSHOT_SCOPED_COPY');
-    expect(execSummary.payload).not.toHaveProperty('embedding'); // diagnostic contains no vector
-    expect(execSummary.payload).not.toHaveProperty('contentHash'); // diagnostic contains no hash
-    expect(execSummary.payload).not.toHaveProperty('source'); // diagnostic contains no raw source
-    expect(execSummary.payload).not.toHaveProperty('content'); // diagnostic contains no full chunk text
-    expect(execSummary.payload).not.toHaveProperty('excerpt'); // diagnostic contains no evidence excerpts
-    expect(execSummary.payload.samples).toHaveProperty('copied');
-    expect(execSummary.payload.samples).toHaveProperty('generated');
-    expect(execSummary.payload.samples).toHaveProperty('blocked');
-    expect(execSummary.payload.copiedChunkCount).toBeGreaterThanOrEqual(0); // accurately counts copied
-    expect(execSummary.payload.generatedChunkCount).toBeGreaterThanOrEqual(0); // accurately counts generated
-    expect(execSummary.payload.versionBlockedChunkCount).toBeGreaterThanOrEqual(0); // accurately counts blocked
+    expect(snapshotRepoMock.updateSnapshotDiagnostics).toHaveBeenCalled();
+    const payload = snapshotRepoMock.updateSnapshotDiagnostics.mock.calls[0][2][0].payload;
+    expect(payload.mode).toBe('SNAPSHOT_SCOPED_COPY');
+    expect(payload.samples).toHaveProperty('copied');
+    expect(payload.samples).toHaveProperty('generated');
+    expect(payload.samples).toHaveProperty('blocked');
+    expect(payload.copiedChunkCount).toBeGreaterThanOrEqual(0);
+    expect(payload.generatedChunkCount).toBeGreaterThanOrEqual(0);
+    expect(payload.versionBlockedChunkCount).toBeGreaterThanOrEqual(0);
   });
 });

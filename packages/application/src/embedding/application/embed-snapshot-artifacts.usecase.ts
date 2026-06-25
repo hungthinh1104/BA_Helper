@@ -1,12 +1,10 @@
-import { Injectable } from '@nestjs/common';
-import { AppError } from '@ba-helper/shared';
-import { EmbeddingChunkRepository } from '../infrastructure/embedding-chunk.repository';
-import { EmbeddingProvider } from '../domain/embedding-provider.interface';
-import { PrismaService } from '../../prisma/prisma.service';
+import { AppError, AiPolicy } from '@ba-helper/shared';
+import type { EmbeddingChunkRepositoryPort } from '../ports/embedding-chunk.repository.port';
+import type { EmbeddingProviderPort } from '../ports/embedding-provider.port';
+import type { EmbeddingSnapshotRepositoryPort } from '../ports/embedding-snapshot.repository.port';
 import { ArtifactChunkBuilder, CHUNK_BUILDER_VERSION } from '../domain/artifact-chunk.builder';
 import { matchChunksForReuse, CurrentChunkItem, MatchResult } from '../domain/embedding-reuse-matcher';
 import { createHash } from 'node:crypto';
-import { AiPolicy } from '@ba-helper/shared';
 import type {
   DiagnosticItem,
   EmbeddingReusePlanPayload,
@@ -15,40 +13,27 @@ import type {
 
 const SAMPLE_LIMIT = 20 as const;
 
-@Injectable()
 export class EmbedSnapshotArtifactsUseCase {
   constructor(
-    private readonly chunkRepo: EmbeddingChunkRepository,
-    private readonly embeddingProvider: EmbeddingProvider,
-    private readonly prisma: PrismaService,
+    private readonly chunkRepo: EmbeddingChunkRepositoryPort,
+    private readonly embeddingProvider: EmbeddingProviderPort,
+    private readonly snapshotRepo: EmbeddingSnapshotRepositoryPort,
   ) {}
 
   async execute(params: { snapshotId: string }): Promise<void> {
-    const snapshot = await this.prisma.repositorySnapshot.findUnique({
-      where: { id: params.snapshotId },
-      include: { repository: true },
-    });
+    const snapshot = await this.snapshotRepo.findSnapshotById(params.snapshotId);
     if (!snapshot) throw new AppError('SNAPSHOT_NOT_FOUND', 'Snapshot not found');
 
     const { projectId } = snapshot.repository;
     const { repositoryId, commitSha } = snapshot;
 
-    await this.prisma.repositorySnapshot.update({
-      where: { id: snapshot.id },
-      data: { indexStatus: 'VECTOR_INDEXING' },
-    });
+    await this.snapshotRepo.updateSnapshotIndexStatus(snapshot.id, 'VECTOR_INDEXING');
 
     try {
-      const artifacts = await this.prisma.codeArtifact.findMany({
-        where: { snapshotId: params.snapshotId },
-        include: { evidences: true },
-      });
+      const artifacts = await this.snapshotRepo.findArtifactsWithEvidenceBySnapshot(params.snapshotId);
 
       if (artifacts.length === 0) {
-        await this.prisma.repositorySnapshot.update({
-          where: { id: snapshot.id },
-          data: { indexStatus: 'VECTOR_READY' },
-        });
+        await this.snapshotRepo.updateSnapshotIndexStatus(snapshot.id, 'VECTOR_READY');
         return;
       }
 
@@ -84,10 +69,7 @@ export class EmbedSnapshotArtifactsUseCase {
         (i) => existingByStableId.get(i.stableChunkId) !== i.contentHash,
       );
       if (needsProcessing.length === 0) {
-        await this.prisma.repositorySnapshot.update({
-          where: { id: snapshot.id },
-          data: { indexStatus: 'VECTOR_READY' },
-        });
+        await this.snapshotRepo.updateSnapshotIndexStatus(snapshot.id, 'VECTOR_READY');
         return;
       }
 
@@ -100,8 +82,8 @@ export class EmbedSnapshotArtifactsUseCase {
       if (reusePlan?.baseSnapshotId && reusePlan.reuseSafety !== 'VERSION_CHANGED_REVIEW_REQUIRED') {
         matchResult = await this.buildMatchResult(
           needsProcessing,
-          reusePlan,
           artifacts,
+          reusePlan,
         );
       }
 
@@ -228,18 +210,9 @@ export class EmbedSnapshotArtifactsUseCase {
         },
       ];
 
-      await this.prisma.repositorySnapshot.update({
-        where: { id: snapshot.id },
-        data: {
-          indexStatus: 'VECTOR_READY',
-          diagnostics: updatedDiagnostics as unknown as import('@prisma/client').Prisma.InputJsonValue,
-        },
-      });
+      await this.snapshotRepo.updateSnapshotDiagnostics(snapshot.id, 'VECTOR_READY', updatedDiagnostics);
     } catch (error) {
-      await this.prisma.repositorySnapshot.update({
-        where: { id: snapshot.id },
-        data: { indexStatus: 'VECTOR_FAILED' },
-      });
+      await this.snapshotRepo.markSnapshotFailed(snapshot.id);
       throw error;
     }
   }
@@ -259,16 +232,13 @@ export class EmbedSnapshotArtifactsUseCase {
 
   private async buildMatchResult(
     needsProcessing: CurrentChunkItem[],
+    artifacts: ArtifactWithEvidenceBasic[],
     reusePlan: EmbeddingReusePlanPayload,
-    currentArtifacts: Array<{ artifactKey: string; id: string; contentHash: string | null }>,
   ): Promise<MatchResult> {
     const baseSnapshotId = reusePlan.baseSnapshotId!;
 
     // Load previous artifacts for this snapshot
-    const previousArtifacts = await this.prisma.codeArtifact.findMany({
-      where: { snapshotId: baseSnapshotId },
-      select: { id: true, artifactKey: true, contentHash: true },
-    });
+    const previousArtifacts = await this.snapshotRepo.findPreviousArtifactsBySnapshot(baseSnapshotId);
 
     const previousArtifactByKey = new Map(
       previousArtifacts.map((a) => [a.artifactKey, { id: a.id, contentHash: a.contentHash }]),
@@ -276,8 +246,10 @@ export class EmbedSnapshotArtifactsUseCase {
     const previousArtifactContentHashByKey = new Map(
       previousArtifacts.map((a) => [a.artifactKey, a.contentHash]),
     );
+    // Note: currentArtifacts in original code was just the full list of artifacts.
+    // In our refactored method, we can just use needsProcessing to build the current map since it has all info
     const currentArtifactContentHashByKey = new Map(
-      currentArtifacts.map((a) => [a.artifactKey, a.contentHash]),
+      artifacts.map((a) => [a.artifactKey, a.contentHash]),
     );
 
     // Load previous chunks (metadata only) for candidate artifact IDs

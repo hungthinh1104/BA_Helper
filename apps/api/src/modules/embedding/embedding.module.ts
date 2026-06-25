@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
-import { EmbeddingProvider } from './domain/embedding-provider.interface';
+import { EmbeddingProviderPort, EmbedSnapshotArtifactsUseCase } from '@ba-helper/application';
 import { FakeEmbeddingProvider } from './infrastructure/fake-embedding.provider';
 import { OpenAiEmbeddingProvider } from './infrastructure/openai-embedding.provider';
 import { GoogleEmbeddingProvider } from './infrastructure/google-embedding.provider';
 import { EmbeddingChunkRepository } from './infrastructure/embedding-chunk.repository';
-import { EmbedSnapshotArtifactsUseCase } from './application/embed-snapshot-artifacts.usecase';
+import { PrismaEmbeddingSnapshotRepository } from './infrastructure/prisma-embedding-snapshot.repository';
 import { PrismaModule } from '../prisma/prisma.module';
 
 import { resolveEmbeddingConfig } from '@ba-helper/shared';
@@ -13,9 +13,14 @@ import { resolveEmbeddingConfig } from '@ba-helper/shared';
   imports: [PrismaModule],
   providers: [
     EmbeddingChunkRepository,
-    EmbedSnapshotArtifactsUseCase,
+    PrismaEmbeddingSnapshotRepository,
     {
-      provide: EmbeddingProvider,
+      provide: EmbedSnapshotArtifactsUseCase,
+      useFactory: (chunkRepo, provider, snapshotRepo) => new EmbedSnapshotArtifactsUseCase(chunkRepo, provider, snapshotRepo),
+      inject: [EmbeddingChunkRepository, EmbeddingProviderPort, PrismaEmbeddingSnapshotRepository],
+    },
+    {
+      provide: EmbeddingProviderPort,
       useFactory: () => {
         // By default, use fake provider if not in production and not explicitly requested
         const config = resolveEmbeddingConfig(process.env);
@@ -34,6 +39,6 @@ import { resolveEmbeddingConfig } from '@ba-helper/shared';
       },
     },
   ],
-  exports: [EmbedSnapshotArtifactsUseCase, EmbeddingChunkRepository, EmbeddingProvider],
+  exports: [EmbedSnapshotArtifactsUseCase, EmbeddingChunkRepository, EmbeddingProviderPort],
 })
 export class EmbeddingModule {}

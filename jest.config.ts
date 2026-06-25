@@ -23,6 +23,7 @@ const config: Config = {
     '^@ba-helper/contracts$': '<rootDir>/packages/contracts/src/index.ts',
     '^@ba-helper/shared$': '<rootDir>/packages/shared/src/index.ts',
     '^@ba-helper/analyzer$': '<rootDir>/packages/analyzer/src/index.ts',
+    '^@ba-helper/application$': '<rootDir>/packages/application/src/index.ts',
   },
   testPathIgnorePatterns: ['/node_modules/', '/dist/', '/build/', '/tests/fixtures/'],
 };

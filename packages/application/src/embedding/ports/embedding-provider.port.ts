@@ -10,7 +10,7 @@ export interface EmbeddingResult {
   tokenUsage?: number | null;
 }
 
-export abstract class EmbeddingProvider {
+export abstract class EmbeddingProviderPort {
   abstract readonly providerName: string;
   abstract embed(request: EmbeddingRequest): Promise<EmbeddingResult>;
 }

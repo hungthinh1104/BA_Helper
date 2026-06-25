@@ -37,7 +37,7 @@ export class GoogleEmbeddingProvider extends EmbeddingProviderPort {
       for (let i = 0; i < request.texts.length; i += CONCURRENCY_LIMIT) {
         const batch = request.texts.slice(i, i + CONCURRENCY_LIMIT);
         const results = await Promise.all(
-          batch.map((t: string) => 
+          batch.map(t => 
             // We pass outputDimensionality to force the vector size to exactly 1536
             model.embedContent({ 
               content: { role: 'user', parts: [{ text: t }] }, 
@@ -45,7 +45,7 @@ export class GoogleEmbeddingProvider extends EmbeddingProviderPort {
             } as any)
           )
         );
-        embeddingsResult.push(...results.map((r: any) => r.embedding.values));
+        embeddingsResult.push(...results.map(r => r.embedding.values));
       }
     } catch (e: any) {
       this.logger.error(`Failed to generate embeddings: ${e.message}`, e.stack);

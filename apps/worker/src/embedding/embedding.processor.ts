@@ -1,6 +1,6 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
-import { EmbedSnapshotArtifactsUseCase } from '../../../api/src/modules/embedding/application/embed-snapshot-artifacts.usecase';
+import { EmbedSnapshotArtifactsUseCase } from '@ba-helper/application';
 
 @Processor('embedding')
 export class EmbeddingProcessor extends WorkerHost {

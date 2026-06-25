@@ -7,7 +7,8 @@
     "paths": {
       "@ba-helper/contracts": ["packages/contracts/src/index.ts"],
       "@ba-helper/shared": ["packages/shared/src/index.ts"],
-      "@ba-helper/analyzer": ["packages/analyzer/src/index.ts"]
+      "@ba-helper/analyzer": ["packages/analyzer/src/index.ts"],
+      "@ba-helper/application": ["packages/application/src/index.ts"]
     },
     "strict": true,
     "experimentalDecorators": true,

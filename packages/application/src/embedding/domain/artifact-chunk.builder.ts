@@ -1,4 +1,4 @@
-import { CodeArtifact, Evidence } from '@prisma/client';
+import type { ArtifactWithEvidenceBasic } from '../ports/embedding-snapshot.repository.port';
 
 /**
  * Bumped whenever build() text assembly logic changes.
@@ -8,8 +8,8 @@ import { CodeArtifact, Evidence } from '@prisma/client';
 export const CHUNK_BUILDER_VERSION = 'artifact-chunker@0.1.0';
 
 export type ArtifactChunkBuilderInput = {
-  artifact: CodeArtifact;
-  evidence?: Evidence[];
+  artifact: Omit<ArtifactWithEvidenceBasic, 'evidences'>;
+  evidence?: ArtifactWithEvidenceBasic['evidences'];
 };
 
 export type BuiltChunk = {

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../../../api/src/modules/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import type { EmbeddingChunkRepositoryPort, SimilarChunk } from '@ba-helper/application';
 
