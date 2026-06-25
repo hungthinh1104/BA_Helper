@@ -47,11 +47,15 @@ Current profiles:
 
 | Profile | Status | Notes |
 | --- | --- | --- |
-| `booking@0.1.0` | `STABLE` | MVP Booking / Payment / Refund domain. |
+| `booking@0.1.0` | `STABLE` | MVP Booking / Payment / Refund domain with P7C fixture-backed coverage for cancellation, refund, double-refund prevention, inventory release, and payment state. |
 | `general@0.0.0` | `FALLBACK` | Empty safe default; no booking-specific hints. |
 
 Do not claim broad multi-domain support until each new profile has status,
 limits, evaluation cases, and fallback behavior documented.
+
+`booking@0.1.0` `STABLE` means the current fixture-backed evaluation set covers
+the MVP booking cancellation/refund slice. It does not claim complete booking
+runtime support, broad multi-domain behavior, or Vietnamese product mode.
 
 ## Glossary Metadata
 

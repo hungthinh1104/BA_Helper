@@ -82,6 +82,35 @@ The Evaluation summary also explicitly asserts the following deterministic safet
 3. **General Fallback Integrity:** General pack strictly has no `booking` hints leaked.
 4. **Diagnostic Boundedness:** Guarantees `DOMAIN_PACK_APPLIED` never blows out memory via payload template leakage.
 
+## Booking STABLE Coverage (P7C)
+P7C adds deterministic booking-domain cases that justify the current
+`booking@0.1.0` `STABLE` registry status with fixture-backed expectations.
+
+The stable set covers:
+
+- cancellation through the paid-booking refund flow
+- duplicate cancellation / double-refund prevention
+- slot inventory release after cancellation
+- payment transaction state changing from `PAID` to `REFUNDED`
+- refund policy hints that must remain unknown until source evidence or
+  stakeholder confirmation exists
+
+These cases assert expected impacted artifacts, unknowns, risks, and QA
+scenarios against the `nestjs-booking-with-payment` fixture. Every expected
+impacted artifact must map to a scanner fixture artifact with a source file,
+line range, and raw code excerpt. Domain pack retrieval hints, risk templates,
+QA templates, unknown templates, and glossary terms are terminology hints only;
+they cannot satisfy evidence requirements and cannot become impacted artifact
+keys.
+
+Known limits:
+
+- The evaluation proves deterministic fixture coverage, not broad booking
+  product support.
+- It does not add new scanner behavior, retrieval behavior, or AI behavior.
+- It does not translate code, artifact keys, paths, or evidence excerpts.
+- It does not promote any additional domain to `PARTIAL` or `STABLE`.
+
 ## How to Add a New Case
 1. Ensure the requirement matches an existing fixture in `tests/fixtures/`.
 2. Create a new `.ts` file under `tests/evaluation/cases/`.
