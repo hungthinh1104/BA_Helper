@@ -5,7 +5,7 @@
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "dev": "pnpm exec ts-node -r tsconfig-paths/register --project tsconfig.json src/main.ts",
+    "dev": "dotenv -e ../../.env -- pnpm exec ts-node -r tsconfig-paths/register --project tsconfig.json src/main.ts",
     "lint": "echo \"lint worker\"",
     "test": "echo \"test worker\"",
     "typecheck": "echo \"typecheck worker\""

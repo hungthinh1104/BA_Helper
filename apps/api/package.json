@@ -5,16 +5,16 @@
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "dev": "pnpm exec ts-node -r tsconfig-paths/register --project tsconfig.json src/main.ts",
+    "dev": "dotenv -e ../../.env -- pnpm exec ts-node -r tsconfig-paths/register --project tsconfig.json src/main.ts",
     "lint": "echo \"lint api\"",
-    "smoke:public-github": "tsx src/smoke-e2e.ts",
-    "smoke:public-github:real-llm": "REAL_LLM_SMOKE=true tsx src/smoke-e2e.ts",
-    "smoke:public-github:real-path": "REAL_PATH_SMOKE=true tsx src/smoke-e2e.ts",
+    "smoke:public-github": "dotenv -e ../../.env -- tsx src/smoke-e2e.ts",
+    "smoke:public-github:real-llm": "REAL_LLM_SMOKE=true dotenv -e ../../.env -- tsx src/smoke-e2e.ts",
+    "smoke:public-github:real-path": "REAL_PATH_SMOKE=true dotenv -e ../../.env -- tsx src/smoke-e2e.ts",
     "test": "jest",
     "typecheck": "tsc --noEmit",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio"
+    "prisma:generate": "dotenv -e ../../.env -- prisma generate",
+    "prisma:migrate": "dotenv -e ../../.env -- prisma migrate dev",
+    "prisma:studio": "dotenv -e ../../.env -- prisma studio"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.99.0",
