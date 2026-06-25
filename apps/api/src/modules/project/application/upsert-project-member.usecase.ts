@@ -2,7 +2,7 @@ import type {
   ProjectMemberUpsertRequest,
   RequestUser,
 } from '@ba-helper/contracts';
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { EventLogService } from '../../event-log/application/event-log.service';
 import { ProjectPermissionService } from './project-permission.service';
 import { ProjectRepository } from '../infrastructure/project.repository';

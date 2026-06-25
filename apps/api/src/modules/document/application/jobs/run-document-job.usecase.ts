@@ -11,7 +11,7 @@ import { ReviewDecisionRepository } from '../../../impact-analysis/infrastructur
 import { GetImpactDiffUseCase } from '../../../impact-analysis/application/queries/get-impact-diff.usecase';
 import { DocumentRepository } from '../../infrastructure/document.repository';
 import { ReviewedSnapshotReportContextAdapter } from '../render/reviewed-snapshot-report-context.adapter';
-import { AppError } from '../../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 
 @Injectable()
 export class RunDocumentJobUseCase {

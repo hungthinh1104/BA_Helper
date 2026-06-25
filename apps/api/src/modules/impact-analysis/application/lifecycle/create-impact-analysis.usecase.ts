@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
 import { RequirementRepository } from '../../../requirement/infrastructure/requirement.repository';
-import { AppError } from '../../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { ImpactAnalysisPolicy } from '../../domain/impact-analysis.policy';
 import { EventLogService } from '../../../event-log/application/event-log.service';
 import { PrismaService } from '../../../prisma/prisma.service';

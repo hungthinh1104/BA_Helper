@@ -9,7 +9,7 @@ import { InsightRepository } from '../../../insight/infrastructure/insight.repos
 import { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
 import { LlmProvider } from '../../../ai/domain/llm-provider.interface';
 import { HybridRetrievalService } from '../../../retrieval/application/hybrid-retrieval.service';
-import { AppError } from '../../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { renderPrompt } from '../../../ai/domain/prompt-registry';
 import { DomainPackRegistry } from '../../../domain-pack/application/domain-pack.registry';
 

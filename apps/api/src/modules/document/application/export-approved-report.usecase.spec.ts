@@ -1,7 +1,7 @@
 import { RequestUser } from '@ba-helper/contracts';
 import { EventLogService } from '../../event-log/application/event-log.service';
 import { DocumentRepository } from '../infrastructure/document.repository';
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { ApprovedReportProjectionService } from './approved-report-projection.service';
 import { ExportApprovedReportUseCase } from './export-approved-report.usecase';
 import { MarkdownExportRenderer } from './markdown-export.renderer';

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { AppError } from '../../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { ReviewQueueResponse, ReviewQueueItem, QaCoverageSeverity } from '@ba-helper/contracts';
 import { ImpactGraphReadModelBuilder } from '../queries/impact-graph-read-model.builder';
 import { QaCoverageDeriver } from '../qa/qa-coverage.deriver';

@@ -1,4 +1,4 @@
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 
 const secretPatterns = [
   /AKIA[0-9A-Z]{16}/,

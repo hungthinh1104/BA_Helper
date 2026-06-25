@@ -8,7 +8,7 @@ import { AppModule } from '../../apps/api/src/app.module';
 import { prepareIsolatedTestEnv } from '../../apps/api/test/e2e/helpers/prepare-test-env';
 import { resetDatabase } from '../../apps/api/test/e2e/helpers/reset-db';
 import { ALL_EVALUATION_CASES } from '../evaluation/cases';
-import { AppError } from '../../apps/api/src/shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { EmbeddingChunkRepository } from '../../apps/api/src/modules/embedding/infrastructure/embedding-chunk.repository';
 // @ts-ignore
 import * as dotenv from 'dotenv';

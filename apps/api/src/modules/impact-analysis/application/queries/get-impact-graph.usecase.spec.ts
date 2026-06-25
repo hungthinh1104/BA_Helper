@@ -1,7 +1,7 @@
 import { GetImpactGraphUseCase } from './get-impact-graph.usecase';
 import { ImpactGraphReadModelBuilder } from './impact-graph-read-model.builder';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { AppError } from '../../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 
 // ── Helper builders ──────────────────────────────────────────────────────────
 

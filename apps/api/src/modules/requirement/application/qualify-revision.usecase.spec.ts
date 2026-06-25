@@ -1,6 +1,6 @@
 import { QualifyRequirementRevisionUseCase } from './qualify-revision.usecase';
 import { RequirementRepository } from '../infrastructure/requirement.repository';
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 
 describe('QualifyRequirementRevisionUseCase', () => {
   let useCase: QualifyRequirementRevisionUseCase;

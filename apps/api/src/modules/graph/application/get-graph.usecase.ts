@@ -1,6 +1,6 @@
 import { GraphRepository } from '../infrastructure/graph.repository';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 
 export class GetGraphUseCase {
   constructor(

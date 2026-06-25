@@ -1,7 +1,7 @@
 import { ReviewInsightUseCase } from './review-insight.usecase';
 import { InsightRepository } from '../infrastructure/insight.repository';
 import { EventLogService } from '../../event-log/application/event-log.service';
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 
 describe('ReviewInsightUseCase', () => {
   let useCase: ReviewInsightUseCase;

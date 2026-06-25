@@ -9,7 +9,7 @@ import { ReviewNoteRepository } from '../../infrastructure/review-note.repositor
 import { ClarificationRepository } from '../../../clarification/infrastructure/clarification.repository';
 import { CreateReviewedReportSnapshotUseCase } from '../../../document/application/commands/create-reviewed-report-snapshot.usecase';
 import { EnqueueDocumentJobUseCase } from '../../../document/application/commands/enqueue-document-job.usecase';
-import { AppError } from '../../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 
 describe('CreateAnalysisReviewDecisionUseCase', () => {
   let useCase: CreateAnalysisReviewDecisionUseCase;

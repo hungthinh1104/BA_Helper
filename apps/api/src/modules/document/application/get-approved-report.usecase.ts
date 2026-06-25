@@ -1,5 +1,5 @@
 import { DocumentRepository } from '../infrastructure/document.repository';
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { ApprovedReportProjectionService } from './approved-report-projection.service';
 
 export class GetApprovedReportUseCase {

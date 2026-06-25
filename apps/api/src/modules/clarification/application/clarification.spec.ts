@@ -6,7 +6,7 @@ import { ClarificationRepository } from '../infrastructure/clarification.reposit
 import { InsightRepository } from '../../insight/infrastructure/insight.repository';
 import { ImpactAnalysisRepository } from '../../impact-analysis/infrastructure/impact-analysis.repository';
 import { RequirementRepository } from '../../requirement/infrastructure/requirement.repository';
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 
 describe('Clarification Use Cases', () => {
   let clarificationRepo: jest.Mocked<ClarificationRepository>;

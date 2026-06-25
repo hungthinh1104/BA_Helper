@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ScanJobRepository } from '../infrastructure/scan-job.repository';
 import { EventLogService } from '../../event-log/application/event-log.service';
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { ScanJobStatus, ScanJobStage, DependencyEdgeType } from '@prisma/client';
 import { ArtifactRepository } from '../../artifact/infrastructure/artifact.repository';
 import { GraphRepository } from '../../graph/infrastructure/graph.repository';

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TraceabilityRepository } from '../infrastructure/traceability.repository';
 import { ReviewCompletionResponse } from '@ba-helper/contracts';
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 
 @Injectable()
 export class GetReviewCompletionUseCase {

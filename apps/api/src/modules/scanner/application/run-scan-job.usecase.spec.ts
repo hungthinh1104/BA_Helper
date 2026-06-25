@@ -1,4 +1,4 @@
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { RunScanJobUseCase } from './run-scan-job.usecase';
 import * as fs from 'node:fs/promises';
 import { ScanJobStage, ScanJobStatus } from '@prisma/client';

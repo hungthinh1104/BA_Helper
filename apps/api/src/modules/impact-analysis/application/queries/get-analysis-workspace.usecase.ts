@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AppError } from '../../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { mapAnalysisWorkspace } from '../mappers/analysis-workspace.mapper';
 

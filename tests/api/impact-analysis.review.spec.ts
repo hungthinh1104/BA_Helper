@@ -1,5 +1,5 @@
 import { FinalizeImpactAnalysisUseCase } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/finalize-impact-analysis.usecase';
-import { AppError } from '../../apps/api/src/shared/app-error';
+import { AppError } from '@ba-helper/shared';
 
 const defaultAnalysisState = {
   id: 'analysis-1',

@@ -1,6 +1,6 @@
 import { RequirementRepository } from '../infrastructure/requirement.repository';
 import { ProjectRepository } from '../../project/infrastructure/project.repository';
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 
 export class ListRequirementsUseCase {
   constructor(

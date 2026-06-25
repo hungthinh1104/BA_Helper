@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { AppError } from '../../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { LineageTimelineEvent, LineageTimelineResponse } from '@ba-helper/contracts';
 
 const EVENT_ORDER: Record<LineageTimelineEvent['type'], number> = {

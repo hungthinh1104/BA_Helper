@@ -4,7 +4,7 @@ import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../src/modules/prisma/prisma.service';
 import { PdfExportRenderer } from '../../src/modules/document/application/pdf-export.renderer';
-import { AppError } from '../../src/shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { createTestApp } from './helpers/test-app';
 import { resetDatabase } from './helpers/reset-db';
 import { grantProjectMembership } from './helpers/grant-project-membership';

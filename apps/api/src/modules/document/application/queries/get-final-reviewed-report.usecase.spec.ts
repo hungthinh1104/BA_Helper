@@ -1,5 +1,5 @@
 import { GetFinalReviewedReportUseCase } from './get-final-reviewed-report.usecase';
-import { AppError } from '../../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 
 describe('GetFinalReviewedReportUseCase', () => {
   let useCase: GetFinalReviewedReportUseCase;

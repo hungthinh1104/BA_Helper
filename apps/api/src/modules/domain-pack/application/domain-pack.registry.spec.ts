@@ -1,5 +1,5 @@
 import { DomainPackRegistry } from './domain-pack.registry';
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 
 describe('DomainPackRegistry', () => {
   let registry: DomainPackRegistry;

@@ -7,16 +7,7 @@ import { EmbeddingChunkRepository } from './infrastructure/embedding-chunk.repos
 import { EmbedSnapshotArtifactsUseCase } from './application/embed-snapshot-artifacts.usecase';
 import { PrismaModule } from '../prisma/prisma.module';
 
-const EMBEDDING_PROVIDERS = ['fake', 'openai', 'google'] as const;
-type EmbeddingProviderName = (typeof EMBEDDING_PROVIDERS)[number];
-
-export function resolveEmbeddingProvider(rawProvider?: string): EmbeddingProviderName {
-  const provider = (rawProvider || 'fake').trim().toLowerCase();
-  if ((EMBEDDING_PROVIDERS as readonly string[]).includes(provider)) {
-    return provider as EmbeddingProviderName;
-  }
-  throw new Error(`Unsupported EMBEDDING_PROVIDER "${rawProvider}". Expected one of: ${EMBEDDING_PROVIDERS.join(', ')}.`);
-}
+import { resolveEmbeddingConfig } from '@ba-helper/shared';
 
 @Module({
   imports: [PrismaModule],
@@ -27,17 +18,17 @@ export function resolveEmbeddingProvider(rawProvider?: string): EmbeddingProvide
       provide: EmbeddingProvider,
       useFactory: () => {
         // By default, use fake provider if not in production and not explicitly requested
-        const provider = resolveEmbeddingProvider(process.env.EMBEDDING_PROVIDER);
+        const config = resolveEmbeddingConfig(process.env);
 
-        if (process.env.NODE_ENV === 'production' && provider === 'fake') {
+        if (process.env.NODE_ENV === 'production' && config.provider === 'fake') {
           throw new Error('FakeEmbeddingProvider is forbidden in production. Please set EMBEDDING_PROVIDER.');
         }
 
-        if (provider === 'openai') {
-          return new OpenAiEmbeddingProvider();
+        if (config.provider === 'openai') {
+          return new OpenAiEmbeddingProvider(config);
         }
-        if (provider === 'google') {
-          return new GoogleEmbeddingProvider();
+        if (config.provider === 'google') {
+          return new GoogleEmbeddingProvider(config);
         }
         return new FakeEmbeddingProvider();
       },

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { AiPolicy } from '../../ai/domain/ai.policy';
+import { AiPolicy } from '@ba-helper/shared';
 
 export const EmbeddingPolicy = {
   /** Build text content from an artifact for embedding */

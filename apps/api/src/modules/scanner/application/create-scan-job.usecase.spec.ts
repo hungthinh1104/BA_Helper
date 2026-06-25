@@ -3,7 +3,7 @@ import { ScanJobRepository } from '../infrastructure/scan-job.repository';
 import { RepositoryRepository } from '../../repository/infrastructure/repository.repository';
 import { EventLogService } from '../../event-log/application/event-log.service';
 import { QueueService } from '../../queue/queue.service';
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { ScanJobPolicy } from '../domain/scan-job.policy';
 
 jest.mock('../domain/scan-job.policy');

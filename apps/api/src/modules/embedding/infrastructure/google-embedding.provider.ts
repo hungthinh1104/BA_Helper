@@ -1,8 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { EmbeddingProvider, EmbeddingRequest, EmbeddingResult } from '../domain/embedding-provider.interface';
-import { AppError } from '../../../shared/app-error';
-import { resolveGoogleProviderApiKey } from '../../ai/infrastructure/google-provider-env';
+import { AppError, EmbeddingConfig } from '@ba-helper/shared';
 
 const DEFAULT_MODEL = 'gemini-embedding-001';
 const EXPECTED_DIMENSIONS = 1536;
@@ -14,9 +13,9 @@ export class GoogleEmbeddingProvider extends EmbeddingProvider {
   private readonly client: GoogleGenerativeAI;
   private readonly logger = new Logger(GoogleEmbeddingProvider.name);
 
-  constructor() {
+  constructor(private readonly config: EmbeddingConfig) {
     super();
-    const apiKey = resolveGoogleProviderApiKey();
+    const apiKey = this.config.apiKey;
     if (!apiKey) {
       throw new AppError(
         'AI_PROVIDER_CONFIG_INVALID',

@@ -1,6 +1,6 @@
 import { EvidenceRepository } from '../infrastructure/evidence.repository';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 
 export class ListEvidenceUseCase {
   constructor(

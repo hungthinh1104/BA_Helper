@@ -1,5 +1,5 @@
 import type { RequestUser } from '@ba-helper/contracts';
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { EventLogService } from '../../event-log/application/event-log.service';
 import { GetCurrentWorkspaceUseCase } from './get-current-workspace.usecase';
 import { ProjectRepository } from '../infrastructure/project.repository';

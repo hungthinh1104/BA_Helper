@@ -1,5 +1,5 @@
 import type { RequestUser } from '@ba-helper/contracts';
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import {
   CurrentWorkspaceResolver,
 } from './current-workspace.resolver';

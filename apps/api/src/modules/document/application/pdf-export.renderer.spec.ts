@@ -1,4 +1,4 @@
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { PdfExportRenderer } from './pdf-export.renderer';
 
 describe('PdfExportRenderer', () => {

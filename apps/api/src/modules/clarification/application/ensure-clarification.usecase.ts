@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ClarificationRepository } from '../infrastructure/clarification.repository';
 import { ImpactAnalysisRepository } from '../../impact-analysis/infrastructure/impact-analysis.repository';
 import { InsightRepository } from '../../insight/infrastructure/insight.repository';
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 
 @Injectable()
 export class EnsureClarificationUseCase {

@@ -1,10 +1,3 @@
-export interface AiConfig {
-  provider: 'fake' | 'openai' | 'anthropic' | 'google' | 'deepseek';
-  defaultModel: string;
-  temperature: number;
-  maxTokens: number;
-  /** Có bật secret redaction không (always true in prod) */
-  redactSecrets: boolean;
-}
+export type { AiConfig } from '@ba-helper/shared';
 
 export const AI_CONFIG_TOKEN = Symbol('AI_CONFIG');

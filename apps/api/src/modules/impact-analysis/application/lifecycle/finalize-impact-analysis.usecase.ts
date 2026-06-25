@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
-import { AppError } from '../../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 
 import { ReviewPolicy } from '../../../review/domain/review.policy';
 import { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AppError } from '../../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { deriveMultiRepoRunAggregates } from './multi-repo-run-readiness';
 import { InsightRepository } from '../../../insight/infrastructure/insight.repository';
 import { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';

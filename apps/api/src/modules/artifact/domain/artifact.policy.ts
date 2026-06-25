@@ -1,4 +1,4 @@
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 
 export const ArtifactPolicy = {
   validateArtifactPayload: (params: {

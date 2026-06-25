@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { AnalysisReviewDecisionValue } from '@prisma/client';
-import { AppError } from '../../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { GetApprovedMultiRepoReportUseCase } from './get-approved-multi-repo-report.usecase';
 import { MultiRepoMergedReportRepository } from '../../infrastructure/multi-repo-merged-report.repository';
 import { MergedMultiRepoReportReviewDecisionRepository } from '../../infrastructure/merged-multi-repo-report-review-decision.repository';

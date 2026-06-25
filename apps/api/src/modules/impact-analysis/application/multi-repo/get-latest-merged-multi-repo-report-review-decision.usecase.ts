@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AppError } from '../../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { MultiRepoMergedReportRepository } from '../../infrastructure/multi-repo-merged-report.repository';
 import { MergedMultiRepoReportReviewDecisionRepository } from '../../infrastructure/merged-multi-repo-report-review-decision.repository';
 

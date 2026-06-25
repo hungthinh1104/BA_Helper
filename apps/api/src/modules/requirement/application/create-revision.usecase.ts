@@ -1,6 +1,6 @@
 import { RequirementRepository } from '../infrastructure/requirement.repository';
 import { RequirementPolicy } from '../domain/requirement.policy';
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 
 export class CreateRequirementRevisionUseCase {
   constructor(private readonly repository: RequirementRepository) {}

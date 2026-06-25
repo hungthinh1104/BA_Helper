@@ -4,7 +4,7 @@ import { ReviewNoteRepository } from '../../infrastructure/review-note.repositor
 import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
 import { InsightRepository } from '../../../insight/infrastructure/insight.repository';
 import { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
-import { AppError } from '../../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 
 @Injectable()
 export class SaveReviewNoteUseCase {

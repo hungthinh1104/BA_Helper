@@ -5,7 +5,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { AppError } from './app-error';
+import { AppError } from '@ba-helper/shared';
 
 @Catch(AppError)
 export class AppExceptionFilter implements ExceptionFilter {

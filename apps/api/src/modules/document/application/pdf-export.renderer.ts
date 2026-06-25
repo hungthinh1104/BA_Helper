@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import PDFDocument from 'pdfkit';
 import sanitizeHtml from 'sanitize-html';
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { sanitizeReportFilename } from '../domain/sanitize-filename.util';
 import { ApprovedReportMetadata } from '../domain/approved-report-metadata';
 import { DocumentExportRenderer, RenderedExport } from './document-export.renderer';

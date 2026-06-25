@@ -3,10 +3,9 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { z } from 'zod';
 import { LlmProvider, LlmRequest, LlmResult } from '../domain/llm-provider.interface';
 import { AiConfig, AI_CONFIG_TOKEN } from '../domain/ai-config';
-import { AiPolicy } from '../domain/ai.policy';
+import { AiPolicy } from '@ba-helper/shared';
 import { parseStructuredLlmOutput } from './structured-output';
-import { AppError } from '../../../shared/app-error';
-import { resolveGoogleProviderApiKey } from './google-provider-env';
+import { AppError } from '@ba-helper/shared';
 import { AiOutputError } from '../domain/ai.errors';
 
 @Injectable()
@@ -16,7 +15,7 @@ export class GoogleLlmProvider extends LlmProvider {
 
   constructor(@Inject(AI_CONFIG_TOKEN) private config: AiConfig) {
     super();
-    const apiKey = resolveGoogleProviderApiKey();
+    const apiKey = this.config.apiKey;
 
     if (!apiKey) {
       throw new AppError(

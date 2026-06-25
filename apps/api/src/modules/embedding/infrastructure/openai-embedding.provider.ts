@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import OpenAI from 'openai';
 import { EmbeddingProvider, EmbeddingRequest, EmbeddingResult } from '../domain/embedding-provider.interface';
-import { AppError } from '../../../shared/app-error';
+import { AppError, EmbeddingConfig } from '@ba-helper/shared';
 
 const DEFAULT_MODEL = 'text-embedding-3-small';
 const DIMENSIONS = 1536;
@@ -11,9 +11,9 @@ export class OpenAiEmbeddingProvider extends EmbeddingProvider {
   readonly providerName = 'openai';
   private readonly client: OpenAI;
 
-  constructor() {
+  constructor(private readonly config: EmbeddingConfig) {
     super();
-    this.client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    this.client = new OpenAI({ apiKey: this.config.apiKey });
   }
 
   async embed(request: EmbeddingRequest): Promise<EmbeddingResult> {

@@ -1,5 +1,5 @@
 import { EmbeddingPolicy } from '../../apps/api/src/modules/embedding/domain/embedding.policy';
-import { AiPolicy } from '../../apps/api/src/modules/ai/domain/ai.policy';
+import { AiPolicy } from '@ba-helper/shared';
 
 describe('EmbeddingPolicy', () => {
   describe('buildArtifactContent', () => {

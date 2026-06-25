@@ -1,11 +1,11 @@
 import { Injectable, Inject } from '@nestjs/common';
 import OpenAI from 'openai';
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { z } from 'zod';
 import { LlmProvider, LlmRequest, LlmResult } from '../domain/llm-provider.interface';
 import { AiConfig, AI_CONFIG_TOKEN } from '../domain/ai-config';
 import { parseStructuredLlmOutput } from './structured-output';
-import { AiPolicy } from '../domain/ai.policy';
+import { AiPolicy } from '@ba-helper/shared';
 
 @Injectable()
 export class OpenAiLlmProvider extends LlmProvider {
@@ -14,7 +14,7 @@ export class OpenAiLlmProvider extends LlmProvider {
 
   constructor(@Inject(AI_CONFIG_TOKEN) private config: AiConfig) {
     super();
-    this.client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    this.client = new OpenAI({ apiKey: this.config.apiKey });
   }
 
   async generateStructured<T>(

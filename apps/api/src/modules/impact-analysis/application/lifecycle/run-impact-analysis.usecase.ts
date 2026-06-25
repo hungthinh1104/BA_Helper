@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { AppError } from '../../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
 import { InsightRepository } from '../../../insight/infrastructure/insight.repository';
 import { DomainPackRegistry } from '../../../domain-pack/application/domain-pack.registry';

@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { EmbeddingChunkRepository } from '../infrastructure/embedding-chunk.repository';
 import { EmbeddingProvider } from '../domain/embedding-provider.interface';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ArtifactChunkBuilder, CHUNK_BUILDER_VERSION } from '../domain/artifact-chunk.builder';
 import { matchChunksForReuse, CurrentChunkItem, MatchResult } from '../domain/embedding-reuse-matcher';
 import { createHash } from 'node:crypto';
-import { AiPolicy } from '../../ai/domain/ai.policy';
+import { AiPolicy } from '@ba-helper/shared';
 import type {
   DiagnosticItem,
   EmbeddingReusePlanPayload,

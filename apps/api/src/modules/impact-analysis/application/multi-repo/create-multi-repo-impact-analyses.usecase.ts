@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import { Injectable } from '@nestjs/common';
-import { AppError } from '../../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { CreateImpactAnalysisUseCase } from '../lifecycle/create-impact-analysis.usecase';
 import { RequirementRepository } from '../../../requirement/infrastructure/requirement.repository';
