@@ -5,6 +5,11 @@ import type {
   MultiRepoAnalysisRunListItemResponse,
 } from '@ba-helper/contracts';
 import { deriveMultiRepoRunAggregates } from '../application/multi-repo/multi-repo-run-readiness';
+import {
+  deriveMergedReportBlockedReasons,
+  deriveMergedReportCapabilities,
+  deriveMergedReportStaleness,
+} from '../application/multi-repo/multi-repo-merged-report-state';
 import { isAnalyzerVersionOutdated } from './analyzer-version';
 
 type BaseAnalysis = Prisma.ImpactAnalysisGetPayload<Record<string, never>>;
@@ -36,6 +41,7 @@ type AnalysisWithRelations = BaseAnalysis & {
   sourceTarget: AnalysisSourceTarget;
   requirementRevision: AnalysisRequirementRevision;
   reviewDecisions?: Array<{
+    id: string;
     decision: 'ACCEPTED' | 'REJECTED' | 'NEEDS_MORE_CLARIFICATION';
     createdAt: Date;
     reviewedByUserId: string;
@@ -205,6 +211,9 @@ export const mapMultiRepoAnalysisRunDetail = (run: {
     email: string;
   };
   createdAt: Date;
+  approvedMergedReport: {
+    provenance: unknown;
+  } | null;
   analyses: Array<AnalysisWithRelations & {
     snapshot: AnalysisSnapshot & {
       repository: {
@@ -259,8 +268,49 @@ export const mapMultiRepoAnalysisRunDetail = (run: {
     items.map((item) => ({
       status: item.status,
       latestReviewDecision: item.latestReviewDecision,
+      isStale: item.isStale,
     })),
   );
+  const storedChildProvenance = run.approvedMergedReport
+    ? (((run.approvedMergedReport.provenance as any)?.childAnalyses ?? []) as Array<{
+        analysisId: string;
+        latestReviewDecisionId: string;
+        snapshotId: string;
+        commitSha: string;
+      }>)
+    : [];
+  const currentChildProvenance = run.analyses.map((analysis) => {
+    const { isStale } = computeFreshness(analysis);
+    const latestDecision = analysis.reviewDecisions?.[0] ?? null;
+
+    return {
+      analysisId: analysis.id,
+      latestReviewDecisionId: latestDecision?.id ?? null,
+      snapshotId: analysis.snapshot.id,
+      commitSha: analysis.snapshot.commitSha,
+      status: analysis.status,
+      isStale,
+    };
+  });
+  const reportStaleness = run.approvedMergedReport
+    ? deriveMergedReportStaleness({
+        storedChildProvenance,
+        currentChildProvenance,
+      })
+    : { isStale: false };
+  const blockedReasons = deriveMergedReportBlockedReasons(
+    items.map((item) => ({
+      status: item.status,
+      isStale: item.isStale,
+      latestReviewDecision: item.latestReviewDecision,
+    })),
+  );
+  const mergedReportState = deriveMergedReportCapabilities({
+    hasApprovedReport: Boolean(run.approvedMergedReport),
+    isApprovedReportStale: reportStaleness.isStale,
+    canStartMergedReport: runReadiness.canStartMergedReport,
+    blockedReasons,
+  });
 
   return {
     runId: run.id,
@@ -269,6 +319,8 @@ export const mapMultiRepoAnalysisRunDetail = (run: {
     requirementTitle: run.requirementRevision.title,
     createdBy: run.createdByUser.name || run.createdByUser.email,
     createdAt: run.createdAt.toISOString(),
+    mergedReportStatus: mergedReportState.mergedReportStatus,
+    capabilities: mergedReportState.capabilities,
     runReadiness,
     childReviewSummary,
     items,

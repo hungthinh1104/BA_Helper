@@ -41,6 +41,24 @@ const BLOCKING_REASON_LABEL: Record<string, string> = {
   NONE: "Ready",
 }
 
+const MERGED_REPORT_STATUS_LABEL: Record<string, string> = {
+  NOT_CREATED: "Ready to finalize",
+  CURRENT: "Current",
+  STALE: "Stale",
+  BLOCKED: "Blocked",
+}
+
+const CAPABILITY_BLOCKER_LABEL: Record<string, string> = {
+  CHILD_ANALYSIS_FAILED: "A child analysis failed",
+  CHILD_ANALYSIS_NOT_COMPLETED: "A child analysis is not completed",
+  CHILD_ANALYSIS_WAITING_FOR_REVIEW: "A child analysis is waiting for review",
+  CHILD_ANALYSIS_STALE: "A child analysis is stale",
+  CHILD_REVIEW_NEEDS_CLARIFICATION: "A child review needs clarification",
+  CHILD_REVIEW_REJECTED: "A child review was rejected",
+  CHILD_REVIEW_PENDING: "A child review is pending",
+  MERGED_REPORT_CURRENT: "Approved merged report is current",
+}
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString("en-US", {
     month: "short",
@@ -70,10 +88,18 @@ export default function MultiRepoAnalysisRunDetailPage({
   }
 
   const canFinalizeMergedReport =
-    workspace ? canFinalizeAnalysis(workspace.membershipRole) && Boolean(data?.runReadiness.canStartMergedReport) : false
+    workspace
+      ? canFinalizeAnalysis(workspace.membershipRole) &&
+        Boolean(
+          data?.capabilities.canFinalizeMergedReport ||
+            data?.capabilities.canRefreshMergedReport,
+        )
+      : false
+  const approvedReportErrorCode = (approvedReportError as { code?: string } | undefined)?.code
   const hasApprovedMergedReport =
+    Boolean(data?.capabilities.canOpenApprovedReport) ||
     Boolean(approvedReport) ||
-    (approvedReportError as { code?: string } | undefined)?.code !== "MERGED_MULTI_REPO_REPORT_NOT_FOUND"
+    Boolean(approvedReportError && approvedReportErrorCode !== "MERGED_MULTI_REPO_REPORT_NOT_FOUND")
 
   const handleFinalizeMergedReport = async () => {
     try {
@@ -107,7 +133,7 @@ export default function MultiRepoAnalysisRunDetailPage({
         >
           <div className="flex items-center gap-2">
             {data && (
-              data.runReadiness.canStartMergedReport ? (
+              data.capabilities.canFinalizeMergedReport || data.capabilities.canRefreshMergedReport ? (
                 <>
                   <Link
                     href={`/analyses/runs/${runId}/merged-report`}
@@ -122,7 +148,11 @@ export default function MultiRepoAnalysisRunDetailPage({
                     onClick={() => void handleFinalizeMergedReport()}
                     disabled={!canFinalizeMergedReport || finalizeReport.isPending}
                   >
-                    {finalizeReport.isPending ? "Finalizing..." : "Finalize merged report"}
+                    {finalizeReport.isPending
+                      ? "Finalizing..."
+                      : data.capabilities.canRefreshMergedReport
+                        ? "Refresh merged report"
+                        : "Finalize merged report"}
                   </Button>
                 </>
               ) : hasApprovedMergedReport ? (
@@ -135,15 +165,15 @@ export default function MultiRepoAnalysisRunDetailPage({
                   </Link>
                   <span
                     className="text-[12px] text-[var(--text-tertiary)]"
-                    title="Merged report exists, but the run is not currently ready for a fresh merged snapshot."
+                    title={data.capabilities.blockedReasons.map((reason) => CAPABILITY_BLOCKER_LABEL[reason] ?? reason).join(", ")}
                   >
-                    Refresh blocked until child analyses are accepted again
+                    {data.mergedReportStatus === "CURRENT" ? "Current snapshot" : "Refresh blocked"}
                   </span>
                 </>
               ) : (
                 <span
                   className="text-[12px] text-[var(--text-tertiary)]"
-                  title="Every child analysis must have latest review decision ACCEPTED."
+                  title={data.capabilities.blockedReasons.map((reason) => CAPABILITY_BLOCKER_LABEL[reason] ?? reason).join(", ")}
                 >
                   Merged report not ready
                 </span>
@@ -165,15 +195,26 @@ export default function MultiRepoAnalysisRunDetailPage({
               <MetricCard label="Accepted" value={data.childReviewSummary.accepted} accent="success" />
               <MetricCard label="Pending Review" value={data.childReviewSummary.pendingReview} accent={data.childReviewSummary.pendingReview > 0 ? "warning" : "default"} />
               <MetricCard
-                label="Merged Ready"
-                value={data.runReadiness.canStartMergedReport ? "Yes" : "No"}
-                accent={data.runReadiness.canStartMergedReport ? "success" : "default"}
+                label="Merged Report"
+                value={MERGED_REPORT_STATUS_LABEL[data.mergedReportStatus] ?? data.mergedReportStatus}
+                accent={
+                  data.mergedReportStatus === "CURRENT" || data.mergedReportStatus === "NOT_CREATED"
+                    ? "success"
+                    : data.mergedReportStatus === "STALE"
+                      ? "warning"
+                      : "default"
+                }
               />
             </div>
 
             <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2 text-[12px] text-[var(--text-secondary)]">
               Review summary: accepted {data.childReviewSummary.accepted} • rejected {data.childReviewSummary.rejected} • needs clarification {data.childReviewSummary.needsMoreClarification} • pending {data.childReviewSummary.pendingReview}
             </div>
+            {data.capabilities.blockedReasons.length > 0 && data.mergedReportStatus !== "CURRENT" && (
+              <div className="rounded-lg border border-[var(--warning-soft)] bg-[var(--warning-soft)]/40 px-3 py-2 text-[12px] text-[var(--warning)]">
+                Merged report blocker: {data.capabilities.blockedReasons.map((reason) => CAPABILITY_BLOCKER_LABEL[reason] ?? reason).join("; ")}
+              </div>
+            )}
           </div>
         )}
 

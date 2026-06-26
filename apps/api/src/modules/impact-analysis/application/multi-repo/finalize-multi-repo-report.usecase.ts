@@ -5,6 +5,8 @@ import { MultiRepoAnalysisRunRepository } from '../../infrastructure/multi-repo-
 import { MultiRepoMergedReportRepository } from '../../infrastructure/multi-repo-merged-report.repository';
 import { GetApprovedMultiRepoReportUseCase } from './get-approved-multi-repo-report.usecase';
 import { RequestUser } from '@ba-helper/contracts';
+import { deriveMultiRepoRunAggregates } from './multi-repo-run-readiness';
+import { normalizeChildProvenance } from './multi-repo-merged-report-state';
 
 @Injectable()
 export class FinalizeMultiRepoReportUseCase {
@@ -24,6 +26,23 @@ export class FinalizeMultiRepoReportUseCase {
       );
     }
 
+    const aggregates = deriveMultiRepoRunAggregates(
+      run.analyses.map((analysis) => ({
+        status: analysis.status,
+        latestReviewDecision: analysis.reviewDecisions[0]?.decision ?? null,
+        isStale:
+          analysis.sourceTarget.resolvedRefType !== 'COMMIT' &&
+          analysis.sourceTarget.latestObservedCommitSha !== analysis.snapshot.commitSha,
+      })),
+    );
+
+    if (!aggregates.runReadiness.canStartMergedReport) {
+      throw new AppError(
+        'MULTI_REPO_RUN_NOT_READY',
+        'Multi-repo analysis run is not ready for a merged report.',
+      );
+    }
+
     const currentProvenance = run.analyses.map((analysis) => {
       const latestDecision = analysis.reviewDecisions[0];
       if (!latestDecision) {
@@ -40,14 +59,6 @@ export class FinalizeMultiRepoReportUseCase {
         commitSha: analysis.snapshot.commitSha,
       };
     });
-    const normalizeProvenance = (
-      items: Array<{
-        analysisId: string;
-        latestReviewDecisionId: string;
-        snapshotId: string;
-        commitSha: string;
-      }>,
-    ) => [...items].sort((left, right) => left.analysisId.localeCompare(right.analysisId));
 
     try {
       const existingApproved = await this.getApproved.execute(runId);
@@ -61,26 +72,14 @@ export class FinalizeMultiRepoReportUseCase {
     }
 
     const draft = await this.draft.execute(runId, actor);
-    const report = await this.reports.upsertApproved({
+    await this.reports.upsertApproved({
       runId,
       content: draft.markdown,
       provenance: {
-        childAnalyses: normalizeProvenance(currentProvenance),
+        childAnalyses: normalizeChildProvenance(currentProvenance),
       },
     });
 
-    return {
-      id: report.id,
-      runId: report.runId,
-      projectId: report.run.projectId,
-      requirementRevisionId: report.run.requirementRevisionId,
-      requirementTitle: report.run.requirementRevision.title,
-      markdown: report.content,
-      approvedAt: report.updatedAt.toISOString(),
-      isStale: false,
-      provenance: {
-        childAnalyses: currentProvenance,
-      },
-    };
+    return this.getApproved.execute(runId);
   }
 }

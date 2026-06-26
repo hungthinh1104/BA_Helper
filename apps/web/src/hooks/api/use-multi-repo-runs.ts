@@ -73,6 +73,12 @@ export function useMultiRepoAnalysisRunDetail(runId: string) {
     },
     enabled: Boolean(runId),
     refetchOnWindowFocus: true,
+    refetchInterval: (query) => {
+      const data = query.state.data
+      return data?.items.some((item) => item.status === "QUEUED" || item.status === "RUNNING")
+        ? 3000
+        : false
+    },
   })
 }
 

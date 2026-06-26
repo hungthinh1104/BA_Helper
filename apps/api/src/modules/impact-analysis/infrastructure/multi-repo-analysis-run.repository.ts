@@ -5,6 +5,7 @@ const MULTI_REPO_RUN_INCLUDE = {
   project: true,
   requirementRevision: true,
   createdByUser: true,
+  approvedMergedReport: true,
   analyses: {
     include: {
       snapshot: {

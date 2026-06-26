@@ -23,6 +23,12 @@ To execute the golden path demo deterministically in a local environment:
 pnpm test tests/demo/golden-path-demo.spec.ts
 ```
 
+The bounded multi-repo proof path is separate:
+
+```bash
+pnpm demo:multi-repo-golden-path
+```
+
 *Note: If you have made docs-only changes, you do not need to run the full test suite.*
 
 ## Expected Outputs & Diagnostics

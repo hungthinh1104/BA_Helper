@@ -135,6 +135,33 @@ export const multiRepoImpactAnalysisCreateResponseSchema = z.object({
 	})),
 });
 
+export const multiRepoMergedReportStatusSchema = z.enum([
+	'NOT_CREATED',
+	'CURRENT',
+	'STALE',
+	'BLOCKED',
+]);
+
+export const multiRepoMergedReportBlockedReasonSchema = z.enum([
+	'CHILD_ANALYSIS_FAILED',
+	'CHILD_ANALYSIS_NOT_COMPLETED',
+	'CHILD_ANALYSIS_WAITING_FOR_REVIEW',
+	'CHILD_ANALYSIS_STALE',
+	'CHILD_REVIEW_NEEDS_CLARIFICATION',
+	'CHILD_REVIEW_REJECTED',
+	'CHILD_REVIEW_PENDING',
+	'MERGED_REPORT_CURRENT',
+]);
+
+export const multiRepoMergedReportCapabilitiesSchema = z.object({
+	canFinalizeMergedReport: z.boolean(),
+	canRefreshMergedReport: z.boolean(),
+	canExportMergedReport: z.boolean(),
+	canReviewMergedReport: z.boolean(),
+	canOpenApprovedReport: z.boolean(),
+	blockedReasons: z.array(multiRepoMergedReportBlockedReasonSchema),
+});
+
 export const multiRepoAnalysisRunDetailResponseSchema = z.object({
 	runId: z.string().uuid(),
 	projectId: z.string().uuid(),
@@ -142,6 +169,8 @@ export const multiRepoAnalysisRunDetailResponseSchema = z.object({
 	requirementTitle: z.string(),
 	createdBy: z.string(),
 	createdAt: z.string(),
+	mergedReportStatus: multiRepoMergedReportStatusSchema,
+	capabilities: multiRepoMergedReportCapabilitiesSchema,
 	runReadiness: z.object({
 		totalAnalyses: z.number().int().nonnegative(),
 		completedAnalyses: z.number().int().nonnegative(),
@@ -274,6 +303,8 @@ export const multiRepoApprovedReportResponseSchema = z.object({
 	requirementTitle: z.string(),
 	markdown: z.string(),
 	approvedAt: z.string(),
+	mergedReportStatus: multiRepoMergedReportStatusSchema,
+	capabilities: multiRepoMergedReportCapabilitiesSchema,
 	isStale: z.boolean(),
 	staleReason: z.string().optional(),
 	provenance: z.object({

@@ -34,6 +34,9 @@ export class GetMergedMultiRepoReportDraftUseCase {
       run.analyses.map((analysis) => ({
         status: analysis.status,
         latestReviewDecision: analysis.reviewDecisions?.[0]?.decision ?? null,
+        isStale:
+          analysis.sourceTarget.resolvedRefType !== 'COMMIT' &&
+          analysis.sourceTarget.latestObservedCommitSha !== analysis.snapshot.commitSha,
       })),
     );
 

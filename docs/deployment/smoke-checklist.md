@@ -39,9 +39,11 @@ Use this checklist before a demo, handoff, or release candidate tag.
 - multi-repo create succeeds
 - run detail loads
 - run list loads
+- run detail shows backend-authored merged report status, capabilities, and blocker reasons
 - merged draft loads when all child latest decisions are `ACCEPTED`
 - merged finalize succeeds
 - approved merged report loads
+- approved merged report shows backend-authored current/stale state and export/review capabilities
 - merged Markdown export works when non-stale
 - merged PDF export works when non-stale
 - merged report review decision create/list/latest works
@@ -68,8 +70,13 @@ Use this checklist before a demo, handoff, or release candidate tag.
 - `pnpm test`
 - `pnpm test:e2e`
 - `pnpm demo:golden-path`
+- `pnpm demo:multi-repo-golden-path`
 - `pnpm --dir apps/api smoke:public-github:real-llm` (explicit manual run)
 - `pnpm --dir apps/api smoke:public-github:real-path` (explicit manual run)
+
+Run full Jest, golden-path demos, and public smoke commands separately when
+they share the same database/schema. They reset and seed test data and can
+produce false failures if run concurrently.
 
 ## Public demo story
 

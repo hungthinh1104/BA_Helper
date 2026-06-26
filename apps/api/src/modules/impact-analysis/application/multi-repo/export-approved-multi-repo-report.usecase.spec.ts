@@ -28,6 +28,15 @@ describe('ExportApprovedMultiRepoReportUseCase', () => {
     requirementTitle: 'Refund paid bookings',
     markdown: '# Merged approved report',
     approvedAt: '2026-06-09T08:00:00.000Z',
+    mergedReportStatus: 'CURRENT' as const,
+    capabilities: {
+      canFinalizeMergedReport: false,
+      canRefreshMergedReport: false,
+      canExportMergedReport: true,
+      canReviewMergedReport: true,
+      canOpenApprovedReport: true,
+      blockedReasons: ['MERGED_REPORT_CURRENT' as const],
+    },
     isStale: false,
     staleReason: undefined,
     provenance: {
