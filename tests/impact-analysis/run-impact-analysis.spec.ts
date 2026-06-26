@@ -1,10 +1,12 @@
-import { RunImpactAnalysisUseCase } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/run-impact-analysis.usecase';
+import {
+  RunImpactAnalysisUseCase,
+  ImpactEvidenceCollectionStep,
+  ImpactDiagnosticPropagationStep,
+  ImpactAiReasoningStep,
+} from '@ba-helper/application';
 import { AppError } from '@ba-helper/shared';
 import { FakeLlmProvider } from '../../apps/api/src/modules/ai/infrastructure/fake-ai.provider';
 import { DomainPackRegistry } from '../../apps/api/src/modules/domain-pack/application/domain-pack.registry';
-import { ImpactEvidenceCollectionStep } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/steps/impact-evidence-collection.step';
-import { ImpactDiagnosticPropagationStep } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/steps/impact-diagnostic-propagation.step';
-import { ImpactAiReasoningStep } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/steps/impact-ai-reasoning.step';
 
 type StubArtifact = {
   id: string;

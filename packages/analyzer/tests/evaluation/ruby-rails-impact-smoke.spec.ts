@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { ScannerAdapterRegistry } from '../../src/scanner/scanner-adapter.registry';
 import { SafeFileEnumerator } from '../../src/scanner/core/safe-file-enumerator';
-import { DiagnosticRiskEvaluator } from '../../../../apps/api/src/modules/impact-analysis/application/risks/diagnostic-risk.evaluator';
+import { DiagnosticRiskEvaluator } from '@ba-helper/application';
 
 describe('Ruby/Rails Impact Analysis Smoke Evaluation', () => {
   const fixturePath = join(__dirname, '../../../../tests/fixtures/ruby-rails-basic');

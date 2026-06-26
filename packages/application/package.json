@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@ba-helper/contracts": "workspace:*",
-    "@ba-helper/shared": "workspace:*"
+    "@ba-helper/shared": "workspace:*",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/node": "^20",

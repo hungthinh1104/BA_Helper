@@ -1,28 +1,22 @@
-import { Injectable, Logger } from '@nestjs/common';
 import { AppError } from '@ba-helper/shared';
-import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
-import { InsightRepository } from '../../../insight/infrastructure/insight.repository';
-import { DomainPackRegistry } from '../../../domain-pack/application/domain-pack.registry';
-import { AiOutputError } from '../../../ai/domain/ai.errors';
+import { AiOutputError } from '../ai/ai.errors';
+import type { ImpactAnalysisRepositoryPort } from '../ports/impact-analysis.repository.port';
+import type { InsightRepositoryPort, InsightRecord } from '../ports/insight.repository.port';
+import type { DomainPackSelectionPort } from '../ports/domain-pack-selection.port';
+import type { EventLogPort } from '../ports/event-log.port';
 import { ImpactEvidenceCollectionStep } from './steps/impact-evidence-collection.step';
 import { ImpactDiagnosticPropagationStep } from './steps/impact-diagnostic-propagation.step';
 import { ImpactAiReasoningStep } from './steps/impact-ai-reasoning.step';
-import { InsightRecord } from './steps/impact-analysis-step.types';
 
-import { EventLogService } from '../../../event-log/application/event-log.service';
-
-@Injectable()
 export class RunImpactAnalysisUseCase {
-  private readonly logger = new Logger(RunImpactAnalysisUseCase.name);
-
   constructor(
-    private readonly impactRepo: ImpactAnalysisRepository,
-    private readonly insightRepo: InsightRepository,
-    private readonly domainPackRegistry: DomainPackRegistry,
+    private readonly impactRepo: ImpactAnalysisRepositoryPort,
+    private readonly insightRepo: InsightRepositoryPort,
+    private readonly domainPackSelection: DomainPackSelectionPort,
     private readonly evidenceStep: ImpactEvidenceCollectionStep,
     private readonly diagnosticStep: ImpactDiagnosticPropagationStep,
     private readonly aiReasoningStep: ImpactAiReasoningStep,
-    private readonly eventLogService: EventLogService,
+    private readonly eventLog: EventLogPort,
   ) {}
 
   async execute(params: { analysisId: string; expandGraph?: boolean; domain?: string }) {
@@ -46,9 +40,9 @@ export class RunImpactAnalysisUseCase {
       progress: 10,
     });
 
-    const triggeredByUserId = (analysis as any).multiRepoRun?.createdByUserId || null;
+    const triggeredByUserId = analysis.multiRepoRun?.createdByUserId ?? null;
 
-    await this.eventLogService.recordEvent({
+    await this.eventLog.recordEvent({
       eventType: 'ANALYSIS_STARTED',
       idempotencyKey: `analysis:${analysis.id}:started`,
       actorUserId: 'system',
@@ -59,7 +53,7 @@ export class RunImpactAnalysisUseCase {
         triggeredByUserId,
         analysisId: analysis.id,
         repositoryId: analysis.snapshot.repositoryId,
-        projectId: (analysis as any).requirementRevision?.requirement?.projectId,
+        projectId: analysis.requirementRevision.requirement?.projectId,
         previousStatus: analysis.status,
         nextStatus: 'RUNNING',
         phase: 'RETRIEVING_EVIDENCE',
@@ -68,7 +62,7 @@ export class RunImpactAnalysisUseCase {
 
     try {
       const snapshotDomain = (analysis.snapshot as any).profile?.domain;
-      const domainPackSelection = this.domainPackRegistry.selectPack({
+      const domainPackResult = this.domainPackSelection.selectPack({
         manualPackId: params.domain,
         repositoryProfileDomain: snapshotDomain,
       });
@@ -76,7 +70,7 @@ export class RunImpactAnalysisUseCase {
       // Step 1: Collect Evidence and Traceability Links
       const evidenceResult = await this.evidenceStep.execute(
         analysis,
-        domainPackSelection,
+        domainPackResult,
         params.expandGraph ?? true,
       );
 
@@ -87,7 +81,7 @@ export class RunImpactAnalysisUseCase {
         progress: 60,
       });
 
-      await this.eventLogService.recordEvent({
+      await this.eventLog.recordEvent({
         eventType: 'ANALYSIS_EVIDENCE_RETRIEVED',
         idempotencyKey: `analysis:${analysis.id}:evidence-retrieved`,
         actorUserId: 'system',
@@ -98,7 +92,7 @@ export class RunImpactAnalysisUseCase {
           triggeredByUserId,
           analysisId: analysis.id,
           repositoryId: analysis.snapshot.repositoryId,
-          projectId: (analysis as any).requirementRevision?.requirement?.projectId,
+          projectId: analysis.requirementRevision.requirement?.projectId,
           previousStatus: 'RUNNING',
           nextStatus: 'RUNNING',
           phase: 'RUNNING_AI_REASONING',
@@ -111,19 +105,16 @@ export class RunImpactAnalysisUseCase {
       const aiResult = await this.aiReasoningStep.execute(
         analysis,
         evidenceResult,
-        domainPackSelection,
+        domainPackResult,
       );
 
       // Step 3: Diagnostic Risk Propagation
-      // Keep exact order from E20E-0: Evaluated after LLM call, but persisted together
       const diagnosticInsights = this.diagnosticStep.execute(analysis, evidenceResult);
 
       const insightInputs = [...aiResult.insightInputs, ...diagnosticInsights];
 
       // Persist all insights
-      const insights = (await this.insightRepo.upsertMany(
-        insightInputs,
-      )) as InsightRecord[];
+      const insights = (await this.insightRepo.upsertMany(insightInputs)) as InsightRecord[];
 
       // Link evidence to AI EVIDENCED insights
       await Promise.all(
@@ -147,9 +138,6 @@ export class RunImpactAnalysisUseCase {
               .filter((id): id is string => Boolean(id));
 
             if (evidenceIds.length === 0) {
-              this.logger.warn(
-                `Could not resolve any evidence IDs for insight ${insight.insightKey}`,
-              );
               return Promise.resolve([]);
             }
 
@@ -160,7 +148,7 @@ export class RunImpactAnalysisUseCase {
           }),
       );
 
-      await this.eventLogService.recordEvent({
+      await this.eventLog.recordEvent({
         eventType: 'ANALYSIS_AI_REASONING_COMPLETED',
         idempotencyKey: `analysis:${analysis.id}:ai-reasoning-completed`,
         actorUserId: 'system',
@@ -171,7 +159,7 @@ export class RunImpactAnalysisUseCase {
           triggeredByUserId,
           analysisId: analysis.id,
           repositoryId: analysis.snapshot.repositoryId,
-          projectId: (analysis as any).requirementRevision?.requirement?.projectId,
+          projectId: analysis.requirementRevision.requirement?.projectId,
           previousStatus: 'RUNNING',
           nextStatus: 'RUNNING',
           phase: 'DONE',
@@ -181,7 +169,7 @@ export class RunImpactAnalysisUseCase {
         },
       });
 
-      const domainPack = domainPackSelection.pack;
+      const domainPack = domainPackResult.pack;
 
       const result = await this.impactRepo.updateStatus({
         id: analysis.id,
@@ -201,13 +189,13 @@ export class RunImpactAnalysisUseCase {
             evidenceItems: aiResult.evidenceCandidatesLength,
             evidenceChars: aiResult.totalEvidenceChars,
             evidenceTruncated: aiResult.evidenceTruncated,
-            domainContextUsed: domainPackSelection.normalizedPackId,
+            domainContextUsed: domainPackResult.normalizedPackId,
           },
           domainPack: {
             id: domainPack.id,
             version: domainPack.version,
             status: domainPack.status,
-            selectedBy: domainPackSelection.selectedBy,
+            selectedBy: domainPackResult.selectedBy,
           },
           diagnostics: [
             {
@@ -218,7 +206,7 @@ export class RunImpactAnalysisUseCase {
                 domainPackId: domainPack.id,
                 domainPackVersion: domainPack.version,
                 domainPackStatus: domainPack.status,
-                selectedBy: domainPackSelection.selectedBy,
+                selectedBy: domainPackResult.selectedBy,
                 conceptCount: domainPack.concepts.length,
                 retrievalHintCount: domainPack.retrievalHints.length,
                 riskTemplateCount: domainPack.riskTemplates.length,
@@ -230,7 +218,7 @@ export class RunImpactAnalysisUseCase {
         },
       });
 
-      await this.eventLogService.recordEvent({
+      await this.eventLog.recordEvent({
         eventType: 'ANALYSIS_WAITING_FOR_REVIEW',
         idempotencyKey: `analysis:${analysis.id}:waiting-for-review`,
         actorUserId: 'system',
@@ -241,7 +229,7 @@ export class RunImpactAnalysisUseCase {
           triggeredByUserId,
           analysisId: analysis.id,
           repositoryId: analysis.snapshot.repositoryId,
-          projectId: (analysis as any).requirementRevision?.requirement?.projectId,
+          projectId: analysis.requirementRevision.requirement?.projectId,
           previousStatus: 'RUNNING',
           nextStatus: 'WAITING_FOR_REVIEW',
           phase: 'DONE',
@@ -250,17 +238,6 @@ export class RunImpactAnalysisUseCase {
 
       return result;
     } catch (e: any) {
-      const safeError = {
-        message: e instanceof Error ? e.message : String(e),
-        code: (e as any).code,
-        name: e instanceof Error ? e.name : 'UnknownError',
-        stack: e instanceof Error ? e.stack : undefined,
-      };
-      this.logger.error(
-        `RunImpactAnalysisUseCase execution failed: ${safeError.message}`,
-        safeError.stack,
-      );
-
       const errorCode =
         e instanceof AppError
           ? e.code
@@ -289,8 +266,7 @@ export class RunImpactAnalysisUseCase {
         },
       });
 
-      const triggeredByUserId = (analysis as any).multiRepoRun?.createdByUserId || null;
-      await this.eventLogService.recordEvent({
+      await this.eventLog.recordEvent({
         eventType: 'ANALYSIS_FAILED',
         idempotencyKey: `analysis:${analysis.id}:failed`,
         actorUserId: 'system',
@@ -301,7 +277,7 @@ export class RunImpactAnalysisUseCase {
           triggeredByUserId,
           analysisId: analysis.id,
           repositoryId: analysis.snapshot.repositoryId,
-          projectId: (analysis as any).requirementRevision?.requirement?.projectId,
+          projectId: analysis.requirementRevision.requirement?.projectId,
           previousStatus: analysis.status,
           nextStatus: 'FAILED',
           errorCode,

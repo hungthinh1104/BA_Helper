@@ -1,7 +1,7 @@
 import { AppError, AiPolicy } from '@ba-helper/shared';
 import type { EmbeddingChunkRepositoryPort } from '../ports/embedding-chunk.repository.port';
 import type { EmbeddingProviderPort } from '../ports/embedding-provider.port';
-import type { EmbeddingSnapshotRepositoryPort } from '../ports/embedding-snapshot.repository.port';
+import type { EmbeddingSnapshotRepositoryPort, ArtifactWithEvidenceBasic } from '../ports/embedding-snapshot.repository.port';
 import { ArtifactChunkBuilder, CHUNK_BUILDER_VERSION } from '../domain/artifact-chunk.builder';
 import { matchChunksForReuse, CurrentChunkItem, MatchResult } from '../domain/embedding-reuse-matcher';
 import { createHash } from 'node:crypto';

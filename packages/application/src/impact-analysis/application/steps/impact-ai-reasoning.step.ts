@@ -1,28 +1,20 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { LlmProvider } from '../../../../ai/domain/llm-provider.interface';
-import { renderPrompt } from '../../../../ai/domain/prompt-registry';
-import { buildCompactDomainContext } from '../../../../domain-profile';
-import { impactAnalysisAiSchema } from '../../../../ai/domain/ai.schema';
-import {
-  EvidenceCandidate,
-  EvidencePackFormatter,
-} from '../../../../ai/application/evidence-pack.formatter';
-import {
-  ImpactAiReasoningResult,
-  ImpactEvidenceCollectionResult,
-  InsightInputParams,
-} from './impact-analysis-step.types';
+import type { LlmProviderPort } from '../../ports/llm-provider.port';
+import { renderPrompt } from '../../ai/prompt-registry';
+import { buildCompactDomainContext } from '../../domain-profile/index';
+import { impactAnalysisAiSchema } from '../../ai/ai.schema';
+import { EvidencePackFormatter, type EvidenceCandidate } from '../../ai/evidence-pack.formatter';
+import type { ImpactAiReasoningResult, ImpactEvidenceCollectionResult } from '../../domain/impact-analysis-step.types';
+import type { InsightInputParams } from '../../ports/insight.repository.port';
+import type { DomainPackSelectionResult } from '../../ports/domain-pack-selection.port';
+import type { ImpactAnalysisRecord } from '../../ports/impact-analysis.repository.port';
 
-@Injectable()
 export class ImpactAiReasoningStep {
-  private readonly logger = new Logger(ImpactAiReasoningStep.name);
-
-  constructor(private readonly llmProvider: LlmProvider) {}
+  constructor(private readonly llmProvider: LlmProviderPort) {}
 
   async execute(
-    analysis: any,
+    analysis: ImpactAnalysisRecord,
     evidenceResult: ImpactEvidenceCollectionResult,
-    domainPackSelection: any,
+    domainPackSelection: DomainPackSelectionResult,
   ): Promise<ImpactAiReasoningResult> {
     const MAX_EVIDENCE_ITEMS_FOR_LLM = 12;
     const MAX_TOTAL_EVIDENCE_CHARS = 30000;
@@ -32,9 +24,7 @@ export class ImpactAiReasoningStep {
     const evidenceCandidates: EvidenceCandidate[] = [];
 
     for (const retrieved of evidenceResult.retrievedArtifacts) {
-      if (evidenceCandidates.length >= MAX_EVIDENCE_ITEMS_FOR_LLM) {
-        break;
-      }
+      if (evidenceCandidates.length >= MAX_EVIDENCE_ITEMS_FOR_LLM) break;
 
       const persistedArtifact = evidenceResult.artifactByKey.get(retrieved.artifactKey);
       if (!persistedArtifact) continue;
@@ -45,9 +35,7 @@ export class ImpactAiReasoningStep {
       if (totalEvidenceChars + excerpt.length > MAX_TOTAL_EVIDENCE_CHARS) {
         const remainingSpace = MAX_TOTAL_EVIDENCE_CHARS - totalEvidenceChars;
         if (remainingSpace > 500) {
-          excerpt =
-            excerpt.substring(0, remainingSpace) +
-            '\n... [TRUNCATED DUE TO TOKEN LIMITS]';
+          excerpt = excerpt.substring(0, remainingSpace) + '\n... [TRUNCATED DUE TO TOKEN LIMITS]';
           evidenceTruncated = true;
         } else {
           break;
@@ -64,12 +52,10 @@ export class ImpactAiReasoningStep {
         excerpt,
         retrievalMethod: retrieved.retrievalMethod,
         retrievalReason: `Score: ${retrieved.score}`,
-      } as unknown as EvidenceCandidate);
+      } as EvidenceCandidate);
     }
 
-    const domainContext = buildCompactDomainContext(
-      domainPackSelection.normalizedPackId,
-    );
+    const domainContext = buildCompactDomainContext(domainPackSelection.normalizedPackId);
 
     const { systemPrompt, userPrompt, version } = renderPrompt('IMPACT_ANALYSIS', {
       changeRequest: analysis.requirementRevision.rawText,
@@ -105,9 +91,6 @@ export class ImpactAiReasoningStep {
             originalCertainty: 'EVIDENCED',
             requestedEvidenceKeys,
           };
-          this.logger.warn(
-            `Downgraded insight ${insight.insightKey} from EVIDENCED because no persisted evidence could be resolved.`,
-          );
         } else {
           resolvableEvidencedInsightKeys.add(insight.insightKey);
           evidencedInsightMap.push({

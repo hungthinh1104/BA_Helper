@@ -3,10 +3,12 @@ import { CreateImpactAnalysisUseCase } from './application/lifecycle/create-impa
 import { GetImpactAnalysisUseCase } from './application/lifecycle/get-impact-analysis.usecase';
 import { FinalizeImpactAnalysisUseCase } from './application/lifecycle/finalize-impact-analysis.usecase';
 import { ListImpactAnalysesUseCase } from './application/lifecycle/list-impact-analyses.usecase';
-import { RunImpactAnalysisUseCase } from './application/lifecycle/run-impact-analysis.usecase';
-import { ImpactEvidenceCollectionStep } from './application/lifecycle/steps/impact-evidence-collection.step';
-import { ImpactDiagnosticPropagationStep } from './application/lifecycle/steps/impact-diagnostic-propagation.step';
-import { ImpactAiReasoningStep } from './application/lifecycle/steps/impact-ai-reasoning.step';
+import {
+  RunImpactAnalysisUseCase,
+  ImpactEvidenceCollectionStep,
+  ImpactDiagnosticPropagationStep,
+  ImpactAiReasoningStep,
+} from '@ba-helper/application';
 import { GetImpactGraphUseCase } from './application/queries/get-impact-graph.usecase';
 import { GetQaCoverageUseCase } from './application/qa/get-qa-coverage.usecase';
 import { QaCoverageDeriver } from './application/qa/qa-coverage.deriver';
@@ -76,6 +78,8 @@ import { RepositoryModule } from '../repository/repository.module';
 import { GetAnalysisDriftFreshnessUseCase } from './application/queries/get-analysis-drift-freshness.usecase';
 import { GetAnalysisWorkspaceUseCase } from './application/queries/get-analysis-workspace.usecase';
 import { DomainPackModule } from '../domain-pack/domain-pack.module';
+import { DomainPackRegistry } from '../domain-pack/application/domain-pack.registry';
+import { EventLogPortAdapter } from '../event-log/infrastructure/event-log-port.adapter';
 
 @Module({
   imports: [PrismaModule, EventLogModule, DocumentModule, QueueModule, AiModule, RetrievalModule, GraphModule, ClarificationModule, ProjectModule, RepositoryModule, DomainPackModule],
@@ -114,10 +118,51 @@ import { DomainPackModule } from '../domain-pack/domain-pack.module';
     GetLatestMergedMultiRepoReportReviewDecisionUseCase,
     MergedMultiRepoReportDraftBuilder,
     FinalizeImpactAnalysisUseCase,
-    ImpactEvidenceCollectionStep,
-    ImpactDiagnosticPropagationStep,
-    ImpactAiReasoningStep,
-    RunImpactAnalysisUseCase,
+    {
+      provide: ImpactEvidenceCollectionStep,
+      useFactory: (artifactRepo: ArtifactRepository, evidenceRepo: EvidenceRepository, traceabilityRepo: TraceabilityRepository, retrievalService: HybridRetrievalService) =>
+        new ImpactEvidenceCollectionStep(artifactRepo, evidenceRepo, traceabilityRepo, retrievalService),
+      inject: [ArtifactRepository, EvidenceRepository, TraceabilityRepository, HybridRetrievalService],
+    },
+    {
+      provide: ImpactDiagnosticPropagationStep,
+      useFactory: () => new ImpactDiagnosticPropagationStep(),
+    },
+    {
+      provide: ImpactAiReasoningStep,
+      useFactory: (llmProvider: LlmProvider) => new ImpactAiReasoningStep(llmProvider),
+      inject: [LlmProvider],
+    },
+    {
+      provide: RunImpactAnalysisUseCase,
+      useFactory: (
+        impactRepo: ImpactAnalysisRepository,
+        insightRepo: InsightRepository,
+        domainPackRegistry: DomainPackRegistry,
+        evidenceStep: ImpactEvidenceCollectionStep,
+        diagnosticStep: ImpactDiagnosticPropagationStep,
+        aiReasoningStep: ImpactAiReasoningStep,
+        eventLogService: EventLogService,
+      ) =>
+        new RunImpactAnalysisUseCase(
+          impactRepo,
+          insightRepo,
+          domainPackRegistry,
+          evidenceStep,
+          diagnosticStep,
+          aiReasoningStep,
+          new EventLogPortAdapter(eventLogService),
+        ),
+      inject: [
+        ImpactAnalysisRepository,
+        InsightRepository,
+        DomainPackRegistry,
+        ImpactEvidenceCollectionStep,
+        ImpactDiagnosticPropagationStep,
+        ImpactAiReasoningStep,
+        EventLogService,
+      ],
+    },
     ImpactGraphReadModelBuilder,
     GetImpactGraphUseCase,
     QaCoverageDeriver,
@@ -154,6 +199,6 @@ import { DomainPackModule } from '../domain-pack/domain-pack.module';
       inject: [ImpactAnalysisRepository, ProjectRepository],
     },
   ],
-  exports: [ImpactAnalysisRepository],
+  exports: [ImpactAnalysisRepository, RunImpactAnalysisUseCase],
 })
 export class ImpactAnalysisModule {}

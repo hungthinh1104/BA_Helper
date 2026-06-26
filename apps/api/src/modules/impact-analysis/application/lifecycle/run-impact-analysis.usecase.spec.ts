@@ -1,7 +1,9 @@
-import { RunImpactAnalysisUseCase } from './run-impact-analysis.usecase';
-import { ImpactEvidenceCollectionStep } from './steps/impact-evidence-collection.step';
-import { ImpactDiagnosticPropagationStep } from './steps/impact-diagnostic-propagation.step';
-import { ImpactAiReasoningStep } from './steps/impact-ai-reasoning.step';
+import {
+  RunImpactAnalysisUseCase,
+  ImpactEvidenceCollectionStep,
+  ImpactDiagnosticPropagationStep,
+  ImpactAiReasoningStep,
+} from '@ba-helper/application';
 import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
 import { ArtifactRepository } from '../../../artifact/infrastructure/artifact.repository';
 import { EvidenceRepository } from '../../../evidence/infrastructure/evidence.repository';
@@ -10,10 +12,7 @@ import { TraceabilityRepository } from '../../../traceability/infrastructure/tra
 import { LlmProvider } from '../../../ai/domain/llm-provider.interface';
 import { HybridRetrievalService } from '../../../retrieval/application/hybrid-retrieval.service';
 import { AppError } from '@ba-helper/shared';
-import { renderPrompt } from '../../../ai/domain/prompt-registry';
 import { DomainPackRegistry } from '../../../domain-pack/application/domain-pack.registry';
-
-jest.mock('../../../ai/domain/prompt-registry');
 
 describe('RunImpactAnalysisUseCase', () => {
   let useCase: RunImpactAnalysisUseCase;
@@ -99,11 +98,6 @@ describe('RunImpactAnalysisUseCase', () => {
       eventLogService,
     );
 
-    (renderPrompt as jest.Mock).mockReturnValue({
-      systemPrompt: 'sys',
-      userPrompt: 'user',
-      version: 'v1',
-    });
   });
 
   it('should throw if analysis not found', async () => {
@@ -196,8 +190,8 @@ describe('RunImpactAnalysisUseCase', () => {
     // 4. Verify Fake Provider Argument Boundary
     const promptArg = (llmProvider.generateStructured as jest.Mock).mock.calls[0][0];
     expect(promptArg).toEqual(expect.objectContaining({
-      systemPrompt: 'sys',
-      userPrompt: 'user'
+      systemPrompt: expect.any(String),
+      userPrompt: expect.any(String)
     }));
 
     // 5. Verify Event Logs

@@ -1,15 +1,12 @@
-import { Injectable } from '@nestjs/common';
 import { createHash } from 'node:crypto';
-import { DiagnosticRiskEvaluator } from '../../risks/diagnostic-risk.evaluator';
-import {
-  ImpactEvidenceCollectionResult,
-  InsightInputParams,
-} from './impact-analysis-step.types';
+import { DiagnosticRiskEvaluator } from '../../domain/diagnostic-risk.evaluator';
+import type { ImpactEvidenceCollectionResult } from '../../domain/impact-analysis-step.types';
+import type { InsightInputParams } from '../../ports/insight.repository.port';
+import type { ImpactAnalysisRecord } from '../../ports/impact-analysis.repository.port';
 
-@Injectable()
 export class ImpactDiagnosticPropagationStep {
   execute(
-    analysis: any,
+    analysis: ImpactAnalysisRecord,
     evidenceResult: ImpactEvidenceCollectionResult,
   ): InsightInputParams[] {
     const snapshotDiagnostics = (analysis.snapshot.diagnostics as any[]) || [];
@@ -17,7 +14,7 @@ export class ImpactDiagnosticPropagationStep {
 
     const retrievedFilePaths = new Set(
       evidenceResult.retrievedArtifacts
-        .map((r: any) => evidenceResult.artifactByKey.get(r.artifactKey)?.filePath)
+        .map((r) => evidenceResult.artifactByKey.get(r.artifactKey)?.filePath)
         .filter(Boolean),
     );
 
@@ -25,9 +22,7 @@ export class ImpactDiagnosticPropagationStep {
       .filter((d: any) => d.severity === 'WARN' || d.severity === 'ERROR')
       .filter((d: any) => {
         const propagationMode = DiagnosticRiskEvaluator.getPropagationMode(d);
-        if (propagationMode === 'NONE') {
-          return false;
-        }
+        if (propagationMode === 'NONE') return false;
 
         if (
           propagationMode === 'LEXICAL' &&

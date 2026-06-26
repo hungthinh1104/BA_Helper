@@ -1,7 +1,9 @@
-import { RunImpactAnalysisUseCase } from '../lifecycle/run-impact-analysis.usecase';
-import { ImpactEvidenceCollectionStep } from '../lifecycle/steps/impact-evidence-collection.step';
-import { ImpactDiagnosticPropagationStep } from '../lifecycle/steps/impact-diagnostic-propagation.step';
-import { ImpactAiReasoningStep } from '../lifecycle/steps/impact-ai-reasoning.step';
+import {
+  RunImpactAnalysisUseCase,
+  ImpactEvidenceCollectionStep,
+  ImpactDiagnosticPropagationStep,
+  ImpactAiReasoningStep,
+} from '@ba-helper/application';
 import { InsightRepository } from '../../../insight/infrastructure/insight.repository';
 import { FakeLlmProvider } from '../../../ai/infrastructure/fake-ai.provider';
 import { PrismaClient } from '@prisma/client';

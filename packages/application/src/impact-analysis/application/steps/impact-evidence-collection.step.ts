@@ -1,41 +1,35 @@
-import { Injectable } from '@nestjs/common';
 import { createHash } from 'node:crypto';
-import { ArtifactRepository } from '../../../../artifact/infrastructure/artifact.repository';
-import { EvidenceRepository } from '../../../../evidence/infrastructure/evidence.repository';
-import { TraceabilityRepository } from '../../../../traceability/infrastructure/traceability.repository';
-import { HybridRetrievalService } from '../../../../retrieval/application/hybrid-retrieval.service';
-import {
-  EvidenceRecord,
-  ImpactEvidenceCollectionResult,
-  PersistedArtifact,
-  ScanArtifact,
-} from './impact-analysis-step.types';
+import type { ArtifactRepositoryPort, PersistedArtifact } from '../../ports/artifact.repository.port';
+import type { EvidenceRepositoryPort } from '../../ports/evidence.repository.port';
+import type { TraceabilityRepositoryPort } from '../../ports/traceability.repository.port';
+import type { RetrievalPort, RetrievedArtifact } from '../../ports/retrieval.port';
+import type { DomainPackSelectionResult } from '../../ports/domain-pack-selection.port';
+import type { ImpactEvidenceCollectionResult } from '../../domain/impact-analysis-step.types';
+import type { ImpactAnalysisRecord } from '../../ports/impact-analysis.repository.port';
 
 const toEvidenceSourceType = (artifactType: string) =>
   artifactType === 'TEST' ? 'TEST' : 'CODE';
 
-const buildExcerpt = (artifact: ScanArtifact) =>
-  `${artifact.filePath}:${artifact.startLine}-${artifact.endLine} (${artifact.symbolName})`;
+const buildExcerpt = (artifact: PersistedArtifact) =>
+  `${artifact.filePath}:${artifact.startLine ?? 0}-${artifact.endLine ?? 0} (${artifact.name})`;
 
-@Injectable()
 export class ImpactEvidenceCollectionStep {
   constructor(
-    private readonly artifactRepo: ArtifactRepository,
-    private readonly evidenceRepo: EvidenceRepository,
-    private readonly traceabilityRepo: TraceabilityRepository,
-    private readonly retrievalService: HybridRetrievalService,
+    private readonly artifactRepo: ArtifactRepositoryPort,
+    private readonly evidenceRepo: EvidenceRepositoryPort,
+    private readonly traceabilityRepo: TraceabilityRepositoryPort,
+    private readonly retrievalService: RetrievalPort,
   ) {}
 
   async execute(
-    analysis: any,
-    domainPackSelection: any,
+    analysis: ImpactAnalysisRecord,
+    domainPackSelection: DomainPackSelectionResult,
     expandGraph: boolean = true,
   ): Promise<ImpactEvidenceCollectionResult> {
     const snapshotId = analysis.snapshot.id;
     const artifacts = await this.artifactRepo.listBySnapshot(snapshotId);
 
-    // Retrieve using Hybrid RAG — domain scopes keyword expansion via DomainProfile
-    const retrievedArtifacts = await this.retrievalService.retrieve({
+    const retrievedArtifacts: RetrievedArtifact[] = await this.retrievalService.retrieve({
       projectId: analysis.snapshot?.repository?.projectId ?? 'unknown',
       repositoryId: analysis.snapshot.repositoryId,
       snapshotId,
@@ -50,22 +44,11 @@ export class ImpactEvidenceCollectionStep {
     );
 
     const evidenceInputs = retrievedArtifacts
-      .map((retrieved: any) => {
+      .map((retrieved) => {
         const persistedArtifact = artifactByKey.get(retrieved.artifactKey);
-        if (!persistedArtifact) {
-          return null;
-        }
+        if (!persistedArtifact) return null;
 
-        const artifactToExcerpt: ScanArtifact = {
-          stableId: persistedArtifact.artifactKey,
-          type: persistedArtifact.artifactType,
-          filePath: persistedArtifact.filePath,
-          symbolName: persistedArtifact.name,
-          startLine: persistedArtifact.startLine ?? 0,
-          endLine: persistedArtifact.endLine ?? 0,
-        };
-
-        const excerpt = buildExcerpt(artifactToExcerpt);
+        const excerpt = buildExcerpt(persistedArtifact);
         const contentHash = createHash('sha256').update(excerpt).digest('hex');
         return {
           provenanceKey: `snapshot:${snapshotId}:artifact:${persistedArtifact.artifactKey}`,
@@ -81,17 +64,17 @@ export class ImpactEvidenceCollectionStep {
           redactionMetadata: null,
         };
       })
-      .filter((entry: any): entry is NonNullable<typeof entry> => entry !== null);
+      .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
 
     const evidence = await this.evidenceRepo.upsertMany(evidenceInputs);
 
-    const evidenceById = new Map<string, EvidenceRecord>(
-      (evidence as EvidenceRecord[])
+    const evidenceById = new Map(
+      evidence
         .filter((item) => item.artifactId)
         .map((item) => [item.artifactId as string, item]),
     );
 
-    const evidenceByKey = new Map<string, EvidenceRecord>();
+    const evidenceByKey = new Map<string, typeof evidence[0]>();
     for (const [artifactKey, artifact] of artifactByKey.entries()) {
       const evidenceRecord = evidenceById.get(artifact.id);
       if (evidenceRecord) {
@@ -100,16 +83,16 @@ export class ImpactEvidenceCollectionStep {
     }
 
     const affectedLinks = retrievedArtifacts
-      .filter((retrieved: any) => retrieved.retrievalMethod !== 'GRAPH')
-      .map((retrieved: any) => {
+      .filter((retrieved) => retrieved.retrievalMethod !== 'GRAPH')
+      .map((retrieved) => {
         const artifact = artifactByKey.get(retrieved.artifactKey);
         if (!artifact) return null;
         return { artifact, retrieved };
       })
-      .filter((pair: any): pair is any => Boolean(pair));
+      .filter((pair): pair is NonNullable<typeof pair> => Boolean(pair));
 
     const traceabilityLinks = await this.traceabilityRepo.upsertMany(
-      affectedLinks.map(({ artifact, retrieved }: any) => ({
+      affectedLinks.map(({ artifact, retrieved }) => ({
         impactAnalysisId: analysis.id,
         artifactId: artifact.id,
         linkType: 'AFFECTED',
@@ -135,11 +118,9 @@ export class ImpactEvidenceCollectionStep {
     );
 
     await Promise.all(
-      traceabilityLinks.map((link: { id: string; artifactId: string }) => {
+      traceabilityLinks.map((link) => {
         const evidenceRecord = evidenceById.get(link.artifactId);
-        if (!evidenceRecord) {
-          return Promise.resolve([]);
-        }
+        if (!evidenceRecord) return Promise.resolve([]);
         return this.traceabilityRepo.linkEvidence({
           linkId: link.id,
           evidenceIds: [evidenceRecord.id],
@@ -148,9 +129,7 @@ export class ImpactEvidenceCollectionStep {
     );
 
     const vectorSignalCount = retrievedArtifacts.filter(
-      (r: any) =>
-        r.retrievalSignals?.includes('VECTOR') ||
-        r.retrievalSignals?.has?.('VECTOR'),
+      (r) => r.retrievalSignals?.includes('VECTOR'),
     ).length;
 
     return {

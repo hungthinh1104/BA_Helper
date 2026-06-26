@@ -1,4 +1,4 @@
-import { DiagnosticRiskEvaluator } from './diagnostic-risk.evaluator';
+import { DiagnosticRiskEvaluator } from '@ba-helper/application';
 
 describe('DiagnosticRiskEvaluator', () => {
   it('matches plural requirement term to singular diagnostic candidate', () => {
