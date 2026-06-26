@@ -11,12 +11,11 @@ import { Badge } from "@/components/ui/badge"
 import { useApprovedMultiRepoReport, useCreateMergedMultiRepoReportReviewDecision, useFinalizeMultiRepoReport, useLatestMergedMultiRepoReportReviewDecision, useMergedMultiRepoReportReviewDecisions, useMultiRepoAnalysisRunDetail } from "@/hooks/api/use-analyses"
 import { toast } from "sonner"
 import { apiGetFile } from "@/lib/api-client"
-import { canFinalizeAnalysis, canReview as canReviewPermission } from "@/lib/permissions"
-import { useCurrentWorkspace } from "@/lib/project-context"
 import { useState } from "react"
 import { ReportMarkdown } from "@/components/report/report-markdown"
 import { MergedReportActions } from "./_components/merged-report-actions"
 import { MergedReportReviewPanel } from "./_components/merged-report-review-panel"
+import { formatMultiRepoMergedReportBlockers } from "@/lib/multi-repo-report-labels"
 
 const MERGED_REPORT_STATUS_LABEL: Record<string, string> = {
   NOT_CREATED: "Not created",
@@ -37,7 +36,6 @@ export default function ApprovedMultiRepoReportPage({
   const { data: reviewDecisionsData, isLoading: reviewDecisionsLoading } = useMergedMultiRepoReportReviewDecisions(runId)
   const finalizeReport = useFinalizeMultiRepoReport(runId)
   const createReviewDecision = useCreateMergedMultiRepoReportReviewDecision(runId)
-  const workspace = useCurrentWorkspace()
   const [exportingFormat, setExportingFormat] = useState<"md" | "pdf" | null>(null)
 
   const status = (error as { status?: number } | undefined)?.status
@@ -48,19 +46,13 @@ export default function ApprovedMultiRepoReportPage({
     notFound()
   }
 
-  const canFinalize = workspace
-    ? canFinalizeAnalysis(workspace.membershipRole) &&
-      Boolean(
-        data?.capabilities.canRefreshMergedReport ||
-          runDetail?.capabilities.canFinalizeMergedReport ||
-          runDetail?.capabilities.canRefreshMergedReport,
-      )
-    : false
+  const canFinalize = Boolean(
+    data?.capabilities.canRefreshMergedReport ||
+      runDetail?.capabilities.canFinalizeMergedReport ||
+      runDetail?.capabilities.canRefreshMergedReport,
+  )
   const canExport = Boolean(data?.capabilities.canExportMergedReport)
-  const canReview = workspace
-    ? canReviewPermission(workspace.membershipRole) &&
-      Boolean(data?.capabilities.canReviewMergedReport)
-    : false
+  const canReview = Boolean(data?.capabilities.canReviewMergedReport)
   const reviewDecisions = reviewDecisionsData?.items ?? []
   const latestReviewedDecision = latestDecisionCode === "MERGED_MULTI_REPO_REPORT_NOT_FOUND" ? null : latestDecision
 
@@ -197,7 +189,7 @@ export default function ApprovedMultiRepoReportPage({
               </Badge>
               {data.capabilities.blockedReasons.length > 0 && data.mergedReportStatus !== "CURRENT" && (
                 <span className="text-[12px] text-muted-foreground">
-                  Blocked by {data.capabilities.blockedReasons.join(", ")}
+                  Blocked by {formatMultiRepoMergedReportBlockers(data.capabilities.blockedReasons)}
                 </span>
               )}
             </div>
@@ -246,7 +238,6 @@ export default function ApprovedMultiRepoReportPage({
               reviewDecisions={reviewDecisions}
               reviewDecisionsLoading={reviewDecisionsLoading}
               canReview={canReview}
-              hasReviewPermission={canReviewPermission(workspace?.membershipRole ?? null)}
               isSubmitting={createReviewDecision.isPending}
               onSubmitReview={handleSubmitReview}
             />

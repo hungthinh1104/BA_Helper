@@ -4,11 +4,11 @@ import type {
   MultiRepoAnalysisRunDetailResponse,
   MultiRepoAnalysisRunListItemResponse,
 } from '@ba-helper/contracts';
-import { deriveMultiRepoRunAggregates } from '../application/multi-repo/multi-repo-run-readiness';
 import {
-  deriveMergedReportBlockedReasons,
-  deriveMergedReportCapabilities,
-  deriveMergedReportStaleness,
+  deriveChildBlockingReason,
+  deriveMergedReportState,
+  isChildAnalysisStale,
+  MultiRepoChildState,
 } from '../application/multi-repo/multi-repo-merged-report-state';
 import { isAnalyzerVersionOutdated } from './analyzer-version';
 
@@ -222,27 +222,37 @@ export const mapMultiRepoAnalysisRunDetail = (run: {
     };
   }>;
 }): MultiRepoAnalysisRunDetailResponse => {
+  const childStates: MultiRepoChildState[] = run.analyses.map((analysis) => {
+    const latestDecision = analysis.reviewDecisions?.[0] ?? null;
+
+    return {
+      analysisId: analysis.id,
+      latestReviewDecisionId: latestDecision?.id ?? null,
+      latestReviewDecision: latestDecision?.decision ?? null,
+      snapshotId: analysis.snapshot.id,
+      commitSha: analysis.snapshot.commitSha,
+      status: analysis.status,
+      sourceTarget: {
+        resolvedRefType: analysis.sourceTarget.resolvedRefType,
+        latestObservedCommitSha: analysis.sourceTarget.latestObservedCommitSha,
+      },
+    };
+  });
+  const childStateByAnalysisId = new Map(
+    childStates.map((child) => [child.analysisId, child]),
+  );
   const items = run.analyses.map((analysis) => {
-    const { isStale } = computeFreshness(analysis);
+    const childState = childStateByAnalysisId.get(analysis.id)!;
+    const isStale = isChildAnalysisStale(childState);
     const repositoryDisplayName =
       analysis.snapshot.repository.canonicalUrl.split('/').pop() ??
       analysis.snapshot.repository.canonicalUrl;
     const latestDecision = analysis.reviewDecisions?.[0] ?? null;
-
-    let blockingReason: MultiRepoAnalysisRunDetailResponse['items'][number]['blockingReason'] =
-      'NONE';
-
-    if (analysis.status === 'FAILED') {
-      blockingReason = 'FAILED';
-    } else if (latestDecision?.decision === 'NEEDS_MORE_CLARIFICATION') {
-      blockingReason = 'NEEDS_MORE_CLARIFICATION';
-    } else if (latestDecision?.decision === 'REJECTED') {
-      blockingReason = 'REJECTED';
-    } else if (analysis.status === 'WAITING_FOR_REVIEW') {
-      blockingReason = 'WAITING_FOR_REVIEW';
-    } else if (analysis.status !== 'COMPLETED') {
-      blockingReason = 'NOT_COMPLETED';
-    }
+    const blockingReason = deriveChildBlockingReason({
+      status: childState.status,
+      isStale,
+      latestReviewDecision: childState.latestReviewDecision,
+    });
 
     return {
       analysisId: analysis.id,
@@ -263,53 +273,9 @@ export const mapMultiRepoAnalysisRunDetail = (run: {
       blockingReason,
     };
   });
-
-  const { runReadiness, childReviewSummary } = deriveMultiRepoRunAggregates(
-    items.map((item) => ({
-      status: item.status,
-      latestReviewDecision: item.latestReviewDecision,
-      isStale: item.isStale,
-    })),
-  );
-  const storedChildProvenance = run.approvedMergedReport
-    ? (((run.approvedMergedReport.provenance as any)?.childAnalyses ?? []) as Array<{
-        analysisId: string;
-        latestReviewDecisionId: string;
-        snapshotId: string;
-        commitSha: string;
-      }>)
-    : [];
-  const currentChildProvenance = run.analyses.map((analysis) => {
-    const { isStale } = computeFreshness(analysis);
-    const latestDecision = analysis.reviewDecisions?.[0] ?? null;
-
-    return {
-      analysisId: analysis.id,
-      latestReviewDecisionId: latestDecision?.id ?? null,
-      snapshotId: analysis.snapshot.id,
-      commitSha: analysis.snapshot.commitSha,
-      status: analysis.status,
-      isStale,
-    };
-  });
-  const reportStaleness = run.approvedMergedReport
-    ? deriveMergedReportStaleness({
-        storedChildProvenance,
-        currentChildProvenance,
-      })
-    : { isStale: false };
-  const blockedReasons = deriveMergedReportBlockedReasons(
-    items.map((item) => ({
-      status: item.status,
-      isStale: item.isStale,
-      latestReviewDecision: item.latestReviewDecision,
-    })),
-  );
-  const mergedReportState = deriveMergedReportCapabilities({
-    hasApprovedReport: Boolean(run.approvedMergedReport),
-    isApprovedReportStale: reportStaleness.isStale,
-    canStartMergedReport: runReadiness.canStartMergedReport,
-    blockedReasons,
+  const mergedReportState = deriveMergedReportState({
+    children: childStates,
+    approvedReportProvenance: run.approvedMergedReport?.provenance,
   });
 
   return {
@@ -321,8 +287,8 @@ export const mapMultiRepoAnalysisRunDetail = (run: {
     createdAt: run.createdAt.toISOString(),
     mergedReportStatus: mergedReportState.mergedReportStatus,
     capabilities: mergedReportState.capabilities,
-    runReadiness,
-    childReviewSummary,
+    runReadiness: mergedReportState.runReadiness,
+    childReviewSummary: mergedReportState.childReviewSummary,
     items,
   };
 };

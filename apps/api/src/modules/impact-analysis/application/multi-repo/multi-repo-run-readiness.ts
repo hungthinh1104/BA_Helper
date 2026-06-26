@@ -1,5 +1,9 @@
-type ChildReviewDecision = 'ACCEPTED' | 'REJECTED' | 'NEEDS_MORE_CLARIFICATION' | null;
-type ChildStatus =
+export type ChildReviewDecision =
+  | 'ACCEPTED'
+  | 'REJECTED'
+  | 'NEEDS_MORE_CLARIFICATION'
+  | null;
+export type ChildStatus =
   | 'QUEUED'
   | 'RUNNING'
   | 'WAITING_FOR_REVIEW'

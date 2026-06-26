@@ -203,6 +203,7 @@ export const multiRepoAnalysisRunDetailResponseSchema = z.object({
 			'WAITING_FOR_REVIEW',
 			'NEEDS_MORE_CLARIFICATION',
 			'REJECTED',
+			'STALE',
 			'NONE',
 		]),
 	})),
@@ -259,6 +260,7 @@ export const multiRepoImpactMatrixRowSchema = z.object({
 		'WAITING_FOR_REVIEW',
 		'NEEDS_MORE_CLARIFICATION',
 		'REJECTED',
+		'STALE',
 		'NONE',
 	]).nullable(),
 });

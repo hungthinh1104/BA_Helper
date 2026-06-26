@@ -12,7 +12,6 @@ interface MergedReportReviewPanelProps {
   reviewDecisions: MergedMultiRepoReportReviewDecisionResponse[]
   reviewDecisionsLoading: boolean
   canReview: boolean
-  hasReviewPermission: boolean
   isSubmitting: boolean
   onSubmitReview: (data: { decision: "ACCEPTED" | "REJECTED" | "NEEDS_MORE_CLARIFICATION"; note: string }) => void
 }
@@ -23,7 +22,6 @@ export function MergedReportReviewPanel({
   reviewDecisions,
   reviewDecisionsLoading,
   canReview,
-  hasReviewPermission,
   isSubmitting,
   onSubmitReview,
 }: MergedReportReviewPanelProps) {
@@ -133,9 +131,7 @@ export function MergedReportReviewPanel({
           <span className="text-[12px] text-muted-foreground">
             {canReview
               ? "Review decisions are append-only. Existing entries are preserved."
-              : !hasReviewPermission
-                ? "You have view-only access. Reviewer or Analyst role required."
-                : "Only admin/reviewer review posture can submit merged report decisions in the current UI."}
+              : "Review submission is unavailable for this merged report state or role."}
           </span>
           <Button
             type="submit"

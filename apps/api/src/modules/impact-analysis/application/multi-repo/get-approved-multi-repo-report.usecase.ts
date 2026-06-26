@@ -2,20 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { AppError } from '@ba-helper/shared';
 import { MultiRepoAnalysisRunRepository } from '../../infrastructure/multi-repo-analysis-run.repository';
 import { MultiRepoMergedReportRepository } from '../../infrastructure/multi-repo-merged-report.repository';
-import { deriveMultiRepoRunAggregates } from './multi-repo-run-readiness';
 import {
-  deriveMergedReportBlockedReasons,
-  deriveMergedReportCapabilities,
-  deriveMergedReportStaleness,
-  normalizeChildProvenance,
+  deriveMergedReportState,
+  MultiRepoChildState,
 } from './multi-repo-merged-report-state';
-
-type StoredChildProvenance = {
-  analysisId: string;
-  latestReviewDecisionId: string;
-  snapshotId: string;
-  commitSha: string;
-};
 
 @Injectable()
 export class GetApprovedMultiRepoReportUseCase {
@@ -41,46 +31,21 @@ export class GetApprovedMultiRepoReportUseCase {
       );
     }
 
-    const storedChildProvenance = normalizeChildProvenance(
-      (report.provenance as { childAnalyses: StoredChildProvenance[] }).childAnalyses,
-    );
-    const currentChildProvenance = run.analyses.map((analysis) => ({
+    const children: MultiRepoChildState[] = run.analyses.map((analysis) => ({
       analysisId: analysis.id,
       latestReviewDecisionId: analysis.reviewDecisions[0]?.id ?? null,
+      latestReviewDecision: analysis.reviewDecisions[0]?.decision ?? null,
       snapshotId: analysis.snapshot.id,
       commitSha: analysis.snapshot.commitSha,
       status: analysis.status,
-      isStale:
-        analysis.sourceTarget.resolvedRefType !== 'COMMIT' &&
-        analysis.sourceTarget.latestObservedCommitSha !== analysis.snapshot.commitSha,
+      sourceTarget: {
+        resolvedRefType: analysis.sourceTarget.resolvedRefType,
+        latestObservedCommitSha: analysis.sourceTarget.latestObservedCommitSha,
+      },
     }));
-    const staleness = deriveMergedReportStaleness({
-      storedChildProvenance,
-      currentChildProvenance,
-    });
-    const aggregates = deriveMultiRepoRunAggregates(
-      run.analyses.map((analysis) => ({
-        status: analysis.status,
-        latestReviewDecision: analysis.reviewDecisions[0]?.decision ?? null,
-        isStale:
-          analysis.sourceTarget.resolvedRefType !== 'COMMIT' &&
-          analysis.sourceTarget.latestObservedCommitSha !== analysis.snapshot.commitSha,
-      })),
-    );
-    const blockedReasons = deriveMergedReportBlockedReasons(
-      run.analyses.map((analysis) => ({
-        status: analysis.status,
-        latestReviewDecision: analysis.reviewDecisions[0]?.decision ?? null,
-        isStale:
-          analysis.sourceTarget.resolvedRefType !== 'COMMIT' &&
-          analysis.sourceTarget.latestObservedCommitSha !== analysis.snapshot.commitSha,
-      })),
-    );
-    const mergedReportState = deriveMergedReportCapabilities({
-      hasApprovedReport: true,
-      isApprovedReportStale: staleness.isStale,
-      canStartMergedReport: aggregates.runReadiness.canStartMergedReport,
-      blockedReasons,
+    const mergedReportState = deriveMergedReportState({
+      children,
+      approvedReportProvenance: report.provenance,
     });
 
     return {
@@ -93,10 +58,10 @@ export class GetApprovedMultiRepoReportUseCase {
       approvedAt: report.updatedAt.toISOString(),
       mergedReportStatus: mergedReportState.mergedReportStatus,
       capabilities: mergedReportState.capabilities,
-      isStale: staleness.isStale,
-      staleReason: staleness.staleReason,
+      isStale: mergedReportState.staleness.isStale,
+      staleReason: mergedReportState.staleness.staleReason,
       provenance: {
-        childAnalyses: storedChildProvenance,
+        childAnalyses: mergedReportState.storedChildProvenance,
       },
     };
   }

@@ -17,9 +17,15 @@ describe('BuildMultiRepoImpactMatrixReadModel', () => {
             id: 'ana-1',
             status: 'COMPLETED',
             snapshot: {
+              id: 'snapshot-1',
               repositoryId: 'repo-1',
+              commitSha: 'commit-1',
               profile: { domain: 'BOOKING', language: 'TYPESCRIPT', framework: 'NESTJS' },
               repository: { canonicalUrl: 'https://github.com/org/Booking-API' },
+            },
+            sourceTarget: {
+              resolvedRefType: 'BRANCH',
+              latestObservedCommitSha: 'commit-1',
             },
             traceabilityLinks: [
               { artifactId: 'art-1', linkType: 'AFFECTED', artifact: { universalKind: 'API_ENDPOINT' } },
@@ -37,9 +43,15 @@ describe('BuildMultiRepoImpactMatrixReadModel', () => {
             id: 'ana-2',
             status: 'WAITING_FOR_REVIEW',
             snapshot: {
+              id: 'snapshot-2',
               repositoryId: 'repo-2',
+              commitSha: 'commit-2',
               profile: null, // missing profile
               repository: { canonicalUrl: 'https://github.com/org/Payment-API' },
+            },
+            sourceTarget: {
+              resolvedRefType: 'BRANCH',
+              latestObservedCommitSha: 'commit-2',
             },
             traceabilityLinks: [],
             insights: [],
