@@ -1,5 +1,5 @@
-import { ApprovedImpactReportResponse } from '@ba-helper/contracts';
-import { ApprovedReportMetadata } from '../domain/approved-report-metadata';
+import type { ApprovedImpactReportResponse } from '@ba-helper/contracts';
+import type { ApprovedReportMetadata } from '../domain/approved-report-metadata';
 
 export class DocumentMapper {
   static toApprovedReportResponse(

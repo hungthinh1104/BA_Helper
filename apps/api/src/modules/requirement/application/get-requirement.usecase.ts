@@ -1,4 +1,4 @@
-import { RequirementRepository } from '../infrastructure/requirement.repository';
+import type { RequirementRepository } from '../infrastructure/requirement.repository';
 import { AppError } from '@ba-helper/shared';
 
 export class GetRequirementUseCase {

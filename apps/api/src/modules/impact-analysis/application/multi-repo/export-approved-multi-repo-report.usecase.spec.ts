@@ -1,9 +1,9 @@
-import { RequestUser } from '@ba-helper/contracts';
+import type { RequestUser } from '@ba-helper/contracts';
 import { AppError } from '@ba-helper/shared';
-import { EventLogService } from '../../../event-log/application/event-log.service';
-import { MarkdownExportRenderer } from '../../../document/application/markdown-export.renderer';
-import { PdfExportRenderer } from '../../../document/application/pdf-export.renderer';
-import { GetApprovedMultiRepoReportUseCase } from './get-approved-multi-repo-report.usecase';
+import type { EventLogService } from '../../../event-log/application/event-log.service';
+import type { MarkdownExportRenderer } from '../../../document/application/markdown-export.renderer';
+import type { PdfExportRenderer } from '../../../document/application/pdf-export.renderer';
+import type { GetApprovedMultiRepoReportUseCase } from './get-approved-multi-repo-report.usecase';
 import { ExportApprovedMultiRepoReportUseCase } from './export-approved-multi-repo-report.usecase';
 
 describe('ExportApprovedMultiRepoReportUseCase', () => {

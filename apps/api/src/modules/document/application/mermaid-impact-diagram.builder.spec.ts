@@ -1,4 +1,6 @@
-import { MermaidImpactDiagramBuilder, ReportDependencyEdge } from './mermaid-impact-diagram.builder';
+import type { RequirementRevision } from '@prisma/client';
+import type { ReportDependencyEdge } from './mermaid-impact-diagram.builder';
+import { MermaidImpactDiagramBuilder } from './mermaid-impact-diagram.builder';
 
 describe('MermaidImpactDiagramBuilder', () => {
   let builder: MermaidImpactDiagramBuilder;
@@ -8,7 +10,7 @@ describe('MermaidImpactDiagramBuilder', () => {
   });
 
   it('builds valid Mermaid for simple traceability flow', () => {
-    const requirement = { title: 'Cancel booking' } as unknown as import('@prisma/client').RequirementRevision;
+    const requirement = { title: 'Cancel booking' } as unknown as RequirementRevision;
     const traceabilityLinks = [
       {
         reviewStatus: 'CONFIRMED',
@@ -38,14 +40,14 @@ describe('MermaidImpactDiagramBuilder', () => {
   });
 
   it('escapes unsafe labels', () => {
-    const requirement = { title: 'Test "Quotes" & [Brackets] \n Newline' } as unknown as import('@prisma/client').RequirementRevision;
+    const requirement = { title: 'Test "Quotes" & [Brackets] \n Newline' } as unknown as RequirementRevision;
     const result = builder.build({ requirement, traceabilityLinks: [], dependencyEdges: [], insights: [] });
     
     expect(result.mermaid).toContain('n_req["[Requirement] Test Quotes & Brackets Newline"]');
   });
 
   it('caps large graphs and omits dangling edges', () => {
-    const requirement = { title: 'Large Feature' } as unknown as import('@prisma/client').RequirementRevision;
+    const requirement = { title: 'Large Feature' } as unknown as RequirementRevision;
     const traceabilityLinks = Array.from({ length: 25 }).map((_, i) => ({
       reviewStatus: 'CONFIRMED',
       artifact: { id: `a${i}`, name: `Artifact ${i}`, artifactType: 'ENTITY' },
@@ -66,7 +68,7 @@ describe('MermaidImpactDiagramBuilder', () => {
   });
 
   it('excludes rejected items', () => {
-    const requirement = { title: 'Req' } as unknown as import('@prisma/client').RequirementRevision;
+    const requirement = { title: 'Req' } as unknown as RequirementRevision;
     const traceabilityLinks = [
       {
         reviewStatus: 'REJECTED',
@@ -79,7 +81,7 @@ describe('MermaidImpactDiagramBuilder', () => {
   });
 
   it('uses universalKind fallback for legacy artifact labels', () => {
-    const requirement = { title: 'Req' } as unknown as import('@prisma/client').RequirementRevision;
+    const requirement = { title: 'Req' } as unknown as RequirementRevision;
     const traceabilityLinks = [
       {
         reviewStatus: 'CONFIRMED',

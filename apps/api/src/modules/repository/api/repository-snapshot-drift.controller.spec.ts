@@ -1,4 +1,5 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { RepositorySnapshotController } from './repository-snapshot.controller';
 import { GetRepositorySnapshotDriftUseCase } from '../application/get-repository-snapshot-drift.usecase';
 import { ListRepositorySnapshotsUseCase } from '../application/list-repository-snapshots.usecase';

@@ -1,4 +1,4 @@
-import { MarkdownReportRenderContext } from '../../markdown-impact-report.types';
+import type { MarkdownReportRenderContext } from '../../markdown-impact-report.types';
 import { getReportLabels } from '../report-localization';
 
 export function renderEvidenceAppendix(context: MarkdownReportRenderContext): string[] {

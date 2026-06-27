@@ -1,6 +1,6 @@
 import { ListImpactAnalysesUseCase } from './list-impact-analyses.usecase';
-import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
-import { ProjectRepository } from '../../../project/infrastructure/project.repository';
+import type { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
+import type { ProjectRepository } from '../../../project/infrastructure/project.repository';
 
 describe('ListImpactAnalysesUseCase', () => {
   let useCase: ListImpactAnalysesUseCase;

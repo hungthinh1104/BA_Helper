@@ -1,6 +1,6 @@
-import { EventLogRepository } from '../infrastructure/event-log.repository';
+import type { EventLogRepository } from '../infrastructure/event-log.repository';
 import { EventLogPolicy } from '../domain/event-log.policy';
-import { EventLogDto } from '@ba-helper/contracts';
+import type { EventLogDto } from '@ba-helper/contracts';
 
 export class EventLogService {
   constructor(private readonly repository: EventLogRepository) {}

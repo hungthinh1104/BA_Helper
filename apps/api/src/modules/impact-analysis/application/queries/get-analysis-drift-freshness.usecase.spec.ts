@@ -1,7 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { GetAnalysisDriftFreshnessUseCase } from './get-analysis-drift-freshness.usecase';
-import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
-import { GetRepositorySnapshotDriftUseCase } from '../../../repository/application/get-repository-snapshot-drift.usecase';
+import type { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
+import type { GetRepositorySnapshotDriftUseCase } from '../../../repository/application/get-repository-snapshot-drift.usecase';
 import { PrismaService } from '../../../prisma/prisma.service';
 
 describe('GetAnalysisDriftFreshnessUseCase', () => {

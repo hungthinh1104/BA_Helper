@@ -11,7 +11,7 @@
  * - qaScenarioTemplates are generic smoke-test patterns.
  * - This profile must never throw or cause diagnostic failures.
  */
-import { DomainProfile } from './booking.domain-profile';
+import type { DomainProfile } from './booking.domain-profile';
 
 export const UnknownDomainProfile: DomainProfile = {
   domain: 'UNKNOWN',

@@ -1,4 +1,4 @@
-import { MarkdownReportRenderContext } from '../../markdown-impact-report.types';
+import type { MarkdownReportRenderContext } from '../../markdown-impact-report.types';
 import { getBookingTerminology, getReportLabels } from '../report-localization';
 
 export function renderReportHeader(context: MarkdownReportRenderContext): string[] {

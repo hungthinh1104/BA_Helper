@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import type { ImpactAnalysisMetadata } from '../domain/impact-analysis.types';
 
 const IMPACT_ANALYSIS_INCLUDE = {
   snapshot: {
@@ -164,7 +165,7 @@ export class ImpactAnalysisRepository {
     status: 'COMPLETED' | 'WAITING_FOR_REVIEW' | 'FAILED' | 'CANCELLED' | 'RUNNING' | 'QUEUED';
     stage: 'WAITING' | 'RETRIEVING_EVIDENCE' | 'EXPANDING_GRAPH' | 'RUNNING_AI_REASONING' | 'GENERATING_INSIGHTS' | 'GENERATING_DOCUMENTS' | 'DONE';
     progress: number;
-    metadata?: import('../domain/impact-analysis.types').ImpactAnalysisMetadata;
+    metadata?: ImpactAnalysisMetadata;
     error?: any;
   }) {
     return this.prisma.impactAnalysis.update({

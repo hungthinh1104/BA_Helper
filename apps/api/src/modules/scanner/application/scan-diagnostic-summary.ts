@@ -1,4 +1,4 @@
-import { DiagnosticItem } from '@ba-helper/contracts';
+import type { DiagnosticItem } from '@ba-helper/contracts';
 
 type SeverityBucket = Record<'BLOCKER' | 'ERROR' | 'WARN' | 'INFO', number>;
 type CategoryBucket = Partial<

@@ -4,7 +4,7 @@
  * Deterministic hints for the Notification domain.
  * Used for retrieval glossary expansion and prompt context injection.
  */
-import { DomainProfile } from './booking.domain-profile';
+import type { DomainProfile } from './booking.domain-profile';
 
 export const NotificationDomainProfile: DomainProfile = {
   domain: 'NOTIFICATION',

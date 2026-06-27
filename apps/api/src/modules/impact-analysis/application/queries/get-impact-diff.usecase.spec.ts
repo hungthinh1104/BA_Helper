@@ -1,5 +1,5 @@
 import { GetImpactDiffUseCase } from './get-impact-diff.usecase';
-import { PrismaService } from '../../../prisma/prisma.service';
+import type { PrismaService } from '../../../prisma/prisma.service';
 
 describe('GetImpactDiffUseCase', () => {
   let useCase: GetImpactDiffUseCase;

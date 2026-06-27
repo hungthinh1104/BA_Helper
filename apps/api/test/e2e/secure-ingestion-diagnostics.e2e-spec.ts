@@ -64,7 +64,7 @@ jest.mock('@ba-helper/analyzer', () => {
   };
 });
 
-import { INestApplication } from '@nestjs/common';
+import type { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
 import * as crypto from 'crypto';

@@ -1,12 +1,13 @@
 import { scanProject } from '../scanner';
-import { 
+import type {
   ScannerAdapter, 
   ScanAdapterInput, 
   ScanAdapterResult, 
-  ScannerCapabilityProfile,
+  ScannerCapabilityProfile} from '../scanner.types';
+import {
   ANALYZER_VERSION
 } from '../scanner.types';
-import { DiagnosticItem } from '../core/diagnostic-collector';
+import type { DiagnosticItem } from '../core/diagnostic-collector';
 
 export class TypeScriptNestJsAdapter implements ScannerAdapter {
   adapterId = 'typescript-nestjs';

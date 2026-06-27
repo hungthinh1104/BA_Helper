@@ -32,6 +32,12 @@ Registry summaries must stay bounded and must not expose executable hint bodies
 such as retrieval hints, risk templates, QA templates, unknown templates, prompt
 payloads, source code, or evidence excerpts.
 
+Runtime retrieval diagnostics and AI prompt context may use the selected
+`DomainPack` concepts/templates as bounded hints. The selected pack is the
+source of truth for runtime domain terminology; legacy `domain-profile` helpers
+must not become a second runtime registry. Pack hints are never evidence and
+must not create `EVIDENCED` impact without persisted source excerpts.
+
 ## Capability Status
 
 Status values:

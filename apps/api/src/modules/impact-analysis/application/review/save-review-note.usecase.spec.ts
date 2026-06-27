@@ -1,8 +1,8 @@
 import { SaveReviewNoteUseCase } from './save-review-note.usecase';
-import { ReviewNoteRepository } from '../../infrastructure/review-note.repository';
-import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
-import { InsightRepository } from '../../../insight/infrastructure/insight.repository';
-import { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
+import type { ReviewNoteRepository } from '../../infrastructure/review-note.repository';
+import type { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
+import type { InsightRepository } from '../../../insight/infrastructure/insight.repository';
+import type { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
 import { AppError } from '@ba-helper/shared';
 
 describe('SaveReviewNoteUseCase', () => {

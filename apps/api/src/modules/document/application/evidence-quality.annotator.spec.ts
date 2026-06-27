@@ -1,4 +1,5 @@
-import { EvidenceQualityAnnotator, TraceabilityLinkForAnnotation } from './evidence-quality.annotator';
+import type { TraceabilityLinkForAnnotation } from './evidence-quality.annotator';
+import { EvidenceQualityAnnotator } from './evidence-quality.annotator';
 
 describe('EvidenceQualityAnnotator', () => {
   const createMockLink = (overrides: Partial<TraceabilityLinkForAnnotation> = {}): TraceabilityLinkForAnnotation => ({

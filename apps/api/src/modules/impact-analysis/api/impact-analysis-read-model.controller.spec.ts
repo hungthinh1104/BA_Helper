@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ImpactAnalysisReadModelController } from './impact-analysis-read-model.controller';
-import { ProjectPermissionService } from '../../project/application/project-permission.service';
-import { GetAnalysisDriftFreshnessUseCase } from '../application/queries/get-analysis-drift-freshness.usecase';
-import { GetAnalysisWorkspaceUseCase } from '../application/queries/get-analysis-workspace.usecase';
+import type { ProjectPermissionService } from '../../project/application/project-permission.service';
+import type { GetAnalysisDriftFreshnessUseCase } from '../application/queries/get-analysis-drift-freshness.usecase';
+import type { GetAnalysisWorkspaceUseCase } from '../application/queries/get-analysis-workspace.usecase';
 import { UnauthorizedException, NotFoundException } from '@nestjs/common';
-import { RequestUser } from '@ba-helper/contracts';
+import type { RequestUser } from '@ba-helper/contracts';
 
 describe('ImpactAnalysisReadModelController - driftFreshness', () => {
   let controller: ImpactAnalysisReadModelController;

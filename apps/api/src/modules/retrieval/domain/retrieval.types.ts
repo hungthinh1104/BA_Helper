@@ -1,3 +1,5 @@
+import type { RetrievalSuggestion } from './retrieval-suggestion';
+
 export interface RetrievalDiagnostics {
   version: 'retrieval-diagnostics@0.1.0';
   lexicalScoreNorm: number;
@@ -16,6 +18,12 @@ export interface RetrievalDiagnostics {
   } | null;
   /** Glossary terms from the domain profile that appeared in the change request. Max 10. */
   matchedDomainTerms?: string[];
+  domainPack?: {
+    id: string;
+    version: string;
+    status: 'STABLE' | 'PARTIAL' | 'EXPERIMENTAL' | 'FALLBACK';
+    selectedBy: 'manual_config' | 'repository_profile' | 'safe_default';
+  };
   finalScore: number;
 }
 
@@ -36,7 +44,7 @@ export interface RetrievedArtifact {
   domainBoost?: number;
   kindBoost?: number;
   finalScore?: number;
-  suggestion?: import('./retrieval-suggestion').RetrievalSuggestion;
+  suggestion?: RetrievalSuggestion;
   retrievalDiagnostics?: RetrievalDiagnostics;
 }
 
@@ -47,7 +55,7 @@ export interface RetrievalRequest {
   repositoryId: string;
   snapshotId: string;
   changeRequest: string;
-  /** Domain profile key e.g. 'BOOKING'. Drives glossary-based keyword expansion. */
+  /** Domain pack/profile key e.g. 'booking'. Drives terminology-based keyword expansion. */
   domain?: string;
   expandGraph?: boolean;
   maxResults?: number;

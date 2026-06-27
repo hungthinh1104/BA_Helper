@@ -1,7 +1,7 @@
 import { Project } from 'ts-morph';
 import { join, relative } from 'node:path';
 import { ANALYZER_VERSION } from './scanner.types';
-import type { ScanInput, ScanResult, ScanArtifact } from './scanner.types';
+import type { ScanInput, ScanResult, ScanArtifact, ScanCoverage } from './scanner.types';
 import { computeArtifactContentHash } from './core/content-hasher';
 
 export const scanFixture = (input: ScanInput): ScanResult => {
@@ -114,7 +114,7 @@ export const scanFixture = (input: ScanInput): ScanResult => {
   };
 };
 
-export const scanProject = (input: ScanInput & { tsFiles: string[], coverage?: import('./scanner.types').ScanCoverage }): ScanResult => {
+export const scanProject = (input: ScanInput & { tsFiles: string[], coverage?: ScanCoverage }): ScanResult => {
   const project = new Project({
     useInMemoryFileSystem: false,
     skipFileDependencyResolution: true,
@@ -192,7 +192,7 @@ export const scanProject = (input: ScanInput & { tsFiles: string[], coverage?: i
     }
   }
 
-  const defaultCoverage: import('./scanner.types').ScanCoverage = {
+  const defaultCoverage: ScanCoverage = {
     status: 'FULL',
     skippedFiles: [],
     skippedSummary: {

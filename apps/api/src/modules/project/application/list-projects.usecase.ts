@@ -1,5 +1,5 @@
 import type { RequestUser } from '@ba-helper/contracts';
-import { ProjectRepository } from '../infrastructure/project.repository';
+import type { ProjectRepository } from '../infrastructure/project.repository';
 
 export class ListProjectsUseCase {
   constructor(private readonly repository: ProjectRepository) {}

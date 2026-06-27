@@ -4,9 +4,10 @@ import type { ImpactAnalysisRepositoryPort } from '../ports/impact-analysis.repo
 import type { InsightRepositoryPort, InsightRecord } from '../ports/insight.repository.port';
 import type { DomainPackSelectionPort } from '../ports/domain-pack-selection.port';
 import type { EventLogPort } from '../ports/event-log.port';
-import { ImpactEvidenceCollectionStep } from './steps/impact-evidence-collection.step';
-import { ImpactDiagnosticPropagationStep } from './steps/impact-diagnostic-propagation.step';
-import { ImpactAiReasoningStep } from './steps/impact-ai-reasoning.step';
+import { buildCompletedAnalysisMetadata } from './analysis-run-metadata';
+import type { ImpactEvidenceCollectionStep } from './steps/impact-evidence-collection.step';
+import type { ImpactDiagnosticPropagationStep } from './steps/impact-diagnostic-propagation.step';
+import type { ImpactAiReasoningStep } from './steps/impact-ai-reasoning.step';
 
 export class RunImpactAnalysisUseCase {
   constructor(
@@ -41,6 +42,16 @@ export class RunImpactAnalysisUseCase {
     });
 
     const triggeredByUserId = analysis.multiRepoRun?.createdByUserId ?? null;
+    const projectId =
+      analysis.requirementRevision.requirement?.projectId ??
+      analysis.snapshot.repository?.projectId;
+
+    if (!projectId) {
+      throw new AppError(
+        'SNAPSHOT_MISSING',
+        'Impact analysis snapshot is missing repository project scope.',
+      );
+    }
 
     await this.eventLog.recordEvent({
       eventType: 'ANALYSIS_STARTED',
@@ -53,7 +64,7 @@ export class RunImpactAnalysisUseCase {
         triggeredByUserId,
         analysisId: analysis.id,
         repositoryId: analysis.snapshot.repositoryId,
-        projectId: analysis.requirementRevision.requirement?.projectId,
+        projectId,
         previousStatus: analysis.status,
         nextStatus: 'RUNNING',
         phase: 'RETRIEVING_EVIDENCE',
@@ -61,7 +72,7 @@ export class RunImpactAnalysisUseCase {
     });
 
     try {
-      const snapshotDomain = (analysis.snapshot as any).profile?.domain;
+      const snapshotDomain = analysis.snapshot.profile?.domain;
       const domainPackResult = this.domainPackSelection.selectPack({
         manualPackId: params.domain,
         repositoryProfileDomain: snapshotDomain,
@@ -92,7 +103,7 @@ export class RunImpactAnalysisUseCase {
           triggeredByUserId,
           analysisId: analysis.id,
           repositoryId: analysis.snapshot.repositoryId,
-          projectId: analysis.requirementRevision.requirement?.projectId,
+          projectId,
           previousStatus: 'RUNNING',
           nextStatus: 'RUNNING',
           phase: 'RUNNING_AI_REASONING',
@@ -159,7 +170,7 @@ export class RunImpactAnalysisUseCase {
           triggeredByUserId,
           analysisId: analysis.id,
           repositoryId: analysis.snapshot.repositoryId,
-          projectId: analysis.requirementRevision.requirement?.projectId,
+          projectId,
           previousStatus: 'RUNNING',
           nextStatus: 'RUNNING',
           phase: 'DONE',
@@ -169,53 +180,16 @@ export class RunImpactAnalysisUseCase {
         },
       });
 
-      const domainPack = domainPackResult.pack;
-
       const result = await this.impactRepo.updateStatus({
         id: analysis.id,
         status: 'WAITING_FOR_REVIEW',
         stage: 'DONE',
         progress: 100,
-        metadata: {
-          retrieval: evidenceResult.retrievalMetadata,
-          llm: {
-            provider: aiResult.llmMetadata?.provider || 'unknown',
-            model: aiResult.llmMetadata?.model || 'unknown',
-            promptVersion: aiResult.promptVersion,
-            parseMode: aiResult.llmMetadata?.parseMode || 'raw',
-            inputTokens: aiResult.llmMetadata?.inputTokens || null,
-            outputTokens: aiResult.llmMetadata?.outputTokens || null,
-            estimatedCostUsd: null,
-            evidenceItems: aiResult.evidenceCandidatesLength,
-            evidenceChars: aiResult.totalEvidenceChars,
-            evidenceTruncated: aiResult.evidenceTruncated,
-            domainContextUsed: domainPackResult.normalizedPackId,
-          },
-          domainPack: {
-            id: domainPack.id,
-            version: domainPack.version,
-            status: domainPack.status,
-            selectedBy: domainPackResult.selectedBy,
-          },
-          diagnostics: [
-            {
-              code: 'DOMAIN_PACK_APPLIED',
-              severity: 'INFO',
-              message: `Applied domain pack ${domainPack.id}@${domainPack.version}`,
-              payload: {
-                domainPackId: domainPack.id,
-                domainPackVersion: domainPack.version,
-                domainPackStatus: domainPack.status,
-                selectedBy: domainPackResult.selectedBy,
-                conceptCount: domainPack.concepts.length,
-                retrievalHintCount: domainPack.retrievalHints.length,
-                riskTemplateCount: domainPack.riskTemplates.length,
-                qaTemplateCount: domainPack.qaTemplates.length,
-                unknownTemplateCount: domainPack.unknownTemplates.length,
-              },
-            },
-          ],
-        },
+        metadata: buildCompletedAnalysisMetadata({
+          evidenceResult,
+          aiResult,
+          domainPackResult,
+        }),
       });
 
       await this.eventLog.recordEvent({
@@ -229,7 +203,7 @@ export class RunImpactAnalysisUseCase {
           triggeredByUserId,
           analysisId: analysis.id,
           repositoryId: analysis.snapshot.repositoryId,
-          projectId: analysis.requirementRevision.requirement?.projectId,
+          projectId,
           previousStatus: 'RUNNING',
           nextStatus: 'WAITING_FOR_REVIEW',
           phase: 'DONE',
@@ -277,7 +251,7 @@ export class RunImpactAnalysisUseCase {
           triggeredByUserId,
           analysisId: analysis.id,
           repositoryId: analysis.snapshot.repositoryId,
-          projectId: analysis.requirementRevision.requirement?.projectId,
+          projectId,
           previousStatus: analysis.status,
           nextStatus: 'FAILED',
           errorCode,

@@ -24,14 +24,17 @@ class StubImpactRepo {
     status: 'QUEUED',
     stage: 'WAITING',
     progress: 0,
-    snapshot: {
-      id: 'snap-1',
-      analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
-      coverageStatus: 'READY',
-    },
-    requirementRevision: {
-      rawText: 'Allow users to cancel paid bookings and receive refund.',
-    },
+	    snapshot: {
+	      id: 'snap-1',
+	      repositoryId: 'repo-1',
+	      analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
+	      coverageStatus: 'READY',
+	      repository: { projectId: 'project-1' },
+	    },
+	    requirementRevision: {
+	      rawText: 'Allow users to cancel paid bookings and receive refund.',
+	      requirement: { projectId: 'project-1' },
+	    },
   });
 
   updateStatus = async (params: {
@@ -400,15 +403,18 @@ describe('RunImpactAnalysisUseCase', () => {
         status: 'QUEUED',
         stage: 'WAITING',
         progress: 0,
-        snapshot: {
-          id: 'snap-1',
-          analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
-          coverageStatus: 'READY',
-          profile: { domain: 'UNKNOWN' },
-        },
-        requirementRevision: {
-          rawText: '...',
-        },
+	        snapshot: {
+	          id: 'snap-1',
+	          repositoryId: 'repo-1',
+	          analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
+	          coverageStatus: 'READY',
+	          repository: { projectId: 'project-1' },
+	          profile: { domain: 'UNKNOWN' },
+	        },
+	        requirementRevision: {
+	          rawText: '...',
+	          requirement: { projectId: 'project-1' },
+	        },
       });
     }
 
@@ -451,15 +457,18 @@ describe('RunImpactAnalysisUseCase', () => {
         status: 'QUEUED',
         stage: 'WAITING',
         progress: 0,
-        snapshot: {
-          id: 'snap-1',
-          analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
-          coverageStatus: 'READY',
-          profile: { domain: 'BOOKING' },
-        },
-        requirementRevision: {
-          rawText: '...',
-        },
+	        snapshot: {
+	          id: 'snap-1',
+	          repositoryId: 'repo-1',
+	          analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
+	          coverageStatus: 'READY',
+	          repository: { projectId: 'project-1' },
+	          profile: { domain: 'BOOKING' },
+	        },
+	        requirementRevision: {
+	          rawText: '...',
+	          requirement: { projectId: 'project-1' },
+	        },
       });
     }
 
@@ -500,15 +509,18 @@ describe('RunImpactAnalysisUseCase', () => {
         status: 'QUEUED',
         stage: 'WAITING',
         progress: 0,
-        snapshot: {
-          id: 'snap-1',
-          analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
-          coverageStatus: 'READY',
-          profile: { domain: 'RENTAL' },
-        },
-        requirementRevision: {
-          rawText: 'Update tenant deposit payment for rental contract.',
-        },
+	        snapshot: {
+	          id: 'snap-1',
+	          repositoryId: 'repo-1',
+	          analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
+	          coverageStatus: 'READY',
+	          repository: { projectId: 'project-1' },
+	          profile: { domain: 'RENTAL' },
+	        },
+	        requirementRevision: {
+	          rawText: 'Update tenant deposit payment for rental contract.',
+	          requirement: { projectId: 'project-1' },
+	        },
       });
     }
 
@@ -551,14 +563,17 @@ describe('RunImpactAnalysisUseCase', () => {
         status: 'WAITING_FOR_REVIEW',
         stage: 'DONE',
         progress: 100,
-        snapshot: {
-          id: 'snap-1',
-          analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
-          coverageStatus: 'READY',
-        },
-        requirementRevision: {
-          rawText: 'Allow users to cancel paid bookings and receive refund.',
-        },
+	        snapshot: {
+	          id: 'snap-1',
+	          repositoryId: 'repo-1',
+	          analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
+	          coverageStatus: 'READY',
+	          repository: { projectId: 'project-1' },
+	        },
+	        requirementRevision: {
+	          rawText: 'Allow users to cancel paid bookings and receive refund.',
+	          requirement: { projectId: 'project-1' },
+	        },
       });
     }
 

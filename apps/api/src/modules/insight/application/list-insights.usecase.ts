@@ -1,4 +1,4 @@
-import { InsightRepository } from '../infrastructure/insight.repository';
+import type { InsightRepository } from '../infrastructure/insight.repository';
 
 export class ListInsightsUseCase {
   constructor(private readonly repository: InsightRepository) {}

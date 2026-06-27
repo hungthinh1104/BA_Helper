@@ -1,4 +1,4 @@
-import { FileDiagnostic } from './safe-file-enumerator';
+import type { FileDiagnostic } from './safe-file-enumerator';
 
 export interface DiagnosticItem {
   code: string;

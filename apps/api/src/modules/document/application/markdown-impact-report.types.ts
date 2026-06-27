@@ -1,8 +1,8 @@
-import { Prisma, ReviewNote } from '@prisma/client';
-import { ClarificationItemDto } from '@ba-helper/contracts';
-import { ApprovedReportMetadata } from '../domain/approved-report-metadata';
-import { ReportDependencyEdge } from './mermaid-impact-diagram.builder';
-import { ReportLocale } from './render/report-localization';
+import type { Prisma, ReviewNote } from '@prisma/client';
+import type { ClarificationItemDto } from '@ba-helper/contracts';
+import type { ApprovedReportMetadata } from '../domain/approved-report-metadata';
+import type { ReportDependencyEdge } from './mermaid-impact-diagram.builder';
+import type { ReportLocale } from './render/report-localization';
 
 export type AnalysisSnapshot = Prisma.ImpactAnalysisGetPayload<{
   include: {

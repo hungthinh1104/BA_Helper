@@ -2,10 +2,10 @@ import { EnsureClarificationUseCase } from './ensure-clarification.usecase';
 import { AnswerClarificationUseCase } from './answer-clarification.usecase';
 import { DismissClarificationUseCase } from './dismiss-clarification.usecase';
 import { ConvertClarificationToRevisionUseCase } from './convert-clarification-to-revision.usecase';
-import { ClarificationRepository } from '../infrastructure/clarification.repository';
-import { InsightRepository } from '../../insight/infrastructure/insight.repository';
-import { ImpactAnalysisRepository } from '../../impact-analysis/infrastructure/impact-analysis.repository';
-import { RequirementRepository } from '../../requirement/infrastructure/requirement.repository';
+import type { ClarificationRepository } from '../infrastructure/clarification.repository';
+import type { InsightRepository } from '../../insight/infrastructure/insight.repository';
+import type { ImpactAnalysisRepository } from '../../impact-analysis/infrastructure/impact-analysis.repository';
+import type { RequirementRepository } from '../../requirement/infrastructure/requirement.repository';
 import { AppError } from '@ba-helper/shared';
 
 describe('Clarification Use Cases', () => {

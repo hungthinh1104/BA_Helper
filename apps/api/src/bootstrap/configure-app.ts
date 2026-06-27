@@ -1,6 +1,6 @@
-import { INestApplication } from '@nestjs/common';
+import type { INestApplication } from '@nestjs/common';
 import { AppExceptionFilter } from '../shared/app-exception.filter';
-import { RuntimeConfig } from './runtime-config';
+import type { RuntimeConfig } from './runtime-config';
 
 export function configureApp(
   app: INestApplication,

@@ -3,6 +3,7 @@ import { getDomainProfile, getDomainGlossary } from '../../apps/api/src/modules/
 import { BookingDomainProfile } from '../../apps/api/src/modules/domain-profile/profiles/booking.domain-profile';
 import { HybridRetrievalService } from '../../apps/api/src/modules/retrieval/application/hybrid-retrieval.service';
 import { FakeEmbeddingProvider } from '../../apps/api/src/modules/embedding/infrastructure/fake-embedding.provider';
+import { DomainPackRegistry } from '../../apps/api/src/modules/domain-pack/application/domain-pack.registry';
 
 describe('getDomainProfile', () => {
   it('returns BookingDomainProfile when domain is "BOOKING"', () => {
@@ -75,9 +76,10 @@ describe('HybridRetrievalService — domain-aware keyword extraction', () => {
       chunkRepoMock as any,
       provider as any,
       artifactRepoMock as any,
-      graphRepoMock as any,
-      prismaMock as any,
-    );
+	      graphRepoMock as any,
+	      prismaMock as any,
+	      new DomainPackRegistry(),
+	    );
   });
 
   it('uses domain glossary for keyword expansion — not hardcoded booking words', async () => {

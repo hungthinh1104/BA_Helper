@@ -4,15 +4,15 @@ import {
   ImpactDiagnosticPropagationStep,
   ImpactAiReasoningStep,
 } from '@ba-helper/application';
-import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
-import { ArtifactRepository } from '../../../artifact/infrastructure/artifact.repository';
-import { EvidenceRepository } from '../../../evidence/infrastructure/evidence.repository';
-import { InsightRepository } from '../../../insight/infrastructure/insight.repository';
-import { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
-import { LlmProvider } from '../../../ai/domain/llm-provider.interface';
-import { HybridRetrievalService } from '../../../retrieval/application/hybrid-retrieval.service';
+import type { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
+import type { ArtifactRepository } from '../../../artifact/infrastructure/artifact.repository';
+import type { EvidenceRepository } from '../../../evidence/infrastructure/evidence.repository';
+import type { InsightRepository } from '../../../insight/infrastructure/insight.repository';
+import type { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
+import type { LlmProvider } from '../../../ai/domain/llm-provider.interface';
+import type { HybridRetrievalService } from '../../../retrieval/application/hybrid-retrieval.service';
 import { AppError } from '@ba-helper/shared';
-import { DomainPackRegistry } from '../../../domain-pack/application/domain-pack.registry';
+import type { DomainPackRegistry } from '../../../domain-pack/application/domain-pack.registry';
 
 describe('RunImpactAnalysisUseCase', () => {
   let useCase: RunImpactAnalysisUseCase;
@@ -202,7 +202,17 @@ describe('RunImpactAnalysisUseCase', () => {
   });
 
   it('should mark analysis as FAILED if error occurs', async () => {
-    const analysis = { id: 'a1', status: 'QUEUED', snapshot: { id: 's1' }, requirementRevision: {} };
+    const analysis = {
+      id: 'a1',
+      status: 'QUEUED',
+      snapshot: {
+        id: 's1',
+        repositoryId: 'r1',
+        analyzerVersion: '1.0',
+        repository: { projectId: 'p1' },
+      },
+      requirementRevision: { rawText: 'cancel booking', requirement: { projectId: 'p1' } },
+    };
     impactRepo.findById.mockResolvedValue(analysis as any);
     impactRepo.updateStatus.mockResolvedValue({} as any);
     
@@ -222,8 +232,8 @@ describe('RunImpactAnalysisUseCase', () => {
     const analysis = {
       id: 'a1',
       status: 'QUEUED',
-      snapshot: { id: 's1', repositoryId: 'r1', analyzerVersion: '1.0', diagnostics: [] },
-      requirementRevision: { rawText: 'cancel booking' },
+      snapshot: { id: 's1', repositoryId: 'r1', analyzerVersion: '1.0', diagnostics: [], repository: { projectId: 'p1' } },
+      requirementRevision: { rawText: 'cancel booking', requirement: { projectId: 'p1' } },
     };
     impactRepo.findById.mockResolvedValue(analysis as any);
     artifactRepo.listBySnapshot.mockResolvedValue([

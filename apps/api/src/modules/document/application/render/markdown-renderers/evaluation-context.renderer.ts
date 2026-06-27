@@ -1,5 +1,6 @@
-import { EvaluationContextAdapter } from '../../evaluation-context.adapter';
-import { ReportLocale, getReportLabels } from '../report-localization';
+import type { EvaluationContextAdapter } from '../../evaluation-context.adapter';
+import type { ReportLocale} from '../report-localization';
+import { getReportLabels } from '../report-localization';
 
 export function renderEvaluationContext(
   evalContext: ReturnType<EvaluationContextAdapter['getEvaluationContext']>,

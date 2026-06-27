@@ -1,7 +1,7 @@
-import PDFKit from 'pdfkit';
+import type PDFKit from 'pdfkit';
 import { PDF_REPORT_THEME } from './pdf-report-theme';
 import { sanitizeCode, sanitizeInline, wrapLongTokens } from './pdf-renderer-sanitizer';
-import { PageMargins } from './pdf-renderer.types';
+import type { PageMargins } from './pdf-renderer.types';
 
 export class PdfMarkdownRenderer {
   renderMarkdown(doc: PDFKit.PDFDocument, markdown: string) {

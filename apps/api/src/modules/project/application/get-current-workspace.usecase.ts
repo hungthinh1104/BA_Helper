@@ -1,6 +1,6 @@
 import type { RequestUser } from '@ba-helper/contracts';
 import { AppError } from '@ba-helper/shared';
-import {
+import type {
   CurrentWorkspaceResolver,
 } from './current-workspace.resolver';
 import { getRuntimeConfig } from '../../../bootstrap/runtime-config';

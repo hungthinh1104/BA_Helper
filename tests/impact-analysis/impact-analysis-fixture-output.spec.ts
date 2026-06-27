@@ -15,14 +15,17 @@ class StubImpactRepo {
     status: 'QUEUED',
     stage: 'WAITING',
     progress: 0,
-    snapshot: {
-      id: 'snap-1',
-      analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
-      coverageStatus: 'READY',
-    },
-    requirementRevision: {
-      rawText: 'Allow users to cancel paid bookings and receive refund.',
-    },
+	    snapshot: {
+	      id: 'snap-1',
+	      repositoryId: 'repo-1',
+	      analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
+	      coverageStatus: 'READY',
+	      repository: { projectId: 'project-1' },
+	    },
+	    requirementRevision: {
+	      rawText: 'Allow users to cancel paid bookings and receive refund.',
+	      requirement: { projectId: 'project-1' },
+	    },
   });
 
   updateStatus = async (params: { id: string; status: string; stage: string; progress: number }) => ({

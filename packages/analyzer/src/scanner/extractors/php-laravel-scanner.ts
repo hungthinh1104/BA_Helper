@@ -2,7 +2,7 @@ import * as fs from 'node:fs/promises';
 import { relative } from 'node:path';
 import { createHash } from 'node:crypto';
 import { ANALYZER_VERSION } from '../scanner.types';
-import type { ScanInput, ScanResult, ScanArtifact } from '../scanner.types';
+import type { ScanInput, ScanResult, ScanArtifact, ScanCoverage } from '../scanner.types';
 import { computeArtifactContentHash } from '../core/content-hasher';
 import type { DiagnosticItem } from '../core/diagnostic-collector';
 
@@ -15,7 +15,7 @@ const ROUTE_HTTP_METHODS = new Set(['get', 'post', 'put', 'patch', 'delete']);
 export const scanPhpLaravelProject = async (
   input: ScanInput & {
     phpFiles: string[];
-    coverage?: import('../scanner.types').ScanCoverage;
+    coverage?: ScanCoverage;
   },
 ): Promise<ScanResult> => {
   const artifacts: ScanArtifact[] = [];
@@ -217,7 +217,7 @@ export const scanPhpLaravelProject = async (
     }
   }
 
-  const defaultCoverage: import('../scanner.types').ScanCoverage = {
+  const defaultCoverage: ScanCoverage = {
     status: 'PARTIAL',
     skippedFiles: [],
     skippedSummary: {

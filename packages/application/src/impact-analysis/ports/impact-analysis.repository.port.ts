@@ -16,7 +16,7 @@ export type ImpactAnalysisRecord = {
   };
   requirementRevision: {
     rawText: string;
-    requirement?: { projectId?: string } | null;
+    requirement?: { projectId: string } | null;
   };
   multiRepoRun?: { createdByUserId?: string | null } | null;
 };

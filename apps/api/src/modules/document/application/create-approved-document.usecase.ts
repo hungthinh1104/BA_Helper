@@ -1,4 +1,4 @@
-import { DocumentRepository } from '../infrastructure/document.repository';
+import type { DocumentRepository } from '../infrastructure/document.repository';
 
 export class CreateApprovedDocumentUseCase {
   constructor(private readonly repository: DocumentRepository) {}

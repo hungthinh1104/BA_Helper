@@ -1,14 +1,14 @@
 import { CreateAnalysisReviewDecisionUseCase } from './create-analysis-review-decision.usecase';
-import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
-import { ReviewDecisionRepository } from '../../infrastructure/review-decision.repository';
-import { GetImpactDiffUseCase } from '../queries/get-impact-diff.usecase';
-import { InsightRepository } from '../../../insight/infrastructure/insight.repository';
-import { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
-import { GraphRepository } from '../../../graph/infrastructure/graph.repository';
-import { ReviewNoteRepository } from '../../infrastructure/review-note.repository';
-import { ClarificationRepository } from '../../../clarification/infrastructure/clarification.repository';
-import { CreateReviewedReportSnapshotUseCase } from '../../../document/application/commands/create-reviewed-report-snapshot.usecase';
-import { EnqueueDocumentJobUseCase } from '../../../document/application/commands/enqueue-document-job.usecase';
+import type { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
+import type { ReviewDecisionRepository } from '../../infrastructure/review-decision.repository';
+import type { GetImpactDiffUseCase } from '../queries/get-impact-diff.usecase';
+import type { InsightRepository } from '../../../insight/infrastructure/insight.repository';
+import type { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
+import type { GraphRepository } from '../../../graph/infrastructure/graph.repository';
+import type { ReviewNoteRepository } from '../../infrastructure/review-note.repository';
+import type { ClarificationRepository } from '../../../clarification/infrastructure/clarification.repository';
+import type { CreateReviewedReportSnapshotUseCase } from '../../../document/application/commands/create-reviewed-report-snapshot.usecase';
+import type { EnqueueDocumentJobUseCase } from '../../../document/application/commands/enqueue-document-job.usecase';
 import { AppError } from '@ba-helper/shared';
 
 describe('CreateAnalysisReviewDecisionUseCase', () => {

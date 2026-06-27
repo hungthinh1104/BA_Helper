@@ -1,5 +1,5 @@
 import { CreateRequirementRevisionUseCase } from './create-revision.usecase';
-import { RequirementRepository } from '../infrastructure/requirement.repository';
+import type { RequirementRepository } from '../infrastructure/requirement.repository';
 import { AppError } from '@ba-helper/shared';
 
 describe('CreateRequirementRevisionUseCase', () => {

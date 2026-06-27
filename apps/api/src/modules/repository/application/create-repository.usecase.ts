@@ -1,8 +1,8 @@
-import { RepositoryRepository } from '../infrastructure/repository.repository';
-import { ProjectRepository } from '../../project/infrastructure/project.repository';
+import type { RepositoryRepository } from '../infrastructure/repository.repository';
+import type { ProjectRepository } from '../../project/infrastructure/project.repository';
 import { RepositoryPolicy } from '../domain/repository.policy';
 import { AppError } from '@ba-helper/shared';
-import { EventLogService } from '../../event-log/application/event-log.service';
+import type { EventLogService } from '../../event-log/application/event-log.service';
 
 export class CreateRepositoryUseCase {
   constructor(

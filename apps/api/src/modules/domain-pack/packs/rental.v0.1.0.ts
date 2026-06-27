@@ -1,4 +1,4 @@
-import { DomainPack } from '@ba-helper/contracts';
+import type { DomainPack } from '@ba-helper/contracts';
 
 export const RentalDomainPack: DomainPack = {
   id: 'rental',

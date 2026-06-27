@@ -1,5 +1,5 @@
-import { AnalysisWorkspaceResponse } from '@ba-helper/contracts';
-import {
+import type { AnalysisWorkspaceResponse } from '@ba-helper/contracts';
+import type {
 	WorkspaceAnalysis,
 	WorkspaceDocumentJob,
 	WorkspaceInsight,

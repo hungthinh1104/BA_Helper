@@ -1,9 +1,9 @@
 import { FinalizeImpactAnalysisUseCase } from './finalize-impact-analysis.usecase';
-import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
-import { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { CreateReviewedReportSnapshotUseCase } from '../../../document/application/commands/create-reviewed-report-snapshot.usecase';
-import { EnqueueDocumentJobUseCase } from '../../../document/application/commands/enqueue-document-job.usecase';
+import type { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
+import type { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
+import type { PrismaService } from '../../../prisma/prisma.service';
+import type { CreateReviewedReportSnapshotUseCase } from '../../../document/application/commands/create-reviewed-report-snapshot.usecase';
+import type { EnqueueDocumentJobUseCase } from '../../../document/application/commands/enqueue-document-job.usecase';
 
 describe('FinalizeImpactAnalysisUseCase', () => {
   let useCase: FinalizeImpactAnalysisUseCase;

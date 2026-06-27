@@ -1,6 +1,6 @@
 import type { RequestUser } from '@ba-helper/contracts';
-import { ProjectRepository } from '../infrastructure/project.repository';
-import { EventLogService } from '../../event-log/application/event-log.service';
+import type { ProjectRepository } from '../infrastructure/project.repository';
+import type { EventLogService } from '../../event-log/application/event-log.service';
 import { AppError } from '@ba-helper/shared';
 import { mapGlobalRoleToProjectRole } from '../domain/project-membership.policy';
 

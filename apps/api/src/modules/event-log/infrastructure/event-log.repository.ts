@@ -1,4 +1,5 @@
-import { PrismaService } from '../../prisma/prisma.service';
+import type { Prisma } from '@prisma/client';
+import type { PrismaService } from '../../prisma/prisma.service';
 
 export class EventLogRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -15,7 +16,7 @@ export class EventLogRepository {
       create: {
         eventType: params.eventType,
         idempotencyKey: params.idempotencyKey,
-        payload: params.payload as import('@prisma/client').Prisma.InputJsonValue,
+        payload: params.payload as Prisma.InputJsonValue,
       },
       update: {},
     });

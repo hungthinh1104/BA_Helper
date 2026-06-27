@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { AppError } from '@ba-helper/shared';
 import type { ArtifactRepositoryPort, PersistedArtifact } from '../../ports/artifact.repository.port';
 import type { EvidenceRepositoryPort } from '../../ports/evidence.repository.port';
 import type { TraceabilityRepositoryPort } from '../../ports/traceability.repository.port';
@@ -27,10 +28,18 @@ export class ImpactEvidenceCollectionStep {
     expandGraph: boolean = true,
   ): Promise<ImpactEvidenceCollectionResult> {
     const snapshotId = analysis.snapshot.id;
+    const projectId = analysis.snapshot.repository.projectId;
+    if (!projectId) {
+      throw new AppError(
+        'SNAPSHOT_MISSING',
+        'Impact analysis snapshot is missing repository project scope.',
+      );
+    }
+
     const artifacts = await this.artifactRepo.listBySnapshot(snapshotId);
 
     const retrievedArtifacts: RetrievedArtifact[] = await this.retrievalService.retrieve({
-      projectId: analysis.snapshot?.repository?.projectId ?? 'unknown',
+      projectId,
       repositoryId: analysis.snapshot.repositoryId,
       snapshotId,
       changeRequest: analysis.requirementRevision.rawText,

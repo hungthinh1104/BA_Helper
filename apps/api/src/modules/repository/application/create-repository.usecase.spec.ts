@@ -1,7 +1,7 @@
 import { CreateRepositoryUseCase } from './create-repository.usecase';
-import { RepositoryRepository } from '../infrastructure/repository.repository';
-import { ProjectRepository } from '../../project/infrastructure/project.repository';
-import { EventLogService } from '../../event-log/application/event-log.service';
+import type { RepositoryRepository } from '../infrastructure/repository.repository';
+import type { ProjectRepository } from '../../project/infrastructure/project.repository';
+import type { EventLogService } from '../../event-log/application/event-log.service';
 import { AppError } from '@ba-helper/shared';
 import { RepositoryPolicy } from '../domain/repository.policy';
 

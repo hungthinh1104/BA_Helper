@@ -3,6 +3,7 @@ import { ScanJobRepository } from '../infrastructure/scan-job.repository';
 import { EventLogService } from '../../event-log/application/event-log.service';
 import { AppError } from '@ba-helper/shared';
 import { ScanJobStatus, ScanJobStage, DependencyEdgeType } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { ArtifactRepository } from '../../artifact/infrastructure/artifact.repository';
 import { GraphRepository } from '../../graph/infrastructure/graph.repository';
 import { normalizeArtifactKind } from '../../artifact/domain/universal-artifact-kind';
@@ -26,7 +27,13 @@ import { createHash } from 'node:crypto';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import type { DetectedRepositoryProfile, ScanArtifact, ScanResult } from '@ba-helper/analyzer';
+import type {
+  DetectedRepositoryProfile,
+  ScanArtifact,
+  ScanCoverage,
+  ScanHealthDiagnostics,
+  ScanResult,
+} from '@ba-helper/analyzer';
 import type { DiagnosticItem } from '@ba-helper/contracts';
 import { summarizeDiagnostics } from './scan-diagnostic-summary';
 import { IncrementalScanClassifier } from './incremental-scan-classifier';
@@ -231,7 +238,7 @@ export class RunScanJobUseCase {
           collector.addFromFileDiagnostic(d, d.filePath ? path.relative(tempDir, d.filePath) : undefined);
         }
 
-        const scanCoverage: import('@ba-helper/analyzer').ScanCoverage = {
+        const scanCoverage: ScanCoverage = {
           status: enumResult.isPartial ? 'PARTIAL' : 'FULL',
           skippedFiles: enumResult.skippedFiles,
           skippedSummary: enumResult.skippedSummary,
@@ -314,7 +321,7 @@ export class RunScanJobUseCase {
       }
 
       // Record detailed scan health into snapshot diagnostics
-      const scanHealth: import('@ba-helper/analyzer').ScanHealthDiagnostics = {
+      const scanHealth: ScanHealthDiagnostics = {
         coverageStatus: scanResult.coverage.status,
         scannerVersion: 'scanner@0.2.0',
         analyzerVersion: scanResult.analyzerVersion,
@@ -358,11 +365,11 @@ export class RunScanJobUseCase {
           commitSha: commitSha,
           analyzerVersion: scanResult.analyzerVersion,
           coverageStatus: coverageStatus,
-          diagnostics: [] as unknown as import('@prisma/client').Prisma.InputJsonValue,
+          diagnostics: [] as unknown as Prisma.InputJsonValue,
         },
         update: {
           coverageStatus: coverageStatus,
-          diagnostics: [] as unknown as import('@prisma/client').Prisma.InputJsonValue,
+          diagnostics: [] as unknown as Prisma.InputJsonValue,
         },
       });
 
@@ -422,7 +429,7 @@ export class RunScanJobUseCase {
       // Update snapshot with final diagnostics
       await this.prisma.repositorySnapshot.update({
         where: { id: snapshot.id },
-        data: { diagnostics: finalDiagnostics as unknown as import('@prisma/client').Prisma.InputJsonValue },
+        data: { diagnostics: finalDiagnostics as unknown as Prisma.InputJsonValue },
       });
 
       if (repositoryProfile) {
@@ -435,11 +442,11 @@ export class RunScanJobUseCase {
             framework: repositoryProfile.framework,
             architectureStyle: repositoryProfile.architectureStyle,
             sourceRoots:
-              repositoryProfile.sourceRoots as unknown as import('@prisma/client').Prisma.InputJsonValue,
+              repositoryProfile.sourceRoots as unknown as Prisma.InputJsonValue,
             testRoots:
-              repositoryProfile.testRoots as unknown as import('@prisma/client').Prisma.InputJsonValue,
+              repositoryProfile.testRoots as unknown as Prisma.InputJsonValue,
             diagnostics: repositoryProfile.diagnostics
-              ? (repositoryProfile.diagnostics as unknown as import('@prisma/client').Prisma.InputJsonValue)
+              ? (repositoryProfile.diagnostics as unknown as Prisma.InputJsonValue)
               : undefined,
             profileVersion: repositoryProfile.profileVersion,
           },
@@ -449,11 +456,11 @@ export class RunScanJobUseCase {
             framework: repositoryProfile.framework,
             architectureStyle: repositoryProfile.architectureStyle,
             sourceRoots:
-              repositoryProfile.sourceRoots as unknown as import('@prisma/client').Prisma.InputJsonValue,
+              repositoryProfile.sourceRoots as unknown as Prisma.InputJsonValue,
             testRoots:
-              repositoryProfile.testRoots as unknown as import('@prisma/client').Prisma.InputJsonValue,
+              repositoryProfile.testRoots as unknown as Prisma.InputJsonValue,
             diagnostics: repositoryProfile.diagnostics
-              ? (repositoryProfile.diagnostics as unknown as import('@prisma/client').Prisma.InputJsonValue)
+              ? (repositoryProfile.diagnostics as unknown as Prisma.InputJsonValue)
               : undefined,
             profileVersion: repositoryProfile.profileVersion,
           },
@@ -593,7 +600,7 @@ export class RunScanJobUseCase {
             collector.addSecretRedacted('source files');
             await this.prisma.repositorySnapshot.update({
               where: { id: snapshot.id },
-              data: { diagnostics: collector.getItems() as unknown as import('@prisma/client').Prisma.InputJsonValue },
+              data: { diagnostics: collector.getItems() as unknown as Prisma.InputJsonValue },
             });
         }
 
@@ -684,7 +691,7 @@ export class RunScanJobUseCase {
       try {
         await this.prisma.scanJob.update({
           where: { id: job.id },
-          data: { diagnostics: collector.getItems() as unknown as import('@prisma/client').Prisma.InputJsonValue },
+          data: { diagnostics: collector.getItems() as unknown as Prisma.InputJsonValue },
         });
       } catch (persistError) {
         this.logger.warn(

@@ -1,13 +1,14 @@
-import { ScannerAdapter, ScannerCapabilityProfile, ScanAdapterInput, ScanAdapterResult, ANALYZER_VERSION } from '../scanner.types';
+import type { ScannerAdapter, ScannerCapabilityProfile, ScanAdapterInput, ScanAdapterResult, SupportedFramework} from '../scanner.types';
+import { ANALYZER_VERSION } from '../scanner.types';
 import { scanGoProject } from '../extractors/go-scanner';
 
 export class GoAdapter implements ScannerAdapter {
   readonly adapterId = 'go-experimental-adapter';
   readonly adapterVersion = ANALYZER_VERSION;
   readonly language = 'go';
-  readonly framework?: import('../scanner.types').SupportedFramework;
+  readonly framework?: SupportedFramework;
 
-  constructor(framework?: import('../scanner.types').SupportedFramework) {
+  constructor(framework?: SupportedFramework) {
     this.framework = framework;
     if (framework) {
       this.capability.framework = framework;

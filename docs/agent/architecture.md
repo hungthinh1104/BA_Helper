@@ -89,7 +89,7 @@ document          owns approved Markdown snapshots and export artifacts
 diagram           later owns generated graph/diagram artifacts
 review            owns human decisions
 event-log         owns auditable domain events
-domain-profile    static domain config (glossary, risk hints, QA templates, prompt context)
+domain-pack       static bounded domain registry (concepts, terminology hints, risk/QA templates, prompt context)
 retrieval         hybrid evidence retrieval (lexical + vector + graph)
 embedding         artifact embedding pipeline and vector chunk persistence
 ai                adapts LLM providers only

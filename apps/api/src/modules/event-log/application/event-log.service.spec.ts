@@ -1,5 +1,5 @@
 import { EventLogService } from './event-log.service';
-import { EventLogRepository } from '../infrastructure/event-log.repository';
+import type { EventLogRepository } from '../infrastructure/event-log.repository';
 import { EventLogDto } from '@ba-helper/contracts';
 
 describe('EventLogService', () => {

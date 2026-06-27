@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { EmbeddingSnapshotRepositoryPort, ArtifactBasic, ArtifactWithEvidenceBasic, SnapshotWithRepositoryBasic } from '@ba-helper/application';
-import type { DiagnosticItem } from '@ba-helper/contracts';
+import type { DiagnosticItem, SnapshotIndexStatus } from '@ba-helper/contracts';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
@@ -25,18 +25,18 @@ export class PrismaEmbeddingSnapshotRepository implements EmbeddingSnapshotRepos
     };
   }
 
-  async updateSnapshotIndexStatus(snapshotId: string, status: string): Promise<void> {
+  async updateSnapshotIndexStatus(snapshotId: string, status: SnapshotIndexStatus): Promise<void> {
     await this.prisma.repositorySnapshot.update({
       where: { id: snapshotId },
-      data: { indexStatus: status as any },
+      data: { indexStatus: status },
     });
   }
 
-  async updateSnapshotDiagnostics(snapshotId: string, status: string, diagnostics: DiagnosticItem[]): Promise<void> {
+  async updateSnapshotDiagnostics(snapshotId: string, status: SnapshotIndexStatus, diagnostics: DiagnosticItem[]): Promise<void> {
     await this.prisma.repositorySnapshot.update({
       where: { id: snapshotId },
       data: {
-        indexStatus: status as any,
+        indexStatus: status,
         diagnostics: diagnostics as unknown as Prisma.InputJsonValue,
       },
     });

@@ -1,4 +1,4 @@
-import type { DiagnosticItem } from '@ba-helper/contracts';
+import type { DiagnosticItem, SnapshotIndexStatus } from '@ba-helper/contracts';
 
 export interface SnapshotWithRepositoryBasic {
   id: string;
@@ -35,8 +35,8 @@ export interface ArtifactWithEvidenceBasic {
 
 export interface EmbeddingSnapshotRepositoryPort {
   findSnapshotById(snapshotId: string): Promise<SnapshotWithRepositoryBasic | null>;
-  updateSnapshotIndexStatus(snapshotId: string, status: string): Promise<void>;
-  updateSnapshotDiagnostics(snapshotId: string, status: string, diagnostics: DiagnosticItem[]): Promise<void>;
+  updateSnapshotIndexStatus(snapshotId: string, status: SnapshotIndexStatus): Promise<void>;
+  updateSnapshotDiagnostics(snapshotId: string, status: SnapshotIndexStatus, diagnostics: DiagnosticItem[]): Promise<void>;
   findArtifactsWithEvidenceBySnapshot(snapshotId: string): Promise<ArtifactWithEvidenceBasic[]>;
   findPreviousArtifactsBySnapshot(snapshotId: string): Promise<ArtifactBasic[]>;
   markSnapshotFailed(snapshotId: string): Promise<void>;

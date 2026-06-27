@@ -1,4 +1,4 @@
-import { ApprovedReportMetadata } from '../domain/approved-report-metadata';
+import type { ApprovedReportMetadata } from '../domain/approved-report-metadata';
 
 export type ExportFormat = 'markdown' | 'pdf';
 

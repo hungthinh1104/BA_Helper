@@ -1,4 +1,4 @@
-import { AnalysisWorkspaceResponse } from '@ba-helper/contracts';
+import type { AnalysisWorkspaceResponse } from '@ba-helper/contracts';
 
 export type WorkspaceAnalysis = {
 	id: string;

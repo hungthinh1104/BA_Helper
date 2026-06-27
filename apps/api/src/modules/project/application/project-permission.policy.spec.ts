@@ -1,4 +1,5 @@
-import { projectRoleHasPermission, ProjectPermission } from './project-permission.policy';
+import type { ProjectPermission } from './project-permission.policy';
+import { projectRoleHasPermission } from './project-permission.policy';
 
 describe('projectRoleHasPermission', () => {
   it('should allow OWNER all defined capabilities', () => {

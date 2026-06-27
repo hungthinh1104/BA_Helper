@@ -1,4 +1,5 @@
-import { PrismaService } from '../../prisma/prisma.service';
+import type { DependencyEdgeType } from '@prisma/client';
+import type { PrismaService } from '../../prisma/prisma.service';
 
 export class GraphRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -37,7 +38,7 @@ export class GraphRepository {
     snapshotId: string;
     fromArtifactId: string;
     toArtifactId: string;
-    type: import('@prisma/client').DependencyEdgeType;
+    type: DependencyEdgeType;
   }[]): Promise<void> {
     if (!edges || edges.length === 0) {
       return;

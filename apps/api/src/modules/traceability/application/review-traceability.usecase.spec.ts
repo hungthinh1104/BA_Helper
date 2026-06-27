@@ -1,6 +1,6 @@
 import { ReviewTraceabilityUseCase } from './review-traceability.usecase';
-import { TraceabilityRepository } from '../infrastructure/traceability.repository';
-import { EventLogService } from '../../event-log/application/event-log.service';
+import type { TraceabilityRepository } from '../infrastructure/traceability.repository';
+import type { EventLogService } from '../../event-log/application/event-log.service';
 import { AppError } from '@ba-helper/shared';
 
 describe('ReviewTraceabilityUseCase', () => {

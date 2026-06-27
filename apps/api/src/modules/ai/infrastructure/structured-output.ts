@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import type { z } from 'zod';
 import { AiOutputError } from '../domain/ai.errors';
 
 export interface ParseStructuredLlmOutputParams<T> {

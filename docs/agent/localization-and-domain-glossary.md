@@ -53,14 +53,17 @@ truth.
 
 They are not executable analyzer rules:
 
-- do not inject these glossary files into prompts in this phase
+- do not inject locale glossary files into prompts in this phase
 - do not use them to create risks, unknowns, QA scenarios, or evidence
 - do not use them to claim a new supported domain
 - do not use them as a replacement for persisted evidence links
 
-Domain behavior still comes from the existing backend domain-profile and
-retrieval code. Any future connection between glossary assets and analyzer
-behavior requires explicit scope, tests, and documentation updates.
+Runtime terminology and hinting come from the backend domain-pack registry.
+The registry may pass bounded concepts, risk templates, QA templates, and
+unknown templates into retrieval diagnostics or prompt context as hints only.
+Those hints must not create `EVIDENCED` claims without persisted source
+evidence. Any future direct connection between locale glossary assets and
+analyzer behavior requires explicit scope, tests, and documentation updates.
 
 ## Adding Locale Labels
 

@@ -1,4 +1,4 @@
-import { RepositoryRepository } from '../infrastructure/repository.repository';
+import type { RepositoryRepository } from '../infrastructure/repository.repository';
 import { AppError } from '@ba-helper/shared';
 
 export class GetRepositoryUseCase {

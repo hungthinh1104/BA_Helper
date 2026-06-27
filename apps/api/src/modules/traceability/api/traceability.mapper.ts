@@ -1,6 +1,6 @@
 import { retrievalMetadataSchema } from '@ba-helper/contracts';
 import { Logger } from '@nestjs/common';
-import { TraceabilityLinkWithArtifactAndReviewDecision } from '../infrastructure/traceability.repository';
+import type { TraceabilityLinkWithArtifactAndReviewDecision } from '../infrastructure/traceability.repository';
 
 export const mapTraceabilityList = (items: TraceabilityLinkWithArtifactAndReviewDecision[]) =>
   items.map((link) => {

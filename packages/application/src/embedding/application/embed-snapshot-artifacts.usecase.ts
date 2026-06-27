@@ -3,7 +3,8 @@ import type { EmbeddingChunkRepositoryPort } from '../ports/embedding-chunk.repo
 import type { EmbeddingProviderPort } from '../ports/embedding-provider.port';
 import type { EmbeddingSnapshotRepositoryPort, ArtifactWithEvidenceBasic } from '../ports/embedding-snapshot.repository.port';
 import { ArtifactChunkBuilder, CHUNK_BUILDER_VERSION } from '../domain/artifact-chunk.builder';
-import { matchChunksForReuse, CurrentChunkItem, MatchResult } from '../domain/embedding-reuse-matcher';
+import type { CurrentChunkItem, MatchResult } from '../domain/embedding-reuse-matcher';
+import { matchChunksForReuse } from '../domain/embedding-reuse-matcher';
 import { createHash } from 'node:crypto';
 import type {
   DiagnosticItem,

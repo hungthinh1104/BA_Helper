@@ -1,4 +1,4 @@
-import { INestApplication } from '@nestjs/common';
+import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { createTestApp } from './helpers/test-app';
 import { resetDatabase } from './helpers/reset-db';
@@ -160,7 +160,7 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       .send({ decision: 'ACCEPTED', note: 'ok' });
       
     if (putRes.status !== 200) {
-      console.log(putRes.body);
+      console.warn(putRes.body);
     }
     expect(putRes.status).toBe(200);
 

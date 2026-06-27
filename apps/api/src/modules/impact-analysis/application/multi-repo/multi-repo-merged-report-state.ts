@@ -1,7 +1,8 @@
 import { z } from 'zod';
-import {
+import type {
   ChildReviewDecision,
-  ChildStatus,
+  ChildStatus} from './multi-repo-run-readiness';
+import {
   deriveMultiRepoRunAggregates,
 } from './multi-repo-run-readiness';
 

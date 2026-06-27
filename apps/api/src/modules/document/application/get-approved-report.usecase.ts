@@ -1,6 +1,6 @@
-import { DocumentRepository } from '../infrastructure/document.repository';
+import type { DocumentRepository } from '../infrastructure/document.repository';
 import { AppError } from '@ba-helper/shared';
-import { ApprovedReportProjectionService } from './approved-report-projection.service';
+import type { ApprovedReportProjectionService } from './approved-report-projection.service';
 
 export class GetApprovedReportUseCase {
   constructor(

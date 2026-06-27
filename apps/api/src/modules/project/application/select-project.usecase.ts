@@ -1,8 +1,8 @@
 import type { RequestUser } from '@ba-helper/contracts';
 import { AppError } from '@ba-helper/shared';
-import { EventLogService } from '../../event-log/application/event-log.service';
-import { GetCurrentWorkspaceUseCase } from './get-current-workspace.usecase';
-import { ProjectRepository } from '../infrastructure/project.repository';
+import type { EventLogService } from '../../event-log/application/event-log.service';
+import type { GetCurrentWorkspaceUseCase } from './get-current-workspace.usecase';
+import type { ProjectRepository } from '../infrastructure/project.repository';
 
 export class SelectProjectUseCase {
   constructor(

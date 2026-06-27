@@ -4,11 +4,12 @@ import type {
   MultiRepoAnalysisRunDetailResponse,
   MultiRepoAnalysisRunListItemResponse,
 } from '@ba-helper/contracts';
+import type {
+  MultiRepoChildState} from '../application/multi-repo/multi-repo-merged-report-state';
 import {
   deriveChildBlockingReason,
   deriveMergedReportState,
-  isChildAnalysisStale,
-  MultiRepoChildState,
+  isChildAnalysisStale
 } from '../application/multi-repo/multi-repo-merged-report-state';
 import { isAnalyzerVersionOutdated } from './analyzer-version';
 

@@ -1,6 +1,6 @@
 import { MarkdownImpactReportBuilder } from './markdown-impact-report.builder';
-import { MermaidImpactDiagramBuilder } from '../mermaid-impact-diagram.builder';
-import { EvaluationContextAdapter } from '../evaluation-context.adapter';
+import type { MermaidImpactDiagramBuilder } from '../mermaid-impact-diagram.builder';
+import type { EvaluationContextAdapter } from '../evaluation-context.adapter';
 
 describe('MarkdownImpactReportBuilder', () => {
   let builder: MarkdownImpactReportBuilder;

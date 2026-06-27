@@ -1,6 +1,6 @@
 import type { LlmProviderPort } from '../../ports/llm-provider.port';
 import { renderPrompt } from '../../ai/prompt-registry';
-import { buildCompactDomainContext } from '../../domain-profile/index';
+import { buildDomainPackPromptContext } from '../../domain/domain-pack-context';
 import { impactAnalysisAiSchema } from '../../ai/ai.schema';
 import { EvidencePackFormatter, type EvidenceCandidate } from '../../ai/evidence-pack.formatter';
 import type { ImpactAiReasoningResult, ImpactEvidenceCollectionResult } from '../../domain/impact-analysis-step.types';
@@ -55,7 +55,7 @@ export class ImpactAiReasoningStep {
       } as EvidenceCandidate);
     }
 
-    const domainContext = buildCompactDomainContext(domainPackSelection.normalizedPackId);
+    const domainContext = buildDomainPackPromptContext(domainPackSelection.pack);
 
     const { systemPrompt, userPrompt, version } = renderPrompt('IMPACT_ANALYSIS', {
       changeRequest: analysis.requirementRevision.rawText,

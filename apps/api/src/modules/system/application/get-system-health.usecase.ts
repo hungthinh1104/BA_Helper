@@ -1,5 +1,5 @@
-import { PrismaService } from '../../prisma/prisma.service';
-import { QueueService } from '../../queue/queue.service';
+import type { PrismaService } from '../../prisma/prisma.service';
+import type { QueueService } from '../../queue/queue.service';
 import { getRuntimeConfig } from '../../../bootstrap/runtime-config';
 
 export class GetSystemHealthUseCase {

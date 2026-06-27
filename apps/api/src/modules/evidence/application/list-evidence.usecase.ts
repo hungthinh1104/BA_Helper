@@ -1,5 +1,5 @@
-import { EvidenceRepository } from '../infrastructure/evidence.repository';
-import { PrismaService } from '../../prisma/prisma.service';
+import type { EvidenceRepository } from '../infrastructure/evidence.repository';
+import type { PrismaService } from '../../prisma/prisma.service';
 import { AppError } from '@ba-helper/shared';
 
 export class ListEvidenceUseCase {

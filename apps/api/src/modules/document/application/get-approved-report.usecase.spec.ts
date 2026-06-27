@@ -1,6 +1,6 @@
-import { DocumentRepository } from '../infrastructure/document.repository';
+import type { DocumentRepository } from '../infrastructure/document.repository';
 import { GetApprovedReportUseCase } from './get-approved-report.usecase';
-import { ApprovedReportProjectionService } from './approved-report-projection.service';
+import type { ApprovedReportProjectionService } from './approved-report-projection.service';
 
 describe('GetApprovedReportUseCase', () => {
   let useCase: GetApprovedReportUseCase;

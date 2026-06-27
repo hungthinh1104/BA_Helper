@@ -3,6 +3,7 @@ export { RunImpactAnalysisUseCase } from './application/run-impact-analysis.usec
 export { ImpactEvidenceCollectionStep } from './application/steps/impact-evidence-collection.step';
 export { ImpactAiReasoningStep } from './application/steps/impact-ai-reasoning.step';
 export { ImpactDiagnosticPropagationStep } from './application/steps/impact-diagnostic-propagation.step';
+export { buildDomainPackPromptContext } from './domain/domain-pack-context';
 
 // Ports
 export type { ImpactAnalysisRepositoryPort, ImpactAnalysisRecord, ImpactAnalysisStatusUpdate } from './ports/impact-analysis.repository.port';

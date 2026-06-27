@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { EvidenceSourceType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -39,7 +40,7 @@ export class EvidenceRepository {
     await this.prisma.evidence.createMany({
       data: items.map((item) => ({
         provenanceKey: item.provenanceKey,
-        sourceType: item.sourceType as import('@prisma/client').EvidenceSourceType,
+        sourceType: item.sourceType as EvidenceSourceType,
         snapshotId: item.snapshotId ?? null,
         artifactId: item.artifactId ?? null,
         requirementRevisionId: item.requirementRevisionId ?? null,
@@ -49,7 +50,7 @@ export class EvidenceRepository {
         excerpt: item.excerpt,
         contentHash: item.contentHash,
         isRedacted: item.isRedacted,
-        redactionMetadata: (item.redactionMetadata ?? null) as import('@prisma/client').Prisma.InputJsonValue,
+        redactionMetadata: (item.redactionMetadata ?? null) as Prisma.InputJsonValue,
       })),
       skipDuplicates: true,
     });

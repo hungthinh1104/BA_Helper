@@ -1,12 +1,13 @@
 import { scanJavaSpringProject } from '../extractors/java-spring-scanner';
-import { 
+import type {
   ScannerAdapter, 
   ScanAdapterInput, 
   ScanAdapterResult, 
-  ScannerCapabilityProfile,
+  ScannerCapabilityProfile} from '../scanner.types';
+import {
   ANALYZER_VERSION
 } from '../scanner.types';
-import { DiagnosticItem } from '../core/diagnostic-collector';
+import type { DiagnosticItem } from '../core/diagnostic-collector';
 
 export class JavaSpringAdapter implements ScannerAdapter {
   adapterId = 'java-spring';
