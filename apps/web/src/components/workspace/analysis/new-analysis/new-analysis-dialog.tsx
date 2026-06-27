@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { useRequirements } from "@/hooks/api/use-requirements"
 import { useRepositories } from "@/hooks/api/use-repositories"
 import { useCreateAnalysis, useCreateMultiRepoAnalyses } from "@/hooks/api/use-analyses"
+import { useDomainPacks } from "@/hooks/api/use-domain-packs"
 import { RequirementListItemResponse, RepositoryListItemResponse, MultiRepoImpactAnalysisCreateResponse } from "@ba-helper/contracts"
 import { X, ChevronRight } from "lucide-react"
 import { toast } from "sonner"
@@ -29,6 +30,7 @@ export function NewAnalysisDialog({
   const router = useRouter()
   const { data: reqData, isLoading: reqsLoading, error: reqsError } = useRequirements()
   const { data: repoData, isLoading: reposLoading, error: reposError } = useRepositories()
+  const { data: domainPackData, isLoading: domainPacksLoading, error: domainPacksError } = useDomainPacks()
   const { mutateAsync: createAnalysis, isPending: singleLoading } = useCreateAnalysis()
   const { mutateAsync: createMultiRepoAnalyses, isPending: multiLoading } = useCreateMultiRepoAnalyses()
 
@@ -36,6 +38,7 @@ export function NewAnalysisDialog({
   const [step, setStep] = useState<Step>(1)
   const [selectedReq, setSelectedReq] = useState<RequirementListItemResponse | null>(null)
   const [selectedRepos, setSelectedRepos] = useState<RepositoryListItemResponse[]>([])
+  const [selectedDomainPackId, setSelectedDomainPackId] = useState<string | null>(null)
   const [acknowledgePartial, setAcknowledgePartial] = useState(false)
   const [batchSuccess, setBatchSuccess] = useState<MultiRepoImpactAnalysisCreateResponse | null>(null)
   const [batchError, setBatchError] = useState<string | null>(null)
@@ -43,6 +46,7 @@ export function NewAnalysisDialog({
   const canRun = workspace ? canRunAnalysis(workspace.membershipRole) : false
 
   const loading = singleLoading || multiLoading
+  const domainPacks = domainPackData?.items ?? []
 
   const readyRepos = useMemo(
     () =>
@@ -103,6 +107,7 @@ export function NewAnalysisDialog({
       setSelectedRepos([])
     }
     setAcknowledgePartial(false)
+    setSelectedDomainPackId(null)
     setBatchSuccess(null)
     setBatchError(null)
   }
@@ -145,6 +150,7 @@ export function NewAnalysisDialog({
             sourceTargetId,
             requestKey: crypto.randomUUID(),
             allowPartialSnapshot: acknowledgePartial,
+            ...(selectedDomainPackId ? { domainPackId: selectedDomainPackId } : {}),
             derivedFromAnalysisId,
             sourceClarificationId,
           },
@@ -162,6 +168,7 @@ export function NewAnalysisDialog({
         repositoryIds: selectedRepos.map((repo) => repo.id),
         allowPartialSnapshot: acknowledgePartial,
         requestKey: crypto.randomUUID(),
+        ...(selectedDomainPackId ? { domainPackId: selectedDomainPackId } : {}),
       })
 
       setBatchSuccess(result)
@@ -283,6 +290,11 @@ export function NewAnalysisDialog({
             hasPartialRepo={hasPartialRepo}
             acknowledgePartial={acknowledgePartial}
             setAcknowledgePartial={setAcknowledgePartial}
+            domainPacks={domainPacks}
+            domainPacksLoading={domainPacksLoading}
+            domainPacksError={domainPacksError}
+            selectedDomainPackId={selectedDomainPackId}
+            setSelectedDomainPackId={setSelectedDomainPackId}
             batchSuccess={batchSuccess}
             batchError={batchError}
             canProceed={canProceedStep3}

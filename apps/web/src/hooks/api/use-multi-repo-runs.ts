@@ -24,6 +24,7 @@ export function useCreateMultiRepoAnalyses(projectId?: string) {
       repositoryIds: string[]
       allowPartialSnapshot: boolean
       requestKey: string
+      domainPackId?: string
     }) => {
       if (!effectiveProjectId) {
         throw new Error("No active project selected.")
@@ -34,6 +35,7 @@ export function useCreateMultiRepoAnalyses(projectId?: string) {
         repositoryIds: data.repositoryIds,
         allowPartialSnapshot: data.allowPartialSnapshot,
         requestKey: data.requestKey,
+        ...(data.domainPackId ? { domainPackId: data.domainPackId } : {}),
       }
 
       return apiPost<MultiRepoImpactAnalysisCreateResponse>(

@@ -37,6 +37,11 @@ export function ConfirmationStep({
   hasPartialRepo,
   acknowledgePartial,
   setAcknowledgePartial,
+  domainPacks,
+  domainPacksLoading,
+  domainPacksError,
+  selectedDomainPackId,
+  setSelectedDomainPackId,
   batchSuccess,
   batchError,
   canProceed,
@@ -47,6 +52,8 @@ export function ConfirmationStep({
   handleOpenRun,
 }: ConfirmationStepProps) {
   const selectedRepo = selectedRepos.length === 1 ? selectedRepos[0] : null
+  const selectedDomainPack =
+    domainPacks.find((pack) => pack.canonicalId === selectedDomainPackId) ?? null
 
   if (batchSuccess) {
     return (
@@ -155,6 +162,46 @@ export function ConfirmationStep({
                 </p>
               </div>
             )}
+        </div>
+
+        <div className="flex flex-col gap-3 p-4 border border-border/60 rounded-lg bg-surface-muted/30">
+          <div>
+            <label
+              htmlFor="domain-pack-selector"
+              className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider"
+            >
+              Domain pack
+            </label>
+            <select
+              id="domain-pack-selector"
+              className="mt-2 h-9 w-full rounded-md border border-border bg-background px-3 text-[12px] text-foreground shadow-none outline-none focus:border-primary"
+              value={selectedDomainPackId ?? ""}
+              onChange={(event) => setSelectedDomainPackId(event.target.value || null)}
+              disabled={domainPacksLoading || Boolean(domainPacksError)}
+            >
+              <option value="">Backend default</option>
+              {domainPacks.map((pack) => (
+                <option key={pack.canonicalId} value={pack.canonicalId}>
+                  {pack.displayName} · {pack.status}
+                </option>
+              ))}
+            </select>
+          </div>
+          {domainPacksError && (
+            <p className="text-[12px] text-danger">
+              Domain pack registry is unavailable. Backend default will be used.
+            </p>
+          )}
+          {selectedDomainPack?.status === "PARTIAL" && (
+            <div className="flex items-start gap-2 rounded-md border border-warning/25 bg-warning/8 p-3">
+              <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
+              <div className="text-[12px] text-foreground/80 leading-relaxed">
+                <p>Domain hints are limited and require source evidence.</p>
+                <p>This pack supports administrative workflow impact analysis only.</p>
+                <p>It does not provide medical advice, clinical decision support, or compliance validation.</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {batchError && (

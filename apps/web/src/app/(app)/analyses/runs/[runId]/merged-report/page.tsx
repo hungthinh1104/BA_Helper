@@ -3,7 +3,7 @@
 import { use } from "react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { AlertCircle, CheckCircle2, FileWarning, MessageSquareWarning, XCircle } from "lucide-react"
+import { AlertCircle, AlertTriangle, CheckCircle2, FileWarning, MessageSquareWarning, XCircle } from "lucide-react"
 import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
@@ -202,6 +202,20 @@ export default function ApprovedMultiRepoReportPage({
                   <span className="text-[13px] text-warning/80">
                     {data.staleReason || "Child analysis state changed after approval."} Export is blocked until the snapshot is refreshed and approved again.
                   </span>
+                </div>
+              </div>
+            )}
+
+            {data.provenance.domainPack?.domainPackStatus === "PARTIAL" && (
+              <div className="mb-6 flex items-start gap-3 rounded-lg border border-warning/25 bg-warning/8 p-4 text-foreground/80">
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
+                <div className="flex flex-col gap-1 text-[13px] leading-relaxed">
+                  <span className="font-semibold text-foreground">
+                    {data.provenance.domainPack.domainPackId}@{data.provenance.domainPack.domainPackVersion} is PARTIAL
+                  </span>
+                  <span>Domain hints are limited and require source evidence.</span>
+                  <span>This pack supports administrative workflow impact analysis only.</span>
+                  <span>It does not provide medical advice, clinical decision support, or compliance validation.</span>
                 </div>
               </div>
             )}
