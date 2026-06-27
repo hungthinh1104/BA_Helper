@@ -1,4 +1,5 @@
 import type { AppError } from '@ba-helper/shared';
+import { RunScanJobPersistenceStep } from './run-scan-job-persistence.step';
 import { RunScanJobUseCase } from './run-scan-job.usecase';
 import * as fs from 'node:fs/promises';
 import { ScanJobStage, ScanJobStatus } from '@prisma/client';
@@ -126,6 +127,7 @@ describe('RunScanJobUseCase', () => {
   let useCase: RunScanJobUseCase;
   let scanJobRepository: any;
   let artifactRepository: any;
+  let graphRepository: any;
   let eventLogService: any;
   let evidenceRepo: any;
   let prisma: any;
@@ -152,6 +154,7 @@ describe('RunScanJobUseCase', () => {
         repository: { canonicalUrl: 'https://github.com/owner/repo' },
       }),
       updateState: jest.fn().mockResolvedValue(undefined),
+      updateDiagnostics: jest.fn().mockResolvedValue(undefined),
     };
 
     artifactRepository = {
@@ -184,25 +187,87 @@ describe('RunScanJobUseCase', () => {
       },
       scanJob: { update: jest.fn().mockResolvedValue(undefined) },
     };
+    prisma.$transaction = jest.fn(async (callback: (tx: any) => unknown) =>
+      callback(prisma),
+    );
 
     queueService = {
       enqueueSnapshotEmbedding: jest.fn().mockResolvedValue(undefined),
     };
 
-    const graphRepository = {
+    graphRepository = {
       createDependencyEdges: jest.fn().mockResolvedValue(undefined),
     } as any;
+    const persistenceStep = new RunScanJobPersistenceStep(
+      prisma,
+      artifactRepository,
+      graphRepository,
+      evidenceRepo,
+      scanJobRepository,
+    );
 
     useCase = new RunScanJobUseCase(
       scanJobRepository,
-      artifactRepository,
-      graphRepository,
       eventLogService,
-      evidenceRepo,
-      prisma,
       queueService,
+      persistenceStep,
     );
   });
+
+  const mockSuccessfulTypeScriptScan = (params: {
+    commitSha?: string;
+    tempDir?: string;
+    artifacts?: any[];
+    dependencyEdges?: any[];
+  } = {}) => {
+    const tempDir = params.tempDir ?? '/tmp/ba-scan-success';
+    (fs.mkdtemp as jest.Mock).mockResolvedValue(tempDir);
+    (fs.rm as jest.Mock).mockResolvedValue(undefined);
+    analyzer.GitHubUrlValidator.validate.mockReturnValue({ isValid: true });
+    analyzer.GitRepositoryFetcher.fetch.mockResolvedValue({
+      commitSha: params.commitSha ?? '0123456789abcdef0123456789abcdef01234567',
+    });
+    analyzer.FrameworkDetector.detect.mockResolvedValue({
+      isSupported: true,
+      language: 'typescript',
+      framework: 'nestjs',
+    });
+    analyzer.RepositoryProfileDetector.detect.mockResolvedValue({
+      domain: 'BOOKING',
+      language: 'TYPESCRIPT',
+      framework: 'NESTJS',
+      architectureStyle: 'MODULAR_MONOLITH',
+      sourceRoots: ['src'],
+      testRoots: ['test'],
+      diagnostics: { detectedMarkers: ['NESTJS'], confidence: 0.9 },
+      profileVersion: 'repo-profile@0.1.0',
+    });
+    analyzer.SafeFileEnumerator.mockImplementation(() => ({
+      enumerate: jest.fn().mockResolvedValue({
+        tsFiles: [],
+        allFiles: [],
+        diagnostics: [],
+        isPartial: false,
+      }),
+    }));
+    analyzer.scanProject.mockReturnValue({
+      analyzerVersion: '0.2.0',
+      artifacts: params.artifacts ?? [
+        {
+          stableId: 'api:booking.controller.cancel',
+          type: 'API_ROUTE',
+          filePath: 'src/booking/booking.controller.ts',
+          symbolName: 'BookingController.cancel',
+          startLine: 10,
+          endLine: 20,
+          excerpt: 'cancel() {}',
+          contentHash: 'hash-123',
+        },
+      ],
+      dependencyEdges: params.dependencyEdges ?? [],
+      coverage: { status: 'READY', skippedSummary: {} },
+    });
+  };
 
   it('removes temp workspace after a successful secure clone scan', async () => {
     (fs.mkdtemp as jest.Mock).mockResolvedValue('/tmp/ba-scan-success');
@@ -265,6 +330,7 @@ describe('RunScanJobUseCase', () => {
           universalKind: expect.any(String),
         }),
       ]),
+      prisma,
     );
 
     expect(fs.rm).toHaveBeenCalledWith('/tmp/ba-scan-success', {
@@ -276,7 +342,7 @@ describe('RunScanJobUseCase', () => {
       status: ScanJobStatus.COMPLETED,
       stage: ScanJobStage.DONE,
       progress: 100,
-    });
+    }, prisma);
     expect(eventLogService.recordEvent).toHaveBeenLastCalledWith(
       expect.objectContaining({
         eventType: 'SCAN_COMPLETED',
@@ -293,7 +359,7 @@ describe('RunScanJobUseCase', () => {
     );
   });
 
-  it('currently ignores scanner dependencyEdges while persisting artifacts and evidence, and enqueues embedding', async () => {
+  it('persists scanner artifacts, evidence, lexical-ready state, and enqueues embedding after commit', async () => {
     (fs.mkdtemp as jest.Mock).mockResolvedValue('/tmp/ba-scan-deps');
     (fs.rm as jest.Mock).mockResolvedValue(undefined);
     analyzer.GitHubUrlValidator.validate.mockReturnValue({ isValid: true });
@@ -304,7 +370,6 @@ describe('RunScanJobUseCase', () => {
       enumerate: jest.fn().mockResolvedValue({ tsFiles: [], allFiles: [], diagnostics: [], isPartial: false }),
     }));
     
-    // Scanner mock returns dependencyEdges, but usecase currently ignores them
     analyzer.scanProject.mockReturnValue({
       analyzerVersion: '0.2.0',
       artifacts: [
@@ -319,9 +384,7 @@ describe('RunScanJobUseCase', () => {
           contentHash: 'hash-123',
         },
       ],
-      dependencyEdges: [
-        { sourceStableId: 'api:booking.controller.cancel', targetStableId: 'api:booking.service.cancel', type: 'CALLS' }
-      ],
+      dependencyEdges: [],
       coverage: { status: 'READY', skippedSummary: {} },
     });
 
@@ -336,7 +399,7 @@ describe('RunScanJobUseCase', () => {
         filePath: 'src/booking/booking.controller.ts',
         contentHash: 'hash-123',
       })
-    ]);
+    ], prisma);
 
     // 2. Assert exact domain-critical fields in Evidence persistence
     expect(evidenceRepo.upsertMany).toHaveBeenCalledWith([
@@ -346,7 +409,7 @@ describe('RunScanJobUseCase', () => {
         sourcePath: 'src/booking/booking.controller.ts',
         isRedacted: false,
       })
-    ]);
+    ], prisma);
 
     // 3. Assert snapshot is marked LEXICAL_READY
     expect(prisma.repositorySnapshot.update).toHaveBeenCalledWith(
@@ -358,9 +421,86 @@ describe('RunScanJobUseCase', () => {
 
     // 4. Assert enqueueSnapshotEmbedding is called
     expect(queueService.enqueueSnapshotEmbedding).toHaveBeenCalledWith('snapshot-1');
+  });
 
-    // Note: dependencyEdges are currently ignored. There is no dependencyEdgeRepository usage.
-    // The test naturally passes despite dependencyEdges being present in the scanner payload.
+  it('runs clone and scanner work outside the persistence transaction', async () => {
+    const milestones: string[] = [];
+    mockSuccessfulTypeScriptScan();
+    analyzer.GitRepositoryFetcher.fetch.mockImplementation(async () => {
+      milestones.push('clone');
+      return { commitSha: 'new-commit' };
+    });
+    analyzer.scanProject.mockImplementation((input: any) => {
+      milestones.push('scan');
+      return {
+        analyzerVersion: '0.2.0',
+        artifacts: [
+          {
+            stableId: 'api:booking.controller.cancel',
+            type: 'API_ROUTE',
+            filePath: 'src/booking/booking.controller.ts',
+            symbolName: 'BookingController.cancel',
+            startLine: 10,
+            endLine: 20,
+            excerpt: 'cancel() {}',
+            contentHash: 'hash-123',
+          },
+        ],
+        dependencyEdges: [],
+        coverage: input.coverage,
+      };
+    });
+    prisma.$transaction.mockImplementation(async (callback: (tx: any) => unknown) => {
+      milestones.push('tx:start');
+      const result = await callback(prisma);
+      milestones.push('tx:commit');
+      return result;
+    });
+    queueService.enqueueSnapshotEmbedding.mockImplementation(async () => {
+      milestones.push('enqueue');
+    });
+
+    await useCase.execute({ jobId: 'job-1' });
+
+    expect(milestones).toEqual(['clone', 'scan', 'tx:start', 'tx:commit', 'enqueue']);
+  });
+
+  it('marks scan completed inside the persistence transaction before embedding enqueue', async () => {
+    mockSuccessfulTypeScriptScan();
+
+    await useCase.execute({ jobId: 'job-1' });
+
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(scanJobRepository.updateState).toHaveBeenCalledWith({
+      jobId: 'job-1',
+      status: ScanJobStatus.COMPLETED,
+      stage: ScanJobStage.DONE,
+      progress: 100,
+    }, prisma);
+    expect(queueService.enqueueSnapshotEmbedding).toHaveBeenCalledWith('snapshot-1');
+  });
+
+  it('does not enqueue embedding when scan persistence transaction fails', async () => {
+    mockSuccessfulTypeScriptScan();
+    prisma.$transaction.mockRejectedValueOnce(new Error('commit failed'));
+
+    await expect(useCase.execute({ jobId: 'job-1' })).rejects.toThrow('commit failed');
+
+    expect(queueService.enqueueSnapshotEmbedding).not.toHaveBeenCalled();
+    expect(eventLogService.recordEvent).not.toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: 'SCAN_COMPLETED' }),
+    );
+    const finalState = scanJobRepository.updateState.mock.calls.at(-1)?.[0];
+    expect(finalState?.status).toBe(ScanJobStatus.FAILED);
+    expect(scanJobRepository.updateDiagnostics).toHaveBeenCalledWith({
+      jobId: 'job-1',
+      diagnostics: expect.arrayContaining([
+        expect.objectContaining({
+          code: 'SCAN_FAILED',
+          message: 'commit failed',
+        }),
+      ]),
+    });
   });
 
   it('removes temp workspace on clone failure without masking the original error', async () => {
