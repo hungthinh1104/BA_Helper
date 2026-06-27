@@ -87,3 +87,6 @@ jobs:
 
       - name: Golden path demo
         run: pnpm demo:golden-path
+
+      - name: Multi-repo golden path demo
+        run: pnpm demo:multi-repo-golden-path

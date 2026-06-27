@@ -42,11 +42,12 @@ Use this checklist before publishing a portfolio walkthrough or recording a live
 - [x] `pnpm lint`
 - [x] `pnpm test:e2e`
 - [x] `pnpm demo:golden-path`
+- [x] `pnpm demo:multi-repo-golden-path`
 
 If a command is skipped, write the reason in the demo notes before publishing.
 Run DB-backed suites sequentially; `pnpm test:e2e` and `pnpm demo:golden-path`
 both reset/use the isolated test database and should not be launched in
-parallel.
+parallel. The multi-repo golden path follows the same rule.
 
 ## Known Limits To State
 
@@ -69,6 +70,7 @@ pnpm test               PASS
 pnpm lint               PASS
 pnpm test:e2e           PASS
 pnpm demo:golden-path   PASS
+pnpm demo:multi-repo-golden-path PASS
 ```
 
 Operational note:
@@ -76,4 +78,5 @@ Operational note:
 ```text
 Do not run DB-backed suites in parallel. `pnpm test:e2e` and
 `pnpm demo:golden-path` both reset/use the isolated test database.
+`pnpm demo:multi-repo-golden-path` must also run separately.
 ```

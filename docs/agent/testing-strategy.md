@@ -112,14 +112,22 @@ the fixture explicitly encodes that behavior.
 ### Local execution note
 
 Do not run the full Jest suite and `pnpm demo:golden-path` concurrently when
-they share the same test database or schema. Both paths reset and seed test
-data, so concurrent execution can create false failures from duplicate fixed
-fixture IDs. Run them as separate commands when validating a release or phase
-handoff:
+they share the same test database or schema. The same rule applies to
+`pnpm demo:multi-repo-golden-path`. These paths reset and seed test data, so
+concurrent execution can create false failures from duplicate fixed fixture
+IDs. Run them as separate commands when validating a release or phase handoff:
 
 ```bash
 pnpm test
 pnpm demo:golden-path
+pnpm demo:multi-repo-golden-path
+```
+
+For a local release-candidate pass with Docker available, prefer the sequential
+wrapper. It starts Postgres/Redis, applies migrations, then runs the checks:
+
+```bash
+pnpm verify:stability
 ```
 
 ### Scanner fixture tests

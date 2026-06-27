@@ -74,6 +74,12 @@ Use this checklist before a demo, handoff, or release candidate tag.
 - `pnpm --dir apps/api smoke:public-github:real-llm` (explicit manual run)
 - `pnpm --dir apps/api smoke:public-github:real-path` (explicit manual run)
 
+For local release-candidate verification with Docker available, run:
+
+```bash
+pnpm verify:stability
+```
+
 Run full Jest, golden-path demos, and public smoke commands separately when
 they share the same database/schema. They reset and seed test data and can
 produce false failures if run concurrently.

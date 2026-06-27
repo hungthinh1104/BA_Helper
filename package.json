@@ -23,7 +23,8 @@
     "test:integration": "jest --config jest.integration.config.ts",
     "test:e2e": "jest --config jest.e2e.config.ts --runInBand",
     "test:e2e:watch": "jest --config jest.e2e.config.ts --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "verify:stability": "pnpm infra:up && pnpm db:migrate && pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e && pnpm demo:golden-path && pnpm demo:multi-repo-golden-path"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
