@@ -1,0 +1,16 @@
+{
+  "domain": "healthcare",
+  "locale": "en",
+  "status": "foundation",
+  "version": "1.0.0",
+  "terms": {
+    "appointment_scheduling": "appointment scheduling",
+    "patient_record": "patient record",
+    "provider": "provider",
+    "patient_notification": "patient notification",
+    "insurance_claim": "insurance claim",
+    "billing_record": "billing record",
+    "prior_authorization": "prior authorization",
+    "lab_order_tracking": "lab/order tracking"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "domain": "healthcare",
+  "locale": "vi",
+  "status": "foundation",
+  "version": "1.0.0",
+  "terms": {
+    "appointment_scheduling": "lịch hẹn",
+    "patient_record": "hồ sơ bệnh nhân",
+    "provider": "nhân sự cung cấp dịch vụ y tế",
+    "patient_notification": "thông báo cho bệnh nhân",
+    "insurance_claim": "yêu cầu bảo hiểm",
+    "billing_record": "hồ sơ thanh toán",
+    "prior_authorization": "phê duyệt trước",
+    "lab_order_tracking": "theo dõi chỉ định/xét nghiệm"
+  }
+}

@@ -13,6 +13,7 @@ import { rentalPartialEvaluationCases } from './rental-partial';
 export { bookingStableEvaluationCases } from './booking-stable';
 export { generalFallbackEvaluationCases } from './general-fallback';
 export { rentalPartialEvaluationCases } from './rental-partial';
+export { healthcarePartialEvaluationCases } from './healthcare-partial';
 
 export const ALL_EVALUATION_CASES = [
   case01,

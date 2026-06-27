@@ -1,5 +1,6 @@
 import { DomainPackRegistry } from '../../apps/api/src/modules/domain-pack/application/domain-pack.registry';
 import { BookingDomainPack } from '../../apps/api/src/modules/domain-pack/packs/booking.v0.1.0';
+import { HealthcareDomainPack } from '../../apps/api/src/modules/domain-pack/packs/healthcare.v0.1.0';
 import { RentalDomainPack } from '../../apps/api/src/modules/domain-pack/packs/rental.v0.1.0';
 
 describe('Domain Pack Concept Matching', () => {
@@ -123,6 +124,38 @@ describe('Domain Pack Concept Matching', () => {
       expect(pack2.id).toBe('general');
       expect(pack3.id).toBe('general');
       expect(pack4.id).toBe('general');
+    });
+  });
+
+  describe('healthcare@0.1.0 (partial)', () => {
+    const pack = HealthcareDomainPack;
+
+    it('is explicitly partial with admin-workflow glossary metadata', () => {
+      expect(pack.status).toBe('PARTIAL');
+      expect(pack.glossaryMetadata.map((item) => item.locale)).toEqual(['en', 'vi']);
+      expect(pack.glossaryMetadata.map((item) => item.termCount)).toEqual([8, 8]);
+    });
+
+    it('maps appointment reschedule to admin workflow concepts', () => {
+      const keys = registry.matchConcepts(
+        'reschedule appointment and send patient notification to provider',
+        pack,
+      );
+
+      expect(keys).toEqual([
+        'appointment_scheduling',
+        'provider',
+        'patient_notification',
+      ]);
+    });
+
+    it('does not imply clinical support from diagnosis or treatment wording', () => {
+      const keys = registry.matchConcepts(
+        'diagnosis treatment recommendation clinical decision support',
+        pack,
+      );
+
+      expect(keys).toEqual([]);
     });
   });
 });
