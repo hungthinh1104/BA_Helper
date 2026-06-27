@@ -26,6 +26,7 @@ DELETE /api/v1/projects/:projectId/members/:userId
 GET  /api/v1/workspace/current
 POST /api/v1/workspace/select-project
 GET  /api/v1/system/health
+GET  /api/v1/domain-packs
 
 GET  /api/v1/projects/:projectId/repositories
 GET  /api/v1/projects/:projectId/repositories/:repositoryId
@@ -71,6 +72,39 @@ GET  /api/v1/impact-analyses/:analysisId/approved-report/export.md
 GET  /api/v1/impact-analyses/:analysisId/approved-report/export.pdf
 GET  /api/v1/impact-analyses/:analysisId/final-reviewed-report?locale=en|vi
 ```
+
+Domain pack registry responses are backend-authored:
+
+```json
+{
+  "items": [
+    {
+      "id": "healthcare",
+      "version": "0.1.0",
+      "canonicalId": "healthcare@0.1.0",
+      "displayName": "Healthcare Admin Workflows (PARTIAL)",
+      "status": "PARTIAL",
+      "description": "Partial domain pack for healthcare administrative workflows.",
+      "supportedConcepts": [
+        { "key": "appointment_scheduling", "label": "Appointment Scheduling" }
+      ],
+      "knownLimits": [
+        "This pack supports administrative workflow impact analysis only."
+      ],
+      "requiresExplicitSelection": true,
+      "aliases": ["healthcare", "healthcare@0.1.0"],
+      "glossaryMetadata": [
+        { "locale": "en", "status": "foundation", "version": "1.0.0", "termCount": 8 }
+      ]
+    }
+  ]
+}
+```
+
+Analysis create requests may include `domainPackId`. The frontend must send a
+value returned by `GET /api/v1/domain-packs`; the backend resolves and persists
+canonical metadata. Omitting `domainPackId` preserves repository-profile or
+`general@0.0.0` fallback behavior.
 
 Analysis workspace responses expose backend-authored domain capability metadata
 when an analysis has applied a domain pack:

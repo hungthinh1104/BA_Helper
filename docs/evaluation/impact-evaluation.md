@@ -170,6 +170,33 @@ Known limits:
 - No scanner, retrieval, or LLM behavior is expanded by P7E.
 - This is not a broad multi-domain product claim.
 
+## Healthcare Admin PARTIAL Coverage
+The first explicit-select healthcare profile is `healthcare@0.1.0` with
+`PARTIAL` status. The display language should be **Healthcare Admin Workflows
+(PARTIAL)**. Do not describe this as clinical healthcare intelligence, medical
+workflow analysis, HIPAA readiness, or compliance validation.
+
+The partial healthcare admin set covers:
+
+- appointment rescheduling affecting appointment state, provider availability,
+  and patient notification
+- insurance claim status affecting claim, billing-record, and patient balance
+  notification workflows
+- prior authorization decision affecting scheduling or lab/order tracking
+  workflow and producing policy unknowns when source evidence is weak
+
+Known limits:
+
+- `healthcare@0.1.0` is explicit-select only; scanner profile strings must not
+  auto-select it.
+- It supports administrative workflow impact analysis only.
+- It does not provide medical advice, clinical decision support,
+  diagnosis/treatment reasoning, HIPAA/compliance validation, or PHI detection
+  beyond existing redaction/input-quality rules.
+- Healthcare glossary, retrieval hints, risk templates, QA templates, and
+  unknown templates cannot satisfy evidence requirements or create
+  `EVIDENCED` claims.
+
 ## How to Add a New Case
 1. Ensure the requirement matches an existing fixture in `tests/fixtures/`.
 2. Create a new `.ts` file under `tests/evaluation/cases/`.

@@ -74,6 +74,10 @@ generated reports.
 - Every public domain pack must expose status: `STABLE`, `PARTIAL`,
   `EXPERIMENTAL`, or `FALLBACK`.
 - `booking@0.1.0` is the current `STABLE` profile.
+- `healthcare@0.1.0` is a `PARTIAL` explicit-select profile for healthcare
+  administrative workflows only; it is not medical advice, clinical decision
+  support, diagnosis/treatment reasoning, HIPAA/compliance validation, or PHI
+  detection.
 - `rental@0.1.0` is a `PARTIAL` profile with bounded fixture-backed coverage;
   it must not be described as full rental-domain support.
 - `general@0.0.0` is the safe `FALLBACK` profile and must not contain

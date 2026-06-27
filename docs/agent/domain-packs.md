@@ -55,6 +55,7 @@ Current profiles:
 | --- | --- | --- |
 | `booking@0.1.0` | `STABLE` | MVP Booking / Payment / Refund domain with P7C fixture-backed coverage for cancellation, refund, double-refund prevention, inventory release, and payment state. |
 | `general@0.0.0` | `FALLBACK` | Empty safe default with P7D defensive coverage; no booking-specific hints. |
+| `healthcare@0.1.0` | `PARTIAL` | Explicit-select healthcare administrative workflow profile for scheduling, records, claims, billing, authorization, and order tracking. No clinical or compliance claim. |
 | `rental@0.1.0` | `PARTIAL` | Bounded rental lifecycle profile with P7E fixture-backed coverage for deposits, room availability, and contract cancellation. |
 
 Do not claim broad multi-domain support until each new profile has status,
@@ -70,15 +71,20 @@ templates, and no glossary metadata. Fallback diagnostics may expose bounded
 metadata such as id, version, status, selectedBy, and counts, but must not
 expose template bodies, prompt payloads, source code, or evidence excerpts.
 
+`healthcare@0.1.0` `PARTIAL` means the registry can identify bounded healthcare
+administrative workflow terminology and evaluation cases. It does not provide
+medical advice, clinical decision support, diagnosis/treatment reasoning, HIPAA
+or compliance validation, or PHI detection beyond existing input-quality and
+redaction rules. Healthcare is explicit-select only; scanner profile strings
+must not auto-select it.
+
 `rental@0.1.0` `PARTIAL` means the registry can identify bounded rental
 terminology and evaluation cases, but the product does not claim full rental
 domain support. Current coverage is limited to deposit payment consistency,
 room availability through a booking request, and contract cancellation effects
 on payment records plus tenant/landlord notification. Maintenance request terms
-exist only as terminology/noise coverage in this revision. Rental is not
-auto-detected by the scanner and is not user-selectable through the analysis
-create API in this revision; it is a bounded registry/evaluation capability
-until an explicit runtime-selection phase is approved.
+exist only as terminology/noise coverage in this revision. Rental is explicit-
+select only and is not auto-detected by the scanner.
 
 ## Glossary Metadata
 
@@ -97,10 +103,37 @@ packages/domain-packs/rental/en.glossary.json
 packages/domain-packs/rental/vi.glossary.json
 ```
 
+Healthcare admin workflows have static English and Vietnamese glossary assets
+under:
+
+```text
+packages/domain-packs/healthcare/profile.json
+packages/domain-packs/healthcare/en.glossary.json
+packages/domain-packs/healthcare/vi.glossary.json
+```
+
 The registry exposes only metadata for these assets: locale, glossary status,
 version, and term count. Glossary assets remain terminology references. Domain
 profile additions do not introduce Vietnamese runtime output, scanner changes,
 or new AI behavior.
+
+Runtime selection is backend-owned. API clients may send `domainPackId` using a
+backend registry value such as `healthcare@0.1.0`; the backend persists resolved
+canonical metadata on the analysis:
+
+```json
+{
+  "requestedDomainPackId": "healthcare",
+  "resolvedDomainPackId": "healthcare",
+  "resolvedDomainPackVersion": "0.1.0",
+  "resolvedDomainPackStatus": "PARTIAL",
+  "selectedBy": "EXPLICIT",
+  "resolvedAt": "2026-06-27T00:00:00.000Z"
+}
+```
+
+The worker and report renderer use this persisted resolved metadata. They must
+not reinterpret a transient queue payload or frontend label.
 
 Workspace and report UI must render capability status from backend-authored
 domain-pack metadata. Frontend components may localize labels for `STABLE`,
