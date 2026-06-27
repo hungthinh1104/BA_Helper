@@ -20,7 +20,24 @@ describe('domain pack governance validation', () => {
     expect(result.digests.every((item) => item.digest.startsWith('sha256:'))).toBe(true);
   });
 
-  it('fails duplicate pack ids', () => {
+  it('keeps short aliases mapped to exactly one canonical pack', () => {
+    const shortAliases = new Map<string, string>();
+    for (const entry of BUILT_IN_DOMAIN_PACK_CATALOG) {
+      const canonicalId = `${entry.pack.id}@${entry.pack.version}`;
+      for (const alias of entry.aliases) {
+        if (alias.includes('@')) {
+          continue;
+        }
+        const existing = shortAliases.get(alias);
+        expect(existing ?? canonicalId).toBe(canonicalId);
+        shortAliases.set(alias, canonicalId);
+      }
+    }
+
+    expect(shortAliases.get('healthcare')).toBe('healthcare@0.1.0');
+  });
+
+  it('fails duplicate canonical pack ids', () => {
     const duplicate = cloneEntry(BUILT_IN_DOMAIN_PACK_CATALOG[0]);
 
     const result = validateDomainPackCatalog([
@@ -30,12 +47,31 @@ describe('domain pack governance validation', () => {
 
     expect(result.errors).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ code: 'DUPLICATE_DOMAIN_PACK_ID' }),
+        expect.objectContaining({ code: 'DUPLICATE_DOMAIN_PACK_VERSION' }),
       ]),
     );
   });
 
-  it('fails duplicate aliases across packs', () => {
+  it('enforces one active version per domain id for now', () => {
+    const nextHealthcare = cloneEntry(BUILT_IN_DOMAIN_PACK_CATALOG[3]);
+    nextHealthcare.pack.version = '0.2.0';
+    nextHealthcare.aliases = ['healthcare-next', 'healthcare@0.2.0'];
+
+    const result = validateDomainPackCatalog([
+      BUILT_IN_DOMAIN_PACK_CATALOG[3],
+      nextHealthcare,
+    ]);
+
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'MULTIPLE_ACTIVE_DOMAIN_PACK_VERSIONS_UNSUPPORTED',
+        }),
+      ]),
+    );
+  });
+
+  it('fails duplicate short aliases across active packs', () => {
     const duplicateAlias = cloneEntry(BUILT_IN_DOMAIN_PACK_CATALOG[1]);
     duplicateAlias.aliases = ['general'];
 

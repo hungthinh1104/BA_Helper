@@ -42,7 +42,7 @@ export function validateDomainPackCatalog(
   options: DomainPackGovernanceOptions = {},
 ): DomainPackGovernanceResult {
   const errors: DomainPackGovernanceError[] = [];
-  const seenPackIds = new Map<string, string>();
+  const seenActiveDomainIds = new Map<string, string>();
   const seenCanonicalIds = new Set<string>();
   const seenAliases = new Map<string, string>();
 
@@ -55,18 +55,17 @@ export function validateDomainPackCatalog(
     validateHealthcareSafety(entry, errors);
     validateGlossaryMetadata(entry.pack, options, errors);
 
-    const existingPackVersion = seenPackIds.get(entry.pack.id);
-    if (existingPackVersion) {
+    const canonicalId = `${entry.pack.id}@${entry.pack.version}`;
+    const existingCanonicalId = seenActiveDomainIds.get(entry.pack.id);
+    if (existingCanonicalId && existingCanonicalId !== canonicalId) {
       errors.push({
-        code: 'DUPLICATE_DOMAIN_PACK_ID',
-        message: `Duplicate domain pack id "${entry.pack.id}" for versions ${existingPackVersion} and ${entry.pack.version}.`,
+        code: 'MULTIPLE_ACTIVE_DOMAIN_PACK_VERSIONS_UNSUPPORTED',
+        message: `Current registry supports one active version per domain id. ${entry.pack.id} maps to both ${existingCanonicalId} and ${canonicalId}.`,
         packId: entry.pack.id,
       });
-    } else {
-      seenPackIds.set(entry.pack.id, entry.pack.version);
     }
+    seenActiveDomainIds.set(entry.pack.id, canonicalId);
 
-    const canonicalId = `${entry.pack.id}@${entry.pack.version}`;
     if (seenCanonicalIds.has(canonicalId)) {
       errors.push({
         code: 'DUPLICATE_DOMAIN_PACK_VERSION',

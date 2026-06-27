@@ -155,9 +155,9 @@ Report provenance must include the resolved domain pack identity:
 }
 ```
 
-`domainPackManifestDigest` and `domainPackRegistryVersion` are reserved for the
-manifest-source hardening pass. Until that pass captures real values, they stay
-nullable; do not populate them with placeholder digest values.
+`domainPackManifestDigest` and `domainPackRegistryVersion` are nullable for
+legacy reports and for records created before manifest-source hardening. Do not
+populate them with placeholder values.
 
 Workspace and report UI must render capability status from backend-authored
 domain-pack metadata. Frontend components may localize labels for `STABLE`,
@@ -179,7 +179,8 @@ The check fails hard for:
 
 ```text
 invalid pack id or semver version
-duplicate pack id or canonical version
+multiple active versions for one domain id
+duplicate canonical pack version
 duplicate alias across packs
 duplicate concept key inside one pack
 PARTIAL pack without known limits
@@ -188,9 +189,46 @@ healthcare/admin pack without medical/clinical/compliance safety limits
 glossary termCount mismatch
 ```
 
-Manifest digests are deterministic hashes over canonical pack and registry
-content. They intentionally exclude runtime-only values such as `resolvedAt`,
-`selectedBy`, environment variables, DB state, and registry response order.
+Current registry policy:
+
+```text
+BA Helper supports one active version per domain id in the built-in registry.
+Short aliases such as "healthcare" must resolve to exactly one canonical pack
+version.
+Parallel active versions for the same domain id are not enabled yet.
+```
+
+Version bumps are required when behavior-affecting or materially user-visible
+pack semantics change:
+
+```text
+concepts
+retrieval hints
+risk templates
+QA templates
+unknown templates
+glossary semantics or term counts
+safety limits or known limits
+```
+
+Current `manifestDigest` is a deterministic hash over canonical pack content
+plus registry metadata such as aliases, display name, known limits, and explicit
+selection policy. It intentionally excludes runtime-only values such as
+`resolvedAt`, `selectedBy`, environment variables, DB state, and registry
+response order. The digest may change for both analytical content changes and
+presentation or registry metadata changes.
+
+Future production policy may split this into:
+
+```text
+executionDigest  concepts, retrieval hints, templates, glossary metadata
+registryDigest   aliases, display name, status, known limits, selection policy
+```
+
+Future parallel-version support should allow the same `pack.id` across
+different versions, reject only duplicate `${id}@${version}`, and keep each
+short alias mapped to one active version unless alias resolution explicitly
+supports versioned channels.
 
 Do not mutate an existing released domain pack version silently. If concepts,
 templates, glossary semantics, aliases, limits, or other manifest semantics
