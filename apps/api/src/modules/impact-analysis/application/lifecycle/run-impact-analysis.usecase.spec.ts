@@ -257,6 +257,50 @@ describe('RunImpactAnalysisUseCase', () => {
     expect(eventLogService.recordEvent).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'ANALYSIS_FAILED' }));
   });
 
+  it('uses persisted canonical domain pack columns on retry when job payload has no domain', async () => {
+    const analysis = {
+      id: 'a1',
+      status: 'QUEUED',
+      stage: 'WAITING',
+      progress: 0,
+      requestedDomainPackId: 'healthcare',
+      resolvedDomainPackId: 'healthcare',
+      resolvedDomainPackVersion: '0.1.0',
+      resolvedDomainPackStatus: 'PARTIAL',
+      domainPackSelectedBy: 'EXPLICIT',
+      domainPackResolvedAt: new Date('2026-06-27T00:00:00.000Z'),
+      metadata: null,
+      snapshot: {
+        id: 's1',
+        repositoryId: 'r1',
+        analyzerVersion: '1.0',
+        diagnostics: [],
+        repository: { projectId: 'p1' },
+        profile: { domain: 'BOOKING' },
+      },
+      requirementRevision: {
+        rawText: 'reschedule appointment',
+        requirement: { projectId: 'p1' },
+      },
+    };
+    impactRepo.findById.mockResolvedValue(analysis as any);
+    artifactRepo.listBySnapshot.mockRejectedValue(new Error('stop after selection'));
+
+    await expect(useCase.execute({ analysisId: 'a1' })).rejects.toThrow(
+      'stop after selection',
+    );
+
+    expect(domainPackRegistry.selectResolvedPack).toHaveBeenCalledWith({
+      requestedDomainPackId: 'healthcare',
+      resolvedDomainPackId: 'healthcare',
+      resolvedDomainPackVersion: '0.1.0',
+      resolvedDomainPackStatus: 'PARTIAL',
+      selectedBy: 'EXPLICIT',
+      resolvedAt: '2026-06-27T00:00:00.000Z',
+    });
+    expect(domainPackRegistry.selectPack).not.toHaveBeenCalled();
+  });
+
   it('downgrades evidenced insights when no persisted evidence can be resolved', async () => {
     const analysis = {
       id: 'a1',

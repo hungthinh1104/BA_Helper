@@ -9,6 +9,7 @@ import { ClarificationRepository } from '../../../clarification/infrastructure/c
 import { ReviewDecisionRepository } from '../../../impact-analysis/infrastructure/review-decision.repository';
 import { GetImpactDiffUseCase } from '../../../impact-analysis/application/queries/get-impact-diff.usecase';
 import { DEFAULT_REPORT_LOCALE, ReportLocale } from './report-localization';
+import type { ApprovedReportMetadata } from '../../domain/approved-report-metadata';
 
 @Injectable()
 export class ReviewedSnapshotReportContextAdapter {
@@ -106,7 +107,78 @@ export class ReviewedSnapshotReportContextAdapter {
         generatedAt: new Date().toISOString(),
         finalizedAt: analysis.updatedAt.toISOString(),
         staleStatusAtReadTime: false, // Snapshot is never stale at read time
+        domainPack: readDomainPackProvenance(analysis),
       },
     };
   }
+}
+
+function readDomainPackProvenance(analysis: {
+  resolvedDomainPackId?: string | null;
+  resolvedDomainPackVersion?: string | null;
+  resolvedDomainPackStatus?: string | null;
+  domainPackSelectedBy?: string | null;
+  metadata?: unknown;
+}): ApprovedReportMetadata['domainPack'] {
+  if (
+    typeof analysis.resolvedDomainPackId === 'string' &&
+    typeof analysis.resolvedDomainPackVersion === 'string' &&
+    isDomainPackStatus(analysis.resolvedDomainPackStatus) &&
+    isDomainPackSelectedBy(analysis.domainPackSelectedBy)
+  ) {
+    return {
+      domainPackId: analysis.resolvedDomainPackId,
+      domainPackVersion: analysis.resolvedDomainPackVersion,
+      domainPackStatus: analysis.resolvedDomainPackStatus,
+      selectedBy: analysis.domainPackSelectedBy,
+    };
+  }
+
+  const metadata = analysis.metadata;
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return undefined;
+  }
+
+  const provenance = (metadata as Record<string, unknown>).reportProvenance;
+  if (!provenance || typeof provenance !== 'object' || Array.isArray(provenance)) {
+    return undefined;
+  }
+
+  const data = provenance as Record<string, unknown>;
+  if (
+    typeof data.domainPackId !== 'string' ||
+    typeof data.domainPackVersion !== 'string' ||
+    !isDomainPackStatus(data.domainPackStatus) ||
+    !isDomainPackSelectedBy(data.selectedBy)
+  ) {
+    return undefined;
+  }
+
+  return {
+    domainPackId: data.domainPackId,
+    domainPackVersion: data.domainPackVersion,
+    domainPackStatus: data.domainPackStatus,
+    selectedBy: data.selectedBy,
+  };
+}
+
+function isDomainPackStatus(
+  value: unknown,
+): value is NonNullable<ApprovedReportMetadata['domainPack']>['domainPackStatus'] {
+  return (
+    value === 'STABLE' ||
+    value === 'PARTIAL' ||
+    value === 'EXPERIMENTAL' ||
+    value === 'FALLBACK'
+  );
+}
+
+function isDomainPackSelectedBy(
+  value: unknown,
+): value is NonNullable<ApprovedReportMetadata['domainPack']>['selectedBy'] {
+  return (
+    value === 'EXPLICIT' ||
+    value === 'REPOSITORY_PROFILE' ||
+    value === 'FALLBACK'
+  );
 }

@@ -194,6 +194,19 @@ enum TraceabilityLinkBasis {
   INFERRED
 }
 
+enum DomainPackCapabilityStatus {
+  STABLE
+  PARTIAL
+  EXPERIMENTAL
+  FALLBACK
+}
+
+enum DomainPackSelectionSource {
+  EXPLICIT
+  REPOSITORY_PROFILE
+  FALLBACK
+}
+
 enum DependencyEdgeType {
   CALLS
   REFERENCES
@@ -449,23 +462,32 @@ model RequirementRevision {
 }
 
 model MultiRepoAnalysisRun {
-  id                    String                 @id @default(uuid())
-  projectId             String
-  requirementRevisionId String
-  createdByUserId       String                 @db.Uuid
-  requestKey            String
-  project               Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  requirementRevision   RequirementRevision    @relation(fields: [requirementRevisionId], references: [id], onDelete: Cascade)
-  createdByUser         User                   @relation("CreatedMultiRepoRuns", fields: [createdByUserId], references: [id], onDelete: Cascade)
-  analyses              ImpactAnalysis[]
-  approvedMergedReport  MergedMultiRepoReport?
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
+  id                        String                     @id @default(uuid())
+  projectId                 String
+  requirementRevisionId     String
+  createdByUserId           String                     @db.Uuid
+  requestKey                String
+  requestedDomainPackId     String?
+  resolvedDomainPackId      String                     @default("general")
+  resolvedDomainPackVersion String                     @default("0.0.0")
+  resolvedDomainPackStatus  DomainPackCapabilityStatus @default(FALLBACK)
+  domainPackSelectedBy      DomainPackSelectionSource  @default(FALLBACK)
+  domainPackResolvedAt      DateTime                   @default(now())
+  domainPackManifestDigest  String?
+  domainPackRegistryVersion String?
+  project                   Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  requirementRevision       RequirementRevision        @relation(fields: [requirementRevisionId], references: [id], onDelete: Cascade)
+  createdByUser             User                       @relation("CreatedMultiRepoRuns", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  analyses                  ImpactAnalysis[]
+  approvedMergedReport      MergedMultiRepoReport?
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
 
   @@unique([projectId, requestKey])
   @@index([projectId])
   @@index([requirementRevisionId])
   @@index([createdByUserId])
+  @@index([resolvedDomainPackId, resolvedDomainPackVersion])
 }
 
 model MergedMultiRepoReport {
@@ -507,6 +529,14 @@ model ImpactAnalysis {
   progress                    Int                          @default(0)
   acceptedPartialCoverage     Boolean                      @default(false)
   coverageWarning             String?
+  requestedDomainPackId       String?
+  resolvedDomainPackId        String                       @default("general")
+  resolvedDomainPackVersion   String                       @default("0.0.0")
+  resolvedDomainPackStatus    DomainPackCapabilityStatus   @default(FALLBACK)
+  domainPackSelectedBy        DomainPackSelectionSource    @default(FALLBACK)
+  domainPackResolvedAt        DateTime                     @default(now())
+  domainPackManifestDigest    String?
+  domainPackRegistryVersion   String?
   requirementRevision         RequirementRevision          @relation(fields: [requirementRevisionId], references: [id])
   snapshot                    RepositorySnapshot           @relation(fields: [snapshotId], references: [id])
   sourceTarget                RepositoryTarget             @relation(fields: [sourceTargetId], references: [id])
@@ -545,6 +575,7 @@ model ImpactAnalysis {
   @@index([derivedFromAnalysisId])
   @@index([sourceClarificationId])
   @@index([reviewClarificationRequestId])
+  @@index([resolvedDomainPackId, resolvedDomainPackVersion])
 }
 
 model BaInsight {
@@ -637,14 +668,14 @@ model TraceabilityEvidence {
 }
 
 model GeneratedDocument {
-  id               String         @id @default(uuid())
-  impactAnalysisId String
-  type             DocumentType
-  status           DocumentStatus
-  content          String
-  impactAnalysis   ImpactAnalysis @relation(fields: [impactAnalysisId], references: [id])
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  id                String                   @id @default(uuid())
+  impactAnalysisId  String
+  type              DocumentType
+  status            DocumentStatus
+  content           String
+  impactAnalysis    ImpactAnalysis           @relation(fields: [impactAnalysisId], references: [id])
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
   reviewedSnapshots ReviewedReportSnapshot[]
   documentJobs      DocumentJob[]
 
@@ -653,27 +684,27 @@ model GeneratedDocument {
 }
 
 model DocumentJob {
-  id                  String            @id @default(uuid())
-  analysisId          String            @map("analysis_id")
-  snapshotId          String            @map("snapshot_id")
-  documentType        DocumentType      @map("document_type")
-  status              DocumentJobStatus
-  progress            Int               @default(0)
-  requestKey          String?           @map("request_key")
-  attemptCount        Int               @default(0) @map("attempt_count")
-  error               Json?
+  id           String            @id @default(uuid())
+  analysisId   String            @map("analysis_id")
+  snapshotId   String            @map("snapshot_id")
+  documentType DocumentType      @map("document_type")
+  status       DocumentJobStatus
+  progress     Int               @default(0)
+  requestKey   String?           @map("request_key")
+  attemptCount Int               @default(0) @map("attempt_count")
+  error        Json?
 
-  generatedDocumentId String?           @map("generated_document_id")
+  generatedDocumentId String? @map("generated_document_id")
 
-  analysis            ImpactAnalysis          @relation(fields: [analysisId], references: [id], onDelete: Cascade)
-  snapshot            ReviewedReportSnapshot  @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
-  generatedDocument   GeneratedDocument?      @relation(fields: [generatedDocumentId], references: [id], onDelete: SetNull)
+  analysis          ImpactAnalysis         @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  snapshot          ReviewedReportSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  generatedDocument GeneratedDocument?     @relation(fields: [generatedDocumentId], references: [id], onDelete: SetNull)
 
-  lastStartedAt       DateTime?         @map("last_started_at")
-  completedAt         DateTime?         @map("completed_at")
-  failedAt            DateTime?         @map("failed_at")
-  createdAt           DateTime          @default(now()) @map("created_at")
-  updatedAt           DateTime          @updatedAt @map("updated_at")
+  lastStartedAt DateTime? @map("last_started_at")
+  completedAt   DateTime? @map("completed_at")
+  failedAt      DateTime? @map("failed_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   @@unique([snapshotId, documentType])
   @@index([analysisId])

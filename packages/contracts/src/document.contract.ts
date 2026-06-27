@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { traceabilityReviewDecisionSchema } from './traceability.contract';
+import { domainPackSelectedBySchema, domainProfileCapabilityStatusSchema } from './domain-pack.contract';
 
 export const documentSchema = z.object({
 	id: z.string().uuid(),
@@ -106,6 +107,12 @@ export const approvedImpactReportResponseSchema = z.object({
 		approvedDocumentCreatedAt: z.string().optional(),
 		approvedDocumentUpdatedAt: z.string().optional(),
 		staleStatusAtReadTime: z.boolean(),
+		domainPack: z.object({
+			domainPackId: z.string(),
+			domainPackVersion: z.string(),
+			domainPackStatus: domainProfileCapabilityStatusSchema,
+			selectedBy: domainPackSelectedBySchema,
+		}).nullable().optional(),
 	}),
 });
 

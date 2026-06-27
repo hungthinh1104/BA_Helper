@@ -245,6 +245,14 @@ describe('CreateImpactAnalysisUseCase', () => {
 
     expect(impactRepo.createQueued).toHaveBeenCalledWith(
       expect.objectContaining({
+        selectedDomainPack: expect.objectContaining({
+          requestedDomainPackId: 'healthcare',
+          resolvedDomainPackId: 'healthcare',
+          resolvedDomainPackVersion: '0.1.0',
+          resolvedDomainPackStatus: 'PARTIAL',
+          selectedBy: 'EXPLICIT',
+          resolvedAt: expect.any(String),
+        }),
         metadata: expect.objectContaining({
           selectedDomainPack: expect.objectContaining({
             requestedDomainPackId: 'healthcare',
@@ -312,6 +320,36 @@ describe('CreateImpactAnalysisUseCase', () => {
     })).rejects.toMatchObject({
       code: 'REQUEST_KEY_MISMATCH',
     });
+  });
+
+  it('requestKey comparison prefers persisted canonical domain pack columns', async () => {
+    mockValidState();
+    impactRepo.findByRequestKey.mockResolvedValue({
+      id: 'existing-1',
+      requirementRevisionId: 'rev-1',
+      snapshotId: 'snap-1',
+      sourceTargetId: 'target-1',
+      requestKey: 'req-key',
+      requestedDomainPackId: 'healthcare',
+      resolvedDomainPackId: 'healthcare',
+      resolvedDomainPackVersion: '0.1.0',
+      resolvedDomainPackStatus: 'PARTIAL',
+      domainPackSelectedBy: 'EXPLICIT',
+      domainPackResolvedAt: new Date('2026-06-27T00:00:00.000Z'),
+      metadata: null,
+    } as any);
+    impactRepo.findByComposite.mockResolvedValue({
+      id: 'existing-1',
+      requirementRevisionId: 'rev-1',
+      snapshotId: 'snap-1',
+      sourceTargetId: 'target-1',
+      requestKey: 'req-key',
+    } as any);
+
+    await expect(useCase.execute({
+      ...validParams,
+      domainPackId: 'healthcare',
+    })).resolves.toMatchObject({ id: 'existing-1' });
   });
 
   describe('Lineage Validation', () => {

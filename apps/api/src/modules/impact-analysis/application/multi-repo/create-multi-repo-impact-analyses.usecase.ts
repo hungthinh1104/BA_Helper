@@ -88,7 +88,7 @@ export class CreateMultiRepoImpactAnalysesUseCase {
         existingRepositoryIds.some(
           (repositoryId, index) => repositoryId !== requestedRepositoryIds[index],
         ) ||
-        !existingRunMatchesDomainPack(existingRun.analyses, explicitDomainPack)
+        !existingRunMatchesDomainPack(existingRun, explicitDomainPack)
       ) {
         throw new AppError(
           'REQUEST_KEY_MISMATCH',
@@ -104,6 +104,7 @@ export class CreateMultiRepoImpactAnalysesUseCase {
         requirementRevisionId: params.requirementRevisionId,
         createdByUserId: params.actorId,
         requestKey: params.requestKey,
+        selectedDomainPack: explicitDomainPack,
       }));
 
     const analyses = await Promise.all(
@@ -193,25 +194,70 @@ export class CreateMultiRepoImpactAnalysesUseCase {
 }
 
 function existingRunMatchesDomainPack(
-  analyses: Array<{ metadata?: unknown }>,
+  run: {
+    requestedDomainPackId?: string | null;
+    resolvedDomainPackId?: string | null;
+    resolvedDomainPackVersion?: string | null;
+    resolvedDomainPackStatus?: string | null;
+    domainPackSelectedBy?: string | null;
+    domainPackResolvedAt?: Date | string | null;
+    analyses: Array<{ metadata?: unknown }>;
+  },
   explicitDomainPack: ResolvedDomainPackSelection | null,
 ) {
   if (!explicitDomainPack) {
     return true;
   }
 
-  return analyses.every((analysis) => {
-    const selected = readSelectedDomainPack(analysis.metadata);
+  const runSelection = readSelectedDomainPack(run);
+  if (runSelection) {
+    return sameResolvedDomainPack(runSelection, explicitDomainPack);
+  }
+
+  return run.analyses.every((analysis) => {
+    const selected = readSelectedDomainPack(analysis);
+    return sameResolvedDomainPack(selected, explicitDomainPack);
+  });
+}
+
+function sameResolvedDomainPack(
+  selected: ResolvedDomainPackSelection | null,
+  explicitDomainPack: ResolvedDomainPackSelection,
+) {
     return (
       selected?.resolvedDomainPackId === explicitDomainPack.resolvedDomainPackId &&
       selected?.resolvedDomainPackVersion === explicitDomainPack.resolvedDomainPackVersion &&
       selected?.resolvedDomainPackStatus === explicitDomainPack.resolvedDomainPackStatus &&
       selected?.selectedBy === explicitDomainPack.selectedBy
     );
-  });
 }
 
-function readSelectedDomainPack(metadata: unknown): ResolvedDomainPackSelection | null {
+function readSelectedDomainPack(record: {
+  requestedDomainPackId?: string | null;
+  resolvedDomainPackId?: string | null;
+  resolvedDomainPackVersion?: string | null;
+  resolvedDomainPackStatus?: string | null;
+  domainPackSelectedBy?: string | null;
+  domainPackResolvedAt?: Date | string | null;
+  metadata?: unknown;
+}): ResolvedDomainPackSelection | null {
+  if (
+    typeof record.resolvedDomainPackId === 'string' &&
+    typeof record.resolvedDomainPackVersion === 'string' &&
+    isDomainPackStatus(record.resolvedDomainPackStatus) &&
+    isDomainPackSelectedBy(record.domainPackSelectedBy)
+  ) {
+    return {
+      requestedDomainPackId: record.requestedDomainPackId ?? null,
+      resolvedDomainPackId: record.resolvedDomainPackId,
+      resolvedDomainPackVersion: record.resolvedDomainPackVersion,
+      resolvedDomainPackStatus: record.resolvedDomainPackStatus,
+      selectedBy: record.domainPackSelectedBy,
+      resolvedAt: normalizeResolvedAt(record.domainPackResolvedAt),
+    };
+  }
+
+  const { metadata } = record;
   if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
     return null;
   }
@@ -222,6 +268,36 @@ function readSelectedDomainPack(metadata: unknown): ResolvedDomainPackSelection 
   }
 
   return selected as ResolvedDomainPackSelection;
+}
+
+function normalizeResolvedAt(value: Date | string | null | undefined): string {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  return typeof value === 'string' && value.trim().length > 0
+    ? value
+    : new Date(0).toISOString();
+}
+
+function isDomainPackStatus(
+  value: unknown,
+): value is ResolvedDomainPackSelection['resolvedDomainPackStatus'] {
+  return (
+    value === 'STABLE' ||
+    value === 'PARTIAL' ||
+    value === 'EXPERIMENTAL' ||
+    value === 'FALLBACK'
+  );
+}
+
+function isDomainPackSelectedBy(
+  value: unknown,
+): value is ResolvedDomainPackSelection['selectedBy'] {
+  return (
+    value === 'EXPLICIT' ||
+    value === 'REPOSITORY_PROFILE' ||
+    value === 'FALLBACK'
+  );
 }
 
 function deriveChildRequestKey(batchRequestKey: string, repositoryId: string): string {

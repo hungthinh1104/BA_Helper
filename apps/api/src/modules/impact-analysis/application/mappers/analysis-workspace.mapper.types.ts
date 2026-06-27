@@ -5,6 +5,11 @@ export type WorkspaceAnalysis = {
 	status: string;
 	progress: number;
 	metadata?: unknown;
+	requestedDomainPackId?: string | null;
+	resolvedDomainPackId?: string | null;
+	resolvedDomainPackVersion?: string | null;
+	resolvedDomainPackStatus?: string | null;
+	domainPackSelectedBy?: string | null;
 	requirementRevision: {
 		id: string;
 		title: string;

@@ -87,7 +87,9 @@ export class FinalizeMultiRepoReportUseCase {
       runId,
       content: draft.markdown,
       provenance: {
-        domainPack: readRunDomainPackProvenance(revalidatedRun.analyses),
+        domainPack:
+          readExplicitRunDomainPackProvenance(revalidatedRun) ??
+          readRunDomainPackProvenance(revalidatedRun.analyses),
         childAnalyses: revalidatedProvenance,
       },
     });
@@ -133,19 +135,53 @@ function toChildStates(
   });
 }
 
+function readExplicitRunDomainPackProvenance(run: {
+  resolvedDomainPackId?: string | null;
+  resolvedDomainPackVersion?: string | null;
+  resolvedDomainPackStatus?: string | null;
+  domainPackSelectedBy?: string | null;
+}): {
+  domainPackId: string;
+  domainPackVersion: string;
+  domainPackStatus: DomainProfileCapabilityStatus;
+  selectedBy: DomainPackSelectedBy;
+} | null {
+  if (
+    run.domainPackSelectedBy !== 'EXPLICIT' ||
+    typeof run.resolvedDomainPackId !== 'string' ||
+    typeof run.resolvedDomainPackVersion !== 'string' ||
+    !isDomainPackStatus(run.resolvedDomainPackStatus)
+  ) {
+    return null;
+  }
+
+  return {
+    domainPackId: run.resolvedDomainPackId,
+    domainPackVersion: run.resolvedDomainPackVersion,
+    domainPackStatus: run.resolvedDomainPackStatus,
+    selectedBy: 'EXPLICIT',
+  };
+}
+
 function readRunDomainPackProvenance(
-  analyses: Array<{ metadata?: unknown }>,
+  analyses: Array<{
+    resolvedDomainPackId?: string | null;
+    resolvedDomainPackVersion?: string | null;
+    resolvedDomainPackStatus?: string | null;
+    domainPackSelectedBy?: string | null;
+    metadata?: unknown;
+  }>,
 ): {
   domainPackId: string;
   domainPackVersion: string;
   domainPackStatus: DomainProfileCapabilityStatus;
   selectedBy: DomainPackSelectedBy;
 } | null {
-  const first = analyses[0] ? readDomainPackProvenance(analyses[0].metadata) : null;
+  const first = analyses[0] ? readDomainPackProvenance(analyses[0]) : null;
   if (!first) return null;
 
   const allSame = analyses.every((analysis) => {
-    const next = readDomainPackProvenance(analysis.metadata);
+    const next = readDomainPackProvenance(analysis);
     return (
       next?.domainPackId === first.domainPackId &&
       next?.domainPackVersion === first.domainPackVersion &&
@@ -163,6 +199,33 @@ function readDomainPackProvenance(metadata: unknown): {
   domainPackStatus: DomainProfileCapabilityStatus;
   selectedBy: DomainPackSelectedBy;
 } | null {
+  if (metadata && typeof metadata === 'object' && !Array.isArray(metadata)) {
+    const record = metadata as {
+      resolvedDomainPackId?: unknown;
+      resolvedDomainPackVersion?: unknown;
+      resolvedDomainPackStatus?: unknown;
+      domainPackSelectedBy?: unknown;
+      metadata?: unknown;
+    };
+    if (
+      typeof record.resolvedDomainPackId === 'string' &&
+      typeof record.resolvedDomainPackVersion === 'string' &&
+      isDomainPackStatus(record.resolvedDomainPackStatus) &&
+      isDomainPackSelectedBy(record.domainPackSelectedBy)
+    ) {
+      return {
+        domainPackId: record.resolvedDomainPackId,
+        domainPackVersion: record.resolvedDomainPackVersion,
+        domainPackStatus: record.resolvedDomainPackStatus,
+        selectedBy: record.domainPackSelectedBy,
+      };
+    }
+
+    if (record.metadata) {
+      return readDomainPackProvenance(record.metadata);
+    }
+  }
+
   if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
     return null;
   }

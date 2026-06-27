@@ -84,6 +84,33 @@ coverageWarning: string or structured metadata
 
 This warning is not UI-only; it must remain available to generated outputs.
 
+Domain-pack selection is also persisted on `ImpactAnalysis` as first-class
+provenance, not only in JSON metadata:
+
+```text
+requestedDomainPackId
+resolvedDomainPackId
+resolvedDomainPackVersion
+resolvedDomainPackStatus: STABLE | PARTIAL | EXPERIMENTAL | FALLBACK
+domainPackSelectedBy: EXPLICIT | REPOSITORY_PROFILE | FALLBACK
+domainPackResolvedAt
+domainPackManifestDigest?
+domainPackRegistryVersion?
+```
+
+The worker must read these persisted resolved fields on retry. Queue payloads
+and frontend labels are not source of truth for domain-pack selection. Legacy
+metadata may be used only as a compatibility fallback for older rows.
+
+`MultiRepoAnalysisRun` stores the same resolved selection fields for explicit
+run-level selection. In v1, child analyses receive the run-level selection and
+cannot override it. Merged-report provenance prefers explicit run-level fields
+and falls back to homogeneous child analysis provenance for legacy runs.
+
+`domainPackManifestDigest` and `domainPackRegistryVersion` are nullable until
+the canonical manifest source is fully versioned. Do not synthesize fake digest
+values; absence means the manifest digest was not captured for that record.
+
 Repository target/scan provenance stores:
 
 ```text

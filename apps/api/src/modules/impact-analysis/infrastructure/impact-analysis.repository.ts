@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { ImpactAnalysisMetadata } from '../domain/impact-analysis.types';
+import type { ResolvedDomainPackSelection } from '@ba-helper/contracts';
 
 const IMPACT_ANALYSIS_INCLUDE = {
   snapshot: {
@@ -129,6 +130,7 @@ export class ImpactAnalysisRepository {
     derivedFromAnalysisId?: string | null;
     sourceClarificationId?: string | null;
     reviewClarificationRequestId?: string | null;
+    selectedDomainPack: ResolvedDomainPackSelection;
     metadata?: ImpactAnalysisMetadata | null;
   }) {
     return this.prisma.impactAnalysis.create({
@@ -146,6 +148,12 @@ export class ImpactAnalysisRepository {
         derivedFromAnalysisId: params.derivedFromAnalysisId,
         sourceClarificationId: params.sourceClarificationId,
         reviewClarificationRequestId: params.reviewClarificationRequestId,
+        requestedDomainPackId: params.selectedDomainPack.requestedDomainPackId,
+        resolvedDomainPackId: params.selectedDomainPack.resolvedDomainPackId,
+        resolvedDomainPackVersion: params.selectedDomainPack.resolvedDomainPackVersion,
+        resolvedDomainPackStatus: params.selectedDomainPack.resolvedDomainPackStatus,
+        domainPackSelectedBy: params.selectedDomainPack.selectedBy,
+        domainPackResolvedAt: new Date(params.selectedDomainPack.resolvedAt),
         ...(params.metadata ? { metadata: params.metadata as any } : {}),
       },
       include: IMPACT_ANALYSIS_INCLUDE,

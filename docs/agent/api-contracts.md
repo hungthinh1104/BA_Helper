@@ -128,6 +128,26 @@ when an analysis has applied a domain pack:
 If no domain pack metadata has been applied yet, `domainPack` is `null`. The
 frontend must not infer `status` from `domainProfileId`.
 
+Approved single-repo and merged report responses include resolved domain-pack
+provenance when available:
+
+```json
+{
+  "provenance": {
+    "domainPack": {
+      "domainPackId": "healthcare",
+      "domainPackVersion": "0.1.0",
+      "domainPackStatus": "PARTIAL",
+      "selectedBy": "EXPLICIT"
+    }
+  }
+}
+```
+
+This provenance is snapshot/report metadata only. Domain-pack glossary,
+template, or retrieval hints still cannot satisfy an `EVIDENCED` claim without
+persisted `Evidence`.
+
 Deferred until after the Markdown report/review completion gate:
 
 ```http

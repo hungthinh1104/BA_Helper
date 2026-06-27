@@ -74,7 +74,7 @@ export class RunImpactAnalysisUseCase {
 
     try {
       const snapshotDomain = analysis.snapshot.profile?.domain;
-      const persistedDomainPack = readSelectedDomainPack(analysis.metadata);
+      const persistedDomainPack = readSelectedDomainPack(analysis);
       const domainPackResult = persistedDomainPack
         ? this.domainPackSelection.selectResolvedPack(persistedDomainPack)
         : this.domainPackSelection.selectPack({
@@ -268,7 +268,36 @@ export class RunImpactAnalysisUseCase {
   }
 }
 
-function readSelectedDomainPack(metadata: unknown): ResolvedDomainPackSelection | null {
+function readSelectedDomainPack(analysis: {
+  requestedDomainPackId?: string | null;
+  resolvedDomainPackId?: string | null;
+  resolvedDomainPackVersion?: string | null;
+  resolvedDomainPackStatus?: string | null;
+  domainPackSelectedBy?: string | null;
+  domainPackResolvedAt?: Date | string | null;
+  metadata?: unknown;
+}): ResolvedDomainPackSelection | null {
+  if (
+    typeof analysis.resolvedDomainPackId === 'string' &&
+    typeof analysis.resolvedDomainPackVersion === 'string' &&
+    isDomainPackStatus(analysis.resolvedDomainPackStatus) &&
+    isDomainPackSelectedBy(analysis.domainPackSelectedBy)
+  ) {
+    if (isUnresolvedDefaultFallback(analysis)) {
+      return null;
+    }
+
+    return {
+      requestedDomainPackId: analysis.requestedDomainPackId ?? null,
+      resolvedDomainPackId: analysis.resolvedDomainPackId,
+      resolvedDomainPackVersion: analysis.resolvedDomainPackVersion,
+      resolvedDomainPackStatus: analysis.resolvedDomainPackStatus,
+      selectedBy: analysis.domainPackSelectedBy,
+      resolvedAt: normalizeResolvedAt(analysis.domainPackResolvedAt),
+    };
+  }
+
+  const { metadata } = analysis;
   if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
     return null;
   }
@@ -290,4 +319,52 @@ function readSelectedDomainPack(metadata: unknown): ResolvedDomainPackSelection 
   }
 
   return data as ResolvedDomainPackSelection;
+}
+
+function isUnresolvedDefaultFallback(analysis: {
+  requestedDomainPackId?: string | null;
+  resolvedDomainPackId?: string | null;
+  resolvedDomainPackVersion?: string | null;
+  resolvedDomainPackStatus?: string | null;
+  domainPackSelectedBy?: string | null;
+  metadata?: unknown;
+}) {
+  return (
+    !analysis.metadata &&
+    !analysis.requestedDomainPackId &&
+    analysis.resolvedDomainPackId === 'general' &&
+    analysis.resolvedDomainPackVersion === '0.0.0' &&
+    analysis.resolvedDomainPackStatus === 'FALLBACK' &&
+    analysis.domainPackSelectedBy === 'FALLBACK'
+  );
+}
+
+function normalizeResolvedAt(value: Date | string | null | undefined): string {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  return typeof value === 'string' && value.trim().length > 0
+    ? value
+    : new Date(0).toISOString();
+}
+
+function isDomainPackStatus(
+  value: unknown,
+): value is ResolvedDomainPackSelection['resolvedDomainPackStatus'] {
+  return (
+    value === 'STABLE' ||
+    value === 'PARTIAL' ||
+    value === 'EXPERIMENTAL' ||
+    value === 'FALLBACK'
+  );
+}
+
+function isDomainPackSelectedBy(
+  value: unknown,
+): value is ResolvedDomainPackSelection['selectedBy'] {
+  return (
+    value === 'EXPLICIT' ||
+    value === 'REPOSITORY_PROFILE' ||
+    value === 'FALLBACK'
+  );
 }

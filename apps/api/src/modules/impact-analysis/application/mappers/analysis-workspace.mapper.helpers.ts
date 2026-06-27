@@ -154,8 +154,33 @@ export function buildDomainProfileId(profile: WorkspaceAnalysis['snapshot']['pro
 }
 
 export function buildWorkspaceDomainPack(
-	metadata: WorkspaceAnalysis['metadata'],
+	analysis: Pick<
+		WorkspaceAnalysis,
+		| 'metadata'
+		| 'resolvedDomainPackId'
+		| 'resolvedDomainPackVersion'
+		| 'resolvedDomainPackStatus'
+		| 'domainPackSelectedBy'
+	>,
 ): AnalysisWorkspaceResponse['overview']['requirement']['domainPack'] {
+	const selectedByFromColumns = normalizeDomainPackSelectedBy(
+		analysis.domainPackSelectedBy,
+	);
+	if (
+		typeof analysis.resolvedDomainPackId === 'string' &&
+		typeof analysis.resolvedDomainPackVersion === 'string' &&
+		isDomainPackStatus(analysis.resolvedDomainPackStatus) &&
+		selectedByFromColumns
+	) {
+		return {
+			id: analysis.resolvedDomainPackId,
+			version: analysis.resolvedDomainPackVersion,
+			status: analysis.resolvedDomainPackStatus,
+			selectedBy: selectedByFromColumns,
+		};
+	}
+
+	const { metadata } = analysis;
 	const domainPack = readMetadata(metadata, 'domainPack');
 	if (!domainPack || typeof domainPack !== 'object' || Array.isArray(domainPack)) {
 		return null;

@@ -60,7 +60,7 @@ export function mapAnalysisWorkspace(
 					analysis.requirementRevision.normalizedText,
 					),
 					domainProfileId: buildDomainProfileId(analysis.snapshot.profile),
-					domainPack: buildWorkspaceDomainPack(analysis.metadata),
+					domainPack: buildWorkspaceDomainPack(analysis),
 				},
 			snapshot: {
 				snapshotId: analysis.snapshot.id,

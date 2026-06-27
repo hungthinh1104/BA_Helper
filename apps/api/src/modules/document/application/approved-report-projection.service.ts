@@ -106,7 +106,72 @@ export class ApprovedReportProjectionService {
         approvedDocumentUpdatedAt: report.updatedAt.toISOString(),
         staleStatusAtReadTime: isStale,
         staleReason,
+        domainPack: readDomainPackProvenance(analysis),
       },
     };
   }
+}
+
+function readDomainPackProvenance(analysis: any): ApprovedReportMetadata['domainPack'] {
+  if (
+    typeof analysis.resolvedDomainPackId === 'string' &&
+    typeof analysis.resolvedDomainPackVersion === 'string' &&
+    isDomainPackStatus(analysis.resolvedDomainPackStatus) &&
+    isDomainPackSelectedBy(analysis.domainPackSelectedBy)
+  ) {
+    return {
+      domainPackId: analysis.resolvedDomainPackId,
+      domainPackVersion: analysis.resolvedDomainPackVersion,
+      domainPackStatus: analysis.resolvedDomainPackStatus,
+      selectedBy: analysis.domainPackSelectedBy,
+    };
+  }
+
+  const metadata = analysis.metadata;
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return undefined;
+  }
+
+  const provenance = (metadata as Record<string, unknown>).reportProvenance;
+  if (!provenance || typeof provenance !== 'object' || Array.isArray(provenance)) {
+    return undefined;
+  }
+
+  const data = provenance as Record<string, unknown>;
+  if (
+    typeof data.domainPackId !== 'string' ||
+    typeof data.domainPackVersion !== 'string' ||
+    !isDomainPackStatus(data.domainPackStatus) ||
+    !isDomainPackSelectedBy(data.selectedBy)
+  ) {
+    return undefined;
+  }
+
+  return {
+    domainPackId: data.domainPackId,
+    domainPackVersion: data.domainPackVersion,
+    domainPackStatus: data.domainPackStatus,
+    selectedBy: data.selectedBy,
+  };
+}
+
+function isDomainPackStatus(
+  value: unknown,
+): value is NonNullable<ApprovedReportMetadata['domainPack']>['domainPackStatus'] {
+  return (
+    value === 'STABLE' ||
+    value === 'PARTIAL' ||
+    value === 'EXPERIMENTAL' ||
+    value === 'FALLBACK'
+  );
+}
+
+function isDomainPackSelectedBy(
+  value: unknown,
+): value is NonNullable<ApprovedReportMetadata['domainPack']>['selectedBy'] {
+  return (
+    value === 'EXPLICIT' ||
+    value === 'REPOSITORY_PROFILE' ||
+    value === 'FALLBACK'
+  );
 }

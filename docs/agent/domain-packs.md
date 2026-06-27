@@ -119,7 +119,7 @@ or new AI behavior.
 
 Runtime selection is backend-owned. API clients may send `domainPackId` using a
 backend registry value such as `healthcare@0.1.0`; the backend persists resolved
-canonical metadata on the analysis:
+canonical metadata on the analysis as first-class fields:
 
 ```json
 {
@@ -134,6 +134,26 @@ canonical metadata on the analysis:
 
 The worker and report renderer use this persisted resolved metadata. They must
 not reinterpret a transient queue payload or frontend label.
+
+For compatibility, analysis metadata may also contain `selectedDomainPack`,
+`domainPack`, and `reportProvenance`, but those JSON fields are not the primary
+source of truth for new records. New runtime paths read first-class columns
+first and use metadata only for legacy rows.
+
+Report provenance must include the resolved domain pack identity:
+
+```json
+{
+  "domainPackId": "healthcare",
+  "domainPackVersion": "0.1.0",
+  "domainPackStatus": "PARTIAL",
+  "selectedBy": "EXPLICIT"
+}
+```
+
+`domainPackManifestDigest` and `domainPackRegistryVersion` are reserved for the
+manifest-source hardening pass. Until that pass captures real values, they stay
+nullable; do not populate them with placeholder digest values.
 
 Workspace and report UI must render capability status from backend-authored
 domain-pack metadata. Frontend components may localize labels for `STABLE`,

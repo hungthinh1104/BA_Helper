@@ -47,6 +47,7 @@ export class DocumentMapper {
         approvedDocumentCreatedAt: metadata.approvedDocumentCreatedAt,
         approvedDocumentUpdatedAt: metadata.approvedDocumentUpdatedAt,
         staleStatusAtReadTime: metadata.staleStatusAtReadTime,
+        domainPack: metadata.domainPack ?? null,
       },
     };
   }

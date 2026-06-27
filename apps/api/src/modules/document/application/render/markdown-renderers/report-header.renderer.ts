@@ -33,18 +33,18 @@ export function renderReportHeader(context: MarkdownReportRenderContext): string
     lines.push(`- ${labels.commitSha}: \`${metadata.commitSha}\``);
     lines.push(`- ${labels.analyzerVersion}: \`${metadata.analyzerVersion}\``);
     lines.push(`- ${labels.finalizedAt}: ${metadata.finalizedAt ?? metadata.generatedAt}`);
-    const domainPack = readObjectField(analysis.metadata, 'domainPack');
-    const domainPackId = readStringField(domainPack, 'id');
-    const domainPackVersion = readStringField(domainPack, 'version');
-    const domainPackStatus = readStringField(domainPack, 'status');
-    const domainPackSelectedBy = readStringField(domainPack, 'selectedBy');
+    const domainPack = readDomainPack(analysis, metadata);
+    const domainPackId = domainPack?.id ?? null;
+    const domainPackVersion = domainPack?.version ?? null;
+    const domainPackStatus = domainPack?.status ?? null;
+    const domainPackSelectedBy = domainPack?.selectedBy ?? null;
     if (domainPackId && domainPackVersion && domainPackStatus && domainPackSelectedBy) {
       lines.push(`- ${labels.domainPack}: \`${domainPackId}@${domainPackVersion}\` (${domainPackStatus}, ${domainPackSelectedBy})`);
     }
     lines.push('');
   }
 
-  if (readStringField(readObjectField(analysis.metadata, 'domainPack'), 'status') === 'PARTIAL') {
+  if (readDomainPack(analysis, metadata)?.status === 'PARTIAL') {
     lines.push(`> **${labels.domainPack}: PARTIAL.** ${labels.partialDomainPackWarning} ${labels.administrativeWorkflowOnly} ${labels.noMedicalClinicalCompliance}`);
     lines.push('');
   }
@@ -90,9 +90,68 @@ export function renderReportHeader(context: MarkdownReportRenderContext): string
 }
 
 function resolveDomainPackId(analysis: MarkdownReportRenderContext['analysis']) {
+  return readDomainPack(analysis)?.id ?? analysis.snapshot.profile?.domain ?? null;
+}
+
+function readDomainPack(
+  analysis: MarkdownReportRenderContext['analysis'],
+  metadata?: MarkdownReportRenderContext['metadata'],
+): {
+  id: string;
+  version: string;
+  status: string;
+  selectedBy: string;
+} | null {
+  if (metadata?.domainPack) {
+    return {
+      id: metadata.domainPack.domainPackId,
+      version: metadata.domainPack.domainPackVersion,
+      status: metadata.domainPack.domainPackStatus,
+      selectedBy: metadata.domainPack.selectedBy,
+    };
+  }
+
+  const firstClass = readFirstClassDomainPack(analysis);
+  if (firstClass) {
+    return firstClass;
+  }
+
   const domainPack = readObjectField(analysis.metadata, 'domainPack');
   const id = readStringField(domainPack, 'id');
-  return id ?? analysis.snapshot.profile?.domain ?? null;
+  const version = readStringField(domainPack, 'version');
+  const status = readStringField(domainPack, 'status');
+  const selectedBy = readStringField(domainPack, 'selectedBy');
+  if (!id || !version || !status || !selectedBy) {
+    return null;
+  }
+
+  return { id, version, status, selectedBy };
+}
+
+function readFirstClassDomainPack(
+  analysis: MarkdownReportRenderContext['analysis'],
+) {
+  const record = analysis as MarkdownReportRenderContext['analysis'] & {
+    resolvedDomainPackId?: string | null;
+    resolvedDomainPackVersion?: string | null;
+    resolvedDomainPackStatus?: string | null;
+    domainPackSelectedBy?: string | null;
+  };
+  if (
+    !record.resolvedDomainPackId ||
+    !record.resolvedDomainPackVersion ||
+    !record.resolvedDomainPackStatus ||
+    !record.domainPackSelectedBy
+  ) {
+    return null;
+  }
+
+  return {
+    id: record.resolvedDomainPackId,
+    version: record.resolvedDomainPackVersion,
+    status: record.resolvedDomainPackStatus,
+    selectedBy: record.domainPackSelectedBy,
+  };
 }
 
 function readObjectField(source: unknown, key: string): Record<string, unknown> | null {

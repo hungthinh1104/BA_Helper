@@ -23,6 +23,12 @@ export type ImpactAnalysisRecord = {
   };
   multiRepoRun?: { createdByUserId?: string | null } | null;
   metadata?: unknown;
+  requestedDomainPackId?: string | null;
+  resolvedDomainPackId?: string | null;
+  resolvedDomainPackVersion?: string | null;
+  resolvedDomainPackStatus?: DomainProfileCapabilityStatus | null;
+  domainPackSelectedBy?: 'EXPLICIT' | 'REPOSITORY_PROFILE' | 'FALLBACK' | null;
+  domainPackResolvedAt?: Date | string | null;
 };
 
 export type ImpactAnalysisStatusUpdate = {

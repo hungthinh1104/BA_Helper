@@ -15,6 +15,12 @@ export type ApprovedReportMetadata = {
   approvedDocumentUpdatedAt?: string;
   staleStatusAtReadTime: boolean;
   staleReason?: string;
+  domainPack?: {
+    domainPackId: string;
+    domainPackVersion: string;
+    domainPackStatus: 'STABLE' | 'PARTIAL' | 'EXPERIMENTAL' | 'FALLBACK';
+    selectedBy: 'EXPLICIT' | 'REPOSITORY_PROFILE' | 'FALLBACK';
+  };
   requirementRevisionId?: string;
   runId?: string;
   childAnalysisCount?: number;

@@ -72,6 +72,16 @@ describe('CreateMultiRepoImpactAnalysesUseCase domain pack selection', () => {
     });
 
     expect(createImpactAnalysis.execute).toHaveBeenCalledTimes(2);
+    expect(runs.create).toHaveBeenCalledWith(expect.objectContaining({
+      selectedDomainPack: {
+        requestedDomainPackId: 'healthcare',
+        resolvedDomainPackId: 'healthcare',
+        resolvedDomainPackVersion: '0.1.0',
+        resolvedDomainPackStatus: 'PARTIAL',
+        selectedBy: 'EXPLICIT',
+        resolvedAt: expect.any(String),
+      },
+    }));
     for (const call of createImpactAnalysis.execute.mock.calls) {
       expect(call[0]).toMatchObject({
         domainPackId: 'healthcare',

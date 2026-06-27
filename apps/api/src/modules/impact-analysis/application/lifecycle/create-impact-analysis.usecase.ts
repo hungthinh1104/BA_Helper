@@ -174,7 +174,7 @@ export class CreateImpactAnalysisUseCase {
         existingByRequestKey.sourceTargetId !== params.sourceTargetId ||
         existingByRequestKey.requirementRevisionId !== params.requirementRevisionId ||
         !sameResolvedDomainPack(
-          readSelectedDomainPack(existingByRequestKey.metadata),
+          readSelectedDomainPack(existingByRequestKey),
           selectedDomainPack,
         ))
     ) {
@@ -208,6 +208,7 @@ export class CreateImpactAnalysisUseCase {
         derivedFromAnalysisId: params.derivedFromAnalysisId,
         sourceClarificationId: params.sourceClarificationId,
         reviewClarificationRequestId: params.reviewClarificationRequestId,
+        selectedDomainPack,
         metadata: {
           selectedDomainPack,
           domainPack: {
@@ -279,7 +280,32 @@ function sameResolvedDomainPack(
   );
 }
 
-function readSelectedDomainPack(metadata: unknown): ResolvedDomainPackSelection | null {
+function readSelectedDomainPack(record: {
+  requestedDomainPackId?: string | null;
+  resolvedDomainPackId?: string | null;
+  resolvedDomainPackVersion?: string | null;
+  resolvedDomainPackStatus?: string | null;
+  domainPackSelectedBy?: string | null;
+  domainPackResolvedAt?: Date | string | null;
+  metadata?: unknown;
+}): ResolvedDomainPackSelection | null {
+  if (
+    typeof record.resolvedDomainPackId === 'string' &&
+    typeof record.resolvedDomainPackVersion === 'string' &&
+    isDomainPackStatus(record.resolvedDomainPackStatus) &&
+    isDomainPackSelectedBy(record.domainPackSelectedBy)
+  ) {
+    return {
+      requestedDomainPackId: record.requestedDomainPackId ?? null,
+      resolvedDomainPackId: record.resolvedDomainPackId,
+      resolvedDomainPackVersion: record.resolvedDomainPackVersion,
+      resolvedDomainPackStatus: record.resolvedDomainPackStatus,
+      selectedBy: record.domainPackSelectedBy,
+      resolvedAt: normalizeResolvedAt(record.domainPackResolvedAt),
+    };
+  }
+
+  const { metadata } = record;
   if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
     return null;
   }
@@ -308,4 +334,34 @@ function readSelectedDomainPack(metadata: unknown): ResolvedDomainPackSelection 
   }
 
   return data as ResolvedDomainPackSelection;
+}
+
+function normalizeResolvedAt(value: Date | string | null | undefined): string {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  return typeof value === 'string' && value.trim().length > 0
+    ? value
+    : new Date(0).toISOString();
+}
+
+function isDomainPackStatus(
+  value: unknown,
+): value is ResolvedDomainPackSelection['resolvedDomainPackStatus'] {
+  return (
+    value === 'STABLE' ||
+    value === 'PARTIAL' ||
+    value === 'EXPERIMENTAL' ||
+    value === 'FALLBACK'
+  );
+}
+
+function isDomainPackSelectedBy(
+  value: unknown,
+): value is ResolvedDomainPackSelection['selectedBy'] {
+  return (
+    value === 'EXPLICIT' ||
+    value === 'REPOSITORY_PROFILE' ||
+    value === 'FALLBACK'
+  );
 }
