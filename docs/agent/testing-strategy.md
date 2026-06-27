@@ -111,11 +111,13 @@ the fixture explicitly encodes that behavior.
 
 ### Local execution note
 
-Do not run the full Jest suite and `pnpm demo:golden-path` concurrently when
-they share the same test database or schema. The same rule applies to
+Root unit/integration tests and e2e tests share local Postgres/Redis resources.
+Run them sequentially unless isolated DB names and Redis namespaces are
+configured. The same rule applies to `pnpm demo:golden-path` and
 `pnpm demo:multi-repo-golden-path`. These paths reset and seed test data, so
-concurrent execution can create false failures from duplicate fixed fixture
-IDs. Run them as separate commands when validating a release or phase handoff:
+concurrent execution can create false failures from duplicate fixed fixture IDs
+or missing shared rows. Run them as separate commands when validating a release
+or phase handoff:
 
 ```bash
 pnpm test

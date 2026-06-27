@@ -164,6 +164,38 @@ domain-pack metadata. Frontend components may localize labels for `STABLE`,
 `PARTIAL`, `EXPERIMENTAL`, and `FALLBACK`, but must not infer capability status
 from a domain id or scanner profile string.
 
+## Governance Validation
+
+Run the domain-pack governance check before adding or changing packs:
+
+```bash
+pnpm verify:domain-packs
+```
+
+The check validates only pack definitions, registry metadata, and glossary
+metadata. It must not call scanner, retrieval, LLM, DB, Prisma, or worker code.
+
+The check fails hard for:
+
+```text
+invalid pack id or semver version
+duplicate pack id or canonical version
+duplicate alias across packs
+duplicate concept key inside one pack
+PARTIAL pack without known limits
+PARTIAL pack that does not require explicit selection
+healthcare/admin pack without medical/clinical/compliance safety limits
+glossary termCount mismatch
+```
+
+Manifest digests are deterministic hashes over canonical pack and registry
+content. They intentionally exclude runtime-only values such as `resolvedAt`,
+`selectedBy`, environment variables, DB state, and registry response order.
+
+Do not mutate an existing released domain pack version silently. If concepts,
+templates, glossary semantics, aliases, limits, or other manifest semantics
+change, bump the pack version or intentionally record a new manifest digest.
+
 ## Adding A Profile
 
 Before adding a new `PARTIAL` or `STABLE` profile:

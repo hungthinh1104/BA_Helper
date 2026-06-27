@@ -5,11 +5,12 @@ import {
   DomainProfileRegistryEntry,
   ResolvedDomainPackSelection,
 } from '@ba-helper/contracts';
-import { GeneralDomainPack } from '../packs/general.v0.0.0';
-import { BookingDomainPack } from '../packs/booking.v0.1.0';
-import { RentalDomainPack } from '../packs/rental.v0.1.0';
-import { HealthcareDomainPack } from '../packs/healthcare.v0.1.0';
 import { AppError } from '@ba-helper/shared';
+import {
+  BUILT_IN_DOMAIN_PACK_CATALOG,
+  DomainPackCatalogEntry,
+} from './domain-pack.catalog';
+import { GeneralDomainPack } from '../packs/general.v0.0.0';
 
 export type DomainPackSelectionInput = {
   manualPackId?: string | null;
@@ -23,14 +24,6 @@ export type DomainPackSelectionResult = {
   resolved: ResolvedDomainPackSelection;
 };
 
-type DomainPackCatalogEntry = {
-  pack: DomainPack;
-  aliases: string[];
-  displayName: string;
-  knownLimits: string[];
-  requiresExplicitSelection: boolean;
-};
-
 @Injectable()
 export class DomainPackRegistry {
   private readonly builtInPacks = new Map<string, DomainPack>();
@@ -38,53 +31,20 @@ export class DomainPackRegistry {
   private readonly aliasToPackId = new Map<string, string>();
 
   constructor() {
-    this.register(GeneralDomainPack, {
-      aliases: ['general', 'general@0.0.0'],
-      displayName: 'General Fallback',
-      knownLimits: [
-        'Generic fallback only; it has no domain-specific concepts, templates, or glossary.',
-      ],
-      requiresExplicitSelection: false,
-    });
-    this.register(BookingDomainPack, {
-      aliases: ['booking', 'booking@0.1.0'],
-      displayName: 'Booking, Payment, Refund',
-      knownLimits: [
-        'Stable only for the covered booking/payment/refund evaluation cases.',
-      ],
-      requiresExplicitSelection: false,
-    });
-    this.register(RentalDomainPack, {
-      aliases: ['rental', 'rental@0.1.0'],
-      displayName: 'Rental Workflows (PARTIAL)',
-      knownLimits: [
-        'Partial rental coverage only; source evidence is required for every claim.',
-      ],
-      requiresExplicitSelection: true,
-    });
-    this.register(HealthcareDomainPack, {
-      aliases: ['healthcare', 'healthcare@0.1.0'],
-      displayName: 'Healthcare Admin Workflows (PARTIAL)',
-      knownLimits: [
-        'Domain hints are limited and require source evidence.',
-        'This pack supports administrative workflow impact analysis only.',
-        'It does not provide medical advice, clinical decision support, or compliance validation.',
-      ],
-      requiresExplicitSelection: true,
-    });
+    for (const entry of BUILT_IN_DOMAIN_PACK_CATALOG) {
+      this.register(entry);
+    }
   }
 
   /**
    * Registers a domain pack into the registry.
    */
-  private register(
-    pack: DomainPack,
-    metadata: Omit<DomainPackCatalogEntry, 'pack'>,
-  ): void {
+  private register(entry: DomainPackCatalogEntry): void {
+    const { pack } = entry;
     this.builtInPacks.set(pack.id, pack);
-    this.catalog.set(pack.id, { pack, ...metadata });
+    this.catalog.set(pack.id, entry);
 
-    for (const alias of metadata.aliases) {
+    for (const alias of entry.aliases) {
       this.aliasToPackId.set(alias.toLowerCase().trim(), pack.id);
     }
   }

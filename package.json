@@ -24,7 +24,8 @@
     "test:e2e": "jest --config jest.e2e.config.ts --runInBand",
     "test:e2e:watch": "jest --config jest.e2e.config.ts --watch",
     "typecheck": "tsc --noEmit",
-    "verify:stability": "pnpm infra:up && pnpm db:migrate && pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e && pnpm demo:golden-path && pnpm demo:multi-repo-golden-path"
+    "verify:domain-packs": "tsx scripts/verify-domain-packs.ts",
+    "verify:stability": "pnpm infra:up && pnpm db:migrate && pnpm verify:domain-packs && pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e && pnpm demo:golden-path && pnpm demo:multi-repo-golden-path"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -52,6 +53,7 @@
     "supertest": "^7.2.2",
     "ts-node": "10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.22.3",
     "typescript": "5.4.5",
     "typescript-eslint": "^8.62.0",
     "undici": "^8.5.0",
