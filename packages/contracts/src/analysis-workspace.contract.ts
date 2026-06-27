@@ -49,9 +49,9 @@ export const analysisWorkspaceEvidenceBasisSchema = z.enum([
 ]);
 
 export const analysisWorkspaceDomainPackSelectedBySchema = z.enum([
-	'manual_config',
-	'repository_profile',
-	'safe_default',
+	'EXPLICIT',
+	'REPOSITORY_PROFILE',
+	'FALLBACK',
 ]);
 
 export const analysisWorkspaceDomainPackSchema = z.object({

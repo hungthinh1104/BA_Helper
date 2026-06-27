@@ -2,12 +2,14 @@ import { z } from 'zod';
 import { snapshotIndexStatusSchema } from './repository.contract';
 import { diagnosticItemSchema, DiagnosticItem } from './diagnostic.contract';
 import { universalArtifactKindSchema } from './artifact.contract';
+import { domainPackSelectedBySchema, domainProfileCapabilityStatusSchema } from './domain-pack.contract';
 
 export const impactAnalysisCreateRequestSchema = z.object({
 	snapshotId: z.string().uuid(),
 	sourceTargetId: z.string().uuid(),
 	allowPartialSnapshot: z.boolean().default(false),
 	requestKey: z.string().uuid(),
+	domainPackId: z.string().min(1).optional(),
 	derivedFromAnalysisId: z.string().uuid().optional(),
 	sourceClarificationId: z.string().uuid().optional(),
 });
@@ -17,6 +19,7 @@ export const multiRepoImpactAnalysisCreateRequestSchema = z.object({
 	repositoryIds: z.array(z.string().uuid()).min(2).max(20),
 	allowPartialSnapshot: z.boolean().default(false),
 	requestKey: z.string().uuid(),
+	domainPackId: z.string().min(1).optional(),
 }).superRefine((data, ctx) => {
 	const unique = new Set(data.repositoryIds);
 	if (unique.size !== data.repositoryIds.length) {
@@ -310,6 +313,12 @@ export const multiRepoApprovedReportResponseSchema = z.object({
 	isStale: z.boolean(),
 	staleReason: z.string().optional(),
 	provenance: z.object({
+		domainPack: z.object({
+			domainPackId: z.string(),
+			domainPackVersion: z.string(),
+			domainPackStatus: domainProfileCapabilityStatusSchema,
+			selectedBy: domainPackSelectedBySchema,
+		}).nullable().optional(),
 		childAnalyses: z.array(z.object({
 			analysisId: z.string().uuid(),
 			latestReviewDecisionId: z.string().uuid(),

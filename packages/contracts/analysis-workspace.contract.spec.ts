@@ -18,7 +18,7 @@ describe('analysisWorkspaceResponseSchema', () => {
 							id: 'booking',
 							version: '0.1.0',
 							status: 'STABLE',
-							selectedBy: 'repository_profile',
+							selectedBy: 'REPOSITORY_PROFILE',
 						},
 					},
 				snapshot: {

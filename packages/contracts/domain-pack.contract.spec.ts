@@ -53,10 +53,15 @@ describe('domain pack contracts', () => {
   it('accepts a fallback registry entry without executable hint bodies', () => {
     const payload: DomainProfileRegistryEntry = {
       id: 'general',
-      name: 'General',
       version: '0.0.0',
+      canonicalId: 'general@0.0.0',
+      displayName: 'General Fallback',
       status: 'FALLBACK',
       description: 'Safe fallback used when no specific profile is selected.',
+      supportedConcepts: [],
+      knownLimits: ['Generic fallback only.'],
+      requiresExplicitSelection: false,
+      aliases: ['general', 'general@0.0.0'],
       glossaryMetadata: [],
     };
 
@@ -68,7 +73,7 @@ describe('domain pack contracts', () => {
       domainPackId: 'booking',
       domainPackVersion: '0.1.0',
       domainPackStatus: 'STABLE',
-      selectedBy: 'repository_profile',
+      selectedBy: 'REPOSITORY_PROFILE',
       conceptCount: 5,
       retrievalHintCount: 6,
       riskTemplateCount: 10,
@@ -84,7 +89,7 @@ describe('domain pack contracts', () => {
       domainPackId: 'rental',
       domainPackVersion: '0.1.0',
       domainPackStatus: 'PARTIAL',
-      selectedBy: 'repository_profile',
+      selectedBy: 'REPOSITORY_PROFILE',
       conceptCount: 9,
       retrievalHintCount: 5,
       riskTemplateCount: 4,
