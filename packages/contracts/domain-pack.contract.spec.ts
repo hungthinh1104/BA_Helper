@@ -50,6 +50,27 @@ describe('domain pack contracts', () => {
     expect(domainPackSchema.parse(payload)).toEqual(payload);
   });
 
+  it('accepts a partial ecommerce pack with English and Vietnamese glossary metadata', () => {
+    const payload: DomainPack = {
+      id: 'ecommerce',
+      name: 'Ecommerce Order Fulfillment',
+      version: '0.1.0',
+      status: 'PARTIAL',
+      description: 'Partial ecommerce order fulfillment lifecycle hints.',
+      glossaryMetadata: [
+        { locale: 'en', status: 'foundation', version: '1.0.0', termCount: 8 },
+        { locale: 'vi', status: 'foundation', version: '1.0.0', termCount: 8 },
+      ],
+      concepts: [],
+      retrievalHints: [],
+      riskTemplates: [],
+      qaTemplates: [],
+      unknownTemplates: [],
+    };
+
+    expect(domainPackSchema.parse(payload)).toEqual(payload);
+  });
+
   it('accepts a fallback registry entry without executable hint bodies', () => {
     const payload: DomainProfileRegistryEntry = {
       id: 'general',
@@ -95,6 +116,22 @@ describe('domain pack contracts', () => {
       riskTemplateCount: 4,
       qaTemplateCount: 3,
       unknownTemplateCount: 4,
+    };
+
+    expect(domainPackAppliedDiagnosticPayloadSchema.parse(payload)).toEqual(payload);
+  });
+
+  it('accepts explicit ecommerce partial diagnostics', () => {
+    const payload: DomainPackAppliedDiagnosticPayload = {
+      domainPackId: 'ecommerce',
+      domainPackVersion: '0.1.0',
+      domainPackStatus: 'PARTIAL',
+      selectedBy: 'EXPLICIT',
+      conceptCount: 8,
+      retrievalHintCount: 5,
+      riskTemplateCount: 4,
+      qaTemplateCount: 3,
+      unknownTemplateCount: 5,
     };
 
     expect(domainPackAppliedDiagnosticPayloadSchema.parse(payload)).toEqual(payload);

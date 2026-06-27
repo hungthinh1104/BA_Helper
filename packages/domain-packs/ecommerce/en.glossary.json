@@ -1,0 +1,16 @@
+{
+  "domain": "ecommerce",
+  "locale": "en",
+  "status": "foundation",
+  "version": "1.0.0",
+  "terms": {
+    "order": "order",
+    "cart": "cart",
+    "checkout": "checkout",
+    "payment_intent": "payment intent",
+    "shipment": "shipment",
+    "inventory_reservation": "inventory reservation",
+    "return_refund": "return/refund",
+    "customer_notification": "customer notification"
+  }
+}

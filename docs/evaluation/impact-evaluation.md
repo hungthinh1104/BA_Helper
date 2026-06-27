@@ -197,6 +197,35 @@ Known limits:
   unknown templates cannot satisfy evidence requirements or create
   `EVIDENCED` claims.
 
+## Ecommerce PARTIAL Coverage
+The ecommerce profile is `ecommerce@0.1.0` with `PARTIAL` status. It is
+explicit-select only and is scoped to ecommerce administrative order
+fulfillment workflows.
+
+The partial ecommerce set covers:
+
+- order cancellation before shipment affecting order status and inventory
+  reservation release
+- cart checkout reserving inventory for an order before payment intent capture
+- shipment consuming inventory reservation and preserving downstream unknowns
+
+The ecommerce fixture uses `tests/fixtures/nestjs-order-inventory`. Every
+expected impacted artifact must come from scanner output over that fixture.
+Ecommerce glossary terms, retrieval hints, risk templates, QA templates, and
+unknown templates cannot satisfy evidence requirements and cannot become
+impacted artifact keys.
+
+Known limits:
+
+- `ecommerce@0.1.0` is `PARTIAL`, not `STABLE`.
+- It does not provide payment compliance validation.
+- It does not provide fraud or risk scoring.
+- It does not provide tax calculation validation.
+- Payment intent and customer notification terms exist as bounded terminology,
+  but this revision does not claim complete payment or notification workflow
+  coverage.
+- No scanner, retrieval, or LLM behavior is expanded by this profile.
+
 ## How to Add a New Case
 1. Ensure the requirement matches an existing fixture in `tests/fixtures/`.
 2. Create a new `.ts` file under `tests/evaluation/cases/`.

@@ -11,6 +11,7 @@ import { generalFallbackEvaluationCases } from './general-fallback';
 import { rentalPartialEvaluationCases } from './rental-partial';
 
 export { bookingStableEvaluationCases } from './booking-stable';
+export { ecommercePartialEvaluationCases } from './ecommerce-partial';
 export { generalFallbackEvaluationCases } from './general-fallback';
 export { rentalPartialEvaluationCases } from './rental-partial';
 export { healthcarePartialEvaluationCases } from './healthcare-partial';

@@ -35,13 +35,15 @@ describe('domain pack governance validation', () => {
     }
 
     expect(shortAliases.get('healthcare')).toBe('healthcare@0.1.0');
+    expect(shortAliases.get('ecommerce')).toBe('ecommerce@0.1.0');
   });
 
   it('fails duplicate canonical pack ids', () => {
-    const duplicate = cloneEntry(BUILT_IN_DOMAIN_PACK_CATALOG[0]);
+    const generalEntry = getCatalogEntry('general');
+    const duplicate = cloneEntry(generalEntry);
 
     const result = validateDomainPackCatalog([
-      BUILT_IN_DOMAIN_PACK_CATALOG[0],
+      generalEntry,
       duplicate,
     ]);
 
@@ -53,12 +55,13 @@ describe('domain pack governance validation', () => {
   });
 
   it('enforces one active version per domain id for now', () => {
-    const nextHealthcare = cloneEntry(BUILT_IN_DOMAIN_PACK_CATALOG[3]);
+    const healthcareEntry = getCatalogEntry('healthcare');
+    const nextHealthcare = cloneEntry(healthcareEntry);
     nextHealthcare.pack.version = '0.2.0';
     nextHealthcare.aliases = ['healthcare-next', 'healthcare@0.2.0'];
 
     const result = validateDomainPackCatalog([
-      BUILT_IN_DOMAIN_PACK_CATALOG[3],
+      healthcareEntry,
       nextHealthcare,
     ]);
 
@@ -72,11 +75,12 @@ describe('domain pack governance validation', () => {
   });
 
   it('fails duplicate short aliases across active packs', () => {
-    const duplicateAlias = cloneEntry(BUILT_IN_DOMAIN_PACK_CATALOG[1]);
+    const generalEntry = getCatalogEntry('general');
+    const duplicateAlias = cloneEntry(getCatalogEntry('booking'));
     duplicateAlias.aliases = ['general'];
 
     const result = validateDomainPackCatalog([
-      BUILT_IN_DOMAIN_PACK_CATALOG[0],
+      generalEntry,
       duplicateAlias,
     ]);
 
@@ -88,7 +92,7 @@ describe('domain pack governance validation', () => {
   });
 
   it('fails duplicate aliases inside a pack', () => {
-    const entry = cloneEntry(BUILT_IN_DOMAIN_PACK_CATALOG[1]);
+    const entry = cloneEntry(getCatalogEntry('booking'));
     entry.aliases = ['booking', 'BOOKING'];
 
     const result = validateDomainPackCatalog([entry]);
@@ -101,7 +105,7 @@ describe('domain pack governance validation', () => {
   });
 
   it('fails duplicate concept keys inside a pack', () => {
-    const entry = cloneEntry(BUILT_IN_DOMAIN_PACK_CATALOG[1]);
+    const entry = cloneEntry(getCatalogEntry('booking'));
     entry.pack.concepts.push({ ...entry.pack.concepts[0] });
 
     const result = validateDomainPackCatalog([entry]);
@@ -114,7 +118,7 @@ describe('domain pack governance validation', () => {
   });
 
   it('fails invalid semver versions', () => {
-    const entry = cloneEntry(BUILT_IN_DOMAIN_PACK_CATALOG[1]);
+    const entry = cloneEntry(getCatalogEntry('booking'));
     entry.pack.version = 'v1';
 
     const result = validateDomainPackCatalog([entry]);
@@ -127,7 +131,7 @@ describe('domain pack governance validation', () => {
   });
 
   it('fails PARTIAL packs without known limits', () => {
-    const entry = cloneEntry(BUILT_IN_DOMAIN_PACK_CATALOG[3]);
+    const entry = cloneEntry(getCatalogEntry('ecommerce'));
     entry.knownLimits = [];
 
     const result = validateDomainPackCatalog([entry]);
@@ -142,7 +146,7 @@ describe('domain pack governance validation', () => {
   });
 
   it('fails explicit-only healthcare admin packs without safety disclaimers', () => {
-    const entry = cloneEntry(BUILT_IN_DOMAIN_PACK_CATALOG[3]);
+    const entry = cloneEntry(getCatalogEntry('healthcare'));
     entry.knownLimits = ['Administrative workflow hints only.'];
 
     const result = validateDomainPackCatalog([entry]);
@@ -157,7 +161,7 @@ describe('domain pack governance validation', () => {
   });
 
   it('keeps digest stable for equivalent canonical content with different object key order', () => {
-    const entry = BUILT_IN_DOMAIN_PACK_CATALOG[3];
+    const entry = getCatalogEntry('healthcare');
     const reordered: DomainPackCatalogEntry = {
       requiresExplicitSelection: entry.requiresExplicitSelection,
       knownLimits: entry.knownLimits,
@@ -184,7 +188,7 @@ describe('domain pack governance validation', () => {
   });
 
   it('changes digest when concepts, templates, or glossary metadata change', () => {
-    const base = BUILT_IN_DOMAIN_PACK_CATALOG[3];
+    const base = getCatalogEntry('healthcare');
     const conceptChanged = cloneEntry(base);
     conceptChanged.pack.concepts[0] = {
       ...conceptChanged.pack.concepts[0],
@@ -208,4 +212,12 @@ describe('domain pack governance validation', () => {
 
 function cloneEntry(entry: DomainPackCatalogEntry): DomainPackCatalogEntry {
   return JSON.parse(JSON.stringify(entry)) as DomainPackCatalogEntry;
+}
+
+function getCatalogEntry(packId: string): DomainPackCatalogEntry {
+  const entry = BUILT_IN_DOMAIN_PACK_CATALOG.find((item) => item.pack.id === packId);
+  if (!entry) {
+    throw new Error(`Missing domain pack catalog entry: ${packId}`);
+  }
+  return entry;
 }

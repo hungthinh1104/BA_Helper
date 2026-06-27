@@ -54,6 +54,7 @@ Current profiles:
 | Profile | Status | Notes |
 | --- | --- | --- |
 | `booking@0.1.0` | `STABLE` | MVP Booking / Payment / Refund domain with P7C fixture-backed coverage for cancellation, refund, double-refund prevention, inventory release, and payment state. |
+| `ecommerce@0.1.0` | `PARTIAL` | Explicit-select ecommerce order fulfillment profile for order, checkout, inventory reservation, shipment, return/refund, and customer notification workflows. No payment compliance, fraud scoring, or tax validation claim. |
 | `general@0.0.0` | `FALLBACK` | Empty safe default with P7D defensive coverage; no booking-specific hints. |
 | `healthcare@0.1.0` | `PARTIAL` | Explicit-select healthcare administrative workflow profile for scheduling, records, claims, billing, authorization, and order tracking. No clinical or compliance claim. |
 | `rental@0.1.0` | `PARTIAL` | Bounded rental lifecycle profile with P7E fixture-backed coverage for deposits, room availability, and contract cancellation. |
@@ -70,6 +71,14 @@ must stay conservative: no concepts, no retrieval hints, no risk/QA/unknown
 templates, and no glossary metadata. Fallback diagnostics may expose bounded
 metadata such as id, version, status, selectedBy, and counts, but must not
 expose template bodies, prompt payloads, source code, or evidence excerpts.
+
+`ecommerce@0.1.0` `PARTIAL` means the registry can identify bounded ecommerce
+order fulfillment terminology and evaluation cases. Current coverage is limited
+to order cancellation with inventory release, cart checkout inventory
+reservation, and shipment consuming inventory reservation. It does not provide
+payment compliance validation, fraud or risk scoring, tax calculation
+validation, or complete order-management support. Ecommerce is explicit-select
+only and is not auto-detected by the scanner.
 
 `healthcare@0.1.0` `PARTIAL` means the registry can identify bounded healthcare
 administrative workflow terminology and evaluation cases. It does not provide
@@ -110,6 +119,15 @@ under:
 packages/domain-packs/healthcare/profile.json
 packages/domain-packs/healthcare/en.glossary.json
 packages/domain-packs/healthcare/vi.glossary.json
+```
+
+Ecommerce order fulfillment has static English and Vietnamese glossary assets
+under:
+
+```text
+packages/domain-packs/ecommerce/profile.json
+packages/domain-packs/ecommerce/en.glossary.json
+packages/domain-packs/ecommerce/vi.glossary.json
 ```
 
 The registry exposes only metadata for these assets: locale, glossary status,

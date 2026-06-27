@@ -61,6 +61,19 @@ describe('DomainPackRegistry', () => {
       expect(explicit.selectedBy).toBe('EXPLICIT');
     });
 
+    it('requires explicit selection for repository ECOMMERCE partial profile', () => {
+      const result = registry.selectPack({ repositoryProfileDomain: 'ECOMMERCE' });
+      expect(result.pack.id).toBe('general');
+      expect(result.selectedBy).toBe('FALLBACK');
+
+      const explicit = registry.selectPack({ manualPackId: 'ecommerce' });
+      expect(explicit.pack.id).toBe('ecommerce');
+      expect(explicit.pack.version).toBe('0.1.0');
+      expect(explicit.pack.status).toBe('PARTIAL');
+      expect(explicit.normalizedPackId).toBe('ecommerce');
+      expect(explicit.selectedBy).toBe('EXPLICIT');
+    });
+
     it('manual config overrides repository profile', () => {
       const result = registry.selectPack({
         manualPackId: 'booking',
@@ -122,6 +135,19 @@ describe('DomainPackRegistry', () => {
           glossaryMetadata: [
             { locale: 'en', status: 'foundation', version: '1.0.0', termCount: 6 },
             { locale: 'vi', status: 'foundation', version: '1.0.0', termCount: 6 },
+          ],
+        }),
+        expect.objectContaining({
+          id: 'ecommerce',
+          canonicalId: 'ecommerce@0.1.0',
+          displayName: 'Ecommerce Order Fulfillment (PARTIAL)',
+          version: '0.1.0',
+          status: 'PARTIAL',
+          requiresExplicitSelection: true,
+          aliases: ['ecommerce', 'ecommerce@0.1.0'],
+          glossaryMetadata: [
+            { locale: 'en', status: 'foundation', version: '1.0.0', termCount: 8 },
+            { locale: 'vi', status: 'foundation', version: '1.0.0', termCount: 8 },
           ],
         }),
         expect.objectContaining({

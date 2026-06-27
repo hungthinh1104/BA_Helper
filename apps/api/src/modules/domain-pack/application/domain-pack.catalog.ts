@@ -1,5 +1,6 @@
 import type { DomainPack } from '@ba-helper/contracts';
 import { BookingDomainPack } from '../packs/booking.v0.1.0';
+import { EcommerceDomainPack } from '../packs/ecommerce.v0.1.0';
 import { GeneralDomainPack } from '../packs/general.v0.0.0';
 import { HealthcareDomainPack } from '../packs/healthcare.v0.1.0';
 import { RentalDomainPack } from '../packs/rental.v0.1.0';
@@ -30,6 +31,19 @@ export const BUILT_IN_DOMAIN_PACK_CATALOG: DomainPackCatalogEntry[] = [
       'Stable only for the covered booking/payment/refund evaluation cases.',
     ],
     requiresExplicitSelection: false,
+  },
+  {
+    pack: EcommerceDomainPack,
+    aliases: ['ecommerce', 'ecommerce@0.1.0'],
+    displayName: 'Ecommerce Order Fulfillment (PARTIAL)',
+    knownLimits: [
+      'Partial ecommerce administrative workflow coverage only.',
+      'No payment compliance validation.',
+      'No fraud or risk scoring.',
+      'No tax calculation validation.',
+      'Source evidence is required for every claim.',
+    ],
+    requiresExplicitSelection: true,
   },
   {
     pack: RentalDomainPack,
