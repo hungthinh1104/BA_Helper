@@ -6,6 +6,8 @@ import { CreateImpactAnalysisUseCase } from '../lifecycle/create-impact-analysis
 import { RequirementRepository } from '../../../requirement/infrastructure/requirement.repository';
 import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
 import { MultiRepoAnalysisRunRepository } from '../../infrastructure/multi-repo-analysis-run.repository';
+import { DomainPackRegistry } from '../../../domain-pack/application/domain-pack.registry';
+import type { ResolvedDomainPackSelection } from '@ba-helper/contracts';
 
 type PlannedRepositoryAnalysis = {
   repositoryId: string;
@@ -22,6 +24,7 @@ export class CreateMultiRepoImpactAnalysesUseCase {
     private readonly runs: MultiRepoAnalysisRunRepository,
     private readonly prisma: PrismaService,
     private readonly requirements: RequirementRepository,
+    private readonly domainPacks: DomainPackRegistry,
   ) {}
 
   async execute(params: {
@@ -31,6 +34,7 @@ export class CreateMultiRepoImpactAnalysesUseCase {
     repositoryIds: string[];
     requestKey: string;
     allowPartialSnapshot: boolean;
+    domainPackId?: string | null;
   }) {
     const revision = await this.requirements.findRevisionById(
       params.requirementRevisionId,
@@ -63,6 +67,9 @@ export class CreateMultiRepoImpactAnalysesUseCase {
         this.planRepositoryAnalysis(params.projectId, repositoryId),
       ),
     );
+    const explicitDomainPack = params.domainPackId
+      ? this.domainPacks.selectPack({ manualPackId: params.domainPackId }).resolved
+      : null;
 
     const existingRun = await this.runs.findByProjectRequestKey(
       params.projectId,
@@ -80,7 +87,8 @@ export class CreateMultiRepoImpactAnalysesUseCase {
         existingRepositoryIds.length !== requestedRepositoryIds.length ||
         existingRepositoryIds.some(
           (repositoryId, index) => repositoryId !== requestedRepositoryIds[index],
-        )
+        ) ||
+        !existingRunMatchesDomainPack(existingRun.analyses, explicitDomainPack)
       ) {
         throw new AppError(
           'REQUEST_KEY_MISMATCH',
@@ -107,6 +115,8 @@ export class CreateMultiRepoImpactAnalysesUseCase {
           multiRepoRunId: run.id,
           requestKey: deriveChildRequestKey(params.requestKey, plan.repositoryId),
           allowPartialSnapshot: params.allowPartialSnapshot,
+          domainPackId: params.domainPackId,
+          selectedDomainPack: explicitDomainPack ?? undefined,
         });
 
         if (analysis.multiRepoRunId !== run.id) {
@@ -180,6 +190,38 @@ export class CreateMultiRepoImpactAnalysesUseCase {
       sourceTargetId: sourceTarget.id,
     };
   }
+}
+
+function existingRunMatchesDomainPack(
+  analyses: Array<{ metadata?: unknown }>,
+  explicitDomainPack: ResolvedDomainPackSelection | null,
+) {
+  if (!explicitDomainPack) {
+    return true;
+  }
+
+  return analyses.every((analysis) => {
+    const selected = readSelectedDomainPack(analysis.metadata);
+    return (
+      selected?.resolvedDomainPackId === explicitDomainPack.resolvedDomainPackId &&
+      selected?.resolvedDomainPackVersion === explicitDomainPack.resolvedDomainPackVersion &&
+      selected?.resolvedDomainPackStatus === explicitDomainPack.resolvedDomainPackStatus &&
+      selected?.selectedBy === explicitDomainPack.selectedBy
+    );
+  });
+}
+
+function readSelectedDomainPack(metadata: unknown): ResolvedDomainPackSelection | null {
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return null;
+  }
+
+  const selected = (metadata as Record<string, unknown>).selectedDomainPack;
+  if (!selected || typeof selected !== 'object' || Array.isArray(selected)) {
+    return null;
+  }
+
+  return selected as ResolvedDomainPackSelection;
 }
 
 function deriveChildRequestKey(batchRequestKey: string, repositoryId: string): string {

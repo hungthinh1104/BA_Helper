@@ -1,8 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { DomainPack, DomainProfileRegistryEntry } from '@ba-helper/contracts';
+import {
+  DomainPack,
+  DomainPackSelectedBy,
+  DomainProfileRegistryEntry,
+  ResolvedDomainPackSelection,
+} from '@ba-helper/contracts';
 import { GeneralDomainPack } from '../packs/general.v0.0.0';
 import { BookingDomainPack } from '../packs/booking.v0.1.0';
 import { RentalDomainPack } from '../packs/rental.v0.1.0';
+import { HealthcareDomainPack } from '../packs/healthcare.v0.1.0';
 import { AppError } from '@ba-helper/shared';
 
 export type DomainPackSelectionInput = {
@@ -13,24 +19,74 @@ export type DomainPackSelectionInput = {
 export type DomainPackSelectionResult = {
   pack: DomainPack;
   normalizedPackId: string;
-  selectedBy: 'manual_config' | 'repository_profile' | 'safe_default';
+  selectedBy: DomainPackSelectedBy;
+  resolved: ResolvedDomainPackSelection;
+};
+
+type DomainPackCatalogEntry = {
+  pack: DomainPack;
+  aliases: string[];
+  displayName: string;
+  knownLimits: string[];
+  requiresExplicitSelection: boolean;
 };
 
 @Injectable()
 export class DomainPackRegistry {
   private readonly builtInPacks = new Map<string, DomainPack>();
+  private readonly catalog = new Map<string, DomainPackCatalogEntry>();
+  private readonly aliasToPackId = new Map<string, string>();
 
   constructor() {
-    this.register(GeneralDomainPack);
-    this.register(BookingDomainPack);
-    this.register(RentalDomainPack);
+    this.register(GeneralDomainPack, {
+      aliases: ['general', 'general@0.0.0'],
+      displayName: 'General Fallback',
+      knownLimits: [
+        'Generic fallback only; it has no domain-specific concepts, templates, or glossary.',
+      ],
+      requiresExplicitSelection: false,
+    });
+    this.register(BookingDomainPack, {
+      aliases: ['booking', 'booking@0.1.0'],
+      displayName: 'Booking, Payment, Refund',
+      knownLimits: [
+        'Stable only for the covered booking/payment/refund evaluation cases.',
+      ],
+      requiresExplicitSelection: false,
+    });
+    this.register(RentalDomainPack, {
+      aliases: ['rental', 'rental@0.1.0'],
+      displayName: 'Rental Workflows (PARTIAL)',
+      knownLimits: [
+        'Partial rental coverage only; source evidence is required for every claim.',
+      ],
+      requiresExplicitSelection: true,
+    });
+    this.register(HealthcareDomainPack, {
+      aliases: ['healthcare', 'healthcare@0.1.0'],
+      displayName: 'Healthcare Admin Workflows (PARTIAL)',
+      knownLimits: [
+        'Domain hints are limited and require source evidence.',
+        'This pack supports administrative workflow impact analysis only.',
+        'It does not provide medical advice, clinical decision support, or compliance validation.',
+      ],
+      requiresExplicitSelection: true,
+    });
   }
 
   /**
    * Registers a domain pack into the registry.
    */
-  private register(pack: DomainPack): void {
+  private register(
+    pack: DomainPack,
+    metadata: Omit<DomainPackCatalogEntry, 'pack'>,
+  ): void {
     this.builtInPacks.set(pack.id, pack);
+    this.catalog.set(pack.id, { pack, ...metadata });
+
+    for (const alias of metadata.aliases) {
+      this.aliasToPackId.set(alias.toLowerCase().trim(), pack.id);
+    }
   }
 
   listProfiles(): DomainProfileRegistryEntry[] {
@@ -52,18 +108,27 @@ export class DomainPackRegistry {
       return GeneralDomainPack;
     }
 
-    const normalizedId = id.toLowerCase();
+    const normalizedId = this.normalizePackId(id);
 
     return this.builtInPacks.get(normalizedId) ?? GeneralDomainPack;
   }
 
   private toProfileEntry(pack: DomainPack): DomainProfileRegistryEntry {
+    const catalogEntry = this.catalog.get(pack.id);
     return {
       id: pack.id,
-      name: pack.name,
       version: pack.version,
+      canonicalId: `${pack.id}@${pack.version}`,
+      displayName: catalogEntry?.displayName ?? pack.name,
       status: pack.status,
       description: pack.description,
+      supportedConcepts: pack.concepts.map((concept) => ({
+        key: concept.key,
+        label: concept.label,
+      })),
+      knownLimits: catalogEntry?.knownLimits ?? [],
+      requiresExplicitSelection: catalogEntry?.requiresExplicitSelection ?? true,
+      aliases: catalogEntry?.aliases ?? [`${pack.id}@${pack.version}`],
       glossaryMetadata: pack.glossaryMetadata,
     };
   }
@@ -74,36 +139,61 @@ export class DomainPackRegistry {
    */
   normalizePackId(packId: string): string {
     const lower = packId.toLowerCase().trim();
-    const withoutVersion = lower.split('@')[0];
-    return withoutVersion;
+    return this.aliasToPackId.get(lower) ?? lower.split('@')[0];
+  }
+
+  listSupportedCanonicalIds(): string[] {
+    return Array.from(this.builtInPacks.values())
+      .map((pack) => `${pack.id}@${pack.version}`)
+      .sort();
   }
 
   /**
    * Selects the appropriate domain pack based on deterministic priority.
    * 1. manualPackId
    * 2. repositoryProfileDomain
-   * 3. safe_default (general)
+   * 3. fallback (general)
    */
   selectPack(input: DomainPackSelectionInput): DomainPackSelectionResult {
     if (input.manualPackId) {
-      const normalized = this.normalizePackId(input.manualPackId);
+      const requested = input.manualPackId.trim();
+      const normalized = this.normalizePackId(requested);
       const foundPack = this.builtInPacks.get(normalized);
 
       if (!foundPack) {
-        throw new AppError('UNSUPPORTED_DOMAIN_PACK', `Unsupported manual domain pack: ${input.manualPackId}`);
+        throw new AppError(
+          'UNSUPPORTED_DOMAIN_PACK',
+          `Unsupported manual domain pack: ${input.manualPackId}`,
+          {
+            requested: input.manualPackId,
+            supported: this.listSupportedCanonicalIds(),
+          },
+        );
       }
 
-      if (input.manualPackId.includes('@')) {
-        const providedVersion = input.manualPackId.split('@')[1];
+      if (requested.includes('@')) {
+        const providedVersion = requested.split('@')[1];
         if (providedVersion !== foundPack.version) {
-          throw new AppError('UNSUPPORTED_DOMAIN_PACK_VERSION', `Unsupported domain pack version for ${normalized}: ${providedVersion}`);
+          throw new AppError(
+            'UNSUPPORTED_DOMAIN_PACK_VERSION',
+            `Unsupported domain pack version for ${normalized}: ${providedVersion}`,
+            {
+              requested: input.manualPackId,
+              supported: this.listSupportedCanonicalIds(),
+            },
+          );
         }
       }
 
       return {
         pack: foundPack,
         normalizedPackId: normalized,
-        selectedBy: 'manual_config',
+        selectedBy: 'EXPLICIT',
+        resolved: this.buildResolved({
+          requestedDomainPackId: input.manualPackId,
+          pack: foundPack,
+          selectedBy: 'EXPLICIT',
+        }),
       };
     }
 
@@ -114,16 +204,27 @@ export class DomainPackRegistry {
         return {
           pack: GeneralDomainPack,
           normalizedPackId: 'general',
-          selectedBy: 'safe_default',
+          selectedBy: 'FALLBACK',
+          resolved: this.buildResolved({
+            requestedDomainPackId: null,
+            pack: GeneralDomainPack,
+            selectedBy: 'FALLBACK',
+          }),
         };
       }
 
       const foundPack = this.builtInPacks.get(normalized);
-      if (foundPack) {
+      const catalogEntry = foundPack ? this.catalog.get(foundPack.id) : null;
+      if (foundPack && !catalogEntry?.requiresExplicitSelection) {
         return {
           pack: foundPack,
           normalizedPackId: normalized,
-          selectedBy: 'repository_profile',
+          selectedBy: 'REPOSITORY_PROFILE',
+          resolved: this.buildResolved({
+            requestedDomainPackId: null,
+            pack: foundPack,
+            selectedBy: 'REPOSITORY_PROFILE',
+          }),
         };
       }
     }
@@ -131,7 +232,52 @@ export class DomainPackRegistry {
     return {
       pack: GeneralDomainPack,
       normalizedPackId: 'general',
-      selectedBy: 'safe_default',
+      selectedBy: 'FALLBACK',
+      resolved: this.buildResolved({
+        requestedDomainPackId: null,
+        pack: GeneralDomainPack,
+        selectedBy: 'FALLBACK',
+      }),
+    };
+  }
+
+  selectResolvedPack(selection: ResolvedDomainPackSelection): DomainPackSelectionResult {
+    const normalized = this.normalizePackId(
+      `${selection.resolvedDomainPackId}@${selection.resolvedDomainPackVersion}`,
+    );
+    const pack = this.builtInPacks.get(normalized);
+
+    if (!pack || pack.version !== selection.resolvedDomainPackVersion) {
+      throw new AppError(
+        'UNSUPPORTED_DOMAIN_PACK_VERSION',
+        `Unsupported persisted domain pack version for ${selection.resolvedDomainPackId}: ${selection.resolvedDomainPackVersion}`,
+        {
+          requested: `${selection.resolvedDomainPackId}@${selection.resolvedDomainPackVersion}`,
+          supported: this.listSupportedCanonicalIds(),
+        },
+      );
+    }
+
+    return {
+      pack,
+      normalizedPackId: normalized,
+      selectedBy: selection.selectedBy,
+      resolved: selection,
+    };
+  }
+
+  private buildResolved(params: {
+    requestedDomainPackId: string | null;
+    pack: DomainPack;
+    selectedBy: DomainPackSelectedBy;
+  }): ResolvedDomainPackSelection {
+    return {
+      requestedDomainPackId: params.requestedDomainPackId,
+      resolvedDomainPackId: params.pack.id,
+      resolvedDomainPackVersion: params.pack.version,
+      resolvedDomainPackStatus: params.pack.status,
+      selectedBy: params.selectedBy,
+      resolvedAt: new Date().toISOString(),
     };
   }
 

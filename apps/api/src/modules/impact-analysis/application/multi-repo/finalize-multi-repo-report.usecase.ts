@@ -5,6 +5,7 @@ import { MultiRepoAnalysisRunRepository } from '../../infrastructure/multi-repo-
 import { MultiRepoMergedReportRepository } from '../../infrastructure/multi-repo-merged-report.repository';
 import { GetApprovedMultiRepoReportUseCase } from './get-approved-multi-repo-report.usecase';
 import { RequestUser } from '@ba-helper/contracts';
+import type { DomainPackSelectedBy, DomainProfileCapabilityStatus } from '@ba-helper/contracts';
 import {
   deriveMergedReportState,
   MultiRepoChildState,
@@ -86,6 +87,7 @@ export class FinalizeMultiRepoReportUseCase {
       runId,
       content: draft.markdown,
       provenance: {
+        domainPack: readRunDomainPackProvenance(revalidatedRun.analyses),
         childAnalyses: revalidatedProvenance,
       },
     });
@@ -110,6 +112,7 @@ function toChildStates(
       resolvedRefType: MultiRepoChildState['sourceTarget']['resolvedRefType'];
       latestObservedCommitSha: string;
     };
+    metadata?: unknown;
   }>,
 ): MultiRepoChildState[] {
   return analyses.map((analysis) => {
@@ -128,6 +131,80 @@ function toChildStates(
       },
     };
   });
+}
+
+function readRunDomainPackProvenance(
+  analyses: Array<{ metadata?: unknown }>,
+): {
+  domainPackId: string;
+  domainPackVersion: string;
+  domainPackStatus: DomainProfileCapabilityStatus;
+  selectedBy: DomainPackSelectedBy;
+} | null {
+  const first = analyses[0] ? readDomainPackProvenance(analyses[0].metadata) : null;
+  if (!first) return null;
+
+  const allSame = analyses.every((analysis) => {
+    const next = readDomainPackProvenance(analysis.metadata);
+    return (
+      next?.domainPackId === first.domainPackId &&
+      next?.domainPackVersion === first.domainPackVersion &&
+      next?.domainPackStatus === first.domainPackStatus &&
+      next?.selectedBy === first.selectedBy
+    );
+  });
+
+  return allSame ? first : null;
+}
+
+function readDomainPackProvenance(metadata: unknown): {
+  domainPackId: string;
+  domainPackVersion: string;
+  domainPackStatus: DomainProfileCapabilityStatus;
+  selectedBy: DomainPackSelectedBy;
+} | null {
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return null;
+  }
+
+  const provenance = (metadata as Record<string, unknown>).reportProvenance;
+  if (!provenance || typeof provenance !== 'object' || Array.isArray(provenance)) {
+    return null;
+  }
+
+  const data = provenance as Record<string, unknown>;
+  if (
+    typeof data.domainPackId !== 'string' ||
+    typeof data.domainPackVersion !== 'string' ||
+    !isDomainPackStatus(data.domainPackStatus) ||
+    !isDomainPackSelectedBy(data.selectedBy)
+  ) {
+    return null;
+  }
+
+  return {
+    domainPackId: data.domainPackId,
+    domainPackVersion: data.domainPackVersion,
+    domainPackStatus: data.domainPackStatus,
+    selectedBy: data.selectedBy,
+  };
+}
+
+function isDomainPackStatus(value: unknown): value is DomainProfileCapabilityStatus {
+  return (
+    value === 'STABLE' ||
+    value === 'PARTIAL' ||
+    value === 'EXPERIMENTAL' ||
+    value === 'FALLBACK'
+  );
+}
+
+function isDomainPackSelectedBy(value: unknown): value is DomainPackSelectedBy {
+  return (
+    value === 'EXPLICIT' ||
+    value === 'REPOSITORY_PROFILE' ||
+    value === 'FALLBACK'
+  );
 }
 
 function buildApprovedChildProvenance(

@@ -106,6 +106,7 @@ export class MultiRepoAnalysisController {
       repositoryIds: input.repositoryIds,
       requestKey: input.requestKey,
       allowPartialSnapshot: input.allowPartialSnapshot,
+      domainPackId: input.domainPackId,
     });
 
     return multiRepoImpactAnalysisCreateResponseSchema.parse(result);

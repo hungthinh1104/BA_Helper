@@ -110,7 +110,7 @@ describe('Diagnostic Risk Propagation', () => {
           qaTemplates: [],
           unknownTemplates: [],
         },
-        selectedBy: 'safe_default',
+        selectedBy: 'FALLBACK',
         normalizedPackId: 'test-pack',
       }),
     };

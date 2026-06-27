@@ -63,7 +63,10 @@ export class HybridRetrievalService {
     const indexStatus = snapshot?.indexStatus ?? 'NOT_INDEXED';
     const profileDomain = snapshot?.profile?.domain;
     const domainPackSelection = this.domainPackRegistry.selectPack({
-      repositoryProfileDomain: profileDomain ?? request.domain,
+      manualPackId: request.domain && request.domain !== 'UNKNOWN'
+        ? request.domain
+        : null,
+      repositoryProfileDomain: profileDomain,
     });
     const domainPack = domainPackSelection.pack;
 

@@ -61,8 +61,37 @@ export class GetApprovedMultiRepoReportUseCase {
       isStale: mergedReportState.staleness.isStale,
       staleReason: mergedReportState.staleness.staleReason,
       provenance: {
+        domainPack: readStoredDomainPackProvenance(report.provenance),
         childAnalyses: mergedReportState.storedChildProvenance,
       },
     };
   }
+}
+
+function readStoredDomainPackProvenance(provenance: unknown) {
+  if (!provenance || typeof provenance !== 'object' || Array.isArray(provenance)) {
+    return null;
+  }
+
+  const domainPack = (provenance as Record<string, unknown>).domainPack;
+  if (!domainPack || typeof domainPack !== 'object' || Array.isArray(domainPack)) {
+    return null;
+  }
+
+  const data = domainPack as Record<string, unknown>;
+  if (
+    typeof data.domainPackId !== 'string' ||
+    typeof data.domainPackVersion !== 'string' ||
+    typeof data.domainPackStatus !== 'string' ||
+    typeof data.selectedBy !== 'string'
+  ) {
+    return null;
+  }
+
+  return {
+    domainPackId: data.domainPackId,
+    domainPackVersion: data.domainPackVersion,
+    domainPackStatus: data.domainPackStatus,
+    selectedBy: data.selectedBy,
+  };
 }

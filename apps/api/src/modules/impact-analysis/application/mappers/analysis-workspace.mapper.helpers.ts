@@ -162,11 +162,12 @@ export function buildWorkspaceDomainPack(
 	}
 
 	const data = domainPack as Record<string, unknown>;
+	const selectedBy = normalizeDomainPackSelectedBy(data.selectedBy);
 	if (
 		typeof data.id !== 'string' ||
 		typeof data.version !== 'string' ||
 		!isDomainPackStatus(data.status) ||
-		!isDomainPackSelectedBy(data.selectedBy)
+		!selectedBy
 	) {
 		return null;
 	}
@@ -175,7 +176,7 @@ export function buildWorkspaceDomainPack(
 		id: data.id,
 		version: data.version,
 		status: data.status,
-		selectedBy: data.selectedBy,
+		selectedBy,
 	};
 }
 
@@ -274,8 +275,18 @@ function isDomainPackSelectedBy(
 	value: unknown,
 ): value is NonNullable<AnalysisWorkspaceResponse['overview']['requirement']['domainPack']>['selectedBy'] {
 	return (
-		value === 'manual_config' ||
-		value === 'repository_profile' ||
-		value === 'safe_default'
+		value === 'EXPLICIT' ||
+		value === 'REPOSITORY_PROFILE' ||
+		value === 'FALLBACK'
 	);
+}
+
+function normalizeDomainPackSelectedBy(
+	value: unknown,
+): NonNullable<AnalysisWorkspaceResponse['overview']['requirement']['domainPack']>['selectedBy'] | null {
+	if (isDomainPackSelectedBy(value)) return value;
+	if (value === 'manual_config') return 'EXPLICIT';
+	if (value === 'repository_profile') return 'REPOSITORY_PROFILE';
+	if (value === 'safe_default') return 'FALLBACK';
+	return null;
 }

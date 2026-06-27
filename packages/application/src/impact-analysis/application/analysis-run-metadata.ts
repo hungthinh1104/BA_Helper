@@ -31,6 +31,13 @@ export const buildCompletedAnalysisMetadata = (params: {
       status: domainPack.status,
       selectedBy: domainPackResult.selectedBy,
     },
+    selectedDomainPack: domainPackResult.resolved,
+    reportProvenance: {
+      domainPackId: domainPack.id,
+      domainPackVersion: domainPack.version,
+      domainPackStatus: domainPack.status,
+      selectedBy: domainPackResult.selectedBy,
+    },
     diagnostics: [
       {
         code: 'DOMAIN_PACK_APPLIED',

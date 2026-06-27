@@ -1,4 +1,8 @@
-import type { DomainPack } from '@ba-helper/contracts';
+import type {
+  DomainPack,
+  DomainPackSelectedBy,
+  ResolvedDomainPackSelection,
+} from '@ba-helper/contracts';
 
 export type DomainPackSelectionInput = {
   manualPackId?: string | null;
@@ -8,9 +12,11 @@ export type DomainPackSelectionInput = {
 export type DomainPackSelectionResult = {
   pack: DomainPack;
   normalizedPackId: string;
-  selectedBy: 'manual_config' | 'repository_profile' | 'safe_default';
+  selectedBy: DomainPackSelectedBy;
+  resolved: ResolvedDomainPackSelection;
 };
 
 export interface DomainPackSelectionPort {
   selectPack(input: DomainPackSelectionInput): DomainPackSelectionResult;
+  selectResolvedPack(selection: ResolvedDomainPackSelection): DomainPackSelectionResult;
 }

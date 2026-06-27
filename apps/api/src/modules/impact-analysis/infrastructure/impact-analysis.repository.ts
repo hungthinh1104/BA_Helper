@@ -129,6 +129,7 @@ export class ImpactAnalysisRepository {
     derivedFromAnalysisId?: string | null;
     sourceClarificationId?: string | null;
     reviewClarificationRequestId?: string | null;
+    metadata?: ImpactAnalysisMetadata | null;
   }) {
     return this.prisma.impactAnalysis.create({
       data: {
@@ -145,6 +146,7 @@ export class ImpactAnalysisRepository {
         derivedFromAnalysisId: params.derivedFromAnalysisId,
         sourceClarificationId: params.sourceClarificationId,
         reviewClarificationRequestId: params.reviewClarificationRequestId,
+        ...(params.metadata ? { metadata: params.metadata as any } : {}),
       },
       include: IMPACT_ANALYSIS_INCLUDE,
     });

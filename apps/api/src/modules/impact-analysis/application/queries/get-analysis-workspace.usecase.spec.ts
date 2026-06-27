@@ -27,7 +27,7 @@ describe('GetAnalysisWorkspaceUseCase', () => {
 				id: 'booking',
 				version: '0.1.0',
 				status: 'STABLE',
-				selectedBy: 'repository_profile',
+				selectedBy: 'REPOSITORY_PROFILE',
 			});
 			expect(result.impactGroups[0].artifacts[0].artifactKey).toBe(
 				'api:booking.controller.cancel',
@@ -144,7 +144,7 @@ function createAnalysis(overrides: Record<string, unknown> = {}) {
 					id: 'booking',
 					version: '0.1.0',
 					status: 'STABLE',
-					selectedBy: 'repository_profile',
+					selectedBy: 'REPOSITORY_PROFILE',
 				},
 			},
 			snapshot: {

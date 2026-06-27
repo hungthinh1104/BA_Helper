@@ -1,4 +1,5 @@
 import type { DomainProfileCapabilityStatus } from '@ba-helper/contracts';
+import type { ResolvedDomainPackSelection } from '@ba-helper/contracts';
 
 /** Minimal analysis record for RunImpactAnalysisUseCase */
 export type ImpactAnalysisRecord = {
@@ -21,6 +22,7 @@ export type ImpactAnalysisRecord = {
     requirement?: { projectId: string } | null;
   };
   multiRepoRun?: { createdByUserId?: string | null } | null;
+  metadata?: unknown;
 };
 
 export type ImpactAnalysisStatusUpdate = {
@@ -52,7 +54,14 @@ export type ImpactAnalysisStatusUpdate = {
       id: string;
       version: string;
       status: DomainProfileCapabilityStatus;
-      selectedBy: 'manual_config' | 'repository_profile' | 'safe_default';
+      selectedBy: 'EXPLICIT' | 'REPOSITORY_PROFILE' | 'FALLBACK';
+    };
+    selectedDomainPack?: ResolvedDomainPackSelection;
+    reportProvenance?: {
+      domainPackId: string;
+      domainPackVersion: string;
+      domainPackStatus: DomainProfileCapabilityStatus;
+      selectedBy: 'EXPLICIT' | 'REPOSITORY_PROFILE' | 'FALLBACK';
     };
     diagnostics?: Array<{
       code: string;

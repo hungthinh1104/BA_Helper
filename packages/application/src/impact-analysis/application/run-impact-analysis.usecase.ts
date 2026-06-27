@@ -8,6 +8,7 @@ import { buildCompletedAnalysisMetadata } from './analysis-run-metadata';
 import type { ImpactEvidenceCollectionStep } from './steps/impact-evidence-collection.step';
 import type { ImpactDiagnosticPropagationStep } from './steps/impact-diagnostic-propagation.step';
 import type { ImpactAiReasoningStep } from './steps/impact-ai-reasoning.step';
+import type { ResolvedDomainPackSelection } from '@ba-helper/contracts';
 
 export class RunImpactAnalysisUseCase {
   constructor(
@@ -73,10 +74,13 @@ export class RunImpactAnalysisUseCase {
 
     try {
       const snapshotDomain = analysis.snapshot.profile?.domain;
-      const domainPackResult = this.domainPackSelection.selectPack({
-        manualPackId: params.domain,
-        repositoryProfileDomain: snapshotDomain,
-      });
+      const persistedDomainPack = readSelectedDomainPack(analysis.metadata);
+      const domainPackResult = persistedDomainPack
+        ? this.domainPackSelection.selectResolvedPack(persistedDomainPack)
+        : this.domainPackSelection.selectPack({
+          manualPackId: params.domain,
+          repositoryProfileDomain: snapshotDomain,
+        });
 
       // Step 1: Collect Evidence and Traceability Links
       const evidenceResult = await this.evidenceStep.execute(
@@ -262,4 +266,28 @@ export class RunImpactAnalysisUseCase {
       throw e;
     }
   }
+}
+
+function readSelectedDomainPack(metadata: unknown): ResolvedDomainPackSelection | null {
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return null;
+  }
+
+  const selected = (metadata as Record<string, unknown>).selectedDomainPack;
+  if (!selected || typeof selected !== 'object' || Array.isArray(selected)) {
+    return null;
+  }
+
+  const data = selected as Record<string, unknown>;
+  if (
+    typeof data.resolvedDomainPackId !== 'string' ||
+    typeof data.resolvedDomainPackVersion !== 'string' ||
+    typeof data.resolvedDomainPackStatus !== 'string' ||
+    typeof data.selectedBy !== 'string' ||
+    typeof data.resolvedAt !== 'string'
+  ) {
+    return null;
+  }
+
+  return data as ResolvedDomainPackSelection;
 }

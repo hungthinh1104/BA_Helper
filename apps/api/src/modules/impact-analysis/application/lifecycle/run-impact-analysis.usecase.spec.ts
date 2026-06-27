@@ -62,8 +62,11 @@ describe('RunImpactAnalysisUseCase', () => {
         selectPack: jest.fn().mockReturnValue({
           pack: {
             id: 'test-pack',
+            name: 'Test Pack',
             version: '1.0',
             status: 'EXPERIMENTAL',
+            description: 'Test pack',
+            glossaryMetadata: [],
             concepts: [],
             retrievalHints: [],
             riskTemplates: [],
@@ -71,8 +74,34 @@ describe('RunImpactAnalysisUseCase', () => {
             unknownTemplates: [],
           },
           normalizedPackId: 'test-pack',
-          selectedBy: 'safe_default',
+          selectedBy: 'FALLBACK',
+          resolved: {
+            requestedDomainPackId: null,
+            resolvedDomainPackId: 'test-pack',
+            resolvedDomainPackVersion: '1.0',
+            resolvedDomainPackStatus: 'EXPERIMENTAL',
+            selectedBy: 'FALLBACK',
+            resolvedAt: '2026-06-27T00:00:00.000Z',
+          },
         }),
+        selectResolvedPack: jest.fn((selection) => ({
+          pack: {
+            id: selection.resolvedDomainPackId,
+            name: 'Test Pack',
+            version: selection.resolvedDomainPackVersion,
+            status: selection.resolvedDomainPackStatus,
+            description: 'Test pack',
+            glossaryMetadata: [],
+            concepts: [],
+            retrievalHints: [],
+            riskTemplates: [],
+            qaTemplates: [],
+            unknownTemplates: [],
+          },
+          normalizedPackId: selection.resolvedDomainPackId,
+          selectedBy: selection.selectedBy,
+          resolved: selection,
+        })),
     } as unknown as jest.Mocked<DomainPackRegistry>;
 
     const evidenceStep = new ImpactEvidenceCollectionStep(

@@ -40,6 +40,7 @@ describe('ExportApprovedMultiRepoReportUseCase', () => {
     isStale: false,
     staleReason: undefined,
     provenance: {
+      domainPack: null,
       childAnalyses: [
         {
           analysisId: 'analysis-1',

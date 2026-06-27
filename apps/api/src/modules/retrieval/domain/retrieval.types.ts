@@ -1,4 +1,5 @@
 import type { RetrievalSuggestion } from './retrieval-suggestion';
+import type { DomainPackSelectedBy } from '@ba-helper/contracts';
 
 export interface RetrievalDiagnostics {
   version: 'retrieval-diagnostics@0.1.0';
@@ -22,7 +23,7 @@ export interface RetrievalDiagnostics {
     id: string;
     version: string;
     status: 'STABLE' | 'PARTIAL' | 'EXPERIMENTAL' | 'FALLBACK';
-    selectedBy: 'manual_config' | 'repository_profile' | 'safe_default';
+    selectedBy: DomainPackSelectedBy;
   };
   finalScore: number;
 }

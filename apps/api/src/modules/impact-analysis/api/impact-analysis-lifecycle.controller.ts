@@ -96,6 +96,7 @@ export class ImpactAnalysisLifecycleController {
       sourceTargetId: input.sourceTargetId,
       allowPartialSnapshot: input.allowPartialSnapshot,
       requestKey: input.requestKey,
+      domainPackId: input.domainPackId,
     });
 
     const response = impactAnalysisResponseSchema.parse(

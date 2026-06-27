@@ -174,7 +174,7 @@ describe('Golden Path Demo', () => {
     expect(packDiagnostic).toBeDefined();
     expect(packDiagnostic.payload.domainPackId).toBe('booking');
     expect(packDiagnostic.payload.domainPackVersion).toBeDefined();
-    expect(packDiagnostic.payload.selectedBy).toBe('manual_config');
+    expect(packDiagnostic.payload.selectedBy).toBe('EXPLICIT');
     // Ensure Boundedness
     expect(packDiagnostic.payload.rawPrompts).toBeUndefined();
     expect(packDiagnostic.payload.sourceCode).toBeUndefined();
@@ -210,6 +210,10 @@ describe('Golden Path Demo', () => {
     // ==========================================
     // Simulate user reviewing insights
     await prisma.baInsight.updateMany({
+      where: { impactAnalysisId: analysisId },
+      data: { reviewStatus: 'CONFIRMED' },
+    });
+    await prisma.traceabilityLink.updateMany({
       where: { impactAnalysisId: analysisId },
       data: { reviewStatus: 'CONFIRMED' },
     });

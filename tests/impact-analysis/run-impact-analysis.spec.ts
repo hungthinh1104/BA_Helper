@@ -382,7 +382,7 @@ describe('RunImpactAnalysisUseCase', () => {
     expect(diagnostic.payload).toMatchObject({
       domainPackId: 'booking',
       domainPackVersion: expect.any(String),
-      selectedBy: 'manual_config',
+      selectedBy: 'EXPLICIT',
       conceptCount: expect.any(Number),
       retrievalHintCount: expect.any(Number),
       riskTemplateCount: expect.any(Number),
@@ -447,7 +447,7 @@ describe('RunImpactAnalysisUseCase', () => {
     expect(diagnostic.payload.domainPackId).toBe('general');
     expect(diagnostic.payload.domainPackVersion).toBe('0.0.0');
     expect(diagnostic.payload.domainPackStatus).toBe('FALLBACK');
-    expect(diagnostic.payload.selectedBy).toBe('safe_default');
+    expect(diagnostic.payload.selectedBy).toBe('FALLBACK');
   });
 
   it('booking profile emits booking@0.1.0', async () => {
@@ -499,10 +499,10 @@ describe('RunImpactAnalysisUseCase', () => {
     const diagnostic = finalUpdateCall![0].metadata.diagnostics.find((d: any) => d.code === 'DOMAIN_PACK_APPLIED');
 
     expect(diagnostic.payload.domainPackId).toBe('booking');
-    expect(diagnostic.payload.selectedBy).toBe('repository_profile');
+    expect(diagnostic.payload.selectedBy).toBe('REPOSITORY_PROFILE');
   });
 
-  it('rental profile emits rental@0.1.0 as PARTIAL', async () => {
+  it('persisted rental selection emits rental@0.1.0 as PARTIAL', async () => {
     class RentalProfileRepo extends StubImpactRepo {
       findById = async () => ({
         id: 'analysis-1',
@@ -521,6 +521,16 @@ describe('RunImpactAnalysisUseCase', () => {
 	          rawText: 'Update tenant deposit payment for rental contract.',
 	          requirement: { projectId: 'project-1' },
 	        },
+          metadata: {
+            selectedDomainPack: {
+              requestedDomainPackId: 'rental',
+              resolvedDomainPackId: 'rental',
+              resolvedDomainPackVersion: '0.1.0',
+              resolvedDomainPackStatus: 'PARTIAL',
+              selectedBy: 'EXPLICIT',
+              resolvedAt: '2026-06-27T00:00:00.000Z',
+            },
+          },
       });
     }
 
@@ -553,7 +563,7 @@ describe('RunImpactAnalysisUseCase', () => {
     expect(diagnostic.payload.domainPackId).toBe('rental');
     expect(diagnostic.payload.domainPackVersion).toBe('0.1.0');
     expect(diagnostic.payload.domainPackStatus).toBe('PARTIAL');
-    expect(diagnostic.payload.selectedBy).toBe('repository_profile');
+    expect(diagnostic.payload.selectedBy).toBe('EXPLICIT');
   });
 
   it('rejects non-runnable analyses', async () => {
