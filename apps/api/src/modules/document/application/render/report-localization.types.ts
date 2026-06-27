@@ -20,6 +20,10 @@ export type ReportLabels = {
   commitSha: string;
   analyzerVersion: string;
   finalizedAt: string;
+  domainPack: string;
+  partialDomainPackWarning: string;
+  administrativeWorkflowOnly: string;
+  noMedicalClinicalCompliance: string;
   scannerCapabilityProfile: string;
   scannerDiagnosticsAndRisks: string;
   language: string;

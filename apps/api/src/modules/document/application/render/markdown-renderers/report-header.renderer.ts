@@ -33,6 +33,19 @@ export function renderReportHeader(context: MarkdownReportRenderContext): string
     lines.push(`- ${labels.commitSha}: \`${metadata.commitSha}\``);
     lines.push(`- ${labels.analyzerVersion}: \`${metadata.analyzerVersion}\``);
     lines.push(`- ${labels.finalizedAt}: ${metadata.finalizedAt ?? metadata.generatedAt}`);
+    const domainPack = readObjectField(analysis.metadata, 'domainPack');
+    const domainPackId = readStringField(domainPack, 'id');
+    const domainPackVersion = readStringField(domainPack, 'version');
+    const domainPackStatus = readStringField(domainPack, 'status');
+    const domainPackSelectedBy = readStringField(domainPack, 'selectedBy');
+    if (domainPackId && domainPackVersion && domainPackStatus && domainPackSelectedBy) {
+      lines.push(`- ${labels.domainPack}: \`${domainPackId}@${domainPackVersion}\` (${domainPackStatus}, ${domainPackSelectedBy})`);
+    }
+    lines.push('');
+  }
+
+  if (readStringField(readObjectField(analysis.metadata, 'domainPack'), 'status') === 'PARTIAL') {
+    lines.push(`> **${labels.domainPack}: PARTIAL.** ${labels.partialDomainPackWarning} ${labels.administrativeWorkflowOnly} ${labels.noMedicalClinicalCompliance}`);
     lines.push('');
   }
 
