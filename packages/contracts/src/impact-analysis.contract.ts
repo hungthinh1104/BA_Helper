@@ -314,10 +314,14 @@ export const multiRepoApprovedReportResponseSchema = z.object({
 	staleReason: z.string().optional(),
 	provenance: z.object({
 		domainPack: z.object({
+			requestedDomainPackId: z.string().nullable().optional(),
 			domainPackId: z.string(),
 			domainPackVersion: z.string(),
 			domainPackStatus: domainProfileCapabilityStatusSchema,
 			selectedBy: domainPackSelectedBySchema,
+			resolvedAt: z.string().nullable().optional(),
+			manifestDigest: z.string().nullable().optional(),
+			registryVersion: z.string().nullable().optional(),
 		}).nullable().optional(),
 		childAnalyses: z.array(z.object({
 			analysisId: z.string().uuid(),

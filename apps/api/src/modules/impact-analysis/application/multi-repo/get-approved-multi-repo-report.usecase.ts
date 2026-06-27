@@ -89,9 +89,17 @@ function readStoredDomainPackProvenance(provenance: unknown) {
   }
 
   return {
+    requestedDomainPackId: readOptionalString(data.requestedDomainPackId),
     domainPackId: data.domainPackId,
     domainPackVersion: data.domainPackVersion,
     domainPackStatus: data.domainPackStatus,
     selectedBy: data.selectedBy,
+    resolvedAt: readOptionalString(data.resolvedAt),
+    manifestDigest: readOptionalString(data.manifestDigest),
+    registryVersion: readOptionalString(data.registryVersion),
   };
+}
+
+function readOptionalString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
 }

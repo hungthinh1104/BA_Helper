@@ -114,10 +114,14 @@ export class ReviewedSnapshotReportContextAdapter {
 }
 
 function readDomainPackProvenance(analysis: {
+  requestedDomainPackId?: string | null;
   resolvedDomainPackId?: string | null;
   resolvedDomainPackVersion?: string | null;
   resolvedDomainPackStatus?: string | null;
   domainPackSelectedBy?: string | null;
+  domainPackResolvedAt?: Date | string | null;
+  domainPackManifestDigest?: string | null;
+  domainPackRegistryVersion?: string | null;
   metadata?: unknown;
 }): ApprovedReportMetadata['domainPack'] {
   if (
@@ -127,10 +131,14 @@ function readDomainPackProvenance(analysis: {
     isDomainPackSelectedBy(analysis.domainPackSelectedBy)
   ) {
     return {
+      requestedDomainPackId: analysis.requestedDomainPackId ?? null,
       domainPackId: analysis.resolvedDomainPackId,
       domainPackVersion: analysis.resolvedDomainPackVersion,
       domainPackStatus: analysis.resolvedDomainPackStatus,
       selectedBy: analysis.domainPackSelectedBy,
+      resolvedAt: normalizeDateTime(analysis.domainPackResolvedAt),
+      manifestDigest: analysis.domainPackManifestDigest ?? null,
+      registryVersion: analysis.domainPackRegistryVersion ?? null,
     };
   }
 
@@ -155,11 +163,26 @@ function readDomainPackProvenance(analysis: {
   }
 
   return {
+    requestedDomainPackId: readOptionalString(data.requestedDomainPackId),
     domainPackId: data.domainPackId,
     domainPackVersion: data.domainPackVersion,
     domainPackStatus: data.domainPackStatus,
     selectedBy: data.selectedBy,
+    resolvedAt: readOptionalString(data.resolvedAt),
+    manifestDigest: readOptionalString(data.manifestDigest),
+    registryVersion: readOptionalString(data.registryVersion),
   };
+}
+
+function normalizeDateTime(value: unknown): string | null {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  return typeof value === 'string' && value.trim().length > 0 ? value : null;
+}
+
+function readOptionalString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
 }
 
 function isDomainPackStatus(

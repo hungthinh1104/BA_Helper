@@ -670,6 +670,7 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
         repositoryIds: [booking.repositoryId, payment.repositoryId],
         allowPartialSnapshot: false,
         requestKey: crypto.randomUUID(),
+        domainPackId: 'healthcare',
       })
       .expect(201);
 
@@ -708,6 +709,16 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
     expect(finalized.markdown).toContain('booking-service');
     expect(finalized.markdown).toContain('payment-service');
     expect(finalized.provenance.childAnalyses).toHaveLength(2);
+    expect(finalized.provenance.domainPack).toEqual({
+      requestedDomainPackId: 'healthcare',
+      domainPackId: 'healthcare',
+      domainPackVersion: '0.1.0',
+      domainPackStatus: 'PARTIAL',
+      selectedBy: 'EXPLICIT',
+      resolvedAt: expect.any(String),
+      manifestDigest: null,
+      registryVersion: null,
+    });
 
     const persisted = await prisma.mergedMultiRepoReport.findUnique({
       where: { runId: result.runId },

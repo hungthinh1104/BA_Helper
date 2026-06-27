@@ -13,6 +13,17 @@ import {
   StoredChildProvenance,
 } from './multi-repo-merged-report-state';
 
+type DomainPackReportProvenance = {
+  requestedDomainPackId?: string | null;
+  domainPackId: string;
+  domainPackVersion: string;
+  domainPackStatus: DomainProfileCapabilityStatus;
+  selectedBy: DomainPackSelectedBy;
+  resolvedAt?: string | null;
+  manifestDigest?: string | null;
+  registryVersion?: string | null;
+};
+
 @Injectable()
 export class FinalizeMultiRepoReportUseCase {
   constructor(
@@ -136,16 +147,15 @@ function toChildStates(
 }
 
 function readExplicitRunDomainPackProvenance(run: {
+  requestedDomainPackId?: string | null;
   resolvedDomainPackId?: string | null;
   resolvedDomainPackVersion?: string | null;
   resolvedDomainPackStatus?: string | null;
   domainPackSelectedBy?: string | null;
-}): {
-  domainPackId: string;
-  domainPackVersion: string;
-  domainPackStatus: DomainProfileCapabilityStatus;
-  selectedBy: DomainPackSelectedBy;
-} | null {
+  domainPackResolvedAt?: Date | string | null;
+  domainPackManifestDigest?: string | null;
+  domainPackRegistryVersion?: string | null;
+}): DomainPackReportProvenance | null {
   if (
     run.domainPackSelectedBy !== 'EXPLICIT' ||
     typeof run.resolvedDomainPackId !== 'string' ||
@@ -156,27 +166,30 @@ function readExplicitRunDomainPackProvenance(run: {
   }
 
   return {
+    requestedDomainPackId: run.requestedDomainPackId ?? null,
     domainPackId: run.resolvedDomainPackId,
     domainPackVersion: run.resolvedDomainPackVersion,
     domainPackStatus: run.resolvedDomainPackStatus,
     selectedBy: 'EXPLICIT',
+    resolvedAt: normalizeDateTime(run.domainPackResolvedAt),
+    manifestDigest: run.domainPackManifestDigest ?? null,
+    registryVersion: run.domainPackRegistryVersion ?? null,
   };
 }
 
 function readRunDomainPackProvenance(
   analyses: Array<{
+    requestedDomainPackId?: string | null;
     resolvedDomainPackId?: string | null;
     resolvedDomainPackVersion?: string | null;
     resolvedDomainPackStatus?: string | null;
     domainPackSelectedBy?: string | null;
+    domainPackResolvedAt?: Date | string | null;
+    domainPackManifestDigest?: string | null;
+    domainPackRegistryVersion?: string | null;
     metadata?: unknown;
   }>,
-): {
-  domainPackId: string;
-  domainPackVersion: string;
-  domainPackStatus: DomainProfileCapabilityStatus;
-  selectedBy: DomainPackSelectedBy;
-} | null {
+): DomainPackReportProvenance | null {
   const first = analyses[0] ? readDomainPackProvenance(analyses[0]) : null;
   if (!first) return null;
 
@@ -193,18 +206,17 @@ function readRunDomainPackProvenance(
   return allSame ? first : null;
 }
 
-function readDomainPackProvenance(metadata: unknown): {
-  domainPackId: string;
-  domainPackVersion: string;
-  domainPackStatus: DomainProfileCapabilityStatus;
-  selectedBy: DomainPackSelectedBy;
-} | null {
+function readDomainPackProvenance(metadata: unknown): DomainPackReportProvenance | null {
   if (metadata && typeof metadata === 'object' && !Array.isArray(metadata)) {
     const record = metadata as {
+      requestedDomainPackId?: unknown;
       resolvedDomainPackId?: unknown;
       resolvedDomainPackVersion?: unknown;
       resolvedDomainPackStatus?: unknown;
       domainPackSelectedBy?: unknown;
+      domainPackResolvedAt?: unknown;
+      domainPackManifestDigest?: unknown;
+      domainPackRegistryVersion?: unknown;
       metadata?: unknown;
     };
     if (
@@ -214,10 +226,14 @@ function readDomainPackProvenance(metadata: unknown): {
       isDomainPackSelectedBy(record.domainPackSelectedBy)
     ) {
       return {
+        requestedDomainPackId: readOptionalString(record.requestedDomainPackId),
         domainPackId: record.resolvedDomainPackId,
         domainPackVersion: record.resolvedDomainPackVersion,
         domainPackStatus: record.resolvedDomainPackStatus,
         selectedBy: record.domainPackSelectedBy,
+        resolvedAt: normalizeDateTime(record.domainPackResolvedAt),
+        manifestDigest: readOptionalString(record.domainPackManifestDigest),
+        registryVersion: readOptionalString(record.domainPackRegistryVersion),
       };
     }
 
@@ -246,11 +262,26 @@ function readDomainPackProvenance(metadata: unknown): {
   }
 
   return {
+    requestedDomainPackId: readOptionalString(data.requestedDomainPackId),
     domainPackId: data.domainPackId,
     domainPackVersion: data.domainPackVersion,
     domainPackStatus: data.domainPackStatus,
     selectedBy: data.selectedBy,
+    resolvedAt: readOptionalString(data.resolvedAt),
+    manifestDigest: readOptionalString(data.manifestDigest),
+    registryVersion: readOptionalString(data.registryVersion),
   };
+}
+
+function normalizeDateTime(value: unknown): string | null {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  return typeof value === 'string' && value.trim().length > 0 ? value : null;
+}
+
+function readOptionalString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
 }
 
 function isDomainPackStatus(value: unknown): value is DomainProfileCapabilityStatus {

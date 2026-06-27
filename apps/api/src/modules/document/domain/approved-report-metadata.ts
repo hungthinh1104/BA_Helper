@@ -16,10 +16,14 @@ export type ApprovedReportMetadata = {
   staleStatusAtReadTime: boolean;
   staleReason?: string;
   domainPack?: {
+    requestedDomainPackId?: string | null;
     domainPackId: string;
     domainPackVersion: string;
     domainPackStatus: 'STABLE' | 'PARTIAL' | 'EXPERIMENTAL' | 'FALLBACK';
     selectedBy: 'EXPLICIT' | 'REPOSITORY_PROFILE' | 'FALLBACK';
+    resolvedAt?: string | null;
+    manifestDigest?: string | null;
+    registryVersion?: string | null;
   };
   requirementRevisionId?: string;
   runId?: string;

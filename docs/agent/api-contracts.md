@@ -135,10 +135,14 @@ provenance when available:
 {
   "provenance": {
     "domainPack": {
+      "requestedDomainPackId": "healthcare",
       "domainPackId": "healthcare",
       "domainPackVersion": "0.1.0",
       "domainPackStatus": "PARTIAL",
-      "selectedBy": "EXPLICIT"
+      "selectedBy": "EXPLICIT",
+      "resolvedAt": "2026-06-27T00:00:00.000Z",
+      "manifestDigest": null,
+      "registryVersion": null
     }
   }
 }
