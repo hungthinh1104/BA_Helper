@@ -91,6 +91,15 @@ describe('Domain Pack Concept Matching', () => {
       expect(keys).toEqual(['maintenance_request']);
       expect(pack.status).toBe('PARTIAL');
     });
+
+    it('does not match rental concepts from generic workflow words alone', () => {
+      const keys = registry.matchConcepts(
+        'Update contract payment status when a request is approved.',
+        pack,
+      );
+
+      expect(keys).toEqual([]);
+    });
   });
 
   describe('general@0.0.0 (fallback)', () => {

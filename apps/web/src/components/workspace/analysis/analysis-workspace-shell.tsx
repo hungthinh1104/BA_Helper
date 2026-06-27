@@ -66,7 +66,7 @@ export function AnalysisWorkspaceShell({
                 {labels.title}
               </p>
               <DomainStatusBadge 
-                domainProfileId={workspace.overview.requirement.domainProfileId} 
+                domainPackStatus={workspace.overview.requirement.domainPack?.status ?? null}
                 locale={locale} 
               />
             </div>

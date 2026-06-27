@@ -11,10 +11,16 @@ describe('analysisWorkspaceResponseSchema', () => {
 				requirement: {
 					revisionId: '00000000-0000-4000-8000-000000000002',
 					title: 'Paid booking cancellation refund',
-					summary: 'Cancel paid bookings and prevent duplicate refunds.',
-					language: 'en',
-					domainProfileId: 'booking@0.1.0',
-				},
+						summary: 'Cancel paid bookings and prevent duplicate refunds.',
+						language: 'en',
+						domainProfileId: 'booking@0.1.0',
+						domainPack: {
+							id: 'booking',
+							version: '0.1.0',
+							status: 'STABLE',
+							selectedBy: 'repository_profile',
+						},
+					},
 				snapshot: {
 					snapshotId: '00000000-0000-4000-8000-000000000003',
 					repositoryId: '00000000-0000-4000-8000-000000000004',

@@ -1,5 +1,7 @@
 import { DomainPackRegistry } from './domain-pack.registry';
 import { AppError } from '@ba-helper/shared';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 describe('DomainPackRegistry', () => {
   let registry: DomainPackRegistry;
@@ -136,5 +138,38 @@ describe('DomainPackRegistry', () => {
       expect(booking.qaTemplates).toBeUndefined();
       expect(booking.unknownTemplates).toBeUndefined();
     });
+
+    it('keeps glossary metadata term counts aligned with glossary assets', () => {
+      for (const profile of registry.listProfiles()) {
+        for (const metadata of profile.glossaryMetadata) {
+          const glossary = readGlossary(profile.id, metadata.locale);
+
+          expect(glossary.domain).toBe(profile.id);
+          expect(glossary.locale).toBe(metadata.locale);
+          expect(glossary.status).toBe(metadata.status);
+          expect(glossary.version).toBe(metadata.version);
+          expect(Object.keys(glossary.terms).length).toBe(metadata.termCount);
+        }
+      }
+    });
   });
 });
+
+function readGlossary(
+  domain: string,
+  locale: string,
+): {
+  domain: string;
+  locale: string;
+  status: string;
+  version: string;
+  terms: Record<string, string>;
+} {
+  const file = resolve(
+    process.cwd(),
+    'packages/domain-packs',
+    domain,
+    `${locale}.glossary.json`,
+  );
+  return JSON.parse(readFileSync(file, 'utf-8'));
+}

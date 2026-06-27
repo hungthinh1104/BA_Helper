@@ -71,10 +71,16 @@ describe('ImpactAnalysisReadModelController - driftFreshness', () => {
         requirement: {
           revisionId: '00000000-0000-4000-8000-000000000002',
           title: 'Refund API',
-          summary: 'Cancel paid bookings.',
-          language: 'en',
-          domainProfileId: 'booking@0.1.0',
-        },
+	          summary: 'Cancel paid bookings.',
+	          language: 'en',
+	          domainProfileId: 'booking@0.1.0',
+	          domainPack: {
+	            id: 'booking',
+	            version: '0.1.0',
+	            status: 'STABLE',
+	            selectedBy: 'repository_profile',
+	          },
+	        },
         snapshot: {
           snapshotId: '00000000-0000-4000-8000-000000000003',
           repositoryId: '00000000-0000-4000-8000-000000000004',

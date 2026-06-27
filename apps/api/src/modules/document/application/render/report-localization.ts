@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { DEFAULT_REPORT_LOCALE, ReportLabels, ReportLocale } from './report-localization.types';
 
 export { DEFAULT_REPORT_LOCALE, ReportLabels, ReportLocale };
@@ -213,29 +215,53 @@ const REPORT_LABELS: Record<ReportLocale, ReportLabels> = {
   },
 };
 
-const BOOKING_TERMS: Record<ReportLocale, Array<{ key: string; value: string }>> = {
-  en: [
-    { key: 'booking', value: 'booking' },
-    { key: 'cancellation', value: 'cancellation' },
-    { key: 'refund', value: 'refund' },
-    { key: 'doubleRefund', value: 'double refund' },
-    { key: 'inventoryRelease', value: 'inventory release' },
-    { key: 'paymentState', value: 'payment state' },
-  ],
-  vi: [
-    { key: 'booking', value: 'đơn đặt phòng' },
-    { key: 'cancellation', value: 'hủy đặt phòng' },
-    { key: 'refund', value: 'hoàn tiền' },
-    { key: 'doubleRefund', value: 'hoàn tiền trùng' },
-    { key: 'inventoryRelease', value: 'giải phóng tồn phòng' },
-    { key: 'paymentState', value: 'trạng thái thanh toán' },
-  ],
-};
-
 export function getReportLabels(locale: ReportLocale = DEFAULT_REPORT_LOCALE): ReportLabels {
   return REPORT_LABELS[locale] ?? REPORT_LABELS[DEFAULT_REPORT_LOCALE];
 }
 
-export function getBookingTerminology(locale: ReportLocale): Array<{ key: string; value: string }> {
-  return BOOKING_TERMS[locale] ?? BOOKING_TERMS[DEFAULT_REPORT_LOCALE];
+export function getDomainTerminology(
+  domain: string | null | undefined,
+  locale: ReportLocale,
+): Array<{ key: string; value: string }> {
+  const normalizedDomain = domain?.toLowerCase().trim();
+  if (!normalizedDomain || !/^[a-z0-9-]+$/.test(normalizedDomain)) {
+    return [];
+  }
+
+  const glossary = readGlossary(normalizedDomain, locale) ??
+    readGlossary(normalizedDomain, DEFAULT_REPORT_LOCALE);
+
+  if (!glossary) {
+    return [];
+  }
+
+  return Object.entries(glossary.terms).map(([key, value]) => ({ key, value }));
+}
+
+function readGlossary(
+  domain: string,
+  locale: ReportLocale,
+): { terms: Record<string, string> } | null {
+  const file = resolve(
+    process.cwd(),
+    'packages/domain-packs',
+    domain,
+    `${locale}.glossary.json`,
+  );
+
+  if (!existsSync(file)) {
+    return null;
+  }
+
+  const parsed = JSON.parse(readFileSync(file, 'utf-8')) as unknown;
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return null;
+  }
+
+  const terms = (parsed as { terms?: unknown }).terms;
+  if (!terms || typeof terms !== 'object' || Array.isArray(terms)) {
+    return null;
+  }
+
+  return { terms: terms as Record<string, string> };
 }

@@ -153,6 +153,32 @@ export function buildDomainProfileId(profile: WorkspaceAnalysis['snapshot']['pro
 	return `${profile.domain.toLowerCase()}@${profile.profileVersion}`;
 }
 
+export function buildWorkspaceDomainPack(
+	metadata: WorkspaceAnalysis['metadata'],
+): AnalysisWorkspaceResponse['overview']['requirement']['domainPack'] {
+	const domainPack = readMetadata(metadata, 'domainPack');
+	if (!domainPack || typeof domainPack !== 'object' || Array.isArray(domainPack)) {
+		return null;
+	}
+
+	const data = domainPack as Record<string, unknown>;
+	if (
+		typeof data.id !== 'string' ||
+		typeof data.version !== 'string' ||
+		!isDomainPackStatus(data.status) ||
+		!isDomainPackSelectedBy(data.selectedBy)
+	) {
+		return null;
+	}
+
+	return {
+		id: data.id,
+		version: data.version,
+		status: data.status,
+		selectedBy: data.selectedBy,
+	};
+}
+
 export function evidenceArtifactKeys(insight: WorkspaceInsight): string[] {
 	return Array.from(
 		new Set(
@@ -231,4 +257,25 @@ function stringifyJobError(error: unknown) {
 		return String((error as { message?: unknown }).message);
 	}
 	return 'Document generation failed.';
+}
+
+function isDomainPackStatus(
+	value: unknown,
+): value is NonNullable<AnalysisWorkspaceResponse['overview']['requirement']['domainPack']>['status'] {
+	return (
+		value === 'STABLE' ||
+		value === 'PARTIAL' ||
+		value === 'EXPERIMENTAL' ||
+		value === 'FALLBACK'
+	);
+}
+
+function isDomainPackSelectedBy(
+	value: unknown,
+): value is NonNullable<AnalysisWorkspaceResponse['overview']['requirement']['domainPack']>['selectedBy'] {
+	return (
+		value === 'manual_config' ||
+		value === 'repository_profile' ||
+		value === 'safe_default'
+	);
 }

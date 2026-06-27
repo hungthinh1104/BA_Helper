@@ -1,3 +1,5 @@
+import type { DomainProfileCapabilityStatus } from '@ba-helper/contracts';
+
 /** Minimal analysis record for RunImpactAnalysisUseCase */
 export type ImpactAnalysisRecord = {
   id: string;
@@ -49,8 +51,8 @@ export type ImpactAnalysisStatusUpdate = {
     domainPack?: {
       id: string;
       version: string;
-      status: string;
-      selectedBy: string;
+      status: DomainProfileCapabilityStatus;
+      selectedBy: 'manual_config' | 'repository_profile' | 'safe_default';
     };
     diagnostics?: Array<{
       code: string;

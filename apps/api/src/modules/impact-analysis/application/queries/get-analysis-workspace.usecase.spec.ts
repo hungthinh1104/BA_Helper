@@ -18,14 +18,20 @@ const ids = {
 };
 
 describe('GetAnalysisWorkspaceUseCase', () => {
-	it('returns AnalysisWorkspaceResponse shape with taxonomy projections', async () => {
-		const result = await executeWith(createAnalysis());
+		it('returns AnalysisWorkspaceResponse shape with taxonomy projections', async () => {
+			const result = await executeWith(createAnalysis());
 
-		expect(() => analysisWorkspaceResponseSchema.parse(result)).not.toThrow();
-		expect(result.overview.analysisId).toBe(ids.analysis);
-		expect(result.impactGroups[0].artifacts[0].artifactKey).toBe(
-			'api:booking.controller.cancel',
-		);
+			expect(() => analysisWorkspaceResponseSchema.parse(result)).not.toThrow();
+			expect(result.overview.analysisId).toBe(ids.analysis);
+			expect(result.overview.requirement.domainPack).toEqual({
+				id: 'booking',
+				version: '0.1.0',
+				status: 'STABLE',
+				selectedBy: 'repository_profile',
+			});
+			expect(result.impactGroups[0].artifacts[0].artifactKey).toBe(
+				'api:booking.controller.cancel',
+			);
 		expect(result.risks).toHaveLength(1);
 		expect(result.unknowns).toHaveLength(1);
 		expect(result.qaScenarios).toHaveLength(1);
@@ -80,9 +86,16 @@ describe('GetAnalysisWorkspaceUseCase', () => {
 	it('counts pending review items from insight and traceability state', async () => {
 		const result = await executeWith(createAnalysis());
 
-		expect(result.reviewQueue).toHaveLength(3);
-		expect(result.overview.counts.pendingReviewItems).toBe(3);
-	});
+			expect(result.reviewQueue).toHaveLength(3);
+			expect(result.overview.counts.pendingReviewItems).toBe(3);
+		});
+
+		it('does not derive domain pack capability when backend metadata is missing', async () => {
+			const result = await executeWith(createAnalysis({ metadata: null }));
+
+			expect(result.overview.requirement.domainProfileId).toBe('booking@repo-profile@0.1.0');
+			expect(result.overview.requirement.domainPack).toBeNull();
+		});
 
 	it('derives drift independently from lifecycle status', async () => {
 		const result = await executeWith(
@@ -120,13 +133,21 @@ function createAnalysis(overrides: Record<string, unknown> = {}) {
 		status: 'WAITING_FOR_REVIEW',
 		stage: 'DONE',
 		progress: 100,
-		requirementRevision: {
-			id: ids.revision,
+			requirementRevision: {
+				id: ids.revision,
 			title: 'Paid booking cancellation refund',
 			rawText: 'Allow users to cancel paid bookings and receive refund.',
 			normalizedText: 'Cancel paid bookings and create a refund.',
-		},
-		snapshot: {
+			},
+			metadata: {
+				domainPack: {
+					id: 'booking',
+					version: '0.1.0',
+					status: 'STABLE',
+					selectedBy: 'repository_profile',
+				},
+			},
+			snapshot: {
 			id: ids.snapshot,
 			repositoryId: ids.repository,
 			commitSha: 'abc123',

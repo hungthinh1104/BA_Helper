@@ -183,6 +183,14 @@ describe('MarkdownImpactReportBuilder', () => {
   it('renders Vietnamese report chrome while preserving raw evidence and source text', () => {
     const viAnalysis = {
       ...mockAnalysis,
+      metadata: {
+        domainPack: {
+          id: 'booking',
+          version: '0.1.0',
+          status: 'STABLE',
+          selectedBy: 'repository_profile',
+        },
+      },
       snapshot: {
         ...mockAnalysis.snapshot,
         profile: { domain: 'BOOKING' },
@@ -226,6 +234,37 @@ describe('MarkdownImpactReportBuilder', () => {
     expect(report).toContain('**File:** `src/booking/booking.service.ts`');
     expect(report).toContain(rawEvidence);
     expect(report).toContain('> Allow users to cancel paid bookings and receive refund.');
+  });
+
+  it('renders terminology from the selected domain pack glossary', () => {
+    const viAnalysis = {
+      ...mockAnalysis,
+      metadata: {
+        domainPack: {
+          id: 'rental',
+          version: '0.1.0',
+          status: 'PARTIAL',
+          selectedBy: 'manual_config',
+        },
+      },
+      snapshot: {
+        ...mockAnalysis.snapshot,
+        profile: { domain: 'UNKNOWN' },
+      },
+    };
+
+    const report = builder.build({
+      locale: 'vi',
+      analysis: viAnalysis,
+      insights: [],
+      traceabilityLinks: [],
+      hasUnreviewedItems: false,
+    });
+
+    expect(report).toContain('## Thuật ngữ domain');
+    expect(report).toContain('- rentalContract: hợp đồng thuê phòng');
+    expect(report).toContain('- deposit: tiền cọc');
+    expect(report).not.toContain('- refund: hoàn tiền');
   });
 
   it('adds unreviewed acknowledged note if hasUnreviewedItems is true', () => {

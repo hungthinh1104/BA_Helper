@@ -1,5 +1,5 @@
 import type { MarkdownReportRenderContext } from '../../markdown-impact-report.types';
-import { getBookingTerminology, getReportLabels } from '../report-localization';
+import { getDomainTerminology, getReportLabels } from '../report-localization';
 
 export function renderReportHeader(context: MarkdownReportRenderContext): string[] {
   const { analysis, metadata } = context;
@@ -36,10 +36,11 @@ export function renderReportHeader(context: MarkdownReportRenderContext): string
     lines.push('');
   }
 
-  if (context.locale === 'vi' && analysis.snapshot.profile?.domain === 'BOOKING') {
+  const terminology = getDomainTerminology(resolveDomainPackId(analysis), context.locale);
+  if (context.locale === 'vi' && terminology.length > 0) {
     lines.push(`## ${labels.terminology}`);
     lines.push('');
-    for (const term of getBookingTerminology(context.locale)) {
+    for (const term of terminology) {
       lines.push(`- ${term.key}: ${term.value}`);
     }
     lines.push('');
@@ -73,4 +74,26 @@ export function renderReportHeader(context: MarkdownReportRenderContext): string
   }
 
   return lines;
+}
+
+function resolveDomainPackId(analysis: MarkdownReportRenderContext['analysis']) {
+  const domainPack = readObjectField(analysis.metadata, 'domainPack');
+  const id = readStringField(domainPack, 'id');
+  return id ?? analysis.snapshot.profile?.domain ?? null;
+}
+
+function readObjectField(source: unknown, key: string): Record<string, unknown> | null {
+  if (!source || typeof source !== 'object' || Array.isArray(source)) {
+    return null;
+  }
+  const value = (source as Record<string, unknown>)[key];
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  return value as Record<string, unknown>;
+}
+
+function readStringField(source: Record<string, unknown> | null, key: string) {
+  const value = source?.[key];
+  return typeof value === 'string' ? value : null;
 }

@@ -326,12 +326,12 @@ export class HybridRetrievalService {
           domainBoostNorm: c.domainBoostNorm,
           matchedIntentLabels,
           universalKind: artifact.universalKind ?? null,
-          repositoryProfile: snapshot?.profile ? {
-            domain: snapshot.profile.domain,
-            framework: snapshot.profile.framework,
-            language: snapshot.profile.language,
-            domainProfileFallback: domainPack.status === 'FALLBACK',
-          } : null,
+	          repositoryProfile: snapshot?.profile ? {
+	            domain: snapshot.profile.domain,
+	            framework: snapshot.profile.framework,
+	            language: snapshot.profile.language,
+	            domainPackFallback: domainPack.status === 'FALLBACK',
+	          } : null,
           matchedDomainTerms: matchDomainPackTerms(
             request.changeRequest,
             domainPack,

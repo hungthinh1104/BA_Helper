@@ -210,17 +210,15 @@ export function CoverageStatusBadge({ status, className }: { status: string; cla
 }
 
 export function DomainStatusBadge({ 
-  domainProfileId, 
   domainPackStatus, 
   locale,
   className 
 }: { 
-  domainProfileId?: string | null
   domainPackStatus?: string | null
   locale?: SupportedLocale
   className?: string 
 }) {
-  const badgeData = getDomainCapabilityBadge({ domainProfileId, domainPackStatus, locale })
+  const badgeData = getDomainCapabilityBadge({ domainPackStatus, locale })
   
   let tone: BadgeTone = "muted"
   if (badgeData.status === "STABLE") tone = "success"

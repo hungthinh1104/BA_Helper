@@ -72,6 +72,28 @@ GET  /api/v1/impact-analyses/:analysisId/approved-report/export.pdf
 GET  /api/v1/impact-analyses/:analysisId/final-reviewed-report?locale=en|vi
 ```
 
+Analysis workspace responses expose backend-authored domain capability metadata
+when an analysis has applied a domain pack:
+
+```json
+{
+  "overview": {
+    "requirement": {
+      "domainProfileId": "booking@repo-profile@0.1.0",
+      "domainPack": {
+        "id": "booking",
+        "version": "0.1.0",
+        "status": "STABLE",
+        "selectedBy": "repository_profile"
+      }
+    }
+  }
+}
+```
+
+If no domain pack metadata has been applied yet, `domainPack` is `null`. The
+frontend must not infer `status` from `domainProfileId`.
+
 Deferred until after the Markdown report/review completion gate:
 
 ```http

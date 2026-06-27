@@ -4,8 +4,9 @@ import {
   driftStatusLabels,
   evidenceBasisLabels,
   exportStatusLabels,
-  formatFallbackLabel,
-  getLocalizedLabel,
+	  formatFallbackLabel,
+	  getDomainCapabilityBadge,
+	  getLocalizedLabel,
   reportStatusLabels,
   reviewDecisionLabels,
   reviewStatusLabels,
@@ -36,9 +37,20 @@ describe("analysis workspace i18n labels", () => {
     expect(getLocalizedLabel(exportStatusLabels, "available", "vi")).toBe("Có thể xuất")
   })
 
-  it("falls back mechanically for missing labels without inventing business state", () => {
-    expect(formatFallbackLabel("SOME_NEW_STATUS")).toBe("SOME NEW STATUS")
-    expect(getLocalizedLabel(reportStatusLabels, "archived", "vi")).toBe("archived")
-    expect(getLocalizedLabel(exportStatusLabels, null, "vi")).toBe("Không áp dụng")
-  })
-})
+	  it("falls back mechanically for missing labels without inventing business state", () => {
+	    expect(formatFallbackLabel("SOME_NEW_STATUS")).toBe("SOME NEW STATUS")
+	    expect(getLocalizedLabel(reportStatusLabels, "archived", "vi")).toBe("archived")
+	    expect(getLocalizedLabel(exportStatusLabels, null, "vi")).toBe("Không áp dụng")
+	  })
+
+	  it("uses backend-authored domain pack status without deriving from domain id", () => {
+	    expect(getDomainCapabilityBadge({ domainPackStatus: "PARTIAL", locale: "vi" })).toMatchObject({
+	      status: "PARTIAL",
+	      label: "Phạm vi một phần",
+	    })
+	    expect(getDomainCapabilityBadge({ domainPackStatus: null, locale: "en" })).toMatchObject({
+	      status: "UNKNOWN",
+	      label: "Unknown capability",
+	    })
+	  })
+	})

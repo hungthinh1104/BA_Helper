@@ -29,7 +29,3 @@ export type { ImpactAnalysisAiResponse } from './ai/ai.schema';
 export { EvidencePackFormatter } from './ai/evidence-pack.formatter';
 export type { EvidenceCandidate } from './ai/evidence-pack.formatter';
 export { renderPrompt } from './ai/prompt-registry';
-
-// Domain profile utilities (needed by retrieval + prompt building)
-export { buildCompactDomainContext, getDomainProfile, getDomainGlossary, matchDomainTerms, isDomainSupported } from './domain-profile/index';
-export type { DomainProfile } from './domain-profile/profiles/booking.domain-profile';

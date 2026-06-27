@@ -75,7 +75,10 @@ terminology and evaluation cases, but the product does not claim full rental
 domain support. Current coverage is limited to deposit payment consistency,
 room availability through a booking request, and contract cancellation effects
 on payment records plus tenant/landlord notification. Maintenance request terms
-exist only as terminology/noise coverage in this revision.
+exist only as terminology/noise coverage in this revision. Rental is not
+auto-detected by the scanner and is not user-selectable through the analysis
+create API in this revision; it is a bounded registry/evaluation capability
+until an explicit runtime-selection phase is approved.
 
 ## Glossary Metadata
 
@@ -98,6 +101,11 @@ The registry exposes only metadata for these assets: locale, glossary status,
 version, and term count. Glossary assets remain terminology references. Domain
 profile additions do not introduce Vietnamese runtime output, scanner changes,
 or new AI behavior.
+
+Workspace and report UI must render capability status from backend-authored
+domain-pack metadata. Frontend components may localize labels for `STABLE`,
+`PARTIAL`, `EXPERIMENTAL`, and `FALLBACK`, but must not infer capability status
+from a domain id or scanner profile string.
 
 ## Adding A Profile
 

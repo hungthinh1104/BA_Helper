@@ -4,6 +4,7 @@ export type WorkspaceAnalysis = {
 	id: string;
 	status: string;
 	progress: number;
+	metadata?: unknown;
 	requirementRevision: {
 		id: string;
 		title: string;

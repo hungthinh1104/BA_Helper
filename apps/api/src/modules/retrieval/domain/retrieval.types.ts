@@ -13,10 +13,10 @@ export interface RetrievalDiagnostics {
     domain?: string | null;
     framework?: string | null;
     language?: string | null;
-    /** true when the domain resolved to the UNKNOWN fallback profile */
-    domainProfileFallback?: boolean;
+    /** true when the selected domain pack resolved to the safe fallback. */
+    domainPackFallback?: boolean;
   } | null;
-  /** Glossary terms from the domain profile that appeared in the change request. Max 10. */
+  /** Terms from the selected domain pack that appeared in the change request. Max 10. */
   matchedDomainTerms?: string[];
   domainPack?: {
     id: string;
