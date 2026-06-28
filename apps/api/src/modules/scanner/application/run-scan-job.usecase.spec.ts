@@ -56,7 +56,7 @@ jest.mock('@ba-helper/analyzer', () => {
           }
           return {
             artifacts: result?.artifacts || [],
-            dependencyEdges: [],
+            dependencyEdges: result?.dependencyEdges || [],
             diagnostics: result?.diagnostics ? [...result.diagnostics, capabilityDiagnostic] : [capabilityDiagnostic],
             capability
           };
@@ -503,6 +503,171 @@ describe('RunScanJobUseCase', () => {
     });
   });
 
+  it.each([
+    {
+      label: 'after snapshot upsert before artifact persistence',
+      setupFailure: () => {
+        artifactRepository.createMany.mockRejectedValueOnce(new Error('artifact create failed'));
+      },
+      expectedMessage: 'artifact create failed',
+    },
+    {
+      label: 'after artifact persistence before evidence persistence',
+      setupFailure: () => {
+        graphRepository.createDependencyEdges.mockRejectedValueOnce(new Error('edge create failed'));
+      },
+      expectedMessage: 'edge create failed',
+    },
+    {
+      label: 'after dependency edge persistence before index publication',
+      setupFailure: () => {
+        evidenceRepo.upsertMany.mockRejectedValueOnce(new Error('evidence upsert failed'));
+      },
+      expectedMessage: 'evidence upsert failed',
+    },
+  ])('keeps scan unpublished when transaction fails $label', async ({ setupFailure, expectedMessage }) => {
+    mockSuccessfulTypeScriptScan();
+    setupFailure();
+
+    await expect(useCase.execute({ jobId: 'job-1' })).rejects.toThrow(expectedMessage);
+
+    expect(prisma.repositorySnapshot.update).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ indexStatus: 'LEXICAL_READY' }),
+      }),
+    );
+    expect(queueService.enqueueSnapshotEmbedding).not.toHaveBeenCalled();
+    expect(eventLogService.recordEvent).not.toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: 'SCAN_COMPLETED' }),
+    );
+    const finalState = scanJobRepository.updateState.mock.calls.at(-1)?.[0];
+    expect(finalState?.status).toBe(ScanJobStatus.FAILED);
+  });
+
+  it('keeps scan completed and marks vector failed when embedding enqueue fails after commit', async () => {
+    mockSuccessfulTypeScriptScan();
+    queueService.enqueueSnapshotEmbedding.mockRejectedValueOnce(new Error('redis down'));
+
+    await useCase.execute({ jobId: 'job-1' });
+
+    expect(scanJobRepository.updateState).toHaveBeenCalledWith({
+      jobId: 'job-1',
+      status: ScanJobStatus.COMPLETED,
+      stage: ScanJobStage.DONE,
+      progress: 100,
+    }, prisma);
+    expect(prisma.repositorySnapshot.update).toHaveBeenCalledWith({
+      where: { id: 'snapshot-1' },
+      data: { indexStatus: 'VECTOR_FAILED' },
+    });
+    expect(eventLogService.recordEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'SCAN_COMPLETED',
+        payload: expect.objectContaining({
+          snapshotId: 'snapshot-1',
+          nextStatus: 'COMPLETED',
+          indexStatus: 'VECTOR_FAILED',
+        }),
+      }),
+    );
+    expect(eventLogService.recordEvent).not.toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: 'SCAN_FAILED' }),
+    );
+  });
+
+  it('reruns the same commit through stable snapshot, artifact, edge, evidence, and embedding keys', async () => {
+    mockSuccessfulTypeScriptScan({
+      commitSha: 'same-commit',
+      artifacts: [
+        {
+          stableId: 'api:booking.controller.cancel',
+          type: 'API_ROUTE',
+          filePath: 'src/booking/booking.controller.ts',
+          symbolName: 'BookingController.cancel',
+          startLine: 10,
+          endLine: 20,
+          excerpt: 'cancel() {}',
+          contentHash: 'hash-route',
+        },
+        {
+          stableId: 'service:booking.service.cancelBooking',
+          type: 'SERVICE_METHOD',
+          filePath: 'src/booking/booking.service.ts',
+          symbolName: 'BookingService.cancelBooking',
+          startLine: 30,
+          endLine: 50,
+          excerpt: 'cancelBooking() {}',
+          contentHash: 'hash-service',
+        },
+      ],
+      dependencyEdges: [
+        {
+          fromArtifactId: 'api:booking.controller.cancel',
+          toArtifactId: 'service:booking.service.cancelBooking',
+          type: 'CALLS',
+        },
+      ],
+    });
+    artifactRepository.listBySnapshot.mockResolvedValue([
+      {
+        id: 'artifact-route',
+        artifactKey: 'api:booking.controller.cancel',
+      },
+      {
+        id: 'artifact-service',
+        artifactKey: 'service:booking.service.cancelBooking',
+      },
+    ]);
+
+    await useCase.execute({ jobId: 'job-1' });
+    await useCase.execute({ jobId: 'job-1' });
+
+    expect(prisma.repositorySnapshot.upsert).toHaveBeenCalledTimes(2);
+    for (const call of prisma.repositorySnapshot.upsert.mock.calls) {
+      expect(call[0].where.repositoryId_commitSha_analyzerVersion).toEqual({
+        repositoryId: 'repo-1',
+        commitSha: 'same-commit',
+        analyzerVersion: '0.2.0',
+      });
+    }
+    expect(artifactRepository.createMany).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          artifactKey: 'api:booking.controller.cancel',
+          contentHash: 'hash-route',
+        }),
+        expect.objectContaining({
+          artifactKey: 'service:booking.service.cancelBooking',
+          contentHash: 'hash-service',
+        }),
+      ]),
+      prisma,
+    );
+    expect(graphRepository.createDependencyEdges).toHaveBeenCalledWith([
+      expect.objectContaining({
+        snapshotId: 'snapshot-1',
+        fromArtifactId: 'artifact-route',
+        toArtifactId: 'artifact-service',
+        type: 'CALLS',
+      }),
+    ], prisma);
+    expect(evidenceRepo.upsertMany).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          provenanceKey: 'snapshot:snapshot-1:artifact:api:booking.controller.cancel',
+          artifactId: 'artifact-route',
+        }),
+        expect.objectContaining({
+          provenanceKey: 'snapshot:snapshot-1:artifact:service:booking.service.cancelBooking',
+          artifactId: 'artifact-service',
+        }),
+      ]),
+      prisma,
+    );
+    expect(queueService.enqueueSnapshotEmbedding).toHaveBeenNthCalledWith(1, 'snapshot-1');
+    expect(queueService.enqueueSnapshotEmbedding).toHaveBeenNthCalledWith(2, 'snapshot-1');
+  });
+
   it('removes temp workspace on clone failure without masking the original error', async () => {
     (fs.mkdtemp as jest.Mock).mockResolvedValue('/tmp/ba-scan-fail');
     (fs.rm as jest.Mock).mockRejectedValue(new Error('cleanup failed'));
@@ -677,6 +842,30 @@ describe('RunScanJobUseCase', () => {
     expect(finalState?.status).toBe(ScanJobStatus.FAILED);
     expect(finalState?.errorCode).toBe('UNSUPPORTED_FRAMEWORK');
 
+    expect(prisma.repositoryTarget.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          repositoryId_targetKey: {
+            repositoryId: 'repo-1',
+            targetKey: 'main',
+          },
+        },
+        update: expect.objectContaining({
+          latestObservedCommitSha: 'unknown-commit',
+        }),
+      }),
+    );
+    expect(prisma.repositorySnapshot.upsert).not.toHaveBeenCalled();
+    expect(prisma.scanJob.update).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          snapshotId: expect.any(String),
+          sourceTargetId: expect.any(String),
+        }),
+      }),
+    );
+    expect(queueService.enqueueSnapshotEmbedding).not.toHaveBeenCalled();
+
     // No SCAN_COMPLETED event emitted
     const completedCall = eventLogService.recordEvent.mock.calls.find(
       (c: any[]) => c[0]?.eventType === 'SCAN_COMPLETED',
@@ -764,6 +953,7 @@ describe('RunScanJobUseCase', () => {
     // Job must be marked FAILED — not COMPLETED
     const finalState = scanJobRepository.updateState.mock.calls.at(-1)?.[0];
     expect(finalState?.status).toBe(ScanJobStatus.FAILED);
+    expect(queueService.enqueueSnapshotEmbedding).not.toHaveBeenCalled();
 
     // No SCAN_COMPLETED event should have been emitted
     const completedCall = eventLogService.recordEvent.mock.calls.find(

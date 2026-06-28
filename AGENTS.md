@@ -4,6 +4,21 @@
 
 This repository builds a **Requirement-to-Code Impact Analyzer for Technical BA**.
 
+The core product key is not "multi-domain" and not "AI code analysis".
+The core path is:
+
+```text
+Requirement change
+-> impacted code artifacts
+-> source evidence
+-> unknowns / risks / QA scenarios
+-> human review
+-> approved traceable report
+```
+
+The value is reducing risk when requirements change by making impact analysis
+evidence-backed, reviewable, and provenance-locked.
+
 The MVP is deliberately narrow:
 
 ```text
@@ -41,13 +56,17 @@ Update docs + contracts + tests before completion.
 Work is currently focused on:
 
 ```text
-1. Snapshot drift and freshness lifecycle
-2. Drift-based stale/re-analysis warnings
-3. Incremental scan foundation
-4. Evaluation packs for impact quality
-5. Domain Pack architecture
-6. Public beta hardening
+1. Scan pipeline atomicity and snapshot publication safety
+2. Evidence quality scoring and weak/missing evidence detection
+3. Impact precision evaluation packs
+4. Review coverage gates
+5. Report trust UX and provenance visibility
+6. Snapshot drift/freshness and public beta hardening
 ```
+
+Do not add new domains as the center of gravity. Domain packs are controlled
+terminology/risk/QA hint layers. Evidence is the source of truth and human
+review is the final authority.
 
 ## Instruction Loading And Workflow
 
@@ -115,6 +134,8 @@ errors/logging, TypeScript/lint/CI configuration, or async worker behavior.
    - EVIDENCED = current MVP name for evidence-backed claim.
    - Long-term target naming should be CONFIRMED / INFERRED / UNKNOWN / CONFLICTING.
    - UI must not invent additional certainty labels.
+   - Domain-pack hints, LLM suggestions, and retrieval candidates cannot create
+     `EVIDENCED` claims without persisted source evidence.
 4. Missing support becomes `UNKNOWN`, `CONFLICTING`, or a stakeholder question, never an invented business rule.
 5. Every analysis and generated artifact is tied to a repository snapshot and
    its `commitSha`; moving-ref freshness is computed through its selected

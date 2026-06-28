@@ -29,7 +29,7 @@ export class QueueService {
     await this.embeddingQueue.add(
       'embed_snapshot',
       { snapshotId },
-      { jobId: `embed-${snapshotId}-${Date.now()}` },
+      { jobId: `embed-${snapshotId}` },
     );
   }
 

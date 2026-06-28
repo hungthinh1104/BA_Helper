@@ -36,6 +36,11 @@ type PersistScanOutputParams = {
   collector: DiagnosticCollectorLike;
 };
 
+type ObserveTargetParams = {
+  job: ScanJobForPersistence;
+  commitSha: string;
+};
+
 export type PersistedScanOutput = {
   snapshotId: string;
   sourceTargetId: string;
@@ -59,6 +64,17 @@ export class RunScanJobPersistenceStep {
     private readonly evidenceRepo: EvidenceRepository,
     private readonly scanJobRepository: ScanJobRepository,
   ) {}
+
+  async observeTarget(params: ObserveTargetParams): Promise<{ id: string }> {
+    return this.upsertObservedTarget(params, this.prisma);
+  }
+
+  async markEmbeddingEnqueueFailed(snapshotId: string): Promise<void> {
+    await this.prisma.repositorySnapshot.update({
+      where: { id: snapshotId },
+      data: { indexStatus: 'VECTOR_FAILED' },
+    });
+  }
 
   async persist(params: PersistScanOutputParams): Promise<PersistedScanOutput> {
     return this.prisma.$transaction(async (tx) => this.persistInTransaction(params, tx));
@@ -118,26 +134,10 @@ export class RunScanJobPersistenceStep {
       collector: params.collector,
     });
 
-    const target = await tx.repositoryTarget.upsert({
-      where: {
-        repositoryId_targetKey: {
-          repositoryId: params.job.repositoryId,
-          targetKey: params.job.requestedRef ?? 'main',
-        },
-      },
-      create: {
-        repositoryId: params.job.repositoryId,
-        targetKey: params.job.requestedRef ?? 'main',
-        requestedRef: params.job.requestedRef ?? 'main',
-        resolvedRefType: 'BRANCH',
-        latestObservedCommitSha: params.commitSha,
-        lastObservedAt: new Date(),
-      },
-      update: {
-        latestObservedCommitSha: params.commitSha,
-        lastObservedAt: new Date(),
-      },
-    });
+    const target = await this.upsertObservedTarget({
+      job: params.job,
+      commitSha: params.commitSha,
+    }, tx);
 
     await this.persistProfile(snapshot.id, params.repositoryProfile, tx);
 
@@ -206,6 +206,32 @@ export class RunScanJobPersistenceStep {
       diagnostics: finalDiagnostics,
       shouldEnqueueEmbedding: params.scanResult.artifacts.length > 0,
     };
+  }
+
+  private async upsertObservedTarget(
+    params: ObserveTargetParams,
+    client: PrismaService | Prisma.TransactionClient,
+  ): Promise<{ id: string }> {
+    return client.repositoryTarget.upsert({
+      where: {
+        repositoryId_targetKey: {
+          repositoryId: params.job.repositoryId,
+          targetKey: params.job.requestedRef ?? 'main',
+        },
+      },
+      create: {
+        repositoryId: params.job.repositoryId,
+        targetKey: params.job.requestedRef ?? 'main',
+        requestedRef: params.job.requestedRef ?? 'main',
+        resolvedRefType: 'BRANCH',
+        latestObservedCommitSha: params.commitSha,
+        lastObservedAt: new Date(),
+      },
+      update: {
+        latestObservedCommitSha: params.commitSha,
+        lastObservedAt: new Date(),
+      },
+    });
   }
 
   private async persistProfile(

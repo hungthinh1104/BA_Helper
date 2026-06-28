@@ -175,6 +175,10 @@ This prevents a transient failed attempt from occupying the immutable
 `(repositoryId, commitSha, analyzerVersion)` identity and blocking a successful
 retry.
 
+Embedding enqueue for a published snapshot must use a deterministic queue key
+derived from `snapshotId`. Retrying the same scan/snapshot must not create
+multiple independent vector-index jobs for identical extraction output.
+
 Repository profiling follows the same publication rule:
 
 ```text

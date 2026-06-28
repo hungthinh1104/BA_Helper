@@ -9,6 +9,18 @@ They are not evidence. A pack may suggest that refund policy is important, but
 only persisted `Evidence` linked to the analyzed snapshot or requirement
 revision can support an `EVIDENCED` insight.
 
+Domain packs are context adapters, not the product center:
+
+```text
+Domain pack = controlled terminology + risk/QA hint layer
+Evidence = source of truth
+Review = final authority
+```
+
+Adding a domain must improve evidence retrieval, unknown/risk quality, QA
+scenario usefulness, or report provenance. A domain pack must never turn a
+terminology match or template into a fact.
+
 ## Registry
 
 The built-in domain profile registry lives in:

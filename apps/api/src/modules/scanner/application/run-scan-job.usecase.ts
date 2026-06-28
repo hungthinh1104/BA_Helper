@@ -144,6 +144,14 @@ export class RunScanJobUseCase {
         } catch (err) {
           throw new AppError('CLONE_FAILED', (err as Error).message);
         }
+        await this.persistenceStep.observeTarget({
+          job: {
+            id: job.id,
+            repositoryId: job.repositoryId,
+            requestedRef: job.requestedRef,
+          },
+          commitSha,
+        });
 
         currentStage = ScanJobStage.DETECTING_PROJECT;
         await this.scanJobRepository.updateState({
@@ -313,9 +321,27 @@ export class RunScanJobUseCase {
         });
       }
 
+      let embeddingEnqueueFailed = false;
       if (persisted.shouldEnqueueEmbedding) {
-        await this.queueService.enqueueSnapshotEmbedding(persisted.snapshotId);
+        try {
+          await this.queueService.enqueueSnapshotEmbedding(persisted.snapshotId);
+        } catch (error) {
+          embeddingEnqueueFailed = true;
+          await this.persistenceStep.markEmbeddingEnqueueFailed(persisted.snapshotId);
+          this.logger.warn(
+            JSON.stringify({
+              event: 'SCAN_EMBEDDING_ENQUEUE_FAILED',
+              jobId: job.id,
+              repositoryId: job.repositoryId,
+              snapshotId: persisted.snapshotId,
+              errorMessage: error instanceof Error ? error.message : 'Unknown error',
+            }),
+          );
+        }
       }
+
+      const completionIndexStatus =
+        embeddingEnqueueFailed ? 'VECTOR_FAILED' : 'LEXICAL_READY';
 
       await this.eventLogService.recordEvent({
         eventType: 'SCAN_COMPLETED',
@@ -330,7 +356,7 @@ export class RunScanJobUseCase {
           snapshotId: persisted.snapshotId,
           previousStatus: 'RUNNING',
           nextStatus: 'COMPLETED',
-          indexStatus: 'LEXICAL_READY',
+          indexStatus: completionIndexStatus,
           artifactCount: persisted.artifactCount,
         },
       });

@@ -1,6 +1,10 @@
 # BA Helper: Requirement-to-Code Impact Analyzer
 
-**BA Helper** is a specialized impact analyzer for backend teams. It bridges the gap between changing business requirements and backend architecture. In research contexts, the engine is referred to as **ReqImpact**.
+**BA Helper** is an evidence-backed Requirement-to-Code Impact Analyzer for backend teams. It helps teams understand what a requirement change may affect in backend systems, with source evidence, unknowns, risks, QA scenarios, human review, and traceable reports. In research contexts, the engine is referred to as **ReqImpact**.
+
+The core value is reducing risk when requirements change. The product is not a
+generic repo chatbot, an AI coding assistant, an auto-BRD generator, or a
+multi-domain intelligence platform.
 
 ## 1. The Problem
 When a business requirement changes (e.g., "allow users to cancel paid bookings for a refund"), Technical Business Analysts (BAs) and QA Engineers must manually trace how that change cascades through the backend codebase. This process is historically slow, heavily reliant on tribal knowledge, and lacks an immutable audit trail—often resulting in missed edge cases and unhandled regression risks.
@@ -12,6 +16,15 @@ BA Helper automates the heavy lifting of traceability while enforcing strict hum
 3. **Human Review:** Forces an analyst to explicitly accept or reject every proposed traceability link.
 4. **Snapshot:** Freezes the reviewed decisions into an immutable reviewed snapshot.
 5. **Final Export:** Generates a deterministic, audited markdown report directly from the locked snapshot.
+
+```text
+Requirement change
+-> impacted code artifacts
+-> source evidence
+-> unknowns / risks / QA scenarios
+-> human review
+-> approved traceable report
+```
 
 ## 3. Why It Is Different from a Repo Chatbot
 Unlike generic AI coding assistants or repo chatbots:
@@ -237,16 +250,20 @@ Built as a TypeScript modular monolith to balance speed of development with even
 - Unsupported route patterns, file scan blind spots, artifact uncertainty, and dependency boundaries become diagnostics, `UNKNOWN`, or `RISK` items requiring review.
 - Experimental scanners must not be presented as production-grade language support.
 - Domain packs are hints, not evidence.
+- Domain packs are context adapters for terminology and risk/QA hints; evidence
+  and review remain the trust anchors.
 - LLM output is constrained by extracted evidence and human review; it is not allowed to finalize reports by itself.
 - Evaluation metrics are internal quality signals, not public benchmarks.
 - Automated CI golden path uses fake providers; manual UI demo runs with Gemini real LLM when configured.
 - Production SaaS concerns such as GitHub App auth, billing, and hosted multi-tenant deployment are not complete.
 
 ## Roadmap
-1. Keep TypeScript/NestJS as the primary public demo story.
-2. Harden pilot scanner adapters while keeping capability status explicit.
-3. Improve visual review and traceability flows without weakening the evidence hierarchy.
-4. Native OAuth and GitHub App integrations.
+1. Harden scan pipeline atomicity and snapshot publication safety.
+2. Add evidence quality scoring for weak/missing/conflicting support.
+3. Improve impact precision evaluation packs and scorecards.
+4. Tighten review coverage gates and report trust UX.
+5. Continue drift/freshness hardening and public beta readiness.
+6. Expand domains/languages only behind explicit capability status and evaluation coverage.
 
 ## Documentation & Assets
 - **[Golden Path Demo Guide](docs/demo/golden-path.md)**
