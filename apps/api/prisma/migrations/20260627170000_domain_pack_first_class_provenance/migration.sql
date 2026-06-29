@@ -52,7 +52,7 @@ WHERE "metadata" ? 'selectedDomainPack';
 -- Backfill multi-repo runs from the first child analysis. v1 creates child
 -- analyses with the same explicit run-level selection when a run-level pack is
 -- requested; mixed or legacy runs retain conservative defaults.
-UPDATE "MultiRepoAnalysisRun" AS run
+UPDATE "MultiRepoAnalysisRun"
 SET
   "requestedDomainPackId" = child."requestedDomainPackId",
   "resolvedDomainPackId" = child."resolvedDomainPackId",
@@ -62,22 +62,22 @@ SET
   "domainPackResolvedAt" = child."domainPackResolvedAt",
   "domainPackManifestDigest" = child."domainPackManifestDigest",
   "domainPackRegistryVersion" = child."domainPackRegistryVersion"
-FROM LATERAL (
-  SELECT
-    analysis."requestedDomainPackId",
-    analysis."resolvedDomainPackId",
-    analysis."resolvedDomainPackVersion",
-    analysis."resolvedDomainPackStatus",
-    analysis."domainPackSelectedBy",
-    analysis."domainPackResolvedAt",
-    analysis."domainPackManifestDigest",
-    analysis."domainPackRegistryVersion"
-  FROM "ImpactAnalysis" AS analysis
-  WHERE analysis."multiRepoRunId" = run."id"
-  ORDER BY analysis."createdAt" ASC
-  LIMIT 1
+FROM (
+  SELECT DISTINCT ON ("multiRepoRunId")
+    "multiRepoRunId",
+    "requestedDomainPackId",
+    "resolvedDomainPackId",
+    "resolvedDomainPackVersion",
+    "resolvedDomainPackStatus",
+    "domainPackSelectedBy",
+    "domainPackResolvedAt",
+    "domainPackManifestDigest",
+    "domainPackRegistryVersion"
+  FROM "ImpactAnalysis"
+  ORDER BY "multiRepoRunId", "createdAt" ASC
 ) AS child
-WHERE child."resolvedDomainPackId" IS NOT NULL;
+WHERE "MultiRepoAnalysisRun"."id" = child."multiRepoRunId"
+  AND child."resolvedDomainPackId" IS NOT NULL;
 
 -- CreateIndex
 CREATE INDEX "ImpactAnalysis_resolvedDomainPackId_resolvedDomainPackVersion_idx"
