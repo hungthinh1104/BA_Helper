@@ -10,9 +10,9 @@ import type { EvidenceRepository } from '../../../evidence/infrastructure/eviden
 import type { InsightRepository } from '../../../insight/infrastructure/insight.repository';
 import type { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
 import type { LlmProvider } from '../../../ai/domain/llm-provider.interface';
-import type { HybridRetrievalService } from '../../../retrieval/application/hybrid-retrieval.service';
+import type { HybridRetrievalService } from '@ba-helper/backend-runtime';
 import { AppError } from '@ba-helper/shared';
-import type { DomainPackRegistry } from '../../../domain-pack/application/domain-pack.registry';
+import type { DomainPackRegistry } from '@ba-helper/backend-runtime';
 
 describe('RunImpactAnalysisUseCase', () => {
   let useCase: RunImpactAnalysisUseCase;

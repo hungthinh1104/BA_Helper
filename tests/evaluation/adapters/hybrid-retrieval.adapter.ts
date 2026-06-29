@@ -5,8 +5,8 @@ import { EvaluationCase, NormalizedEvaluationResult } from '../evaluation-types'
 import { SafeFileEnumerator } from '../../../packages/analyzer/src/scanner/core/safe-file-enumerator';
 import { scanProject } from '../../../packages/analyzer/src/scanner/scanner';
 import { PrismaService } from '../../../apps/api/src/modules/prisma/prisma.service';
-import { HybridRetrievalService } from '../../../apps/api/src/modules/retrieval/application/hybrid-retrieval.service';
-import { DomainPackRegistry } from '../../../apps/api/src/modules/domain-pack/application/domain-pack.registry';
+import { HybridRetrievalService } from '@ba-helper/backend-runtime';
+import { DomainPackRegistry } from '@ba-helper/backend-runtime';
 
 export class HybridRetrievalEvaluationAdapter implements EvaluationAdapter {
   private readonly fixtureRoot = path.join(process.cwd(), 'tests/fixtures');

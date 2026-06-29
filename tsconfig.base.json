@@ -9,7 +9,9 @@
       "@ba-helper/shared": ["packages/shared/src/index.ts"],
       "@ba-helper/analyzer": ["packages/analyzer/src/index.ts"],
       "@ba-helper/application": ["packages/application/src/index.ts"],
-      "@ba-helper/api/*": ["apps/api/src/*"]
+      "@ba-helper/backend-runtime": ["packages/backend-runtime/src/index.ts"],
+      "@ba-helper/backend-runtime/*": ["packages/backend-runtime/src/*"],
+      "@prisma/client": ["apps/api/node_modules/.prisma/client/index.d.ts"]
     },
     "strict": true,
     "experimentalDecorators": true,

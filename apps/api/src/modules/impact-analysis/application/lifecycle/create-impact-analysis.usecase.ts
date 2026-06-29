@@ -7,7 +7,7 @@ import { ImpactAnalysisPolicy } from '../../domain/impact-analysis.policy';
 import { EventLogService } from '../../../event-log/application/event-log.service';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { QueueService } from '../../../queue/queue.service';
-import { DomainPackRegistry } from '../../../domain-pack/application/domain-pack.registry';
+import { DomainPackRegistry } from '@ba-helper/backend-runtime';
 import type { ResolvedDomainPackSelection } from '@ba-helper/contracts';
 
 

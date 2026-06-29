@@ -1,3 +1,4 @@
+name: ba-helper
 services:
   postgres:
     image: pgvector/pgvector:pg16

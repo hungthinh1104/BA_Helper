@@ -1,0 +1,21 @@
+import { Module } from '@nestjs/common';
+import { BullModule } from '@nestjs/bullmq';
+import { QueueService } from '../index';
+import { requireEnv } from '@ba-helper/shared';
+
+@Module({
+  imports: [
+    BullModule.forRoot({
+      connection: {
+        url: requireEnv('REDIS_URL', 'redis://localhost:6379'),
+      },
+    }),
+    BullModule.registerQueue({ name: 'impact-analysis' }),
+    BullModule.registerQueue({ name: 'embedding' }),
+    BullModule.registerQueue({ name: 'scan-job' }),
+    BullModule.registerQueue({ name: 'document-job' }),
+  ],
+  providers: [QueueService],
+  exports: [QueueService],
+})
+export class QueueModule {}

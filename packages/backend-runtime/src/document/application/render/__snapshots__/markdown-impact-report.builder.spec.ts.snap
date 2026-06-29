@@ -1,0 +1,178 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`MarkdownImpactReportBuilder Golden Characterization Snapshot matches the golden characterization snapshot for a full comprehensive report 1`] = `
+"# Impact Analysis Report: Paid booking cancellation refund
+
+**Status:** Approved  
+**Requirement:** Paid booking cancellation refund  
+**Snapshot Commit:** \`f26cd56837cd10a1c00bb89d74d97519abc6f732\`  
+**Repository:** \`https://github.com/ndmen/booking\`  
+**Target Ref:** \`main\`  
+**Generated At:** 2026-01-01  
+
+## Requirement
+
+> Allow users to cancel paid bookings and receive refund.
+
+## Provenance
+
+- Analysis ID: \`analysis-demo-001\`
+- Generated Document ID: \`doc-demo-001\`
+- Project ID: \`project-demo-001\`
+- Repository ID: \`repo-demo-001\`
+- Snapshot ID: \`snapshot-demo-001\`
+- Target Ref: \`main\`
+- Commit SHA: \`f26cd56837cd10a1c00bb89d74d97519abc6f732\`
+- Analyzer Version: \`1.0.0\`
+- Finalized At: 2026-01-01T00:00:00.000Z
+
+## Scanner Capability Profile
+
+- **Language:** typescript
+- **Framework:** nestjs
+- **Maturity Status:** STABLE
+- **Confidence Level:** HIGH
+
+## Scanner Diagnostics & Risks
+
+- **TS_DYNAMIC_IMPORT_UNSUPPORTED**: Dynamic imports are not supported
+
+## Impact Flow Diagram
+
+\`\`\`mermaid
+flowchart TD
+\`\`\`
+
+## Executive Summary
+
+This analysis identified **1** evidence-backed impacts, **1** QA scenarios, and **1** open questions.
+The primary impacted areas are **service** layers.
+
+> This report was finalized with unreviewed items acknowledged.
+
+## Impacted Areas
+
+### Service
+
+- \`GoldenService\` in \`src/golden.ts\` — **Confirmed**
+
+### Reviewer Notes on Impacted Areas
+
+- \`GoldenService\`: Reviewed the golden link
+
+## Evidence-backed Impacts
+
+### 1. This is a golden claim
+
+> **Certainty:** Evidenced  
+> **Reviewer Note:** Reviewed the golden claim  
+> **Reasoning:** Because it is golden  
+
+**Evidence:**
+- \`src/golden.ts\`
+
+## Acceptance Criteria
+
+- Must be golden
+  <br/>_Not directly evidenced; derived from requirement and should be confirmed._
+
+## QA Scenarios
+
+### Golden QA
+
+- **Given:** golden
+- **When:** testing
+- **Then:** pass
+
+## Open Questions / Unknowns
+
+### Golden Unknown
+
+> **Question:** Why is it golden?
+>  
+> **Why this matters:** Need to investigate
+>  
+> _Derived from scanner diagnostic_
+
+## Clarifications
+
+### Answered
+
+**Question:** Is it golden?  
+**Why this matters:** User requested  
+**Answer:** Yes  
+
+## Evidence Appendix
+
+> Secrets were redacted before storage, embedding, or LLM processing.
+
+### \`golden.ts\`
+
+**File:** \`src/golden.ts\`  
+**Lines:** 10–12
+
+\`\`\`ts
+const golden = true;
+\`\`\`
+
+## Review Decision History
+
+| Time | Reviewer | Decision | Note |
+|---|---|---|---|
+| 2026-01-01 13:00:00 | John Doe | APPROVED | Looks golden |
+
+## Evidence Quality & Dataset Readiness
+
+- Strong source evidence: 0
+- Weak source evidence: 1
+- Inferred from structure: 0
+- Domain hint only: 0
+- Missing evidence: 0
+- Conflicting evidence: 0
+- Review required: 0
+
+| Artifact | Quality | Reason |
+|---|---|---|
+| \`src/golden.ts\` | WEAK_SOURCE_EVIDENCE | hasPersistedEvidence, hasSourceEvidence, hasArtifactLink, hasSourcePath, hasLineRange, weakOrGenericExcerpt |
+
+## Evaluation Context
+
+- **Dataset Version**: \`v0-golden\`
+- **Subset ID**: \`clean-vector-ready-v0\`
+- **Subset Size**: \`1/6\` (Illustrative Only)
+- **Interpretation**: \`ILLUSTRATIVE_ONLY\`
+- **Research Artifact**: \`e13-golden.json\`
+- **Comparison Artifact**: \`comp-golden.json\`
+
+### Known Limits
+- Golden Limit A
+
+### Evidence Quality Notes
+- Golden Note B
+
+### Dataset Expansion Recommendations
+- Golden Rec C
+
+## Impact Diff Snapshot
+
+This analysis was derived from baseline analysis: \`base-golden-1\`
+
+### Summary
+- Added code impacts: 1
+- Removed code impacts: 0
+- Resolved unknowns: 1
+- New unknowns: 0
+- Added QA scenarios: 1
+
+### Added Code Impacts
+
+- \`GoldenAdded\` (Class) in \`src/added.ts\`
+
+### Resolved Unknowns
+
+- Resolved golden
+
+### Added QA Scenarios
+
+- **QA-NEW**: New golden QA"
+`;

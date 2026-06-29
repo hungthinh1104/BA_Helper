@@ -6,7 +6,7 @@ import { CreateImpactAnalysisUseCase } from '../lifecycle/create-impact-analysis
 import { RequirementRepository } from '../../../requirement/infrastructure/requirement.repository';
 import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
 import { MultiRepoAnalysisRunRepository } from '../../infrastructure/multi-repo-analysis-run.repository';
-import { DomainPackRegistry } from '../../../domain-pack/application/domain-pack.registry';
+import { DomainPackRegistry } from '@ba-helper/backend-runtime';
 import type { ResolvedDomainPackSelection } from '@ba-helper/contracts';
 
 type PlannedRepositoryAnalysis = {

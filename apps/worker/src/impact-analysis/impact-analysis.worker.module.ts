@@ -9,21 +9,21 @@ import {
 } from '@ba-helper/application';
 // v0.1: use API PrismaModule/PrismaService so repository constructors receive the correct type.
 // Worker-local PrismaModule is only for modules with worker-only infrastructure (embedding).
-import { PrismaModule } from '@ba-helper/api/modules/prisma/prisma.module';
-import { PrismaService } from '@ba-helper/api/modules/prisma/prisma.service';
+import { PrismaModule } from '@ba-helper/backend-runtime';
+import { PrismaService } from '@ba-helper/backend-runtime';
 
 // Infrastructure repositories imported from apps/api (no controller leak — pure infrastructure)
-import { ImpactAnalysisRepository } from '@ba-helper/api/modules/impact-analysis/infrastructure/impact-analysis.repository';
-import { InsightRepository } from '@ba-helper/api/modules/insight/infrastructure/insight.repository';
-import { ArtifactRepository } from '@ba-helper/api/modules/artifact/infrastructure/artifact.repository';
-import { EvidenceRepository } from '@ba-helper/api/modules/evidence/infrastructure/evidence.repository';
-import { TraceabilityRepository } from '@ba-helper/api/modules/traceability/infrastructure/traceability.repository';
-import { EventLogRepository } from '@ba-helper/api/modules/event-log/infrastructure/event-log.repository';
-import { EventLogService } from '@ba-helper/api/modules/event-log/application/event-log.service';
-import { EventLogPortAdapter } from '@ba-helper/api/modules/event-log/infrastructure/event-log-port.adapter';
-import { DomainPackRegistry } from '@ba-helper/api/modules/domain-pack/application/domain-pack.registry';
-import { RetrievalModule } from '@ba-helper/api/modules/retrieval/retrieval.module';
-import { HybridRetrievalService } from '@ba-helper/api/modules/retrieval/application/hybrid-retrieval.service';
+import { ImpactAnalysisRepository } from '@ba-helper/backend-runtime';
+import { InsightRepository } from '@ba-helper/backend-runtime';
+import { ArtifactRepository } from '@ba-helper/backend-runtime';
+import { EvidenceRepository } from '@ba-helper/backend-runtime';
+import { TraceabilityRepository } from '@ba-helper/backend-runtime';
+import { EventLogRepository } from '@ba-helper/backend-runtime';
+import { EventLogService } from '@ba-helper/backend-runtime';
+import { EventLogPortAdapter } from '@ba-helper/backend-runtime';
+import { DomainPackRegistry } from '@ba-helper/backend-runtime';
+import { RetrievalModule } from '@ba-helper/backend-runtime';
+import { HybridRetrievalService } from '@ba-helper/backend-runtime';
 
 /**
  * Worker-scoped ImpactAnalysis module.

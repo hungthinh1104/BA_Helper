@@ -67,8 +67,8 @@ import { QueueModule } from '../queue/queue.module';
 import { QueueService } from '../queue/queue.service';
 import { AiModule } from '../ai/ai.module';
 import { LlmProvider } from '../ai/domain/llm-provider.interface';
-import { RetrievalModule } from '../retrieval/retrieval.module';
-import { HybridRetrievalService } from '../retrieval/application/hybrid-retrieval.service';
+import { RetrievalModule } from '@ba-helper/backend-runtime';
+import { HybridRetrievalService } from '@ba-helper/backend-runtime';
 import { ProjectRepository } from '../project/infrastructure/project.repository';
 import { GraphModule } from '../graph/graph.module';
 import { ClarificationModule } from '../clarification/clarification.module';
@@ -77,8 +77,8 @@ import { ProjectModule } from '../project/project.module';
 import { RepositoryModule } from '../repository/repository.module';
 import { GetAnalysisDriftFreshnessUseCase } from './application/queries/get-analysis-drift-freshness.usecase';
 import { GetAnalysisWorkspaceUseCase } from './application/queries/get-analysis-workspace.usecase';
-import { DomainPackModule } from '../domain-pack/domain-pack.module';
-import { DomainPackRegistry } from '../domain-pack/application/domain-pack.registry';
+import { DomainPackModule } from '@ba-helper/backend-runtime';
+import { DomainPackRegistry } from '@ba-helper/backend-runtime';
 import { EventLogPortAdapter } from '../event-log/infrastructure/event-log-port.adapter';
 
 @Module({

@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { EmbeddingChunkRepository } from '../../apps/api/src/modules/embedding/infrastructure/embedding-chunk.repository';
+import { EmbeddingChunkRepository } from '@ba-helper/backend-runtime';
 import { EmbedSnapshotArtifactsUseCase } from '@ba-helper/application';
 import { EmbeddingChunkRepositoryPort } from '@ba-helper/application';
 import { ArtifactChunkBuilder } from '@ba-helper/application';
-import { FakeEmbeddingProvider } from '../../apps/api/src/modules/embedding/infrastructure/fake-embedding.provider';
+import { FakeEmbeddingProvider } from '@ba-helper/backend-runtime';
 import { createHash } from 'node:crypto';
 
 // ─── Shared constants ────────────────────────────────────────────────────────

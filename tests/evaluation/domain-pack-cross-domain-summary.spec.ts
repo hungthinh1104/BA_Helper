@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { DomainPackRegistry } from '../../apps/api/src/modules/domain-pack/application/domain-pack.registry';
+import { DomainPackRegistry } from '@ba-helper/backend-runtime';
 import {
   bookingStableEvaluationCases,
   ecommercePartialEvaluationCases,

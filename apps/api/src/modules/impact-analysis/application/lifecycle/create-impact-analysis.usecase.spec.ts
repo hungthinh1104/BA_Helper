@@ -7,7 +7,7 @@ import type { PrismaService } from '../../../prisma/prisma.service';
 import type { EventLogService } from '../../../event-log/application/event-log.service';
 import type { QueueService } from '../../../queue/queue.service';
 import { Prisma } from '@prisma/client';
-import { DomainPackRegistry } from '../../../domain-pack/application/domain-pack.registry';
+import { DomainPackRegistry } from '@ba-helper/backend-runtime';
 
 describe('CreateImpactAnalysisUseCase', () => {
   let useCase: CreateImpactAnalysisUseCase;

@@ -1,5 +1,5 @@
 import { CreateMultiRepoImpactAnalysesUseCase } from './create-multi-repo-impact-analyses.usecase';
-import { DomainPackRegistry } from '../../../domain-pack/application/domain-pack.registry';
+import { DomainPackRegistry } from '@ba-helper/backend-runtime';
 
 describe('CreateMultiRepoImpactAnalysesUseCase domain pack selection', () => {
   it('copies run-level explicit healthcare selection to all child analyses', async () => {

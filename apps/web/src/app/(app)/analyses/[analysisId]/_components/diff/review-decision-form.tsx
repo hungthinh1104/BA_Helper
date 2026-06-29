@@ -19,7 +19,7 @@ export function ReviewDecisionForm({ analysisId, analysis }: ReviewDecisionFormP
   const [decision, setDecision] = useState<"ACCEPTED" | "REJECTED" | "NEEDS_MORE_CLARIFICATION">("ACCEPTED")
   const [note, setNote] = useState("")
 
-  const canReview = Boolean(analysis.capabilities.canReview) && canReviewPermission(user?.role ?? null)
+  const canReview = Boolean(analysis.capabilities.canReview) && canReviewPermission((user?.role as any) ?? null)
 
   if (!canReview) return null
 

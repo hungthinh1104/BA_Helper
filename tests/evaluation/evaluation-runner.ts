@@ -9,7 +9,7 @@ import {
   computeConceptPrecision
 } from './evaluation-scoring';
 
-import { DomainPackRegistry } from '../../apps/api/src/modules/domain-pack/application/domain-pack.registry';
+import { DomainPackRegistry } from '@ba-helper/backend-runtime';
 
 export interface EvaluationAdapter {
   evaluateCase(evalCase: EvaluationCase): Promise<NormalizedEvaluationResult>;

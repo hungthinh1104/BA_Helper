@@ -1,6 +1,6 @@
 import { domainPackAppliedDiagnosticPayloadSchema } from '@ba-helper/contracts';
-import { DomainPackRegistry } from '../../apps/api/src/modules/domain-pack/application/domain-pack.registry';
-import { RentalDomainPack } from '../../apps/api/src/modules/domain-pack/packs/rental.v0.1.0';
+import { DomainPackRegistry } from '@ba-helper/backend-runtime';
+import { RentalDomainPack } from '@ba-helper/backend-runtime';
 import { SafeFileEnumerator } from '../../packages/analyzer/src/scanner/core/safe-file-enumerator';
 import { scanProject } from '../../packages/analyzer/src/scanner/scanner';
 import { EvaluationAdapter, EvaluationRunner } from './evaluation-runner';

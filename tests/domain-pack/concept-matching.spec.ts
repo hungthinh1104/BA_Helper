@@ -1,7 +1,7 @@
-import { DomainPackRegistry } from '../../apps/api/src/modules/domain-pack/application/domain-pack.registry';
-import { BookingDomainPack } from '../../apps/api/src/modules/domain-pack/packs/booking.v0.1.0';
-import { HealthcareDomainPack } from '../../apps/api/src/modules/domain-pack/packs/healthcare.v0.1.0';
-import { RentalDomainPack } from '../../apps/api/src/modules/domain-pack/packs/rental.v0.1.0';
+import { DomainPackRegistry } from '@ba-helper/backend-runtime';
+import { BookingDomainPack } from '@ba-helper/backend-runtime';
+import { HealthcareDomainPack } from '@ba-helper/backend-runtime';
+import { RentalDomainPack } from '@ba-helper/backend-runtime';
 
 describe('Domain Pack Concept Matching', () => {
   let registry: DomainPackRegistry;

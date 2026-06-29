@@ -1,20 +1,20 @@
 import { Module } from '@nestjs/common';
 import { ScanJobProcessor } from './scan-job.processor';
-import { RunScanJobUseCase } from '@ba-helper/api/modules/scanner/application/run-scan-job.usecase';
-import { RunScanJobPersistenceStep } from '@ba-helper/api/modules/scanner/application/run-scan-job-persistence.step';
-import { ScanJobRepository } from '@ba-helper/api/modules/scanner/infrastructure/scan-job.repository';
-import { RepositoryRepository } from '@ba-helper/api/modules/repository/infrastructure/repository.repository';
-import { ArtifactRepository } from '@ba-helper/api/modules/artifact/infrastructure/artifact.repository';
-import { EvidenceRepository } from '@ba-helper/api/modules/evidence/infrastructure/evidence.repository';
-import { GraphRepository } from '@ba-helper/api/modules/graph/infrastructure/graph.repository';
-import { EventLogRepository } from '@ba-helper/api/modules/event-log/infrastructure/event-log.repository';
-import { EventLogService } from '@ba-helper/api/modules/event-log/application/event-log.service';
-import { QueueModule } from '@ba-helper/api/modules/queue/queue.module';
-import { QueueService } from '@ba-helper/api/modules/queue/queue.service';
+import { RunScanJobUseCase } from '@ba-helper/backend-runtime';
+import { RunScanJobPersistenceStep } from '@ba-helper/backend-runtime';
+import { ScanJobRepository } from '@ba-helper/backend-runtime';
+import { RepositoryRepository } from '@ba-helper/backend-runtime';
+import { ArtifactRepository } from '@ba-helper/backend-runtime';
+import { EvidenceRepository } from '@ba-helper/backend-runtime';
+import { GraphRepository } from '@ba-helper/backend-runtime';
+import { EventLogRepository } from '@ba-helper/backend-runtime';
+import { EventLogService } from '@ba-helper/backend-runtime';
+import { QueueModule } from '@ba-helper/backend-runtime';
+import { QueueService } from '@ba-helper/backend-runtime';
 // v0.1: use API PrismaModule/PrismaService so repository constructors receive the correct type.
 // Worker-local PrismaModule is only for modules with worker-only infrastructure (embedding).
-import { PrismaModule } from '@ba-helper/api/modules/prisma/prisma.module';
-import { PrismaService } from '@ba-helper/api/modules/prisma/prisma.service';
+import { PrismaModule } from '@ba-helper/backend-runtime';
+import { PrismaService } from '@ba-helper/backend-runtime';
 
 /**
  * Worker-scoped ScanJob module.
