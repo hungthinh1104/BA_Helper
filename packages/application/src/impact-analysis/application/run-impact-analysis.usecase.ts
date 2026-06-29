@@ -221,7 +221,9 @@ export class RunImpactAnalysisUseCase {
           ? e.code
           : e instanceof AiOutputError
             ? e.code
-            : 'UNKNOWN_ANALYSIS_ERROR';
+            : (e instanceof Error && 'code' in e)
+              ? String((e as any).code)
+              : 'UNKNOWN_ANALYSIS_ERROR';
       const errorMessage = e instanceof Error ? e.message : String(e);
       const errorDetails =
         e instanceof AiOutputError

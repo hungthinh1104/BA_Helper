@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { AnalysisReviewDecisionValue } from '@prisma/client';;
-import { PrismaService } from '../../index';;
+import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class MergedMultiRepoReportReviewDecisionRepository {

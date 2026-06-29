@@ -6,12 +6,12 @@ import type {
   ScanResult,
 } from '@ba-helper/analyzer';
 import type { DiagnosticItem } from '@ba-helper/contracts';
-import { ArtifactRepository } from '../../index';;
+import { ArtifactRepository } from '../../artifact/infrastructure/artifact.repository';
 import { normalizeArtifactKind } from '../../artifact/domain/universal-artifact-kind';
-import { EvidenceRepository } from '../../index';;
-import { GraphRepository } from '../../index';;
-import { PrismaService } from '../../index';;
-import { ScanJobRepository } from '../../index';;
+import { EvidenceRepository } from '../../evidence/infrastructure/evidence.repository';
+import { GraphRepository } from '../../graph/infrastructure/graph.repository';
+import { PrismaService } from '../../prisma/prisma.service';
+import { ScanJobRepository } from '../infrastructure/scan-job.repository';
 import {
   addIncrementalDiagnostics,
   addScanHealthDiagnostic,

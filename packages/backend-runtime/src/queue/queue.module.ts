@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
-import { QueueService } from '../index';
+import { QueueService } from './queue.service';
 import { requireEnv } from '@ba-helper/shared';
 
 @Module({

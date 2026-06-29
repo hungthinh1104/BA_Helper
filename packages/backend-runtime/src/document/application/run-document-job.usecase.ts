@@ -1,15 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { DocumentJobStatus } from '@prisma/client';;
-import { PrismaService } from '../../index';;
+import { PrismaService } from '../../prisma/prisma.service';
 import { MarkdownImpactReportBuilder } from './render/markdown-impact-report.builder';
-import { InsightRepository } from '../../index';;
-import { TraceabilityRepository } from '../../index';;
-import { ReviewNoteRepository } from '../../index';
-import { GraphRepository } from '../../index';
-import { ReviewClarificationRepository } from '../../index';
-import { ReviewDecisionRepository } from '../../index';
+import { InsightRepository } from '../../insight/infrastructure/insight.repository';
+import { TraceabilityRepository } from '../../traceability/infrastructure/traceability.repository';
+import { ReviewNoteRepository } from '../../impact-analysis/infrastructure/review-note.repository';
+import { GraphRepository } from '../../graph/infrastructure/graph.repository';
+import { ReviewClarificationRepository } from '../../impact-analysis/infrastructure/review-clarification.repository';
+import { ReviewDecisionRepository } from '../../impact-analysis/infrastructure/review-decision.repository';
 import { GetImpactDiffUseCase } from '../../impact-analysis/application/queries/get-impact-diff.usecase';
-import { DocumentRepository } from '../../index';;
+import { DocumentRepository } from '../infrastructure/document.repository';
 import { ReviewedSnapshotReportContextAdapter } from './render/reviewed-snapshot-report-context.adapter';
 import { AppError } from '@ba-helper/shared';
 

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../index';;
+import { PrismaService } from '../../prisma/prisma.service';
 import type { ImpactAnalysisMetadata } from '../domain/impact-analysis.types';
 import type { ResolvedDomainPackSelection } from '@ba-helper/contracts';
 

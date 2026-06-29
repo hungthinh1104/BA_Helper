@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../index';;
+import { PrismaService } from '../../prisma/prisma.service';
 import type { ResolvedDomainPackSelection } from '@ba-helper/contracts';
 
 const MULTI_REPO_RUN_INCLUDE = {

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { EvidenceSourceType, Prisma } from '@prisma/client';
-import { PrismaService } from '../../index';;
+import { PrismaService } from '../../prisma/prisma.service';
 
 type EvidencePrismaClient = PrismaService | Prisma.TransactionClient;
 

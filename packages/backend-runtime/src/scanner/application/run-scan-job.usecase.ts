@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ScanJobRepository } from '../../index';;
-import { EventLogService } from '../../index';;
+import { ScanJobRepository } from '../infrastructure/scan-job.repository';
+import { EventLogService } from '../../event-log/application/event-log.service';
 import { AppError } from '@ba-helper/shared';
 import { ScanJobStatus, ScanJobStage } from '@prisma/client';;
 import { 
@@ -13,7 +13,7 @@ import {
   GitRepositoryFetcher,
   ScannerAdapterRegistry,
 } from '@ba-helper/analyzer';
-import { QueueService } from '../../index';;
+import { QueueService } from '../../queue/queue.service';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';

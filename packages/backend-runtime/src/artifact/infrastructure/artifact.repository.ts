@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import { PrismaService } from '../../index';;
+import { PrismaService } from '../../prisma/prisma.service';
 
 type ArtifactPrismaClient = PrismaService | Prisma.TransactionClient;
 

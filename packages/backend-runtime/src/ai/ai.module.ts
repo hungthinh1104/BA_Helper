@@ -2,11 +2,11 @@ import { Module, DynamicModule } from '@nestjs/common';
 import { AiConfig, resolveAiConfig } from '@ba-helper/shared';
 import { LlmProvider } from './domain/llm-provider.interface';
 import { AI_CONFIG_TOKEN } from './domain/ai-config';
-import { FakeLlmProvider } from '../index';
-import { OpenAiLlmProvider } from '../index';
-import { AnthropicLlmProvider } from '../index';
-import { GoogleLlmProvider } from '../index';
-import { DeepseekLlmProvider } from '../index';
+import { FakeLlmProvider } from './infrastructure/fake-ai.provider';
+import { OpenAiLlmProvider } from './infrastructure/openai.provider';
+import { AnthropicLlmProvider } from './infrastructure/anthropic.provider';
+import { GoogleLlmProvider } from './infrastructure/google.provider';
+import { DeepseekLlmProvider } from './infrastructure/deepseek.provider';
 
 @Module({})
 export class AiModule {
