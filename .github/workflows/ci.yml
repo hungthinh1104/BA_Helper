@@ -67,6 +67,16 @@ jobs:
       - name: Apply Prisma migrations
         run: pnpm --dir apps/api exec prisma migrate deploy --config prisma.config.ts --schema prisma/schema.prisma
 
+      - name: Domain pack governance
+        run: pnpm verify:domain-packs
+
+      - name: Worker boundary check (no api/ai or api/bootstrap imports)
+        run: |
+          if grep -rE 'from.*api/src/modules/ai|from.*api/src/bootstrap' apps/worker/src/; then
+            echo "BOUNDARY VIOLATION: worker is importing ai or bootstrap directly from apps/api"
+            exit 1
+          fi
+
       - name: Lint
         run: pnpm lint
 

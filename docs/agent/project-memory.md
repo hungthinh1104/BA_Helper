@@ -52,16 +52,24 @@ The project already has a strong trust layer:
 * TypeScript/NestJS extraction
 * Java Spring pilot extraction
 
-## Current biggest gaps
+## v0.1 Closed Foundations
 
-The biggest missing pieces are:
+The following gaps have been closed and are part of the v0.1 foundation:
 
-1. Scan pipeline atomicity: do not publish or index snapshots until artifacts, edges, evidence, diagnostics, and job linkage persist safely
-2. Evidence quality: distinguish strong source evidence, weak source evidence, structural inference, domain-hint-only support, missing evidence, and conflicting evidence
-3. Impact precision evaluation: measure expected artifact hits, false positives, missing critical artifacts, evidenced insight ratio, unknown quality, and QA usefulness
-4. Review coverage: make it clear what has been reviewed before a report is trusted or finalized
-5. Report trust UX: show evidenced/inferred/unknown/stale/reviewed/provenance state clearly
-6. Drift and re-analysis lifecycle: warning when old analysis may no longer be trustworthy
+1. **Scan pipeline atomicity**: snapshots only published when artifacts, edges, evidence, diagnostics, and job linkage persist safely ✅
+2. **Evidence quality**: strong source evidence, weak source evidence, structural inference, domain-hint-only support, missing evidence, and conflicting evidence are tracked ✅
+3. **Impact precision evaluation**: expected artifact hits, false positives, missing critical artifacts, evidenced insight ratio, unknown quality, and QA usefulness are measured ✅
+4. **Review coverage**: deterministic coverage gates with stable IDs, clear reviewed-before-trusted semantics ✅
+5. **Report trust UX**: evidenced/inferred/unknown/stale/reviewed/provenance state shown clearly ✅
+6. **Drift and re-analysis lifecycle**: stale analysis warnings when old analysis may no longer be trustworthy ✅
+
+## Post-v0.1 Backlog (Do Not Implement Without Explicit Scope)
+
+- Extract infrastructure repository classes from `apps/api` to a shared backend package
+- Multi-tenant `organizationId` boundary enforcement
+- Private repository OAuth integration
+- Scanner maturity gates for non-NestJS frameworks
+- Full Java Spring Boot scan parity
 
 ## Engineering principle
 

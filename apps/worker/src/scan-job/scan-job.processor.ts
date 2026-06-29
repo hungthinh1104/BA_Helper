@@ -1,6 +1,7 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
-import { RunScanJobUseCase } from '../../../api/src/modules/scanner/application/run-scan-job.usecase';
+// v0.1 constraint: RunScanJobUseCase lives in apps/api until extracted to a shared package.
+import { RunScanJobUseCase } from '@ba-helper/api/modules/scanner/application/run-scan-job.usecase';
 
 @Processor('scan-job')
 export class ScanJobProcessor extends WorkerHost {

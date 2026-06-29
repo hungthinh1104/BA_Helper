@@ -51,22 +51,35 @@ Read: ui-tech-stack.md, ui-design.md, css-ownership.md
 For Prisma/state/API changes:
 Update docs + contracts + tests before completion.
 
-## Current Delivery Focus
+## v0.1 Status: Foundation Complete
 
-Work is currently focused on:
+The following foundational capabilities are complete and should not be re-implemented:
 
 ```text
-1. Scan pipeline atomicity and snapshot publication safety
-2. Evidence quality scoring and weak/missing evidence detection
-3. Impact precision evaluation packs
-4. Review coverage gates
-5. Report trust UX and provenance visibility
-6. Snapshot drift/freshness and public beta hardening
+✅ Scan pipeline atomicity and snapshot publication safety
+✅ Evidence quality scoring and weak/missing evidence detection
+✅ Impact precision evaluation packs
+✅ Review coverage gates (deterministic gate IDs)
+✅ Report trust UX and provenance visibility
+✅ Snapshot drift/freshness and public beta hardening
+✅ Worker/API boundary separation (AiModule, PrismaModule worker-local)
+✅ Domain-pack governance in CI
+✅ Typed worker error classification
 ```
 
 Do not add new domains as the center of gravity. Domain packs are controlled
 terminology/risk/QA hint layers. Evidence is the source of truth and human
 review is the final authority.
+
+## Post-v0.1 Backlog (Parking Lot — Do Not Implement Without Explicit Scope)
+
+```text
+- Extract infrastructure repository classes from apps/api to shared backend package
+- Move RunScanJobUseCase, RunDocumentJobUseCase to @ba-helper/application
+- Multi-tenant organizationId boundary
+- Private repository OAuth integration
+- Scanner maturity gates for non-NestJS frameworks
+```
 
 ## Instruction Loading And Workflow
 

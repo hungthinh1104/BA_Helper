@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/hooks/use-auth"
 import { useCreateReviewDecision } from "@/hooks/api/use-analyses"
 import { ImpactAnalysisDetailResponse } from "@ba-helper/contracts"
+import { canReview as canReviewPermission } from "@/lib/permissions"
 
 interface ReviewDecisionFormProps {
   analysisId: string
@@ -18,7 +19,7 @@ export function ReviewDecisionForm({ analysisId, analysis }: ReviewDecisionFormP
   const [decision, setDecision] = useState<"ACCEPTED" | "REJECTED" | "NEEDS_MORE_CLARIFICATION">("ACCEPTED")
   const [note, setNote] = useState("")
 
-  const canReview = analysis.status === "COMPLETED" && user?.role !== "VIEWER"
+  const canReview = Boolean(analysis.capabilities.canReview) && canReviewPermission(user?.role ?? null)
 
   if (!canReview) return null
 

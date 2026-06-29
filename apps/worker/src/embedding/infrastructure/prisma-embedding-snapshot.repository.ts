@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../../../api/src/modules/prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import type { EmbeddingSnapshotRepositoryPort, ArtifactBasic, ArtifactWithEvidenceBasic, SnapshotWithRepositoryBasic } from '@ba-helper/application';
 import type { DiagnosticItem, SnapshotIndexStatus } from '@ba-helper/contracts';
 import { Prisma } from '@prisma/client';

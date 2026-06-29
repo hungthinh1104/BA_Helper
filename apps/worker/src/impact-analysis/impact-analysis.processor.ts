@@ -1,10 +1,13 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Logger } from '@nestjs/common';
 import { Job, UnrecoverableError } from 'bullmq';
 import { RunImpactAnalysisUseCase } from '@ba-helper/application';
-import { AiOutputError } from '../../../api/src/modules/ai/domain/ai.errors';
+import { classifyWorkerError } from './job-error-classifier';
 
 @Processor('impact-analysis')
 export class ImpactAnalysisProcessor extends WorkerHost {
+  private readonly logger = new Logger(ImpactAnalysisProcessor.name);
+
   constructor(private readonly runAnalysis: RunImpactAnalysisUseCase) {
     super();
   }
@@ -15,25 +18,27 @@ export class ImpactAnalysisProcessor extends WorkerHost {
         analysisId: job.data.analysisId,
         expandGraph: true,
       });
-    } catch (e: any) {
-      console.error(`ImpactAnalysisProcessor failed for job ${job.id}:`, e);
+    } catch (e: unknown) {
+      const recoverability = classifyWorkerError(e);
+      const errorCode = (e instanceof Error && 'code' in e) ? (e as any).code : undefined;
+      const errorMessage = e instanceof Error ? e.message : String(e);
 
-      if (e instanceof AiOutputError) {
-        if (
-          e.code === 'AI_JSON_PARSE_FAILED' ||
-          e.code === 'AI_OUTPUT_SCHEMA_INVALID' ||
-          e.code === 'AI_OUTPUT_SCHEMA_VALIDATION_FAILED' ||
-          e.code === 'AI_OUTPUT_TRUNCATED'
-        ) {
-          if (job.attemptsMade >= 1) {
-            throw new UnrecoverableError(`Unrecoverable Schema Error: ${e.message}`);
-          }
-        }
-      } else {
-        const msg = (e.message || '').toLowerCase();
-        if (msg.includes('auth') || msg.includes('key') || msg.includes('quota') || msg.includes('not found') || msg.includes('forbidden')) {
-          throw new UnrecoverableError(`Unrecoverable Provider Error: ${e.message}`);
-        }
+      this.logger.error(
+        JSON.stringify({
+          event: 'IMPACT_ANALYSIS_JOB_FAILED',
+          jobId: job.id,
+          analysisId: job.data.analysisId,
+          attemptsMade: job.attemptsMade,
+          errorCode,
+          errorMessage,
+          recoverability,
+        }),
+      );
+
+      if (recoverability === 'UNRECOVERABLE') {
+        throw new UnrecoverableError(
+          `[${errorCode ?? 'UNKNOWN'}] ${errorMessage}`,
+        );
       }
 
       throw e;

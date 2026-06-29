@@ -147,6 +147,7 @@ enum DocumentType {
 enum DocumentStatus {
   DRAFT
   APPROVED
+  /// @description STALE is a projection-only state derived at runtime. It is never persisted to the database.
   STALE
 }
 

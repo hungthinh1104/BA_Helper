@@ -4,8 +4,8 @@ import { ImpactAnalysisWorkerModule } from './impact-analysis/impact-analysis.wo
 import { ScanJobWorkerModule } from './scan-job/scan-job.worker.module';
 import { EmbeddingWorkerModule } from './embedding/embedding.worker.module';
 import { DocumentJobWorkerModule } from './document-job/document-job.worker.module';
-import { AiModule } from '../../api/src/modules/ai/ai.module';
-import { requireEnv } from '../../api/src/bootstrap/runtime-config';
+import { AiModule } from './ai/ai.module';
+import { requireEnv } from '@ba-helper/shared';
 
 @Module({
   imports: [

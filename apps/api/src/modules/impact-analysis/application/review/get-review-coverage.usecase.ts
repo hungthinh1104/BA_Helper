@@ -2,7 +2,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { ProjectPermissionService } from '../../../project/application/project-permission.service';
 import { RequestUser, ReviewCoverageResponse, ReviewCoverageGate, ReviewCoverageStatus } from '@ba-helper/contracts';
-import { randomUUID } from 'crypto';
 
 @Injectable()
 export class GetReviewCoverageUseCase {
@@ -89,7 +88,7 @@ export class GetReviewCoverageUseCase {
 
     if (hasMissingOrRejectedDecision) {
       gates.push({
-        gateId: randomUUID(),
+        gateId: `coverage-gate:${runId}:REVIEW_DECISION:FAIL`,
         category: 'REVIEW_DECISION',
         status: 'FAIL',
         title: 'Pending or Rejected Analyses',
@@ -105,7 +104,7 @@ export class GetReviewCoverageUseCase {
       summary.blockingGates++;
     } else {
       gates.push({
-        gateId: randomUUID(),
+        gateId: `coverage-gate:${runId}:REVIEW_DECISION:PASS`,
         category: 'REVIEW_DECISION',
         status: 'PASS',
         title: 'All Analyses Accepted',
@@ -217,7 +216,7 @@ export class GetReviewCoverageUseCase {
 
     if (hasUncoveredArtifacts) {
       gates.push({
-        gateId: randomUUID(),
+        gateId: `coverage-gate:${runId}:EVIDENCE_COVERAGE:WARN`,
         category: 'EVIDENCE_COVERAGE',
         status: 'WARN',
         title: 'Impacted Artifacts Missing Evidence',
@@ -231,7 +230,7 @@ export class GetReviewCoverageUseCase {
       summary.warningGates++;
     } else {
       gates.push({
-        gateId: randomUUID(),
+        gateId: `coverage-gate:${runId}:EVIDENCE_COVERAGE:PASS`,
         category: 'EVIDENCE_COVERAGE',
         status: 'PASS',
         title: 'All Artifacts Have Evidence',
@@ -246,7 +245,7 @@ export class GetReviewCoverageUseCase {
 
     if (hasUncoveredRisks) {
       gates.push({
-        gateId: randomUUID(),
+        gateId: `coverage-gate:${runId}:QA_COVERAGE:WARN`,
         category: 'QA_COVERAGE',
         status: 'WARN',
         title: 'Risks Missing QA Scenarios',
@@ -260,7 +259,7 @@ export class GetReviewCoverageUseCase {
       summary.warningGates++;
     } else {
       gates.push({
-        gateId: randomUUID(),
+        gateId: `coverage-gate:${runId}:QA_COVERAGE:PASS`,
         category: 'QA_COVERAGE',
         status: 'PASS',
         title: 'All Risks Covered by QA',
@@ -275,7 +274,7 @@ export class GetReviewCoverageUseCase {
 
     if (hasRepoWithRisksButNoQa) {
       gates.push({
-        gateId: randomUUID(),
+        gateId: `coverage-gate:${runId}:RISK_COVERAGE:WARN`,
         category: 'RISK_COVERAGE',
         status: 'WARN',
         title: 'Repositories with Risks but No QA',
@@ -291,7 +290,7 @@ export class GetReviewCoverageUseCase {
       summary.warningGates++;
     } else {
       gates.push({
-        gateId: randomUUID(),
+        gateId: `coverage-gate:${runId}:RISK_COVERAGE:PASS`,
         category: 'RISK_COVERAGE',
         status: 'PASS',
         title: 'No Repositories with Uncovered Risks',
@@ -306,7 +305,7 @@ export class GetReviewCoverageUseCase {
 
     if (hasAcceptedWithZeroArtifacts) {
       gates.push({
-        gateId: randomUUID(),
+        gateId: `coverage-gate:${runId}:REPOSITORY_READINESS:WARN`,
         category: 'REPOSITORY_READINESS',
         status: 'WARN',
         title: 'Accepted Analysis with Zero Artifacts',
@@ -322,7 +321,7 @@ export class GetReviewCoverageUseCase {
       summary.warningGates++;
     } else {
       gates.push({
-        gateId: randomUUID(),
+        gateId: `coverage-gate:${runId}:REPOSITORY_READINESS:PASS`,
         category: 'REPOSITORY_READINESS',
         status: 'PASS',
         title: 'All Accepted Analyses Have Impact',
