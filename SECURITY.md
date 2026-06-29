@@ -1,12 +1,13 @@
 # Security Policy
 
 ## Supported Status
-This project is currently in **Public Beta / Experimental**. 
-While we take security seriously, please note that we do not have a formal security certification yet. 
+This project is currently in **Controlled Beta / Experimental**.
+While we take security seriously, please note that we do not have a formal security certification yet.
 
 ## Current Limitations
 - Production SaaS concerns such as GitHub App auth, billing, and hosted multi-tenant deployment are not complete.
 - We rely on deterministic limits (bounded diagnostics, explicitly skipped large files) rather than formalized sandboxing for repo ingestion.
+- Dev-login is for local development and private controlled demos only. Do not expose a hosted API publicly with dev-login enabled.
 
 ## Reporting a Vulnerability
 

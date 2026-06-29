@@ -167,7 +167,7 @@ export class GetReviewQueueUseCase {
 
       // QA Coverage items are currently diagnostic only in MVP
       const requiresDecision = false;
-      const blockingFinalize = false; 
+      const blockingFinalize = false;
 
       const item: ReviewQueueItem = {
         id: `qa-gap-${gap.artifactId}`,
@@ -180,7 +180,7 @@ export class GetReviewQueueUseCase {
         priorityReason,
         linkedArtifactId: gap.artifactId,
         suggestedAction: gap.suggestedAction,
-        reviewStatus: 'NEEDS_REVIEW', // Placeholder
+        reviewStatus: 'NEEDS_REVIEW',
         requiresDecision,
         blockingFinalize,
       };

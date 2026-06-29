@@ -343,7 +343,7 @@ async function main() {
   console.log(`✅ Seeded Scenario B: COMPLETED with Snapshot (Analysis ID: ${analysisB.id})`);
 
   console.log(`\n🎉 Seed Complete!`);
-  console.log(`Login using the dev-login bypass if enabled.`);
+  console.log(`Use the local dev sign-in flow when ENABLE_DEV_LOGIN=true.`);
   console.log(`Project ID: ${project.id}`);
 }
 
