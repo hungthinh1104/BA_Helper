@@ -1,6 +1,7 @@
 import {
   finalReviewedReportResponseSchema,
   localeAwareReportQuerySchema,
+  reviewCompletionResponseSchema,
   type FinalReviewedReportResponse,
 } from './src';
 
@@ -44,5 +45,29 @@ describe('review report locale contracts', () => {
     };
 
     expect(finalReviewedReportResponseSchema.parse(payload)).toEqual(payload);
+  });
+
+  it('accepts backend-authored critical approval blocking reasons', () => {
+    const payload = {
+      analysisId: 'analysis-1',
+      totalLinks: 1,
+      accepted: 0,
+      rejected: 0,
+      needsReview: 0,
+      needsMoreEvidence: 0,
+      unreviewed: 1,
+      isComplete: false,
+      hasReviewedSnapshot: false,
+      latestSnapshotId: null,
+      blockingReasons: [
+        'UNREVIEWED_TRACEABILITY_LINKS',
+        'CONFLICTING_EVIDENCE_UNREVIEWED',
+        'CRITICAL_MISSING_EVIDENCE',
+        'REVIEW_REQUIRED_ITEMS',
+        'HIGH_RISK_INSIGHT_UNREVIEWED',
+      ],
+    };
+
+    expect(reviewCompletionResponseSchema.parse(payload)).toEqual(payload);
   });
 });

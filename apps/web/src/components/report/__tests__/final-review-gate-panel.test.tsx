@@ -50,7 +50,11 @@ describe('FinalReviewGatePanel', () => {
             needsMoreEvidence: 0,
             unreviewed: 1,
             hasReviewedSnapshot: false,
-            blockingReasons: ['UNREVIEWED_TRACEABILITY_LINKS', 'REVIEWED_SNAPSHOT_MISSING'],
+            blockingReasons: [
+              'UNREVIEWED_TRACEABILITY_LINKS',
+              'REVIEWED_SNAPSHOT_MISSING',
+              'CRITICAL_MISSING_EVIDENCE',
+            ],
           })
         );
       })
@@ -69,6 +73,7 @@ describe('FinalReviewGatePanel', () => {
     // Check blocking reasons
     expect(screen.getByText('Blocked: unreviewed traceability links remain')).toBeInTheDocument();
     expect(screen.getByText('Blocked: reviewed snapshot is missing')).toBeInTheDocument();
+    expect(screen.getByText('Blocked: critical item is missing source evidence')).toBeInTheDocument();
 
     // Check buttons are disabled
     const viewButton = screen.getByRole('button', { name: /view final reviewed report/i });

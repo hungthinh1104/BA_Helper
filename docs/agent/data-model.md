@@ -395,9 +395,8 @@ while new reports emit the labels above.
 
 ## Report Review Coverage Semantics
 
-Review coverage is a report/read-model summary. It is not an approval gate in
-the current slice and must not silently block finalization or export until an
-explicit review-gate phase changes policy.
+Review coverage is a report/read-model summary and is also consumed by the
+single-repo approval gate for critical unresolved evidence issues.
 
 Current coverage summarizes:
 
@@ -420,7 +419,21 @@ Rules:
 Coverage is derived from persisted review status/decisions and report evidence quality.
 Coverage does not call the LLM, scanner, retrieval, or domain-pack registry.
 Coverage may be shown in final/reviewed report UI and Markdown reports.
-Future enforcement must be implemented as a separate explicit gate.
+The approval gate does not call the LLM, scanner, retrieval, or domain-pack registry.
+Non-critical unreviewed items may still use explicit acknowledgement.
+Critical blockers are backend-authored and use stable reason codes.
+Current critical items are `CLAIM` insights, `CONFLICTING` insights, and
+`AFFECTED` traceability links with `EVIDENCED` basis. `UNKNOWN` outputs remain
+reviewable gaps and are not automatically critical claims.
+```
+
+Current critical approval blocker codes:
+
+```text
+CONFLICTING_EVIDENCE_UNREVIEWED
+CRITICAL_MISSING_EVIDENCE
+REVIEW_REQUIRED_ITEMS
+HIGH_RISK_INSIGHT_UNREVIEWED
 ```
 
 ## Generated Output Semantics

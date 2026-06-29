@@ -37,6 +37,7 @@ describe('FinalizeImpactAnalysisUseCase staleness guard', () => {
     const useCase = new FinalizeImpactAnalysisUseCase(
       new StubImpactRepo() as any,
       { listByAnalysis: async () => [] } as any,
+      { listByAnalysis: async () => [] } as any,
       {
         $transaction: async (callback: (tx: any) => Promise<unknown>) =>
           callback({

@@ -21,6 +21,10 @@ export const reviewCompletionResponseSchema = z.object({
   blockingReasons: z.array(z.enum([
     'UNREVIEWED_TRACEABILITY_LINKS',
     'REVIEWED_SNAPSHOT_MISSING',
+    'CONFLICTING_EVIDENCE_UNREVIEWED',
+    'CRITICAL_MISSING_EVIDENCE',
+    'REVIEW_REQUIRED_ITEMS',
+    'HIGH_RISK_INSIGHT_UNREVIEWED',
   ])),
 });
 

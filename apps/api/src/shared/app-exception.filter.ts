@@ -34,6 +34,7 @@ export class AppExceptionFilter implements ExceptionFilter {
       case 'INVALID_REPOSITORY_REF':
       case 'INVALID_REQUIREMENT_INPUT':
       case 'FINALIZE_REQUIRES_REVIEW_ACK':
+      case 'REVIEW_APPROVAL_BLOCKED':
       case 'REVIEW_NOT_ALLOWED':
       case 'INPUT_PROJECT_MISMATCH':
       case 'REQUIREMENT_REVISION_NOT_READY':

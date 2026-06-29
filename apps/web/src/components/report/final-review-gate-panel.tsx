@@ -72,6 +72,14 @@ export function FinalReviewGatePanel({ analysisId }: FinalReviewGatePanelProps) 
         return "Blocked: unreviewed traceability links remain"
       case 'REVIEWED_SNAPSHOT_MISSING':
         return "Blocked: reviewed snapshot is missing"
+      case 'CONFLICTING_EVIDENCE_UNREVIEWED':
+        return "Blocked: conflicting evidence still needs human review"
+      case 'CRITICAL_MISSING_EVIDENCE':
+        return "Blocked: critical item is missing source evidence"
+      case 'REVIEW_REQUIRED_ITEMS':
+        return "Blocked: review-required items remain"
+      case 'HIGH_RISK_INSIGHT_UNREVIEWED':
+        return "Blocked: high-risk insight has no review decision"
       default:
         return `Blocked: ${reason}`
     }

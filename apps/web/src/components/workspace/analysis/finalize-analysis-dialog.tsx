@@ -8,6 +8,7 @@ import { X, CheckCircle2, AlertTriangle, FileText } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import type { AnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
+import { ApiError } from "@/lib/api-error"
 
 interface FinalizeAnalysisDialogProps {
   children: React.ReactNode
@@ -48,6 +49,14 @@ export function FinalizeAnalysisDialog({
       // Redirect directly to the generated report
       router.push(`/reports?analysisId=${analysisId}`)
     } catch (err: unknown) {
+      if (err instanceof ApiError && err.code === "REVIEW_APPROVAL_BLOCKED") {
+        toast.error("Critical review coverage is incomplete.", {
+          description: formatReviewApprovalBlockers(err.details),
+          duration: 8000,
+        })
+        return
+      }
+
       const errorMessage = err instanceof Error ? err.message : String(err)
       
       // Strict Error Mapping based on Backend error codes
@@ -172,6 +181,34 @@ export function FinalizeAnalysisDialog({
       </DialogContent>
     </Dialog>
   )
+}
+
+function formatReviewApprovalBlockers(details: unknown): string {
+  if (!details || typeof details !== "object" || Array.isArray(details)) {
+    return "Resolve backend-reported review blockers before finalizing."
+  }
+
+  const reasons = (details as { blockingReasons?: unknown }).blockingReasons
+  if (!Array.isArray(reasons) || reasons.length === 0) {
+    return "Resolve backend-reported review blockers before finalizing."
+  }
+
+  return reasons.map((reason) => formatReviewApprovalBlocker(String(reason))).join(" · ")
+}
+
+function formatReviewApprovalBlocker(reason: string): string {
+  switch (reason) {
+    case "CONFLICTING_EVIDENCE_UNREVIEWED":
+      return "conflicting evidence needs review"
+    case "CRITICAL_MISSING_EVIDENCE":
+      return "critical item is missing evidence"
+    case "REVIEW_REQUIRED_ITEMS":
+      return "review-required items remain"
+    case "HIGH_RISK_INSIGHT_UNREVIEWED":
+      return "high-risk insight is unreviewed"
+    default:
+      return reason
+  }
 }
 
 function SummaryRow({ label, value, mono = false, valueColor = "text-foreground" }: { label: string; value: string; mono?: boolean; valueColor?: string }) {

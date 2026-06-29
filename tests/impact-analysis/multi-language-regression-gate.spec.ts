@@ -253,6 +253,10 @@ func getRefunds(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) }`
         where: { impactAnalysisId: analysis.id },
         data: { reviewStatus: 'CONFIRMED' },
       });
+      await prisma.traceabilityLink.updateMany({
+        where: { impactAnalysisId: analysis.id },
+        data: { reviewStatus: 'CONFIRMED' },
+      });
 
       await finalizeImpactAnalysis.execute({ analysisId: analysis.id, acknowledgeUnreviewed: true, userId: 'b0e6a1e4-3993-47cb-b0bb-26477e8a9462' });
 

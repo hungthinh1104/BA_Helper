@@ -32,6 +32,10 @@ const createStubRepo = (overrides = {}) => ({
   findById: async () => ({ ...defaultAnalysisState, ...overrides }),
 });
 
+const createInsightRepo = (items: any[] = []) => ({
+  listByAnalysis: async () => items,
+});
+
 const createPrismaStub = (hooks?: {
   onUpsert?: () => void | Promise<void>;
 }) => ({
@@ -60,6 +64,7 @@ describe('FinalizeImpactAnalysisUseCase', () => {
     const useCase = new FinalizeImpactAnalysisUseCase(
       createStubRepo({ insights: [{ reviewStatus: 'NEEDS_REVIEW' }] }) as any,
       { listByAnalysis: async () => [] } as any,
+      createInsightRepo([{ id: 'qa-1', insightType: 'QA_SCENARIO', certainty: 'INFERRED', reviewStatus: 'NEEDS_REVIEW', evidenceLinks: [] }]) as any,
       createPrismaStub() as any,
       { buildSnapshotCreateData: async () => ({}), recordCreatedEvent: async () => {} } as any,
       { createOrReuseQueuedJobForSnapshot: async () => ({ job: { id: 'job-1' } }), enqueueExistingJob: async () => {} } as any,
@@ -76,6 +81,7 @@ describe('FinalizeImpactAnalysisUseCase', () => {
     const useCase = new FinalizeImpactAnalysisUseCase(
       createStubRepo({ insights: [{ reviewStatus: 'CONFIRMED' }] }) as any,
       { listByAnalysis: async () => [{ reviewStatus: 'NEEDS_REVIEW' }] } as any,
+      createInsightRepo([]) as any,
       createPrismaStub() as any,
       { buildSnapshotCreateData: async () => ({}), recordCreatedEvent: async () => {} } as any,
       { createOrReuseQueuedJobForSnapshot: async () => ({ job: { id: 'job-1' } }), enqueueExistingJob: async () => {} } as any,
@@ -93,6 +99,7 @@ describe('FinalizeImpactAnalysisUseCase', () => {
     const useCase = new FinalizeImpactAnalysisUseCase(
       createStubRepo({ insights: [{ reviewStatus: 'NEEDS_REVIEW' }] }) as any,
       { listByAnalysis: async () => [{ reviewStatus: 'NEEDS_REVIEW' }] } as any,
+      createInsightRepo([{ id: 'qa-1', insightType: 'QA_SCENARIO', certainty: 'INFERRED', reviewStatus: 'NEEDS_REVIEW', evidenceLinks: [] }]) as any,
       createPrismaStub() as any,
       { buildSnapshotCreateData: async () => ({}), recordCreatedEvent: async () => {} } as any,
       { createOrReuseQueuedJobForSnapshot: async () => ({ job: { id: 'job-1' } }), enqueueExistingJob: async () => { enqueueCalled = true; } } as any,
@@ -107,6 +114,7 @@ describe('FinalizeImpactAnalysisUseCase', () => {
     const useCase = new FinalizeImpactAnalysisUseCase(
       createStubRepo() as any,
       { listByAnalysis: async () => [] } as any,
+      createInsightRepo([]) as any,
       createPrismaStub() as any,
       { buildSnapshotCreateData: async () => { throw new Error('Snapshot crashed'); } } as any,
       { createOrReuseQueuedJobForSnapshot: async () => ({ job: { id: 'job-1' } }), enqueueExistingJob: async () => {} } as any,
