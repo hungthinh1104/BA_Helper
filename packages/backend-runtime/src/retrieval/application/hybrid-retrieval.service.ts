@@ -2,7 +2,7 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import { RetrievalRequest, RetrievedArtifact } from '../domain/retrieval.types';
 import { buildRetrievalSuggestion } from '../domain/retrieval-suggestion';
 import { EmbeddingChunkRepository } from '../../embedding/infrastructure/embedding-chunk.repository';
-import { EmbeddingProviderPort } from '@ba-helper/application';
+import { EmbeddingProviderPort } from '../../../../application/src/embedding/ports/embedding-provider.port';
 import { ArtifactRepository } from '../../artifact/infrastructure/artifact.repository';
 import { GraphRepository } from '../../graph/infrastructure/graph.repository';
 import { PrismaService } from '../../prisma/prisma.service';
