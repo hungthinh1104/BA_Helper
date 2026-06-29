@@ -15,8 +15,17 @@ export class GetSystemHealthUseCase {
     const queueHealth = await this.queueService.checkQueueHealth();
     const redis = queueHealth.redis;
     const queue = queueHealth.queue;
+    const operations = await this.queueService.getOperationsHealthSummary();
     const status =
-      database && pgvector && redis && queue ? 'ok' : 'degraded';
+      database &&
+      pgvector &&
+      redis &&
+      queue &&
+      operations.scanJobs.status === 'up' &&
+      operations.analysisJobs.status === 'up' &&
+      operations.documentJobs.status === 'up'
+        ? 'ok'
+        : 'degraded';
 
     return {
       apiVersion: config.apiVersion,
@@ -26,6 +35,7 @@ export class GetSystemHealthUseCase {
         queue: queue ? 'up' : 'down',
         redis: redis ? 'up' : 'down',
       },
+      operations,
       serverTime: new Date().toISOString(),
       status,
       workspaceMode: config.workspaceMode,

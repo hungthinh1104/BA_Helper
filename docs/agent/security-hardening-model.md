@@ -160,6 +160,23 @@ Cleanup diagnostics may record whether cleanup was attempted, succeeded,
 failed, or was intentionally preserved. They use a hashed workspace id and must
 not log raw private local checkout paths.
 
+## Public Beta Operations Health Boundary
+
+The system health endpoint may expose backend-authored operational summaries
+needed to run a controlled beta:
+
+```text
+- database/pgvector connectivity
+- Redis/queue connectivity
+- pending/running/failed scan job counts
+- pending/running/failed impact-analysis job counts
+- pending/running/failed document job counts
+```
+
+The health response must remain aggregate-only. It must not include queue job
+payloads, source excerpts, requirement text, prompt text, secrets, repository
+checkout paths, or raw provider responses.
+
 ## Known Risks To Track
 
 - Full production auth and organization-level tenant isolation are not complete

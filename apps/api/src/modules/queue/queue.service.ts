@@ -1,6 +1,19 @@
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 
+export type QueueJobCountSummary = {
+  status: 'up' | 'down';
+  pending: number;
+  running: number;
+  failed: number;
+};
+
+export type OperationsQueueSummary = {
+  scanJobs: QueueJobCountSummary;
+  analysisJobs: QueueJobCountSummary;
+  documentJobs: QueueJobCountSummary;
+};
+
 export class QueueService {
   constructor(
     @InjectQueue('impact-analysis')
@@ -83,6 +96,49 @@ export class QueueService {
       return {
         queue: false,
         redis: false,
+      };
+    }
+  }
+
+  async getOperationsHealthSummary(): Promise<OperationsQueueSummary> {
+    const [scanJobs, analysisJobs, documentJobs] = await Promise.all([
+      this.getQueueJobCountSummary(this.scanJobQueue),
+      this.getQueueJobCountSummary(this.impactQueue),
+      this.getQueueJobCountSummary(this.documentJobQueue),
+    ]);
+
+    return {
+      scanJobs,
+      analysisJobs,
+      documentJobs,
+    };
+  }
+
+  private async getQueueJobCountSummary(queue: Queue): Promise<QueueJobCountSummary> {
+    try {
+      const counts = await queue.getJobCounts(
+        'active',
+        'delayed',
+        'failed',
+        'prioritized',
+        'waiting',
+      );
+
+      return {
+        status: 'up',
+        pending:
+          (counts.waiting ?? 0) +
+          (counts.delayed ?? 0) +
+          (counts.prioritized ?? 0),
+        running: counts.active ?? 0,
+        failed: counts.failed ?? 0,
+      };
+    } catch {
+      return {
+        status: 'down',
+        pending: 0,
+        running: 0,
+        failed: 0,
       };
     }
   }

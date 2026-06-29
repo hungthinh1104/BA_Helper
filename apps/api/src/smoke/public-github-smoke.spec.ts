@@ -36,6 +36,11 @@ describe('public GitHub smoke helpers', () => {
       queue: 'up',
       redis: 'up',
     },
+    operations: {
+      scanJobs: { status: 'up', pending: 0, running: 0, failed: 0 },
+      analysisJobs: { status: 'up', pending: 0, running: 0, failed: 0 },
+      documentJobs: { status: 'up', pending: 0, running: 0, failed: 0 },
+    },
     serverTime: new Date().toISOString(),
     status: 'ok',
     workspaceMode: 'dev-single-user',
