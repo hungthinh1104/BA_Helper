@@ -126,11 +126,29 @@ document generation. Event payloads should include IDs, counts, state names, and
 safe metadata. They must not include raw source excerpts, secret literals, raw
 LLM prompts, raw provider responses, or unbounded diagnostic blobs.
 
+## Public Beta Rate Limit Boundary
+
+The API applies an in-process public beta rate limit to expensive mutating or
+download actions such as scan creation, requirement/revision creation, impact
+analysis creation, report finalization, and report export. The limiter scopes
+by authenticated user and project when project context is available.
+
+Rules:
+
+```text
+Health/bootstrap/read-model GET endpoints remain exempt.
+Rate-limit errors use stable code RATE_LIMITED and do not include raw request bodies.
+Rate limiting is an abuse guard, not a replacement for production tenant isolation.
+Production deploys should override PUBLIC_BETA_RATE_LIMIT_MAX and
+PUBLIC_BETA_RATE_LIMIT_WINDOW_MS according to environment capacity.
+```
+
 ## Known Risks To Track
 
 - Full production auth and organization-level tenant isolation are not complete
   in the MVP.
-- Rate limiting and abuse throttling are not yet the primary hardening layer.
+- Rate limiting and abuse throttling are public beta guardrails, not full
+  production abuse prevention.
 - Temporary checkout retention policy must be deployment-specific before
   scanning non-fixture public repositories at scale.
 - Real-provider LLM smoke tests are opt-in and do not replace a dedicated safety

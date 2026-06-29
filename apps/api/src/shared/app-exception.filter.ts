@@ -45,6 +45,8 @@ export class AppExceptionFilter implements ExceptionFilter {
         return HttpStatus.BAD_REQUEST;
       case 'REPO_LIMIT_EXCEEDED':
         return HttpStatus.PAYLOAD_TOO_LARGE;
+      case 'RATE_LIMITED':
+        return HttpStatus.TOO_MANY_REQUESTS;
       case 'CLONE_FAILED':
         return HttpStatus.BAD_GATEWAY;
       case 'SECURITY_RISK_BLOCKED':
