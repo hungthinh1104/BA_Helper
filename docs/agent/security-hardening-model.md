@@ -143,13 +143,30 @@ Production deploys should override PUBLIC_BETA_RATE_LIMIT_MAX and
 PUBLIC_BETA_RATE_LIMIT_WINDOW_MS according to environment capacity.
 ```
 
+## Scanner Workspace Retention Boundary
+
+Scanner checkouts are temporary execution state, not persisted product data.
+The scanner removes the temp workspace after successful and failed clone/scan
+execution. Persisted artifacts, dependency edges, evidence, snapshots, reports,
+and audit events are never deleted by this cleanup path.
+
+Debug preservation is opt-in only:
+
+```text
+BA_HELPER_PRESERVE_SCAN_WORKSPACE=true
+```
+
+Cleanup diagnostics may record whether cleanup was attempted, succeeded,
+failed, or was intentionally preserved. They use a hashed workspace id and must
+not log raw private local checkout paths.
+
 ## Known Risks To Track
 
 - Full production auth and organization-level tenant isolation are not complete
   in the MVP.
 - Rate limiting and abuse throttling are public beta guardrails, not full
   production abuse prevention.
-- Temporary checkout retention policy must be deployment-specific before
-  scanning non-fixture public repositories at scale.
+- Debug-preserved scanner workspaces require manual cleanup and should not be
+  enabled in public beta production deployments.
 - Real-provider LLM smoke tests are opt-in and do not replace a dedicated safety
   evaluation suite.

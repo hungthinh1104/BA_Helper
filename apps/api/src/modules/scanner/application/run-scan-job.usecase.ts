@@ -25,18 +25,7 @@ import type {
 import type { DiagnosticItem } from '@ba-helper/contracts';
 import { summarizeDiagnostics } from './scan-diagnostic-summary';
 import { RunScanJobPersistenceStep } from './run-scan-job-persistence.step';
-
-const safeRm = async (targetDir?: string): Promise<void> => {
-  if (!targetDir) {
-    return;
-  }
-
-  try {
-    await fs.rm(targetDir, { recursive: true, force: true });
-  } catch {
-    // Cleanup failure must not mask the original scan error.
-  }
-};
+import { ScanWorkspaceCleanupPolicy } from './scan-workspace-cleanup.policy';
 
 const toProfileFrameworkHint = (framework?: string): DetectedRepositoryProfile['framework'] | undefined => {
   if (framework === 'nestjs') return 'NESTJS';
@@ -67,6 +56,7 @@ export class RunScanJobUseCase {
   private readonly logger = new Logger(RunScanJobUseCase.name);
 
   private readonly scannerAdapterRegistry = new ScannerAdapterRegistry();
+  private readonly cleanupPolicy = new ScanWorkspaceCleanupPolicy();
 
   constructor(
     private readonly scanJobRepository: ScanJobRepository,
@@ -474,7 +464,30 @@ export class RunScanJobUseCase {
       );
       throw error;
     } finally {
-      await safeRm(cleanupDir);
+      const cleanup = await this.cleanupPolicy.cleanup(cleanupDir);
+      if (cleanup.reason !== 'NO_WORKSPACE') {
+        const logPayload = {
+          event: 'SCAN_WORKSPACE_CLEANUP',
+          jobId: job.id,
+          repositoryId: job.repositoryId,
+          attempted: cleanup.attempted,
+          preserved: cleanup.preserved,
+          succeeded: cleanup.succeeded,
+          reason: cleanup.reason,
+          workspaceId: cleanup.workspaceId,
+        };
+
+        if (cleanup.succeeded === false) {
+          this.logger.warn(
+            JSON.stringify({
+              ...logPayload,
+              errorMessage: cleanup.errorMessage,
+            }),
+          );
+        } else {
+          this.logger.log(JSON.stringify(logPayload));
+        }
+      }
     }
   }
 }

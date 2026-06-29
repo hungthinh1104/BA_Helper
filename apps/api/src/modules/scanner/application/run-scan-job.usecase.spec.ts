@@ -124,6 +124,7 @@ const analyzer = jest.requireMock('@ba-helper/analyzer') as {
 };
 
 describe('RunScanJobUseCase', () => {
+  const originalPreserveScanWorkspaceEnv = process.env.BA_HELPER_PRESERVE_SCAN_WORKSPACE;
   let useCase: RunScanJobUseCase;
   let scanJobRepository: any;
   let artifactRepository: any;
@@ -135,6 +136,7 @@ describe('RunScanJobUseCase', () => {
 
   beforeEach(() => {
     jest.resetAllMocks();
+    delete process.env.BA_HELPER_PRESERVE_SCAN_WORKSPACE;
     const secretRedactor = (
       jest.requireMock('@ba-helper/analyzer') as {
         SecretRedactor: { redact: jest.Mock };
@@ -212,6 +214,14 @@ describe('RunScanJobUseCase', () => {
       queueService,
       persistenceStep,
     );
+  });
+
+  afterAll(() => {
+    if (originalPreserveScanWorkspaceEnv === undefined) {
+      delete process.env.BA_HELPER_PRESERVE_SCAN_WORKSPACE;
+    } else {
+      process.env.BA_HELPER_PRESERVE_SCAN_WORKSPACE = originalPreserveScanWorkspaceEnv;
+    }
   });
 
   const mockSuccessfulTypeScriptScan = (params: {
@@ -713,6 +723,28 @@ describe('RunScanJobUseCase', () => {
       }),
     );
     expect(prisma.repositoryProfile.upsert).not.toHaveBeenCalled();
+  });
+
+  it('preserves temp workspace on scan failure when debug preserve mode is enabled', async () => {
+    process.env.BA_HELPER_PRESERVE_SCAN_WORKSPACE = '1';
+    (fs.mkdtemp as jest.Mock).mockResolvedValue('/tmp/ba-scan-debug-preserve');
+    analyzer.GitHubUrlValidator.validate.mockReturnValue({ isValid: true });
+    analyzer.GitRepositoryFetcher.fetch.mockRejectedValue(new Error('network down'));
+
+    await expect(useCase.execute({ jobId: 'job-1' })).rejects.toMatchObject({
+      code: 'CLONE_FAILED',
+      message: 'network down',
+    } satisfies Partial<AppError>);
+
+    expect(fs.rm).not.toHaveBeenCalled();
+    expect(scanJobRepository.updateState).toHaveBeenLastCalledWith({
+      jobId: 'job-1',
+      status: ScanJobStatus.FAILED,
+      stage: ScanJobStage.DONE,
+      progress: 0,
+      errorCode: 'CLONE_FAILED',
+      errorMessage: 'network down',
+    });
   });
 
   it('persists INCREMENTAL_SCAN_SUMMARY diagnostic without raw source or hashes', async () => {
