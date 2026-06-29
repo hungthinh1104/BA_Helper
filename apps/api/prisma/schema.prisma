@@ -158,6 +158,12 @@ enum DocumentJobStatus {
   FAILED
 }
 
+enum LocalizationStatus {
+  QUEUED
+  COMPLETED
+  FAILED
+}
+
 enum ClarificationStatus {
   OPEN
   ANSWERED
@@ -679,9 +685,40 @@ model GeneratedDocument {
   updatedAt         DateTime                 @updatedAt
   reviewedSnapshots ReviewedReportSnapshot[]
   documentJobs      DocumentJob[]
+  localizedArtifacts LocalizedReportArtifact[]
 
   @@unique([impactAnalysisId, type, status])
   @@index([impactAnalysisId, status])
+}
+
+model LocalizedReportArtifact {
+  id                 String             @id @default(uuid())
+  sourceDocumentId   String
+  sourceDocument     GeneratedDocument  @relation(fields: [sourceDocumentId], references: [id], onDelete: Cascade)
+
+  locale             String   // BCP-47 locale tag, e.g. "vi-VN"
+  sourceLocale       String   @default("en")
+  localizationStatus LocalizationStatus
+
+  contentMarkdown    String?
+  sourceContentHash  String   // Computed from canonical JSON serialization
+  
+  // Metadata for tracing and debugging
+  glossaryVersion            String?
+  provider                   String?
+  model                      String?
+  translationPromptVersion   String?
+  structuralValidatorVersion String?
+  fieldPolicyVersion         String?
+  
+  errorCode          String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([sourceDocumentId, locale])
+  @@index([sourceDocumentId])
+  @@index([locale])
+  @@index([localizationStatus])
 }
 
 model DocumentJob {

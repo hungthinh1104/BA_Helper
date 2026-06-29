@@ -16,6 +16,7 @@ import { QueueModule } from './modules/queue/queue.module';
 import { AiModule } from './modules/ai/ai.module';
 import { SystemModule } from './modules/system/system.module';
 import { ClarificationModule } from './modules/clarification/clarification.module';
+import { ApiLocalizationModule } from './modules/localization/localization.module';
 
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/application/jwt-auth.guard';
@@ -42,6 +43,7 @@ import { PublicBetaRateLimitPolicy } from './shared/rate-limit/public-beta-rate-
     QueueModule,
     SystemModule,
     ClarificationModule,
+    ApiLocalizationModule,
     AiModule.forRoot(),
   ],
   providers: [

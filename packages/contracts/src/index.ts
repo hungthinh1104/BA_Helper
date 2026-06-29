@@ -28,3 +28,4 @@ export * from './repository-drift.contract';
 export * from './domain-pack.contract';
 export * from './review.contract';
 export * from './event-log.contract';
+export * from './localization.contract';

@@ -4,6 +4,7 @@ import type { AnalysisWorkspaceResponse } from "@ba-helper/contracts"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { FinalizeAnalysisDialog } from "./finalize-analysis-dialog"
+import { AnalysisLocalizationTrigger } from "./analysis-localization-trigger"
 import { useReviewInsight, useReviewTraceabilityLink } from "@/hooks/api/use-analyses"
 import {
   driftStatusLabels,
@@ -152,6 +153,11 @@ export function ReviewReportTab({
             {labels.openReport}
           </Button>
         ) : null}
+
+        <AnalysisLocalizationTrigger 
+          analysisId={workspace.overview.analysisId} 
+          canExport={workspace.reportStatus.canExport} 
+        />
       </aside>
     </section>
   )
