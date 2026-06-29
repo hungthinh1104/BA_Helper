@@ -6,7 +6,6 @@
   },
   "include": [
     "src/**/*.ts",
-    "../api/src/**/*.ts",
     "../../packages/*/src/**/*.ts",
     "../../types.d.ts"
   ]
