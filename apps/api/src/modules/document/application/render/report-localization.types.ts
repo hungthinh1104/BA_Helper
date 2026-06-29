@@ -71,6 +71,12 @@ export type ReportLabels = {
   note: string;
   evidenceQuality: string;
   evidenceBackedLinks: string;
+  strongSourceEvidence: string;
+  weakSourceEvidence: string;
+  inferredFromStructure: string;
+  domainHintOnly: string;
+  missingEvidence: string;
+  conflictingEvidence: string;
   inferredLinks: string;
   reviewRequired: string;
   artifact: string;

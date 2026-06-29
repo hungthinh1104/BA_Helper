@@ -475,7 +475,10 @@ describe('MarkdownImpactReportBuilder', () => {
           evidenceLinks: [
             {
               evidence: {
-                excerpt: 'module',
+                sourceType: 'CODE',
+                artifactId: 'art-1',
+                sourcePath: 'src/app.ts',
+                excerpt: 'export class AppModule configures booking cancellation providers',
                 startLine: 1,
                 endLine: 2,
               }
@@ -505,15 +508,14 @@ describe('MarkdownImpactReportBuilder', () => {
       });
 
       expect(report).toContain('## Evidence Quality & Dataset Readiness');
-      expect(report).toContain('- Evidence-backed links: 1');
-      expect(report).toContain('- Inferred links: 0'); // Because link-2 is REVIEW_REQUIRED (precedence override)
+      expect(report).toContain('- Strong source evidence: 1');
+      expect(report).toContain('- Weak source evidence: 0');
+      expect(report).toContain('- Inferred from structure: 0'); // Because link-2 is REVIEW_REQUIRED (precedence override)
       expect(report).toContain('- Review required: 1');
       
       expect(report).toContain('| Artifact | Quality | Reason |');
-      // link-1 is EVIDENCED
-      expect(report).toMatch(/\| `src\/app\.ts` \| EVIDENCED \| .*hasSourceSnippet.*hasFilePath.*hasSymbolName.*hasLineRange.*hasRetrieverScore.* \|/);
-      // link-2 is REVIEW_REQUIRED because of staleOrUnverified
-      expect(report).toMatch(/\| `src\/main\.ts` \| REVIEW_REQUIRED \| .*missingSourceQuote.*inferredOnly.*staleOrUnverified.* \|/);
+      expect(report).toMatch(/\| `src\/app\.ts` \| STRONG_SOURCE_EVIDENCE \| .*hasPersistedEvidence.*hasSourceEvidence.*hasArtifactLink.*hasLineRange.*hasSpecificExcerpt.* \|/);
+      expect(report).toMatch(/\| `src\/main\.ts` \| REVIEW_REQUIRED \| .*reviewRequired.* \|/);
     });
 
     it('omits Evidence Quality section when no traceability links exist', () => {

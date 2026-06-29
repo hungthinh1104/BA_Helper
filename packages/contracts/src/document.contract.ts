@@ -56,23 +56,45 @@ export const evaluationContextSchema = z.object({
 });
 
 export const evidenceQualitySummarySchema = z.object({
+	strongSourceEvidence: z.number().optional(),
+	weakSourceEvidence: z.number().optional(),
+	inferredFromStructure: z.number().optional(),
+	domainHintOnly: z.number().optional(),
+	missingEvidence: z.number(),
+	conflictingEvidence: z.number().optional(),
+	reviewRequired: z.number(),
 	evidenced: z.number(),
 	inferred: z.number(),
 	weakEvidence: z.number(),
-	missingEvidence: z.number(),
-	reviewRequired: z.number(),
+	STRONG_SOURCE_EVIDENCE: z.number().optional(),
+	WEAK_SOURCE_EVIDENCE: z.number().optional(),
+	INFERRED_FROM_STRUCTURE: z.number().optional(),
+	DOMAIN_HINT_ONLY: z.number().optional(),
+	MISSING_EVIDENCE: z.number().optional(),
+	CONFLICTING_EVIDENCE: z.number().optional(),
+	REVIEW_REQUIRED: z.number().optional(),
 });
 
+const evidenceQualityLabelSchema = z.enum([
+	'STRONG_SOURCE_EVIDENCE',
+	'WEAK_SOURCE_EVIDENCE',
+	'INFERRED_FROM_STRUCTURE',
+	'DOMAIN_HINT_ONLY',
+	'MISSING_EVIDENCE',
+	'CONFLICTING_EVIDENCE',
+	'REVIEW_REQUIRED',
+	'EVIDENCED',
+	'INFERRED',
+	'WEAK_EVIDENCE',
+]);
+
 export const evidenceQualityItemSchema = z.object({
-	linkId: z.string().min(1),
+	itemType: z.enum(['TRACEABILITY_LINK', 'INSIGHT']).optional(),
+	itemId: z.string().min(1).optional(),
+	linkId: z.string().min(1).optional(),
+	insightId: z.string().min(1).optional(),
 	artifact: z.string(),
-	quality: z.enum([
-		'EVIDENCED',
-		'INFERRED',
-		'WEAK_EVIDENCE',
-		'MISSING_EVIDENCE',
-		'REVIEW_REQUIRED',
-	]),
+	quality: evidenceQualityLabelSchema,
 	reasons: z.array(z.string()),
 	reviewDecision: traceabilityReviewDecisionSchema.optional().nullable(),
 });

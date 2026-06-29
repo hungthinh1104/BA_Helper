@@ -1,69 +1,135 @@
-import type { Prisma } from '@prisma/client';
+import type {
+  EvidenceQualitySummary,
+  InsightForAnnotation,
+  QualityAnnotation,
+  TraceabilityLinkForAnnotation,
+} from './evidence-quality.types';
+import {
+  buildEvidenceReasons,
+  emptyEvidenceQualitySummary,
+  hasStructuralMetadata,
+  hasUsableArtifact,
+  inspectEvidence,
+  isDomainHintMetadata,
+  isReviewRequiredInsight,
+  readRecord,
+} from './evidence-quality.rules';
 
-export type TraceabilityLinkForAnnotation = Prisma.TraceabilityLinkGetPayload<{
-  include: {
-    artifact: true;
-    evidenceLinks: {
-      include: {
-        evidence: true;
-      };
-    };
-  };
-}>;
-
-export type QualityLabel = 'EVIDENCED' | 'INFERRED' | 'WEAK_EVIDENCE' | 'MISSING_EVIDENCE' | 'REVIEW_REQUIRED';
-
-export interface QualityAnnotation {
-  label: QualityLabel;
-  reasons: string[];
-}
+export type {
+  EvidenceQualityItem,
+  EvidenceQualitySummary,
+  InsightForAnnotation,
+  QualityAnnotation,
+  QualityLabel,
+  TraceabilityLinkForAnnotation,
+} from './evidence-quality.types';
 
 export class EvidenceQualityAnnotator {
   static annotate(link: TraceabilityLinkForAnnotation): QualityAnnotation {
-    const hasEvidence = link.evidenceLinks && link.evidenceLinks.length > 0;
-    const hasSourceSnippet = hasEvidence && link.evidenceLinks.some(e => !!e.evidence.excerpt);
-    const hasFilePath = !!link.artifact?.filePath;
-    const hasSymbolName = !!link.artifact?.name && !link.artifact.name.includes('UNKNOWN');
-    const hasLineRange = hasEvidence && link.evidenceLinks.some(e => e.evidence.startLine !== null && e.evidence.endLine !== null);
-    
-    const retrievalMetadata = (link.retrievalMetadata as any) || {};
-    const hasRetrieverScore = retrievalMetadata.semanticScore !== undefined || retrievalMetadata.bm25Score !== undefined;
-    const hasMultipleSignals = Array.isArray(retrievalMetadata.signals) && retrievalMetadata.signals.length > 1;
-    
-    const inferredOnly = link.linkBasis === 'INFERRED';
-    const missingSourceQuote = !hasSourceSnippet;
-    const staleOrUnverified = link.reviewStatus === 'NEEDS_REVIEW';
+    return this.annotateTraceabilityLink(link);
+  }
 
-    const reasons: string[] = [];
+  static annotateTraceabilityLink(link: TraceabilityLinkForAnnotation): QualityAnnotation {
+    const evidence = (link.evidenceLinks ?? []).map((item) => item.evidence);
+    const facts = inspectEvidence(evidence, link.artifact);
+    const reasons = buildEvidenceReasons(facts);
+    const hasArtifactStructure = hasUsableArtifact(link.artifact);
 
-    if (hasSourceSnippet) reasons.push('hasSourceSnippet');
-    if (hasFilePath) reasons.push('hasFilePath');
-    if (hasSymbolName) reasons.push('hasSymbolName');
-    if (hasLineRange) reasons.push('hasLineRange');
-    if (hasRetrieverScore) reasons.push('hasRetrieverScore');
-    if (hasMultipleSignals) reasons.push('hasMultipleSignals');
-    if (missingSourceQuote) reasons.push('missingSourceQuote');
-    if (inferredOnly) reasons.push('inferredOnly');
-    if (staleOrUnverified) reasons.push('staleOrUnverified');
+    if (link.reviewStatus === 'NEEDS_REVIEW') {
+      reasons.push('reviewRequired');
+      return { label: 'REVIEW_REQUIRED', reasons };
+    }
 
-    let label: QualityLabel;
+    if (link.linkBasis === 'INFERRED') {
+      reasons.push('inferredLinkBasis');
+      return {
+        label: hasArtifactStructure || facts.hasSourceEvidence
+          ? 'INFERRED_FROM_STRUCTURE'
+          : 'MISSING_EVIDENCE',
+        reasons,
+      };
+    }
 
-    // Precedence: REVIEW_REQUIRED > MISSING_EVIDENCE > WEAK_EVIDENCE > INFERRED > EVIDENCED
-    if (staleOrUnverified) {
-      label = 'REVIEW_REQUIRED';
-    } else if (!hasFilePath || !hasEvidence || missingSourceQuote) {
-      label = 'MISSING_EVIDENCE';
-    } else if (!hasLineRange && !hasSymbolName && !hasRetrieverScore) {
-      label = 'WEAK_EVIDENCE';
-    } else if (inferredOnly) {
-      label = 'INFERRED';
-    } else {
-      label = 'EVIDENCED';
+    if (facts.hasDomainHintOnly) {
+      reasons.push('domainHintOnly');
+      return { label: 'DOMAIN_HINT_ONLY', reasons };
+    }
+
+    if (!facts.hasEvidence || !facts.hasSourceEvidence) {
+      reasons.push('missingPersistedSourceEvidence');
+      return { label: 'MISSING_EVIDENCE', reasons };
     }
 
     return {
-      label,
+      label: facts.hasStrongSourceEvidence ? 'STRONG_SOURCE_EVIDENCE' : 'WEAK_SOURCE_EVIDENCE',
       reasons,
     };
+  }
+
+  static annotateInsight(insight: InsightForAnnotation): QualityAnnotation {
+    const evidence = (insight.evidenceLinks ?? []).map((item) => item.evidence);
+    const facts = inspectEvidence(evidence);
+    const reasons = buildEvidenceReasons(facts);
+    const metadata = readRecord(insight.metadata);
+
+    if (insight.certainty === 'CONFLICTING') {
+      reasons.push('conflictingCertainty');
+      return { label: 'CONFLICTING_EVIDENCE', reasons };
+    }
+
+    if (isReviewRequiredInsight(insight)) {
+      reasons.push('reviewRequired');
+      return { label: 'REVIEW_REQUIRED', reasons };
+    }
+
+    if (facts.hasDomainHintOnly || isDomainHintMetadata(metadata, insight)) {
+      reasons.push('domainHintOnly');
+      return { label: 'DOMAIN_HINT_ONLY', reasons };
+    }
+
+    if (insight.certainty === 'INFERRED') {
+      reasons.push('inferredCertainty');
+      return {
+        label: facts.hasSourceEvidence || hasStructuralMetadata(metadata)
+          ? 'INFERRED_FROM_STRUCTURE'
+          : 'MISSING_EVIDENCE',
+        reasons,
+      };
+    }
+
+    if (insight.certainty === 'UNKNOWN') {
+      reasons.push('unknownCertainty');
+      return { label: 'MISSING_EVIDENCE', reasons };
+    }
+
+    if (!facts.hasEvidence || !facts.hasSourceEvidence) {
+      reasons.push('missingPersistedSourceEvidence');
+      return { label: 'MISSING_EVIDENCE', reasons };
+    }
+
+    return {
+      label: facts.hasStrongSourceEvidence ? 'STRONG_SOURCE_EVIDENCE' : 'WEAK_SOURCE_EVIDENCE',
+      reasons,
+    };
+  }
+
+  static summarize(annotations: QualityAnnotation[]): EvidenceQualitySummary {
+    const counts = emptyEvidenceQualitySummary();
+    for (const annotation of annotations) {
+      counts[annotation.label]++;
+    }
+
+    counts.strongSourceEvidence = counts.STRONG_SOURCE_EVIDENCE;
+    counts.weakSourceEvidence = counts.WEAK_SOURCE_EVIDENCE;
+    counts.inferredFromStructure = counts.INFERRED_FROM_STRUCTURE;
+    counts.domainHintOnly = counts.DOMAIN_HINT_ONLY;
+    counts.missingEvidence = counts.MISSING_EVIDENCE;
+    counts.conflictingEvidence = counts.CONFLICTING_EVIDENCE;
+    counts.reviewRequired = counts.REVIEW_REQUIRED;
+    counts.evidenced = counts.strongSourceEvidence;
+    counts.inferred = counts.inferredFromStructure;
+    counts.weakEvidence = counts.weakSourceEvidence;
+
+    return counts;
   }
 }

@@ -2,14 +2,16 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ApprovedReportMetadata } from '../domain/approved-report-metadata';
 import { TraceabilityRepository } from '../../traceability/infrastructure/traceability.repository';
+import { InsightRepository } from '../../insight/infrastructure/insight.repository';
 import { EvaluationContextAdapter } from './evaluation-context.adapter';
-import { EvidenceQualityAnnotator } from './evidence-quality.annotator';
+import { buildEvidenceQualityProjection } from './evidence-quality.projection';
 
 @Injectable()
 export class ApprovedReportProjectionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly traceabilityRepo: TraceabilityRepository,
+    private readonly insightRepo: InsightRepository,
     private readonly evalContextAdapter: EvaluationContextAdapter,
   ) {}
 
@@ -47,40 +49,10 @@ export class ApprovedReportProjectionService {
 
     const evaluationContext = this.evalContextAdapter.getEvaluationContext();
     const traceabilityLinks = await this.traceabilityRepo.listByAnalysis(analysis.id);
-
-    const linkAnnotations = traceabilityLinks.map(link => ({
-      link,
-      annotation: EvidenceQualityAnnotator.annotate(link as any),
-    }));
-
-    const evidenceQualitySummary = {
-      evidenced: linkAnnotations.filter(l => l.annotation.label === 'EVIDENCED').length,
-      inferred: linkAnnotations.filter(l => l.annotation.label === 'INFERRED').length,
-      weakEvidence: linkAnnotations.filter(l => l.annotation.label === 'WEAK_EVIDENCE').length,
-      missingEvidence: linkAnnotations.filter(l => l.annotation.label === 'MISSING_EVIDENCE').length,
-      reviewRequired: linkAnnotations.filter(l => l.annotation.label === 'REVIEW_REQUIRED').length,
-    };
-
-    const evidenceQualityItems = linkAnnotations.map(item => {
-      const decision = item.link.reviewDecision;
-      
-      return {
-        linkId: item.link.id,
-        artifact: item.link.artifact?.filePath || item.link.artifact?.name || 'Unknown',
-        quality: item.annotation.label,
-        reasons: item.annotation.reasons,
-        reviewDecision: decision
-          ? {
-              id: decision.id,
-              analysisId: decision.analysisId,
-              traceabilityLinkId: decision.traceabilityLinkId,
-              decision: decision.decision,
-              note: decision.note,
-              reviewedByUserId: decision.reviewedByUserId,
-              reviewedAt: decision.reviewedAt.toISOString(),
-            }
-          : null,
-      };
+    const insights = await this.insightRepo.listByAnalysis(analysis.id);
+    const qualityProjection = buildEvidenceQualityProjection({
+      traceabilityLinks,
+      insights: insights as any[],
     });
 
     return {
@@ -88,8 +60,8 @@ export class ApprovedReportProjectionService {
       isStale,
       staleReason,
       evaluationContext,
-      evidenceQualitySummary,
-      evidenceQualityItems,
+      evidenceQualitySummary: qualityProjection.summary,
+      evidenceQualityItems: qualityProjection.items,
       metadata: {
         analysisId: analysis.id,
         title: analysis.requirementRevision.title,

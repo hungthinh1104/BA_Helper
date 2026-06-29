@@ -3,7 +3,8 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { EventLogService } from '../../../event-log/application/event-log.service';
 import { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
-import { EvidenceQualityAnnotator } from '../evidence-quality.annotator';
+import { InsightRepository } from '../../../insight/infrastructure/insight.repository';
+import { buildEvidenceQualityProjection } from '../evidence-quality.projection';
 import { EvaluationContextAdapter } from '../evaluation-context.adapter';
 
 type ReviewedReportSnapshotCreateData = {
@@ -22,6 +23,7 @@ export class CreateReviewedReportSnapshotUseCase {
     private readonly prisma: PrismaService,
     private readonly eventLog: EventLogService,
     private readonly traceabilityRepo: TraceabilityRepository,
+    private readonly insightRepo: InsightRepository,
     private readonly evalContextAdapter: EvaluationContextAdapter,
   ) {}
 
@@ -38,48 +40,18 @@ export class CreateReviewedReportSnapshotUseCase {
   }): Promise<ReviewedReportSnapshotCreateData> {
     const evaluationContextSnapshot = this.evalContextAdapter.getEvaluationContext();
     const traceabilityLinks = await this.traceabilityRepo.listByAnalysis(params.analysisId);
-
-    const linkAnnotations = traceabilityLinks.map((link) => ({
-      link,
-      annotation: EvidenceQualityAnnotator.annotate(link),
-    }));
-
-    const evidenceQualitySummarySnapshot = {
-      evidenced: linkAnnotations.filter((item) => item.annotation.label === 'EVIDENCED').length,
-      inferred: linkAnnotations.filter((item) => item.annotation.label === 'INFERRED').length,
-      weakEvidence: linkAnnotations.filter((item) => item.annotation.label === 'WEAK_EVIDENCE').length,
-      missingEvidence: linkAnnotations.filter((item) => item.annotation.label === 'MISSING_EVIDENCE').length,
-      reviewRequired: linkAnnotations.filter((item) => item.annotation.label === 'REVIEW_REQUIRED').length,
-    };
-
-    const reviewDecisionsSnapshot = linkAnnotations.map((item) => {
-      const decision = item.link.reviewDecision;
-
-      return {
-        linkId: item.link.id,
-        artifact: item.link.artifact?.filePath || item.link.artifact?.name || 'Unknown',
-        quality: item.annotation.label,
-        reasons: item.annotation.reasons,
-        reviewDecision: decision
-          ? {
-              id: decision.id,
-              analysisId: decision.analysisId,
-              traceabilityLinkId: decision.traceabilityLinkId,
-              decision: decision.decision,
-              note: decision.note,
-              reviewedByUserId: decision.reviewedByUserId,
-              reviewedAt: decision.reviewedAt.toISOString(),
-            }
-          : null,
-      };
+    const insights = await this.insightRepo.listByAnalysis(params.analysisId);
+    const qualityProjection = buildEvidenceQualityProjection({
+      traceabilityLinks,
+      insights: insights as any[],
     });
 
     return {
       analysisId: params.analysisId,
       approvedDocumentId: null,
       markdown: null,
-      reviewDecisionsSnapshot: reviewDecisionsSnapshot as Prisma.InputJsonValue,
-      evidenceQualitySummarySnapshot: evidenceQualitySummarySnapshot as Prisma.InputJsonValue,
+      reviewDecisionsSnapshot: qualityProjection.items as Prisma.InputJsonValue,
+      evidenceQualitySummarySnapshot: qualityProjection.summary as Prisma.InputJsonValue,
       evaluationContextSnapshot: evaluationContextSnapshot
         ? (evaluationContextSnapshot as Prisma.InputJsonValue)
         : Prisma.DbNull,
