@@ -1,4 +1,4 @@
-# Public Beta Release: Requirement-to-Code Impact Analyzer
+# Controlled Beta Release: Requirement-to-Code Impact Analyzer
 
 ## 1. What is BA Helper?
 BA Helper is a Requirement-to-Code Impact Analyzer designed specifically for backend teams.
@@ -23,7 +23,7 @@ This project is built on an unwavering evidence hierarchy:
 We utilize strict internal telemetry (`tests/evaluation/impact-evaluation.spec.ts`) to calculate domain concept matching precision and recall. These are internal quality signals tuned to our specific curated subsets to prevent prompt regressions, not public benchmark claims.
 
 ## 6. Current Limitations
-We are committed to honest capabilities. As of this Public Beta:
+We are committed to honest capabilities. As of this controlled beta:
 - **TypeScript/NestJS** is the strongest extraction path.
 - **Java Spring** support is `PARTIAL`; Go, Python, C#, PHP, and Ruby adapters are `EXPERIMENTAL` capability proofs.
 - **Pilot adapters** are bounded static extractors, not full compiler-level semantic analyzers.

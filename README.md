@@ -179,7 +179,9 @@ pnpm dev:worker
 # Start frontend web app (Port 3000)
 pnpm dev:web
 ```
-Open `http://localhost:3000/login` and sign in using the dev-login bypass.
+Open `http://localhost:3000/login` and use the dev sign-in form. In local
+development, `ENABLE_DEV_LOGIN=true` lets you enter with a demo operator email
+and role; do not expose that endpoint on a public API host.
 
 ### 10. Real Runtime Smoke Lanes
 The default CI and golden path stay on fake providers. Real-provider smoke is explicit and manual:
@@ -262,13 +264,13 @@ Built as a TypeScript modular monolith to balance speed of development with even
 2. Add evidence quality scoring for weak/missing/conflicting support.
 3. Improve impact precision evaluation packs and scorecards.
 4. Tighten review coverage gates and report trust UX.
-5. Continue drift/freshness hardening and public beta readiness.
+5. Continue drift/freshness hardening and controlled beta readiness.
 6. Expand domains/languages only behind explicit capability status and evaluation coverage.
 
 ## Documentation & Assets
 - **[Golden Path Demo Guide](docs/demo/golden-path.md)**
 - **[Sample Requirement Change](docs/demo/sample-requirement-change.md)**
-- **[Public Beta Release Note](docs/demo/public-beta-release-note.md)**
+- **[Controlled Beta Release Note](docs/demo/public-beta-release-note.md)**
 - **[Portfolio Proof Pack](docs/demo/portfolio-proof-pack.md)**
 - **[Public Demo Checklist](docs/demo/public-demo-checklist.md)**
 - **[Impact Evaluation Docs](docs/evaluation/impact-evaluation.md)**

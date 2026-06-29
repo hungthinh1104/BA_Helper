@@ -25,14 +25,16 @@ export class PublicBetaRateLimitGuard implements CanActivate {
   ) {}
 
   canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest<RateLimitedRequest>();
+    const path = request.originalUrl ?? request.url ?? '';
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
-    if (isPublic) return true;
+    if (isPublic && !this.policy.shouldLimit(request.method, path)) {
+      return true;
+    }
 
-    const request = context.switchToHttp().getRequest<RateLimitedRequest>();
-    const path = request.originalUrl ?? request.url ?? '';
     const decision = this.policy.consume({
       config: getPublicBetaRateLimitConfig(),
       method: request.method,

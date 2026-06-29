@@ -1,6 +1,7 @@
 # BA Helper: Public Preview Smoke Test
 
-After deploying BA Helper to a public preview environment (e.g., Vercel + Render), follow this checklist to ensure the deployment is healthy and secure.
+After deploying BA Helper to a private preview environment, follow this checklist
+to ensure the deployment is healthy and secure.
 
 ## 1. Security Gate Validation
 - [ ] Visit the deployed Vercel URL.
@@ -8,10 +9,14 @@ After deploying BA Helper to a public preview environment (e.g., Vercel + Render
 - [ ] Attempt to login with incorrect credentials. Verify access is denied.
 - [ ] Login with the configured `PREVIEW_USERNAME` and `PREVIEW_PASSWORD`.
 - [ ] Verify the application loads correctly after successful authentication.
+- [ ] Verify the API host itself is not publicly reachable with dev-login
+      enabled unless protected by provider-level private networking, VPN, or IP
+      allowlisting.
 
 ## 2. API Health Validation
-- [ ] Ensure the login page shows the "Bypass Login (Dev Mode)" button.
-- [ ] Click the bypass button. Verify you are immediately logged in as an Admin.
+- [ ] Ensure the login page shows dev sign-in only in private demo mode.
+- [ ] Sign in with the configured demo operator email/role. Verify you are
+      logged in as an Admin.
 - [ ] *If this step fails, the API URL is likely misconfigured in Vercel (`NEXT_PUBLIC_API_URL`) or CORS is misconfigured in Render (`CORS_ALLOWED_ORIGINS`).*
 
 ## 3. Seeded Data Validation
@@ -29,6 +34,8 @@ After deploying BA Helper to a public preview environment (e.g., Vercel + Render
 - [ ] Click **Download .md**. Verify the file downloads to your local machine correctly.
 
 ## 5. Boot Guard Validation (Backend logs)
-- [ ] Check your backend hosting provider's logs (e.g., Render/Railway logs).
+- [ ] Check your backend hosting provider's logs.
 - [ ] Verify there are no errors about `BOOT GUARD`.
-- [ ] *(Optional but recommended)*: Temporarily inject `OPENAI_API_KEY=test` into your backend environment variables and restart. Verify the application **crashes** with a Boot Guard error, preventing accidental LLM usage. Remove the variable to restore service.
+- [ ] Verify the old invalid release combination
+      `NODE_ENV=production + PUBLIC_PREVIEW_MODE=true + AI_PROVIDER=fake + ENABLE_DEV_LOGIN=true`
+      crashes during startup. Remove those values before restoring service.

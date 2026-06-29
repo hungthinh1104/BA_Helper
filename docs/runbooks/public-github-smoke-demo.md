@@ -56,6 +56,9 @@ ENABLE_DEV_LOGIN=true
 SMOKE_ALLOW_DEV_LOGIN_FALLBACK=false
 ```
 
+This is a local/private operator smoke path. Do not expose an API with
+`ENABLE_DEV_LOGIN=true` on the public internet.
+
 ## Command
 
 From repo root:

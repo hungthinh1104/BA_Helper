@@ -69,6 +69,26 @@ describe('PublicBetaRateLimitGuard', () => {
     expect(guard.canActivate(context)).toBe(true);
     expect(guard.canActivate(context)).toBe(true);
   });
+
+  it('rate-limits public dev-login by anonymous network scope', () => {
+    const guard = new PublicBetaRateLimitGuard(reflector(true), new PublicBetaRateLimitPolicy());
+    const context = httpContext({
+      method: 'POST',
+      originalUrl: '/api/v1/auth/dev-login',
+      ip: '203.0.113.10',
+      body: { email: 'admin@example.com' },
+    });
+
+    expect(guard.canActivate(context)).toBe(true);
+    expect(() => guard.canActivate(context)).toThrow(AppError);
+
+    try {
+      guard.canActivate(context);
+    } catch (error) {
+      expect(error).toMatchObject({ code: 'RATE_LIMITED' });
+      expect(JSON.stringify((error as AppError).details)).not.toContain('admin@example.com');
+    }
+  });
 });
 
 function reflector(isPublic: boolean): Reflector {

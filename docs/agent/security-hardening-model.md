@@ -128,10 +128,12 @@ LLM prompts, raw provider responses, or unbounded diagnostic blobs.
 
 ## Public Beta Rate Limit Boundary
 
-The API applies an in-process public beta rate limit to expensive mutating or
-download actions such as scan creation, requirement/revision creation, impact
-analysis creation, report finalization, and report export. The limiter scopes
-by authenticated user and project when project context is available.
+The API applies an in-process public beta rate limit to expensive or sensitive
+mutating/download actions such as dev-login, scan creation, requirement/revision
+creation, impact analysis creation, report finalization, and report export.
+The limiter scopes by authenticated user and project when project context is
+available, and by anonymous network scope for explicitly rate-limited public
+endpoints such as dev-login.
 
 Rules:
 
