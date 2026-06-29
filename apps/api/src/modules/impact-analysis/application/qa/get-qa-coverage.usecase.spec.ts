@@ -1,7 +1,8 @@
 import { GetQaCoverageUseCase } from './get-qa-coverage.usecase';
 import { QaCoverageDeriver } from './qa-coverage.deriver';
-import { ImpactGraphReadModelBuilder } from '../queries/impact-graph-read-model.builder';
-import { ImpactGraphResponse, ImpactGraphNode, ImpactGraphEdge, QaCoverageItem } from '@ba-helper/contracts';
+import type { ImpactGraphReadModelBuilder } from '../queries/impact-graph-read-model.builder';
+import type { ImpactGraphResponse, ImpactGraphNode, ImpactGraphEdge} from '@ba-helper/contracts';
+import { QaCoverageItem } from '@ba-helper/contracts';
 
 describe('GetQaCoverageUseCase', () => {
   let useCase: GetQaCoverageUseCase;

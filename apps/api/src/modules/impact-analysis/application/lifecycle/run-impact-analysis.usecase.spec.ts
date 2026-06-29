@@ -1,19 +1,18 @@
-import { RunImpactAnalysisUseCase } from './run-impact-analysis.usecase';
-import { ImpactEvidenceCollectionStep } from './steps/impact-evidence-collection.step';
-import { ImpactDiagnosticPropagationStep } from './steps/impact-diagnostic-propagation.step';
-import { ImpactAiReasoningStep } from './steps/impact-ai-reasoning.step';
-import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
-import { ArtifactRepository } from '../../../artifact/infrastructure/artifact.repository';
-import { EvidenceRepository } from '../../../evidence/infrastructure/evidence.repository';
-import { InsightRepository } from '../../../insight/infrastructure/insight.repository';
-import { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
-import { LlmProvider } from '../../../ai/domain/llm-provider.interface';
-import { HybridRetrievalService } from '../../../retrieval/application/hybrid-retrieval.service';
-import { AppError } from '../../../../shared/app-error';
-import { renderPrompt } from '../../../ai/domain/prompt-registry';
-import { DomainPackRegistry } from '../../../domain-pack/application/domain-pack.registry';
-
-jest.mock('../../../ai/domain/prompt-registry');
+import {
+  RunImpactAnalysisUseCase,
+  ImpactEvidenceCollectionStep,
+  ImpactDiagnosticPropagationStep,
+  ImpactAiReasoningStep,
+} from '@ba-helper/application';
+import type { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
+import type { ArtifactRepository } from '../../../artifact/infrastructure/artifact.repository';
+import type { EvidenceRepository } from '../../../evidence/infrastructure/evidence.repository';
+import type { InsightRepository } from '../../../insight/infrastructure/insight.repository';
+import type { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
+import type { LlmProvider } from '../../../ai/domain/llm-provider.interface';
+import type { HybridRetrievalService } from '../../../retrieval/application/hybrid-retrieval.service';
+import { AppError } from '@ba-helper/shared';
+import type { DomainPackRegistry } from '../../../domain-pack/application/domain-pack.registry';
 
 describe('RunImpactAnalysisUseCase', () => {
   let useCase: RunImpactAnalysisUseCase;
@@ -63,8 +62,11 @@ describe('RunImpactAnalysisUseCase', () => {
         selectPack: jest.fn().mockReturnValue({
           pack: {
             id: 'test-pack',
+            name: 'Test Pack',
             version: '1.0',
             status: 'EXPERIMENTAL',
+            description: 'Test pack',
+            glossaryMetadata: [],
             concepts: [],
             retrievalHints: [],
             riskTemplates: [],
@@ -72,8 +74,34 @@ describe('RunImpactAnalysisUseCase', () => {
             unknownTemplates: [],
           },
           normalizedPackId: 'test-pack',
-          selectedBy: 'safe_default',
+          selectedBy: 'FALLBACK',
+          resolved: {
+            requestedDomainPackId: null,
+            resolvedDomainPackId: 'test-pack',
+            resolvedDomainPackVersion: '1.0',
+            resolvedDomainPackStatus: 'EXPERIMENTAL',
+            selectedBy: 'FALLBACK',
+            resolvedAt: '2026-06-27T00:00:00.000Z',
+          },
         }),
+        selectResolvedPack: jest.fn((selection) => ({
+          pack: {
+            id: selection.resolvedDomainPackId,
+            name: 'Test Pack',
+            version: selection.resolvedDomainPackVersion,
+            status: selection.resolvedDomainPackStatus,
+            description: 'Test pack',
+            glossaryMetadata: [],
+            concepts: [],
+            retrievalHints: [],
+            riskTemplates: [],
+            qaTemplates: [],
+            unknownTemplates: [],
+          },
+          normalizedPackId: selection.resolvedDomainPackId,
+          selectedBy: selection.selectedBy,
+          resolved: selection,
+        })),
     } as unknown as jest.Mocked<DomainPackRegistry>;
 
     const evidenceStep = new ImpactEvidenceCollectionStep(
@@ -99,11 +127,6 @@ describe('RunImpactAnalysisUseCase', () => {
       eventLogService,
     );
 
-    (renderPrompt as jest.Mock).mockReturnValue({
-      systemPrompt: 'sys',
-      userPrompt: 'user',
-      version: 'v1',
-    });
   });
 
   it('should throw if analysis not found', async () => {
@@ -196,8 +219,8 @@ describe('RunImpactAnalysisUseCase', () => {
     // 4. Verify Fake Provider Argument Boundary
     const promptArg = (llmProvider.generateStructured as jest.Mock).mock.calls[0][0];
     expect(promptArg).toEqual(expect.objectContaining({
-      systemPrompt: 'sys',
-      userPrompt: 'user'
+      systemPrompt: expect.any(String),
+      userPrompt: expect.any(String)
     }));
 
     // 5. Verify Event Logs
@@ -208,7 +231,17 @@ describe('RunImpactAnalysisUseCase', () => {
   });
 
   it('should mark analysis as FAILED if error occurs', async () => {
-    const analysis = { id: 'a1', status: 'QUEUED', snapshot: { id: 's1' }, requirementRevision: {} };
+    const analysis = {
+      id: 'a1',
+      status: 'QUEUED',
+      snapshot: {
+        id: 's1',
+        repositoryId: 'r1',
+        analyzerVersion: '1.0',
+        repository: { projectId: 'p1' },
+      },
+      requirementRevision: { rawText: 'cancel booking', requirement: { projectId: 'p1' } },
+    };
     impactRepo.findById.mockResolvedValue(analysis as any);
     impactRepo.updateStatus.mockResolvedValue({} as any);
     
@@ -224,12 +257,56 @@ describe('RunImpactAnalysisUseCase', () => {
     expect(eventLogService.recordEvent).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'ANALYSIS_FAILED' }));
   });
 
+  it('uses persisted canonical domain pack columns on retry when job payload has no domain', async () => {
+    const analysis = {
+      id: 'a1',
+      status: 'QUEUED',
+      stage: 'WAITING',
+      progress: 0,
+      requestedDomainPackId: 'healthcare',
+      resolvedDomainPackId: 'healthcare',
+      resolvedDomainPackVersion: '0.1.0',
+      resolvedDomainPackStatus: 'PARTIAL',
+      domainPackSelectedBy: 'EXPLICIT',
+      domainPackResolvedAt: new Date('2026-06-27T00:00:00.000Z'),
+      metadata: null,
+      snapshot: {
+        id: 's1',
+        repositoryId: 'r1',
+        analyzerVersion: '1.0',
+        diagnostics: [],
+        repository: { projectId: 'p1' },
+        profile: { domain: 'BOOKING' },
+      },
+      requirementRevision: {
+        rawText: 'reschedule appointment',
+        requirement: { projectId: 'p1' },
+      },
+    };
+    impactRepo.findById.mockResolvedValue(analysis as any);
+    artifactRepo.listBySnapshot.mockRejectedValue(new Error('stop after selection'));
+
+    await expect(useCase.execute({ analysisId: 'a1' })).rejects.toThrow(
+      'stop after selection',
+    );
+
+    expect(domainPackRegistry.selectResolvedPack).toHaveBeenCalledWith({
+      requestedDomainPackId: 'healthcare',
+      resolvedDomainPackId: 'healthcare',
+      resolvedDomainPackVersion: '0.1.0',
+      resolvedDomainPackStatus: 'PARTIAL',
+      selectedBy: 'EXPLICIT',
+      resolvedAt: '2026-06-27T00:00:00.000Z',
+    });
+    expect(domainPackRegistry.selectPack).not.toHaveBeenCalled();
+  });
+
   it('downgrades evidenced insights when no persisted evidence can be resolved', async () => {
     const analysis = {
       id: 'a1',
       status: 'QUEUED',
-      snapshot: { id: 's1', repositoryId: 'r1', analyzerVersion: '1.0', diagnostics: [] },
-      requirementRevision: { rawText: 'cancel booking' },
+      snapshot: { id: 's1', repositoryId: 'r1', analyzerVersion: '1.0', diagnostics: [], repository: { projectId: 'p1' } },
+      requirementRevision: { rawText: 'cancel booking', requirement: { projectId: 'p1' } },
     };
     impactRepo.findById.mockResolvedValue(analysis as any);
     artifactRepo.listBySnapshot.mockResolvedValue([

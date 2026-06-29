@@ -4,15 +4,7 @@ import { AlertCircle } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { useMultiRepoImpactMatrix } from "@/hooks/api/use-analyses"
-
-const BLOCKING_REASON_LABEL: Record<string, string> = {
-  FAILED: "Failed",
-  NOT_COMPLETED: "Not completed",
-  WAITING_FOR_REVIEW: "Waiting for review",
-  NEEDS_MORE_CLARIFICATION: "Needs clarification",
-  REJECTED: "Rejected",
-  NONE: "Ready",
-}
+import { MULTI_REPO_CHILD_BLOCKING_REASON_LABEL } from "@/lib/multi-repo-report-labels"
 
 interface ImpactMatrixTableProps {
   runId: string
@@ -87,7 +79,7 @@ export function ImpactMatrixTable({ runId, onViewDetails }: ImpactMatrixTablePro
               </TableCell>
               <TableCell>
                 <span className={`text-[12px] ${row.blockingReason === "NONE" ? "text-success" : "text-warning"}`}>
-                  {BLOCKING_REASON_LABEL[row.blockingReason || "NONE"]}
+                  {MULTI_REPO_CHILD_BLOCKING_REASON_LABEL[row.blockingReason || "NONE"]}
                 </span>
               </TableCell>
               <TableCell className="text-right">

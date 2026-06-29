@@ -1,16 +1,19 @@
+import type {
+	AnalysisWorkspaceResponse} from '@ba-helper/contracts';
 import {
-	AnalysisWorkspaceResponse,
 	analysisWorkspaceResponseSchema,
 } from '@ba-helper/contracts';
-import {
-	KIND_GROUPS,
+import type {
 	WorkspaceAnalysis,
 	WorkspaceEvidence,
 	WorkspaceInsight,
-	WorkspaceTraceabilityLink,
+	WorkspaceTraceabilityLink} from './analysis-workspace.mapper.types';
+import {
+	KIND_GROUPS
 } from './analysis-workspace.mapper.types';
 import {
 	buildDomainProfileId,
+	buildWorkspaceDomainPack,
 	buildDriftStatus,
 	buildReportStatus,
 	deriveReviewStatus,
@@ -55,9 +58,10 @@ export function mapAnalysisWorkspace(
 				language: detectRequirementLanguage(
 					analysis.requirementRevision.rawText,
 					analysis.requirementRevision.normalizedText,
-				),
-				domainProfileId: buildDomainProfileId(analysis.snapshot.profile),
-			},
+					),
+					domainProfileId: buildDomainProfileId(analysis.snapshot.profile),
+					domainPack: buildWorkspaceDomainPack(analysis),
+				},
 			snapshot: {
 				snapshotId: analysis.snapshot.id,
 				repositoryId: analysis.snapshot.repositoryId,

@@ -1,5 +1,5 @@
-import { ClarificationItem } from '@prisma/client';
-import { ClarificationItemDto } from '@ba-helper/contracts';
+import type { ClarificationItem } from '@prisma/client';
+import type { ClarificationItemDto } from '@ba-helper/contracts';
 
 export class ClarificationMapper {
   static toDto(entity: ClarificationItem): ClarificationItemDto {

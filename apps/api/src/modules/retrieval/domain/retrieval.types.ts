@@ -1,3 +1,6 @@
+import type { RetrievalSuggestion } from './retrieval-suggestion';
+import type { DomainPackSelectedBy } from '@ba-helper/contracts';
+
 export interface RetrievalDiagnostics {
   version: 'retrieval-diagnostics@0.1.0';
   lexicalScoreNorm: number;
@@ -11,11 +14,17 @@ export interface RetrievalDiagnostics {
     domain?: string | null;
     framework?: string | null;
     language?: string | null;
-    /** true when the domain resolved to the UNKNOWN fallback profile */
-    domainProfileFallback?: boolean;
+    /** true when the selected domain pack resolved to the safe fallback. */
+    domainPackFallback?: boolean;
   } | null;
-  /** Glossary terms from the domain profile that appeared in the change request. Max 10. */
+  /** Terms from the selected domain pack that appeared in the change request. Max 10. */
   matchedDomainTerms?: string[];
+  domainPack?: {
+    id: string;
+    version: string;
+    status: 'STABLE' | 'PARTIAL' | 'EXPERIMENTAL' | 'FALLBACK';
+    selectedBy: DomainPackSelectedBy;
+  };
   finalScore: number;
 }
 
@@ -36,7 +45,7 @@ export interface RetrievedArtifact {
   domainBoost?: number;
   kindBoost?: number;
   finalScore?: number;
-  suggestion?: import('./retrieval-suggestion').RetrievalSuggestion;
+  suggestion?: RetrievalSuggestion;
   retrievalDiagnostics?: RetrievalDiagnostics;
 }
 
@@ -47,7 +56,7 @@ export interface RetrievalRequest {
   repositoryId: string;
   snapshotId: string;
   changeRequest: string;
-  /** Domain profile key e.g. 'BOOKING'. Drives glossary-based keyword expansion. */
+  /** Domain pack/profile key e.g. 'booking'. Drives terminology-based keyword expansion. */
   domain?: string;
   expandGraph?: boolean;
   maxResults?: number;

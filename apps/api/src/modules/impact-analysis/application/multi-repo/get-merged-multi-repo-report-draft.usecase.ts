@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AppError } from '../../../../shared/app-error';
-import { deriveMultiRepoRunAggregates } from './multi-repo-run-readiness';
+import { AppError } from '@ba-helper/shared';
 import { InsightRepository } from '../../../insight/infrastructure/insight.repository';
 import { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
 import { MultiRepoAnalysisRunRepository } from '../../infrastructure/multi-repo-analysis-run.repository';
@@ -9,6 +8,10 @@ import { BuildMultiRepoImpactMatrixReadModel } from './build-multi-repo-impact-m
 import { GetReviewCoverageUseCase } from '../review/get-review-coverage.usecase';
 import { RequestUser } from '@ba-helper/contracts';
 import { parseScanHealthPayload } from '../qa/scan-health-report.formatter';
+import {
+  deriveMergedReportState,
+  MultiRepoChildState,
+} from './multi-repo-merged-report-state';
 
 @Injectable()
 export class GetMergedMultiRepoReportDraftUseCase {
@@ -30,14 +33,23 @@ export class GetMergedMultiRepoReportDraftUseCase {
       );
     }
 
-    const aggregates = deriveMultiRepoRunAggregates(
-      run.analyses.map((analysis) => ({
-        status: analysis.status,
-        latestReviewDecision: analysis.reviewDecisions?.[0]?.decision ?? null,
-      })),
-    );
+    const childStates: MultiRepoChildState[] = run.analyses.map((analysis) => ({
+      analysisId: analysis.id,
+      latestReviewDecisionId: analysis.reviewDecisions?.[0]?.id ?? null,
+      latestReviewDecision: analysis.reviewDecisions?.[0]?.decision ?? null,
+      snapshotId: analysis.snapshot.id,
+      commitSha: analysis.snapshot.commitSha,
+      status: analysis.status,
+      sourceTarget: {
+        resolvedRefType: analysis.sourceTarget.resolvedRefType,
+        latestObservedCommitSha: analysis.sourceTarget.latestObservedCommitSha,
+      },
+    }));
+    const mergedReportState = deriveMergedReportState({
+      children: childStates,
+    });
 
-    if (!aggregates.runReadiness.canStartMergedReport) {
+    if (!mergedReportState.runReadiness.canStartMergedReport) {
       throw new AppError(
         'MULTI_REPO_RUN_NOT_READY',
         'Multi-repo analysis run is not ready for a merged report draft.',

@@ -2,14 +2,17 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ApprovedReportMetadata } from '../domain/approved-report-metadata';
 import { TraceabilityRepository } from '../../traceability/infrastructure/traceability.repository';
+import { InsightRepository } from '../../insight/infrastructure/insight.repository';
 import { EvaluationContextAdapter } from './evaluation-context.adapter';
-import { EvidenceQualityAnnotator } from './evidence-quality.annotator';
+import { buildEvidenceQualityProjection } from './evidence-quality.projection';
+import { buildReportReviewCoverageSummary } from './report-review-coverage.summary';
 
 @Injectable()
 export class ApprovedReportProjectionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly traceabilityRepo: TraceabilityRepository,
+    private readonly insightRepo: InsightRepository,
     private readonly evalContextAdapter: EvaluationContextAdapter,
   ) {}
 
@@ -21,6 +24,7 @@ export class ApprovedReportProjectionService {
     evaluationContext?: any;
     evidenceQualitySummary?: any;
     evidenceQualityItems?: any[];
+    reviewCoverageSummary?: any;
   }> {
     const analysis = report.impactAnalysis;
     const isPinnedCommit = analysis.sourceTarget.resolvedRefType === 'COMMIT';
@@ -47,40 +51,14 @@ export class ApprovedReportProjectionService {
 
     const evaluationContext = this.evalContextAdapter.getEvaluationContext();
     const traceabilityLinks = await this.traceabilityRepo.listByAnalysis(analysis.id);
-
-    const linkAnnotations = traceabilityLinks.map(link => ({
-      link,
-      annotation: EvidenceQualityAnnotator.annotate(link as any),
-    }));
-
-    const evidenceQualitySummary = {
-      evidenced: linkAnnotations.filter(l => l.annotation.label === 'EVIDENCED').length,
-      inferred: linkAnnotations.filter(l => l.annotation.label === 'INFERRED').length,
-      weakEvidence: linkAnnotations.filter(l => l.annotation.label === 'WEAK_EVIDENCE').length,
-      missingEvidence: linkAnnotations.filter(l => l.annotation.label === 'MISSING_EVIDENCE').length,
-      reviewRequired: linkAnnotations.filter(l => l.annotation.label === 'REVIEW_REQUIRED').length,
-    };
-
-    const evidenceQualityItems = linkAnnotations.map(item => {
-      const decision = item.link.reviewDecision;
-      
-      return {
-        linkId: item.link.id,
-        artifact: item.link.artifact?.filePath || item.link.artifact?.name || 'Unknown',
-        quality: item.annotation.label,
-        reasons: item.annotation.reasons,
-        reviewDecision: decision
-          ? {
-              id: decision.id,
-              analysisId: decision.analysisId,
-              traceabilityLinkId: decision.traceabilityLinkId,
-              decision: decision.decision,
-              note: decision.note,
-              reviewedByUserId: decision.reviewedByUserId,
-              reviewedAt: decision.reviewedAt.toISOString(),
-            }
-          : null,
-      };
+    const insights = await this.insightRepo.listByAnalysis(analysis.id);
+    const qualityProjection = buildEvidenceQualityProjection({
+      traceabilityLinks,
+      insights: insights as any[],
+    });
+    const reviewCoverageSummary = buildReportReviewCoverageSummary({
+      items: qualityProjection.items,
+      evidenceQualitySummary: qualityProjection.summary,
     });
 
     return {
@@ -88,8 +66,9 @@ export class ApprovedReportProjectionService {
       isStale,
       staleReason,
       evaluationContext,
-      evidenceQualitySummary,
-      evidenceQualityItems,
+      evidenceQualitySummary: qualityProjection.summary,
+      evidenceQualityItems: qualityProjection.items,
+      reviewCoverageSummary,
       metadata: {
         analysisId: analysis.id,
         title: analysis.requirementRevision.title,
@@ -106,7 +85,91 @@ export class ApprovedReportProjectionService {
         approvedDocumentUpdatedAt: report.updatedAt.toISOString(),
         staleStatusAtReadTime: isStale,
         staleReason,
+        domainPack: readDomainPackProvenance(analysis),
       },
     };
   }
+}
+
+function readDomainPackProvenance(analysis: any): ApprovedReportMetadata['domainPack'] {
+  if (
+    typeof analysis.resolvedDomainPackId === 'string' &&
+    typeof analysis.resolvedDomainPackVersion === 'string' &&
+    isDomainPackStatus(analysis.resolvedDomainPackStatus) &&
+    isDomainPackSelectedBy(analysis.domainPackSelectedBy)
+  ) {
+    return {
+      requestedDomainPackId: analysis.requestedDomainPackId ?? null,
+      domainPackId: analysis.resolvedDomainPackId,
+      domainPackVersion: analysis.resolvedDomainPackVersion,
+      domainPackStatus: analysis.resolvedDomainPackStatus,
+      selectedBy: analysis.domainPackSelectedBy,
+      resolvedAt: normalizeDateTime(analysis.domainPackResolvedAt),
+      manifestDigest: analysis.domainPackManifestDigest ?? null,
+      registryVersion: analysis.domainPackRegistryVersion ?? null,
+    };
+  }
+
+  const metadata = analysis.metadata;
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return undefined;
+  }
+
+  const provenance = (metadata as Record<string, unknown>).reportProvenance;
+  if (!provenance || typeof provenance !== 'object' || Array.isArray(provenance)) {
+    return undefined;
+  }
+
+  const data = provenance as Record<string, unknown>;
+  if (
+    typeof data.domainPackId !== 'string' ||
+    typeof data.domainPackVersion !== 'string' ||
+    !isDomainPackStatus(data.domainPackStatus) ||
+    !isDomainPackSelectedBy(data.selectedBy)
+  ) {
+    return undefined;
+  }
+
+  return {
+    requestedDomainPackId: readOptionalString(data.requestedDomainPackId),
+    domainPackId: data.domainPackId,
+    domainPackVersion: data.domainPackVersion,
+    domainPackStatus: data.domainPackStatus,
+    selectedBy: data.selectedBy,
+    resolvedAt: readOptionalString(data.resolvedAt),
+    manifestDigest: readOptionalString(data.manifestDigest),
+    registryVersion: readOptionalString(data.registryVersion),
+  };
+}
+
+function normalizeDateTime(value: unknown): string | null {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  return typeof value === 'string' && value.trim().length > 0 ? value : null;
+}
+
+function readOptionalString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
+function isDomainPackStatus(
+  value: unknown,
+): value is NonNullable<ApprovedReportMetadata['domainPack']>['domainPackStatus'] {
+  return (
+    value === 'STABLE' ||
+    value === 'PARTIAL' ||
+    value === 'EXPERIMENTAL' ||
+    value === 'FALLBACK'
+  );
+}
+
+function isDomainPackSelectedBy(
+  value: unknown,
+): value is NonNullable<ApprovedReportMetadata['domainPack']>['selectedBy'] {
+  return (
+    value === 'EXPLICIT' ||
+    value === 'REPOSITORY_PROFILE' ||
+    value === 'FALLBACK'
+  );
 }

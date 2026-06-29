@@ -1,0 +1,25 @@
+{
+  "domain": "ecommerce",
+  "version": "0.1.0",
+  "status": "PARTIAL",
+  "displayName": "Ecommerce Order Fulfillment (PARTIAL)",
+  "description": "Partial domain pack for ecommerce order, checkout, inventory reservation, shipment, return/refund, and customer notification workflows.",
+  "requiresExplicitSelection": true,
+  "supportedConcepts": [
+    "order",
+    "cart",
+    "checkout",
+    "payment intent",
+    "shipment",
+    "inventory reservation",
+    "return/refund",
+    "customer notification"
+  ],
+  "knownLimits": [
+    "Partial ecommerce administrative workflow coverage only.",
+    "No payment compliance validation.",
+    "No fraud or risk scoring.",
+    "No tax calculation validation.",
+    "Source evidence is required for every claim."
+  ]
+}

@@ -5,7 +5,7 @@ import {
 } from '@ba-helper/contracts';
 import { CreateScanJobUseCase } from '../application/create-scan-job.usecase';
 import { ScanJobRepository } from '../infrastructure/scan-job.repository';
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 
 import { CurrentUser } from '../../auth/api/current-user.decorator';
 import { RequestUser } from '@ba-helper/contracts';

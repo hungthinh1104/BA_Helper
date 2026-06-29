@@ -2,13 +2,21 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TraceabilityRepository } from '../infrastructure/traceability.repository';
 import { ReviewCompletionResponse } from '@ba-helper/contracts';
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
+import { InsightRepository } from '../../insight/infrastructure/insight.repository';
+import { buildEvidenceQualityProjection } from '../../document/application/evidence-quality.projection';
+import {
+  buildReportApprovalGateItems,
+  ReportApprovalGatePolicy,
+  type ReportApprovalBlockerCode,
+} from '../../document/application/report-approval-gate.policy';
 
 @Injectable()
 export class GetReviewCompletionUseCase {
   constructor(
     private readonly prisma: PrismaService,
     private readonly repository: TraceabilityRepository,
+    private readonly insightRepository: InsightRepository,
   ) {}
 
   async execute(analysisId: string): Promise<ReviewCompletionResponse> {
@@ -21,6 +29,7 @@ export class GetReviewCompletionUseCase {
     }
 
     const links = await this.repository.listByAnalysis(analysisId);
+    const insights = await this.insightRepository.listByAnalysis(analysisId);
     const totalLinks = links.length;
 
     let accepted = 0;
@@ -47,7 +56,11 @@ export class GetReviewCompletionUseCase {
     const hasReviewedSnapshot = !!latestSnapshot;
     
     let isComplete = true;
-    const blockingReasons: Array<'UNREVIEWED_TRACEABILITY_LINKS' | 'REVIEWED_SNAPSHOT_MISSING'> = [];
+    const blockingReasons: Array<
+      'UNREVIEWED_TRACEABILITY_LINKS' |
+      'REVIEWED_SNAPSHOT_MISSING' |
+      ReportApprovalBlockerCode
+    > = [];
 
     if (totalLinks === 0) {
       // Technically no unreviewed links, but it makes sense to not be complete if there are no links.
@@ -62,6 +75,20 @@ export class GetReviewCompletionUseCase {
     if (!hasReviewedSnapshot) {
       isComplete = false;
       blockingReasons.push('REVIEWED_SNAPSHOT_MISSING');
+    }
+
+    const qualityProjection = buildEvidenceQualityProjection({
+      traceabilityLinks: links,
+      insights: insights as any[],
+    });
+    const approvalGate = ReportApprovalGatePolicy.evaluate(buildReportApprovalGateItems({
+      items: qualityProjection.items,
+      insights,
+      traceabilityLinks: links,
+    }));
+    if (!approvalGate.canApprove) {
+      isComplete = false;
+      blockingReasons.push(...approvalGate.blockingReasons);
     }
 
     // Double check invariant
@@ -83,7 +110,7 @@ export class GetReviewCompletionUseCase {
       isComplete,
       hasReviewedSnapshot,
       latestSnapshotId: latestSnapshot?.id || null,
-      blockingReasons,
+      blockingReasons: Array.from(new Set(blockingReasons)),
     };
   }
 }

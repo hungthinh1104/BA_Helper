@@ -1,8 +1,8 @@
 import { GetReviewQueueUseCase } from './get-review-queue.usecase';
-import { ImpactGraphReadModelBuilder } from '../queries/impact-graph-read-model.builder';
-import { QaCoverageDeriver } from '../qa/qa-coverage.deriver';
-import { InsightRepository } from '../../../insight/infrastructure/insight.repository';
-import { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
+import type { ImpactGraphReadModelBuilder } from '../queries/impact-graph-read-model.builder';
+import type { QaCoverageDeriver } from '../qa/qa-coverage.deriver';
+import type { InsightRepository } from '../../../insight/infrastructure/insight.repository';
+import type { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
 import { PrismaService } from '../../../prisma/prisma.service';
 
 describe('GetReviewQueueUseCase', () => {

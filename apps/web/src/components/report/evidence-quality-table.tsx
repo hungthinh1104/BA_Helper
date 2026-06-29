@@ -34,11 +34,17 @@ export function EvidenceQualityTable({ analysisId, items }: EvidenceQualityTable
                     <EvidenceQualityBadge quality={item.quality} />
                   </td>
                   <td className="px-4 py-3 align-top min-w-[180px]">
-                    <ReviewDecisionControls
-                      analysisId={analysisId}
-                      linkId={item.linkId}
-                      currentDecision={item.reviewDecision}
-                    />
+                    {item.linkId ? (
+                      <ReviewDecisionControls
+                        analysisId={analysisId}
+                        linkId={item.linkId}
+                        currentDecision={item.reviewDecision}
+                      />
+                    ) : (
+                      <span className="text-[12px] text-muted-foreground">
+                        {item.itemType === "INSIGHT" ? "Insight review state" : "Not available"}
+                      </span>
+                    )}
                     {item.reviewDecision?.note && (
                       <div className="mt-2 text-[12px] text-muted-foreground leading-relaxed italic border-l-2 border-border pl-2">
                         {item.reviewDecision.note}
@@ -62,10 +68,12 @@ export function EvidenceQualityBadge({ quality }: { quality: string }) {
   // Use neutral technical variants to avoid pass/fail coloring
   let variant: "default" | "secondary" | "outline" | "destructive" = "secondary";
   
-  if (quality === "EVIDENCED") variant = "default";
-  else if (quality === "INFERRED") variant = "secondary";
-  else if (quality === "WEAK_EVIDENCE") variant = "outline";
+  if (quality === "STRONG_SOURCE_EVIDENCE" || quality === "EVIDENCED") variant = "default";
+  else if (quality === "INFERRED_FROM_STRUCTURE" || quality === "INFERRED") variant = "secondary";
+  else if (quality === "WEAK_SOURCE_EVIDENCE" || quality === "WEAK_EVIDENCE") variant = "outline";
   else if (quality === "MISSING_EVIDENCE") variant = "outline";
+  else if (quality === "DOMAIN_HINT_ONLY") variant = "outline";
+  else if (quality === "CONFLICTING_EVIDENCE") variant = "destructive";
   else if (quality === "REVIEW_REQUIRED") variant = "secondary";
 
   return (

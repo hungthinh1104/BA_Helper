@@ -1,4 +1,4 @@
-import { TraceabilityRepository } from '../infrastructure/traceability.repository';
+import type { TraceabilityRepository } from '../infrastructure/traceability.repository';
 
 export class ListTraceabilityUseCase {
   constructor(private readonly repository: TraceabilityRepository) {}

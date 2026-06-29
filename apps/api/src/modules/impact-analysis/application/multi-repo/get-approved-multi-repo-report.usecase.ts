@@ -1,14 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { AppError } from '../../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { MultiRepoAnalysisRunRepository } from '../../infrastructure/multi-repo-analysis-run.repository';
 import { MultiRepoMergedReportRepository } from '../../infrastructure/multi-repo-merged-report.repository';
-
-type StoredChildProvenance = {
-  analysisId: string;
-  latestReviewDecisionId: string;
-  snapshotId: string;
-  commitSha: string;
-};
+import {
+  deriveMergedReportState,
+  MultiRepoChildState,
+} from './multi-repo-merged-report-state';
 
 @Injectable()
 export class GetApprovedMultiRepoReportUseCase {
@@ -34,58 +31,22 @@ export class GetApprovedMultiRepoReportUseCase {
       );
     }
 
-    const normalizeProvenance = (items: StoredChildProvenance[]) =>
-      [...items].sort((left, right) => left.analysisId.localeCompare(right.analysisId));
-
-    const storedChildProvenance = normalizeProvenance(
-      (report.provenance as { childAnalyses: StoredChildProvenance[] }).childAnalyses,
-    );
-    const currentChildProvenance = run.analyses.map((analysis) => ({
+    const children: MultiRepoChildState[] = run.analyses.map((analysis) => ({
       analysisId: analysis.id,
       latestReviewDecisionId: analysis.reviewDecisions[0]?.id ?? null,
+      latestReviewDecision: analysis.reviewDecisions[0]?.decision ?? null,
       snapshotId: analysis.snapshot.id,
       commitSha: analysis.snapshot.commitSha,
       status: analysis.status,
+      sourceTarget: {
+        resolvedRefType: analysis.sourceTarget.resolvedRefType,
+        latestObservedCommitSha: analysis.sourceTarget.latestObservedCommitSha,
+      },
     }));
-
-    let isStale = false;
-    let staleReason: string | undefined;
-
-    if (storedChildProvenance.length !== currentChildProvenance.length) {
-      isStale = true;
-      staleReason = 'Child analysis set changed after the approved merged report snapshot was generated.';
-    } else {
-      const storedByAnalysisId = new Map(
-        storedChildProvenance.map((item) => [item.analysisId, item]),
-      );
-
-      for (const current of currentChildProvenance) {
-        const stored = storedByAnalysisId.get(current.analysisId);
-        if (!stored) {
-          isStale = true;
-          staleReason = 'Child analysis set changed after the approved merged report snapshot was generated.';
-          break;
-        }
-        if (current.status !== 'COMPLETED') {
-          isStale = true;
-          staleReason = 'A child analysis is no longer completed.';
-          break;
-        }
-        if (current.latestReviewDecisionId !== stored.latestReviewDecisionId) {
-          isStale = true;
-          staleReason = 'Child review decisions changed after the approved merged report snapshot was generated.';
-          break;
-        }
-        if (
-          current.snapshotId !== stored.snapshotId ||
-          current.commitSha !== stored.commitSha
-        ) {
-          isStale = true;
-          staleReason = 'Child snapshot provenance changed after the approved merged report snapshot was generated.';
-          break;
-        }
-      }
-    }
+    const mergedReportState = deriveMergedReportState({
+      children,
+      approvedReportProvenance: report.provenance,
+    });
 
     return {
       id: report.id,
@@ -95,11 +56,50 @@ export class GetApprovedMultiRepoReportUseCase {
       requirementTitle: report.run.requirementRevision.title,
       markdown: report.content,
       approvedAt: report.updatedAt.toISOString(),
-      isStale,
-      staleReason,
+      mergedReportStatus: mergedReportState.mergedReportStatus,
+      capabilities: mergedReportState.capabilities,
+      isStale: mergedReportState.staleness.isStale,
+      staleReason: mergedReportState.staleness.staleReason,
       provenance: {
-        childAnalyses: storedChildProvenance,
+        domainPack: readStoredDomainPackProvenance(report.provenance),
+        childAnalyses: mergedReportState.storedChildProvenance,
       },
     };
   }
+}
+
+function readStoredDomainPackProvenance(provenance: unknown) {
+  if (!provenance || typeof provenance !== 'object' || Array.isArray(provenance)) {
+    return null;
+  }
+
+  const domainPack = (provenance as Record<string, unknown>).domainPack;
+  if (!domainPack || typeof domainPack !== 'object' || Array.isArray(domainPack)) {
+    return null;
+  }
+
+  const data = domainPack as Record<string, unknown>;
+  if (
+    typeof data.domainPackId !== 'string' ||
+    typeof data.domainPackVersion !== 'string' ||
+    typeof data.domainPackStatus !== 'string' ||
+    typeof data.selectedBy !== 'string'
+  ) {
+    return null;
+  }
+
+  return {
+    requestedDomainPackId: readOptionalString(data.requestedDomainPackId),
+    domainPackId: data.domainPackId,
+    domainPackVersion: data.domainPackVersion,
+    domainPackStatus: data.domainPackStatus,
+    selectedBy: data.selectedBy,
+    resolvedAt: readOptionalString(data.resolvedAt),
+    manifestDigest: readOptionalString(data.manifestDigest),
+    registryVersion: readOptionalString(data.registryVersion),
+  };
+}
+
+function readOptionalString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
 }

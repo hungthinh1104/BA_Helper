@@ -2,14 +2,15 @@ import * as fs from 'node:fs/promises';
 import { relative } from 'node:path';
 import { createHash } from 'node:crypto';
 import { ANALYZER_VERSION } from '../scanner.types';
-import type { ScanInput, ScanResult, ScanArtifact } from '../scanner.types';
+import type { ScanInput, ScanResult, ScanArtifact, ScanCoverage } from '../scanner.types';
+import type { DiagnosticItem } from '../core/diagnostic-collector';
 import { computeArtifactContentHash } from '../core/content-hasher';
 
 export const scanPythonProject = async (
-  input: ScanInput & { pyFiles: string[], coverage?: import('../scanner.types').ScanCoverage },
+  input: ScanInput & { pyFiles: string[], coverage?: ScanCoverage },
 ): Promise<ScanResult> => {
   const artifacts: ScanArtifact[] = [];
-  const diagnostics: import('../core/diagnostic-collector').DiagnosticItem[] = [];
+  const diagnostics: DiagnosticItem[] = [];
 
   const getHash8 = (str: string) => createHash('sha256').update(str).digest('hex').slice(0, 8);
 
@@ -149,7 +150,7 @@ export const scanPythonProject = async (
     }
   }
 
-  const defaultCoverage: import('../scanner.types').ScanCoverage = {
+  const defaultCoverage: ScanCoverage = {
     status: 'PARTIAL',
     skippedFiles: [],
     skippedSummary: {

@@ -5,7 +5,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { AppError } from './app-error';
+import { AppError } from '@ba-helper/shared';
 
 @Catch(AppError)
 export class AppExceptionFilter implements ExceptionFilter {
@@ -34,6 +34,7 @@ export class AppExceptionFilter implements ExceptionFilter {
       case 'INVALID_REPOSITORY_REF':
       case 'INVALID_REQUIREMENT_INPUT':
       case 'FINALIZE_REQUIRES_REVIEW_ACK':
+      case 'REVIEW_APPROVAL_BLOCKED':
       case 'REVIEW_NOT_ALLOWED':
       case 'INPUT_PROJECT_MISMATCH':
       case 'REQUIREMENT_REVISION_NOT_READY':
@@ -44,6 +45,8 @@ export class AppExceptionFilter implements ExceptionFilter {
         return HttpStatus.BAD_REQUEST;
       case 'REPO_LIMIT_EXCEEDED':
         return HttpStatus.PAYLOAD_TOO_LARGE;
+      case 'RATE_LIMITED':
+        return HttpStatus.TOO_MANY_REQUESTS;
       case 'CLONE_FAILED':
         return HttpStatus.BAD_GATEWAY;
       case 'SECURITY_RISK_BLOCKED':

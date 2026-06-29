@@ -160,6 +160,11 @@ Public endpoints must be explicit:
 - POST /api/v1/auth/dev-login only when ENABLE_DEV_LOGIN=true
 ```
 
+`POST /api/v1/auth/dev-login` is for local development and private controlled
+demos only. It is explicitly rate-limited by the backend public-beta limiter
+even though it is a public endpoint. Do not expose a hosted API publicly with
+dev-login enabled.
+
 Required auth-related env for the current MVP web experience:
 
 ```text

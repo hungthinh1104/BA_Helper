@@ -12,6 +12,7 @@ import { AnalysisStatusBadge } from "@/components/workspace/shared/status-badges
 import { EvaluationContextCard } from "./evaluation-context-card"
 import { EvidenceQualitySummary } from "./evidence-quality-summary"
 import { EvidenceQualityTable } from "./evidence-quality-table"
+import { ReviewCoverageSummary } from "./review-coverage-summary"
 import { ReviewedSnapshotPanel } from "./reviewed-snapshot-panel"
 import { FinalReviewGatePanel } from "./final-review-gate-panel"
 import { ReportMarkdown } from "./report-markdown"
@@ -212,6 +213,7 @@ export function ReportViewer({ analysisId, printMode = false }: ReportViewerProp
       {!printMode && (
         <>
           <div className="mt-12 space-y-8 border-t border-border/50 pt-8 print:hidden">
+            <ReviewCoverageSummary summary={report.reviewCoverageSummary} />
             <EvidenceQualitySummary summary={report.evidenceQualitySummary} />
             {report.evidenceQualityItems && report.evidenceQualityItems.length > 0 && (
               <EvidenceQualityTable analysisId={analysisId} items={report.evidenceQualityItems} />

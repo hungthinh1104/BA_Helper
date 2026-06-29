@@ -4,7 +4,11 @@ import { EvaluationContextAdapter } from '../evaluation-context.adapter';
 import { MarkdownReportRenderContext } from '../markdown-impact-report.types';
 import { renderReportHeader } from './markdown-renderers/report-header.renderer';
 import { renderExecutiveSummary } from './markdown-renderers/executive-summary.renderer';
-import { renderImpactedAreas, renderEvidenceQuality } from './markdown-renderers/traceability-section.renderer';
+import {
+  renderEvidenceQuality,
+  renderImpactedAreas,
+  renderReviewCoverage,
+} from './markdown-renderers/traceability-section.renderer';
 import { renderImpactsAndAc, renderQuestionsAndClarifications } from './markdown-renderers/insight-section.renderer';
 import { renderQaSection } from './markdown-renderers/qa-section.renderer';
 import { renderEvidenceAppendix } from './markdown-renderers/evidence-appendix.renderer';
@@ -48,6 +52,7 @@ export class MarkdownImpactReportBuilder {
       ...renderQuestionsAndClarifications(context),
       ...renderEvidenceAppendix(context),
       ...renderReviewHistory(context),
+      ...renderReviewCoverage(context),
       ...renderEvidenceQuality(context),
       ...renderEvaluationContext(evalContext, context.locale),
       ...renderImpactDiff(context),

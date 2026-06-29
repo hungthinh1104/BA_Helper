@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { AppError } from '../../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { ReviewQueueResponse, ReviewQueueItem, QaCoverageSeverity } from '@ba-helper/contracts';
 import { ImpactGraphReadModelBuilder } from '../queries/impact-graph-read-model.builder';
 import { QaCoverageDeriver } from '../qa/qa-coverage.deriver';
@@ -167,7 +167,7 @@ export class GetReviewQueueUseCase {
 
       // QA Coverage items are currently diagnostic only in MVP
       const requiresDecision = false;
-      const blockingFinalize = false; 
+      const blockingFinalize = false;
 
       const item: ReviewQueueItem = {
         id: `qa-gap-${gap.artifactId}`,
@@ -180,7 +180,7 @@ export class GetReviewQueueUseCase {
         priorityReason,
         linkedArtifactId: gap.artifactId,
         suggestedAction: gap.suggestedAction,
-        reviewStatus: 'NEEDS_REVIEW', // Placeholder
+        reviewStatus: 'NEEDS_REVIEW',
         requiresDecision,
         blockingFinalize,
       };

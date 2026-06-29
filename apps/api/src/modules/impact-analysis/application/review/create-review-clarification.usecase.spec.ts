@@ -1,8 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { CreateReviewClarificationRequestUseCase } from './create-review-clarification.usecase';
 import { ReviewClarificationRepository } from '../../infrastructure/review-clarification.repository';
 import { ReviewDecisionRepository } from '../../infrastructure/review-decision.repository';
-import { AppError } from '../../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 
 describe('CreateReviewClarificationRequestUseCase', () => {
   let useCase: CreateReviewClarificationRequestUseCase;

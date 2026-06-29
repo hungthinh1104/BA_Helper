@@ -1,7 +1,7 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ProjectPermissionService } from './project-permission.service';
-import { ProjectRepository } from '../infrastructure/project.repository';
-import { ProjectScopeRepository } from '../infrastructure/project-scope.repository';
+import type { ProjectRepository } from '../infrastructure/project.repository';
+import type { ProjectScopeRepository } from '../infrastructure/project-scope.repository';
 
 describe('ProjectPermissionService', () => {
   let projects: jest.Mocked<ProjectRepository>;

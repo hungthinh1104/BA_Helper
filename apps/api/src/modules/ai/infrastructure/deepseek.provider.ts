@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import OpenAI from 'openai';
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { z } from 'zod';
 import { LlmProvider, LlmRequest, LlmResult } from '../domain/llm-provider.interface';
 import { AiConfig, AI_CONFIG_TOKEN } from '../domain/ai-config';
@@ -14,8 +14,8 @@ export class DeepseekLlmProvider extends LlmProvider {
   constructor(@Inject(AI_CONFIG_TOKEN) private config: AiConfig) {
     super();
     this.client = new OpenAI({ 
-      baseURL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com',
-      apiKey: process.env.DEEPSEEK_API_KEY 
+      baseURL: this.config.baseUrl,
+      apiKey: this.config.apiKey 
     });
   }
 
@@ -23,7 +23,7 @@ export class DeepseekLlmProvider extends LlmProvider {
     request: LlmRequest,
     schema: z.ZodSchema<T>,
   ): Promise<LlmResult<T>> {
-    const model = request.options?.model ?? process.env.DEEPSEEK_MODEL ?? this.config.defaultModel;
+    const model = request.options?.model ?? this.config.defaultModel;
     const start = Date.now();
 
     let response;

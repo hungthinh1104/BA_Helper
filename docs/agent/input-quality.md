@@ -161,8 +161,11 @@ Persistence policy for the MVP:
 - accepted requirement raw text is stored only after secret-input rejection
 - persisted evidence excerpts are redacted before storage; keep source locator,
   hash, and redaction metadata rather than a detected secret literal
-- temporary checkout retention/cleanup must be defined before scanning
-  non-fixture public repositories in a deployed environment
+- temporary checkouts are removed after successful or failed scans by default
+- temporary checkout preservation requires explicit debug opt-in through
+  BA_HELPER_PRESERVE_SCAN_WORKSPACE
+- cleanup diagnostics may include a hashed workspace id, never the raw local
+  checkout path
 ```
 
 Automated tests begin with prompt-like fixture content and deterministic fake

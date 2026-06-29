@@ -1,5 +1,9 @@
-type ChildReviewDecision = 'ACCEPTED' | 'REJECTED' | 'NEEDS_MORE_CLARIFICATION' | null;
-type ChildStatus =
+export type ChildReviewDecision =
+  | 'ACCEPTED'
+  | 'REJECTED'
+  | 'NEEDS_MORE_CLARIFICATION'
+  | null;
+export type ChildStatus =
   | 'QUEUED'
   | 'RUNNING'
   | 'WAITING_FOR_REVIEW'
@@ -11,6 +15,7 @@ export function deriveMultiRepoRunAggregates(
   items: Array<{
     status: ChildStatus;
     latestReviewDecision: ChildReviewDecision;
+    isStale?: boolean;
   }>,
 ) {
   const childReviewSummary = items.reduce(
@@ -51,7 +56,12 @@ export function deriveMultiRepoRunAggregates(
       hasFailures: failedAnalyses > 0,
       canStartMergedReport:
         totalAnalyses > 0 &&
-        items.every((item) => item.latestReviewDecision === 'ACCEPTED'),
+        items.every(
+          (item) =>
+            item.status === 'COMPLETED' &&
+            item.latestReviewDecision === 'ACCEPTED' &&
+            item.isStale !== true,
+        ),
     },
     childReviewSummary,
   };

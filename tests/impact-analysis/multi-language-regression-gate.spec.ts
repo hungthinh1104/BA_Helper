@@ -5,7 +5,7 @@ import { execSync } from 'node:child_process';
 import { AppModule } from '../../apps/api/src/app.module';
 import { PrismaService } from '../../apps/api/src/modules/prisma/prisma.service';
 import { RunScanJobUseCase } from '../../apps/api/src/modules/scanner/application/run-scan-job.usecase';
-import { RunImpactAnalysisUseCase } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/run-impact-analysis.usecase';
+import { RunImpactAnalysisUseCase } from '@ba-helper/application';
 import { FinalizeImpactAnalysisUseCase } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/finalize-impact-analysis.usecase';
 import { ScanJobStatus } from '@prisma/client';
 import { resolve, join } from 'node:path';
@@ -250,6 +250,10 @@ func getRefunds(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) }`
       await runImpactAnalysis.execute({ analysisId: analysis.id, domain: 'booking' });
 
       await prisma.baInsight.updateMany({
+        where: { impactAnalysisId: analysis.id },
+        data: { reviewStatus: 'CONFIRMED' },
+      });
+      await prisma.traceabilityLink.updateMany({
         where: { impactAnalysisId: analysis.id },
         data: { reviewStatus: 'CONFIRMED' },
       });

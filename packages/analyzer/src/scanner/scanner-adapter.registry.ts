@@ -1,4 +1,4 @@
-import { ScannerAdapter, ScannerCapabilityProfile } from './scanner.types';
+import type { ScannerAdapter, ScannerCapabilityProfile } from './scanner.types';
 import { TypeScriptNestJsAdapter } from './adapters/typescript-nestjs.adapter';
 import { JavaSpringAdapter } from './adapters/java-spring.adapter';
 import { GoAdapter } from './adapters/go.adapter';

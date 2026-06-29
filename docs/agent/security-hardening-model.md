@@ -126,12 +126,66 @@ document generation. Event payloads should include IDs, counts, state names, and
 safe metadata. They must not include raw source excerpts, secret literals, raw
 LLM prompts, raw provider responses, or unbounded diagnostic blobs.
 
+## Public Beta Rate Limit Boundary
+
+The API applies an in-process public beta rate limit to expensive or sensitive
+mutating/download actions such as dev-login, scan creation, requirement/revision
+creation, impact analysis creation, report finalization, and report export.
+The limiter scopes by authenticated user and project when project context is
+available, and by anonymous network scope for explicitly rate-limited public
+endpoints such as dev-login.
+
+Rules:
+
+```text
+Health/bootstrap/read-model GET endpoints remain exempt.
+Rate-limit errors use stable code RATE_LIMITED and do not include raw request bodies.
+Rate limiting is an abuse guard, not a replacement for production tenant isolation.
+Production deploys should override PUBLIC_BETA_RATE_LIMIT_MAX and
+PUBLIC_BETA_RATE_LIMIT_WINDOW_MS according to environment capacity.
+```
+
+## Scanner Workspace Retention Boundary
+
+Scanner checkouts are temporary execution state, not persisted product data.
+The scanner removes the temp workspace after successful and failed clone/scan
+execution. Persisted artifacts, dependency edges, evidence, snapshots, reports,
+and audit events are never deleted by this cleanup path.
+
+Debug preservation is opt-in only:
+
+```text
+BA_HELPER_PRESERVE_SCAN_WORKSPACE=true
+```
+
+Cleanup diagnostics may record whether cleanup was attempted, succeeded,
+failed, or was intentionally preserved. They use a hashed workspace id and must
+not log raw private local checkout paths.
+
+## Public Beta Operations Health Boundary
+
+The system health endpoint may expose backend-authored operational summaries
+needed to run a controlled beta:
+
+```text
+- database/pgvector connectivity
+- Redis/queue connectivity
+- pending/running/failed scan job counts
+- pending/running/failed impact-analysis job counts
+- pending/running/failed document job counts
+```
+
+The health response must remain aggregate-only. It must not include queue job
+payloads, source excerpts, requirement text, prompt text, secrets, repository
+checkout paths, or raw provider responses.
+
 ## Known Risks To Track
 
 - Full production auth and organization-level tenant isolation are not complete
   in the MVP.
-- Rate limiting and abuse throttling are not yet the primary hardening layer.
-- Temporary checkout retention policy must be deployment-specific before
-  scanning non-fixture public repositories at scale.
+- Rate limiting and abuse throttling are public beta guardrails, not full
+  production abuse prevention.
+- Debug-preserved scanner workspaces require manual cleanup and should not be
+  enabled in public beta production deployments.
 - Real-provider LLM smoke tests are opt-in and do not replace a dedicated safety
   evaluation suite.

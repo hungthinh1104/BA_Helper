@@ -9,6 +9,8 @@ import {
 import { ApiError } from "@/lib/api-error"
 import { normalizeAuthErrorCode } from "@/lib/auth-errors"
 import { getApiBaseUrl } from "@/lib/runtime-config"
+import { resolveNextAuthSecret } from "@/lib/auth-secret"
+import { resolveAuthMode } from "@ba-helper/shared"
 
 type AuthorizedUser = {
   id: string
@@ -51,6 +53,11 @@ export const authOptions: AuthOptions = {
           const parsedRole = userRoleSchema.safeParse(credentials.role)
           if (!parsedRole.success) {
             throw new Error("UNAUTHORIZED")
+          }
+
+          const authMode = resolveAuthMode(process.env)
+          if (authMode === "unsupported") {
+            throw new Error("DEV_LOGIN_DISABLED")
           }
 
           const apiBaseUrl = getApiBaseUrl({
@@ -146,5 +153,5 @@ export const authOptions: AuthOptions = {
     strategy: "jwt",
     maxAge: 24 * 60 * 60,
   },
-  secret: process.env.NEXTAUTH_SECRET || "dev-super-secret-key-nextauth",
+  secret: resolveNextAuthSecret(),
 }

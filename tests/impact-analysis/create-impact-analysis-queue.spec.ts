@@ -1,4 +1,5 @@
 import { CreateImpactAnalysisUseCase } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/create-impact-analysis.usecase';
+import { DomainPackRegistry } from '../../apps/api/src/modules/domain-pack/application/domain-pack.registry';
 
 class StubImpactRepo {
   findByRequestKey = async () => null;
@@ -77,6 +78,7 @@ describe('CreateImpactAnalysisUseCase', () => {
       new StubPrisma() as any,
       new StubEventLog() as any,
       queue as any,
+      new DomainPackRegistry(),
     );
 
     await useCase.execute({

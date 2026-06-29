@@ -8,6 +8,7 @@
     "db:migrate": "dotenv -e .env -- pnpm --dir apps/api exec prisma migrate deploy",
     "db:seed:demo": "dotenv -e .env -- pnpm --dir apps/api exec tsx prisma/seed.demo.ts",
     "demo:golden-path": "jest --config jest.config.ts --runInBand tests/demo/golden-path-demo.spec.ts",
+    "demo:multi-repo-golden-path": "jest --config jest.config.ts --runInBand tests/demo/multi-repo-golden-path-demo.spec.ts",
     "dev:api": "dotenv -e .env -- pnpm --dir apps/api dev",
     "dev:web": "dotenv -e .env -- pnpm --dir apps/web dev",
     "dev:worker": "dotenv -e .env -- pnpm --dir apps/worker dev",
@@ -22,9 +23,12 @@
     "test:integration": "jest --config jest.integration.config.ts",
     "test:e2e": "jest --config jest.e2e.config.ts --runInBand",
     "test:e2e:watch": "jest --config jest.e2e.config.ts --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "verify:domain-packs": "tsx scripts/verify-domain-packs.ts",
+    "verify:stability": "pnpm infra:up && pnpm db:migrate && pnpm verify:domain-packs && pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e && pnpm demo:golden-path && pnpm demo:multi-repo-golden-path"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@jest/globals": "^30.4.1",
     "@nestjs/testing": "^11.1.24",
     "@prisma/client": "7.8.0",
@@ -37,6 +41,8 @@
     "@types/node": "25.9.1",
     "@types/pg": "^8.20.0",
     "@types/supertest": "^7.2.0",
+    "@typescript-eslint/eslint-plugin": "^8.62.0",
+    "@typescript-eslint/parser": "^8.62.0",
     "dotenv": "^17.4.2",
     "dotenv-cli": "^11.0.0",
     "eslint": "10.4.0",
@@ -47,7 +53,9 @@
     "supertest": "^7.2.2",
     "ts-node": "10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.22.3",
     "typescript": "5.4.5",
+    "typescript-eslint": "^8.62.0",
     "undici": "^8.5.0",
     "whatwg-fetch": "^3.6.20",
     "zod": "3.23.8"

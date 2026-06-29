@@ -1,4 +1,4 @@
-import { resolveEmbeddingProvider } from './embedding.module';
+import { resolveEmbeddingProvider } from '@ba-helper/shared';
 
 describe('resolveEmbeddingProvider', () => {
   it('normalizes whitespace and casing', () => {

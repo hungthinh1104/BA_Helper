@@ -1,4 +1,4 @@
-import { ReportLocale } from '../report-localization';
+import type { ReportLocale } from '../report-localization';
 
 export function formatArtifactType(type: string): string {
   return type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');

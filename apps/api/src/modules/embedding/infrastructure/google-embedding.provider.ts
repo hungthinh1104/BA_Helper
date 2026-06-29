@@ -1,22 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { EmbeddingProvider, EmbeddingRequest, EmbeddingResult } from '../domain/embedding-provider.interface';
-import { AppError } from '../../../shared/app-error';
-import { resolveGoogleProviderApiKey } from '../../ai/infrastructure/google-provider-env';
+import { EmbeddingProviderPort, EmbeddingRequest, EmbeddingResult } from '@ba-helper/application';
+import { AppError, EmbeddingConfig } from '@ba-helper/shared';
 
 const DEFAULT_MODEL = 'gemini-embedding-001';
 const EXPECTED_DIMENSIONS = 1536;
 const CONCURRENCY_LIMIT = 5;
 
 @Injectable()
-export class GoogleEmbeddingProvider extends EmbeddingProvider {
+export class GoogleEmbeddingProvider extends EmbeddingProviderPort {
   readonly providerName = 'google';
   private readonly client: GoogleGenerativeAI;
   private readonly logger = new Logger(GoogleEmbeddingProvider.name);
 
-  constructor() {
+  constructor(private readonly config: EmbeddingConfig) {
     super();
-    const apiKey = resolveGoogleProviderApiKey();
+    const apiKey = this.config.apiKey;
     if (!apiKey) {
       throw new AppError(
         'AI_PROVIDER_CONFIG_INVALID',
@@ -38,7 +37,7 @@ export class GoogleEmbeddingProvider extends EmbeddingProvider {
       for (let i = 0; i < request.texts.length; i += CONCURRENCY_LIMIT) {
         const batch = request.texts.slice(i, i + CONCURRENCY_LIMIT);
         const results = await Promise.all(
-          batch.map(t => 
+          batch.map((t: string) => 
             // We pass outputDimensionality to force the vector size to exactly 1536
             model.embedContent({ 
               content: { role: 'user', parts: [{ text: t }] }, 
@@ -46,7 +45,7 @@ export class GoogleEmbeddingProvider extends EmbeddingProvider {
             } as any)
           )
         );
-        embeddingsResult.push(...results.map(r => r.embedding.values));
+        embeddingsResult.push(...results.map((r: any) => r.embedding.values));
       }
     } catch (e: any) {
       this.logger.error(`Failed to generate embeddings: ${e.message}`, e.stack);

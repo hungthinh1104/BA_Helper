@@ -2,7 +2,7 @@ import * as fs from 'node:fs/promises';
 import { relative } from 'node:path';
 import { createHash } from 'node:crypto';
 import { ANALYZER_VERSION } from '../scanner.types';
-import type { ScanInput, ScanResult, ScanArtifact } from '../scanner.types';
+import type { ScanInput, ScanResult, ScanArtifact, ScanCoverage } from '../scanner.types';
 import { computeArtifactContentHash } from '../core/content-hasher';
 import type { DiagnosticItem } from '../core/diagnostic-collector';
 
@@ -24,7 +24,7 @@ const MINIMAL_API_MAP_METHODS: Record<string, string> = {
 export const scanCSharpProject = async (
   input: ScanInput & {
     csFiles: string[];
-    coverage?: import('../scanner.types').ScanCoverage;
+    coverage?: ScanCoverage;
   },
 ): Promise<ScanResult> => {
   const artifacts: ScanArtifact[] = [];
@@ -234,7 +234,7 @@ export const scanCSharpProject = async (
     }
   }
 
-  const defaultCoverage: import('../scanner.types').ScanCoverage = {
+  const defaultCoverage: ScanCoverage = {
     status: 'PARTIAL',
     skippedFiles: [],
     skippedSummary: {

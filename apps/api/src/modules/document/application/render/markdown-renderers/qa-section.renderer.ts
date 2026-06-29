@@ -1,4 +1,4 @@
-import { MarkdownReportRenderContext } from '../../markdown-impact-report.types';
+import type { MarkdownReportRenderContext } from '../../markdown-impact-report.types';
 import { parseQaScenarioParts } from './markdown-render-utils';
 import { getReportLabels } from '../report-localization';
 

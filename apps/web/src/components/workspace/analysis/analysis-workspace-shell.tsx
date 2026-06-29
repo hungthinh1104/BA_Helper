@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react"
 import type { AnalysisWorkspaceResponse } from "@ba-helper/contracts"
+import { AlertTriangle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   DEFAULT_ANALYSIS_WORKSPACE_LOCALE,
@@ -66,7 +67,7 @@ export function AnalysisWorkspaceShell({
                 {labels.title}
               </p>
               <DomainStatusBadge 
-                domainProfileId={workspace.overview.requirement.domainProfileId} 
+                domainPackStatus={workspace.overview.requirement.domainPack?.status ?? null}
                 locale={locale} 
               />
             </div>
@@ -92,6 +93,17 @@ export function AnalysisWorkspaceShell({
             />
           </div>
         </div>
+
+        {workspace.overview.requirement.domainPack?.status === "PARTIAL" && (
+          <div className="flex items-start gap-2 rounded-lg border border-warning/25 bg-warning/8 p-3 text-[12px] text-foreground/80">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+            <div className="leading-relaxed">
+              <p>Domain hints are limited and require source evidence.</p>
+              <p>This pack supports administrative workflow impact analysis only.</p>
+              <p>It does not provide medical advice, clinical decision support, or compliance validation.</p>
+            </div>
+          </div>
+        )}
 
         <nav
           aria-label={labels.navLabel}

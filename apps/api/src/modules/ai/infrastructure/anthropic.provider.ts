@@ -1,10 +1,11 @@
 import { Injectable, Inject } from '@nestjs/common';
 import Anthropic from '@anthropic-ai/sdk';
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { z } from 'zod';
 import { LlmProvider, LlmRequest, LlmResult } from '../domain/llm-provider.interface';
 import { AiConfig, AI_CONFIG_TOKEN } from '../domain/ai-config';
 import { parseStructuredLlmOutput } from './structured-output';
+import { AiPolicy } from '@ba-helper/shared';
 
 @Injectable()
 export class AnthropicLlmProvider extends LlmProvider {
@@ -13,7 +14,7 @@ export class AnthropicLlmProvider extends LlmProvider {
 
   constructor(@Inject(AI_CONFIG_TOKEN) private config: AiConfig) {
     super();
-    this.client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    this.client = new Anthropic({ apiKey: this.config.apiKey });
   }
 
   async generateStructured<T>(
@@ -23,13 +24,17 @@ export class AnthropicLlmProvider extends LlmProvider {
     const model = request.options?.model ?? this.config.defaultModel;
     const start = Date.now();
 
+    const safeUserPrompt = this.config.redactSecrets
+      ? AiPolicy.redactPayload(request.userPrompt).redactedPayload
+      : request.userPrompt;
+
     let response;
     try {
       response = await this.client.messages.create({
         model,
         max_tokens: request.options?.maxTokens ?? this.config.maxTokens,
         system: request.systemPrompt,
-        messages: [{ role: 'user', content: request.userPrompt }],
+        messages: [{ role: 'user', content: safeUserPrompt }],
       });
     } catch (error: any) {
       const msg = error?.message?.toLowerCase() || '';

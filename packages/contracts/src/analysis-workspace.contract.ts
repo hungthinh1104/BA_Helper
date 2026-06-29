@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { universalArtifactKindSchema } from './artifact.contract';
 import { impactAnalysisStatusSchema } from './impact-analysis.contract';
+import { domainProfileCapabilityStatusSchema } from './domain-pack.contract';
 
 export const analysisWorkspaceLanguageSchema = z.enum([
 	'en',
@@ -47,6 +48,19 @@ export const analysisWorkspaceEvidenceBasisSchema = z.enum([
 	'conflicting',
 ]);
 
+export const analysisWorkspaceDomainPackSelectedBySchema = z.enum([
+	'EXPLICIT',
+	'REPOSITORY_PROFILE',
+	'FALLBACK',
+]);
+
+export const analysisWorkspaceDomainPackSchema = z.object({
+	id: z.string(),
+	version: z.string(),
+	status: domainProfileCapabilityStatusSchema,
+	selectedBy: analysisWorkspaceDomainPackSelectedBySchema,
+});
+
 export const analysisOverviewSchema = z.object({
 	analysisId: z.string().uuid(),
 	requirement: z.object({
@@ -55,6 +69,7 @@ export const analysisOverviewSchema = z.object({
 		summary: z.string(),
 		language: analysisWorkspaceLanguageSchema,
 		domainProfileId: z.string(),
+		domainPack: analysisWorkspaceDomainPackSchema.nullable(),
 	}),
 	snapshot: z.object({
 		snapshotId: z.string().uuid(),
@@ -236,6 +251,9 @@ export type AnalysisWorkspaceReportStatus = z.infer<
 >;
 export type AnalysisWorkspaceDriftStatus = z.infer<
 	typeof analysisWorkspaceDriftStatusSchema
+>;
+export type AnalysisWorkspaceDomainPack = z.infer<
+	typeof analysisWorkspaceDomainPackSchema
 >;
 export type AnalysisOverview = z.infer<typeof analysisOverviewSchema>;
 export type ImpactGroup = z.infer<typeof impactGroupSchema>;

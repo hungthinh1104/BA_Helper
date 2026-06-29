@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ScanJobController } from './api/scan-job.controller';
 import { CreateScanJobUseCase } from './application/create-scan-job.usecase';
+import { RunScanJobPersistenceStep } from './application/run-scan-job-persistence.step';
 import { RunScanJobUseCase } from './application/run-scan-job.usecase';
 import { ScanJobRepository } from './infrastructure/scan-job.repository';
 import { RepositoryRepository } from '../repository/infrastructure/repository.repository';
@@ -31,6 +32,7 @@ import { GraphModule } from '../graph/graph.module';
       useFactory: (prisma: PrismaService) => new RepositoryRepository(prisma),
       inject: [PrismaService],
     },
+    RunScanJobPersistenceStep,
     RunScanJobUseCase,
     CreateScanJobUseCase,
   ],

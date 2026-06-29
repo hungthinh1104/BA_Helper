@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ImpactAnalysisReadModelController } from './impact-analysis-read-model.controller';
-import { ProjectPermissionService } from '../../project/application/project-permission.service';
-import { GetAnalysisDriftFreshnessUseCase } from '../application/queries/get-analysis-drift-freshness.usecase';
-import { GetAnalysisWorkspaceUseCase } from '../application/queries/get-analysis-workspace.usecase';
+import type { ProjectPermissionService } from '../../project/application/project-permission.service';
+import type { GetAnalysisDriftFreshnessUseCase } from '../application/queries/get-analysis-drift-freshness.usecase';
+import type { GetAnalysisWorkspaceUseCase } from '../application/queries/get-analysis-workspace.usecase';
 import { UnauthorizedException, NotFoundException } from '@nestjs/common';
-import { RequestUser } from '@ba-helper/contracts';
+import type { RequestUser } from '@ba-helper/contracts';
 
 describe('ImpactAnalysisReadModelController - driftFreshness', () => {
   let controller: ImpactAnalysisReadModelController;
@@ -71,10 +71,16 @@ describe('ImpactAnalysisReadModelController - driftFreshness', () => {
         requirement: {
           revisionId: '00000000-0000-4000-8000-000000000002',
           title: 'Refund API',
-          summary: 'Cancel paid bookings.',
-          language: 'en',
-          domainProfileId: 'booking@0.1.0',
-        },
+	          summary: 'Cancel paid bookings.',
+	          language: 'en',
+	          domainProfileId: 'booking@0.1.0',
+	          domainPack: {
+	            id: 'booking',
+	            version: '0.1.0',
+	            status: 'STABLE',
+	            selectedBy: 'REPOSITORY_PROFILE',
+	          },
+	        },
         snapshot: {
           snapshotId: '00000000-0000-4000-8000-000000000003',
           repositoryId: '00000000-0000-4000-8000-000000000004',

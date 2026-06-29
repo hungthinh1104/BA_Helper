@@ -1,5 +1,5 @@
-import { AnalysisWorkspaceResponse } from '@ba-helper/contracts';
-import {
+import type { AnalysisWorkspaceResponse } from '@ba-helper/contracts';
+import type {
 	WorkspaceAnalysis,
 	WorkspaceDocumentJob,
 	WorkspaceInsight,
@@ -153,6 +153,58 @@ export function buildDomainProfileId(profile: WorkspaceAnalysis['snapshot']['pro
 	return `${profile.domain.toLowerCase()}@${profile.profileVersion}`;
 }
 
+export function buildWorkspaceDomainPack(
+	analysis: Pick<
+		WorkspaceAnalysis,
+		| 'metadata'
+		| 'resolvedDomainPackId'
+		| 'resolvedDomainPackVersion'
+		| 'resolvedDomainPackStatus'
+		| 'domainPackSelectedBy'
+	>,
+): AnalysisWorkspaceResponse['overview']['requirement']['domainPack'] {
+	const selectedByFromColumns = normalizeDomainPackSelectedBy(
+		analysis.domainPackSelectedBy,
+	);
+	if (
+		typeof analysis.resolvedDomainPackId === 'string' &&
+		typeof analysis.resolvedDomainPackVersion === 'string' &&
+		isDomainPackStatus(analysis.resolvedDomainPackStatus) &&
+		selectedByFromColumns
+	) {
+		return {
+			id: analysis.resolvedDomainPackId,
+			version: analysis.resolvedDomainPackVersion,
+			status: analysis.resolvedDomainPackStatus,
+			selectedBy: selectedByFromColumns,
+		};
+	}
+
+	const { metadata } = analysis;
+	const domainPack = readMetadata(metadata, 'domainPack');
+	if (!domainPack || typeof domainPack !== 'object' || Array.isArray(domainPack)) {
+		return null;
+	}
+
+	const data = domainPack as Record<string, unknown>;
+	const selectedBy = normalizeDomainPackSelectedBy(data.selectedBy);
+	if (
+		typeof data.id !== 'string' ||
+		typeof data.version !== 'string' ||
+		!isDomainPackStatus(data.status) ||
+		!selectedBy
+	) {
+		return null;
+	}
+
+	return {
+		id: data.id,
+		version: data.version,
+		status: data.status,
+		selectedBy,
+	};
+}
+
 export function evidenceArtifactKeys(insight: WorkspaceInsight): string[] {
 	return Array.from(
 		new Set(
@@ -231,4 +283,35 @@ function stringifyJobError(error: unknown) {
 		return String((error as { message?: unknown }).message);
 	}
 	return 'Document generation failed.';
+}
+
+function isDomainPackStatus(
+	value: unknown,
+): value is NonNullable<AnalysisWorkspaceResponse['overview']['requirement']['domainPack']>['status'] {
+	return (
+		value === 'STABLE' ||
+		value === 'PARTIAL' ||
+		value === 'EXPERIMENTAL' ||
+		value === 'FALLBACK'
+	);
+}
+
+function isDomainPackSelectedBy(
+	value: unknown,
+): value is NonNullable<AnalysisWorkspaceResponse['overview']['requirement']['domainPack']>['selectedBy'] {
+	return (
+		value === 'EXPLICIT' ||
+		value === 'REPOSITORY_PROFILE' ||
+		value === 'FALLBACK'
+	);
+}
+
+function normalizeDomainPackSelectedBy(
+	value: unknown,
+): NonNullable<AnalysisWorkspaceResponse['overview']['requirement']['domainPack']>['selectedBy'] | null {
+	if (isDomainPackSelectedBy(value)) return value;
+	if (value === 'manual_config') return 'EXPLICIT';
+	if (value === 'repository_profile') return 'REPOSITORY_PROFILE';
+	if (value === 'safe_default') return 'FALLBACK';
+	return null;
 }

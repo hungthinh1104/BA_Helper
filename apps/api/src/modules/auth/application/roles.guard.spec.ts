@@ -1,6 +1,7 @@
 import { RolesGuard } from './roles.guard';
 import { Reflector } from '@nestjs/core';
-import { ExecutionContext, ForbiddenException } from '@nestjs/common';
+import type { ExecutionContext} from '@nestjs/common';
+import { ForbiddenException } from '@nestjs/common';
 import { IS_PUBLIC_KEY } from './jwt-auth.guard';
 import { ROLES_KEY } from '../api/roles.decorator';
 

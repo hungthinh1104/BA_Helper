@@ -50,6 +50,7 @@ describe('FinalizeImpactAnalysisUseCase stale guard', () => {
     const useCase = new FinalizeImpactAnalysisUseCase(
       new StubImpactRepo() as any,
       { listByAnalysis: async () => [] } as any,
+      { listByAnalysis: async () => [] } as any,
       { $transaction: async (cb: any) => cb({ impactAnalysis: { updateMany: async () => ({ count: 1 }) } }) } as any,
       { execute: async () => ({ id: 'snap-1' }) } as any,
       { execute: async () => {} } as any,

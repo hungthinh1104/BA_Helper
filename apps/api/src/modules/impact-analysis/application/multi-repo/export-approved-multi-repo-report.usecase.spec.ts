@@ -1,9 +1,9 @@
-import { RequestUser } from '@ba-helper/contracts';
-import { AppError } from '../../../../shared/app-error';
-import { EventLogService } from '../../../event-log/application/event-log.service';
-import { MarkdownExportRenderer } from '../../../document/application/markdown-export.renderer';
-import { PdfExportRenderer } from '../../../document/application/pdf-export.renderer';
-import { GetApprovedMultiRepoReportUseCase } from './get-approved-multi-repo-report.usecase';
+import type { RequestUser } from '@ba-helper/contracts';
+import { AppError } from '@ba-helper/shared';
+import type { EventLogService } from '../../../event-log/application/event-log.service';
+import type { MarkdownExportRenderer } from '../../../document/application/markdown-export.renderer';
+import type { PdfExportRenderer } from '../../../document/application/pdf-export.renderer';
+import type { GetApprovedMultiRepoReportUseCase } from './get-approved-multi-repo-report.usecase';
 import { ExportApprovedMultiRepoReportUseCase } from './export-approved-multi-repo-report.usecase';
 
 describe('ExportApprovedMultiRepoReportUseCase', () => {
@@ -28,9 +28,19 @@ describe('ExportApprovedMultiRepoReportUseCase', () => {
     requirementTitle: 'Refund paid bookings',
     markdown: '# Merged approved report',
     approvedAt: '2026-06-09T08:00:00.000Z',
+    mergedReportStatus: 'CURRENT' as const,
+    capabilities: {
+      canFinalizeMergedReport: false,
+      canRefreshMergedReport: false,
+      canExportMergedReport: true,
+      canReviewMergedReport: true,
+      canOpenApprovedReport: true,
+      blockedReasons: ['MERGED_REPORT_CURRENT' as const],
+    },
     isStale: false,
     staleReason: undefined,
     provenance: {
+      domainPack: null,
       childAnalyses: [
         {
           analysisId: 'analysis-1',

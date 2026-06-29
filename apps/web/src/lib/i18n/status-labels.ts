@@ -188,22 +188,13 @@ export const domainPackStatusTooltips = {
 } as const satisfies LocalizedLabelMap
 
 export function getDomainCapabilityBadge({
-  domainProfileId,
   domainPackStatus,
   locale = DEFAULT_ANALYSIS_WORKSPACE_LOCALE,
 }: {
-  domainProfileId?: string | null
   domainPackStatus?: string | null
   locale?: SupportedLocale
 }) {
-  let resolvedStatus = (domainPackStatus as DomainPackStatusType | undefined | null) || "UNKNOWN"
-  
-  if (resolvedStatus === "UNKNOWN" && domainProfileId) {
-    if (domainProfileId.includes("booking")) resolvedStatus = "STABLE"
-    else if (domainProfileId.includes("rental")) resolvedStatus = "PARTIAL"
-    else if (domainProfileId.includes("general")) resolvedStatus = "FALLBACK"
-  }
-
+  const resolvedStatus = (domainPackStatus as DomainPackStatusType | undefined | null) || "UNKNOWN"
   const safeStatus = (domainPackStatusLabels[locale] as Record<string, string>)[resolvedStatus] ? resolvedStatus : "UNKNOWN"
 
   return {

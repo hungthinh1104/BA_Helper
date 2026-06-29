@@ -46,6 +46,14 @@ observation for the requested branch, tag, or pinned commit, even if later
 analysis of that code fails. Target observation and extracted snapshot
 identity are separate because distinct refs may resolve to one commit.
 
+Embedding enqueue/indexing is downstream of snapshot publication. Once the
+snapshot, artifacts, edges, evidence, diagnostics, target linkage, and scan job
+completion commit successfully, an embedding enqueue failure must not turn the
+completed extraction into a failed scan. Keep the scan job `COMPLETED`, keep the
+published snapshot readable for lexical retrieval, and mark
+`RepositorySnapshot.indexStatus=VECTOR_FAILED` so vector readiness is clearly a
+separate indexing failure.
+
 ## Repository Snapshot Coverage Classification
 
 ```text

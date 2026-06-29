@@ -1,4 +1,4 @@
-import { INestApplication } from '@nestjs/common';
+import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';

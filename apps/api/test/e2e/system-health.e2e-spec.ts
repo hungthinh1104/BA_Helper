@@ -1,4 +1,4 @@
-import { INestApplication } from '@nestjs/common';
+import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { systemHealthResponseSchema } from '@ba-helper/contracts';
 import { createTestApp } from './helpers/test-app';

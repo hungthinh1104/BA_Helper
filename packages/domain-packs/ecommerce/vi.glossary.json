@@ -1,0 +1,16 @@
+{
+  "domain": "ecommerce",
+  "locale": "vi",
+  "status": "foundation",
+  "version": "1.0.0",
+  "terms": {
+    "order": "đơn hàng",
+    "cart": "giỏ hàng",
+    "checkout": "thanh toán đơn hàng",
+    "payment_intent": "ý định thanh toán",
+    "shipment": "giao hàng",
+    "inventory_reservation": "giữ tồn kho",
+    "return_refund": "trả hàng/hoàn tiền",
+    "customer_notification": "thông báo cho khách hàng"
+  }
+}

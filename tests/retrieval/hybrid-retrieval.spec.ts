@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { HybridRetrievalService } from '../../apps/api/src/modules/retrieval/application/hybrid-retrieval.service';
 import { FakeEmbeddingProvider } from '../../apps/api/src/modules/embedding/infrastructure/fake-embedding.provider';
+import { DomainPackRegistry } from '../../apps/api/src/modules/domain-pack/application/domain-pack.registry';
 
 describe('HybridRetrievalService', () => {
   let service: HybridRetrievalService;
@@ -36,9 +37,10 @@ describe('HybridRetrievalService', () => {
       chunkRepoMock,
       provider,
       artifactRepoMock,
-      graphRepoMock,
-      prismaMock,
-    );
+	      graphRepoMock,
+	      prismaMock,
+	      new DomainPackRegistry(),
+	    );
   });
 
   describe('tenant isolation', () => {

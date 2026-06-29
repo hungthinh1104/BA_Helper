@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ReviewClarificationRepository } from '../../infrastructure/review-clarification.repository';
-import { AppError } from '../../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { RequestUser } from '@ba-helper/contracts';
 
 @Injectable()

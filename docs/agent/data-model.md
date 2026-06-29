@@ -84,6 +84,33 @@ coverageWarning: string or structured metadata
 
 This warning is not UI-only; it must remain available to generated outputs.
 
+Domain-pack selection is also persisted on `ImpactAnalysis` as first-class
+provenance, not only in JSON metadata:
+
+```text
+requestedDomainPackId
+resolvedDomainPackId
+resolvedDomainPackVersion
+resolvedDomainPackStatus: STABLE | PARTIAL | EXPERIMENTAL | FALLBACK
+domainPackSelectedBy: EXPLICIT | REPOSITORY_PROFILE | FALLBACK
+domainPackResolvedAt
+domainPackManifestDigest?
+domainPackRegistryVersion?
+```
+
+The worker must read these persisted resolved fields on retry. Queue payloads
+and frontend labels are not source of truth for domain-pack selection. Legacy
+metadata may be used only as a compatibility fallback for older rows.
+
+`MultiRepoAnalysisRun` stores the same resolved selection fields for explicit
+run-level selection. In v1, child analyses receive the run-level selection and
+cannot override it. Merged-report provenance prefers explicit run-level fields
+and falls back to homogeneous child analysis provenance for legacy runs.
+
+`domainPackManifestDigest` and `domainPackRegistryVersion` are nullable until
+the canonical manifest source is fully versioned. Do not synthesize fake digest
+values; absence means the manifest digest was not captured for that record.
+
 Repository target/scan provenance stores:
 
 ```text
@@ -147,6 +174,10 @@ changed analyzer behavior or extraction/coverage policy affecting persisted
 This prevents a transient failed attempt from occupying the immutable
 `(repositoryId, commitSha, analyzerVersion)` identity and blocking a successful
 retry.
+
+Embedding enqueue for a published snapshot must use a deterministic queue key
+derived from `snapshotId`. Retrying the same scan/snapshot must not create
+multiple independent vector-index jobs for identical extraction output.
 
 Repository profiling follows the same publication rule:
 
@@ -333,6 +364,77 @@ CONFLICTING  InsightEvidence count >= 2; metadata explains contradiction
 
 Do not use the word `CONFIRMED` for machine certainty. It is reserved for a
 human review decision.
+
+## Report Evidence Quality Semantics
+
+Evidence quality is a report/read-model classification, not a persisted Prisma
+enum in the current MVP. It must be computed from persisted evidence, artifact
+links, machine certainty/basis, and review state.
+
+Current report-only labels:
+
+```text
+STRONG_SOURCE_EVIDENCE   persisted CODE/TEST/STATIC_ANALYSIS evidence with artifact, source path, line range, and specific excerpt
+WEAK_SOURCE_EVIDENCE     persisted source evidence exists, but locator or excerpt specificity is weak
+INFERRED_FROM_STRUCTURE  impact is inferred from artifact structure, link basis, or contextual metadata
+DOMAIN_HINT_ONLY         domain pack terminology/template/hint exists without persisted source evidence
+MISSING_EVIDENCE         no persisted source evidence supports the item
+CONFLICTING_EVIDENCE     machine certainty is CONFLICTING or contradiction is explicitly represented
+REVIEW_REQUIRED          critical/unreviewed item still requires human review
+```
+
+Rules:
+
+```text
+Domain pack hints never upgrade quality to STRONG_SOURCE_EVIDENCE.
+EVIDENCED certainty alone is insufficient; report quality must inspect linked Evidence.
+Code/source excerpts remain raw source text after redaction and are not translated.
+Legacy reports may contain older quality labels; readers should tolerate them
+while new reports emit the labels above.
+```
+
+## Report Review Coverage Semantics
+
+Review coverage is a report/read-model summary and is also consumed by the
+single-repo approval gate for critical unresolved evidence issues.
+
+Current coverage summarizes:
+
+```text
+insights.reviewed / insights.total
+traceabilityLinks.reviewed / traceabilityLinks.total
+accepted, rejected, needsReview, needsMoreEvidence, unreviewed decisions
+strong, weak, missing, conflicting, and reviewRequired evidence-quality counts
+```
+
+`needsClarification` is a display/read-model aggregate of:
+
+```text
+needsReview + needsMoreEvidence + unreviewed
+```
+
+Rules:
+
+```text
+Coverage is derived from persisted review status/decisions and report evidence quality.
+Coverage does not call the LLM, scanner, retrieval, or domain-pack registry.
+Coverage may be shown in final/reviewed report UI and Markdown reports.
+The approval gate does not call the LLM, scanner, retrieval, or domain-pack registry.
+Non-critical unreviewed items may still use explicit acknowledgement.
+Critical blockers are backend-authored and use stable reason codes.
+Current critical items are `CLAIM` insights, `CONFLICTING` insights, and
+`AFFECTED` traceability links with `EVIDENCED` basis. `UNKNOWN` outputs remain
+reviewable gaps and are not automatically critical claims.
+```
+
+Current critical approval blocker codes:
+
+```text
+CONFLICTING_EVIDENCE_UNREVIEWED
+CRITICAL_MISSING_EVIDENCE
+REVIEW_REQUIRED_ITEMS
+HIGH_RISK_INSIGHT_UNREVIEWED
+```
 
 ## Generated Output Semantics
 

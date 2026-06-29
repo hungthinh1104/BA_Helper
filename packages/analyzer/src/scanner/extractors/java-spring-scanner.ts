@@ -1,14 +1,15 @@
 import * as fs from 'node:fs/promises';
 import { relative } from 'node:path';
 import { ANALYZER_VERSION } from '../scanner.types';
-import type { ScanInput, ScanResult, ScanArtifact } from '../scanner.types';
+import type { ScanInput, ScanResult, ScanArtifact, ScanCoverage } from '../scanner.types';
+import type { DiagnosticItem } from '../core/diagnostic-collector';
 import { computeArtifactContentHash } from '../core/content-hasher';
 
 export const scanJavaSpringProject = async (
-  input: ScanInput & { javaFiles: string[], coverage?: import('../scanner.types').ScanCoverage },
+  input: ScanInput & { javaFiles: string[], coverage?: ScanCoverage },
 ): Promise<ScanResult> => {
   const artifacts: ScanArtifact[] = [];
-  const diagnostics: import('../core/diagnostic-collector').DiagnosticItem[] = [];
+  const diagnostics: DiagnosticItem[] = [];
 
   const normalizePath = (base: string, methodPath: string) => {
     let fullPath = `${base}/${methodPath}`;
@@ -230,7 +231,7 @@ export const scanJavaSpringProject = async (
     }
   }
 
-  const defaultCoverage: import('../scanner.types').ScanCoverage = {
+  const defaultCoverage: ScanCoverage = {
     status: 'PARTIAL',
     skippedFiles: [],
     skippedSummary: {

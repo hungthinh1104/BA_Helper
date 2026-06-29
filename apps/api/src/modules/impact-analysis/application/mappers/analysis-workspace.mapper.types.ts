@@ -1,9 +1,15 @@
-import { AnalysisWorkspaceResponse } from '@ba-helper/contracts';
+import type { AnalysisWorkspaceResponse } from '@ba-helper/contracts';
 
 export type WorkspaceAnalysis = {
 	id: string;
 	status: string;
 	progress: number;
+	metadata?: unknown;
+	requestedDomainPackId?: string | null;
+	resolvedDomainPackId?: string | null;
+	resolvedDomainPackVersion?: string | null;
+	resolvedDomainPackStatus?: string | null;
+	domainPackSelectedBy?: string | null;
 	requirementRevision: {
 		id: string;
 		title: string;

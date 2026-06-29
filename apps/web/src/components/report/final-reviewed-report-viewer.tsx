@@ -65,8 +65,8 @@ export function FinalReviewedReportViewer({ analysisId, open, onOpenChange }: Fi
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/40 bg-surface">
-                    {decisions.map((item) => (
-                      <tr key={item.linkId} className="hover:bg-muted/30 transition-colors opacity-95">
+                    {decisions.map((item, index) => (
+                      <tr key={item.itemId ?? item.linkId ?? index} className="hover:bg-muted/30 transition-colors opacity-95">
                         <td className="px-4 py-3 font-mono text-foreground/90 whitespace-nowrap break-all align-top">
                           {item.artifact || 'Unknown'}
                         </td>
@@ -74,7 +74,9 @@ export function FinalReviewedReportViewer({ analysisId, open, onOpenChange }: Fi
                           <EvidenceQualityBadge quality={item.quality} />
                         </td>
                         <td className="px-4 py-3 align-top min-w-[120px]">
-                          {item.reviewDecision?.decision ? (
+                          {item.itemType === "INSIGHT" ? (
+                            <span className="text-muted-foreground italic">Insight item</span>
+                          ) : item.reviewDecision?.decision ? (
                             <Badge variant="outline" className="rounded-sm px-2 py-0.5 text-[11px] font-mono tracking-wide border-border/50 text-foreground/80">
                               {item.reviewDecision.decision.replace(/_/g, " ")}
                             </Badge>

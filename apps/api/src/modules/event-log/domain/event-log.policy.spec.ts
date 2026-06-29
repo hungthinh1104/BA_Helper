@@ -1,4 +1,4 @@
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { EventLogPolicy } from './event-log.policy';
 
 describe('EventLogPolicy', () => {

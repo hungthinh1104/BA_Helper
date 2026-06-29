@@ -1,13 +1,18 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { RetrievalRequest, RetrievedArtifact } from '../domain/retrieval.types';
 import { buildRetrievalSuggestion } from '../domain/retrieval-suggestion';
 import { EmbeddingChunkRepository } from '../../embedding/infrastructure/embedding-chunk.repository';
-import { EmbeddingProvider } from '../../embedding/domain/embedding-provider.interface';
+import { EmbeddingProviderPort } from '@ba-helper/application';
 import { ArtifactRepository } from '../../artifact/infrastructure/artifact.repository';
 import { GraphRepository } from '../../graph/infrastructure/graph.repository';
 import { PrismaService } from '../../prisma/prisma.service';
-import { getDomainGlossary, matchDomainTerms, isDomainSupported } from '../../domain-profile';
 import { Prisma } from '@prisma/client';
+import type { DomainPack } from '@ba-helper/contracts';
+import { DomainPackRegistry } from '../../domain-pack/application/domain-pack.registry';
+import {
+  buildDomainPackTerms,
+  matchDomainPackTerms,
+} from '../../domain-pack/application/domain-pack-terminology';
 
 const WEIGHTS = {
   lexical: 0.45,
@@ -39,10 +44,11 @@ export class HybridRetrievalService {
 
   constructor(
     private readonly chunkRepo: EmbeddingChunkRepository,
-    private readonly embeddingProvider: EmbeddingProvider,
+    private readonly embeddingProvider: EmbeddingProviderPort,
     private readonly artifactRepo: ArtifactRepository,
     private readonly graphRepo: GraphRepository,
     private readonly prisma: PrismaService,
+    private readonly domainPackRegistry: DomainPackRegistry,
   ) {}
 
   async retrieve(request: RetrievalRequest): Promise<RetrievedArtifact[]> {
@@ -56,6 +62,13 @@ export class HybridRetrievalService {
     });
     const indexStatus = snapshot?.indexStatus ?? 'NOT_INDEXED';
     const profileDomain = snapshot?.profile?.domain;
+    const domainPackSelection = this.domainPackRegistry.selectPack({
+      manualPackId: request.domain && request.domain !== 'UNKNOWN'
+        ? request.domain
+        : null,
+      repositoryProfileDomain: profileDomain,
+    });
+    const domainPack = domainPackSelection.pack;
 
     const candidates = new Map<string, Candidate>();
 
@@ -79,7 +92,10 @@ export class HybridRetrievalService {
     };
 
     // 1. Lexical search — domain-glossary-aware keyword extraction
-    const { glossaryMatches, symbolMatches } = this.extractKeywords(request.changeRequest, profileDomain ?? request.domain);
+    const { glossaryMatches, symbolMatches } = this.extractKeywords(
+      request.changeRequest,
+      domainPack,
+    );
     const keywords = [...glossaryMatches, ...symbolMatches];
     
     // Intent Detection
@@ -313,18 +329,24 @@ export class HybridRetrievalService {
           domainBoostNorm: c.domainBoostNorm,
           matchedIntentLabels,
           universalKind: artifact.universalKind ?? null,
-          repositoryProfile: snapshot?.profile ? {
-            domain: snapshot.profile.domain,
-            framework: snapshot.profile.framework,
-            language: snapshot.profile.language,
-            domainProfileFallback: !isDomainSupported(snapshot.profile.domain ?? undefined),
-          } : null,
-          matchedDomainTerms: matchDomainTerms(
+	          repositoryProfile: snapshot?.profile ? {
+	            domain: snapshot.profile.domain,
+	            framework: snapshot.profile.framework,
+	            language: snapshot.profile.language,
+	            domainPackFallback: domainPack.status === 'FALLBACK',
+	          } : null,
+          matchedDomainTerms: matchDomainPackTerms(
             request.changeRequest,
-            profileDomain ?? request.domain,
+            domainPack,
           ).slice(0, 10),
+          domainPack: {
+            id: domainPack.id,
+            version: domainPack.version,
+            status: domainPack.status,
+            selectedBy: domainPackSelection.selectedBy,
+          },
           finalScore,
-        }
+        },
       };
       
       retrievedArtifact.suggestion = buildRetrievalSuggestion(retrievedArtifact);
@@ -343,9 +365,8 @@ export class HybridRetrievalService {
     return Math.max(1, Math.min(Math.trunc(value), MAX_RETRIEVAL_RESULTS));
   }
 
-  private extractKeywords(text: string, domain?: string): { glossaryMatches: string[], symbolMatches: string[] } {
-    // Pass domain as-is — getDomainGlossary handles unknown via UNKNOWN profile, no hard-code needed
-    const glossary = getDomainGlossary(domain);
+  private extractKeywords(text: string, domainPack: DomainPack): { glossaryMatches: string[], symbolMatches: string[] } {
+    const glossary = buildDomainPackTerms(domainPack);
     const lowerText = text.toLowerCase();
 
     const glossaryMatches = glossary.filter(term => lowerText.includes(term.toLowerCase()));

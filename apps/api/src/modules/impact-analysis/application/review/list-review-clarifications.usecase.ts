@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ReviewClarificationRepository } from '../../infrastructure/review-clarification.repository';
 import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
-import { AppError } from '../../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 
 @Injectable()
 export class ListReviewClarificationsUseCase {

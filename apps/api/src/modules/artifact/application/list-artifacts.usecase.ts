@@ -1,6 +1,6 @@
-import { ArtifactRepository } from '../infrastructure/artifact.repository';
-import { PrismaService } from '../../prisma/prisma.service';
-import { AppError } from '../../../shared/app-error';
+import type { ArtifactRepository } from '../infrastructure/artifact.repository';
+import type { PrismaService } from '../../prisma/prisma.service';
+import { AppError } from '@ba-helper/shared';
 
 export class ListArtifactsUseCase {
   constructor(

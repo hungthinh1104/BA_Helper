@@ -1,4 +1,6 @@
 import 'reflect-metadata';
+import type {
+  ReviewQueueResponse} from '@ba-helper/contracts';
 import {
   approvedImpactReportResponseSchema,
   currentWorkspaceResponseSchema,
@@ -9,7 +11,6 @@ import {
   scanJobResponseSchema,
   systemHealthResponseSchema,
   impactAnalysisResponseSchema,
-  ReviewQueueResponse,
   loginResponseSchema,
 } from '@ba-helper/contracts';
 import * as process from 'node:process';
@@ -296,7 +297,7 @@ async function main() {
       if ((llmInfo.inputTokens ?? 0) <= 0) {
         throw new Error('Expected inputTokens > 0 from real provider. Check usageMetadata.');
       }
-      console.log(
+      console.warn(
         `\n✅ Phase 6A LLM Assertions Passed:\n` +
         `   provider=${llmInfo.provider} | model=${llmInfo.model}\n` +
         `   promptVersion=${llmInfo.promptVersion} | parseMode=${llmInfo.parseMode}\n` +
@@ -510,7 +511,7 @@ async function resolveSmokeAuthToken(): Promise<{
       if (message.includes('falling back')) {
         console.warn(message);
       } else {
-        console.log(message);
+        console.warn(message);
       }
     },
   });

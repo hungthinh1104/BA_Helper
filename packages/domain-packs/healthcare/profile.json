@@ -1,0 +1,25 @@
+{
+  "domain": "healthcare",
+  "version": "0.1.0",
+  "status": "PARTIAL",
+  "displayName": "Healthcare Admin Workflows (PARTIAL)",
+  "description": "Partial domain pack for healthcare administrative workflows such as scheduling, records, billing, claims, and authorization.",
+  "requiresExplicitSelection": true,
+  "supportedConcepts": [
+    "appointment scheduling",
+    "patient record",
+    "provider",
+    "patient notification",
+    "insurance claim",
+    "billing record",
+    "prior authorization",
+    "lab/order tracking"
+  ],
+  "knownLimits": [
+    "No medical advice.",
+    "No clinical decision support.",
+    "No diagnosis or treatment reasoning.",
+    "No HIPAA or compliance validation.",
+    "No PHI detection beyond existing redaction and input-quality rules."
+  ]
+}

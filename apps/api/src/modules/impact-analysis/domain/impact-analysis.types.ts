@@ -1,3 +1,5 @@
+import type { ResolvedDomainPackSelection } from '@ba-helper/contracts';
+
 export type ImpactAnalysisMetadata = {
   llm?: {
     provider: string;
@@ -23,6 +25,13 @@ export type ImpactAnalysisMetadata = {
     id: string;
     version: string;
     status: 'STABLE' | 'PARTIAL' | 'EXPERIMENTAL' | 'FALLBACK';
+    selectedBy: string;
+  };
+  selectedDomainPack?: ResolvedDomainPackSelection;
+  reportProvenance?: {
+    domainPackId: string;
+    domainPackVersion: string;
+    domainPackStatus: 'STABLE' | 'PARTIAL' | 'EXPERIMENTAL' | 'FALLBACK';
     selectedBy: string;
   };
   diagnostics?: Array<{

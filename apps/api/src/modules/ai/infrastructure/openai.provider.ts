@@ -1,10 +1,11 @@
 import { Injectable, Inject } from '@nestjs/common';
 import OpenAI from 'openai';
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { z } from 'zod';
 import { LlmProvider, LlmRequest, LlmResult } from '../domain/llm-provider.interface';
 import { AiConfig, AI_CONFIG_TOKEN } from '../domain/ai-config';
 import { parseStructuredLlmOutput } from './structured-output';
+import { AiPolicy } from '@ba-helper/shared';
 
 @Injectable()
 export class OpenAiLlmProvider extends LlmProvider {
@@ -13,7 +14,7 @@ export class OpenAiLlmProvider extends LlmProvider {
 
   constructor(@Inject(AI_CONFIG_TOKEN) private config: AiConfig) {
     super();
-    this.client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    this.client = new OpenAI({ apiKey: this.config.apiKey });
   }
 
   async generateStructured<T>(
@@ -22,6 +23,10 @@ export class OpenAiLlmProvider extends LlmProvider {
   ): Promise<LlmResult<T>> {
     const model = request.options?.model ?? this.config.defaultModel;
     const start = Date.now();
+
+    const safeUserPrompt = this.config.redactSecrets
+      ? AiPolicy.redactPayload(request.userPrompt).redactedPayload
+      : request.userPrompt;
 
     let response;
     try {
@@ -32,7 +37,7 @@ export class OpenAiLlmProvider extends LlmProvider {
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: request.systemPrompt },
-          { role: 'user', content: request.userPrompt },
+          { role: 'user', content: safeUserPrompt },
         ],
       });
     } catch (error: any) {

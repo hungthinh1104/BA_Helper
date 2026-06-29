@@ -3,21 +3,26 @@
 import { use } from "react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { AlertCircle, CheckCircle2, FileWarning, MessageSquareWarning, XCircle } from "lucide-react"
+import { AlertCircle, AlertTriangle, CheckCircle2, FileWarning, MessageSquareWarning, XCircle } from "lucide-react"
 import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useApprovedMultiRepoReport, useCreateMergedMultiRepoReportReviewDecision, useFinalizeMultiRepoReport, useLatestMergedMultiRepoReportReviewDecision, useMergedMultiRepoReportReviewDecisions, useMultiRepoAnalysisRunDetail } from "@/hooks/api/use-analyses"
-import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import { apiGetFile } from "@/lib/api-client"
-import { canFinalizeAnalysis, canReview as canReviewPermission } from "@/lib/permissions"
-import { useCurrentWorkspace } from "@/lib/project-context"
 import { useState } from "react"
 import { ReportMarkdown } from "@/components/report/report-markdown"
 import { MergedReportActions } from "./_components/merged-report-actions"
 import { MergedReportReviewPanel } from "./_components/merged-report-review-panel"
+import { formatMultiRepoMergedReportBlockers } from "@/lib/multi-repo-report-labels"
+
+const MERGED_REPORT_STATUS_LABEL: Record<string, string> = {
+  NOT_CREATED: "Not created",
+  CURRENT: "Current",
+  STALE: "Stale",
+  BLOCKED: "Blocked",
+}
 
 export default function ApprovedMultiRepoReportPage({
   params,
@@ -31,8 +36,6 @@ export default function ApprovedMultiRepoReportPage({
   const { data: reviewDecisionsData, isLoading: reviewDecisionsLoading } = useMergedMultiRepoReportReviewDecisions(runId)
   const finalizeReport = useFinalizeMultiRepoReport(runId)
   const createReviewDecision = useCreateMergedMultiRepoReportReviewDecision(runId)
-  const { role } = useAuth()
-  const workspace = useCurrentWorkspace()
   const [exportingFormat, setExportingFormat] = useState<"md" | "pdf" | null>(null)
 
   const status = (error as { status?: number } | undefined)?.status
@@ -43,9 +46,13 @@ export default function ApprovedMultiRepoReportPage({
     notFound()
   }
 
-  const canFinalize = workspace ? canFinalizeAnalysis(workspace.membershipRole) && Boolean(runDetail?.runReadiness.canStartMergedReport) : false
-  const canExport = Boolean(role) && Boolean(data) && !data?.isStale
-  const canReview = workspace ? canReviewPermission(workspace.membershipRole) && Boolean(data) && !data?.isStale : false
+  const canFinalize = Boolean(
+    data?.capabilities.canRefreshMergedReport ||
+      runDetail?.capabilities.canFinalizeMergedReport ||
+      runDetail?.capabilities.canRefreshMergedReport,
+  )
+  const canExport = Boolean(data?.capabilities.canExportMergedReport)
+  const canReview = Boolean(data?.capabilities.canReviewMergedReport)
   const reviewDecisions = reviewDecisionsData?.items ?? []
   const latestReviewedDecision = latestDecisionCode === "MERGED_MULTI_REPO_REPORT_NOT_FOUND" ? null : latestDecision
 
@@ -176,6 +183,17 @@ export default function ApprovedMultiRepoReportPage({
 
         {data && (
           <div className="rounded-xl border border-border/50 bg-surface/40 p-6">
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <Badge variant={data.mergedReportStatus === "CURRENT" ? "default" : data.mergedReportStatus === "STALE" ? "secondary" : "outline"}>
+                {MERGED_REPORT_STATUS_LABEL[data.mergedReportStatus] ?? data.mergedReportStatus}
+              </Badge>
+              {data.capabilities.blockedReasons.length > 0 && data.mergedReportStatus !== "CURRENT" && (
+                <span className="text-[12px] text-muted-foreground">
+                  Blocked by {formatMultiRepoMergedReportBlockers(data.capabilities.blockedReasons)}
+                </span>
+              )}
+            </div>
+
             {data.isStale && (
               <div className="flex items-start gap-3 p-4 mb-6 bg-warning/10 border border-warning/25 rounded-lg text-warning">
                 <FileWarning className="w-5 h-5 shrink-0 mt-0.5" />
@@ -184,6 +202,20 @@ export default function ApprovedMultiRepoReportPage({
                   <span className="text-[13px] text-warning/80">
                     {data.staleReason || "Child analysis state changed after approval."} Export is blocked until the snapshot is refreshed and approved again.
                   </span>
+                </div>
+              </div>
+            )}
+
+            {data.provenance.domainPack?.domainPackStatus === "PARTIAL" && (
+              <div className="mb-6 flex items-start gap-3 rounded-lg border border-warning/25 bg-warning/8 p-4 text-foreground/80">
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
+                <div className="flex flex-col gap-1 text-[13px] leading-relaxed">
+                  <span className="font-semibold text-foreground">
+                    {data.provenance.domainPack.domainPackId}@{data.provenance.domainPack.domainPackVersion} is PARTIAL
+                  </span>
+                  <span>Domain hints are limited and require source evidence.</span>
+                  <span>This pack supports administrative workflow impact analysis only.</span>
+                  <span>It does not provide medical advice, clinical decision support, or compliance validation.</span>
                 </div>
               </div>
             )}
@@ -220,7 +252,6 @@ export default function ApprovedMultiRepoReportPage({
               reviewDecisions={reviewDecisions}
               reviewDecisionsLoading={reviewDecisionsLoading}
               canReview={canReview}
-              hasReviewPermission={canReviewPermission(workspace?.membershipRole ?? null)}
               isSubmitting={createReviewDecision.isPending}
               onSubmitReview={handleSubmitReview}
             />

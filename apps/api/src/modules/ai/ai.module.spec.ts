@@ -1,4 +1,4 @@
-import { resolveAiProvider } from './ai.module';
+import { resolveAiProvider } from '@ba-helper/shared';
 
 describe('resolveAiProvider', () => {
   it('normalizes whitespace and casing', () => {

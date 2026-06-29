@@ -1,6 +1,5 @@
 import { ApiError } from "./api-error"
 
-const DEFAULT_DEV_API_URL = "http://localhost:3000"
 
 interface RuntimeEnv {
   apiUrl?: string
@@ -47,13 +46,9 @@ export function getApiBaseUrl(env: RuntimeEnv = {
     return validateApiUrl(env.apiUrl.trim())
   }
 
-  if (env.nodeEnv === "production") {
-    throw new ApiError({
-      status: 500,
-      code: "API_URL_MISSING",
-      message: "NEXT_PUBLIC_API_URL is required for production deployments.",
-    })
-  }
-
-  return DEFAULT_DEV_API_URL
+  throw new ApiError({
+    status: 500,
+    code: "API_URL_MISSING",
+    message: "API URL is missing. Set INTERNAL_API_URL for server-side calls or NEXT_PUBLIC_API_URL for browser-visible calls.",
+  })
 }

@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { DEFAULT_REPORT_LOCALE, ReportLabels, ReportLocale } from './report-localization.types';
 
 export { DEFAULT_REPORT_LOCALE, ReportLabels, ReportLocale };
@@ -25,6 +27,10 @@ const REPORT_LABELS: Record<ReportLocale, ReportLabels> = {
     commitSha: 'Commit SHA',
     analyzerVersion: 'Analyzer Version',
     finalizedAt: 'Finalized At',
+    domainPack: 'Domain Pack',
+    partialDomainPackWarning: 'Domain hints are limited and require source evidence.',
+    administrativeWorkflowOnly: 'This pack supports administrative workflow impact analysis only.',
+    noMedicalClinicalCompliance: 'It does not provide medical advice, clinical decision support, or compliance validation.',
     scannerCapabilityProfile: 'Scanner Capability Profile',
     scannerDiagnosticsAndRisks: 'Scanner Diagnostics & Risks',
     language: 'Language',
@@ -70,8 +76,21 @@ const REPORT_LABELS: Record<ReportLocale, ReportLabels> = {
     reviewer: 'Reviewer',
     decision: 'Decision',
     note: 'Note',
+    reviewCoverage: 'Review Coverage',
+    insightsReviewed: 'Insights reviewed',
+    traceabilityLinksReviewed: 'Traceability links reviewed',
+    acceptedItems: 'Accepted items',
+    rejectedItems: 'Rejected items',
+    needsClarificationItems: 'Needs clarification items',
+    weakOrMissingEvidence: 'Weak/missing evidence',
     evidenceQuality: 'Evidence Quality & Dataset Readiness',
     evidenceBackedLinks: 'Evidence-backed links',
+    strongSourceEvidence: 'Strong source evidence',
+    weakSourceEvidence: 'Weak source evidence',
+    inferredFromStructure: 'Inferred from structure',
+    domainHintOnly: 'Domain hint only',
+    missingEvidence: 'Missing evidence',
+    conflictingEvidence: 'Conflicting evidence',
     inferredLinks: 'Inferred links',
     reviewRequired: 'Review required',
     artifact: 'Artifact',
@@ -127,6 +146,10 @@ const REPORT_LABELS: Record<ReportLocale, ReportLabels> = {
     commitSha: 'Commit SHA',
     analyzerVersion: 'Analyzer Version',
     finalizedAt: 'Finalize lúc',
+    domainPack: 'Domain Pack',
+    partialDomainPackWarning: 'Domain hint có giới hạn và phải dựa trên bằng chứng từ source.',
+    administrativeWorkflowOnly: 'Pack này chỉ hỗ trợ phân tích tác động cho workflow hành chính.',
+    noMedicalClinicalCompliance: 'Pack này không cung cấp tư vấn y tế, hỗ trợ quyết định lâm sàng, hoặc xác thực compliance.',
     scannerCapabilityProfile: 'Hồ sơ năng lực scanner',
     scannerDiagnosticsAndRisks: 'Chẩn đoán scanner và rủi ro',
     language: 'Ngôn ngữ',
@@ -172,8 +195,21 @@ const REPORT_LABELS: Record<ReportLocale, ReportLabels> = {
     reviewer: 'Reviewer',
     decision: 'Quyết định',
     note: 'Ghi chú',
+    reviewCoverage: 'Độ phủ review',
+    insightsReviewed: 'Insight đã review',
+    traceabilityLinksReviewed: 'Traceability link đã review',
+    acceptedItems: 'Item đã accept',
+    rejectedItems: 'Item đã reject',
+    needsClarificationItems: 'Item cần làm rõ',
+    weakOrMissingEvidence: 'Bằng chứng yếu/thiếu',
     evidenceQuality: 'Chất lượng bằng chứng và mức sẵn sàng dataset',
     evidenceBackedLinks: 'Link có bằng chứng',
+    strongSourceEvidence: 'Bằng chứng source mạnh',
+    weakSourceEvidence: 'Bằng chứng source yếu',
+    inferredFromStructure: 'Suy ra từ cấu trúc',
+    domainHintOnly: 'Chỉ là domain hint',
+    missingEvidence: 'Thiếu bằng chứng',
+    conflictingEvidence: 'Bằng chứng mâu thuẫn',
     inferredLinks: 'Link suy luận',
     reviewRequired: 'Cần review',
     artifact: 'Artifact',
@@ -213,29 +249,53 @@ const REPORT_LABELS: Record<ReportLocale, ReportLabels> = {
   },
 };
 
-const BOOKING_TERMS: Record<ReportLocale, Array<{ key: string; value: string }>> = {
-  en: [
-    { key: 'booking', value: 'booking' },
-    { key: 'cancellation', value: 'cancellation' },
-    { key: 'refund', value: 'refund' },
-    { key: 'doubleRefund', value: 'double refund' },
-    { key: 'inventoryRelease', value: 'inventory release' },
-    { key: 'paymentState', value: 'payment state' },
-  ],
-  vi: [
-    { key: 'booking', value: 'đơn đặt phòng' },
-    { key: 'cancellation', value: 'hủy đặt phòng' },
-    { key: 'refund', value: 'hoàn tiền' },
-    { key: 'doubleRefund', value: 'hoàn tiền trùng' },
-    { key: 'inventoryRelease', value: 'giải phóng tồn phòng' },
-    { key: 'paymentState', value: 'trạng thái thanh toán' },
-  ],
-};
-
 export function getReportLabels(locale: ReportLocale = DEFAULT_REPORT_LOCALE): ReportLabels {
   return REPORT_LABELS[locale] ?? REPORT_LABELS[DEFAULT_REPORT_LOCALE];
 }
 
-export function getBookingTerminology(locale: ReportLocale): Array<{ key: string; value: string }> {
-  return BOOKING_TERMS[locale] ?? BOOKING_TERMS[DEFAULT_REPORT_LOCALE];
+export function getDomainTerminology(
+  domain: string | null | undefined,
+  locale: ReportLocale,
+): Array<{ key: string; value: string }> {
+  const normalizedDomain = domain?.toLowerCase().trim();
+  if (!normalizedDomain || !/^[a-z0-9-]+$/.test(normalizedDomain)) {
+    return [];
+  }
+
+  const glossary = readGlossary(normalizedDomain, locale) ??
+    readGlossary(normalizedDomain, DEFAULT_REPORT_LOCALE);
+
+  if (!glossary) {
+    return [];
+  }
+
+  return Object.entries(glossary.terms).map(([key, value]) => ({ key, value }));
+}
+
+function readGlossary(
+  domain: string,
+  locale: ReportLocale,
+): { terms: Record<string, string> } | null {
+  const file = resolve(
+    process.cwd(),
+    'packages/domain-packs',
+    domain,
+    `${locale}.glossary.json`,
+  );
+
+  if (!existsSync(file)) {
+    return null;
+  }
+
+  const parsed = JSON.parse(readFileSync(file, 'utf-8')) as unknown;
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return null;
+  }
+
+  const terms = (parsed as { terms?: unknown }).terms;
+  if (!terms || typeof terms !== 'object' || Array.isArray(terms)) {
+    return null;
+  }
+
+  return { terms: terms as Record<string, string> };
 }

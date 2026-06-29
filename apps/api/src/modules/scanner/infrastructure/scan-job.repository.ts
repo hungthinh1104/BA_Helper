@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ScanJobStatus, ScanJobStage } from '@prisma/client';
+
+type ScanJobPrismaClient = PrismaService | Prisma.TransactionClient;
 
 @Injectable()
 export class ScanJobRepository {
@@ -56,8 +59,8 @@ export class ScanJobRepository {
     progress: number;
     errorCode?: string | null;
     errorMessage?: string;
-  }) {
-    return this.prisma.scanJob.update({
+  }, client: ScanJobPrismaClient = this.prisma) {
+    return client.scanJob.update({
       where: { id: params.jobId },
       data: {
         status: params.status,
@@ -65,6 +68,21 @@ export class ScanJobRepository {
         progress: params.progress,
         errorCode: params.errorCode ?? null,
         errorMessage: params.errorMessage ?? null,
+      },
+    });
+  }
+
+  async updateDiagnostics(
+    params: {
+      jobId: string;
+      diagnostics: unknown;
+    },
+    client: ScanJobPrismaClient = this.prisma,
+  ) {
+    return client.scanJob.update({
+      where: { id: params.jobId },
+      data: {
+        diagnostics: params.diagnostics as Prisma.InputJsonValue,
       },
     });
   }

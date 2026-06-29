@@ -1,70 +1,31 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ScanJobRepository } from '../infrastructure/scan-job.repository';
 import { EventLogService } from '../../event-log/application/event-log.service';
-import { AppError } from '../../../shared/app-error';
-import { ScanJobStatus, ScanJobStage, DependencyEdgeType } from '@prisma/client';
-import { ArtifactRepository } from '../../artifact/infrastructure/artifact.repository';
-import { GraphRepository } from '../../graph/infrastructure/graph.repository';
-import { normalizeArtifactKind } from '../../artifact/domain/universal-artifact-kind';
+import { AppError } from '@ba-helper/shared';
+import { ScanJobStatus, ScanJobStage } from '@prisma/client';
 import { 
   scanFixture, 
-  scanProject, 
   FrameworkDetector, 
   RepositoryProfileDetector,
   SafeFileEnumerator, 
-  SecretRedactor,
   DiagnosticCollector,
-  scanJavaSpringProject,
   GitHubUrlValidator,
   GitRepositoryFetcher,
   ScannerAdapterRegistry,
 } from '@ba-helper/analyzer';
-import { PrismaService } from '../../prisma/prisma.service';
 import { QueueService } from '../../queue/queue.service';
-import { EvidenceRepository } from '../../evidence/infrastructure/evidence.repository';
-import { createHash } from 'node:crypto';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import type { DetectedRepositoryProfile, ScanArtifact, ScanResult } from '@ba-helper/analyzer';
+import type {
+  DetectedRepositoryProfile,
+  ScanCoverage,
+  ScanResult,
+} from '@ba-helper/analyzer';
 import type { DiagnosticItem } from '@ba-helper/contracts';
 import { summarizeDiagnostics } from './scan-diagnostic-summary';
-import { IncrementalScanClassifier } from './incremental-scan-classifier';
-
-/**
- * Required diagnostic codes for every successfully finalized snapshot.
- * If any of these are missing after classification, the scan is treated as
- * incomplete and the snapshot must not be left in a usable state silently.
- */
-const REQUIRED_SCAN_DIAGNOSTIC_CODES = [
-  'SCAN_HEALTH',
-  'SCANNER_CAPABILITY_SUMMARY',
-  'INCREMENTAL_SCAN_SUMMARY',
-  'EMBEDDING_REUSE_PLAN',
-] as const;
-
-function assertRequiredDiagnostics(items: DiagnosticItem[]): void {
-  const presentCodes = new Set(items.map((d) => d.code));
-  const missing = REQUIRED_SCAN_DIAGNOSTIC_CODES.filter((code) => !presentCodes.has(code));
-  if (missing.length > 0) {
-    throw new AppError(
-      'SNAPSHOT_DIAGNOSTICS_INCOMPLETE',
-      `Required scan diagnostics missing before finalization: ${missing.join(', ')}`,
-    );
-  }
-}
-
-const safeRm = async (targetDir?: string): Promise<void> => {
-  if (!targetDir) {
-    return;
-  }
-
-  try {
-    await fs.rm(targetDir, { recursive: true, force: true });
-  } catch {
-    // Cleanup failure must not mask the original scan error.
-  }
-};
+import { RunScanJobPersistenceStep } from './run-scan-job-persistence.step';
+import { ScanWorkspaceCleanupPolicy } from './scan-workspace-cleanup.policy';
 
 const toProfileFrameworkHint = (framework?: string): DetectedRepositoryProfile['framework'] | undefined => {
   if (framework === 'nestjs') return 'NESTJS';
@@ -90,36 +51,18 @@ const toProfileLanguageHint = (language?: string): DetectedRepositoryProfile['la
   return undefined;
 };
 
-function mapScannerEdgeType(type: string): DependencyEdgeType | null {
-  switch (type) {
-    case 'CALLS':
-      return 'CALLS';
-    case 'IMPORTS':
-      return 'IMPORTS';
-    case 'TESTS':
-      return 'TESTS';
-    case 'USES':
-    case 'REFERENCES':
-      return 'REFERENCES';
-    default:
-      return null;
-  }
-}
-
 @Injectable()
 export class RunScanJobUseCase {
   private readonly logger = new Logger(RunScanJobUseCase.name);
 
   private readonly scannerAdapterRegistry = new ScannerAdapterRegistry();
+  private readonly cleanupPolicy = new ScanWorkspaceCleanupPolicy();
 
   constructor(
     private readonly scanJobRepository: ScanJobRepository,
-    private readonly artifactRepository: ArtifactRepository,
-    private readonly graphRepository: GraphRepository,
     private readonly eventLogService: EventLogService,
-    private readonly evidenceRepo: EvidenceRepository,
-    private readonly prisma: PrismaService,
     private readonly queueService: QueueService,
+    private readonly persistenceStep: RunScanJobPersistenceStep,
   ) {}
 
   async execute(params: { jobId: string }): Promise<void> {
@@ -162,7 +105,6 @@ export class RunScanJobUseCase {
     try {
       let scanResult: ScanResult;
       let repositoryProfile: DetectedRepositoryProfile | null = null;
-      let coverageStatus: 'READY' | 'PARTIAL' = 'READY';
       
       const sourceRoot = job.repository.canonicalUrl;
       const isLocalFixtureSource =
@@ -192,6 +134,14 @@ export class RunScanJobUseCase {
         } catch (err) {
           throw new AppError('CLONE_FAILED', (err as Error).message);
         }
+        await this.persistenceStep.observeTarget({
+          job: {
+            id: job.id,
+            repositoryId: job.repositoryId,
+            requestedRef: job.requestedRef,
+          },
+          commitSha,
+        });
 
         currentStage = ScanJobStage.DETECTING_PROJECT;
         await this.scanJobRepository.updateState({
@@ -231,7 +181,7 @@ export class RunScanJobUseCase {
           collector.addFromFileDiagnostic(d, d.filePath ? path.relative(tempDir, d.filePath) : undefined);
         }
 
-        const scanCoverage: import('@ba-helper/analyzer').ScanCoverage = {
+        const scanCoverage: ScanCoverage = {
           status: enumResult.isPartial ? 'PARTIAL' : 'FULL',
           skippedFiles: enumResult.skippedFiles,
           skippedSummary: enumResult.skippedSummary,
@@ -305,159 +255,8 @@ export class RunScanJobUseCase {
         });
       }
 
-      // FULL maps to READY because Prisma enum predates scan-health terminology.
-      // FAILED does not create RepositorySnapshot.
-      coverageStatus = scanResult.coverage.status === 'FULL' ? 'READY' : 'PARTIAL';
-
       if (!commitSha) {
         throw new Error('Commit SHA was not resolved for scan job.');
-      }
-
-      // Record detailed scan health into snapshot diagnostics
-      const scanHealth: import('@ba-helper/analyzer').ScanHealthDiagnostics = {
-        coverageStatus: scanResult.coverage.status,
-        scannerVersion: 'scanner@0.2.0',
-        analyzerVersion: scanResult.analyzerVersion,
-        scannedFileCount: scanResult.artifacts.length, // approximation or use enumResult if possible
-        skippedFileCount: Object.values(scanResult.coverage?.skippedSummary || {}).reduce((a, b) => a + b, 0),
-        artifactCount: scanResult.artifacts.length,
-        skippedSummary: scanResult.coverage?.skippedSummary || {},
-        skippedFilesSample: scanResult.coverage?.skippedFiles || [],
-        limits: scanResult.coverage?.limits || { maxFiles: 0, maxFileSize: 0 },
-        limitHits: scanResult.coverage?.limitHits || [],
-      };
-
-      collector.add({
-        code: 'SCAN_HEALTH',
-        severity: 'INFO',
-        message: 'Scan health summary generated',
-        category: 'SCANNER',
-        payload: scanHealth as unknown as Record<string, unknown>,
-      });
-
-      const previousSnapshot = await this.prisma.repositorySnapshot.findFirst({
-        where: {
-          repositoryId: job.repositoryId,
-          coverageStatus: { in: ['READY', 'PARTIAL'] },
-        },
-        orderBy: [
-          { createdAt: 'desc' },
-          { id: 'desc' },
-        ],
-      });
-      const snapshot = await this.prisma.repositorySnapshot.upsert({
-        where: {
-          repositoryId_commitSha_analyzerVersion: {
-            repositoryId: job.repositoryId,
-            commitSha: commitSha,
-            analyzerVersion: scanResult.analyzerVersion,
-          },
-        },
-        create: {
-          repositoryId: job.repositoryId,
-          commitSha: commitSha,
-          analyzerVersion: scanResult.analyzerVersion,
-          coverageStatus: coverageStatus,
-          diagnostics: [] as unknown as import('@prisma/client').Prisma.InputJsonValue,
-        },
-        update: {
-          coverageStatus: coverageStatus,
-          diagnostics: [] as unknown as import('@prisma/client').Prisma.InputJsonValue,
-        },
-      });
-
-      const previousArtifacts = previousSnapshot ? await this.artifactRepository.listBySnapshot(previousSnapshot.id) : [];
-
-      const { scanSummary: incrementalSummary, reusePlan } = IncrementalScanClassifier.generateDiagnostics({
-        targetSnapshotId: snapshot.id,
-        currentArtifacts: scanResult.artifacts,
-        currentAnalyzerVersion: scanResult.analyzerVersion,
-        previousSnapshot: previousSnapshot ? { id: previousSnapshot.id, analyzerVersion: previousSnapshot.analyzerVersion } : null,
-        previousArtifacts,
-      });
-
-      collector.add({
-        code: 'INCREMENTAL_SCAN_SUMMARY',
-        severity: 'INFO',
-        message: 'Incremental scan classification summary generated',
-        category: 'SCANNER',
-        payload: incrementalSummary as unknown as Record<string, unknown>,
-      });
-
-      collector.add({
-        code: 'EMBEDDING_REUSE_PLAN',
-        severity: 'INFO',
-        message: 'Embedding chunk reuse plan generated',
-        category: 'SCANNER',
-        payload: reusePlan as unknown as Record<string, unknown>,
-      });
-
-      const target = await this.prisma.repositoryTarget.upsert({
-        where: {
-          repositoryId_targetKey: {
-            repositoryId: job.repositoryId,
-            targetKey: job.requestedRef ?? 'main',
-          },
-        },
-        create: {
-          repositoryId: job.repositoryId,
-          targetKey: job.requestedRef ?? 'main',
-          requestedRef: job.requestedRef ?? 'main',
-          resolvedRefType: 'BRANCH',
-          latestObservedCommitSha: commitSha,
-          lastObservedAt: new Date(),
-        },
-        update: {
-          latestObservedCommitSha: commitSha,
-          lastObservedAt: new Date(),
-        },
-      });
-
-      // Validate all required diagnostics are present before committing the snapshot as usable.
-      // If any are missing (e.g. classifier threw), this throws and the catch block
-      // marks the job as FAILED — the snapshot is left without a LEXICAL_READY promotion.
-      const finalDiagnostics = collector.getItems() as DiagnosticItem[];
-      assertRequiredDiagnostics(finalDiagnostics);
-
-      // Update snapshot with final diagnostics
-      await this.prisma.repositorySnapshot.update({
-        where: { id: snapshot.id },
-        data: { diagnostics: finalDiagnostics as unknown as import('@prisma/client').Prisma.InputJsonValue },
-      });
-
-      if (repositoryProfile) {
-        await this.prisma.repositoryProfile.upsert({
-          where: { snapshotId: snapshot.id },
-          create: {
-            snapshotId: snapshot.id,
-            domain: repositoryProfile.domain,
-            language: repositoryProfile.language,
-            framework: repositoryProfile.framework,
-            architectureStyle: repositoryProfile.architectureStyle,
-            sourceRoots:
-              repositoryProfile.sourceRoots as unknown as import('@prisma/client').Prisma.InputJsonValue,
-            testRoots:
-              repositoryProfile.testRoots as unknown as import('@prisma/client').Prisma.InputJsonValue,
-            diagnostics: repositoryProfile.diagnostics
-              ? (repositoryProfile.diagnostics as unknown as import('@prisma/client').Prisma.InputJsonValue)
-              : undefined,
-            profileVersion: repositoryProfile.profileVersion,
-          },
-          update: {
-            domain: repositoryProfile.domain,
-            language: repositoryProfile.language,
-            framework: repositoryProfile.framework,
-            architectureStyle: repositoryProfile.architectureStyle,
-            sourceRoots:
-              repositoryProfile.sourceRoots as unknown as import('@prisma/client').Prisma.InputJsonValue,
-            testRoots:
-              repositoryProfile.testRoots as unknown as import('@prisma/client').Prisma.InputJsonValue,
-            diagnostics: repositoryProfile.diagnostics
-              ? (repositoryProfile.diagnostics as unknown as import('@prisma/client').Prisma.InputJsonValue)
-              : undefined,
-            profileVersion: repositoryProfile.profileVersion,
-          },
-        });
       }
 
       await this.scanJobRepository.updateState({
@@ -467,27 +266,19 @@ export class RunScanJobUseCase {
         progress: 50,
       });
 
-      await this.prisma.scanJob.update({
-        where: { id: job.id },
-        data: { snapshotId: snapshot.id, sourceTargetId: target.id },
+      const persisted = await this.persistenceStep.persist({
+        job: {
+          id: job.id,
+          repositoryId: job.repositoryId,
+          requestedRef: job.requestedRef,
+        },
+        commitSha,
+        scanResult,
+        repositoryProfile,
+        collector,
       });
 
-      if (scanResult.artifacts.length > 0) {
-        // Wait until artifacts are created first since evidence needs artifact references
-        await this.artifactRepository.createMany(
-          scanResult.artifacts.map((artifact: ScanArtifact) => ({
-            snapshotId: snapshot.id,
-            artifactKey: artifact.stableId,
-            artifactType: artifact.type,
-            universalKind: normalizeArtifactKind(artifact.type),
-            name: artifact.symbolName,
-            filePath: artifact.filePath,
-            startLine: artifact.startLine,
-            endLine: artifact.endLine,
-            contentHash: artifact.contentHash,
-          })),
-        );
-
+      if (persisted.artifactCount > 0) {
         await this.eventLogService.recordEvent({
           eventType: 'SCAN_ARTIFACTS_EXTRACTED',
           idempotencyKey: `scan-job:${job.id}:artifacts-extracted`,
@@ -498,79 +289,10 @@ export class RunScanJobUseCase {
             actorName: 'BA Helper Worker',
             scanJobId: job.id,
             repositoryId: job.repositoryId,
-            snapshotId: snapshot.id,
-            artifactCount: scanResult.artifacts.length,
+            snapshotId: persisted.snapshotId,
+            artifactCount: persisted.artifactCount,
           },
         });
-
-        // Fetch back artifacts to insert their excerpts into Evidence
-        const persistedArtifacts = await this.artifactRepository.listBySnapshot(snapshot.id);
-        const evidenceInputs = scanResult.artifacts.map((artifact: ScanArtifact) => {
-            const persistedId = persistedArtifacts.find((persistedArtifact: { artifactKey: string; id: string }) => persistedArtifact.artifactKey === artifact.stableId)?.id;
-            if (!persistedId) return null;
-            
-            let excerpt = artifact.excerpt || '';
-            const redaction = SecretRedactor.redact(excerpt);
-            excerpt = redaction.redactedContent;
-            
-            const contentHash = createHash('sha256').update(excerpt).digest('hex');
-
-            return {
-                provenanceKey: `snapshot:${snapshot.id}:artifact:${artifact.stableId}`,
-                sourceType: artifact.type === 'TEST' ? 'TEST' : 'CODE',
-                snapshotId: snapshot.id,
-                artifactId: persistedId,
-                sourcePath: artifact.filePath,
-                startLine: artifact.startLine,
-                endLine: artifact.endLine,
-                excerpt,
-                contentHash,
-                isRedacted: redaction.foundSecrets,
-                redactionMetadata: null,
-            };
-        }).filter((e): e is NonNullable<typeof e> => e !== null);
-        
-        // --- Dependency Edge Persistence ---
-        const artifactIdByStableId = new Map(
-          persistedArtifacts.map((artifact) => [artifact.artifactKey, artifact.id]),
-        );
-
-        const edgesToPersist: {
-          snapshotId: string;
-          fromArtifactId: string;
-          toArtifactId: string;
-          type: DependencyEdgeType;
-        }[] = [];
-        let droppedEdgeCount = 0;
-
-        for (const edge of scanResult.dependencyEdges || []) {
-          const mappedType = mapScannerEdgeType(edge.type);
-          if (!mappedType) {
-            droppedEdgeCount++;
-            continue;
-          }
-
-          const fromId = artifactIdByStableId.get(edge.fromArtifactId);
-          const toId = artifactIdByStableId.get(edge.toArtifactId);
-
-          if (!fromId || !toId) {
-            droppedEdgeCount++;
-            continue;
-          }
-
-          edgesToPersist.push({
-            snapshotId: snapshot.id,
-            fromArtifactId: fromId,
-            toArtifactId: toId,
-            type: mappedType,
-          });
-        }
-
-        if (droppedEdgeCount > 0) {
-          this.logger.debug(`Dropped ${droppedEdgeCount} unresolved or unsupported dependency edges.`);
-        }
-
-        await this.graphRepository.createDependencyEdges(edgesToPersist);
 
         await this.eventLogService.recordEvent({
           eventType: 'SCAN_DEPENDENCY_EDGES_PERSISTED',
@@ -582,36 +304,34 @@ export class RunScanJobUseCase {
             actorName: 'BA Helper Worker',
             scanJobId: job.id,
             repositoryId: job.repositoryId,
-            snapshotId: snapshot.id,
-            dependencyEdgeCount: edgesToPersist.length,
-            skippedEdgeCount: droppedEdgeCount,
+            snapshotId: persisted.snapshotId,
+            dependencyEdgeCount: persisted.dependencyEdgeCount,
+            skippedEdgeCount: persisted.skippedDependencyEdgeCount,
           },
         });
-        // -----------------------------------
-        
-        if (evidenceInputs.some(e => e.isRedacted)) {
-            collector.addSecretRedacted('source files');
-            await this.prisma.repositorySnapshot.update({
-              where: { id: snapshot.id },
-              data: { diagnostics: collector.getItems() as unknown as import('@prisma/client').Prisma.InputJsonValue },
-            });
-        }
-
-        await this.evidenceRepo.upsertMany(evidenceInputs);
-
-        // Snapshot is now LEXICAL_READY, enqueue for embedding
-        await this.prisma.repositorySnapshot.update({
-          where: { id: snapshot.id },
-          data: { indexStatus: 'LEXICAL_READY' },
-        });
-        await this.queueService.enqueueSnapshotEmbedding(snapshot.id);
       }
-      await this.scanJobRepository.updateState({
-        jobId: job.id,
-        status: ScanJobStatus.COMPLETED,
-        stage: ScanJobStage.DONE,
-        progress: 100,
-      });
+
+      let embeddingEnqueueFailed = false;
+      if (persisted.shouldEnqueueEmbedding) {
+        try {
+          await this.queueService.enqueueSnapshotEmbedding(persisted.snapshotId);
+        } catch (error) {
+          embeddingEnqueueFailed = true;
+          await this.persistenceStep.markEmbeddingEnqueueFailed(persisted.snapshotId);
+          this.logger.warn(
+            JSON.stringify({
+              event: 'SCAN_EMBEDDING_ENQUEUE_FAILED',
+              jobId: job.id,
+              repositoryId: job.repositoryId,
+              snapshotId: persisted.snapshotId,
+              errorMessage: error instanceof Error ? error.message : 'Unknown error',
+            }),
+          );
+        }
+      }
+
+      const completionIndexStatus =
+        embeddingEnqueueFailed ? 'VECTOR_FAILED' : 'LEXICAL_READY';
 
       await this.eventLogService.recordEvent({
         eventType: 'SCAN_COMPLETED',
@@ -623,12 +343,11 @@ export class RunScanJobUseCase {
           actorName: 'BA Helper Worker',
           scanJobId: job.id,
           repositoryId: job.repositoryId,
-          snapshotId: snapshot.id,
+          snapshotId: persisted.snapshotId,
           previousStatus: 'RUNNING',
           nextStatus: 'COMPLETED',
-          indexStatus: 'LEXICAL_READY',
-          // Note: using artifacts.length might be inaccurate if not provided here, but it's okay for payload
-          artifactCount: scanResult?.artifacts?.length ?? 0,
+          indexStatus: completionIndexStatus,
+          artifactCount: persisted.artifactCount,
         },
       });
       this.logger.log(
@@ -637,11 +356,11 @@ export class RunScanJobUseCase {
           jobId: job.id,
           repositoryId: job.repositoryId,
           requestedRef: job.requestedRef ?? 'main',
-          sourceTargetId: target.id,
-          snapshotId: snapshot.id,
+          sourceTargetId: persisted.sourceTargetId,
+          snapshotId: persisted.snapshotId,
           commitSha,
-          coverageStatus,
-          diagnostics: summarizeDiagnostics(collector.getItems() as DiagnosticItem[]),
+          coverageStatus: persisted.coverageStatus,
+          diagnostics: summarizeDiagnostics(persisted.diagnostics),
         }),
       );
     } catch (error) {
@@ -682,9 +401,9 @@ export class RunScanJobUseCase {
       }
 
       try {
-        await this.prisma.scanJob.update({
-          where: { id: job.id },
-          data: { diagnostics: collector.getItems() as unknown as import('@prisma/client').Prisma.InputJsonValue },
+        await this.scanJobRepository.updateDiagnostics({
+          jobId: job.id,
+          diagnostics: collector.getItems(),
         });
       } catch (persistError) {
         this.logger.warn(
@@ -745,7 +464,30 @@ export class RunScanJobUseCase {
       );
       throw error;
     } finally {
-      await safeRm(cleanupDir);
+      const cleanup = await this.cleanupPolicy.cleanup(cleanupDir);
+      if (cleanup.reason !== 'NO_WORKSPACE') {
+        const logPayload = {
+          event: 'SCAN_WORKSPACE_CLEANUP',
+          jobId: job.id,
+          repositoryId: job.repositoryId,
+          attempted: cleanup.attempted,
+          preserved: cleanup.preserved,
+          succeeded: cleanup.succeeded,
+          reason: cleanup.reason,
+          workspaceId: cleanup.workspaceId,
+        };
+
+        if (cleanup.succeeded === false) {
+          this.logger.warn(
+            JSON.stringify({
+              ...logPayload,
+              errorMessage: cleanup.errorMessage,
+            }),
+          );
+        } else {
+          this.logger.log(JSON.stringify(logPayload));
+        }
+      }
     }
   }
 }

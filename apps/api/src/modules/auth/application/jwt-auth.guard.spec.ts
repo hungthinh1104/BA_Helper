@@ -1,6 +1,7 @@
 import { JwtAuthGuard, IS_PUBLIC_KEY } from './jwt-auth.guard';
 import { Reflector } from '@nestjs/core';
-import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import type { ExecutionContext} from '@nestjs/common';
+import { UnauthorizedException } from '@nestjs/common';
 
 describe('JwtAuthGuard', () => {
   let guard: JwtAuthGuard;

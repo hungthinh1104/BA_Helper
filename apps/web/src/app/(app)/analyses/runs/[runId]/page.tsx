@@ -7,14 +7,16 @@ import { notFound } from "next/navigation"
 import { AlertCircle, GitBranch } from "lucide-react"
 import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
 import { DataList, DataListCell, DataListHeader, DataListRow } from "@/components/workspace/shared/data-list"
-import { canFinalizeAnalysis } from "@/lib/permissions"
-import { useCurrentWorkspace } from "@/lib/project-context"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { useApprovedMultiRepoReport, useMultiRepoAnalysisRunDetail, useFinalizeMultiRepoReport } from "@/hooks/api/use-analyses"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { MetricCard } from "@/components/workspace/shared/primitives"
+import {
+  formatMultiRepoMergedReportBlockers,
+  MULTI_REPO_CHILD_BLOCKING_REASON_LABEL,
+} from "@/lib/multi-repo-report-labels"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ImpactMatrixTable } from "@/components/workspace/matrix/impact-matrix-table"
@@ -32,13 +34,11 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
 
 const gridCols = "minmax(180px, 1.8fr) minmax(120px, 1fr) 130px 110px minmax(150px, 1.3fr) minmax(120px, 1fr)"
 
-const BLOCKING_REASON_LABEL: Record<string, string> = {
-  FAILED: "Failed",
-  NOT_COMPLETED: "Not completed",
-  WAITING_FOR_REVIEW: "Waiting for review",
-  NEEDS_MORE_CLARIFICATION: "Needs clarification",
-  REJECTED: "Rejected",
-  NONE: "Ready",
+const MERGED_REPORT_STATUS_LABEL: Record<string, string> = {
+  NOT_CREATED: "Ready to finalize",
+  CURRENT: "Current",
+  STALE: "Stale",
+  BLOCKED: "Blocked",
 }
 
 function formatDate(iso: string) {
@@ -61,7 +61,6 @@ export default function MultiRepoAnalysisRunDetailPage({
   const { data, isLoading, error } = useMultiRepoAnalysisRunDetail(runId)
   const { data: approvedReport, error: approvedReportError } = useApprovedMultiRepoReport(runId)
   const finalizeReport = useFinalizeMultiRepoReport(runId)
-  const workspace = useCurrentWorkspace()
   const router = useRouter()
   const [selectedAnalysisId, setSelectedAnalysisId] = React.useState<string | null>(null)
 
@@ -69,11 +68,15 @@ export default function MultiRepoAnalysisRunDetailPage({
     notFound()
   }
 
-  const canFinalizeMergedReport =
-    workspace ? canFinalizeAnalysis(workspace.membershipRole) && Boolean(data?.runReadiness.canStartMergedReport) : false
+  const canFinalizeMergedReport = Boolean(
+    data?.capabilities.canFinalizeMergedReport ||
+      data?.capabilities.canRefreshMergedReport,
+  )
+  const approvedReportErrorCode = (approvedReportError as { code?: string } | undefined)?.code
   const hasApprovedMergedReport =
+    Boolean(data?.capabilities.canOpenApprovedReport) ||
     Boolean(approvedReport) ||
-    (approvedReportError as { code?: string } | undefined)?.code !== "MERGED_MULTI_REPO_REPORT_NOT_FOUND"
+    Boolean(approvedReportError && approvedReportErrorCode !== "MERGED_MULTI_REPO_REPORT_NOT_FOUND")
 
   const handleFinalizeMergedReport = async () => {
     try {
@@ -107,7 +110,7 @@ export default function MultiRepoAnalysisRunDetailPage({
         >
           <div className="flex items-center gap-2">
             {data && (
-              data.runReadiness.canStartMergedReport ? (
+              data.capabilities.canFinalizeMergedReport || data.capabilities.canRefreshMergedReport ? (
                 <>
                   <Link
                     href={`/analyses/runs/${runId}/merged-report`}
@@ -122,7 +125,11 @@ export default function MultiRepoAnalysisRunDetailPage({
                     onClick={() => void handleFinalizeMergedReport()}
                     disabled={!canFinalizeMergedReport || finalizeReport.isPending}
                   >
-                    {finalizeReport.isPending ? "Finalizing..." : "Finalize merged report"}
+                    {finalizeReport.isPending
+                      ? "Finalizing..."
+                      : data.capabilities.canRefreshMergedReport
+                        ? "Refresh merged report"
+                        : "Finalize merged report"}
                   </Button>
                 </>
               ) : hasApprovedMergedReport ? (
@@ -135,15 +142,15 @@ export default function MultiRepoAnalysisRunDetailPage({
                   </Link>
                   <span
                     className="text-[12px] text-[var(--text-tertiary)]"
-                    title="Merged report exists, but the run is not currently ready for a fresh merged snapshot."
+                    title={formatMultiRepoMergedReportBlockers(data.capabilities.blockedReasons)}
                   >
-                    Refresh blocked until child analyses are accepted again
+                    {data.mergedReportStatus === "CURRENT" ? "Current snapshot" : "Refresh blocked"}
                   </span>
                 </>
               ) : (
                 <span
                   className="text-[12px] text-[var(--text-tertiary)]"
-                  title="Every child analysis must have latest review decision ACCEPTED."
+                  title={formatMultiRepoMergedReportBlockers(data.capabilities.blockedReasons)}
                 >
                   Merged report not ready
                 </span>
@@ -165,15 +172,26 @@ export default function MultiRepoAnalysisRunDetailPage({
               <MetricCard label="Accepted" value={data.childReviewSummary.accepted} accent="success" />
               <MetricCard label="Pending Review" value={data.childReviewSummary.pendingReview} accent={data.childReviewSummary.pendingReview > 0 ? "warning" : "default"} />
               <MetricCard
-                label="Merged Ready"
-                value={data.runReadiness.canStartMergedReport ? "Yes" : "No"}
-                accent={data.runReadiness.canStartMergedReport ? "success" : "default"}
+                label="Merged Report"
+                value={MERGED_REPORT_STATUS_LABEL[data.mergedReportStatus] ?? data.mergedReportStatus}
+                accent={
+                  data.mergedReportStatus === "CURRENT" || data.mergedReportStatus === "NOT_CREATED"
+                    ? "success"
+                    : data.mergedReportStatus === "STALE"
+                      ? "warning"
+                      : "default"
+                }
               />
             </div>
 
             <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2 text-[12px] text-[var(--text-secondary)]">
               Review summary: accepted {data.childReviewSummary.accepted} • rejected {data.childReviewSummary.rejected} • needs clarification {data.childReviewSummary.needsMoreClarification} • pending {data.childReviewSummary.pendingReview}
             </div>
+            {data.capabilities.blockedReasons.length > 0 && data.mergedReportStatus !== "CURRENT" && (
+              <div className="rounded-lg border border-[var(--warning-soft)] bg-[var(--warning-soft)]/40 px-3 py-2 text-[12px] text-[var(--warning)]">
+                Merged report blocker: {formatMultiRepoMergedReportBlockers(data.capabilities.blockedReasons)}
+              </div>
+            )}
           </div>
         )}
 
@@ -271,7 +289,7 @@ export default function MultiRepoAnalysisRunDetailPage({
                     </DataListCell>
                     <DataListCell>
                       <span className={`text-[12px] ${item.blockingReason === "NONE" ? "text-[var(--success)]" : "text-[var(--warning)]"}`}>
-                        {BLOCKING_REASON_LABEL[item.blockingReason]}
+                        {MULTI_REPO_CHILD_BLOCKING_REASON_LABEL[item.blockingReason]}
                       </span>
                     </DataListCell>
                   </DataListRow>

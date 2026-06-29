@@ -1,7 +1,32 @@
-import { MarkdownReportRenderContext } from '../../markdown-impact-report.types';
+import type { MarkdownReportRenderContext } from '../../markdown-impact-report.types';
 import { resolveArtifactDisplayType } from './markdown-render-utils';
 import { EvidenceQualityAnnotator } from '../../evidence-quality.annotator';
 import { getReportLabels } from '../report-localization';
+
+export function renderReviewCoverage(context: MarkdownReportRenderContext): string[] {
+  const summary = context.reviewCoverageSummarySnapshot;
+  if (!summary) {
+    return [];
+  }
+
+  const labels = getReportLabels(context.locale);
+  const weakOrMissing = summary.evidence.weak + summary.evidence.missing;
+
+  return [
+    `## ${labels.reviewCoverage}`,
+    '',
+    `- ${labels.insightsReviewed}: ${summary.insights.reviewed} / ${summary.insights.total}`,
+    `- ${labels.traceabilityLinksReviewed}: ${summary.traceabilityLinks.reviewed} / ${summary.traceabilityLinks.total}`,
+    `- ${labels.acceptedItems}: ${summary.decisions.accepted}`,
+    `- ${labels.rejectedItems}: ${summary.decisions.rejected}`,
+    `- ${labels.needsClarificationItems}: ${summary.decisions.needsClarification}`,
+    `- ${labels.strongSourceEvidence}: ${summary.evidence.strong}`,
+    `- ${labels.weakOrMissingEvidence}: ${weakOrMissing}`,
+    `- ${labels.conflictingEvidence}: ${summary.evidence.conflicting}`,
+    `- ${labels.reviewRequired}: ${summary.evidence.reviewRequired}`,
+    '',
+  ];
+}
 
 export function renderImpactedAreas(context: MarkdownReportRenderContext): string[] {
   const { analysis, traceabilityLinks, reviewNotes } = context;
@@ -88,22 +113,27 @@ export function renderEvidenceQuality(context: MarkdownReportRenderContext): str
 
   if (evidenceQualitySummarySnapshot) {
     const summary = evidenceQualitySummarySnapshot;
-    lines.push(`- ${labels.evidenceBackedLinks}: ${summary.evidenced + summary.weakEvidence}`);
-    lines.push(`- ${labels.inferredLinks}: ${summary.inferred}`);
-    lines.push(`- ${labels.reviewRequired}: ${summary.reviewRequired}`);
+    lines.push(`- ${labels.strongSourceEvidence}: ${readSummaryCount(summary, 'strongSourceEvidence', 'evidenced', 'STRONG_SOURCE_EVIDENCE')}`);
+    lines.push(`- ${labels.weakSourceEvidence}: ${readSummaryCount(summary, 'weakSourceEvidence', 'weakEvidence', 'WEAK_SOURCE_EVIDENCE')}`);
+    lines.push(`- ${labels.inferredFromStructure}: ${readSummaryCount(summary, 'inferredFromStructure', 'inferred', 'INFERRED_FROM_STRUCTURE')}`);
+    lines.push(`- ${labels.domainHintOnly}: ${readSummaryCount(summary, 'domainHintOnly', 'DOMAIN_HINT_ONLY')}`);
+    lines.push(`- ${labels.missingEvidence}: ${readSummaryCount(summary, 'missingEvidence', 'MISSING_EVIDENCE')}`);
+    lines.push(`- ${labels.conflictingEvidence}: ${readSummaryCount(summary, 'conflictingEvidence', 'CONFLICTING_EVIDENCE')}`);
+    lines.push(`- ${labels.reviewRequired}: ${readSummaryCount(summary, 'reviewRequired', 'REVIEW_REQUIRED')}`);
   } else {
     const linkAnnotations = traceabilityLinks.map(link => ({
       link,
       annotation: EvidenceQualityAnnotator.annotate(link as any)
     }));
 
-    const evidencedCount = linkAnnotations.filter(l => l.annotation.label === 'EVIDENCED' || l.annotation.label === 'WEAK_EVIDENCE').length;
-    const inferredCount = linkAnnotations.filter(l => l.annotation.label === 'INFERRED').length;
-    const reviewRequiredCount = linkAnnotations.filter(l => l.annotation.label === 'REVIEW_REQUIRED').length;
-
-    lines.push(`- ${labels.evidenceBackedLinks}: ${evidencedCount}`);
-    lines.push(`- ${labels.inferredLinks}: ${inferredCount}`);
-    lines.push(`- ${labels.reviewRequired}: ${reviewRequiredCount}`);
+    const summary = EvidenceQualityAnnotator.summarize(linkAnnotations.map((item) => item.annotation));
+    lines.push(`- ${labels.strongSourceEvidence}: ${summary.strongSourceEvidence}`);
+    lines.push(`- ${labels.weakSourceEvidence}: ${summary.weakSourceEvidence}`);
+    lines.push(`- ${labels.inferredFromStructure}: ${summary.inferredFromStructure}`);
+    lines.push(`- ${labels.domainHintOnly}: ${summary.domainHintOnly}`);
+    lines.push(`- ${labels.missingEvidence}: ${summary.missingEvidence}`);
+    lines.push(`- ${labels.conflictingEvidence}: ${summary.conflictingEvidence}`);
+    lines.push(`- ${labels.reviewRequired}: ${summary.reviewRequired}`);
   }
 
   lines.push('');
@@ -128,4 +158,14 @@ export function renderEvidenceQuality(context: MarkdownReportRenderContext): str
   lines.push('');
 
   return lines;
+}
+
+function readSummaryCount(summary: Record<string, unknown>, ...keys: string[]): number {
+  for (const key of keys) {
+    const value = summary[key];
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+  }
+  return 0;
 }

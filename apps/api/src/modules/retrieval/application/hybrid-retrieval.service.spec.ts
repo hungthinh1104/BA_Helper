@@ -1,4 +1,5 @@
 import { HybridRetrievalService } from './hybrid-retrieval.service';
+import { DomainPackRegistry } from '../../domain-pack/application/domain-pack.registry';
 
 describe('HybridRetrievalService', () => {
   describe('security', () => {
@@ -27,10 +28,11 @@ describe('HybridRetrievalService', () => {
       const service = new HybridRetrievalService(
         { searchSimilar: jest.fn() } as any,
         { embed: jest.fn() } as any,
-        { findById: jest.fn() } as any,
-        { expandFromSeeds: jest.fn() } as any,
-        prisma,
-      );
+	        { findById: jest.fn() } as any,
+	        { expandFromSeeds: jest.fn() } as any,
+	        prisma,
+	        new DomainPackRegistry(),
+	      );
 
       const maliciousInput = `Update booking flow; DROP TABLE "CodeArtifact"; --`;
       const result = await service.retrieve({
@@ -100,10 +102,11 @@ describe('HybridRetrievalService', () => {
       const service = new HybridRetrievalService(
         { searchSimilar: jest.fn() } as any,
         { embed: jest.fn() } as any,
-        { findById: jest.fn() } as any,
-        { expandFromSeeds: jest.fn() } as any,
-        prisma,
-      );
+	        { findById: jest.fn() } as any,
+	        { expandFromSeeds: jest.fn() } as any,
+	        prisma,
+	        new DomainPackRegistry(),
+	      );
 
       const requestText = 'Fix booking API logic'; 
       // Contains 'booking' (from BOOKING domain)
@@ -171,10 +174,11 @@ describe('HybridRetrievalService', () => {
       const service = new HybridRetrievalService(
         { searchSimilar: jest.fn() } as any,
         { embed: jest.fn() } as any,
-        { findById: jest.fn() } as any,
-        { expandFromSeeds: jest.fn() } as any,
-        prisma,
-      );
+	        { findById: jest.fn() } as any,
+	        { expandFromSeeds: jest.fn() } as any,
+	        prisma,
+	        new DomainPackRegistry(),
+	      );
 
       await service.retrieve({
         projectId: '11',

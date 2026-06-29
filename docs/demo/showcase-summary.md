@@ -2,7 +2,7 @@
 
 _Draft for social media (LinkedIn / GitHub Discussions / Portfolio)_
 
-**Public Beta Release: BA Helper - A Requirement-to-Code Impact Analyzer**
+**Controlled Beta Release: BA Helper - A Requirement-to-Code Impact Analyzer**
 
 BA Helper is a Requirement-to-Code Impact Analyzer designed specifically for backend teams.
 
@@ -38,4 +38,4 @@ pnpm install
 pnpm demo:golden-path
 ```
 
-Check out our [Public Beta Release Note](public-beta-release-note.md) and [Sample Requirement](sample-requirement-change.md) to dive deeper into the technical trust model!
+Check out our [Controlled Beta Release Note](public-beta-release-note.md) and [Sample Requirement](sample-requirement-change.md) to dive deeper into the technical trust model!

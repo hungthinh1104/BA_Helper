@@ -1,14 +1,16 @@
 import { FinalizeImpactAnalysisUseCase } from './finalize-impact-analysis.usecase';
-import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
-import { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { CreateReviewedReportSnapshotUseCase } from '../../../document/application/commands/create-reviewed-report-snapshot.usecase';
-import { EnqueueDocumentJobUseCase } from '../../../document/application/commands/enqueue-document-job.usecase';
+import type { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
+import type { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
+import type { InsightRepository } from '../../../insight/infrastructure/insight.repository';
+import type { PrismaService } from '../../../prisma/prisma.service';
+import type { CreateReviewedReportSnapshotUseCase } from '../../../document/application/commands/create-reviewed-report-snapshot.usecase';
+import type { EnqueueDocumentJobUseCase } from '../../../document/application/commands/enqueue-document-job.usecase';
 
 describe('FinalizeImpactAnalysisUseCase', () => {
   let useCase: FinalizeImpactAnalysisUseCase;
   let impactRepo: jest.Mocked<ImpactAnalysisRepository>;
   let traceabilityRepo: jest.Mocked<TraceabilityRepository>;
+  let insightRepo: jest.Mocked<InsightRepository>;
   let prisma: jest.Mocked<PrismaService>;
   let createSnapshot: jest.Mocked<CreateReviewedReportSnapshotUseCase>;
   let enqueueJob: jest.Mocked<EnqueueDocumentJobUseCase>;
@@ -25,6 +27,9 @@ describe('FinalizeImpactAnalysisUseCase', () => {
     traceabilityRepo = {
       listByAnalysis: jest.fn().mockResolvedValue([]),
     } as unknown as jest.Mocked<TraceabilityRepository>;
+    insightRepo = {
+      listByAnalysis: jest.fn().mockResolvedValue([]),
+    } as unknown as jest.Mocked<InsightRepository>;
 
     txImpactUpdateMany = jest.fn().mockResolvedValue({ count: 1 });
     txSnapshotCreate = jest.fn().mockResolvedValue({
@@ -101,6 +106,7 @@ describe('FinalizeImpactAnalysisUseCase', () => {
     useCase = new FinalizeImpactAnalysisUseCase(
       impactRepo,
       traceabilityRepo,
+      insightRepo,
       prisma,
       createSnapshot,
       enqueueJob,
@@ -147,6 +153,33 @@ describe('FinalizeImpactAnalysisUseCase', () => {
       ],
       ...overrides,
     } as any);
+    insightRepo.listByAnalysis.mockResolvedValue((overrides.insights as any[]) ?? [
+      {
+        id: 'insight-1',
+        insightType: 'CLAIM',
+        title: 'Insight 1',
+        insightKey: 'insight-1',
+        certainty: 'EVIDENCED',
+        reviewStatus: 'CONFIRMED',
+        evidenceLinks: [
+          {
+            evidence: {
+              sourceType: 'CODE',
+              artifactId: 'artifact-1',
+              sourcePath: 'src/booking.service.ts',
+              startLine: 1,
+              endLine: 5,
+              excerpt: 'await refundService.issueRefundForCancelledPaidBooking(booking.id);',
+              artifact: {
+                id: 'artifact-1',
+                filePath: 'src/booking.service.ts',
+                name: 'BookingService',
+              },
+            },
+          },
+        ],
+      },
+    ] as any);
   };
 
   it('UC07-A: Valid finalize creates COMPLETED status, generates snapshot, and enqueues job', async () => {
@@ -213,7 +246,8 @@ describe('FinalizeImpactAnalysisUseCase', () => {
     mockValidState({
       insights: [
         {
-          insightType: 'CLAIM',
+          id: 'qa-1',
+          insightType: 'QA_SCENARIO',
           title: 'Unreviewed Insight',
           certainty: 'INFERRED',
           reviewStatus: 'NEEDS_REVIEW',
@@ -254,7 +288,8 @@ describe('FinalizeImpactAnalysisUseCase', () => {
     mockValidState({
       insights: [
         {
-          insightType: 'CLAIM',
+          id: 'qa-1',
+          insightType: 'QA_SCENARIO',
           title: 'Unreviewed Insight',
           certainty: 'INFERRED',
           reviewStatus: 'NEEDS_REVIEW',
@@ -267,5 +302,33 @@ describe('FinalizeImpactAnalysisUseCase', () => {
     expect(txImpactUpdateMany).toHaveBeenCalled();
     expect(createSnapshot.buildSnapshotCreateData).toHaveBeenCalled();
     expect(enqueueJob.enqueueExistingJob).toHaveBeenCalled();
+  });
+
+  it('blocks critical unresolved evidence quality issues even with unreviewed acknowledgement', async () => {
+    mockValidState({
+      insights: [
+        {
+          id: 'critical-insight-1',
+          insightType: 'CLAIM',
+          title: 'Critical missing evidence claim',
+          insightKey: 'critical-insight-1',
+          certainty: 'EVIDENCED',
+          reviewStatus: 'CONFIRMED',
+          evidenceLinks: [],
+        },
+      ],
+    });
+
+    await expect(useCase.execute({
+      analysisId: 'analysis-1',
+      acknowledgeUnreviewed: true,
+      userId: 'user-1',
+    })).rejects.toMatchObject({
+      code: 'REVIEW_APPROVAL_BLOCKED',
+      details: {
+        blockingReasons: ['CRITICAL_MISSING_EVIDENCE'],
+      },
+    });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 });

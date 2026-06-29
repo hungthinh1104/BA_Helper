@@ -1,0 +1,90 @@
+import { ReportApprovalGatePolicy, type ReportApprovalGateItem } from './report-approval-gate.policy';
+
+describe('ReportApprovalGatePolicy', () => {
+  it('blocks unresolved critical review and evidence quality failures', () => {
+    const result = ReportApprovalGatePolicy.evaluate([
+      insight('i1', 'REVIEW_REQUIRED', 'NEEDS_REVIEW', true),
+      insight('i2', 'CONFLICTING_EVIDENCE', 'NEEDS_REVIEW', true),
+      insight('i3', 'MISSING_EVIDENCE', 'CONFIRMED', true),
+    ]);
+
+    expect(result.canApprove).toBe(false);
+    expect(result.blockingReasons).toEqual([
+      'REVIEW_REQUIRED_ITEMS',
+      'HIGH_RISK_INSIGHT_UNREVIEWED',
+      'CONFLICTING_EVIDENCE_UNREVIEWED',
+      'CRITICAL_MISSING_EVIDENCE',
+    ]);
+    expect(result.blockingItems).toHaveLength(5);
+  });
+
+  it('allows non-critical unreviewed items to remain governed by acknowledgement policy', () => {
+    const result = ReportApprovalGatePolicy.evaluate([
+      insight('qa1', 'MISSING_EVIDENCE', 'NEEDS_REVIEW', false),
+    ]);
+
+    expect(result).toEqual({
+      canApprove: true,
+      blockingReasons: [],
+      blockingItems: [],
+    });
+  });
+
+  it('allows critical missing evidence when the item was rejected by review', () => {
+    const result = ReportApprovalGatePolicy.evaluate([
+      insight('i1', 'MISSING_EVIDENCE', 'REJECTED', true),
+      link('l1', 'MISSING_EVIDENCE', 'REJECTED', true),
+    ]);
+
+    expect(result.canApprove).toBe(true);
+  });
+
+  it('does not block reviewed conflicting evidence', () => {
+    const result = ReportApprovalGatePolicy.evaluate([
+      insight('i1', 'CONFLICTING_EVIDENCE', 'CONFIRMED', true),
+      link('l1', 'CONFLICTING_EVIDENCE', 'NEEDS_MORE_EVIDENCE', true),
+    ]);
+
+    expect(result.canApprove).toBe(true);
+  });
+});
+
+function insight(
+  id: string,
+  quality: ReportApprovalGateItem['quality'],
+  reviewStatus: string,
+  isCritical: boolean,
+): ReportApprovalGateItem {
+  return {
+    itemType: 'INSIGHT',
+    itemId: id,
+    insightId: id,
+    artifact: `Insight ${id}`,
+    quality,
+    reasons: [],
+    reviewStatus,
+    reviewDecision: null,
+    isCritical,
+  };
+}
+
+function link(
+  id: string,
+  quality: ReportApprovalGateItem['quality'],
+  decision: string,
+  isCritical: boolean,
+): ReportApprovalGateItem {
+  return {
+    itemType: 'TRACEABILITY_LINK',
+    itemId: id,
+    linkId: id,
+    artifact: `src/${id}.ts`,
+    quality,
+    reasons: [],
+    reviewStatus: 'NEEDS_REVIEW',
+    reviewDecision: {
+      decision,
+    },
+    isCritical,
+  };
+}

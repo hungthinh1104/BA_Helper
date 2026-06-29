@@ -123,13 +123,17 @@ const golden = true;
 
 ## Evidence Quality & Dataset Readiness
 
-- Evidence-backed links: 1
-- Inferred links: 0
+- Strong source evidence: 0
+- Weak source evidence: 1
+- Inferred from structure: 0
+- Domain hint only: 0
+- Missing evidence: 0
+- Conflicting evidence: 0
 - Review required: 0
 
 | Artifact | Quality | Reason |
 |---|---|---|
-| \`src/golden.ts\` | EVIDENCED | hasSourceSnippet, hasFilePath, hasSymbolName, hasLineRange, hasRetrieverScore |
+| \`src/golden.ts\` | WEAK_SOURCE_EVIDENCE | hasPersistedEvidence, hasSourceEvidence, hasArtifactLink, hasSourcePath, hasLineRange, weakOrGenericExcerpt |
 
 ## Evaluation Context
 

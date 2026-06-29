@@ -2,8 +2,15 @@ name: ci
 
 "on":
   push:
-    branches: ["main"]
+    branches:
+      - "**"
   pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   quality-and-tests:
@@ -80,3 +87,6 @@ jobs:
 
       - name: Golden path demo
         run: pnpm demo:golden-path
+
+      - name: Multi-repo golden path demo
+        run: pnpm demo:multi-repo-golden-path

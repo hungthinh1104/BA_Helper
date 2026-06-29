@@ -1,4 +1,4 @@
-import { INestApplication } from '@nestjs/common';
+import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { createTestApp } from './helpers/test-app';
 import { resetDatabase } from './helpers/reset-db';
@@ -147,6 +147,44 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       ],
     });
 
+    const evidence1Id = crypto.randomUUID();
+    const evidence2Id = crypto.randomUUID();
+    await prisma.evidence.createMany({
+      data: [
+        {
+          id: evidence1Id,
+          provenanceKey: `audit-flow:${analysisId}:src/main.ts`,
+          sourceType: 'CODE',
+          snapshotId,
+          artifactId: artifact1Id,
+          sourcePath: 'src/main.ts',
+          startLine: 1,
+          endLine: 8,
+          excerpt: 'export function main() { return runReviewedImpactFlow(); }',
+          contentHash: 'audit-flow-main-hash',
+        },
+        {
+          id: evidence2Id,
+          provenanceKey: `audit-flow:${analysisId}:src/utils.ts`,
+          sourceType: 'CODE',
+          snapshotId,
+          artifactId: artifact2Id,
+          sourcePath: 'src/utils.ts',
+          startLine: 3,
+          endLine: 12,
+          excerpt: 'export function utils() { return buildTraceabilityEvidence(); }',
+          contentHash: 'audit-flow-utils-hash',
+        },
+      ],
+    });
+
+    await prisma.traceabilityEvidence.createMany({
+      data: [
+        { traceabilityLinkId: link1Id, evidenceId: evidence1Id },
+        { traceabilityLinkId: link2Id, evidenceId: evidence2Id },
+      ],
+    });
+
     return { analysisId, link1Id, link2Id, docId };
   }
 
@@ -160,7 +198,7 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       .send({ decision: 'ACCEPTED', note: 'ok' });
       
     if (putRes.status !== 200) {
-      console.log(putRes.body);
+      console.warn(putRes.body);
     }
     expect(putRes.status).toBe(200);
 

@@ -1,4 +1,4 @@
-import { MarkdownReportRenderContext } from '../../markdown-impact-report.types';
+import type { MarkdownReportRenderContext } from '../../markdown-impact-report.types';
 import { resolveArtifactDisplayType } from './markdown-render-utils';
 import { getReportLabels } from '../report-localization';
 

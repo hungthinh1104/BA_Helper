@@ -1,10 +1,28 @@
 import { Injectable } from '@nestjs/common';
-import { AppError } from '../../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { GetMergedMultiRepoReportDraftUseCase } from './get-merged-multi-repo-report-draft.usecase';
 import { MultiRepoAnalysisRunRepository } from '../../infrastructure/multi-repo-analysis-run.repository';
 import { MultiRepoMergedReportRepository } from '../../infrastructure/multi-repo-merged-report.repository';
 import { GetApprovedMultiRepoReportUseCase } from './get-approved-multi-repo-report.usecase';
 import { RequestUser } from '@ba-helper/contracts';
+import type { DomainPackSelectedBy, DomainProfileCapabilityStatus } from '@ba-helper/contracts';
+import {
+  deriveMergedReportState,
+  MultiRepoChildState,
+  normalizeChildProvenance,
+  StoredChildProvenance,
+} from './multi-repo-merged-report-state';
+
+type DomainPackReportProvenance = {
+  requestedDomainPackId?: string | null;
+  domainPackId: string;
+  domainPackVersion: string;
+  domainPackStatus: DomainProfileCapabilityStatus;
+  selectedBy: DomainPackSelectedBy;
+  resolvedAt?: string | null;
+  manifestDigest?: string | null;
+  registryVersion?: string | null;
+};
 
 @Injectable()
 export class FinalizeMultiRepoReportUseCase {
@@ -24,30 +42,20 @@ export class FinalizeMultiRepoReportUseCase {
       );
     }
 
-    const currentProvenance = run.analyses.map((analysis) => {
-      const latestDecision = analysis.reviewDecisions[0];
-      if (!latestDecision) {
-        throw new AppError(
-          'MULTI_REPO_RUN_NOT_READY',
-          'Multi-repo analysis run is not ready for a merged report.',
-        );
-      }
-
-      return {
-        analysisId: analysis.id,
-        latestReviewDecisionId: latestDecision.id,
-        snapshotId: analysis.snapshot.id,
-        commitSha: analysis.snapshot.commitSha,
-      };
+    const initialChildren = toChildStates(run.analyses);
+    const initialState = deriveMergedReportState({
+      children: initialChildren,
+      approvedReportProvenance: run.approvedMergedReport?.provenance,
     });
-    const normalizeProvenance = (
-      items: Array<{
-        analysisId: string;
-        latestReviewDecisionId: string;
-        snapshotId: string;
-        commitSha: string;
-      }>,
-    ) => [...items].sort((left, right) => left.analysisId.localeCompare(right.analysisId));
+
+    if (!initialState.runReadiness.canStartMergedReport) {
+      throw new AppError(
+        'MULTI_REPO_RUN_NOT_READY',
+        'Multi-repo analysis run is not ready for a merged report.',
+      );
+    }
+
+    const initialProvenance = buildApprovedChildProvenance(initialChildren);
 
     try {
       const existingApproved = await this.getApproved.execute(runId);
@@ -61,26 +69,264 @@ export class FinalizeMultiRepoReportUseCase {
     }
 
     const draft = await this.draft.execute(runId, actor);
-    const report = await this.reports.upsertApproved({
+    const revalidatedRun = await this.runs.findById(runId);
+    if (!revalidatedRun) {
+      throw new AppError(
+        'MULTI_REPO_ANALYSIS_RUN_NOT_FOUND',
+        'Multi-repo analysis run not found.',
+      );
+    }
+    const revalidatedChildren = toChildStates(revalidatedRun.analyses);
+    const revalidatedState = deriveMergedReportState({
+      children: revalidatedChildren,
+      approvedReportProvenance: revalidatedRun.approvedMergedReport?.provenance,
+    });
+    const revalidatedProvenance =
+      buildApprovedChildProvenance(revalidatedChildren);
+
+    if (
+      !revalidatedState.runReadiness.canStartMergedReport ||
+      !sameChildProvenance(initialProvenance, revalidatedProvenance)
+    ) {
+      throw new AppError(
+        'MULTI_REPO_RUN_NOT_READY',
+        'Multi-repo analysis run changed during merged report finalization. Refresh and retry.',
+      );
+    }
+
+    await this.reports.upsertApproved({
       runId,
       content: draft.markdown,
       provenance: {
-        childAnalyses: normalizeProvenance(currentProvenance),
+        domainPack:
+          readExplicitRunDomainPackProvenance(revalidatedRun) ??
+          readRunDomainPackProvenance(revalidatedRun.analyses),
+        childAnalyses: revalidatedProvenance,
       },
     });
 
+    return this.getApproved.execute(runId);
+  }
+}
+
+function toChildStates(
+  analyses: Array<{
+    id: string;
+    status: MultiRepoChildState['status'];
+    reviewDecisions: Array<{
+      id: string;
+      decision: NonNullable<MultiRepoChildState['latestReviewDecision']>;
+    }>;
+    snapshot: {
+      id: string;
+      commitSha: string;
+    };
+    sourceTarget: {
+      resolvedRefType: MultiRepoChildState['sourceTarget']['resolvedRefType'];
+      latestObservedCommitSha: string;
+    };
+    metadata?: unknown;
+  }>,
+): MultiRepoChildState[] {
+  return analyses.map((analysis) => {
+    const latestDecision = analysis.reviewDecisions[0] ?? null;
+
     return {
-      id: report.id,
-      runId: report.runId,
-      projectId: report.run.projectId,
-      requirementRevisionId: report.run.requirementRevisionId,
-      requirementTitle: report.run.requirementRevision.title,
-      markdown: report.content,
-      approvedAt: report.updatedAt.toISOString(),
-      isStale: false,
-      provenance: {
-        childAnalyses: currentProvenance,
+      analysisId: analysis.id,
+      latestReviewDecisionId: latestDecision?.id ?? null,
+      latestReviewDecision: latestDecision?.decision ?? null,
+      snapshotId: analysis.snapshot.id,
+      commitSha: analysis.snapshot.commitSha,
+      status: analysis.status,
+      sourceTarget: {
+        resolvedRefType: analysis.sourceTarget.resolvedRefType,
+        latestObservedCommitSha: analysis.sourceTarget.latestObservedCommitSha,
       },
     };
+  });
+}
+
+function readExplicitRunDomainPackProvenance(run: {
+  requestedDomainPackId?: string | null;
+  resolvedDomainPackId?: string | null;
+  resolvedDomainPackVersion?: string | null;
+  resolvedDomainPackStatus?: string | null;
+  domainPackSelectedBy?: string | null;
+  domainPackResolvedAt?: Date | string | null;
+  domainPackManifestDigest?: string | null;
+  domainPackRegistryVersion?: string | null;
+}): DomainPackReportProvenance | null {
+  if (
+    run.domainPackSelectedBy !== 'EXPLICIT' ||
+    typeof run.resolvedDomainPackId !== 'string' ||
+    typeof run.resolvedDomainPackVersion !== 'string' ||
+    !isDomainPackStatus(run.resolvedDomainPackStatus)
+  ) {
+    return null;
   }
+
+  return {
+    requestedDomainPackId: run.requestedDomainPackId ?? null,
+    domainPackId: run.resolvedDomainPackId,
+    domainPackVersion: run.resolvedDomainPackVersion,
+    domainPackStatus: run.resolvedDomainPackStatus,
+    selectedBy: 'EXPLICIT',
+    resolvedAt: normalizeDateTime(run.domainPackResolvedAt),
+    manifestDigest: run.domainPackManifestDigest ?? null,
+    registryVersion: run.domainPackRegistryVersion ?? null,
+  };
+}
+
+function readRunDomainPackProvenance(
+  analyses: Array<{
+    requestedDomainPackId?: string | null;
+    resolvedDomainPackId?: string | null;
+    resolvedDomainPackVersion?: string | null;
+    resolvedDomainPackStatus?: string | null;
+    domainPackSelectedBy?: string | null;
+    domainPackResolvedAt?: Date | string | null;
+    domainPackManifestDigest?: string | null;
+    domainPackRegistryVersion?: string | null;
+    metadata?: unknown;
+  }>,
+): DomainPackReportProvenance | null {
+  const first = analyses[0] ? readDomainPackProvenance(analyses[0]) : null;
+  if (!first) return null;
+
+  const allSame = analyses.every((analysis) => {
+    const next = readDomainPackProvenance(analysis);
+    return (
+      next?.domainPackId === first.domainPackId &&
+      next?.domainPackVersion === first.domainPackVersion &&
+      next?.domainPackStatus === first.domainPackStatus &&
+      next?.selectedBy === first.selectedBy
+    );
+  });
+
+  return allSame ? first : null;
+}
+
+function readDomainPackProvenance(metadata: unknown): DomainPackReportProvenance | null {
+  if (metadata && typeof metadata === 'object' && !Array.isArray(metadata)) {
+    const record = metadata as {
+      requestedDomainPackId?: unknown;
+      resolvedDomainPackId?: unknown;
+      resolvedDomainPackVersion?: unknown;
+      resolvedDomainPackStatus?: unknown;
+      domainPackSelectedBy?: unknown;
+      domainPackResolvedAt?: unknown;
+      domainPackManifestDigest?: unknown;
+      domainPackRegistryVersion?: unknown;
+      metadata?: unknown;
+    };
+    if (
+      typeof record.resolvedDomainPackId === 'string' &&
+      typeof record.resolvedDomainPackVersion === 'string' &&
+      isDomainPackStatus(record.resolvedDomainPackStatus) &&
+      isDomainPackSelectedBy(record.domainPackSelectedBy)
+    ) {
+      return {
+        requestedDomainPackId: readOptionalString(record.requestedDomainPackId),
+        domainPackId: record.resolvedDomainPackId,
+        domainPackVersion: record.resolvedDomainPackVersion,
+        domainPackStatus: record.resolvedDomainPackStatus,
+        selectedBy: record.domainPackSelectedBy,
+        resolvedAt: normalizeDateTime(record.domainPackResolvedAt),
+        manifestDigest: readOptionalString(record.domainPackManifestDigest),
+        registryVersion: readOptionalString(record.domainPackRegistryVersion),
+      };
+    }
+
+    if (record.metadata) {
+      return readDomainPackProvenance(record.metadata);
+    }
+  }
+
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return null;
+  }
+
+  const provenance = (metadata as Record<string, unknown>).reportProvenance;
+  if (!provenance || typeof provenance !== 'object' || Array.isArray(provenance)) {
+    return null;
+  }
+
+  const data = provenance as Record<string, unknown>;
+  if (
+    typeof data.domainPackId !== 'string' ||
+    typeof data.domainPackVersion !== 'string' ||
+    !isDomainPackStatus(data.domainPackStatus) ||
+    !isDomainPackSelectedBy(data.selectedBy)
+  ) {
+    return null;
+  }
+
+  return {
+    requestedDomainPackId: readOptionalString(data.requestedDomainPackId),
+    domainPackId: data.domainPackId,
+    domainPackVersion: data.domainPackVersion,
+    domainPackStatus: data.domainPackStatus,
+    selectedBy: data.selectedBy,
+    resolvedAt: readOptionalString(data.resolvedAt),
+    manifestDigest: readOptionalString(data.manifestDigest),
+    registryVersion: readOptionalString(data.registryVersion),
+  };
+}
+
+function normalizeDateTime(value: unknown): string | null {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  return typeof value === 'string' && value.trim().length > 0 ? value : null;
+}
+
+function readOptionalString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
+function isDomainPackStatus(value: unknown): value is DomainProfileCapabilityStatus {
+  return (
+    value === 'STABLE' ||
+    value === 'PARTIAL' ||
+    value === 'EXPERIMENTAL' ||
+    value === 'FALLBACK'
+  );
+}
+
+function isDomainPackSelectedBy(value: unknown): value is DomainPackSelectedBy {
+  return (
+    value === 'EXPLICIT' ||
+    value === 'REPOSITORY_PROFILE' ||
+    value === 'FALLBACK'
+  );
+}
+
+function buildApprovedChildProvenance(
+  children: MultiRepoChildState[],
+): StoredChildProvenance[] {
+  return normalizeChildProvenance(
+    children.map((child) => {
+      if (!child.latestReviewDecisionId) {
+        throw new AppError(
+          'MULTI_REPO_RUN_NOT_READY',
+          'Multi-repo analysis run is not ready for a merged report.',
+        );
+      }
+
+      return {
+        analysisId: child.analysisId,
+        latestReviewDecisionId: child.latestReviewDecisionId,
+        snapshotId: child.snapshotId,
+        commitSha: child.commitSha,
+      };
+    }),
+  );
+}
+
+function sameChildProvenance(
+  left: StoredChildProvenance[],
+  right: StoredChildProvenance[],
+): boolean {
+  return JSON.stringify(normalizeChildProvenance(left)) ===
+    JSON.stringify(normalizeChildProvenance(right));
 }

@@ -26,6 +26,7 @@ import {
   lineageTimelineResponseSchema,
   driftFreshnessRecommendationSchema,
   RequestUser,
+  type ProjectRole,
 } from '@ba-helper/contracts';
 import { CurrentUser } from '../../auth/api/current-user.decorator';
 import { CreateImpactAnalysisUseCase } from '../application/lifecycle/create-impact-analysis.usecase';
@@ -64,6 +65,7 @@ import {
 } from '../infrastructure/impact-analysis.mapper';
 
 import { ProjectPermissionService } from '../../project/application/project-permission.service';
+import { projectRoleHasPermission } from '../../project/application/project-permission.policy';
 
 import { EventLogService } from '../../event-log/application/event-log.service';
 
@@ -104,6 +106,7 @@ export class MultiRepoAnalysisController {
       repositoryIds: input.repositoryIds,
       requestKey: input.requestKey,
       allowPartialSnapshot: input.allowPartialSnapshot,
+      domainPackId: input.domainPackId,
     });
 
     return multiRepoImpactAnalysisCreateResponseSchema.parse(result);
@@ -116,8 +119,10 @@ export class MultiRepoAnalysisController {
   ) {
     await this.permissions.assertCanReadMultiRepoRun(actor, runId);
     const run = await this.getMultiRepoRun.execute(runId);
+    const response = mapMultiRepoAnalysisRunDetail(run);
+    const role = await this.permissions.getMembershipRole(actor, response.projectId);
     return multiRepoAnalysisRunDetailResponseSchema.parse(
-      mapMultiRepoAnalysisRunDetail(run),
+      applyActorMergedReportCapabilities(response, role),
     );
   }
 
@@ -152,7 +157,10 @@ export class MultiRepoAnalysisController {
       'analysis:finalize',
     );
     const result = await this.finalizeMultiRepoReport.execute(runId, actor);
-    return multiRepoApprovedReportResponseSchema.parse(result);
+    const role = await this.permissions.getMembershipRole(actor, result.projectId);
+    return multiRepoApprovedReportResponseSchema.parse(
+      applyActorMergedReportCapabilities(result, role),
+    );
   }
 
   @Get('/multi-repo-runs/:runId/merged-report')
@@ -162,7 +170,10 @@ export class MultiRepoAnalysisController {
   ) {
     await this.permissions.assertCanReadMultiRepoRun(actor, runId);
     const result = await this.getApprovedMultiRepoReport.execute(runId);
-    return multiRepoApprovedReportResponseSchema.parse(result);
+    const role = await this.permissions.getMembershipRole(actor, result.projectId);
+    return multiRepoApprovedReportResponseSchema.parse(
+      applyActorMergedReportCapabilities(result, role),
+    );
   }
 
   @Post('/multi-repo-runs/:runId/merged-report/review-decisions')
@@ -274,4 +285,37 @@ export class MultiRepoAnalysisController {
       items: runs.map((run) => mapMultiRepoAnalysisRunListItem(run)),
     });
   }
+}
+
+function applyActorMergedReportCapabilities<
+  T extends {
+    projectId: string;
+    capabilities: {
+      canFinalizeMergedReport: boolean;
+      canRefreshMergedReport: boolean;
+      canExportMergedReport: boolean;
+      canReviewMergedReport: boolean;
+      canOpenApprovedReport: boolean;
+      blockedReasons: string[];
+    };
+  },
+>(dto: T, role: ProjectRole | null): T {
+  const canFinalize = role
+    ? projectRoleHasPermission(role, 'analysis:finalize')
+    : false;
+  const canExport = role ? projectRoleHasPermission(role, 'report:export') : false;
+  const canReview = role ? projectRoleHasPermission(role, 'review:write') : false;
+
+  return {
+    ...dto,
+    capabilities: {
+      ...dto.capabilities,
+      canFinalizeMergedReport:
+        dto.capabilities.canFinalizeMergedReport && canFinalize,
+      canRefreshMergedReport:
+        dto.capabilities.canRefreshMergedReport && canFinalize,
+      canExportMergedReport: dto.capabilities.canExportMergedReport && canExport,
+      canReviewMergedReport: dto.capabilities.canReviewMergedReport && canReview,
+    },
+  };
 }

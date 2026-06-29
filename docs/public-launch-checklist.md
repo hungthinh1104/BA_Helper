@@ -1,6 +1,8 @@
-# Public Launch Checklist
+# Public Repository Launch Checklist
 
-Before launching the repository publicly on GitHub or Product Hunt, ensure the following items are completed.
+Before launching the repository publicly on GitHub or Product Hunt, ensure the
+following items are completed. This checklist is for public repository
+presentation, not a production SaaS launch.
 
 ## 1. Repository Settings
 - [ ] **Repository Name**: Clean, descriptive, and accurately reflects the project (e.g., `requirement-impact-analyzer`).
@@ -24,7 +26,8 @@ Before launching the repository publicly on GitHub or Product Hunt, ensure the f
 - [ ] **README.md**: Verify that all 13 required sections are present and accurately describe the MVP.
 - [ ] **Public Demo Checklist**: Review `docs/demo/public-demo-checklist.md` before recording or presenting the project.
 - [ ] **Claims Audit**: Confirm experimental scanner adapters are not described as production-grade multi-language support.
-- [ ] **Screenshots/GIFs**: Replace all `TODO` placeholders in the README with actual high-quality screenshots or compressed GIFs of the working application.
+- [ ] **Screenshots/GIFs**: Add high-quality screenshots or compressed GIFs of
+  the working application when available; do not publish broken placeholders.
   - Requirement Input UI
   - Impact Matrix
   - Evidence Drilldown
@@ -35,6 +38,9 @@ Before launching the repository publicly on GitHub or Product Hunt, ensure the f
 - [ ] **Secrets Check**: Run a secret scanner (e.g., TruffleHog or GitGuardian) to ensure no `.env` files, internal keys, or proprietary private repo URLs are hardcoded in the history.
 - [ ] **Test Coverage**: Ensure all existing tests pass (`pnpm test`, `pnpm test:e2e`).
 - [ ] **Build Check**: Ensure `pnpm --filter web build` and `pnpm --filter api build` complete successfully without missing dependencies.
+- [ ] **Preview Boundary**: Confirm any hosted demo is private/controlled
+      unless real hosted auth is enabled; never expose dev-login on a public API
+      host.
 
 ## 4. Community & Contributing
 - [ ] **Issue Templates**: Create basic GitHub Issue templates for Bug Reports and Feature Requests.

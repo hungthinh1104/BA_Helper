@@ -1,8 +1,8 @@
 import type { RequestUser } from '@ba-helper/contracts';
-import { EventLogService } from '../../event-log/application/event-log.service';
+import type { EventLogService } from '../../event-log/application/event-log.service';
 import { mapGlobalRoleToProjectRole } from '../domain/project-membership.policy';
-import { ProjectRepository } from '../infrastructure/project.repository';
-import {
+import type { ProjectRepository } from '../infrastructure/project.repository';
+import type {
   CurrentWorkspaceResolver,
   ResolvedWorkspace,
 } from './current-workspace.resolver';

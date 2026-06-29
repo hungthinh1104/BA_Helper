@@ -70,7 +70,7 @@ describe('Rental domain PARTIAL evaluation cases', () => {
     const selection = registry.selectPack({ manualPackId: 'rental@0.1.0' });
 
     expect(selection.normalizedPackId).toBe('rental');
-    expect(selection.selectedBy).toBe('manual_config');
+    expect(selection.selectedBy).toBe('EXPLICIT');
     expect(selection.pack.version).toBe('0.1.0');
     expect(selection.pack.status).toBe('PARTIAL');
     expect(selection.pack.glossaryMetadata).toEqual([
@@ -80,7 +80,7 @@ describe('Rental domain PARTIAL evaluation cases', () => {
   });
 
   it('emits bounded PARTIAL status metadata for diagnostics', () => {
-    const selection = registry.selectPack({ repositoryProfileDomain: 'RENTAL' });
+    const selection = registry.selectPack({ manualPackId: 'rental' });
     const payload = {
       domainPackId: selection.pack.id,
       domainPackVersion: selection.pack.version,
@@ -97,7 +97,7 @@ describe('Rental domain PARTIAL evaluation cases', () => {
       domainPackId: 'rental',
       domainPackVersion: '0.1.0',
       domainPackStatus: 'PARTIAL',
-      selectedBy: 'repository_profile',
+      selectedBy: 'EXPLICIT',
     });
     expect(JSON.stringify(payload)).not.toContain('PARTIAL rental hint:');
     expect(JSON.stringify(payload)).not.toContain('sourceCode');

@@ -1,11 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { RunImpactAnalysisUseCase } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/run-impact-analysis.usecase';
+import {
+  RunImpactAnalysisUseCase,
+  ImpactEvidenceCollectionStep,
+  ImpactDiagnosticPropagationStep,
+  ImpactAiReasoningStep,
+} from '@ba-helper/application';
 import { FakeLlmProvider } from '../../apps/api/src/modules/ai/infrastructure/fake-ai.provider';
 import { DomainPackRegistry } from '../../apps/api/src/modules/domain-pack/application/domain-pack.registry';
-import { ImpactEvidenceCollectionStep } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/steps/impact-evidence-collection.step';
-import { ImpactDiagnosticPropagationStep } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/steps/impact-diagnostic-propagation.step';
-import { ImpactAiReasoningStep } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/steps/impact-ai-reasoning.step';
 
 class StubImpactRepo {
   findById = async () => ({
@@ -13,14 +15,17 @@ class StubImpactRepo {
     status: 'QUEUED',
     stage: 'WAITING',
     progress: 0,
-    snapshot: {
-      id: 'snap-1',
-      analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
-      coverageStatus: 'READY',
-    },
-    requirementRevision: {
-      rawText: 'Allow users to cancel paid bookings and receive refund.',
-    },
+	    snapshot: {
+	      id: 'snap-1',
+	      repositoryId: 'repo-1',
+	      analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
+	      coverageStatus: 'READY',
+	      repository: { projectId: 'project-1' },
+	    },
+	    requirementRevision: {
+	      rawText: 'Allow users to cancel paid bookings and receive refund.',
+	      requirement: { projectId: 'project-1' },
+	    },
   });
 
   updateStatus = async (params: { id: string; status: string; stage: string; progress: number }) => ({

@@ -1,5 +1,5 @@
-import { Prisma } from '@prisma/client';
-import { ReviewClarificationRequest } from '@ba-helper/contracts';
+import type { Prisma } from '@prisma/client';
+import type { ReviewClarificationRequest } from '@ba-helper/contracts';
 
 type ReviewClarificationEntity = Prisma.ReviewClarificationRequestGetPayload<{
   include: {

@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import type { EvidenceSourceType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+
+type EvidencePrismaClient = PrismaService | Prisma.TransactionClient;
 
 @Injectable()
 export class EvidenceRepository {
@@ -31,15 +34,16 @@ export class EvidenceRepository {
       isRedacted: boolean;
       redactionMetadata: Record<string, unknown> | null;
     }>,
+    client: EvidencePrismaClient = this.prisma,
   ) {
     if (items.length === 0) {
       return [];
     }
 
-    await this.prisma.evidence.createMany({
+    await client.evidence.createMany({
       data: items.map((item) => ({
         provenanceKey: item.provenanceKey,
-        sourceType: item.sourceType as import('@prisma/client').EvidenceSourceType,
+        sourceType: item.sourceType as EvidenceSourceType,
         snapshotId: item.snapshotId ?? null,
         artifactId: item.artifactId ?? null,
         requirementRevisionId: item.requirementRevisionId ?? null,
@@ -49,12 +53,12 @@ export class EvidenceRepository {
         excerpt: item.excerpt,
         contentHash: item.contentHash,
         isRedacted: item.isRedacted,
-        redactionMetadata: (item.redactionMetadata ?? null) as import('@prisma/client').Prisma.InputJsonValue,
+        redactionMetadata: (item.redactionMetadata ?? null) as Prisma.InputJsonValue,
       })),
       skipDuplicates: true,
     });
 
-    return this.prisma.evidence.findMany({
+    return client.evidence.findMany({
       where: {
         provenanceKey: { in: items.map((item) => item.provenanceKey) },
       },

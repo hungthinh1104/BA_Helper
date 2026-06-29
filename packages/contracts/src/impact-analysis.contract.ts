@@ -2,12 +2,14 @@ import { z } from 'zod';
 import { snapshotIndexStatusSchema } from './repository.contract';
 import { diagnosticItemSchema, DiagnosticItem } from './diagnostic.contract';
 import { universalArtifactKindSchema } from './artifact.contract';
+import { domainPackSelectedBySchema, domainProfileCapabilityStatusSchema } from './domain-pack.contract';
 
 export const impactAnalysisCreateRequestSchema = z.object({
 	snapshotId: z.string().uuid(),
 	sourceTargetId: z.string().uuid(),
 	allowPartialSnapshot: z.boolean().default(false),
 	requestKey: z.string().uuid(),
+	domainPackId: z.string().min(1).optional(),
 	derivedFromAnalysisId: z.string().uuid().optional(),
 	sourceClarificationId: z.string().uuid().optional(),
 });
@@ -17,6 +19,7 @@ export const multiRepoImpactAnalysisCreateRequestSchema = z.object({
 	repositoryIds: z.array(z.string().uuid()).min(2).max(20),
 	allowPartialSnapshot: z.boolean().default(false),
 	requestKey: z.string().uuid(),
+	domainPackId: z.string().min(1).optional(),
 }).superRefine((data, ctx) => {
 	const unique = new Set(data.repositoryIds);
 	if (unique.size !== data.repositoryIds.length) {
@@ -135,6 +138,33 @@ export const multiRepoImpactAnalysisCreateResponseSchema = z.object({
 	})),
 });
 
+export const multiRepoMergedReportStatusSchema = z.enum([
+	'NOT_CREATED',
+	'CURRENT',
+	'STALE',
+	'BLOCKED',
+]);
+
+export const multiRepoMergedReportBlockedReasonSchema = z.enum([
+	'CHILD_ANALYSIS_FAILED',
+	'CHILD_ANALYSIS_NOT_COMPLETED',
+	'CHILD_ANALYSIS_WAITING_FOR_REVIEW',
+	'CHILD_ANALYSIS_STALE',
+	'CHILD_REVIEW_NEEDS_CLARIFICATION',
+	'CHILD_REVIEW_REJECTED',
+	'CHILD_REVIEW_PENDING',
+	'MERGED_REPORT_CURRENT',
+]);
+
+export const multiRepoMergedReportCapabilitiesSchema = z.object({
+	canFinalizeMergedReport: z.boolean(),
+	canRefreshMergedReport: z.boolean(),
+	canExportMergedReport: z.boolean(),
+	canReviewMergedReport: z.boolean(),
+	canOpenApprovedReport: z.boolean(),
+	blockedReasons: z.array(multiRepoMergedReportBlockedReasonSchema),
+});
+
 export const multiRepoAnalysisRunDetailResponseSchema = z.object({
 	runId: z.string().uuid(),
 	projectId: z.string().uuid(),
@@ -142,6 +172,8 @@ export const multiRepoAnalysisRunDetailResponseSchema = z.object({
 	requirementTitle: z.string(),
 	createdBy: z.string(),
 	createdAt: z.string(),
+	mergedReportStatus: multiRepoMergedReportStatusSchema,
+	capabilities: multiRepoMergedReportCapabilitiesSchema,
 	runReadiness: z.object({
 		totalAnalyses: z.number().int().nonnegative(),
 		completedAnalyses: z.number().int().nonnegative(),
@@ -174,6 +206,7 @@ export const multiRepoAnalysisRunDetailResponseSchema = z.object({
 			'WAITING_FOR_REVIEW',
 			'NEEDS_MORE_CLARIFICATION',
 			'REJECTED',
+			'STALE',
 			'NONE',
 		]),
 	})),
@@ -230,6 +263,7 @@ export const multiRepoImpactMatrixRowSchema = z.object({
 		'WAITING_FOR_REVIEW',
 		'NEEDS_MORE_CLARIFICATION',
 		'REJECTED',
+		'STALE',
 		'NONE',
 	]).nullable(),
 });
@@ -274,9 +308,21 @@ export const multiRepoApprovedReportResponseSchema = z.object({
 	requirementTitle: z.string(),
 	markdown: z.string(),
 	approvedAt: z.string(),
+	mergedReportStatus: multiRepoMergedReportStatusSchema,
+	capabilities: multiRepoMergedReportCapabilitiesSchema,
 	isStale: z.boolean(),
 	staleReason: z.string().optional(),
 	provenance: z.object({
+		domainPack: z.object({
+			requestedDomainPackId: z.string().nullable().optional(),
+			domainPackId: z.string(),
+			domainPackVersion: z.string(),
+			domainPackStatus: domainProfileCapabilityStatusSchema,
+			selectedBy: domainPackSelectedBySchema,
+			resolvedAt: z.string().nullable().optional(),
+			manifestDigest: z.string().nullable().optional(),
+			registryVersion: z.string().nullable().optional(),
+		}).nullable().optional(),
 		childAnalyses: z.array(z.object({
 			analysisId: z.string().uuid(),
 			latestReviewDecisionId: z.string().uuid(),

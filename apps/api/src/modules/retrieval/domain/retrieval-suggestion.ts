@@ -1,4 +1,4 @@
-import { RetrievedArtifact } from './retrieval.types';
+import type { RetrievedArtifact } from './retrieval.types';
 
 export interface RetrievalSuggestion {
   version: string;

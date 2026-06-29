@@ -1,5 +1,5 @@
 import { GetRepositorySnapshotDriftUseCase } from './get-repository-snapshot-drift.usecase';
-import { PrismaService } from '../../prisma/prisma.service';
+import type { PrismaService } from '../../prisma/prisma.service';
 
 describe('GetRepositorySnapshotDriftUseCase', () => {
   let prisma: jest.Mocked<PrismaService>;

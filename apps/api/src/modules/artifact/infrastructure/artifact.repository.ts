@@ -1,12 +1,15 @@
 import { Injectable } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+
+type ArtifactPrismaClient = PrismaService | Prisma.TransactionClient;
 
 @Injectable()
 export class ArtifactRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listBySnapshot(snapshotId: string) {
-    return this.prisma.codeArtifact.findMany({
+  async listBySnapshot(snapshotId: string, client: ArtifactPrismaClient = this.prisma) {
+    return client.codeArtifact.findMany({
       where: { snapshotId },
     });
   }
@@ -27,8 +30,8 @@ export class ArtifactRepository {
     startLine?: number;
     endLine?: number;
     contentHash?: string | null;
-  }>) {
-    return this.prisma.codeArtifact.createMany({
+  }>, client: ArtifactPrismaClient = this.prisma) {
+    return client.codeArtifact.createMany({
       data,
       skipDuplicates: true,
     });

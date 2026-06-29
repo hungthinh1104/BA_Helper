@@ -6,10 +6,10 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "dotenv -e ../../.env -- pnpm exec ts-node -r tsconfig-paths/register --project tsconfig.json src/main.ts",
-    "lint": "echo \"lint api\"",
+    "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
     "smoke:public-github": "dotenv -e ../../.env -- tsx src/smoke-e2e.ts",
-    "smoke:public-github:real-llm": "REAL_LLM_SMOKE=true dotenv -e ../../.env -- tsx src/smoke-e2e.ts",
-    "smoke:public-github:real-path": "REAL_PATH_SMOKE=true dotenv -e ../../.env -- tsx src/smoke-e2e.ts",
+    "smoke:public-github:real-llm": "dotenv -e ../../.env -v REAL_LLM_SMOKE=true -- tsx src/smoke-e2e.ts",
+    "smoke:public-github:real-path": "dotenv -e ../../.env -v REAL_PATH_SMOKE=true -- tsx src/smoke-e2e.ts",
     "test": "jest",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "dotenv -e ../../.env -- prisma generate",
@@ -19,6 +19,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.99.0",
     "@ba-helper/analyzer": "workspace:*",
+    "@ba-helper/application": "workspace:*",
     "@ba-helper/contracts": "workspace:*",
     "@google/generative-ai": "^0.24.1",
     "@nestjs/bullmq": "11.0.4",

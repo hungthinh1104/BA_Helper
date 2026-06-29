@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { AppError, AppErrorCode } from '../../../../shared/app-error';
+import { AppError, AppErrorCode } from '@ba-helper/shared';
 import { ImpactAnalysisDiffResponse, DiffArtifact, DiffInsight, DiagnosticItem } from '@ba-helper/contracts';
 import { InsightType } from '@prisma/client';
 

@@ -1,11 +1,13 @@
-import { RunImpactAnalysisUseCase } from '../lifecycle/run-impact-analysis.usecase';
-import { ImpactEvidenceCollectionStep } from '../lifecycle/steps/impact-evidence-collection.step';
-import { ImpactDiagnosticPropagationStep } from '../lifecycle/steps/impact-diagnostic-propagation.step';
-import { ImpactAiReasoningStep } from '../lifecycle/steps/impact-ai-reasoning.step';
-import { InsightRepository } from '../../../insight/infrastructure/insight.repository';
+import {
+  RunImpactAnalysisUseCase,
+  ImpactEvidenceCollectionStep,
+  ImpactDiagnosticPropagationStep,
+  ImpactAiReasoningStep,
+} from '@ba-helper/application';
+import type { InsightRepository } from '../../../insight/infrastructure/insight.repository';
 import { FakeLlmProvider } from '../../../ai/infrastructure/fake-ai.provider';
 import { PrismaClient } from '@prisma/client';
-import { DiagnosticItem } from '@ba-helper/analyzer';
+import type { DiagnosticItem } from '@ba-helper/analyzer';
 
 describe('Diagnostic Risk Propagation', () => {
   let useCase: RunImpactAnalysisUseCase;
@@ -68,9 +70,12 @@ describe('Diagnostic Risk Propagation', () => {
           requestedRef: 'main'
         },
         snapshot: {
+          id: 'snap-123',
+          repositoryId: 'repo-123',
           commitSha: 'abc',
           repository: {
-            canonicalUrl: 'url'
+            canonicalUrl: 'url',
+            projectId: 'project-123',
           }
         }
       }),
@@ -105,7 +110,7 @@ describe('Diagnostic Risk Propagation', () => {
           qaTemplates: [],
           unknownTemplates: [],
         },
-        selectedBy: 'safe_default',
+        selectedBy: 'FALLBACK',
         normalizedPackId: 'test-pack',
       }),
     };
@@ -148,10 +153,12 @@ describe('Diagnostic Risk Propagation', () => {
       },
       snapshot: {
         id: 'snap-123',
+        repositoryId: 'repo-123',
         commitSha: 'abc',
         diagnostics: diagnostics,
         repository: {
-          canonicalUrl: 'url'
+          canonicalUrl: 'url',
+          projectId: 'project-123',
         }
       }
     });

@@ -1,6 +1,6 @@
 import { MarkdownImpactReportBuilder } from './markdown-impact-report.builder';
-import { MermaidImpactDiagramBuilder } from '../mermaid-impact-diagram.builder';
-import { EvaluationContextAdapter } from '../evaluation-context.adapter';
+import type { MermaidImpactDiagramBuilder } from '../mermaid-impact-diagram.builder';
+import type { EvaluationContextAdapter } from '../evaluation-context.adapter';
 
 describe('MarkdownImpactReportBuilder', () => {
   let builder: MarkdownImpactReportBuilder;
@@ -183,6 +183,14 @@ describe('MarkdownImpactReportBuilder', () => {
   it('renders Vietnamese report chrome while preserving raw evidence and source text', () => {
     const viAnalysis = {
       ...mockAnalysis,
+      metadata: {
+        domainPack: {
+          id: 'booking',
+          version: '0.1.0',
+          status: 'STABLE',
+          selectedBy: 'REPOSITORY_PROFILE',
+        },
+      },
       snapshot: {
         ...mockAnalysis.snapshot,
         profile: { domain: 'BOOKING' },
@@ -226,6 +234,37 @@ describe('MarkdownImpactReportBuilder', () => {
     expect(report).toContain('**File:** `src/booking/booking.service.ts`');
     expect(report).toContain(rawEvidence);
     expect(report).toContain('> Allow users to cancel paid bookings and receive refund.');
+  });
+
+  it('renders terminology from the selected domain pack glossary', () => {
+    const viAnalysis = {
+      ...mockAnalysis,
+      metadata: {
+        domainPack: {
+          id: 'rental',
+          version: '0.1.0',
+          status: 'PARTIAL',
+          selectedBy: 'EXPLICIT',
+        },
+      },
+      snapshot: {
+        ...mockAnalysis.snapshot,
+        profile: { domain: 'UNKNOWN' },
+      },
+    };
+
+    const report = builder.build({
+      locale: 'vi',
+      analysis: viAnalysis,
+      insights: [],
+      traceabilityLinks: [],
+      hasUnreviewedItems: false,
+    });
+
+    expect(report).toContain('## Thuật ngữ domain');
+    expect(report).toContain('- rentalContract: hợp đồng thuê phòng');
+    expect(report).toContain('- deposit: tiền cọc');
+    expect(report).not.toContain('- refund: hoàn tiền');
   });
 
   it('adds unreviewed acknowledged note if hasUnreviewedItems is true', () => {
@@ -420,6 +459,57 @@ describe('MarkdownImpactReportBuilder', () => {
   });
 
   describe('Evidence Quality & Dataset Readiness', () => {
+    it('renders Review Coverage summary when snapshot coverage is present', () => {
+      const report = builder.build({
+        analysis: mockAnalysis,
+        insights: [],
+        traceabilityLinks: [],
+        hasUnreviewedItems: false,
+        reviewCoverageSummarySnapshot: {
+          insights: {
+            total: 24,
+            reviewed: 18,
+            unreviewed: 6,
+            confirmed: 16,
+            rejected: 2,
+            needsReview: 6,
+          },
+          traceabilityLinks: {
+            total: 14,
+            reviewed: 10,
+            unreviewed: 4,
+            accepted: 9,
+            rejected: 1,
+            needsReview: 0,
+            needsMoreEvidence: 0,
+          },
+          decisions: {
+            accepted: 25,
+            rejected: 3,
+            needsReview: 6,
+            needsMoreEvidence: 0,
+            needsClarification: 10,
+            unreviewed: 10,
+          },
+          evidence: {
+            strong: 9,
+            weak: 2,
+            missing: 3,
+            conflicting: 1,
+            reviewRequired: 4,
+          },
+        },
+      });
+
+      expect(report).toContain('## Review Coverage');
+      expect(report).toContain('- Insights reviewed: 18 / 24');
+      expect(report).toContain('- Traceability links reviewed: 10 / 14');
+      expect(report).toContain('- Strong source evidence: 9');
+      expect(report).toContain('- Weak/missing evidence: 5');
+      expect(report).toContain('- Conflicting evidence: 1');
+      expect(report).toContain('- Review required: 4');
+    });
+
     it('renders Evidence Quality section with table and summary when traceability links exist', () => {
       const links = [
         {
@@ -436,7 +526,10 @@ describe('MarkdownImpactReportBuilder', () => {
           evidenceLinks: [
             {
               evidence: {
-                excerpt: 'module',
+                sourceType: 'CODE',
+                artifactId: 'art-1',
+                sourcePath: 'src/app.ts',
+                excerpt: 'export class AppModule configures booking cancellation providers',
                 startLine: 1,
                 endLine: 2,
               }
@@ -466,15 +559,14 @@ describe('MarkdownImpactReportBuilder', () => {
       });
 
       expect(report).toContain('## Evidence Quality & Dataset Readiness');
-      expect(report).toContain('- Evidence-backed links: 1');
-      expect(report).toContain('- Inferred links: 0'); // Because link-2 is REVIEW_REQUIRED (precedence override)
+      expect(report).toContain('- Strong source evidence: 1');
+      expect(report).toContain('- Weak source evidence: 0');
+      expect(report).toContain('- Inferred from structure: 0'); // Because link-2 is REVIEW_REQUIRED (precedence override)
       expect(report).toContain('- Review required: 1');
       
       expect(report).toContain('| Artifact | Quality | Reason |');
-      // link-1 is EVIDENCED
-      expect(report).toMatch(/\| `src\/app\.ts` \| EVIDENCED \| .*hasSourceSnippet.*hasFilePath.*hasSymbolName.*hasLineRange.*hasRetrieverScore.* \|/);
-      // link-2 is REVIEW_REQUIRED because of staleOrUnverified
-      expect(report).toMatch(/\| `src\/main\.ts` \| REVIEW_REQUIRED \| .*missingSourceQuote.*inferredOnly.*staleOrUnverified.* \|/);
+      expect(report).toMatch(/\| `src\/app\.ts` \| STRONG_SOURCE_EVIDENCE \| .*hasPersistedEvidence.*hasSourceEvidence.*hasArtifactLink.*hasLineRange.*hasSpecificExcerpt.* \|/);
+      expect(report).toMatch(/\| `src\/main\.ts` \| REVIEW_REQUIRED \| .*reviewRequired.* \|/);
     });
 
     it('omits Evidence Quality section when no traceability links exist', () => {

@@ -1,5 +1,5 @@
 import { ListRepositorySnapshotsUseCase } from './list-repository-snapshots.usecase';
-import { PrismaService } from '../../prisma/prisma.service';
+import type { PrismaService } from '../../prisma/prisma.service';
 
 describe('ListRepositorySnapshotsUseCase', () => {
   let prisma: jest.Mocked<PrismaService>;

@@ -1,4 +1,4 @@
-import { INestApplication } from '@nestjs/common';
+import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { JwtService } from '@nestjs/jwt';
 import { createTestApp } from './helpers/test-app';
@@ -129,6 +129,7 @@ describe('Analysis Flow (E2E)', () => {
       sourceTargetId: target.id,
       allowPartialSnapshot: false,
       requestKey: analysisRequestKey,
+      domainPackId: 'booking',
     };
 
     const createAnalysisRes = await request(app.getHttpServer())
@@ -226,5 +227,15 @@ describe('Analysis Flow (E2E)', () => {
     expect(pdfExportRes.headers['content-disposition']).toContain('.pdf');
     expect(pdfExportRes.headers['content-type']).toContain('application/pdf');
     expect(reportDto.provenance.generatedDocumentId).toEqual(expect.any(String));
+    expect(reportDto.provenance.domainPack).toEqual({
+      requestedDomainPackId: 'booking',
+      domainPackId: 'booking',
+      domainPackVersion: '0.1.0',
+      domainPackStatus: 'STABLE',
+      selectedBy: 'EXPLICIT',
+      resolvedAt: expect.any(String),
+      manifestDigest: null,
+      registryVersion: null,
+    });
   });
 });

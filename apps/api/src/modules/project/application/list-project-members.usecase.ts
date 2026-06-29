@@ -1,4 +1,4 @@
-import { ProjectRepository } from '../infrastructure/project.repository';
+import type { ProjectRepository } from '../infrastructure/project.repository';
 
 export class ListProjectMembersUseCase {
   constructor(private readonly repository: ProjectRepository) {}

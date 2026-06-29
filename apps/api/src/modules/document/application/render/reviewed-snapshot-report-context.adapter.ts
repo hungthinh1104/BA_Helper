@@ -9,6 +9,8 @@ import { ClarificationRepository } from '../../../clarification/infrastructure/c
 import { ReviewDecisionRepository } from '../../../impact-analysis/infrastructure/review-decision.repository';
 import { GetImpactDiffUseCase } from '../../../impact-analysis/application/queries/get-impact-diff.usecase';
 import { DEFAULT_REPORT_LOCALE, ReportLocale } from './report-localization';
+import type { ApprovedReportMetadata } from '../../domain/approved-report-metadata';
+import { buildReportReviewCoverageSummaryFromSnapshot } from '../report-review-coverage.summary';
 
 @Injectable()
 export class ReviewedSnapshotReportContextAdapter {
@@ -48,6 +50,10 @@ export class ReviewedSnapshotReportContextAdapter {
     // Retrieve snapshot payload
     const reviewDecisionsSnapshot = snapshot.reviewDecisionsSnapshot as any[];
     const evidenceQualitySummarySnapshot = snapshot.evidenceQualitySummarySnapshot as any;
+    const reviewCoverageSummarySnapshot = buildReportReviewCoverageSummaryFromSnapshot({
+      reviewDecisionsSnapshot,
+      evidenceQualitySummarySnapshot,
+    });
 
     // Overwrite traceability links with snapshot state
     if (reviewDecisionsSnapshot && Array.isArray(reviewDecisionsSnapshot)) {
@@ -92,6 +98,7 @@ export class ReviewedSnapshotReportContextAdapter {
       reviewDecisions,
       reviewDecisionsSnapshot,
       evidenceQualitySummarySnapshot,
+      reviewCoverageSummarySnapshot,
       diff,
       metadata: {
         analysisId: analysis.id,
@@ -106,7 +113,101 @@ export class ReviewedSnapshotReportContextAdapter {
         generatedAt: new Date().toISOString(),
         finalizedAt: analysis.updatedAt.toISOString(),
         staleStatusAtReadTime: false, // Snapshot is never stale at read time
+        domainPack: readDomainPackProvenance(analysis),
       },
     };
   }
+}
+
+function readDomainPackProvenance(analysis: {
+  requestedDomainPackId?: string | null;
+  resolvedDomainPackId?: string | null;
+  resolvedDomainPackVersion?: string | null;
+  resolvedDomainPackStatus?: string | null;
+  domainPackSelectedBy?: string | null;
+  domainPackResolvedAt?: Date | string | null;
+  domainPackManifestDigest?: string | null;
+  domainPackRegistryVersion?: string | null;
+  metadata?: unknown;
+}): ApprovedReportMetadata['domainPack'] {
+  if (
+    typeof analysis.resolvedDomainPackId === 'string' &&
+    typeof analysis.resolvedDomainPackVersion === 'string' &&
+    isDomainPackStatus(analysis.resolvedDomainPackStatus) &&
+    isDomainPackSelectedBy(analysis.domainPackSelectedBy)
+  ) {
+    return {
+      requestedDomainPackId: analysis.requestedDomainPackId ?? null,
+      domainPackId: analysis.resolvedDomainPackId,
+      domainPackVersion: analysis.resolvedDomainPackVersion,
+      domainPackStatus: analysis.resolvedDomainPackStatus,
+      selectedBy: analysis.domainPackSelectedBy,
+      resolvedAt: normalizeDateTime(analysis.domainPackResolvedAt),
+      manifestDigest: analysis.domainPackManifestDigest ?? null,
+      registryVersion: analysis.domainPackRegistryVersion ?? null,
+    };
+  }
+
+  const metadata = analysis.metadata;
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return undefined;
+  }
+
+  const provenance = (metadata as Record<string, unknown>).reportProvenance;
+  if (!provenance || typeof provenance !== 'object' || Array.isArray(provenance)) {
+    return undefined;
+  }
+
+  const data = provenance as Record<string, unknown>;
+  if (
+    typeof data.domainPackId !== 'string' ||
+    typeof data.domainPackVersion !== 'string' ||
+    !isDomainPackStatus(data.domainPackStatus) ||
+    !isDomainPackSelectedBy(data.selectedBy)
+  ) {
+    return undefined;
+  }
+
+  return {
+    requestedDomainPackId: readOptionalString(data.requestedDomainPackId),
+    domainPackId: data.domainPackId,
+    domainPackVersion: data.domainPackVersion,
+    domainPackStatus: data.domainPackStatus,
+    selectedBy: data.selectedBy,
+    resolvedAt: readOptionalString(data.resolvedAt),
+    manifestDigest: readOptionalString(data.manifestDigest),
+    registryVersion: readOptionalString(data.registryVersion),
+  };
+}
+
+function normalizeDateTime(value: unknown): string | null {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  return typeof value === 'string' && value.trim().length > 0 ? value : null;
+}
+
+function readOptionalString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
+function isDomainPackStatus(
+  value: unknown,
+): value is NonNullable<ApprovedReportMetadata['domainPack']>['domainPackStatus'] {
+  return (
+    value === 'STABLE' ||
+    value === 'PARTIAL' ||
+    value === 'EXPERIMENTAL' ||
+    value === 'FALLBACK'
+  );
+}
+
+function isDomainPackSelectedBy(
+  value: unknown,
+): value is NonNullable<ApprovedReportMetadata['domainPack']>['selectedBy'] {
+  return (
+    value === 'EXPLICIT' ||
+    value === 'REPOSITORY_PROFILE' ||
+    value === 'FALLBACK'
+  );
 }

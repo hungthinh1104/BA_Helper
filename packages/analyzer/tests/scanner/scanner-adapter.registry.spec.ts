@@ -1,5 +1,6 @@
 import { ScannerAdapterRegistry } from '../../src/scanner/scanner-adapter.registry';
-import { ScannerAdapter, ScanAdapterInput } from '../../src/scanner/scanner.types';
+import type { ScanAdapterInput } from '../../src/scanner/scanner.types';
+import { ScannerAdapter } from '../../src/scanner/scanner.types';
 
 describe('ScannerAdapterRegistry', () => {
   let registry: ScannerAdapterRegistry;

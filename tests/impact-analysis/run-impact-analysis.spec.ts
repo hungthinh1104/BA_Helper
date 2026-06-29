@@ -1,10 +1,12 @@
-import { RunImpactAnalysisUseCase } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/run-impact-analysis.usecase';
-import { AppError } from '../../apps/api/src/shared/app-error';
+import {
+  RunImpactAnalysisUseCase,
+  ImpactEvidenceCollectionStep,
+  ImpactDiagnosticPropagationStep,
+  ImpactAiReasoningStep,
+} from '@ba-helper/application';
+import { AppError } from '@ba-helper/shared';
 import { FakeLlmProvider } from '../../apps/api/src/modules/ai/infrastructure/fake-ai.provider';
 import { DomainPackRegistry } from '../../apps/api/src/modules/domain-pack/application/domain-pack.registry';
-import { ImpactEvidenceCollectionStep } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/steps/impact-evidence-collection.step';
-import { ImpactDiagnosticPropagationStep } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/steps/impact-diagnostic-propagation.step';
-import { ImpactAiReasoningStep } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/steps/impact-ai-reasoning.step';
 
 type StubArtifact = {
   id: string;
@@ -22,14 +24,17 @@ class StubImpactRepo {
     status: 'QUEUED',
     stage: 'WAITING',
     progress: 0,
-    snapshot: {
-      id: 'snap-1',
-      analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
-      coverageStatus: 'READY',
-    },
-    requirementRevision: {
-      rawText: 'Allow users to cancel paid bookings and receive refund.',
-    },
+	    snapshot: {
+	      id: 'snap-1',
+	      repositoryId: 'repo-1',
+	      analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
+	      coverageStatus: 'READY',
+	      repository: { projectId: 'project-1' },
+	    },
+	    requirementRevision: {
+	      rawText: 'Allow users to cancel paid bookings and receive refund.',
+	      requirement: { projectId: 'project-1' },
+	    },
   });
 
   updateStatus = async (params: {
@@ -377,7 +382,7 @@ describe('RunImpactAnalysisUseCase', () => {
     expect(diagnostic.payload).toMatchObject({
       domainPackId: 'booking',
       domainPackVersion: expect.any(String),
-      selectedBy: 'manual_config',
+      selectedBy: 'EXPLICIT',
       conceptCount: expect.any(Number),
       retrievalHintCount: expect.any(Number),
       riskTemplateCount: expect.any(Number),
@@ -398,15 +403,18 @@ describe('RunImpactAnalysisUseCase', () => {
         status: 'QUEUED',
         stage: 'WAITING',
         progress: 0,
-        snapshot: {
-          id: 'snap-1',
-          analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
-          coverageStatus: 'READY',
-          profile: { domain: 'UNKNOWN' },
-        },
-        requirementRevision: {
-          rawText: '...',
-        },
+	        snapshot: {
+	          id: 'snap-1',
+	          repositoryId: 'repo-1',
+	          analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
+	          coverageStatus: 'READY',
+	          repository: { projectId: 'project-1' },
+	          profile: { domain: 'UNKNOWN' },
+	        },
+	        requirementRevision: {
+	          rawText: '...',
+	          requirement: { projectId: 'project-1' },
+	        },
       });
     }
 
@@ -439,7 +447,7 @@ describe('RunImpactAnalysisUseCase', () => {
     expect(diagnostic.payload.domainPackId).toBe('general');
     expect(diagnostic.payload.domainPackVersion).toBe('0.0.0');
     expect(diagnostic.payload.domainPackStatus).toBe('FALLBACK');
-    expect(diagnostic.payload.selectedBy).toBe('safe_default');
+    expect(diagnostic.payload.selectedBy).toBe('FALLBACK');
   });
 
   it('booking profile emits booking@0.1.0', async () => {
@@ -449,15 +457,18 @@ describe('RunImpactAnalysisUseCase', () => {
         status: 'QUEUED',
         stage: 'WAITING',
         progress: 0,
-        snapshot: {
-          id: 'snap-1',
-          analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
-          coverageStatus: 'READY',
-          profile: { domain: 'BOOKING' },
-        },
-        requirementRevision: {
-          rawText: '...',
-        },
+	        snapshot: {
+	          id: 'snap-1',
+	          repositoryId: 'repo-1',
+	          analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
+	          coverageStatus: 'READY',
+	          repository: { projectId: 'project-1' },
+	          profile: { domain: 'BOOKING' },
+	        },
+	        requirementRevision: {
+	          rawText: '...',
+	          requirement: { projectId: 'project-1' },
+	        },
       });
     }
 
@@ -488,25 +499,38 @@ describe('RunImpactAnalysisUseCase', () => {
     const diagnostic = finalUpdateCall![0].metadata.diagnostics.find((d: any) => d.code === 'DOMAIN_PACK_APPLIED');
 
     expect(diagnostic.payload.domainPackId).toBe('booking');
-    expect(diagnostic.payload.selectedBy).toBe('repository_profile');
+    expect(diagnostic.payload.selectedBy).toBe('REPOSITORY_PROFILE');
   });
 
-  it('rental profile emits rental@0.1.0 as PARTIAL', async () => {
+  it('persisted rental selection emits rental@0.1.0 as PARTIAL', async () => {
     class RentalProfileRepo extends StubImpactRepo {
       findById = async () => ({
         id: 'analysis-1',
         status: 'QUEUED',
         stage: 'WAITING',
         progress: 0,
-        snapshot: {
-          id: 'snap-1',
-          analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
-          coverageStatus: 'READY',
-          profile: { domain: 'RENTAL' },
-        },
-        requirementRevision: {
-          rawText: 'Update tenant deposit payment for rental contract.',
-        },
+	        snapshot: {
+	          id: 'snap-1',
+	          repositoryId: 'repo-1',
+	          analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
+	          coverageStatus: 'READY',
+	          repository: { projectId: 'project-1' },
+	          profile: { domain: 'RENTAL' },
+	        },
+	        requirementRevision: {
+	          rawText: 'Update tenant deposit payment for rental contract.',
+	          requirement: { projectId: 'project-1' },
+	        },
+          metadata: {
+            selectedDomainPack: {
+              requestedDomainPackId: 'rental',
+              resolvedDomainPackId: 'rental',
+              resolvedDomainPackVersion: '0.1.0',
+              resolvedDomainPackStatus: 'PARTIAL',
+              selectedBy: 'EXPLICIT',
+              resolvedAt: '2026-06-27T00:00:00.000Z',
+            },
+          },
       });
     }
 
@@ -539,7 +563,7 @@ describe('RunImpactAnalysisUseCase', () => {
     expect(diagnostic.payload.domainPackId).toBe('rental');
     expect(diagnostic.payload.domainPackVersion).toBe('0.1.0');
     expect(diagnostic.payload.domainPackStatus).toBe('PARTIAL');
-    expect(diagnostic.payload.selectedBy).toBe('repository_profile');
+    expect(diagnostic.payload.selectedBy).toBe('EXPLICIT');
   });
 
   it('rejects non-runnable analyses', async () => {
@@ -549,14 +573,17 @@ describe('RunImpactAnalysisUseCase', () => {
         status: 'WAITING_FOR_REVIEW',
         stage: 'DONE',
         progress: 100,
-        snapshot: {
-          id: 'snap-1',
-          analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
-          coverageStatus: 'READY',
-        },
-        requirementRevision: {
-          rawText: 'Allow users to cancel paid bookings and receive refund.',
-        },
+	        snapshot: {
+	          id: 'snap-1',
+	          repositoryId: 'repo-1',
+	          analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
+	          coverageStatus: 'READY',
+	          repository: { projectId: 'project-1' },
+	        },
+	        requirementRevision: {
+	          rawText: 'Allow users to cancel paid bookings and receive refund.',
+	          requirement: { projectId: 'project-1' },
+	        },
       });
     }
 

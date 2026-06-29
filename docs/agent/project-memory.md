@@ -8,16 +8,34 @@ It is a Requirement-to-Code Impact Analyzer for backend teams.
 
 Given a requirement/change request, the system should identify impacted backend code artifacts, attach explicit evidence, surface unknowns/risks/QA scenarios, support human review, and generate traceability reports.
 
+Core path:
+
+```text
+Requirement change
+-> impacted code artifacts
+-> source evidence
+-> unknowns / risks / QA scenarios
+-> human review
+-> approved traceable report
+```
+
+Core value: reduce delivery and regression risk when requirements change.
+
+Do not position the product as "multi-domain", "AI analyzes code", an AI repo
+chatbot, an AI coding assistant, an auto-BRD generator, or a code-smell
+dashboard. Domain packs and LLMs are support layers for the trust pipeline, not
+the product center.
+
 ## Product priority
 
 The priority order is:
 
-1. Evidence-backed requirement impact
-2. Human review before finalization
-3. Matrix/drilldown auditability
-4. Coverage, scan health, stale/drift warnings
-5. Immutable report/export
-6. Multi-domain and multi-language support only after trust foundations are stable
+1. Evidence-backed requirement-to-code impact
+2. Unknowns, risks, and QA scenarios that expose missing policy
+3. Human review before finalization
+4. Traceability/provenance for reports and exports
+5. Coverage, scan health, stale/drift warnings
+6. Domain and language expansion only after trust foundations are stable
 
 ## Main strength so far
 
@@ -38,12 +56,12 @@ The project already has a strong trust layer:
 
 The biggest missing pieces are:
 
-1. Snapshot drift: knowing what changed between repository snapshots
-2. Re-analysis lifecycle: warning when old analysis may no longer be trustworthy
-3. Incremental scan: avoiding full rescans for unchanged artifacts
-4. Real-world evaluation: precision, recall, evidence quality, QA usefulness
-5. Repository onboarding: making the first local/demo experience smooth
-6. Domain scaling architecture: avoiding hardcoded domain prompt sprawl
+1. Scan pipeline atomicity: do not publish or index snapshots until artifacts, edges, evidence, diagnostics, and job linkage persist safely
+2. Evidence quality: distinguish strong source evidence, weak source evidence, structural inference, domain-hint-only support, missing evidence, and conflicting evidence
+3. Impact precision evaluation: measure expected artifact hits, false positives, missing critical artifacts, evidenced insight ratio, unknown quality, and QA usefulness
+4. Review coverage: make it clear what has been reviewed before a report is trusted or finalized
+5. Report trust UX: show evidenced/inferred/unknown/stale/reviewed/provenance state clearly
+6. Drift and re-analysis lifecycle: warning when old analysis may no longer be trustworthy
 
 ## Engineering principle
 
@@ -99,6 +117,18 @@ Each domain pack should include:
 
 Domain packs are hints, not facts. Evidence must still come from code.
 
+Correct hierarchy:
+
+```text
+Domain pack = controlled terminology + risk/QA hint layer
+Evidence = source of truth
+Review = final authority
+Provenance = audit boundary for reports
+```
+
+Every feature should answer whether it improves evidence, review, provenance,
+or risk reduction for BA/QC/Tech Lead users. If not, defer it.
+
 ## Evaluation principle
 
 Every new domain or scanner expansion needs evaluation cases.
@@ -150,12 +180,12 @@ The system should prioritize trust and auditability over broad feature expansion
 
 Priority order:
 
-1. Evidence-backed requirement impact
-2. Human review before finalization
-3. Matrix/drilldown auditability
-4. Coverage, scan health, stale/drift warnings
-5. Immutable report/export
-6. Multi-domain and multi-language only after trust foundations are stable
+1. Evidence-backed requirement-to-code impact
+2. Unknowns, risks, and QA scenarios
+3. Human review before finalization
+4. Traceable provenance for reviewed reports
+5. Coverage, scan health, stale/drift warnings
+6. Domain and language expansion only after trust foundations are stable
 
 Current architecture assumptions:
 
@@ -190,12 +220,12 @@ When reviewing or proposing a phase, always provide:
 
 Near-term roadmap:
 
-1. Repository Snapshot Drift Summary API
-2. Snapshot Drift UI
-3. Drift-based stale/re-analysis warning
-4. Incremental scan foundation
-5. Evaluation pack for requirement impact quality
-6. Domain Pack architecture for scaling domains cleanly
+1. Harden scan pipeline persistence boundaries
+2. Classify evidence quality for impact reports
+3. Add impact precision scorecards for golden cases
+4. Tighten review coverage gates
+5. Improve report trust UX
+6. Continue drift/freshness hardening
 
 Domain scaling rule:
 Do not add domains by hardcoding many prompt branches. Use Domain Packs containing glossary, entity hints, workflow terms, risk patterns, QA patterns, retrieval hints, evaluation cases, and negative examples. Domain packs are hints only; evidence must still come from code.
@@ -203,5 +233,4 @@ Do not add domains by hardcoding many prompt branches. Use Domain Packs containi
 Response style:
 Be concise in chat, but detailed in implementation prompts. Be critical and precise. Avoid motivational filler. Do not let the project drift into a generic chatbot or AI coding agent.
 
-**Core Mantra**: Build a traceability-first backend impact analyzer: requirement change → impacted code → evidence → risks/QA → human review → immutable report, with scan health, drift, and domain packs keeping the system trustworthy as it scales.
-
+**Core Mantra**: Evidence, Review, Provenance. Build a traceability-first backend impact analyzer: requirement change → impacted code → evidence → unknowns/risks/QA → human review → immutable report, with scan health, drift, and bounded domain hints keeping the system trustworthy as it scales.

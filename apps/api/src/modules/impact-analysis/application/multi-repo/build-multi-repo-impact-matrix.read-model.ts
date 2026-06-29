@@ -2,6 +2,10 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { MultiRepoAnalysisRunRepository } from '../../infrastructure/multi-repo-analysis-run.repository';
 import { MultiRepoImpactMatrixResponse, MultiRepoImpactMatrixRow } from '@ba-helper/contracts';
+import {
+  deriveChildBlockingReason,
+  isChildAnalysisStale,
+} from './multi-repo-merged-report-state';
 
 @Injectable()
 export class BuildMultiRepoImpactMatrixReadModel {
@@ -31,6 +35,7 @@ export class BuildMultiRepoImpactMatrixReadModel {
           orderBy: { createdAt: 'desc' },
           take: 1,
         },
+        sourceTarget: true,
       },
     });
 
@@ -101,19 +106,24 @@ export class BuildMultiRepoImpactMatrixReadModel {
       totalRisks += riskCount;
       totalQaScenarios += qaScenarioCount;
 
-      // Ensure review status logic aligns with blocking reason
-      let blockingReason: MultiRepoImpactMatrixRow['blockingReason'] = 'NONE';
-      if (analysis.status === 'FAILED') {
-        blockingReason = 'FAILED';
-      } else if (latestDecision === 'NEEDS_MORE_CLARIFICATION') {
-        blockingReason = 'NEEDS_MORE_CLARIFICATION';
-      } else if (latestDecision === 'REJECTED') {
-        blockingReason = 'REJECTED';
-      } else if (analysis.status === 'WAITING_FOR_REVIEW') {
-        blockingReason = 'WAITING_FOR_REVIEW';
-      } else if (analysis.status !== 'COMPLETED') {
-        blockingReason = 'NOT_COMPLETED';
-      }
+      const isStale = isChildAnalysisStale({
+        analysisId: analysis.id,
+        latestReviewDecisionId: analysis.reviewDecisions[0]?.id ?? null,
+        latestReviewDecision: latestDecision,
+        snapshotId: analysis.snapshot.id,
+        commitSha: analysis.snapshot.commitSha,
+        status: analysis.status,
+        sourceTarget: {
+          resolvedRefType: analysis.sourceTarget.resolvedRefType,
+          latestObservedCommitSha: analysis.sourceTarget.latestObservedCommitSha,
+        },
+      });
+      const blockingReason: MultiRepoImpactMatrixRow['blockingReason'] =
+        deriveChildBlockingReason({
+          status: analysis.status,
+          latestReviewDecision: latestDecision,
+          isStale,
+        });
       
       if (latestDecision === 'ACCEPTED') {
         acceptedRepos++;

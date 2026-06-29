@@ -1,10 +1,10 @@
-import { INestApplication } from '@nestjs/common';
+import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../src/modules/prisma/prisma.service';
 import { PdfExportRenderer } from '../../src/modules/document/application/pdf-export.renderer';
-import { AppError } from '../../src/shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { createTestApp } from './helpers/test-app';
 import { resetDatabase } from './helpers/reset-db';
 import { grantProjectMembership } from './helpers/grant-project-membership';
@@ -16,6 +16,7 @@ import {
   mergedMultiRepoReportReviewDecisionListResponseSchema,
   mergedMultiRepoReportReviewDecisionResponseSchema,
   multiRepoMergedReportDraftResponseSchema,
+  multiRepoImpactMatrixResponseSchema,
   multiRepoImpactAnalysisCreateResponseSchema,
 } from '@ba-helper/contracts';
 
@@ -307,6 +308,17 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
     expect(runDetail.runId).toBe(result.runId);
     expect(runDetail.projectId).toBe(projectId);
     expect(runDetail.requirementRevisionId).toBe(revisionId);
+    expect(runDetail.mergedReportStatus).toBe('BLOCKED');
+    expect(runDetail.capabilities).toMatchObject({
+      canFinalizeMergedReport: false,
+      canRefreshMergedReport: false,
+      canExportMergedReport: false,
+      canReviewMergedReport: false,
+      canOpenApprovedReport: false,
+    });
+    expect(runDetail.capabilities.blockedReasons).toEqual(
+      expect.arrayContaining(['CHILD_ANALYSIS_NOT_COMPLETED', 'CHILD_REVIEW_PENDING']),
+    );
     expect(runDetail.items).toHaveLength(2);
   });
 
@@ -658,6 +670,7 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
         repositoryIds: [booking.repositoryId, payment.repositoryId],
         allowPartialSnapshot: false,
         requestKey: crypto.randomUUID(),
+        domainPackId: 'healthcare',
       })
       .expect(201);
 
@@ -696,6 +709,16 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
     expect(finalized.markdown).toContain('booking-service');
     expect(finalized.markdown).toContain('payment-service');
     expect(finalized.provenance.childAnalyses).toHaveLength(2);
+    expect(finalized.provenance.domainPack).toEqual({
+      requestedDomainPackId: 'healthcare',
+      domainPackId: 'healthcare',
+      domainPackVersion: '0.1.0',
+      domainPackStatus: 'PARTIAL',
+      selectedBy: 'EXPLICIT',
+      resolvedAt: expect.any(String),
+      manifestDigest: null,
+      registryVersion: null,
+    });
 
     const persisted = await prisma.mergedMultiRepoReport.findUnique({
       where: { runId: result.runId },
@@ -918,6 +941,69 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
     );
   });
 
+  it('refreshes a stale approved merged report when child review readiness is restored', async () => {
+    const { result } = await seedReadyAcceptedRun();
+    const originalReport = await prisma.mergedMultiRepoReport.findUniqueOrThrow({
+      where: { runId: result.runId },
+    });
+
+    await createLatestReviewDecision({
+      analysisId: result.items[0].analysisId,
+      decision: 'REJECTED',
+    });
+
+    const rejectedReadResponse = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    const rejectedRead = multiRepoApprovedReportResponseSchema.parse(
+      rejectedReadResponse.body,
+    );
+    expect(rejectedRead.mergedReportStatus).toBe('STALE');
+    expect(rejectedRead.capabilities.canRefreshMergedReport).toBe(false);
+
+    const restoredDecision = await createLatestReviewDecision({
+      analysisId: result.items[0].analysisId,
+      decision: 'ACCEPTED',
+    });
+
+    const refreshableReadResponse = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    const refreshableRead = multiRepoApprovedReportResponseSchema.parse(
+      refreshableReadResponse.body,
+    );
+    expect(refreshableRead.mergedReportStatus).toBe('STALE');
+    expect(refreshableRead.capabilities.canRefreshMergedReport).toBe(true);
+    expect(refreshableRead.capabilities.canExportMergedReport).toBe(false);
+
+    const refreshedResponse = await request(app.getHttpServer())
+      .post(`/api/v1/multi-repo-runs/${result.runId}/merged-report/finalize`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({})
+      .expect(201);
+    const refreshed = multiRepoApprovedReportResponseSchema.parse(
+      refreshedResponse.body,
+    );
+    const refreshedReport = await prisma.mergedMultiRepoReport.findUniqueOrThrow({
+      where: { runId: result.runId },
+    });
+
+    expect(refreshed.id).toBe(originalReport.id);
+    expect(refreshed.mergedReportStatus).toBe('CURRENT');
+    expect(refreshed.capabilities.canExportMergedReport).toBe(true);
+    expect(refreshed.provenance.childAnalyses).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          analysisId: result.items[0].analysisId,
+          latestReviewDecisionId: restoredDecision.id,
+        }),
+      ]),
+    );
+    expect(refreshedReport.provenance).toEqual(refreshed.provenance);
+  });
+
   it('exports markdown and pdf for a non-stale approved merged report', async () => {
     const { result } = await seedReadyAcceptedRun();
 
@@ -1011,6 +1097,44 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
       });
   });
 
+  it('treats invalid approved merged report provenance as stale and blocks export', async () => {
+    const { result } = await seedReadyAcceptedRun();
+
+    await prisma.mergedMultiRepoReport.update({
+      where: { runId: result.runId },
+      data: {
+        provenance: {
+          childAnalyses: [
+            {
+              analysisId: 'not-a-uuid',
+            },
+          ],
+        },
+      },
+    });
+
+    const readResponse = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    const read = multiRepoApprovedReportResponseSchema.parse(readResponse.body);
+
+    expect(read.mergedReportStatus).toBe('STALE');
+    expect(read.isStale).toBe(true);
+    expect(read.staleReason).toContain('provenance is invalid');
+    expect(read.provenance.childAnalyses).toEqual([]);
+    expect(read.capabilities.canExportMergedReport).toBe(false);
+    expect(read.capabilities.canReviewMergedReport).toBe(false);
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report/export.md`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(409)
+      .expect(({ body }) => {
+        expect(body.code).toBe('MERGED_REPORT_EXPORT_BLOCKED_STALE');
+      });
+  });
+
   it('merged report export enforces 404 outsider and honors same-project export permission matrix', async () => {
     const { projectId, result } = await seedReadyAcceptedRun();
 
@@ -1052,6 +1176,34 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
       email: limitedUser.email,
       role: limitedUser.role,
       name: limitedUser.name,
+    });
+
+    const viewerReadResponse = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/merged-report`)
+      .set('Authorization', `Bearer ${limitedToken}`)
+      .expect(200);
+    const viewerRead = multiRepoApprovedReportResponseSchema.parse(
+      viewerReadResponse.body,
+    );
+    expect(viewerRead.capabilities).toMatchObject({
+      canFinalizeMergedReport: false,
+      canRefreshMergedReport: false,
+      canExportMergedReport: true,
+      canReviewMergedReport: false,
+      canOpenApprovedReport: true,
+    });
+
+    const viewerRunDetailResponse = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}`)
+      .set('Authorization', `Bearer ${limitedToken}`)
+      .expect(200);
+    const viewerRunDetail = multiRepoAnalysisRunDetailResponseSchema.parse(
+      viewerRunDetailResponse.body,
+    );
+    expect(viewerRunDetail.capabilities).toMatchObject({
+      canFinalizeMergedReport: false,
+      canRefreshMergedReport: false,
+      canOpenApprovedReport: true,
     });
 
     const allowedResponse = await request(app.getHttpServer())
@@ -1323,6 +1475,16 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
       needsMoreClarification: 1,
       pendingReview: 2,
     });
+    expect(runDetail.mergedReportStatus).toBe('BLOCKED');
+    expect(runDetail.capabilities.canFinalizeMergedReport).toBe(false);
+    expect(runDetail.capabilities.blockedReasons).toEqual(
+      expect.arrayContaining([
+        'CHILD_ANALYSIS_FAILED',
+        'CHILD_ANALYSIS_WAITING_FOR_REVIEW',
+        'CHILD_REVIEW_NEEDS_CLARIFICATION',
+        'CHILD_REVIEW_PENDING',
+      ]),
+    );
 
     const bookingItem = runDetail.items.find(
       (item) => item.repositoryId === booking.repositoryId,
@@ -1412,7 +1574,94 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
       needsMoreClarification: 0,
       pendingReview: 0,
     });
+    expect(runDetail.mergedReportStatus).toBe('NOT_CREATED');
+    expect(runDetail.capabilities).toMatchObject({
+      canFinalizeMergedReport: true,
+      canRefreshMergedReport: false,
+      canExportMergedReport: false,
+      canReviewMergedReport: false,
+      canOpenApprovedReport: false,
+      blockedReasons: [],
+    });
     expect(runDetail.items.every((item) => item.blockingReason === 'NONE')).toBe(true);
+  });
+
+  it('blocks merged report readiness when an accepted child analysis becomes stale', async () => {
+    const { projectId, revisionId } = await seedProjectWithReadyRequirement();
+    const booking = await seedRepository(projectId, 'booking-service');
+    const payment = await seedRepository(projectId, 'payment-service');
+
+    const createResponse = await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requirementRevisionId: revisionId,
+        repositoryIds: [booking.repositoryId, payment.repositoryId],
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+      })
+      .expect(201);
+
+    const result = multiRepoImpactAnalysisCreateResponseSchema.parse(createResponse.body);
+
+    for (const item of result.items) {
+      await prisma.impactAnalysis.update({
+        where: { id: item.analysisId },
+        data: { status: 'COMPLETED' },
+      });
+      await createLatestReviewDecision({
+        analysisId: item.analysisId,
+        decision: 'ACCEPTED',
+      });
+    }
+
+    await prisma.repositoryTarget.update({
+      where: { id: booking.targetId },
+      data: { latestObservedCommitSha: 'new-booking-commit' },
+    });
+
+    const runDetailResponse = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const runDetail = multiRepoAnalysisRunDetailResponseSchema.parse(
+      runDetailResponse.body,
+    );
+
+    expect(runDetail.runReadiness).toMatchObject({
+      completedAnalyses: 2,
+      canStartMergedReport: false,
+    });
+    expect(runDetail.mergedReportStatus).toBe('BLOCKED');
+    expect(runDetail.capabilities.canFinalizeMergedReport).toBe(false);
+    expect(runDetail.capabilities.blockedReasons).toContain('CHILD_ANALYSIS_STALE');
+    expect(
+      runDetail.items.find((item) => item.repositoryId === booking.repositoryId),
+    ).toMatchObject({
+      isStale: true,
+      blockingReason: 'STALE',
+    });
+
+    const matrixResponse = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${result.runId}/impact-matrix`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    const matrix = multiRepoImpactMatrixResponseSchema.parse(matrixResponse.body);
+    expect(
+      matrix.rows.find((row) => row.repositoryId === booking.repositoryId),
+    ).toMatchObject({
+      blockingReason: 'STALE',
+    });
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/multi-repo-runs/${result.runId}/merged-report/finalize`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({})
+      .expect(409)
+      .expect(({ body }) => {
+        expect(body.code).toBe('MULTI_REPO_RUN_NOT_READY');
+      });
   });
 
   it('lists only project runs with derived status counts in newest-first order', async () => {
@@ -1697,6 +1946,15 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
       .expect(200);
 
     const report = multiRepoApprovedReportResponseSchema.parse(reportResponse.body);
+    expect(report.mergedReportStatus).toBe('CURRENT');
+    expect(report.capabilities).toMatchObject({
+      canFinalizeMergedReport: false,
+      canRefreshMergedReport: false,
+      canExportMergedReport: true,
+      canReviewMergedReport: true,
+      canOpenApprovedReport: true,
+      blockedReasons: ['MERGED_REPORT_CURRENT'],
+    });
     expect(report.markdown).toContain('## Review Coverage');
     expect(report.markdown).toContain('### Coverage Gates');
     expect(report.markdown).toContain('## Cross-domain Impact Matrix');
@@ -1851,6 +2109,9 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
 
     const staleReport = multiRepoApprovedReportResponseSchema.parse(readResponse.body);
     expect(staleReport.isStale).toBe(true);
+    expect(staleReport.mergedReportStatus).toBe('STALE');
+    expect(staleReport.capabilities.canExportMergedReport).toBe(false);
+    expect(staleReport.capabilities.canReviewMergedReport).toBe(false);
 
     // Export is blocked because report is stale (existing policy unchanged)
     await request(app.getHttpServer())
@@ -1888,6 +2149,7 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
 
     const staleReport = multiRepoApprovedReportResponseSchema.parse(staleResponse.body);
     expect(staleReport.isStale).toBe(true);
+    expect(staleReport.mergedReportStatus).toBe('STALE');
     // Content is unchanged: reads from persisted snapshot, never recomputed
     expect(staleReport.markdown).toBe(capturedMarkdown);
     expect(staleReport.markdown).toContain('## Review Coverage');

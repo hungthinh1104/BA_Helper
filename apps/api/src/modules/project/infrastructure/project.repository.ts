@@ -1,5 +1,5 @@
 import type { ProjectRole } from '@ba-helper/contracts';
-import { PrismaService } from '../../prisma/prisma.service';
+import type { PrismaService } from '../../prisma/prisma.service';
 
 export class ProjectRepository {
   constructor(private readonly prisma: PrismaService) {}

@@ -4,7 +4,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '../../apps/api/src/app.module';
 import { PrismaService } from '../../apps/api/src/modules/prisma/prisma.service';
 import { RunScanJobUseCase } from '../../apps/api/src/modules/scanner/application/run-scan-job.usecase';
-import { RunImpactAnalysisUseCase } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/run-impact-analysis.usecase';
+import { RunImpactAnalysisUseCase } from '@ba-helper/application';
 import { FinalizeImpactAnalysisUseCase } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/finalize-impact-analysis.usecase';
 import { GetRepositorySnapshotDriftUseCase } from '../../apps/api/src/modules/repository/application/get-repository-snapshot-drift.usecase';
 import { ScanJobStatus } from '@prisma/client';
@@ -174,7 +174,7 @@ describe('Golden Path Demo', () => {
     expect(packDiagnostic).toBeDefined();
     expect(packDiagnostic.payload.domainPackId).toBe('booking');
     expect(packDiagnostic.payload.domainPackVersion).toBeDefined();
-    expect(packDiagnostic.payload.selectedBy).toBe('manual_config');
+    expect(packDiagnostic.payload.selectedBy).toBe('EXPLICIT');
     // Ensure Boundedness
     expect(packDiagnostic.payload.rawPrompts).toBeUndefined();
     expect(packDiagnostic.payload.sourceCode).toBeUndefined();
@@ -210,6 +210,10 @@ describe('Golden Path Demo', () => {
     // ==========================================
     // Simulate user reviewing insights
     await prisma.baInsight.updateMany({
+      where: { impactAnalysisId: analysisId },
+      data: { reviewStatus: 'CONFIRMED' },
+    });
+    await prisma.traceabilityLink.updateMany({
       where: { impactAnalysisId: analysisId },
       data: { reviewStatus: 'CONFIRMED' },
     });

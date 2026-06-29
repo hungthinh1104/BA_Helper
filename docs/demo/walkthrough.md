@@ -78,6 +78,7 @@ Use this only after the single-repo baseline is understood.
    - child analyses exist
    - readiness summary is visible
    - review state per child is visible
+   - merged report status and blockers come from backend capabilities
 8. Ensure each child analysis ends with latest review decision `ACCEPTED`
 9. Open merged draft from the run
 10. Finalize merged report
@@ -96,6 +97,7 @@ Use this only after the single-repo baseline is understood.
    - report is still readable
    - export is blocked
    - merged report review submission is blocked until refresh/finalize
+   - run detail shows backend blocker reason for stale child analysis state when applicable
 
 ## Viewer check
 
@@ -112,4 +114,14 @@ Use this only after the single-repo baseline is understood.
 - Unsupported route patterns and dependency boundaries require manual review
 - Domain packs guide retrieval but do not create evidence
 - LLM output is constrained by extracted evidence and review gates
+- Multi-repo aggregates reviewed child analysis snapshots; it does not perform cross-repo dependency scanning
 - Manual public demo uses Gemini real LLM when `AI_PROVIDER=google` and a Gemini API key are configured
+
+## Deterministic demo commands
+
+Run these separately because both reset and seed test data:
+
+```bash
+pnpm demo:golden-path
+pnpm demo:multi-repo-golden-path
+```

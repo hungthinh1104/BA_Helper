@@ -1,5 +1,5 @@
-import { MarkdownReportRenderContext } from '../../markdown-impact-report.types';
-import { getBookingTerminology, getReportLabels } from '../report-localization';
+import type { MarkdownReportRenderContext } from '../../markdown-impact-report.types';
+import { getDomainTerminology, getReportLabels } from '../report-localization';
 
 export function renderReportHeader(context: MarkdownReportRenderContext): string[] {
   const { analysis, metadata } = context;
@@ -33,13 +33,27 @@ export function renderReportHeader(context: MarkdownReportRenderContext): string
     lines.push(`- ${labels.commitSha}: \`${metadata.commitSha}\``);
     lines.push(`- ${labels.analyzerVersion}: \`${metadata.analyzerVersion}\``);
     lines.push(`- ${labels.finalizedAt}: ${metadata.finalizedAt ?? metadata.generatedAt}`);
+    const domainPack = readDomainPack(analysis, metadata);
+    const domainPackId = domainPack?.id ?? null;
+    const domainPackVersion = domainPack?.version ?? null;
+    const domainPackStatus = domainPack?.status ?? null;
+    const domainPackSelectedBy = domainPack?.selectedBy ?? null;
+    if (domainPackId && domainPackVersion && domainPackStatus && domainPackSelectedBy) {
+      lines.push(`- ${labels.domainPack}: \`${domainPackId}@${domainPackVersion}\` (${domainPackStatus}, ${domainPackSelectedBy})`);
+    }
     lines.push('');
   }
 
-  if (context.locale === 'vi' && analysis.snapshot.profile?.domain === 'BOOKING') {
+  if (readDomainPack(analysis, metadata)?.status === 'PARTIAL') {
+    lines.push(`> **${labels.domainPack}: PARTIAL.** ${labels.partialDomainPackWarning} ${labels.administrativeWorkflowOnly} ${labels.noMedicalClinicalCompliance}`);
+    lines.push('');
+  }
+
+  const terminology = getDomainTerminology(resolveDomainPackId(analysis), context.locale);
+  if (context.locale === 'vi' && terminology.length > 0) {
     lines.push(`## ${labels.terminology}`);
     lines.push('');
-    for (const term of getBookingTerminology(context.locale)) {
+    for (const term of terminology) {
       lines.push(`- ${term.key}: ${term.value}`);
     }
     lines.push('');
@@ -73,4 +87,85 @@ export function renderReportHeader(context: MarkdownReportRenderContext): string
   }
 
   return lines;
+}
+
+function resolveDomainPackId(analysis: MarkdownReportRenderContext['analysis']) {
+  return readDomainPack(analysis)?.id ?? analysis.snapshot.profile?.domain ?? null;
+}
+
+function readDomainPack(
+  analysis: MarkdownReportRenderContext['analysis'],
+  metadata?: MarkdownReportRenderContext['metadata'],
+): {
+  id: string;
+  version: string;
+  status: string;
+  selectedBy: string;
+} | null {
+  if (metadata?.domainPack) {
+    return {
+      id: metadata.domainPack.domainPackId,
+      version: metadata.domainPack.domainPackVersion,
+      status: metadata.domainPack.domainPackStatus,
+      selectedBy: metadata.domainPack.selectedBy,
+    };
+  }
+
+  const firstClass = readFirstClassDomainPack(analysis);
+  if (firstClass) {
+    return firstClass;
+  }
+
+  const domainPack = readObjectField(analysis.metadata, 'domainPack');
+  const id = readStringField(domainPack, 'id');
+  const version = readStringField(domainPack, 'version');
+  const status = readStringField(domainPack, 'status');
+  const selectedBy = readStringField(domainPack, 'selectedBy');
+  if (!id || !version || !status || !selectedBy) {
+    return null;
+  }
+
+  return { id, version, status, selectedBy };
+}
+
+function readFirstClassDomainPack(
+  analysis: MarkdownReportRenderContext['analysis'],
+) {
+  const record = analysis as MarkdownReportRenderContext['analysis'] & {
+    resolvedDomainPackId?: string | null;
+    resolvedDomainPackVersion?: string | null;
+    resolvedDomainPackStatus?: string | null;
+    domainPackSelectedBy?: string | null;
+  };
+  if (
+    !record.resolvedDomainPackId ||
+    !record.resolvedDomainPackVersion ||
+    !record.resolvedDomainPackStatus ||
+    !record.domainPackSelectedBy
+  ) {
+    return null;
+  }
+
+  return {
+    id: record.resolvedDomainPackId,
+    version: record.resolvedDomainPackVersion,
+    status: record.resolvedDomainPackStatus,
+    selectedBy: record.domainPackSelectedBy,
+  };
+}
+
+function readObjectField(source: unknown, key: string): Record<string, unknown> | null {
+  if (!source || typeof source !== 'object' || Array.isArray(source)) {
+    return null;
+  }
+  const value = (source as Record<string, unknown>)[key];
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  return value as Record<string, unknown>;
+}
+
+function readStringField(source: Record<string, unknown> | null, key: string) {
+  const value = source?.[key];
+  return typeof value === 'string' ? value : null;
 }

@@ -7,4 +7,7 @@ const bootstrap = async () => {
 	await app.init();
 };
 
-bootstrap();
+bootstrap().catch((err) => {
+	console.error('Worker failed to start', err);
+	process.exit(1);
+});

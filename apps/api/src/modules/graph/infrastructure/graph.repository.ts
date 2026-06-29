@@ -1,4 +1,8 @@
-import { PrismaService } from '../../prisma/prisma.service';
+import type { DependencyEdgeType } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
+import type { PrismaService } from '../../prisma/prisma.service';
+
+type GraphPrismaClient = PrismaService | Prisma.TransactionClient;
 
 export class GraphRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -37,13 +41,13 @@ export class GraphRepository {
     snapshotId: string;
     fromArtifactId: string;
     toArtifactId: string;
-    type: import('@prisma/client').DependencyEdgeType;
-  }[]): Promise<void> {
+    type: DependencyEdgeType;
+  }[], client: GraphPrismaClient = this.prisma): Promise<void> {
     if (!edges || edges.length === 0) {
       return;
     }
 
-    await this.prisma.dependencyEdge.createMany({
+    await client.dependencyEdge.createMany({
       data: edges,
       skipDuplicates: true,
     });

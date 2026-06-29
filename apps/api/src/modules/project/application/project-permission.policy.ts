@@ -1,4 +1,4 @@
-import { ProjectRole } from '@ba-helper/contracts';
+import type { ProjectRole } from '@ba-helper/contracts';
 
 export type ProjectPermission =
   | 'project:read'

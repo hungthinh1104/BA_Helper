@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { EmbeddingChunkRepository } from '../../apps/api/src/modules/embedding/infrastructure/embedding-chunk.repository';
-import { EmbedSnapshotArtifactsUseCase } from '../../apps/api/src/modules/embedding/application/embed-snapshot-artifacts.usecase';
+import { EmbedSnapshotArtifactsUseCase } from '@ba-helper/application';
+import { EmbeddingChunkRepositoryPort } from '@ba-helper/application';
+import { ArtifactChunkBuilder } from '@ba-helper/application';
 import { FakeEmbeddingProvider } from '../../apps/api/src/modules/embedding/infrastructure/fake-embedding.provider';
-import { ArtifactChunkBuilder } from '../../apps/api/src/modules/embedding/domain/artifact-chunk.builder';
 import { createHash } from 'node:crypto';
 
 // ─── Shared constants ────────────────────────────────────────────────────────
@@ -29,6 +30,7 @@ const ARTIFACT = {
 describe('EmbeddingChunkRepository — multi-tenant isolation', () => {
   let prismaMock: any;
   let repo: EmbeddingChunkRepository;
+  let snapshotRepoMock: any;
 
   beforeEach(() => {
     prismaMock = {
@@ -38,6 +40,9 @@ describe('EmbeddingChunkRepository — multi-tenant isolation', () => {
         deleteMany: jest.fn<any>().mockResolvedValue({ count: 3 }),
         findMany: jest.fn<any>().mockResolvedValue([]),
       },
+    };
+    snapshotRepoMock = {
+      updateSnapshotIndexStatus: jest.fn<any>(),
     };
     repo = new EmbeddingChunkRepository(prismaMock);
   });
@@ -149,7 +154,7 @@ describe('EmbedSnapshotArtifactsUseCase — stableChunkId cache semantics', () =
   let useCase: EmbedSnapshotArtifactsUseCase;
   let artifactRepoMock: any;
   let chunkRepoMock: any;
-  let prismaMock: any;
+  let snapshotRepoMock: any;
   let provider: FakeEmbeddingProvider;
 
   const SNAPSHOT = {
@@ -165,17 +170,15 @@ describe('EmbedSnapshotArtifactsUseCase — stableChunkId cache semantics', () =
       listBySnapshot: jest.fn<any>(),
       insertMany: jest.fn<any>(),
     };
-    prismaMock = {
-      repositorySnapshot: {
-        findUnique: jest.fn<any>().mockResolvedValue(SNAPSHOT),
-        update: jest.fn<any>(),
-      },
-      codeArtifact: {
-        findMany: jest.fn<any>().mockResolvedValue([ARTIFACT]),
-      },
+    snapshotRepoMock = {
+      findSnapshotById: jest.fn<any>().mockResolvedValue(SNAPSHOT),
+      findArtifactsWithEvidenceBySnapshot: jest.fn<any>().mockResolvedValue([ARTIFACT]),
+      updateSnapshotIndexStatus: jest.fn<any>(),
+      findPreviousArtifactsBySnapshot: jest.fn<any>(),
+      updateSnapshotDiagnostics: jest.fn<any>(),
     };
     provider = new FakeEmbeddingProvider();
-    useCase = new EmbedSnapshotArtifactsUseCase(chunkRepoMock, provider, prismaMock);
+    useCase = new EmbedSnapshotArtifactsUseCase(chunkRepoMock, provider, snapshotRepoMock);
   });
 
   it('skips re-embed when same snapshotId + stableChunkId + contentHash already exists', async () => {

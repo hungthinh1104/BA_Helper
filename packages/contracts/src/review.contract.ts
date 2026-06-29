@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { reportReviewCoverageSummarySchema } from './document.contract';
 
 export const reportLocaleSchema = z.enum(['en', 'vi']);
 
@@ -20,6 +21,10 @@ export const reviewCompletionResponseSchema = z.object({
   blockingReasons: z.array(z.enum([
     'UNREVIEWED_TRACEABILITY_LINKS',
     'REVIEWED_SNAPSHOT_MISSING',
+    'CONFLICTING_EVIDENCE_UNREVIEWED',
+    'CRITICAL_MISSING_EVIDENCE',
+    'REVIEW_REQUIRED_ITEMS',
+    'HIGH_RISK_INSIGHT_UNREVIEWED',
   ])),
 });
 
@@ -34,6 +39,7 @@ export const finalReviewedReportResponseSchema = z.object({
   markdown: z.string().nullable().optional(),
   createdAt: z.string(),
   reviewCompletion: reviewCompletionResponseSchema,
+  reviewCoverageSummary: reportReviewCoverageSummarySchema.nullable().optional(),
   reviewDecisionsSnapshot: z.unknown(),
   evidenceQualitySummarySnapshot: z.unknown(),
   evaluationContextSnapshot: z.unknown().nullable(),

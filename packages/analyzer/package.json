@@ -6,9 +6,9 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "lint": "echo \"lint analyzer\"",
-    "test": "echo \"test analyzer\"",
-    "typecheck": "echo \"typecheck analyzer\""
+    "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "test": "jest --config ../../jest.analyzer.config.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "simple-git": "3.36.0",

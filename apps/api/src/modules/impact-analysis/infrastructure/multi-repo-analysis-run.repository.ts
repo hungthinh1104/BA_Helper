@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import type { ResolvedDomainPackSelection } from '@ba-helper/contracts';
 
 const MULTI_REPO_RUN_INCLUDE = {
   project: true,
   requirementRevision: true,
   createdByUser: true,
+  approvedMergedReport: true,
   analyses: {
     include: {
       snapshot: {
@@ -78,6 +80,7 @@ export class MultiRepoAnalysisRunRepository {
     requirementRevisionId: string;
     createdByUserId: string;
     requestKey: string;
+    selectedDomainPack?: ResolvedDomainPackSelection | null;
   }) {
     return this.prisma.multiRepoAnalysisRun.create({
       data: {
@@ -85,6 +88,18 @@ export class MultiRepoAnalysisRunRepository {
         requirementRevisionId: params.requirementRevisionId,
         createdByUserId: params.createdByUserId,
         requestKey: params.requestKey,
+        ...(params.selectedDomainPack
+          ? {
+              requestedDomainPackId: params.selectedDomainPack.requestedDomainPackId,
+              resolvedDomainPackId: params.selectedDomainPack.resolvedDomainPackId,
+              resolvedDomainPackVersion:
+                params.selectedDomainPack.resolvedDomainPackVersion,
+              resolvedDomainPackStatus:
+                params.selectedDomainPack.resolvedDomainPackStatus,
+              domainPackSelectedBy: params.selectedDomainPack.selectedBy,
+              domainPackResolvedAt: new Date(params.selectedDomainPack.resolvedAt),
+            }
+          : {}),
       },
       include: MULTI_REPO_RUN_INCLUDE,
     });

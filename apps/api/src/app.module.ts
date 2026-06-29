@@ -20,6 +20,8 @@ import { ClarificationModule } from './modules/clarification/clarification.modul
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/application/jwt-auth.guard';
 import { RolesGuard } from './modules/auth/application/roles.guard';
+import { PublicBetaRateLimitGuard } from './shared/rate-limit/public-beta-rate-limit.guard';
+import { PublicBetaRateLimitPolicy } from './shared/rate-limit/public-beta-rate-limit.policy';
 
 @Module({
   imports: [
@@ -50,6 +52,11 @@ import { RolesGuard } from './modules/auth/application/roles.guard';
     {
       provide: 'APP_GUARD',
       useClass: RolesGuard,
+    },
+    PublicBetaRateLimitPolicy,
+    {
+      provide: 'APP_GUARD',
+      useClass: PublicBetaRateLimitGuard,
     },
   ],
 })

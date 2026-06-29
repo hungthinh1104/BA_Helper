@@ -1,11 +1,13 @@
 import { createHash } from 'crypto';
 import { Injectable } from '@nestjs/common';
-import { AppError } from '../../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { CreateImpactAnalysisUseCase } from '../lifecycle/create-impact-analysis.usecase';
 import { RequirementRepository } from '../../../requirement/infrastructure/requirement.repository';
 import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
 import { MultiRepoAnalysisRunRepository } from '../../infrastructure/multi-repo-analysis-run.repository';
+import { DomainPackRegistry } from '../../../domain-pack/application/domain-pack.registry';
+import type { ResolvedDomainPackSelection } from '@ba-helper/contracts';
 
 type PlannedRepositoryAnalysis = {
   repositoryId: string;
@@ -22,6 +24,7 @@ export class CreateMultiRepoImpactAnalysesUseCase {
     private readonly runs: MultiRepoAnalysisRunRepository,
     private readonly prisma: PrismaService,
     private readonly requirements: RequirementRepository,
+    private readonly domainPacks: DomainPackRegistry,
   ) {}
 
   async execute(params: {
@@ -31,6 +34,7 @@ export class CreateMultiRepoImpactAnalysesUseCase {
     repositoryIds: string[];
     requestKey: string;
     allowPartialSnapshot: boolean;
+    domainPackId?: string | null;
   }) {
     const revision = await this.requirements.findRevisionById(
       params.requirementRevisionId,
@@ -63,6 +67,9 @@ export class CreateMultiRepoImpactAnalysesUseCase {
         this.planRepositoryAnalysis(params.projectId, repositoryId),
       ),
     );
+    const explicitDomainPack = params.domainPackId
+      ? this.domainPacks.selectPack({ manualPackId: params.domainPackId }).resolved
+      : null;
 
     const existingRun = await this.runs.findByProjectRequestKey(
       params.projectId,
@@ -80,7 +87,8 @@ export class CreateMultiRepoImpactAnalysesUseCase {
         existingRepositoryIds.length !== requestedRepositoryIds.length ||
         existingRepositoryIds.some(
           (repositoryId, index) => repositoryId !== requestedRepositoryIds[index],
-        )
+        ) ||
+        !existingRunMatchesDomainPack(existingRun, explicitDomainPack)
       ) {
         throw new AppError(
           'REQUEST_KEY_MISMATCH',
@@ -96,6 +104,7 @@ export class CreateMultiRepoImpactAnalysesUseCase {
         requirementRevisionId: params.requirementRevisionId,
         createdByUserId: params.actorId,
         requestKey: params.requestKey,
+        selectedDomainPack: explicitDomainPack,
       }));
 
     const analyses = await Promise.all(
@@ -107,6 +116,8 @@ export class CreateMultiRepoImpactAnalysesUseCase {
           multiRepoRunId: run.id,
           requestKey: deriveChildRequestKey(params.requestKey, plan.repositoryId),
           allowPartialSnapshot: params.allowPartialSnapshot,
+          domainPackId: params.domainPackId,
+          selectedDomainPack: explicitDomainPack ?? undefined,
         });
 
         if (analysis.multiRepoRunId !== run.id) {
@@ -180,6 +191,113 @@ export class CreateMultiRepoImpactAnalysesUseCase {
       sourceTargetId: sourceTarget.id,
     };
   }
+}
+
+function existingRunMatchesDomainPack(
+  run: {
+    requestedDomainPackId?: string | null;
+    resolvedDomainPackId?: string | null;
+    resolvedDomainPackVersion?: string | null;
+    resolvedDomainPackStatus?: string | null;
+    domainPackSelectedBy?: string | null;
+    domainPackResolvedAt?: Date | string | null;
+    analyses: Array<{ metadata?: unknown }>;
+  },
+  explicitDomainPack: ResolvedDomainPackSelection | null,
+) {
+  if (!explicitDomainPack) {
+    return true;
+  }
+
+  const runSelection = readSelectedDomainPack(run);
+  if (runSelection) {
+    return sameResolvedDomainPack(runSelection, explicitDomainPack);
+  }
+
+  return run.analyses.every((analysis) => {
+    const selected = readSelectedDomainPack(analysis);
+    return sameResolvedDomainPack(selected, explicitDomainPack);
+  });
+}
+
+function sameResolvedDomainPack(
+  selected: ResolvedDomainPackSelection | null,
+  explicitDomainPack: ResolvedDomainPackSelection,
+) {
+    return (
+      selected?.resolvedDomainPackId === explicitDomainPack.resolvedDomainPackId &&
+      selected?.resolvedDomainPackVersion === explicitDomainPack.resolvedDomainPackVersion &&
+      selected?.resolvedDomainPackStatus === explicitDomainPack.resolvedDomainPackStatus &&
+      selected?.selectedBy === explicitDomainPack.selectedBy
+    );
+}
+
+function readSelectedDomainPack(record: {
+  requestedDomainPackId?: string | null;
+  resolvedDomainPackId?: string | null;
+  resolvedDomainPackVersion?: string | null;
+  resolvedDomainPackStatus?: string | null;
+  domainPackSelectedBy?: string | null;
+  domainPackResolvedAt?: Date | string | null;
+  metadata?: unknown;
+}): ResolvedDomainPackSelection | null {
+  if (
+    typeof record.resolvedDomainPackId === 'string' &&
+    typeof record.resolvedDomainPackVersion === 'string' &&
+    isDomainPackStatus(record.resolvedDomainPackStatus) &&
+    isDomainPackSelectedBy(record.domainPackSelectedBy)
+  ) {
+    return {
+      requestedDomainPackId: record.requestedDomainPackId ?? null,
+      resolvedDomainPackId: record.resolvedDomainPackId,
+      resolvedDomainPackVersion: record.resolvedDomainPackVersion,
+      resolvedDomainPackStatus: record.resolvedDomainPackStatus,
+      selectedBy: record.domainPackSelectedBy,
+      resolvedAt: normalizeResolvedAt(record.domainPackResolvedAt),
+    };
+  }
+
+  const { metadata } = record;
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return null;
+  }
+
+  const selected = (metadata as Record<string, unknown>).selectedDomainPack;
+  if (!selected || typeof selected !== 'object' || Array.isArray(selected)) {
+    return null;
+  }
+
+  return selected as ResolvedDomainPackSelection;
+}
+
+function normalizeResolvedAt(value: Date | string | null | undefined): string {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  return typeof value === 'string' && value.trim().length > 0
+    ? value
+    : new Date(0).toISOString();
+}
+
+function isDomainPackStatus(
+  value: unknown,
+): value is ResolvedDomainPackSelection['resolvedDomainPackStatus'] {
+  return (
+    value === 'STABLE' ||
+    value === 'PARTIAL' ||
+    value === 'EXPERIMENTAL' ||
+    value === 'FALLBACK'
+  );
+}
+
+function isDomainPackSelectedBy(
+  value: unknown,
+): value is ResolvedDomainPackSelection['selectedBy'] {
+  return (
+    value === 'EXPLICIT' ||
+    value === 'REPOSITORY_PROFILE' ||
+    value === 'FALLBACK'
+  );
 }
 
 function deriveChildRequestKey(batchRequestKey: string, repositoryId: string): string {

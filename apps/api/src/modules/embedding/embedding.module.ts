@@ -1,48 +1,44 @@
 import { Module } from '@nestjs/common';
-import { EmbeddingProvider } from './domain/embedding-provider.interface';
+import { EmbeddingProviderPort, EmbedSnapshotArtifactsUseCase } from '@ba-helper/application';
 import { FakeEmbeddingProvider } from './infrastructure/fake-embedding.provider';
 import { OpenAiEmbeddingProvider } from './infrastructure/openai-embedding.provider';
 import { GoogleEmbeddingProvider } from './infrastructure/google-embedding.provider';
 import { EmbeddingChunkRepository } from './infrastructure/embedding-chunk.repository';
-import { EmbedSnapshotArtifactsUseCase } from './application/embed-snapshot-artifacts.usecase';
+import { PrismaEmbeddingSnapshotRepository } from './infrastructure/prisma-embedding-snapshot.repository';
 import { PrismaModule } from '../prisma/prisma.module';
 
-const EMBEDDING_PROVIDERS = ['fake', 'openai', 'google'] as const;
-type EmbeddingProviderName = (typeof EMBEDDING_PROVIDERS)[number];
-
-export function resolveEmbeddingProvider(rawProvider?: string): EmbeddingProviderName {
-  const provider = (rawProvider || 'fake').trim().toLowerCase();
-  if ((EMBEDDING_PROVIDERS as readonly string[]).includes(provider)) {
-    return provider as EmbeddingProviderName;
-  }
-  throw new Error(`Unsupported EMBEDDING_PROVIDER "${rawProvider}". Expected one of: ${EMBEDDING_PROVIDERS.join(', ')}.`);
-}
+import { resolveEmbeddingConfig } from '@ba-helper/shared';
 
 @Module({
   imports: [PrismaModule],
   providers: [
     EmbeddingChunkRepository,
-    EmbedSnapshotArtifactsUseCase,
+    PrismaEmbeddingSnapshotRepository,
     {
-      provide: EmbeddingProvider,
+      provide: EmbedSnapshotArtifactsUseCase,
+      useFactory: (chunkRepo, provider, snapshotRepo) => new EmbedSnapshotArtifactsUseCase(chunkRepo, provider, snapshotRepo),
+      inject: [EmbeddingChunkRepository, EmbeddingProviderPort, PrismaEmbeddingSnapshotRepository],
+    },
+    {
+      provide: EmbeddingProviderPort,
       useFactory: () => {
         // By default, use fake provider if not in production and not explicitly requested
-        const provider = resolveEmbeddingProvider(process.env.EMBEDDING_PROVIDER);
+        const config = resolveEmbeddingConfig(process.env);
 
-        if (process.env.NODE_ENV === 'production' && provider === 'fake') {
+        if (process.env.NODE_ENV === 'production' && config.provider === 'fake') {
           throw new Error('FakeEmbeddingProvider is forbidden in production. Please set EMBEDDING_PROVIDER.');
         }
 
-        if (provider === 'openai') {
-          return new OpenAiEmbeddingProvider();
+        if (config.provider === 'openai') {
+          return new OpenAiEmbeddingProvider(config);
         }
-        if (provider === 'google') {
-          return new GoogleEmbeddingProvider();
+        if (config.provider === 'google') {
+          return new GoogleEmbeddingProvider(config);
         }
         return new FakeEmbeddingProvider();
       },
     },
   ],
-  exports: [EmbedSnapshotArtifactsUseCase, EmbeddingChunkRepository, EmbeddingProvider],
+  exports: [EmbedSnapshotArtifactsUseCase, EmbeddingChunkRepository, EmbeddingProviderPort],
 })
 export class EmbeddingModule {}

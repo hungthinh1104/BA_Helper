@@ -10,7 +10,7 @@
 - **Brand / Visual Identity:** Color tokens, light/dark theme, landing style, workspace style, status colors, evidence/code surfaces. shadcn defaults are not distinct enough.
 - **App Layout:** AppShell, Sidebar, Topbar, ImpactAnalysisWorkspace, EvidenceInspector, ArtifactList, InsightCard, TraceabilityMatrix, GeneratedReportView. (Do NOT use generic admin layouts or dashboard templates).
 - **Product-Specific Components:** EvidenceCard, CodeEvidenceBlock, AffectedArtifactCard, UnknownInsightCard, BAQuestionList, QAScenarioList, CommitSnapshotBadge, ReviewActionPanel, ImpactGraphPanel.
-- **Domain-Specific UI Labels:** Risk labels, question templates, QA scenario sections, report sections, domain glossary display (Dynamic based on DomainProfile).
+- **Domain-Specific UI Labels:** Risk labels, question templates, QA scenario sections, report sections, domain glossary display (render backend-authored Domain Pack state; do not infer capability in the frontend).
 - **RAG / Evidence UX (The Moat):** Retrieval results, evidence ranking, file path + line range, confidence, confirmed/inferred/unknown, traceability links.
 
 **Do NOT Custom Build (Use shadcn):**

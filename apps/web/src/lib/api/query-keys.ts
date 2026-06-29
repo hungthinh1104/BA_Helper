@@ -7,6 +7,9 @@ export const queryKeys = {
   system: {
     health: ["system", "health"] as const,
   },
+  domainPacks: {
+    list: ["domain-packs", "list"] as const,
+  },
   repositories: {
     all: ["repositories"] as const,
     list: (projectId: string, params?: { limit?: number; offset?: number }) => ["repositories", "list", projectId, params] as const,

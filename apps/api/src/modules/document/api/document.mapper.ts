@@ -1,5 +1,6 @@
-import { ApprovedImpactReportResponse } from '@ba-helper/contracts';
-import { ApprovedReportMetadata } from '../domain/approved-report-metadata';
+import type { ApprovedImpactReportResponse } from '@ba-helper/contracts';
+import type { ApprovedReportMetadata } from '../domain/approved-report-metadata';
+import { buildReportReviewCoverageSummaryFromSnapshot } from '../application/report-review-coverage.summary';
 
 export class DocumentMapper {
   static toApprovedReportResponse(
@@ -11,9 +12,17 @@ export class DocumentMapper {
       evaluationContext?: any;
       evidenceQualitySummary?: any;
       evidenceQualityItems?: any[];
+      reviewCoverageSummary?: any;
     }
   ): ApprovedImpactReportResponse {
-    const { report, metadata, evaluationContext, evidenceQualitySummary, evidenceQualityItems } = projectedResult;
+    const {
+      report,
+      metadata,
+      evaluationContext,
+      evidenceQualitySummary,
+      evidenceQualityItems,
+      reviewCoverageSummary,
+    } = projectedResult;
     const analysis = report.impactAnalysis;
     const revision = analysis.requirementRevision;
 
@@ -33,6 +42,7 @@ export class DocumentMapper {
       evaluationContext: evaluationContext || undefined,
       evidenceQualitySummary: evidenceQualitySummary || undefined,
       evidenceQualityItems: evidenceQualityItems || undefined,
+      reviewCoverageSummary: reviewCoverageSummary || undefined,
       provenance: {
         analysisId: metadata.analysisId,
         projectId: metadata.projectId,
@@ -47,6 +57,7 @@ export class DocumentMapper {
         approvedDocumentCreatedAt: metadata.approvedDocumentCreatedAt,
         approvedDocumentUpdatedAt: metadata.approvedDocumentUpdatedAt,
         staleStatusAtReadTime: metadata.staleStatusAtReadTime,
+        domainPack: metadata.domainPack ?? null,
       },
     };
   }
@@ -59,6 +70,10 @@ export class DocumentMapper {
       markdown: snapshot.markdown,
       reviewDecisionsSnapshot: snapshot.reviewDecisionsSnapshot,
       evidenceQualitySummarySnapshot: snapshot.evidenceQualitySummarySnapshot,
+      reviewCoverageSummary: buildReportReviewCoverageSummaryFromSnapshot({
+        reviewDecisionsSnapshot: snapshot.reviewDecisionsSnapshot,
+        evidenceQualitySummarySnapshot: snapshot.evidenceQualitySummarySnapshot,
+      }),
       evaluationContextSnapshot: snapshot.evaluationContextSnapshot || null,
       createdByUserId: snapshot.createdByUserId || null,
       createdAt: snapshot.createdAt.toISOString(),

@@ -2,7 +2,8 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import { SafeFileEnumerator } from '../../../src/scanner/core/safe-file-enumerator';
-import { ScanLimitsPolicy, ScanLimits } from '../../../src/scanner/core/limits';
+import type { ScanLimits } from '../../../src/scanner/core/limits';
+import { ScanLimitsPolicy } from '../../../src/scanner/core/limits';
 
 describe('SafeFileEnumerator', () => {
   let tmpDir: string;

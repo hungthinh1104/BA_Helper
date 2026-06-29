@@ -74,7 +74,7 @@ describe('General domain FALLBACK evaluation cases', () => {
     const selection = registry.selectPack({ repositoryProfileDomain: 'UNKNOWN' });
 
     expect(selection.normalizedPackId).toBe('general');
-    expect(selection.selectedBy).toBe('safe_default');
+    expect(selection.selectedBy).toBe('FALLBACK');
     expect(selection.pack.version).toBe('0.0.0');
     expect(selection.pack.status).toBe('FALLBACK');
     expect(selection.pack.concepts).toEqual([]);
@@ -103,7 +103,7 @@ describe('General domain FALLBACK evaluation cases', () => {
       domainPackId: 'general',
       domainPackVersion: '0.0.0',
       domainPackStatus: 'FALLBACK',
-      selectedBy: 'safe_default',
+      selectedBy: 'FALLBACK',
     });
     expect(JSON.stringify(payload)).not.toContain('refund eligibility');
     expect(JSON.stringify(payload)).not.toContain('sourceCode');

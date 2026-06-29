@@ -1,19 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
-
-export type SimilarChunk = {
-  id: string;
-  artifactId: string | null;
-  filePath: string;
-  symbolName: string | null;
-  artifactType: string;
-  content: string;
-  similarity: number;
-};
+import type { EmbeddingChunkRepositoryPort, SimilarChunk } from '@ba-helper/application';
 
 @Injectable()
-export class EmbeddingChunkRepository {
+export class EmbeddingChunkRepository implements EmbeddingChunkRepositoryPort {
   constructor(private readonly prisma: PrismaService) {}
 
   async insertMany(

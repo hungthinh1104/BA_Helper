@@ -1,4 +1,9 @@
-import { RequirementListItemResponse, RepositoryListItemResponse, MultiRepoImpactAnalysisCreateResponse } from "@ba-helper/contracts"
+import {
+  DomainProfileRegistryEntry,
+  RequirementListItemResponse,
+  RepositoryListItemResponse,
+  MultiRepoImpactAnalysisCreateResponse,
+} from "@ba-helper/contracts"
 
 export type Step = 1 | 2 | 3
 
@@ -40,6 +45,11 @@ export interface ConfirmationStepProps {
   hasPartialRepo: boolean
   acknowledgePartial: boolean
   setAcknowledgePartial: (val: boolean) => void
+  domainPacks: DomainProfileRegistryEntry[]
+  domainPacksLoading: boolean
+  domainPacksError: Error | null
+  selectedDomainPackId: string | null
+  setSelectedDomainPackId: (val: string | null) => void
   batchSuccess: MultiRepoImpactAnalysisCreateResponse | null
   batchError: string | null
   canProceed: boolean

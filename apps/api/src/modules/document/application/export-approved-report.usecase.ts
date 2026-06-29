@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestUser } from '@ba-helper/contracts';
-import { AppError } from '../../../shared/app-error';
+import { AppError } from '@ba-helper/shared';
 import { EventLogService } from '../../event-log/application/event-log.service';
 import { DocumentRepository } from '../infrastructure/document.repository';
 import { ApprovedReportProjectionService } from './approved-report-projection.service';

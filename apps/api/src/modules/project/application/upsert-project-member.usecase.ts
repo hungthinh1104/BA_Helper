@@ -2,10 +2,10 @@ import type {
   ProjectMemberUpsertRequest,
   RequestUser,
 } from '@ba-helper/contracts';
-import { AppError } from '../../../shared/app-error';
-import { EventLogService } from '../../event-log/application/event-log.service';
-import { ProjectPermissionService } from './project-permission.service';
-import { ProjectRepository } from '../infrastructure/project.repository';
+import { AppError } from '@ba-helper/shared';
+import type { EventLogService } from '../../event-log/application/event-log.service';
+import type { ProjectPermissionService } from './project-permission.service';
+import type { ProjectRepository } from '../infrastructure/project.repository';
 
 export class UpsertProjectMemberUseCase {
   constructor(

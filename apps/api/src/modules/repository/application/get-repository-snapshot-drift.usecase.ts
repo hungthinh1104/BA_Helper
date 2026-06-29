@@ -1,6 +1,6 @@
-import { AppError } from '../../../shared/app-error';
-import { PrismaService } from '../../prisma/prisma.service';
-import {
+import { AppError } from '@ba-helper/shared';
+import type { PrismaService } from '../../prisma/prisma.service';
+import type {
   DriftStatus,
   DriftArtifactSample,
   DriftChangedArtifactSample,

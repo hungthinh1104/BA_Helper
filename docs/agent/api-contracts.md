@@ -26,6 +26,7 @@ DELETE /api/v1/projects/:projectId/members/:userId
 GET  /api/v1/workspace/current
 POST /api/v1/workspace/select-project
 GET  /api/v1/system/health
+GET  /api/v1/domain-packs
 
 GET  /api/v1/projects/:projectId/repositories
 GET  /api/v1/projects/:projectId/repositories/:repositoryId
@@ -71,6 +72,85 @@ GET  /api/v1/impact-analyses/:analysisId/approved-report/export.md
 GET  /api/v1/impact-analyses/:analysisId/approved-report/export.pdf
 GET  /api/v1/impact-analyses/:analysisId/final-reviewed-report?locale=en|vi
 ```
+
+Domain pack registry responses are backend-authored:
+
+```json
+{
+  "items": [
+    {
+      "id": "healthcare",
+      "version": "0.1.0",
+      "canonicalId": "healthcare@0.1.0",
+      "displayName": "Healthcare Admin Workflows (PARTIAL)",
+      "status": "PARTIAL",
+      "description": "Partial domain pack for healthcare administrative workflows.",
+      "supportedConcepts": [
+        { "key": "appointment_scheduling", "label": "Appointment Scheduling" }
+      ],
+      "knownLimits": [
+        "This pack supports administrative workflow impact analysis only."
+      ],
+      "requiresExplicitSelection": true,
+      "aliases": ["healthcare", "healthcare@0.1.0"],
+      "glossaryMetadata": [
+        { "locale": "en", "status": "foundation", "version": "1.0.0", "termCount": 8 }
+      ]
+    }
+  ]
+}
+```
+
+Analysis create requests may include `domainPackId`. The frontend must send a
+value returned by `GET /api/v1/domain-packs`; the backend resolves and persists
+canonical metadata. Omitting `domainPackId` preserves repository-profile or
+`general@0.0.0` fallback behavior.
+
+Analysis workspace responses expose backend-authored domain capability metadata
+when an analysis has applied a domain pack:
+
+```json
+{
+  "overview": {
+    "requirement": {
+      "domainProfileId": "booking@repo-profile@0.1.0",
+      "domainPack": {
+        "id": "booking",
+        "version": "0.1.0",
+        "status": "STABLE",
+        "selectedBy": "repository_profile"
+      }
+    }
+  }
+}
+```
+
+If no domain pack metadata has been applied yet, `domainPack` is `null`. The
+frontend must not infer `status` from `domainProfileId`.
+
+Approved single-repo and merged report responses include resolved domain-pack
+provenance when available:
+
+```json
+{
+  "provenance": {
+    "domainPack": {
+      "requestedDomainPackId": "healthcare",
+      "domainPackId": "healthcare",
+      "domainPackVersion": "0.1.0",
+      "domainPackStatus": "PARTIAL",
+      "selectedBy": "EXPLICIT",
+      "resolvedAt": "2026-06-27T00:00:00.000Z",
+      "manifestDigest": null,
+      "registryVersion": null
+    }
+  }
+}
+```
+
+This provenance is snapshot/report metadata only. Domain-pack glossary,
+template, or retrieval hints still cannot satisfy an `EVIDENCED` claim without
+persisted `Evidence`.
 
 Deferred until after the Markdown report/review completion gate:
 
@@ -308,14 +388,21 @@ current project with derived child status counts. Run detail also returns
 derived readiness and latest review-decision state per child analysis. This is
 a batch/run tracking foundation. `GET /api/v1/multi-repo-runs/:runId/merged-report-draft`
 returns a read-only merged Markdown draft only when every child analysis has a
-latest review decision of `ACCEPTED`. The merged draft is not persisted and
-does not create a `GeneratedDocument`.
+latest review decision of `ACCEPTED` and no child analysis is known stale.
+The merged draft is not persisted and does not create a `GeneratedDocument`.
 
 `POST /api/v1/multi-repo-runs/:runId/merged-report/finalize` persists an
-approved merged Markdown snapshot for the run. `GET /api/v1/multi-repo-runs/:runId/merged-report`
+approved merged Markdown snapshot for the run. Finalize is idempotent when
+child provenance is unchanged, and it revalidates child status, latest review
+decision, and selected snapshot provenance immediately before writing the
+approved snapshot. If the child set changes during finalization, the mutation
+returns `MULTI_REPO_RUN_NOT_READY` and writes no approved snapshot.
+`GET /api/v1/multi-repo-runs/:runId/merged-report`
 returns that persisted snapshot plus provenance and stale status. The approved
 merged report is stale when child review decisions or child analysis snapshot
-provenance change after approval. `GET /api/v1/multi-repo-runs/:runId/merged-report/export.md`
+provenance change after approval. Invalid persisted merged-report provenance is
+treated as stale and blocks review/export until the snapshot is refreshed.
+`GET /api/v1/multi-repo-runs/:runId/merged-report/export.md`
 and `GET /api/v1/multi-repo-runs/:runId/merged-report/export.pdf` export only
 the persisted approved merged snapshot. Stale approved merged reports remain
 readable but export is blocked with `MERGED_REPORT_EXPORT_BLOCKED_STALE`.
@@ -326,6 +413,13 @@ note; `GET /api/v1/multi-repo-runs/:runId/merged-report/review-decisions` and
 `GET /api/v1/multi-repo-runs/:runId/merged-report/review-decisions/latest`
 return the review history and latest merged decision. This phase does not add
 merged clarification loops or merged report editing.
+
+Multi-repo run detail and approved merged-report responses include backend
+computed `mergedReportStatus` and `capabilities`. These capabilities are
+effective for the current actor: state readiness is combined with project
+permissions on the backend. Frontend consumers render these booleans directly
+and do not infer finalize, refresh, review, or export eligibility from progress,
+role, or local child-analysis counts.
 
 ## Status Contract
 

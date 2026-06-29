@@ -5,6 +5,9 @@ describe('ApprovedReportProjectionService', () => {
     const mockTraceabilityRepo = {
       listByAnalysis: jest.fn().mockResolvedValue([]),
     };
+    const mockInsightRepo = {
+      listByAnalysis: jest.fn().mockResolvedValue([]),
+    };
     const mockEvalContextAdapter = {
       getEvaluationContext: jest.fn().mockReturnValue(null),
     };
@@ -15,6 +18,7 @@ describe('ApprovedReportProjectionService', () => {
         },
       } as any,
       mockTraceabilityRepo as any,
+      mockInsightRepo as any,
       mockEvalContextAdapter as any,
     );
 
