@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@ba-helper/backend-runtime':
+        specifier: workspace:*
+        version: link:packages/backend-runtime
       '@ba-helper/contracts':
         specifier: workspace:*
         version: link:packages/contracts
@@ -123,6 +126,9 @@ importers:
       '@ba-helper/application':
         specifier: workspace:*
         version: link:../../packages/application
+      '@ba-helper/backend-runtime':
+        specifier: workspace:*
+        version: link:../../packages/backend-runtime
       '@ba-helper/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts

@@ -5,10 +5,11 @@ import { GetReviewCompletionUseCase } from '../../../traceability/application/ge
 import { GetLatestReviewedReportSnapshotUseCase } from './get-latest-reviewed-report-snapshot.usecase';
 import { FinalReviewedReportResponse } from '@ba-helper/contracts';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { ReviewedSnapshotReportContextAdapter } from '../render/reviewed-snapshot-report-context.adapter';
-import { MarkdownImpactReportBuilder } from '../render/markdown-impact-report.builder';
+
 import { DEFAULT_REPORT_LOCALE, ReportLocale } from '../render/report-localization';
 import { buildReportReviewCoverageSummaryFromSnapshot } from '../report-review-coverage.summary';
+import { computeCanonicalReportHash } from '@ba-helper/backend-runtime';
+import { MarkdownReportRenderContext } from '../markdown-impact-report.types';
 
 @Injectable()
 export class GetFinalReviewedReportUseCase {
@@ -16,8 +17,6 @@ export class GetFinalReviewedReportUseCase {
     private readonly getReviewCompletion: GetReviewCompletionUseCase,
     private readonly getLatestSnapshot: GetLatestReviewedReportSnapshotUseCase,
     private readonly prisma: PrismaService,
-    private readonly contextAdapter: ReviewedSnapshotReportContextAdapter,
-    private readonly reportBuilder: MarkdownImpactReportBuilder,
   ) {}
 
   async execute(
@@ -69,13 +68,91 @@ export class GetFinalReviewedReportUseCase {
     analysisId: string;
     approvedDocumentId: string | null;
     markdown: string | null;
+    reviewDecisionsSnapshot: any;
+    evidenceQualitySummarySnapshot: any;
   }, locale: ReportLocale) {
     const defaultMarkdown = await this.resolveDefaultSnapshotMarkdown(snapshot);
     if (locale === DEFAULT_REPORT_LOCALE) {
       return defaultMarkdown;
     }
 
-    return this.renderLocalizedSnapshotMarkdown(snapshot, locale);
+    if (!snapshot.approvedDocumentId) {
+      throw new AppError('LOCALIZED_REPORT_NOT_READY', 'The canonical report has not been approved yet.');
+    }
+
+    const localized = await this.prisma.localizedReportArtifact.findUnique({
+      where: {
+        sourceDocumentId_locale: {
+          sourceDocumentId: snapshot.approvedDocumentId,
+          locale,
+        }
+      }
+    });
+
+    if (!localized) {
+      throw new AppError('LOCALIZED_REPORT_NOT_READY', `Localized report for ${locale} is not ready yet.`);
+    }
+
+    if (localized.localizationStatus === 'FAILED') {
+      throw new AppError('LOCALIZED_REPORT_FAILED', `Localization failed for ${locale}. Please retry.`);
+    }
+
+    if (localized.localizationStatus !== 'COMPLETED' || !localized.contentMarkdown) {
+      throw new AppError('LOCALIZED_REPORT_NOT_READY', `Localization for ${locale} is still in progress.`);
+    }
+
+    // Verify sourceContentHash
+    const analysis = await this.prisma.impactAnalysis.findUnique({
+      where: { id: snapshot.analysisId },
+      include: {
+        snapshot: { include: { repository: true, profile: true } },
+        sourceTarget: true,
+        requirementRevision: true,
+      }
+    });
+
+    if (!analysis) {
+      throw new AppError('IMPACT_ANALYSIS_NOT_FOUND', 'Impact analysis not found.');
+    }
+
+    const insights = await this.prisma.baInsight.findMany({
+      where: { impactAnalysisId: snapshot.analysisId },
+      include: { evidenceLinks: { include: { evidence: true } } }
+    });
+
+    const traceabilityLinks = await this.prisma.traceabilityLink.findMany({
+      where: { impactAnalysisId: snapshot.analysisId },
+      include: { artifact: true, evidenceLinks: { include: { evidence: true } } }
+    });
+
+    const reviewNotes = await this.prisma.reviewNote.findMany({
+      where: { impactAnalysisId: snapshot.analysisId }
+    });
+
+    const clarifications = await this.prisma.clarificationItem.findMany({
+      where: { impactAnalysisId: snapshot.analysisId }
+    });
+
+    const canonicalContext: MarkdownReportRenderContext = {
+      analysis: analysis as any,
+      locale: 'en',
+      insights: insights as any,
+      traceabilityLinks: traceabilityLinks as any,
+      reviewNotes,
+      hasUnreviewedItems: false,
+      dependencyEdges: [],
+      clarifications: clarifications as any,
+      reviewDecisions: [],
+      reviewDecisionsSnapshot: snapshot.reviewDecisionsSnapshot,
+      evidenceQualitySummarySnapshot: snapshot.evidenceQualitySummarySnapshot,
+    };
+
+    const currentHash = computeCanonicalReportHash(canonicalContext);
+    if (localized.sourceContentHash !== currentHash) {
+      throw new AppError('LOCALIZED_REPORT_OUT_OF_SYNC', `Localized report for ${locale} is out of sync. Please regenerate.`);
+    }
+
+    return localized.contentMarkdown;
   }
 
   private async resolveDefaultSnapshotMarkdown(snapshot: {
@@ -129,25 +206,4 @@ export class GetFinalReviewedReportUseCase {
     );
   }
 
-  private async renderLocalizedSnapshotMarkdown(snapshot: {
-    id: string;
-    analysisId: string;
-  }, locale: ReportLocale) {
-    const analysis = await this.prisma.impactAnalysis.findUnique({
-      where: { id: snapshot.analysisId },
-      include: {
-        snapshot: { include: { repository: true, profile: true } },
-        sourceTarget: true,
-        requirementRevision: { include: { requirement: true } },
-        insights: true,
-      },
-    });
-
-    if (!analysis) {
-      throw new AppError('IMPACT_ANALYSIS_NOT_FOUND', 'Impact analysis not found.');
-    }
-
-    const context = await this.contextAdapter.buildContext(snapshot, analysis, locale);
-    return this.reportBuilder.build(context);
-  }
 }

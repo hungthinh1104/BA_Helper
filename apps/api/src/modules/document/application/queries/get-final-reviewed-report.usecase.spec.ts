@@ -6,8 +6,6 @@ describe('GetFinalReviewedReportUseCase', () => {
   let getReviewCompletionMock: any;
   let getLatestSnapshotMock: any;
   let prismaMock: any;
-  let contextAdapterMock: any;
-  let reportBuilderMock: any;
 
   beforeEach(() => {
     getReviewCompletionMock = {
@@ -27,19 +25,10 @@ describe('GetFinalReviewedReportUseCase', () => {
         findUnique: jest.fn(),
       },
     };
-    contextAdapterMock = {
-      buildContext: jest.fn(),
-    };
-    reportBuilderMock = {
-      build: jest.fn(),
-    };
-
     useCase = new GetFinalReviewedReportUseCase(
       getReviewCompletionMock as any,
       getLatestSnapshotMock as any,
       prismaMock as any,
-      contextAdapterMock as any,
-      reportBuilderMock as any,
     );
   });
 
@@ -144,78 +133,116 @@ describe('GetFinalReviewedReportUseCase', () => {
     expect(result.locale).toBe('en');
   });
 
-  it('renders localized markdown from the reviewed snapshot after default document readiness is satisfied', async () => {
-    const mockCompletion = {
-      isComplete: true,
-      blockingReasons: [],
-    };
-    const mockSnapshot = {
+  it('throws LOCALIZED_REPORT_NOT_READY when localized artifact is missing', async () => {
+    getReviewCompletionMock.execute.mockResolvedValue({ isComplete: true, blockingReasons: [] });
+    getLatestSnapshotMock.execute.mockResolvedValue({
       id: 'snap-1',
       analysisId: 'analysis-123',
       approvedDocumentId: 'doc-1',
       markdown: null,
-      createdAt: new Date('2026-01-01T00:00:00.000Z'),
-      reviewDecisionsSnapshot: [],
-      evidenceQualitySummarySnapshot: {},
-      evaluationContextSnapshot: null,
-      createdByUserId: null,
-    };
-    const mockAnalysis = { id: 'analysis-123' };
-    const mockContext = { locale: 'vi' };
-
-    getReviewCompletionMock.execute.mockResolvedValue(mockCompletion);
-    getLatestSnapshotMock.execute.mockResolvedValue(mockSnapshot);
+      createdAt: new Date(),
+    });
     prismaMock.generatedDocument.findUnique.mockResolvedValue({
       id: 'doc-1',
-      content: '# English persisted document',
+      content: '# English',
     });
-    prismaMock.impactAnalysis.findUnique.mockResolvedValue(mockAnalysis);
-    contextAdapterMock.buildContext.mockResolvedValue(mockContext);
-    reportBuilderMock.build.mockReturnValue('# Bao cao tieng Viet\n```ts\nconsole.log("raw evidence");\n```');
+    prismaMock.localizedReportArtifact = {
+      findUnique: jest.fn().mockResolvedValue(null),
+    };
 
-    const result = await useCase.execute('analysis-123', { locale: 'vi' });
-
-    expect(result.locale).toBe('vi');
-    expect(result.markdown).toContain('# Bao cao tieng Viet');
-    expect(result.markdown).toContain('console.log("raw evidence");');
-    expect(contextAdapterMock.buildContext).toHaveBeenCalledWith(mockSnapshot, mockAnalysis, 'vi');
-    expect(reportBuilderMock.build).toHaveBeenCalledWith(mockContext);
+    await expect(useCase.execute('analysis-123', { locale: 'vi-VN' as any })).rejects.toMatchObject({
+      code: 'LOCALIZED_REPORT_NOT_READY',
+    });
   });
 
-  it('throws a document readiness error when the async document job is still queued', async () => {
-    getReviewCompletionMock.execute.mockResolvedValue({
-      isComplete: true,
-      blockingReasons: [],
-    });
+  it('throws LOCALIZED_REPORT_FAILED when localization failed', async () => {
+    getReviewCompletionMock.execute.mockResolvedValue({ isComplete: true, blockingReasons: [] });
     getLatestSnapshotMock.execute.mockResolvedValue({
       id: 'snap-1',
-      approvedDocumentId: null,
+      analysisId: 'analysis-123',
+      approvedDocumentId: 'doc-1',
       markdown: null,
-      createdAt: new Date('2026-01-01T00:00:00.000Z'),
-      reviewDecisionsSnapshot: [],
-      evidenceQualitySummarySnapshot: {},
-      evaluationContextSnapshot: null,
-      createdByUserId: null,
+      createdAt: new Date(),
     });
-    prismaMock.documentJob.findFirst.mockResolvedValue({
-      id: 'job-1',
-      status: 'QUEUED',
-      failedAt: null,
-      error: null,
-    });
+    prismaMock.generatedDocument.findUnique.mockResolvedValue({ id: 'doc-1', content: '# English' });
+    prismaMock.localizedReportArtifact = {
+      findUnique: jest.fn().mockResolvedValue({ localizationStatus: 'FAILED' }),
+    };
 
-    await expect(useCase.execute('analysis-123')).rejects.toMatchObject({
-      code: 'DOCUMENT_JOB_NOT_READY',
-      details: {
-        documentJobId: 'job-1',
-        status: 'QUEUED',
-      },
+    await expect(useCase.execute('analysis-123', { locale: 'vi-VN' as any })).rejects.toMatchObject({
+      code: 'LOCALIZED_REPORT_FAILED',
     });
+  });
+
+  it('throws LOCALIZED_REPORT_OUT_OF_SYNC when hashes do not match', async () => {
+    getReviewCompletionMock.execute.mockResolvedValue({ isComplete: true, blockingReasons: [] });
+    getLatestSnapshotMock.execute.mockResolvedValue({
+      id: 'snap-1',
+      analysisId: 'analysis-123',
+      approvedDocumentId: 'doc-1',
+      markdown: null,
+      createdAt: new Date(),
+    });
+    prismaMock.generatedDocument.findUnique.mockResolvedValue({ id: 'doc-1', content: '# English' });
+    prismaMock.localizedReportArtifact = {
+      findUnique: jest.fn().mockResolvedValue({
+        localizationStatus: 'COMPLETED',
+        contentMarkdown: '# Vietnamese',
+        sourceContentHash: 'old-hash',
+      }),
+    };
+    prismaMock.impactAnalysis.findUnique.mockResolvedValue({ id: 'analysis-123', snapshot: { id: 'snap-1' }, requirementRevision: { id: 'rev-1' } });
+    prismaMock.baInsight = { findMany: jest.fn().mockResolvedValue([]) };
+    prismaMock.traceabilityLink = { findMany: jest.fn().mockResolvedValue([]) };
+    prismaMock.reviewNote = { findMany: jest.fn().mockResolvedValue([]) };
+    prismaMock.clarificationItem = { findMany: jest.fn().mockResolvedValue([]) };
+
+    await expect(useCase.execute('analysis-123', { locale: 'vi-VN' as any })).rejects.toMatchObject({
+      code: 'LOCALIZED_REPORT_OUT_OF_SYNC',
+    });
+  });
+
+  it('returns localized markdown when artifact is completed and hashes match', async () => {
+    getReviewCompletionMock.execute.mockResolvedValue({ isComplete: true, blockingReasons: [] });
+    getLatestSnapshotMock.execute.mockResolvedValue({
+      id: 'snap-1',
+      analysisId: 'analysis-123',
+      approvedDocumentId: 'doc-1',
+      markdown: null,
+      createdAt: new Date(),
+    });
+    prismaMock.generatedDocument.findUnique.mockResolvedValue({ id: 'doc-1', content: '# English' });
+    prismaMock.impactAnalysis.findUnique.mockResolvedValue({ id: 'analysis-123', snapshot: { id: 'snap-1' }, requirementRevision: { id: 'rev-1' } });
+    prismaMock.baInsight = { findMany: jest.fn().mockResolvedValue([]) };
+    prismaMock.traceabilityLink = { findMany: jest.fn().mockResolvedValue([]) };
+    prismaMock.reviewNote = { findMany: jest.fn().mockResolvedValue([]) };
+    prismaMock.clarificationItem = { findMany: jest.fn().mockResolvedValue([]) };
+
+    // Compute expected hash for an empty context to mock correctly
+    const { computeCanonicalReportHash } = require('@ba-helper/backend-runtime');
+    const mockContext = {
+      analysis: { id: 'analysis-123', snapshot: { id: 'snap-1' }, requirementRevision: { id: 'rev-1' } },
+      locale: 'en',
+      insights: [],
+      traceabilityLinks: [],
+      reviewNotes: [],
+      clarifications: [],
+    };
+    const expectedHash = computeCanonicalReportHash(mockContext);
+
+    prismaMock.localizedReportArtifact = {
+      findUnique: jest.fn().mockResolvedValue({
+        localizationStatus: 'COMPLETED',
+        contentMarkdown: '# Vietnamese Report',
+        sourceContentHash: expectedHash,
+      }),
+    };
+
+    const result = await useCase.execute('analysis-123', { locale: 'vi-VN' as any });
+    expect(result.markdown).toBe('# Vietnamese Report');
   });
 
   it('does not call retrieval/analysis generation dependencies', async () => {
-    // Verified implicitly because the only dependencies are getReviewCompletion and getLatestSnapshot
-    // There are no retrieval or LLM dependencies injected.
     expect(useCase).toBeDefined();
   });
 });

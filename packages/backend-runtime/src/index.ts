@@ -52,4 +52,5 @@ export * from './queue/queue.service';
 export * from './document/application/run-document-job.usecase';
 export * from './localization/localization.module';
 export * from './localization/application/report-localization.service';
+export { computeCanonicalReportHash } from './localization/domain/report-hash';
 export * from './document/application/markdown-impact-report.types';

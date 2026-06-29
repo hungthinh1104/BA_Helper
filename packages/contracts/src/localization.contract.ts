@@ -34,3 +34,9 @@ export const generateLocalizedReportRequestSchema = z.object({
 });
 
 export type GenerateLocalizedReportRequest = z.infer<typeof generateLocalizedReportRequestSchema>;
+
+export const localizationStatusResponseSchema = z.object({
+  status: z.enum(['READY', 'NOT_TRANSLATED', 'QUEUED', 'FAILED', 'OUT_OF_SYNC', 'SOURCE_NOT_READY']),
+});
+
+export type LocalizationStatusResponse = z.infer<typeof localizationStatusResponseSchema>;

@@ -23,6 +23,7 @@ const config: Config = {
     '^@ba-helper/analyzer$': '<rootDir>/packages/analyzer/src/index.ts',
     '^@ba-helper/backend-runtime$': '<rootDir>/packages/backend-runtime/src/index.ts',
     '^@ba-helper/application$': '<rootDir>/packages/application/src/index.ts',
+    '^@ba-helper/backend-runtime$': '<rootDir>/packages/backend-runtime/src/index.ts',
   },
   testEnvironment: 'node',
   testPathIgnorePatterns: ['/node_modules/', '/dist/', '/build/', '/tests/fixtures/'],
