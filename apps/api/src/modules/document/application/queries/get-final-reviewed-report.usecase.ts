@@ -8,6 +8,7 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { ReviewedSnapshotReportContextAdapter } from '../render/reviewed-snapshot-report-context.adapter';
 import { MarkdownImpactReportBuilder } from '../render/markdown-impact-report.builder';
 import { DEFAULT_REPORT_LOCALE, ReportLocale } from '../render/report-localization';
+import { buildReportReviewCoverageSummaryFromSnapshot } from '../report-review-coverage.summary';
 
 @Injectable()
 export class GetFinalReviewedReportUseCase {
@@ -43,6 +44,10 @@ export class GetFinalReviewedReportUseCase {
     }
 
     const markdown = await this.resolveSnapshotMarkdown(snapshot, locale);
+    const reviewCoverageSummary = buildReportReviewCoverageSummaryFromSnapshot({
+      reviewDecisionsSnapshot: snapshot.reviewDecisionsSnapshot,
+      evidenceQualitySummarySnapshot: snapshot.evidenceQualitySummarySnapshot,
+    });
 
     return {
       analysisId,
@@ -51,6 +56,7 @@ export class GetFinalReviewedReportUseCase {
       markdown,
       createdAt: snapshot.createdAt.toISOString(),
       reviewCompletion: completion,
+      reviewCoverageSummary,
       reviewDecisionsSnapshot: snapshot.reviewDecisionsSnapshot,
       evidenceQualitySummarySnapshot: snapshot.evidenceQualitySummarySnapshot,
       evaluationContextSnapshot: snapshot.evaluationContextSnapshot,

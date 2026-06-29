@@ -3,6 +3,31 @@ import { resolveArtifactDisplayType } from './markdown-render-utils';
 import { EvidenceQualityAnnotator } from '../../evidence-quality.annotator';
 import { getReportLabels } from '../report-localization';
 
+export function renderReviewCoverage(context: MarkdownReportRenderContext): string[] {
+  const summary = context.reviewCoverageSummarySnapshot;
+  if (!summary) {
+    return [];
+  }
+
+  const labels = getReportLabels(context.locale);
+  const weakOrMissing = summary.evidence.weak + summary.evidence.missing;
+
+  return [
+    `## ${labels.reviewCoverage}`,
+    '',
+    `- ${labels.insightsReviewed}: ${summary.insights.reviewed} / ${summary.insights.total}`,
+    `- ${labels.traceabilityLinksReviewed}: ${summary.traceabilityLinks.reviewed} / ${summary.traceabilityLinks.total}`,
+    `- ${labels.acceptedItems}: ${summary.decisions.accepted}`,
+    `- ${labels.rejectedItems}: ${summary.decisions.rejected}`,
+    `- ${labels.needsClarificationItems}: ${summary.decisions.needsClarification}`,
+    `- ${labels.strongSourceEvidence}: ${summary.evidence.strong}`,
+    `- ${labels.weakOrMissingEvidence}: ${weakOrMissing}`,
+    `- ${labels.conflictingEvidence}: ${summary.evidence.conflicting}`,
+    `- ${labels.reviewRequired}: ${summary.evidence.reviewRequired}`,
+    '',
+  ];
+}
+
 export function renderImpactedAreas(context: MarkdownReportRenderContext): string[] {
   const { analysis, traceabilityLinks, reviewNotes } = context;
   const labels = getReportLabels(context.locale);

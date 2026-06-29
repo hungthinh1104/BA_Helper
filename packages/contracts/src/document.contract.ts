@@ -96,7 +96,43 @@ export const evidenceQualityItemSchema = z.object({
 	artifact: z.string(),
 	quality: evidenceQualityLabelSchema,
 	reasons: z.array(z.string()),
+	reviewStatus: z.string().nullable().optional(),
 	reviewDecision: traceabilityReviewDecisionSchema.optional().nullable(),
+});
+
+export const reportReviewCoverageSummarySchema = z.object({
+	insights: z.object({
+		total: z.number().int().nonnegative(),
+		reviewed: z.number().int().nonnegative(),
+		unreviewed: z.number().int().nonnegative(),
+		confirmed: z.number().int().nonnegative(),
+		rejected: z.number().int().nonnegative(),
+		needsReview: z.number().int().nonnegative(),
+	}),
+	traceabilityLinks: z.object({
+		total: z.number().int().nonnegative(),
+		reviewed: z.number().int().nonnegative(),
+		unreviewed: z.number().int().nonnegative(),
+		accepted: z.number().int().nonnegative(),
+		rejected: z.number().int().nonnegative(),
+		needsReview: z.number().int().nonnegative(),
+		needsMoreEvidence: z.number().int().nonnegative(),
+	}),
+	decisions: z.object({
+		accepted: z.number().int().nonnegative(),
+		rejected: z.number().int().nonnegative(),
+		needsReview: z.number().int().nonnegative(),
+		needsMoreEvidence: z.number().int().nonnegative(),
+		needsClarification: z.number().int().nonnegative(),
+		unreviewed: z.number().int().nonnegative(),
+	}),
+	evidence: z.object({
+		strong: z.number().int().nonnegative(),
+		weak: z.number().int().nonnegative(),
+		missing: z.number().int().nonnegative(),
+		conflicting: z.number().int().nonnegative(),
+		reviewRequired: z.number().int().nonnegative(),
+	}),
 });
 
 export const approvedImpactReportResponseSchema = z.object({
@@ -115,6 +151,7 @@ export const approvedImpactReportResponseSchema = z.object({
 	evaluationContext: evaluationContextSchema.nullable().optional(),
 	evidenceQualitySummary: evidenceQualitySummarySchema.nullable().optional(),
 	evidenceQualityItems: z.array(evidenceQualityItemSchema).nullable().optional(),
+	reviewCoverageSummary: reportReviewCoverageSummarySchema.nullable().optional(),
 	provenance: z.object({
 		analysisId: z.string().uuid(),
 		projectId: z.string().uuid(),
@@ -149,6 +186,7 @@ export const reviewedReportSnapshotSchema = z.object({
 	markdown: z.string().nullable().optional(),
 	reviewDecisionsSnapshot: z.any(),
 	evidenceQualitySummarySnapshot: z.any(),
+	reviewCoverageSummary: reportReviewCoverageSummarySchema.nullable().optional(),
 	evaluationContextSnapshot: z.any().nullable().optional(),
 	createdByUserId: z.string().uuid().nullable().optional(),
 	createdAt: z.string(),
@@ -160,3 +198,4 @@ export type DocumentJob = z.infer<typeof documentJobSchema>;
 export type FinalizeImpactAnalysisRequest = z.infer<typeof finalizeImpactAnalysisRequestSchema>;
 export type ApprovedImpactReportResponse = z.infer<typeof approvedImpactReportResponseSchema>;
 export type ReviewedReportSnapshotResponse = z.infer<typeof reviewedReportSnapshotSchema>;
+export type ReportReviewCoverageSummary = z.infer<typeof reportReviewCoverageSummarySchema>;

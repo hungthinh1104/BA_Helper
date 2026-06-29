@@ -10,6 +10,7 @@ import { ReviewDecisionRepository } from '../../../impact-analysis/infrastructur
 import { GetImpactDiffUseCase } from '../../../impact-analysis/application/queries/get-impact-diff.usecase';
 import { DEFAULT_REPORT_LOCALE, ReportLocale } from './report-localization';
 import type { ApprovedReportMetadata } from '../../domain/approved-report-metadata';
+import { buildReportReviewCoverageSummaryFromSnapshot } from '../report-review-coverage.summary';
 
 @Injectable()
 export class ReviewedSnapshotReportContextAdapter {
@@ -49,6 +50,10 @@ export class ReviewedSnapshotReportContextAdapter {
     // Retrieve snapshot payload
     const reviewDecisionsSnapshot = snapshot.reviewDecisionsSnapshot as any[];
     const evidenceQualitySummarySnapshot = snapshot.evidenceQualitySummarySnapshot as any;
+    const reviewCoverageSummarySnapshot = buildReportReviewCoverageSummaryFromSnapshot({
+      reviewDecisionsSnapshot,
+      evidenceQualitySummarySnapshot,
+    });
 
     // Overwrite traceability links with snapshot state
     if (reviewDecisionsSnapshot && Array.isArray(reviewDecisionsSnapshot)) {
@@ -93,6 +98,7 @@ export class ReviewedSnapshotReportContextAdapter {
       reviewDecisions,
       reviewDecisionsSnapshot,
       evidenceQualitySummarySnapshot,
+      reviewCoverageSummarySnapshot,
       diff,
       metadata: {
         analysisId: analysis.id,

@@ -48,6 +48,7 @@ export type EvidenceQualityItem = {
   artifact: string;
   quality: QualityLabel;
   reasons: string[];
+  reviewStatus?: string | null;
   reviewDecision?: unknown;
 };
 

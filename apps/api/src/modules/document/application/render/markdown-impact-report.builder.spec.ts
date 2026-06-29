@@ -459,6 +459,57 @@ describe('MarkdownImpactReportBuilder', () => {
   });
 
   describe('Evidence Quality & Dataset Readiness', () => {
+    it('renders Review Coverage summary when snapshot coverage is present', () => {
+      const report = builder.build({
+        analysis: mockAnalysis,
+        insights: [],
+        traceabilityLinks: [],
+        hasUnreviewedItems: false,
+        reviewCoverageSummarySnapshot: {
+          insights: {
+            total: 24,
+            reviewed: 18,
+            unreviewed: 6,
+            confirmed: 16,
+            rejected: 2,
+            needsReview: 6,
+          },
+          traceabilityLinks: {
+            total: 14,
+            reviewed: 10,
+            unreviewed: 4,
+            accepted: 9,
+            rejected: 1,
+            needsReview: 0,
+            needsMoreEvidence: 0,
+          },
+          decisions: {
+            accepted: 25,
+            rejected: 3,
+            needsReview: 6,
+            needsMoreEvidence: 0,
+            needsClarification: 10,
+            unreviewed: 10,
+          },
+          evidence: {
+            strong: 9,
+            weak: 2,
+            missing: 3,
+            conflicting: 1,
+            reviewRequired: 4,
+          },
+        },
+      });
+
+      expect(report).toContain('## Review Coverage');
+      expect(report).toContain('- Insights reviewed: 18 / 24');
+      expect(report).toContain('- Traceability links reviewed: 10 / 14');
+      expect(report).toContain('- Strong source evidence: 9');
+      expect(report).toContain('- Weak/missing evidence: 5');
+      expect(report).toContain('- Conflicting evidence: 1');
+      expect(report).toContain('- Review required: 4');
+    });
+
     it('renders Evidence Quality section with table and summary when traceability links exist', () => {
       const links = [
         {

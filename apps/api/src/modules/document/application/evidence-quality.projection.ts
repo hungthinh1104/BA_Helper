@@ -24,6 +24,7 @@ export function buildEvidenceQualityProjection(params: {
         artifact: link.artifact?.filePath || link.artifact?.name || 'Unknown',
         quality: annotation.label,
         reasons: annotation.reasons,
+        reviewStatus: link.reviewStatus,
         reviewDecision: link.reviewDecision
           ? {
               id: link.reviewDecision.id,
@@ -50,6 +51,7 @@ export function buildEvidenceQualityProjection(params: {
         artifact: insight.title || insight.insightKey,
         quality: annotation.label,
         reasons: annotation.reasons,
+        reviewStatus: insight.reviewStatus,
         reviewDecision: null,
       },
     };

@@ -1,6 +1,7 @@
 import type { Prisma, ReviewNote } from '@prisma/client';
 import type { ClarificationItemDto } from '@ba-helper/contracts';
 import type { ApprovedReportMetadata } from '../domain/approved-report-metadata';
+import type { ReportReviewCoverageSummary } from './report-review-coverage.summary';
 import type { ReportDependencyEdge } from './mermaid-impact-diagram.builder';
 import type { ReportLocale } from './render/report-localization';
 
@@ -45,6 +46,7 @@ export type MarkdownReportRenderContext = {
   reviewDecisions: any[];
   reviewDecisionsSnapshot?: any[];
   evidenceQualitySummarySnapshot?: any;
+  reviewCoverageSummarySnapshot?: ReportReviewCoverageSummary;
   diff?: any;
   metadata?: ApprovedReportMetadata;
 };

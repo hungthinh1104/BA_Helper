@@ -5,6 +5,7 @@ import { TraceabilityRepository } from '../../traceability/infrastructure/tracea
 import { InsightRepository } from '../../insight/infrastructure/insight.repository';
 import { EvaluationContextAdapter } from './evaluation-context.adapter';
 import { buildEvidenceQualityProjection } from './evidence-quality.projection';
+import { buildReportReviewCoverageSummary } from './report-review-coverage.summary';
 
 @Injectable()
 export class ApprovedReportProjectionService {
@@ -23,6 +24,7 @@ export class ApprovedReportProjectionService {
     evaluationContext?: any;
     evidenceQualitySummary?: any;
     evidenceQualityItems?: any[];
+    reviewCoverageSummary?: any;
   }> {
     const analysis = report.impactAnalysis;
     const isPinnedCommit = analysis.sourceTarget.resolvedRefType === 'COMMIT';
@@ -54,6 +56,10 @@ export class ApprovedReportProjectionService {
       traceabilityLinks,
       insights: insights as any[],
     });
+    const reviewCoverageSummary = buildReportReviewCoverageSummary({
+      items: qualityProjection.items,
+      evidenceQualitySummary: qualityProjection.summary,
+    });
 
     return {
       report,
@@ -62,6 +68,7 @@ export class ApprovedReportProjectionService {
       evaluationContext,
       evidenceQualitySummary: qualityProjection.summary,
       evidenceQualityItems: qualityProjection.items,
+      reviewCoverageSummary,
       metadata: {
         analysisId: analysis.id,
         title: analysis.requirementRevision.title,

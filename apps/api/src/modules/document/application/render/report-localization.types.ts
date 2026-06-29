@@ -69,6 +69,13 @@ export type ReportLabels = {
   reviewer: string;
   decision: string;
   note: string;
+  reviewCoverage: string;
+  insightsReviewed: string;
+  traceabilityLinksReviewed: string;
+  acceptedItems: string;
+  rejectedItems: string;
+  needsClarificationItems: string;
+  weakOrMissingEvidence: string;
   evidenceQuality: string;
   evidenceBackedLinks: string;
   strongSourceEvidence: string;

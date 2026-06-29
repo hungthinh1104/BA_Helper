@@ -393,6 +393,36 @@ Legacy reports may contain older quality labels; readers should tolerate them
 while new reports emit the labels above.
 ```
 
+## Report Review Coverage Semantics
+
+Review coverage is a report/read-model summary. It is not an approval gate in
+the current slice and must not silently block finalization or export until an
+explicit review-gate phase changes policy.
+
+Current coverage summarizes:
+
+```text
+insights.reviewed / insights.total
+traceabilityLinks.reviewed / traceabilityLinks.total
+accepted, rejected, needsReview, needsMoreEvidence, unreviewed decisions
+strong, weak, missing, conflicting, and reviewRequired evidence-quality counts
+```
+
+`needsClarification` is a display/read-model aggregate of:
+
+```text
+needsReview + needsMoreEvidence + unreviewed
+```
+
+Rules:
+
+```text
+Coverage is derived from persisted review status/decisions and report evidence quality.
+Coverage does not call the LLM, scanner, retrieval, or domain-pack registry.
+Coverage may be shown in final/reviewed report UI and Markdown reports.
+Future enforcement must be implemented as a separate explicit gate.
+```
+
 ## Generated Output Semantics
 
 Persist output projection status independently from analysis freshness against

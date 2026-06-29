@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { reportReviewCoverageSummarySchema } from './document.contract';
 
 export const reportLocaleSchema = z.enum(['en', 'vi']);
 
@@ -34,6 +35,7 @@ export const finalReviewedReportResponseSchema = z.object({
   markdown: z.string().nullable().optional(),
   createdAt: z.string(),
   reviewCompletion: reviewCompletionResponseSchema,
+  reviewCoverageSummary: reportReviewCoverageSummarySchema.nullable().optional(),
   reviewDecisionsSnapshot: z.unknown(),
   evidenceQualitySummarySnapshot: z.unknown(),
   evaluationContextSnapshot: z.unknown().nullable(),
