@@ -144,8 +144,15 @@ export class TraceabilityRepository {
     });
   }
   async deleteReviewDecision(linkId: string) {
-    return this.prisma.traceabilityReviewDecision.delete({
-      where: { traceabilityLinkId: linkId },
+    return this.prisma.$transaction(async (tx) => {
+      const deleted = await tx.traceabilityReviewDecision.delete({
+        where: { traceabilityLinkId: linkId },
+      });
+      await tx.traceabilityLink.update({
+        where: { id: linkId },
+        data: { reviewStatus: 'NEEDS_REVIEW' },
+      });
+      return deleted;
     });
   }
 
@@ -156,21 +163,37 @@ export class TraceabilityRepository {
     note?: string | null;
     reviewedByUserId?: string | null;
   }) {
-    return this.prisma.traceabilityReviewDecision.upsert({
-      where: { traceabilityLinkId: params.linkId },
-      create: {
-        traceabilityLinkId: params.linkId,
-        analysisId: params.analysisId,
-        decision: params.decision,
-        note: params.note,
-        reviewedByUserId: params.reviewedByUserId,
-      },
-      update: {
-        decision: params.decision,
-        note: params.note,
-        reviewedByUserId: params.reviewedByUserId,
-        reviewedAt: new Date(),
-      },
+    const reviewStatus = toTraceabilityReviewStatus(params.decision);
+    return this.prisma.$transaction(async (tx) => {
+      await tx.traceabilityLink.update({
+        where: { id: params.linkId },
+        data: { reviewStatus },
+      });
+
+      return tx.traceabilityReviewDecision.upsert({
+        where: { traceabilityLinkId: params.linkId },
+        create: {
+          traceabilityLinkId: params.linkId,
+          analysisId: params.analysisId,
+          decision: params.decision,
+          note: params.note,
+          reviewedByUserId: params.reviewedByUserId,
+        },
+        update: {
+          decision: params.decision,
+          note: params.note,
+          reviewedByUserId: params.reviewedByUserId,
+          reviewedAt: new Date(),
+        },
+      });
     });
   }
+}
+
+function toTraceabilityReviewStatus(
+  decision: 'ACCEPTED' | 'REJECTED' | 'NEEDS_REVIEW' | 'NEEDS_MORE_EVIDENCE',
+) {
+  if (decision === 'ACCEPTED') return 'CONFIRMED';
+  if (decision === 'REJECTED') return 'REJECTED';
+  return 'NEEDS_REVIEW';
 }
