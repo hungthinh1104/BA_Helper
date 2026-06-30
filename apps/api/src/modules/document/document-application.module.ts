@@ -13,6 +13,7 @@ import { RunDocumentJobUseCase } from './application/jobs/run-document-job.useca
 import { GetFinalReviewedReportUseCase } from './application/queries/get-final-reviewed-report.usecase';
 import { GetLatestReviewedReportSnapshotUseCase } from './application/queries/get-latest-reviewed-report-snapshot.usecase';
 import { ListDocumentsUseCase } from './application/queries/list-documents.usecase';
+import { ApprovedReportContextReader } from './application/queries/approved-report-context.reader';
 
 import { MarkdownImpactReportBuilder } from './application/render/markdown-impact-report.builder';
 import { ReviewedSnapshotReportContextAdapter } from './application/render/reviewed-snapshot-report-context.adapter';
@@ -40,6 +41,7 @@ import { GetImpactDiffUseCase } from '../impact-analysis/application/queries/get
     RunDocumentJobUseCase,
     GetFinalReviewedReportUseCase,
     GetLatestReviewedReportSnapshotUseCase,
+    ApprovedReportContextReader,
     {
       provide: ListDocumentsUseCase,
       useFactory: (repo: DocumentRepository) => new ListDocumentsUseCase(repo),
@@ -61,6 +63,7 @@ import { GetImpactDiffUseCase } from '../impact-analysis/application/queries/get
     GetFinalReviewedReportUseCase,
     GetLatestReviewedReportSnapshotUseCase,
     ListDocumentsUseCase,
+    ApprovedReportContextReader,
     DocumentRepository,
     EvaluationContextAdapter,
   ],

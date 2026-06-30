@@ -21,7 +21,7 @@ export class ImpactAnalysisProcessor extends WorkerHost {
     } catch (e: unknown) {
       const recoverability = classifyWorkerError(e);
       const errorCode = (e instanceof Error && 'code' in e) ? (e as any).code : undefined;
-      const errorMessage = e instanceof Error ? e.message : String(e);
+      const errorName = e instanceof Error ? e.name : 'UnknownError';
 
       this.logger.error(
         JSON.stringify({
@@ -30,14 +30,14 @@ export class ImpactAnalysisProcessor extends WorkerHost {
           analysisId: job.data.analysisId,
           attemptsMade: job.attemptsMade,
           errorCode,
-          errorMessage,
+          errorName,
           recoverability,
         }),
       );
 
       if (recoverability === 'UNRECOVERABLE') {
         throw new UnrecoverableError(
-          `[${errorCode ?? 'UNKNOWN'}] ${errorMessage}`,
+          `[${errorCode ?? 'UNKNOWN'}] ${errorName}`,
         );
       }
 

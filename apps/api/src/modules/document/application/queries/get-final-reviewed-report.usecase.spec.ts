@@ -6,6 +6,7 @@ describe('GetFinalReviewedReportUseCase', () => {
   let getReviewCompletionMock: any;
   let getLatestSnapshotMock: any;
   let prismaMock: any;
+  let contextReaderMock: any;
 
   beforeEach(() => {
     getReviewCompletionMock = {
@@ -25,10 +26,14 @@ describe('GetFinalReviewedReportUseCase', () => {
         findUnique: jest.fn(),
       },
     };
+    contextReaderMock = {
+      readContext: jest.fn(),
+    };
     useCase = new GetFinalReviewedReportUseCase(
       getReviewCompletionMock as any,
       getLatestSnapshotMock as any,
       prismaMock as any,
+      contextReaderMock as any,
     );
   });
 
@@ -191,11 +196,9 @@ describe('GetFinalReviewedReportUseCase', () => {
         sourceContentHash: 'old-hash',
       }),
     };
-    prismaMock.impactAnalysis.findUnique.mockResolvedValue({ id: 'analysis-123', snapshot: { id: 'snap-1' }, requirementRevision: { id: 'rev-1' } });
-    prismaMock.baInsight = { findMany: jest.fn().mockResolvedValue([]) };
-    prismaMock.traceabilityLink = { findMany: jest.fn().mockResolvedValue([]) };
-    prismaMock.reviewNote = { findMany: jest.fn().mockResolvedValue([]) };
-    prismaMock.clarificationItem = { findMany: jest.fn().mockResolvedValue([]) };
+    contextReaderMock.readContext.mockResolvedValue({
+      sourceContentHash: 'new-hash',
+    });
 
     await expect(useCase.execute('analysis-123', { locale: 'vi-VN' as any })).rejects.toMatchObject({
       code: 'LOCALIZED_REPORT_OUT_OF_SYNC',
@@ -212,29 +215,16 @@ describe('GetFinalReviewedReportUseCase', () => {
       createdAt: new Date(),
     });
     prismaMock.generatedDocument.findUnique.mockResolvedValue({ id: 'doc-1', content: '# English' });
-    prismaMock.impactAnalysis.findUnique.mockResolvedValue({ id: 'analysis-123', snapshot: { id: 'snap-1' }, requirementRevision: { id: 'rev-1' } });
-    prismaMock.baInsight = { findMany: jest.fn().mockResolvedValue([]) };
-    prismaMock.traceabilityLink = { findMany: jest.fn().mockResolvedValue([]) };
-    prismaMock.reviewNote = { findMany: jest.fn().mockResolvedValue([]) };
-    prismaMock.clarificationItem = { findMany: jest.fn().mockResolvedValue([]) };
-
-    // Compute expected hash for an empty context to mock correctly
-    const { computeCanonicalReportHash } = require('@ba-helper/backend-runtime');
-    const mockContext = {
-      analysis: { id: 'analysis-123', snapshot: { id: 'snap-1' }, requirementRevision: { id: 'rev-1' } },
-      locale: 'en',
-      insights: [],
-      traceabilityLinks: [],
-      reviewNotes: [],
-      clarifications: [],
-    };
-    const expectedHash = computeCanonicalReportHash(mockContext);
+    
+    contextReaderMock.readContext.mockResolvedValue({
+      sourceContentHash: 'expected-hash',
+    });
 
     prismaMock.localizedReportArtifact = {
       findUnique: jest.fn().mockResolvedValue({
         localizationStatus: 'COMPLETED',
         contentMarkdown: '# Vietnamese Report',
-        sourceContentHash: expectedHash,
+        sourceContentHash: 'expected-hash',
       }),
     };
 

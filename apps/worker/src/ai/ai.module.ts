@@ -9,8 +9,8 @@ import { GoogleLlmProvider } from './google.provider';
 import { DeepseekLlmProvider } from './deepseek.provider';
 
 /**
- * Worker-local AiModule — mirrors @ba-helper/api/modules/ai/ai.module.ts
- * but does NOT import from @ba-helper/api. Providers use @ba-helper/application and
+ * Worker-local AiModule — mirrors the API AiModule
+ * but does NOT import from it. Providers use @ba-helper/application and
  * @ba-helper/shared directly.
  */
 @Module({})

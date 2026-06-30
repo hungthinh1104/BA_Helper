@@ -16,6 +16,7 @@ import {
   finalizeImpactAnalysisRequestSchema,
   impactGraphResponseSchema,
   qaCoverageResponseSchema,
+  reviewCoverageResponseSchema,
   reviewQueueResponseSchema,
   paginationQuerySchema,
   impactAnalysisDiffResponseSchema,
@@ -84,7 +85,7 @@ export class ImpactAnalysisReviewController {
   ) {
     // Permission is checked within the use case
     const result = await this.getReviewCoverage.execute(actor, runId);
-    return result; // result is already validated by contract schema format implicitly, or we can use reviewCoverageResponseSchema.parse
+    return reviewCoverageResponseSchema.parse(result);
   }
 
   @Post('/impact-analyses/:analysisId/review-decisions')

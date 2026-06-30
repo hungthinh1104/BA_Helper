@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { domainPackRegistryResponseSchema } from '@ba-helper/contracts';
-import { DomainPackRegistry } from '../application/domain-pack.registry';
+import { DomainPackRegistry } from '@ba-helper/backend-runtime';
 
 @Controller('/api/v1/domain-packs')
 export class DomainPackController {

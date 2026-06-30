@@ -8,8 +8,7 @@ import { PrismaService } from '../../../prisma/prisma.service';
 
 import { DEFAULT_REPORT_LOCALE, ReportLocale } from '../render/report-localization';
 import { buildReportReviewCoverageSummaryFromSnapshot } from '../report-review-coverage.summary';
-import { computeCanonicalReportHash } from '@ba-helper/backend-runtime';
-import { MarkdownReportRenderContext } from '../markdown-impact-report.types';
+import { ApprovedReportContextReader } from './approved-report-context.reader';
 
 @Injectable()
 export class GetFinalReviewedReportUseCase {
@@ -17,6 +16,7 @@ export class GetFinalReviewedReportUseCase {
     private readonly getReviewCompletion: GetReviewCompletionUseCase,
     private readonly getLatestSnapshot: GetLatestReviewedReportSnapshotUseCase,
     private readonly prisma: PrismaService,
+    private readonly contextReader: ApprovedReportContextReader,
   ) {}
 
   async execute(
@@ -101,53 +101,7 @@ export class GetFinalReviewedReportUseCase {
       throw new AppError('LOCALIZED_REPORT_NOT_READY', `Localization for ${locale} is still in progress.`);
     }
 
-    // Verify sourceContentHash
-    const analysis = await this.prisma.impactAnalysis.findUnique({
-      where: { id: snapshot.analysisId },
-      include: {
-        snapshot: { include: { repository: true, profile: true } },
-        sourceTarget: true,
-        requirementRevision: true,
-      }
-    });
-
-    if (!analysis) {
-      throw new AppError('IMPACT_ANALYSIS_NOT_FOUND', 'Impact analysis not found.');
-    }
-
-    const insights = await this.prisma.baInsight.findMany({
-      where: { impactAnalysisId: snapshot.analysisId },
-      include: { evidenceLinks: { include: { evidence: true } } }
-    });
-
-    const traceabilityLinks = await this.prisma.traceabilityLink.findMany({
-      where: { impactAnalysisId: snapshot.analysisId },
-      include: { artifact: true, evidenceLinks: { include: { evidence: true } } }
-    });
-
-    const reviewNotes = await this.prisma.reviewNote.findMany({
-      where: { impactAnalysisId: snapshot.analysisId }
-    });
-
-    const clarifications = await this.prisma.clarificationItem.findMany({
-      where: { impactAnalysisId: snapshot.analysisId }
-    });
-
-    const canonicalContext: MarkdownReportRenderContext = {
-      analysis: analysis as any,
-      locale: 'en',
-      insights: insights as any,
-      traceabilityLinks: traceabilityLinks as any,
-      reviewNotes,
-      hasUnreviewedItems: false,
-      dependencyEdges: [],
-      clarifications: clarifications as any,
-      reviewDecisions: [],
-      reviewDecisionsSnapshot: snapshot.reviewDecisionsSnapshot,
-      evidenceQualitySummarySnapshot: snapshot.evidenceQualitySummarySnapshot,
-    };
-
-    const currentHash = computeCanonicalReportHash(canonicalContext);
+    const { sourceContentHash: currentHash } = await this.contextReader.readContext(snapshot.analysisId);
     if (localized.sourceContentHash !== currentHash) {
       throw new AppError('LOCALIZED_REPORT_OUT_OF_SYNC', `Localized report for ${locale} is out of sync. Please regenerate.`);
     }

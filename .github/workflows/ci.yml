@@ -77,6 +77,13 @@ jobs:
             exit 1
           fi
 
+      - name: Backend-runtime boundary check (no api decorators)
+        run: |
+          if grep -rE '@Controller|@UseGuards|@CurrentUser|@Req|@Get|@Post|@Put|@Delete|@Patch|JwtAuthGuard|RolesGuard' packages/backend-runtime/src/; then
+            echo "BOUNDARY VIOLATION: backend-runtime must not contain HTTP controllers or guards"
+            exit 1
+          fi
+
       - name: Lint
         run: pnpm lint
 
@@ -85,6 +92,15 @@ jobs:
 
       - name: Web production build
         run: pnpm --filter web... build
+
+      - name: Build backend-runtime
+        run: pnpm --filter @ba-helper/backend-runtime build
+
+      - name: Build api
+        run: pnpm --filter @ba-helper/api build
+
+      - name: Build worker
+        run: pnpm --filter @ba-helper/worker build
 
       - name: Analyzer tests
         run: pnpm test:analyzer
