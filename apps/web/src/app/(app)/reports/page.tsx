@@ -24,6 +24,7 @@ function ReportsPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const urlAnalysisId = searchParams?.get("analysisId")
+  const urlLocale = searchParams?.get("locale") || "en"
   const activeAnalysisId =
     urlAnalysisId && completedAnalyses.some((analysis) => analysis.id === urlAnalysisId)
       ? urlAnalysisId
@@ -157,7 +158,7 @@ function ReportsPageContent() {
                   {/* Scrollable Content */}
                   <div className="flex-1 overflow-y-auto bg-background">
                     {selectedDoc && (
-                      <ReportViewer analysisId={selectedDoc.id} />
+                      <ReportViewer analysisId={selectedDoc.id} locale={urlLocale} />
                     )}
                   </div>
                 </div>

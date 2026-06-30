@@ -80,15 +80,11 @@ export function AnalysisLocalizationTrigger({
         <div className="flex gap-2 w-full">
           {status === "READY" ? (
             <>
-              <Button 
-                variant="outline" 
-                className="flex-1"
-                asChild
-              >
-                <Link href={`/reports?analysisId=${analysisId}&locale=${selectedLocale}`}>
+              <Link href={`/reports?analysisId=${analysisId}&locale=${selectedLocale}`} className="flex-1">
+                <Button variant="outline" className="w-full">
                   View Report
-                </Link>
-              </Button>
+                </Button>
+              </Link>
               <Button 
                 variant="secondary" 
                 disabled={generateLocalization.isPending}

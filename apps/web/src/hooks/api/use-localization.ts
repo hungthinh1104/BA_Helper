@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { GenerateLocalizedReportRequest, LocalizedReportArtifact } from '@ba-helper/contracts';
-import { api } from '@/lib/api-client';
+import { apiGet, apiPost } from '@/lib/api-client';
 
 export const localizationKeys = {
   all: ['localization'] as const,
@@ -11,11 +11,11 @@ export const localizationKeys = {
 export function useGenerateLocalizedReport(analysisId: string) {
   return useMutation({
     mutationFn: async (data: GenerateLocalizedReportRequest) => {
-      const response = await api.post<LocalizedReportArtifact>(
+      const response = await apiPost<LocalizedReportArtifact>(
         `/v1/analyses/${analysisId}/localization`,
         data
       );
-      return response.data;
+      return response;
     },
   });
 }
@@ -24,10 +24,10 @@ export function useLocalizationStatus(analysisId: string, locale: string) {
   return useQuery({
     queryKey: localizationKeys.status(analysisId, locale),
     queryFn: async () => {
-      const response = await api.get<{ status: 'READY' | 'NOT_TRANSLATED' | 'QUEUED' | 'FAILED' | 'OUT_OF_SYNC' | 'SOURCE_NOT_READY' }>(
+      const response = await apiGet<{ status: 'READY' | 'NOT_TRANSLATED' | 'QUEUED' | 'FAILED' | 'OUT_OF_SYNC' | 'SOURCE_NOT_READY' }>(
         `/v1/analyses/${analysisId}/localization/${locale}/status`
       );
-      return response.data;
+      return response;
     },
     refetchInterval: (query) => {
       // Auto-poll if it's queued

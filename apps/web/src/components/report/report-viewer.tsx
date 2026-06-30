@@ -1,7 +1,8 @@
 "use client"
 
-import { useApprovedReport } from "@/hooks/api/use-approved-report"
+import { useApprovedReport, useFinalReviewedReport } from "@/hooks/api/use-approved-report"
 import { useAnalysisDetail } from "@/hooks/api/use-analyses"
+import { ApprovedImpactReportResponse } from "@ba-helper/contracts"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AlertCircle, FileWarning, Copy, Download, CheckCircle2, Loader2, Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -20,18 +21,36 @@ import { ReportMarkdown } from "./report-markdown"
 interface ReportViewerProps {
   analysisId: string
   printMode?: boolean
+  locale?: string
 }
 
-export function ReportViewer({ analysisId, printMode = false }: ReportViewerProps) {
+export function ReportViewer({ analysisId, printMode = false, locale = "en" }: ReportViewerProps) {
   const { data: analysis, isLoading: analysisLoading } = useAnalysisDetail(analysisId)
-  const { data: report, isLoading: reportLoading, error } = useApprovedReport(analysisId, analysis?.status)
+  const isEnglish = locale === "en"
+  
+  // Conditionally fetch approved report only if it's english
+  const { data: approvedReport, isLoading: approvedLoading, error: approvedError } = useApprovedReport(analysisId, isEnglish ? analysis?.status : undefined)
+  
+  // Use the new localized final reviewed report if locale is provided
+  const { data: localizedReport, isLoading: localizedLoading, error: localizedError } = useFinalReviewedReport(analysisId, locale)
+  
+  const reportLoading = isEnglish ? approvedLoading : localizedLoading
+  const error = isEnglish ? approvedError : localizedError
+  const hasReport = isEnglish ? !!approvedReport : !!localizedReport
+  const markdown = isEnglish ? approvedReport?.markdown : localizedReport?.markdown
+  const isStale = isEnglish ? !!approvedReport?.isStale : false // localized report implicitly not stale if served, but we lack full status
+  const staleReason = isEnglish ? approvedReport?.staleReason : undefined
+  
+  const commitSha = isEnglish ? approvedReport?.provenance.commitSha : analysis?.snapshot.commitSha
+  const generatedAt = isEnglish ? approvedReport?.provenance.generatedAt : localizedReport?.createdAt
+
   const [copied, setCopied] = useState(false)
   const [exportingFormat, setExportingFormat] = useState<"md" | "pdf" | null>(null)
 
   const handleCopy = async () => {
-    if (!report?.markdown) return
+    if (!markdown) return
     try {
-      await navigator.clipboard.writeText(report.markdown)
+      await navigator.clipboard.writeText(markdown)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch (error) {
@@ -43,7 +62,7 @@ export function ReportViewer({ analysisId, printMode = false }: ReportViewerProp
   }
 
   const handleDownload = async (format: "md" | "pdf") => {
-    if (!report || report.isStale) return;
+    if (!hasReport || isStale || !isEnglish) return;
     setExportingFormat(format);
     try {
       const file = await apiGetFile(`/api/v1/impact-analyses/${analysisId}/approved-report/export.${format}`);
@@ -95,7 +114,7 @@ export function ReportViewer({ analysisId, printMode = false }: ReportViewerProp
     )
   }
 
-  if (error || !report) {
+  if (error || !hasReport) {
     const isFinalizedWithoutApprovedReport = analysis?.status === "COMPLETED"
     return (
       <div className="m-8 flex flex-col items-center justify-center rounded-xl border border-border/60 bg-surface px-8 py-12 text-muted-foreground">
@@ -147,8 +166,8 @@ export function ReportViewer({ analysisId, printMode = false }: ReportViewerProp
                   variant="outline"
                   className="h-8 gap-1.5 shadow-none"
                   onClick={() => handleDownload("md")}
-                  disabled={report.isStale || exportingFormat !== null}
-                  title={report.isStale ? "Report is stale; rerun/finalize again before export" : undefined}
+                  disabled={isStale || exportingFormat !== null || !isEnglish}
+                  title={!isEnglish ? "Export is currently only available for the English canonical report" : isStale ? "Report is stale; rerun/finalize again before export" : undefined}
                 >
                   {exportingFormat === "md" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
                   Export Markdown
@@ -158,8 +177,8 @@ export function ReportViewer({ analysisId, printMode = false }: ReportViewerProp
                   variant="outline"
                   className="h-8 gap-1.5 shadow-none"
                   onClick={() => handleDownload("pdf")}
-                  disabled={report.isStale || exportingFormat !== null}
-                  title={report.isStale ? "Report is stale; rerun/finalize again before export" : undefined}
+                  disabled={isStale || exportingFormat !== null || !isEnglish}
+                  title={!isEnglish ? "Export is currently only available for the English canonical report" : isStale ? "Report is stale; rerun/finalize again before export" : undefined}
                 >
                   {exportingFormat === "pdf" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
                   Export PDF
@@ -170,16 +189,16 @@ export function ReportViewer({ analysisId, printMode = false }: ReportViewerProp
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <AnalysisStatusBadge status={report.isStale ? "STALE" : "COMPLETED"} />
+          <AnalysisStatusBadge status={isStale ? "STALE" : "COMPLETED"} />
         </div>
         
-        {report.isStale && (
+        {isStale && (
           <div className="report-stale-warning mb-6 flex items-start gap-3 rounded-lg border border-warning/25 bg-warning/10 p-4 text-warning">
             <FileWarning className="w-5 h-5 shrink-0 mt-0.5" />
             <div className="flex flex-col gap-1">
               <span className="font-semibold text-[13px] uppercase tracking-wider">Stale Report Warning</span>
               <span className="text-[13px] text-warning/80">
-                {report.staleReason || "The repository has progressed past the snapshot used for this report. The findings may no longer be accurate."}
+                {staleReason || "The repository has progressed past the snapshot used for this report. The findings may no longer be accurate."}
               </span>
               <span className="text-[12px] text-warning/75">
                 Reading remains allowed for traceability, but export is blocked until the analysis is rerun and finalized against the current snapshot.
@@ -195,8 +214,8 @@ export function ReportViewer({ analysisId, printMode = false }: ReportViewerProp
           {analysis?.snapshot.repositoryId && (
             <div><strong className="text-foreground/80 font-medium">Target Repository:</strong> <span className="ml-2">{analysis.snapshot.repositoryId}</span></div>
           )}
-          <div><strong className="text-foreground/80 font-medium">Target Commit:</strong> <span className="font-mono ml-2">{report.provenance.commitSha.substring(0, 7)}</span></div>
-          <div><strong className="text-foreground/80 font-medium">Generated At:</strong> <span className="ml-2">{new Date(report.provenance.generatedAt).toLocaleDateString()}</span></div>
+          <div><strong className="text-foreground/80 font-medium">Target Commit:</strong> <span className="font-mono ml-2">{commitSha?.substring(0, 7) || "unknown"}</span></div>
+          <div><strong className="text-foreground/80 font-medium">Generated At:</strong> <span className="ml-2">{generatedAt ? new Date(generatedAt).toLocaleDateString() : "unknown"}</span></div>
         </div>
         
         {analysis?.requirement.rawText && (
@@ -207,22 +226,26 @@ export function ReportViewer({ analysisId, printMode = false }: ReportViewerProp
       </header>
 
       {/* Markdown Content */}
-      <ReportMarkdown markdown={report.markdown || ""} />
+      <ReportMarkdown markdown={markdown || ""} />
 
-      {/* Structured Evidence Quality and Evaluation Context */}
+      {/* Structured Evidence Quality and Evaluation Context (Hidden for non-en locales if missing) */}
       {!printMode && (
         <>
           <div className="mt-12 space-y-8 border-t border-border/50 pt-8 print:hidden">
-            <ReviewCoverageSummary summary={report.reviewCoverageSummary} />
-            <EvidenceQualitySummary summary={report.evidenceQualitySummary} />
-            {report.evidenceQualityItems && report.evidenceQualityItems.length > 0 && (
-              <EvidenceQualityTable analysisId={analysisId} items={report.evidenceQualityItems} />
+            {Boolean(isEnglish ? approvedReport?.reviewCoverageSummary : localizedReport?.reviewCoverageSummary) && <ReviewCoverageSummary summary={isEnglish ? approvedReport!.reviewCoverageSummary! : localizedReport!.reviewCoverageSummary!} />}
+            {Boolean(isEnglish ? approvedReport?.evidenceQualitySummary : localizedReport?.evidenceQualitySummarySnapshot) && <EvidenceQualitySummary summary={isEnglish ? approvedReport!.evidenceQualitySummary! : localizedReport!.evidenceQualitySummarySnapshot as NonNullable<ApprovedImpactReportResponse["evidenceQualitySummary"]>} />}
+            {isEnglish && Boolean(approvedReport?.evidenceQualityItems?.length) && (
+              <EvidenceQualityTable analysisId={analysisId} items={approvedReport!.evidenceQualityItems!} />
             )}
-            <EvaluationContextCard context={report.evaluationContext} />
+            {isEnglish && approvedReport?.evaluationContext && <EvaluationContextCard context={approvedReport.evaluationContext} />}
           </div>
 
-          <ReviewedSnapshotPanel analysisId={analysisId} />
-          <FinalReviewGatePanel analysisId={analysisId} />
+          {isEnglish && (
+            <>
+              <ReviewedSnapshotPanel analysisId={analysisId} />
+              <FinalReviewGatePanel analysisId={analysisId} />
+            </>
+          )}
         </>
       )}
     </div>
