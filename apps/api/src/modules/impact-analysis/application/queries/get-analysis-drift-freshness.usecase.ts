@@ -1,8 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../prisma/prisma.service';
 import { GetRepositorySnapshotDriftUseCase } from '../../../repository/application/get-repository-snapshot-drift.usecase';
-import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
 import { DriftFreshnessRecommendation } from '@ba-helper/contracts';
+import { PrismaService, ImpactAnalysisRepository } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class GetAnalysisDriftFreshnessUseCase {

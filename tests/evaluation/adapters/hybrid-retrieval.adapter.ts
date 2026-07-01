@@ -4,8 +4,7 @@ import { EvaluationAdapter } from '../evaluation-runner';
 import { EvaluationCase, NormalizedEvaluationResult } from '../evaluation-types';
 import { SafeFileEnumerator } from '../../../packages/analyzer/src/scanner/core/safe-file-enumerator';
 import { scanProject } from '../../../packages/analyzer/src/scanner/scanner';
-import { PrismaService } from '../../../apps/api/src/modules/prisma/prisma.service';
-import { HybridRetrievalService } from '@ba-helper/backend-runtime';
+import { HybridRetrievalService, PrismaService } from '@ba-helper/backend-runtime';
 import { DomainPackRegistry } from '@ba-helper/backend-runtime';
 
 export class HybridRetrievalEvaluationAdapter implements EvaluationAdapter {

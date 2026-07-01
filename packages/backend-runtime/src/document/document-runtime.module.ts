@@ -7,7 +7,7 @@ import { EvaluationContextAdapter } from './application/evaluation-context.adapt
 import { GetImpactDiffUseCase } from '../impact-analysis/application/queries/get-impact-diff.usecase';
 import { EventLogModule } from '../event-log/event-log.module';
 import { PrismaModule } from '../prisma/prisma.module';
-// Wait, repositories should also be provided, but they might be provided globally or we can just provide them here.
+import { PrismaService } from '../prisma/prisma.service';
 import { DocumentRepository } from './infrastructure/document.repository';
 import { TraceabilityRepository } from '../traceability/infrastructure/traceability.repository';
 import { GraphRepository } from '../graph/infrastructure/graph.repository';
@@ -26,6 +26,54 @@ import { ImpactAnalysisRepository } from '../impact-analysis/infrastructure/impa
     MermaidImpactDiagramBuilder,
     EvaluationContextAdapter,
     GetImpactDiffUseCase,
+    {
+      provide: DocumentRepository,
+      useFactory: (prisma: PrismaService) => new DocumentRepository(prisma),
+      inject: [PrismaService],
+    },
+    {
+      provide: TraceabilityRepository,
+      useFactory: (prisma: PrismaService) => new TraceabilityRepository(prisma),
+      inject: [PrismaService],
+    },
+    {
+      provide: GraphRepository,
+      useFactory: (prisma: PrismaService) => new GraphRepository(prisma),
+      inject: [PrismaService],
+    },
+    {
+      provide: InsightRepository,
+      useFactory: (prisma: PrismaService) => new InsightRepository(prisma),
+      inject: [PrismaService],
+    },
+    {
+      provide: ReviewNoteRepository,
+      useFactory: (prisma: PrismaService) => new ReviewNoteRepository(prisma),
+      inject: [PrismaService],
+    },
+    {
+      provide: ReviewClarificationRepository,
+      useFactory: (prisma: PrismaService) => new ReviewClarificationRepository(prisma),
+      inject: [PrismaService],
+    },
+    {
+      provide: ReviewDecisionRepository,
+      useFactory: (prisma: PrismaService) => new ReviewDecisionRepository(prisma),
+      inject: [PrismaService],
+    },
+    {
+      provide: ImpactAnalysisRepository,
+      useFactory: (prisma: PrismaService) => new ImpactAnalysisRepository(prisma),
+      inject: [PrismaService],
+    },
+  ],
+  exports: [
+    RunDocumentJobUseCase,
+    MarkdownImpactReportBuilder,
+    ReviewedSnapshotReportContextAdapter,
+    MermaidImpactDiagramBuilder,
+    EvaluationContextAdapter,
+    GetImpactDiffUseCase,
     DocumentRepository,
     TraceabilityRepository,
     GraphRepository,
@@ -34,9 +82,6 @@ import { ImpactAnalysisRepository } from '../impact-analysis/infrastructure/impa
     ReviewClarificationRepository,
     ReviewDecisionRepository,
     ImpactAnalysisRepository,
-  ],
-  exports: [
-    RunDocumentJobUseCase,
   ],
 })
 export class DocumentRuntimeModule {}

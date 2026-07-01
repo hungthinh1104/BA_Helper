@@ -1,5 +1,4 @@
-import { GetImpactDiffUseCase } from './get-impact-diff.usecase';
-import type { PrismaService } from '../../../prisma/prisma.service';
+import { PrismaService, GetImpactDiffUseCase } from "@ba-helper/backend-runtime";
 
 describe('GetImpactDiffUseCase', () => {
   let useCase: GetImpactDiffUseCase;

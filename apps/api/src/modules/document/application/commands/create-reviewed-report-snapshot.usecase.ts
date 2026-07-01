@@ -1,11 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { EventLogService } from '../../../event-log/application/event-log.service';
-import { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
-import { InsightRepository } from '../../../insight/infrastructure/insight.repository';
 import { buildEvidenceQualityProjection } from '../evidence-quality.projection';
-import { EvaluationContextAdapter } from '../evaluation-context.adapter';
+import { PrismaService, TraceabilityRepository, InsightRepository, EvaluationContextAdapter, EventLogService } from "@ba-helper/backend-runtime";
 
 type ReviewedReportSnapshotCreateData = {
   analysisId: string;

@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { ReviewNoteRepository } from '../../infrastructure/review-note.repository';
-import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
 import { AppError } from '@ba-helper/shared';
+import { ReviewNoteRepository, ImpactAnalysisRepository } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class GetReviewNotesUseCase {

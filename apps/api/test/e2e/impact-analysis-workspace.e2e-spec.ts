@@ -11,13 +11,13 @@ import {
 } from '@ba-helper/contracts';
 import * as crypto from 'crypto';
 import request from 'supertest';
-import { PrismaService } from '../../src/modules/prisma/prisma.service';
 import { createTestApp } from './helpers/test-app';
 import { resetDatabase } from './helpers/reset-db';
 import {
 	seedImpactAnalysisCompletion,
 	seedScanJobCompletion,
 } from './helpers/seed-fixture';
+import { PrismaService } from "@ba-helper/backend-runtime";
 
 describe('Impact Analysis Workspace (E2E)', () => {
 	let app: INestApplication;

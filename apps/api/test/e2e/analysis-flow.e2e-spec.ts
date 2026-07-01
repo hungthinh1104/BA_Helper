@@ -3,7 +3,6 @@ import request from 'supertest';
 import { JwtService } from '@nestjs/jwt';
 import { createTestApp } from './helpers/test-app';
 import { resetDatabase } from './helpers/reset-db';
-import { PrismaService } from '../../src/modules/prisma/prisma.service';
 import * as crypto from 'crypto';
 import {
   seedScanJobCompletion,
@@ -18,7 +17,7 @@ import {
   impactAnalysisResponseSchema,
   approvedImpactReportResponseSchema,
 } from '@ba-helper/contracts';
-import { RunDocumentJobUseCase } from '../../src/modules/document/application/jobs/run-document-job.usecase';
+import { PrismaService, RunDocumentJobUseCase } from "@ba-helper/backend-runtime";
 
 describe('Analysis Flow (E2E)', () => {
   let app: INestApplication;

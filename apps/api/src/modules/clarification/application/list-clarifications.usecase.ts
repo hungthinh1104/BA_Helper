@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ClarificationRepository } from '../infrastructure/clarification.repository';
+import { ClarificationRepository } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class ListClarificationsUseCase {

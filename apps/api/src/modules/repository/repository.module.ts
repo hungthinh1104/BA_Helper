@@ -4,15 +4,12 @@ import { RepositorySnapshotController } from './api/repository-snapshot.controll
 import { GetRepositorySnapshotDriftUseCase } from './application/get-repository-snapshot-drift.usecase';
 import { ListRepositorySnapshotsUseCase } from './application/list-repository-snapshots.usecase';
 import { CreateRepositoryUseCase } from './application/create-repository.usecase';
-import { RepositoryRepository } from './infrastructure/repository.repository';
 import { ListRepositoriesUseCase } from './application/list-repositories.usecase';
 import { GetRepositoryUseCase } from './application/get-repository.usecase';
 import { ProjectRepository } from '../project/infrastructure/project.repository';
-import { PrismaModule } from '../prisma/prisma.module';
-import { PrismaService } from '../prisma/prisma.service';
 import { EventLogModule } from '../event-log/event-log.module';
-import { EventLogService } from '../event-log/application/event-log.service';
 import { ProjectModule } from '../project/project.module';
+import { PrismaModule, PrismaService, RepositoryRepository, EventLogService } from "@ba-helper/backend-runtime";
 
 @Module({
   imports: [PrismaModule, EventLogModule, ProjectModule],

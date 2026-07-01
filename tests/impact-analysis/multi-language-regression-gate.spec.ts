@@ -3,15 +3,13 @@ import { resetDatabase } from '../../apps/api/test/e2e/helpers/reset-db';
 import { Test, TestingModule } from '@nestjs/testing';
 import { execSync } from 'node:child_process';
 import { AppModule } from '../../apps/api/src/app.module';
-import { PrismaService } from '../../apps/api/src/modules/prisma/prisma.service';
-import { RunScanJobUseCase } from '../../apps/api/src/modules/scanner/application/run-scan-job.usecase';
 import { RunImpactAnalysisUseCase } from '@ba-helper/application';
 import { FinalizeImpactAnalysisUseCase } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/finalize-impact-analysis.usecase';
 import { ScanJobStatus } from '@prisma/client';
 import { resolve, join } from 'node:path';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
-import { RunDocumentJobUseCase } from '../../apps/api/src/modules/document/application/jobs/run-document-job.usecase';
+import { PrismaService, RunScanJobUseCase, RunDocumentJobUseCase } from "@ba-helper/backend-runtime";
 
 const safeRm = async (targetPath: string) => {
   await fs.rm(targetPath, { recursive: true, force: true }).catch(() => {});

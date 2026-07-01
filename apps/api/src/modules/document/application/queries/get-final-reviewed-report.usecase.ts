@@ -4,11 +4,8 @@ import { AppError } from '@ba-helper/shared';
 import { GetReviewCompletionUseCase } from '../../../traceability/application/get-review-completion.usecase';
 import { GetLatestReviewedReportSnapshotUseCase } from './get-latest-reviewed-report-snapshot.usecase';
 import { FinalReviewedReportResponse } from '@ba-helper/contracts';
-import { PrismaService } from '../../../prisma/prisma.service';
-
-import { DEFAULT_REPORT_LOCALE, ReportLocale } from '../render/report-localization';
-import { buildReportReviewCoverageSummaryFromSnapshot } from '../report-review-coverage.summary';
 import { ApprovedReportContextReader } from './approved-report-context.reader';
+import { PrismaService, DEFAULT_REPORT_LOCALE, ReportLocale, buildReportReviewCoverageSummaryFromSnapshot } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class GetFinalReviewedReportUseCase {

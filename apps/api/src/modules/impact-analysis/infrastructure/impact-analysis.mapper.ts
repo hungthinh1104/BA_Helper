@@ -11,7 +11,7 @@ import {
   deriveMergedReportState,
   isChildAnalysisStale
 } from '../application/multi-repo/multi-repo-merged-report-state';
-import { isAnalyzerVersionOutdated } from './analyzer-version';
+import { isAnalyzerVersionOutdated } from "@ba-helper/backend-runtime";
 
 type BaseAnalysis = Prisma.ImpactAnalysisGetPayload<Record<string, never>>;
 type AnalysisSourceTarget = {

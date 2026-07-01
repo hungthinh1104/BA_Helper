@@ -1,15 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { TraceabilityRepository } from '../infrastructure/traceability.repository';
 import { ReviewCompletionResponse } from '@ba-helper/contracts';
 import { AppError } from '@ba-helper/shared';
-import { InsightRepository } from '../../insight/infrastructure/insight.repository';
 import { buildEvidenceQualityProjection } from '../../document/application/evidence-quality.projection';
 import {
   buildReportApprovalGateItems,
   ReportApprovalGatePolicy,
   type ReportApprovalBlockerCode,
 } from '../../document/application/report-approval-gate.policy';
+import { PrismaService, TraceabilityRepository, InsightRepository } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class GetReviewCompletionUseCase {

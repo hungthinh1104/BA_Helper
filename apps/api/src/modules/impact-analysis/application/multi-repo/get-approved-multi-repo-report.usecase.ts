@@ -1,11 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { AppError } from '@ba-helper/shared';
-import { MultiRepoAnalysisRunRepository } from '../../infrastructure/multi-repo-analysis-run.repository';
-import { MultiRepoMergedReportRepository } from '../../infrastructure/multi-repo-merged-report.repository';
 import {
   deriveMergedReportState,
   MultiRepoChildState,
 } from './multi-repo-merged-report-state';
+import { MultiRepoAnalysisRunRepository, MultiRepoMergedReportRepository } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class GetApprovedMultiRepoReportUseCase {

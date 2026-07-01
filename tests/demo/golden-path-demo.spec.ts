@@ -2,14 +2,12 @@ import { prepareIsolatedTestEnv } from '../../apps/api/test/e2e/helpers/prepare-
 import { resetDatabase } from '../../apps/api/test/e2e/helpers/reset-db';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '../../apps/api/src/app.module';
-import { PrismaService } from '../../apps/api/src/modules/prisma/prisma.service';
-import { RunScanJobUseCase } from '../../apps/api/src/modules/scanner/application/run-scan-job.usecase';
 import { RunImpactAnalysisUseCase } from '@ba-helper/application';
 import { FinalizeImpactAnalysisUseCase } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/finalize-impact-analysis.usecase';
 import { GetRepositorySnapshotDriftUseCase } from '../../apps/api/src/modules/repository/application/get-repository-snapshot-drift.usecase';
 import { ScanJobStatus } from '@prisma/client';
 import { resolve } from 'node:path';
-import { RunDocumentJobUseCase } from '../../apps/api/src/modules/document/application/jobs/run-document-job.usecase';
+import { PrismaService, RunScanJobUseCase, RunDocumentJobUseCase } from "@ba-helper/backend-runtime";
 
 describe('Golden Path Demo', () => {
   let app: any;

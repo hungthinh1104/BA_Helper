@@ -4,8 +4,8 @@ import { JwtService } from '@nestjs/jwt';
 import * as crypto from 'crypto';
 import { createTestApp } from './helpers/test-app';
 import { resetDatabase } from './helpers/reset-db';
-import { PrismaService } from '../../src/modules/prisma/prisma.service';
 import { grantProjectMembership } from './helpers/grant-project-membership';
+import { PrismaService } from "@ba-helper/backend-runtime";
 
 describe('Error Mapping (E2E)', () => {
   let app: INestApplication;

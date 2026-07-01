@@ -3,11 +3,11 @@ import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
 import { createTestApp } from './helpers/test-app';
 import { resetDatabase } from './helpers/reset-db';
-import { PrismaService } from '../../src/modules/prisma/prisma.service';
 import * as crypto from 'crypto';
 import { seedImpactAnalysisCompletion } from './helpers/seed-fixture';
 import { impactAnalysisDiffResponseSchema } from '@ba-helper/contracts';
 import { grantProjectMembership } from './helpers/grant-project-membership';
+import { PrismaService } from "@ba-helper/backend-runtime";
 
 describe('Impact Diff Endpoint (e2e)', () => {
   let app: INestApplication;

@@ -1,4 +1,4 @@
-import { normalizeArtifactKind } from './universal-artifact-kind';
+import { normalizeArtifactKind } from "@ba-helper/backend-runtime";
 
 describe('normalizeArtifactKind', () => {
   it('maps API_ROUTE to API_ENDPOINT', () => {

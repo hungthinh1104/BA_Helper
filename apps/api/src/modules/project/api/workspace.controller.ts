@@ -13,10 +13,10 @@ import {
 } from '@ba-helper/contracts';
 import { Public } from '../../auth/application/jwt-auth.guard';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '../../prisma/prisma.service';
 import { GetCurrentWorkspaceUseCase } from '../application/get-current-workspace.usecase';
 import { CurrentUser } from '../../auth/api/current-user.decorator';
 import { SelectProjectUseCase } from '../application/select-project.usecase';
+import { PrismaService } from "@ba-helper/backend-runtime";
 
 @Controller('/api/v1/workspace')
 export class WorkspaceController {

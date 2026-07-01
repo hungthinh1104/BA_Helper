@@ -1,4 +1,4 @@
-import type { InsightRepository } from '../infrastructure/insight.repository';
+import { InsightRepository } from "@ba-helper/backend-runtime";
 
 export class ListInsightsUseCase {
   constructor(private readonly repository: InsightRepository) {}

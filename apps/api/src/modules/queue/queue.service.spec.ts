@@ -1,4 +1,4 @@
-import { QueueService } from './queue.service';
+import { QueueService } from "@ba-helper/backend-runtime";
 
 const makeQueue = () => ({
   add: jest.fn().mockResolvedValue(undefined),

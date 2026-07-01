@@ -1,9 +1,5 @@
-import type {
-  InsightForAnnotation,
-  TraceabilityLinkForAnnotation,
-} from './evidence-quality.annotator';
-import { EvidenceQualityAnnotator } from './evidence-quality.annotator';
 import { buildEvidenceQualityProjection } from './evidence-quality.projection';
+import { InsightForAnnotation, TraceabilityLinkForAnnotation, EvidenceQualityAnnotator } from "@ba-helper/backend-runtime";
 
 describe('EvidenceQualityAnnotator', () => {
   const createMockLink = (

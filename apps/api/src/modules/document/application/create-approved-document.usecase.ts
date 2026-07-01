@@ -1,4 +1,4 @@
-import type { DocumentRepository } from '../infrastructure/document.repository';
+import { DocumentRepository } from "@ba-helper/backend-runtime";
 
 export class CreateApprovedDocumentUseCase {
   constructor(private readonly repository: DocumentRepository) {}

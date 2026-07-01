@@ -1,10 +1,10 @@
 import type { RequestUser } from '@ba-helper/contracts';
 import { AppError } from '@ba-helper/shared';
-import type { EventLogService } from '../../../event-log/application/event-log.service';
 import type { MarkdownExportRenderer } from '../../../document/application/markdown-export.renderer';
 import type { PdfExportRenderer } from '../../../document/application/pdf-export.renderer';
 import type { GetApprovedMultiRepoReportUseCase } from './get-approved-multi-repo-report.usecase';
 import { ExportApprovedMultiRepoReportUseCase } from './export-approved-multi-repo-report.usecase';
+import { EventLogService } from "@ba-helper/backend-runtime";
 
 describe('ExportApprovedMultiRepoReportUseCase', () => {
   let useCase: ExportApprovedMultiRepoReportUseCase;

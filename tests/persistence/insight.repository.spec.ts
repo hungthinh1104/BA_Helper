@@ -1,4 +1,4 @@
-import { InsightRepository } from '../../apps/api/src/modules/insight/infrastructure/insight.repository';
+import { InsightRepository } from "@ba-helper/backend-runtime";
 
 describe('InsightRepository', () => {
   it('uses createMany with skipDuplicates for upsertMany', async () => {

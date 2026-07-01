@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../prisma/prisma.service';
 import { MatrixRowDetailResponse } from '@ba-helper/contracts';
+import { PrismaService } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class GetMatrixRowDetailUseCase {

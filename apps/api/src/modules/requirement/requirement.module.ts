@@ -6,12 +6,10 @@ import { CreateRequirementRevisionUseCase } from './application/create-revision.
 import { QualifyRequirementRevisionUseCase } from './application/qualify-revision.usecase';
 import { ListRequirementsUseCase } from './application/list-requirements.usecase';
 import { GetRequirementUseCase } from './application/get-requirement.usecase';
-import { PrismaModule } from '../prisma/prisma.module';
-import { PrismaService } from '../prisma/prisma.service';
 import { EventLogModule } from '../event-log/event-log.module';
-import { EventLogService } from '../event-log/application/event-log.service';
 import { ProjectRepository } from '../project/infrastructure/project.repository';
 import { ProjectModule } from '../project/project.module';
+import { PrismaModule, PrismaService, EventLogService } from "@ba-helper/backend-runtime";
 
 @Module({
   imports: [PrismaModule, EventLogModule, ProjectModule],

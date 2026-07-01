@@ -1,12 +1,9 @@
 import { createHash } from 'crypto';
 import { Injectable } from '@nestjs/common';
 import { AppError } from '@ba-helper/shared';
-import { PrismaService } from '../../../prisma/prisma.service';
 import { CreateImpactAnalysisUseCase } from '../lifecycle/create-impact-analysis.usecase';
 import { RequirementRepository } from '../../../requirement/infrastructure/requirement.repository';
-import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
-import { MultiRepoAnalysisRunRepository } from '../../infrastructure/multi-repo-analysis-run.repository';
-import { DomainPackRegistry } from '@ba-helper/backend-runtime';
+import { DomainPackRegistry, PrismaService, ImpactAnalysisRepository, MultiRepoAnalysisRunRepository } from '@ba-helper/backend-runtime';
 import type { ResolvedDomainPackSelection } from '@ba-helper/contracts';
 
 type PlannedRepositoryAnalysis = {

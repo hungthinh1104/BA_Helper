@@ -1,8 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { AppError } from '@ba-helper/shared';
-import { InsightRepository } from '../../../insight/infrastructure/insight.repository';
-import { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
-import { MultiRepoAnalysisRunRepository } from '../../infrastructure/multi-repo-analysis-run.repository';
 import { MergedMultiRepoReportDraftBuilder } from './merged-multi-repo-report-draft.builder';
 import { BuildMultiRepoImpactMatrixReadModel } from './build-multi-repo-impact-matrix.read-model';
 import { GetReviewCoverageUseCase } from '../review/get-review-coverage.usecase';
@@ -12,6 +9,7 @@ import {
   deriveMergedReportState,
   MultiRepoChildState,
 } from './multi-repo-merged-report-state';
+import { InsightRepository, TraceabilityRepository, MultiRepoAnalysisRunRepository } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class GetMergedMultiRepoReportDraftUseCase {

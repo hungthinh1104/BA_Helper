@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RequestUser } from '@ba-helper/contracts';
 import { AppError } from '@ba-helper/shared';
-import { EventLogService } from '../../../event-log/application/event-log.service';
 import { MarkdownExportRenderer } from '../../../document/application/markdown-export.renderer';
 import { PdfExportRenderer } from '../../../document/application/pdf-export.renderer';
 import {
@@ -9,6 +8,7 @@ import {
   RenderedExport,
 } from '../../../document/application/document-export.renderer';
 import { GetApprovedMultiRepoReportUseCase } from './get-approved-multi-repo-report.usecase';
+import { EventLogService } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class ExportApprovedMultiRepoReportUseCase {

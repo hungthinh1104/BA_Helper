@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from './modules/prisma/prisma.module';
 import { EventLogModule } from './modules/event-log/event-log.module';
 import { ProjectModule } from './modules/project/project.module';
 import { RepositoryModule } from './modules/repository/repository.module';
@@ -12,8 +11,6 @@ import { DocumentModule } from './modules/document/document.module';
 import { EvidenceModule } from './modules/evidence/evidence.module';
 import { ArtifactModule } from './modules/artifact/artifact.module';
 import { GraphModule } from './modules/graph/graph.module';
-import { QueueModule } from './modules/queue/queue.module';
-import { AiModule } from './modules/ai/ai.module';
 import { SystemModule } from './modules/system/system.module';
 import { ClarificationModule } from './modules/clarification/clarification.module';
 import { ApiLocalizationModule } from './modules/localization/localization.module';
@@ -24,6 +21,7 @@ import { JwtAuthGuard } from './modules/auth/application/jwt-auth.guard';
 import { RolesGuard } from './modules/auth/application/roles.guard';
 import { PublicBetaRateLimitGuard } from './shared/rate-limit/public-beta-rate-limit.guard';
 import { PublicBetaRateLimitPolicy } from './shared/rate-limit/public-beta-rate-limit.policy';
+import { PrismaModule, QueueModule, AiModule } from "@ba-helper/backend-runtime";
 
 @Module({
   imports: [

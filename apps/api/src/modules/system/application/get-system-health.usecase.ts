@@ -1,6 +1,5 @@
-import type { PrismaService } from '../../prisma/prisma.service';
-import type { QueueService } from '../../queue/queue.service';
 import { getRuntimeConfig } from '../../../bootstrap/runtime-config';
+import { PrismaService, QueueService } from "@ba-helper/backend-runtime";
 
 export class GetSystemHealthUseCase {
   constructor(

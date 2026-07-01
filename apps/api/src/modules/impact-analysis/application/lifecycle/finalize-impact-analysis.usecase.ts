@@ -1,20 +1,15 @@
 import { Injectable } from "@nestjs/common";
-
-import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
 import { AppError } from '@ba-helper/shared';
 
 import { ReviewPolicy } from '../../../review/domain/review.policy';
-import { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
-import { PrismaService } from '../../../prisma/prisma.service';
-
 import { CreateReviewedReportSnapshotUseCase } from '../../../document/application/commands/create-reviewed-report-snapshot.usecase';
 import { EnqueueDocumentJobUseCase } from '../../../document/application/commands/enqueue-document-job.usecase';
-import { InsightRepository } from '../../../insight/infrastructure/insight.repository';
 import { buildEvidenceQualityProjection } from '../../../document/application/evidence-quality.projection';
 import {
   buildReportApprovalGateItems,
   ReportApprovalGatePolicy,
 } from '../../../document/application/report-approval-gate.policy';
+import { PrismaService, ImpactAnalysisRepository, TraceabilityRepository, InsightRepository } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class FinalizeImpactAnalysisUseCase {

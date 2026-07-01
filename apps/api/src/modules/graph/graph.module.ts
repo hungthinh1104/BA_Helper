@@ -1,10 +1,8 @@
 import { Module } from '@nestjs/common';
 import { GraphController } from './api/graph.controller';
 import { GetGraphUseCase } from './application/get-graph.usecase';
-import { GraphRepository } from './infrastructure/graph.repository';
-import { PrismaModule } from '../prisma/prisma.module';
-import { PrismaService } from '../prisma/prisma.service';
 import { ProjectModule } from '../project/project.module';
+import { PrismaModule, PrismaService, GraphRepository } from "@ba-helper/backend-runtime";
 
 @Module({
   imports: [PrismaModule, ProjectModule],

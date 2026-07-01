@@ -6,8 +6,7 @@ import {
   ImpactDiagnosticPropagationStep,
   ImpactAiReasoningStep,
 } from '@ba-helper/application';
-import { FakeLlmProvider } from '../../apps/api/src/modules/ai/infrastructure/fake-ai.provider';
-import { DomainPackRegistry } from '@ba-helper/backend-runtime';
+import { DomainPackRegistry, FakeLlmProvider } from '@ba-helper/backend-runtime';
 
 class StubImpactRepo {
   findById = async () => ({

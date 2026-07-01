@@ -1,8 +1,7 @@
-import type { InsightRepository } from '../infrastructure/insight.repository';
-import type { EventLogService } from '../../event-log/application/event-log.service';
 import { AppError } from '@ba-helper/shared';
 
 import { ReviewPolicy } from '../../review/domain/review.policy';
+import { InsightRepository, EventLogService } from "@ba-helper/backend-runtime";
 
 export class ReviewInsightUseCase {
   constructor(

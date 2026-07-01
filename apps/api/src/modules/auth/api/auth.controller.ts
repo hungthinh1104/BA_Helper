@@ -1,11 +1,11 @@
 import { BadRequestException, Body, Controller, ForbiddenException, Get, Post } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '../../prisma/prisma.service';
 import { Public } from '../application/jwt-auth.guard';
 import { CurrentUser } from './current-user.decorator';
 import { getRuntimeConfig } from '../../../bootstrap/runtime-config';
 import { loginRequestSchema, RequestUser, type LoginRequest, type LoginResponse } from '@ba-helper/contracts';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { PrismaService } from "@ba-helper/backend-runtime";
 
 @ApiTags('Auth')
 @Controller('/api/v1/auth')

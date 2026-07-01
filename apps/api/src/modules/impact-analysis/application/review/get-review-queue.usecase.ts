@@ -3,8 +3,7 @@ import { AppError } from '@ba-helper/shared';
 import { ReviewQueueResponse, ReviewQueueItem, QaCoverageSeverity } from '@ba-helper/contracts';
 import { ImpactGraphReadModelBuilder } from '../queries/impact-graph-read-model.builder';
 import { QaCoverageDeriver } from '../qa/qa-coverage.deriver';
-import { InsightRepository } from '../../../insight/infrastructure/insight.repository';
-import { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
+import { InsightRepository, TraceabilityRepository } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class GetReviewQueueUseCase {

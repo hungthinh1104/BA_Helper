@@ -4,13 +4,7 @@ import {
   ImpactDiagnosticPropagationStep,
   ImpactAiReasoningStep,
 } from '@ba-helper/application';
-import type { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
-import type { ArtifactRepository } from '../../../artifact/infrastructure/artifact.repository';
-import type { EvidenceRepository } from '../../../evidence/infrastructure/evidence.repository';
-import type { InsightRepository } from '../../../insight/infrastructure/insight.repository';
-import type { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
-import type { LlmProvider } from '../../../ai/domain/llm-provider.interface';
-import type { HybridRetrievalService } from '@ba-helper/backend-runtime';
+import type { HybridRetrievalService, ImpactAnalysisRepository, ArtifactRepository, EvidenceRepository, InsightRepository, TraceabilityRepository, LlmProvider } from '@ba-helper/backend-runtime';
 import { AppError } from '@ba-helper/shared';
 import type { DomainPackRegistry } from '@ba-helper/backend-runtime';
 

@@ -3,12 +3,12 @@ import request from 'supertest';
 import { createTestApp } from '../../apps/api/test/e2e/helpers/test-app';
 import { resetDatabase } from '../../apps/api/test/e2e/helpers/reset-db';
 import { grantProjectMembership } from '../../apps/api/test/e2e/helpers/grant-project-membership';
-import { PrismaService } from '../../apps/api/src/modules/prisma/prisma.service';
 import {
   multiRepoApprovedReportResponseSchema,
   multiRepoAnalysisRunDetailResponseSchema,
   multiRepoImpactAnalysisCreateResponseSchema,
 } from '@ba-helper/contracts';
+import { PrismaService } from "@ba-helper/backend-runtime";
 
 describe('Multi-repo Golden Path Demo', () => {
   let app: Awaited<ReturnType<typeof createTestApp>>;

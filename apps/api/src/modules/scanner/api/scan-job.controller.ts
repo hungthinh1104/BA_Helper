@@ -4,13 +4,12 @@ import {
   scanJobResponseSchema,
 } from '@ba-helper/contracts';
 import { CreateScanJobUseCase } from '../application/create-scan-job.usecase';
-import { ScanJobRepository } from '../infrastructure/scan-job.repository';
 import { AppError } from '@ba-helper/shared';
 
 import { CurrentUser } from '../../auth/api/current-user.decorator';
 import { RequestUser } from '@ba-helper/contracts';
 import { ProjectPermissionService } from '../../project/application/project-permission.service';
-import { EventLogService } from '../../event-log/application/event-log.service';
+import { ScanJobRepository, EventLogService } from "@ba-helper/backend-runtime";
 
 @Controller('/api/v1/repositories/:repositoryId/scan-jobs')
 export class ScanJobController {

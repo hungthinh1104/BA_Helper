@@ -1,11 +1,4 @@
-import {
-  buildReportReviewCoverageSummary,
-  buildReportReviewCoverageSummaryFromSnapshot,
-} from './report-review-coverage.summary';
-import type {
-  EvidenceQualityItem,
-  EvidenceQualitySummary,
-} from './evidence-quality.types';
+import { buildReportReviewCoverageSummary, buildReportReviewCoverageSummaryFromSnapshot, EvidenceQualityItem, EvidenceQualitySummary } from "@ba-helper/backend-runtime";
 
 describe('buildReportReviewCoverageSummary', () => {
   it('counts reviewed and unreviewed insights, traceability decisions, and evidence quality buckets', () => {

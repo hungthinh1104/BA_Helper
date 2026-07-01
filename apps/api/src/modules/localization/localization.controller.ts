@@ -1,7 +1,6 @@
 import { Controller, Post, Get, Param, Body, UseGuards, NotFoundException, InternalServerErrorException } from '@nestjs/common';
-import { ReportLocalizationService } from '@ba-helper/backend-runtime';
+import { ReportLocalizationService, PrismaService } from '@ba-helper/backend-runtime';
 import { GenerateLocalizedReportRequest, generateLocalizedReportRequestSchema, LocalizedReportArtifact, SupportedReportLocale, LocalizationStatusResponse } from '@ba-helper/contracts';
-import { PrismaService } from '../prisma/prisma.service';
 import { ProjectPermissionService } from '../project/application/project-permission.service';
 import { RolesGuard } from '../auth/application/roles.guard';
 import { JwtAuthGuard } from '../auth/application/jwt-auth.guard';

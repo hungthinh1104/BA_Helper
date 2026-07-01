@@ -1,10 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ScanJobRepository } from '../infrastructure/scan-job.repository';
-import { RepositoryRepository } from '../../repository/infrastructure/repository.repository';
-import { ScanJobPolicy } from '../domain/scan-job.policy';
+import { ScanJobRepository, EventLogService } from '@ba-helper/backend-runtime';
 import { AppError } from '@ba-helper/shared';
-import { EventLogService } from '../../event-log/application/event-log.service';
-import { QueueService } from '../../queue/queue.service';
+import { RepositoryRepository, QueueService, ScanJobPolicy } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class CreateScanJobUseCase {

@@ -1,7 +1,6 @@
-import { DomainPackRegistry } from '@ba-helper/backend-runtime';
+import { DomainPackRegistry, PrismaService } from '@ba-helper/backend-runtime';
 import { HybridRetrievalEvaluationAdapter } from '../evaluation/adapters/hybrid-retrieval.adapter';
 import { EvaluationRunner } from '../evaluation/evaluation-runner';
-import { PrismaService } from '../../apps/api/src/modules/prisma/prisma.service';
 import { HybridRetrievalService } from '@ba-helper/backend-runtime';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '../../apps/api/src/app.module';

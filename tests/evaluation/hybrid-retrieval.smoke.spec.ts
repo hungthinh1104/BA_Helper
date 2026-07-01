@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '../../apps/api/src/app.module';
-import { PrismaService } from '../../apps/api/src/modules/prisma/prisma.service';
-import { HybridRetrievalService } from '@ba-helper/backend-runtime';
+import { HybridRetrievalService, PrismaService } from '@ba-helper/backend-runtime';
 import { EmbeddingChunkRepository } from '@ba-helper/backend-runtime';
 import { resetDatabase } from '../../apps/api/test/e2e/helpers/reset-db';
 import { prepareIsolatedTestEnv } from '../../apps/api/test/e2e/helpers/prepare-test-env';

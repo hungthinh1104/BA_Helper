@@ -1,5 +1,5 @@
-import type { PrismaService } from '../../../src/modules/prisma/prisma.service';
 import * as crypto from 'crypto';
+import { PrismaService } from "@ba-helper/backend-runtime";
 
 export async function seedScanJobCompletion(
   prisma: PrismaService,

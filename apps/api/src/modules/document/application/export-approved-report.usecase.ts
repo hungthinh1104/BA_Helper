@@ -1,12 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { RequestUser } from '@ba-helper/contracts';
 import { AppError } from '@ba-helper/shared';
-import { EventLogService } from '../../event-log/application/event-log.service';
-import { DocumentRepository } from '../infrastructure/document.repository';
 import { ApprovedReportProjectionService } from './approved-report-projection.service';
 import { ExportFormat, RenderedExport } from './document-export.renderer';
 import { MarkdownExportRenderer } from './markdown-export.renderer';
 import { PdfExportRenderer } from './pdf-export.renderer';
+import { DocumentRepository, EventLogService } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class ExportApprovedReportUseCase {

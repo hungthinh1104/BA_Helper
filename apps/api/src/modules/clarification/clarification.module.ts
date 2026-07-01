@@ -1,17 +1,13 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from '../prisma/prisma.module';
-import { PrismaService } from '../prisma/prisma.service';
 import { ClarificationController } from './api/clarification.controller';
-import { ClarificationRepository } from './infrastructure/clarification.repository';
 import { EnsureClarificationUseCase } from './application/ensure-clarification.usecase';
 import { AnswerClarificationUseCase } from './application/answer-clarification.usecase';
 import { DismissClarificationUseCase } from './application/dismiss-clarification.usecase';
 import { ListClarificationsUseCase } from './application/list-clarifications.usecase';
 import { ConvertClarificationToRevisionUseCase } from './application/convert-clarification-to-revision.usecase';
-import { ImpactAnalysisRepository } from '../impact-analysis/infrastructure/impact-analysis.repository';
-import { InsightRepository } from '../insight/infrastructure/insight.repository';
 import { RequirementRepository } from '../requirement/infrastructure/requirement.repository';
 import { ProjectModule } from '../project/project.module';
+import { PrismaModule, PrismaService, ImpactAnalysisRepository, InsightRepository, ClarificationRepository } from "@ba-helper/backend-runtime";
 
 @Module({
   imports: [PrismaModule, ProjectModule],

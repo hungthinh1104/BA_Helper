@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { MarkdownReportRenderContext, computeCanonicalReportHash } from '@ba-helper/backend-runtime';
+import { MarkdownReportRenderContext, computeCanonicalReportHash, PrismaService } from '@ba-helper/backend-runtime';
 import { GeneratedDocument } from '@prisma/client';
 
 export interface ApprovedReportContextResult {

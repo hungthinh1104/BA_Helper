@@ -1,6 +1,6 @@
-import type { RepositoryRepository } from '../infrastructure/repository.repository';
 import type { ProjectRepository } from '../../project/infrastructure/project.repository';
 import { AppError } from '@ba-helper/shared';
+import { RepositoryRepository } from "@ba-helper/backend-runtime";
 
 export class ListRepositoriesUseCase {
   constructor(

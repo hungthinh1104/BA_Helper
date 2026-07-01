@@ -1,8 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { AppError } from '@ba-helper/shared';
 import { GetMergedMultiRepoReportDraftUseCase } from './get-merged-multi-repo-report-draft.usecase';
-import { MultiRepoAnalysisRunRepository } from '../../infrastructure/multi-repo-analysis-run.repository';
-import { MultiRepoMergedReportRepository } from '../../infrastructure/multi-repo-merged-report.repository';
 import { GetApprovedMultiRepoReportUseCase } from './get-approved-multi-repo-report.usecase';
 import { RequestUser } from '@ba-helper/contracts';
 import type { DomainPackSelectedBy, DomainProfileCapabilityStatus } from '@ba-helper/contracts';
@@ -12,6 +10,7 @@ import {
   normalizeChildProvenance,
   StoredChildProvenance,
 } from './multi-repo-merged-report-state';
+import { MultiRepoAnalysisRunRepository, MultiRepoMergedReportRepository } from "@ba-helper/backend-runtime";
 
 type DomainPackReportProvenance = {
   requestedDomainPackId?: string | null;

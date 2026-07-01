@@ -1,13 +1,9 @@
 import { Injectable } from "@nestjs/common";
 
 import { CreateImpactAnalysisUseCase } from './create-impact-analysis.usecase';
-import type { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
 import type { RequirementRepository } from '../../../requirement/infrastructure/requirement.repository';
-import type { PrismaService } from '../../../prisma/prisma.service';
-import type { EventLogService } from '../../../event-log/application/event-log.service';
-import type { QueueService } from '../../../queue/queue.service';
 import { Prisma } from '@prisma/client';
-import { DomainPackRegistry } from '@ba-helper/backend-runtime';
+import { DomainPackRegistry, PrismaService, ImpactAnalysisRepository, QueueService, EventLogService } from '@ba-helper/backend-runtime';
 
 describe('CreateImpactAnalysisUseCase', () => {
   let useCase: CreateImpactAnalysisUseCase;

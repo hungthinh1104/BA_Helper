@@ -1,22 +1,13 @@
 import { Module } from '@nestjs/common';
 import { ScanJobController } from './api/scan-job.controller';
 import { CreateScanJobUseCase } from './application/create-scan-job.usecase';
-import { RunScanJobPersistenceStep } from './application/run-scan-job-persistence.step';
-import { RunScanJobUseCase } from './application/run-scan-job.usecase';
-import { ScanJobRepository } from './infrastructure/scan-job.repository';
-import { RepositoryRepository } from '../repository/infrastructure/repository.repository';
-import { PrismaModule } from '../prisma/prisma.module';
-import { PrismaService } from '../prisma/prisma.service';
 import { EventLogModule } from '../event-log/event-log.module';
-import { EventLogService } from '../event-log/application/event-log.service';
 import { RepositoryModule } from '../repository/repository.module';
 import { ArtifactModule } from '../artifact/artifact.module';
-import { ArtifactRepository } from '../artifact/infrastructure/artifact.repository';
-import { QueueModule } from '../queue/queue.module';
-import { QueueService } from '../queue/queue.service';
 import { EvidenceModule } from '../evidence/evidence.module';
 import { ProjectModule } from '../project/project.module';
 import { GraphModule } from '../graph/graph.module';
+import { PrismaModule, PrismaService, RepositoryRepository, ArtifactRepository, RunScanJobPersistenceStep, RunScanJobUseCase, ScanJobRepository, QueueModule, QueueService, EventLogService } from "@ba-helper/backend-runtime";
 
 @Module({
   imports: [PrismaModule, EventLogModule, RepositoryModule, ArtifactModule, QueueModule, EvidenceModule, ProjectModule, GraphModule],

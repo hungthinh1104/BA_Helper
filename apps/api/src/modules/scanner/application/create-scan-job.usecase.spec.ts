@@ -1,12 +1,8 @@
 import { CreateScanJobUseCase } from './create-scan-job.usecase';
-import type { ScanJobRepository } from '../infrastructure/scan-job.repository';
-import type { RepositoryRepository } from '../../repository/infrastructure/repository.repository';
-import type { EventLogService } from '../../event-log/application/event-log.service';
-import type { QueueService } from '../../queue/queue.service';
+import type { ScanJobRepository, EventLogService } from '@ba-helper/backend-runtime';
 import { AppError } from '@ba-helper/shared';
-import { ScanJobPolicy } from '../domain/scan-job.policy';
+import { RepositoryRepository, QueueService, ScanJobPolicy } from "@ba-helper/backend-runtime";
 
-jest.mock('../domain/scan-job.policy');
 
 describe('CreateScanJobUseCase', () => {
   let useCase: CreateScanJobUseCase;
@@ -40,7 +36,7 @@ describe('CreateScanJobUseCase', () => {
       queueService,
     );
 
-    (ScanJobPolicy.validateRef as jest.Mock).mockImplementation(() => {});
+    jest.spyOn(ScanJobPolicy, 'validateRef').mockImplementation(() => {});
   });
 
   it('should throw if repository is not found', async () => {

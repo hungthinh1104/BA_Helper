@@ -1,6 +1,5 @@
 import type { ApprovedImpactReportResponse } from '@ba-helper/contracts';
-import type { ApprovedReportMetadata } from '../domain/approved-report-metadata';
-import { buildReportReviewCoverageSummaryFromSnapshot } from '../application/report-review-coverage.summary';
+import { ApprovedReportMetadata, buildReportReviewCoverageSummaryFromSnapshot } from "@ba-helper/backend-runtime";
 
 export class DocumentMapper {
   static toApprovedReportResponse(

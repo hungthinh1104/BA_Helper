@@ -1,4 +1,4 @@
-import type { EvidenceQualityItem } from './evidence-quality.types';
+import { EvidenceQualityItem } from "@ba-helper/backend-runtime";
 
 export type ReportApprovalBlockerCode =
   | 'CONFLICTING_EVIDENCE_UNREVIEWED'

@@ -1,5 +1,5 @@
-import type { RepositoryRepository } from '../infrastructure/repository.repository';
 import { AppError } from '@ba-helper/shared';
+import { RepositoryRepository } from "@ba-helper/backend-runtime";
 
 export class GetRepositoryUseCase {
   constructor(private readonly repositoryRepo: RepositoryRepository) {}

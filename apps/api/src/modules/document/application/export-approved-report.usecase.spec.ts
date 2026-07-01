@@ -1,11 +1,10 @@
 import type { RequestUser } from '@ba-helper/contracts';
-import type { EventLogService } from '../../event-log/application/event-log.service';
-import type { DocumentRepository } from '../infrastructure/document.repository';
 import { AppError } from '@ba-helper/shared';
 import type { ApprovedReportProjectionService } from './approved-report-projection.service';
 import { ExportApprovedReportUseCase } from './export-approved-report.usecase';
 import type { MarkdownExportRenderer } from './markdown-export.renderer';
 import type { PdfExportRenderer } from './pdf-export.renderer';
+import { DocumentRepository, EventLogService } from "@ba-helper/backend-runtime";
 
 describe('ExportApprovedReportUseCase', () => {
   let useCase: ExportApprovedReportUseCase;
