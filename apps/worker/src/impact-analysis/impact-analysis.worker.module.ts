@@ -12,7 +12,7 @@ import {
 import { PrismaModule } from '@ba-helper/backend-runtime';
 import { PrismaService } from '@ba-helper/backend-runtime';
 
-// Infrastructure repositories imported from apps/api (no controller leak — pure infrastructure)
+// Infrastructure repositories imported from @ba-helper/backend-runtime
 import { ImpactAnalysisRepository } from '@ba-helper/backend-runtime';
 import { InsightRepository } from '@ba-helper/backend-runtime';
 import { ArtifactRepository } from '@ba-helper/backend-runtime';
@@ -30,9 +30,7 @@ import { HybridRetrievalService } from '@ba-helper/backend-runtime';
  * Wires RunImpactAnalysisUseCase without loading API HTTP controllers.
  * LlmProviderPort is provided globally by AiModule.forRoot() in app.module.ts.
  *
- * Infrastructure repository classes are imported from apps/api paths.
- * NOTE: This is a known v0.1 constraint. Post-v0.1, these should be moved to
- * packages/application or a shared backend-infrastructure package.
+ * Infrastructure repository classes are imported from @ba-helper/backend-runtime.
  */
 @Module({
   imports: [PrismaModule, RetrievalModule],

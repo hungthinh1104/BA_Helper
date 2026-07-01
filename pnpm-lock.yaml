@@ -359,6 +359,9 @@ importers:
       '@ba-helper/application':
         specifier: workspace:*
         version: link:../../packages/application
+      '@ba-helper/backend-runtime':
+        specifier: workspace:*
+        version: link:../../packages/backend-runtime
       '@google/generative-ai':
         specifier: ^0.24.1
         version: 0.24.1
