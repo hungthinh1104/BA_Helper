@@ -84,6 +84,9 @@ jobs:
             exit 1
           fi
 
+      - name: Backend-runtime duplication boundary check
+        run: pnpm verify:backend-runtime-boundary
+
       - name: Lint
         run: pnpm lint
 

@@ -7,8 +7,7 @@ import {
   ImpactAiReasoningStep,
   LlmProviderPort,
 } from '@ba-helper/application';
-// v0.1: use API PrismaModule/PrismaService so repository constructors receive the correct type.
-// Worker-local PrismaModule is only for modules with worker-only infrastructure (embedding).
+// v0.1: use backend-runtime PrismaModule/PrismaService so repository constructors share the same runtime Prisma type.
 import { PrismaModule } from '@ba-helper/backend-runtime';
 import { PrismaService } from '@ba-helper/backend-runtime';
 
