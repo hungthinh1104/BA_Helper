@@ -2,8 +2,8 @@
   "name": "@ba-helper/backend-runtime",
   "version": "0.1.0",
   "private": true,
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/backend-runtime/src/index.js",
+  "types": "dist/backend-runtime/src/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "eslint \"src/**/*.ts\"",
@@ -19,6 +19,7 @@
     "@google/generative-ai": "^0.24.1",
     "@prisma/adapter-pg": "7.8.0",
     "openai": "^6.39.0",
+    "pg": "8.16.3",
     "@ba-helper/shared": "workspace:*"
   },
   "devDependencies": {

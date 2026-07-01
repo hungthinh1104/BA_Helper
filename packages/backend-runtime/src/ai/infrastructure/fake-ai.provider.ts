@@ -18,6 +18,11 @@ export class FakeLlmProvider extends LlmProvider {
 
     let mockData: any;
 
+    const isBookingRefund = request.userPrompt.includes('booking.controller.cancel') || 
+                            request.userPrompt.includes('payment.service.refund') ||
+                            request.userPrompt.includes('slot.service.releaseSlot') ||
+                            request.userPrompt.includes('notification.service.notifyOwner');
+
     if (isOrderInventory) {
       mockData = {
         insights: [
@@ -92,7 +97,7 @@ export class FakeLlmProvider extends LlmProvider {
           }
         ]
       };
-    } else {
+    } else if (isBookingRefund) {
       mockData = {
         insights: [
           {
@@ -162,6 +167,19 @@ export class FakeLlmProvider extends LlmProvider {
             reasoning: 'Slot release is called, but no policy for rebooking timing was found.',
           },
         ],
+        qaScenarios: []
+      };
+    } else {
+      mockData = {
+        insights: [],
+        unknowns: [
+          {
+            insightKey: 'unknown:generic-behavior',
+            description: 'Specific behavior is not confirmed from code evidence.',
+            reasoning: 'No explicit implementation was found in the provided evidence.',
+          }
+        ],
+        qaScenarios: []
       };
     }
 

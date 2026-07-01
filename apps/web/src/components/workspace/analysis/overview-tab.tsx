@@ -9,6 +9,8 @@ import {
   type SupportedLocale,
 } from "@/lib/i18n/status-labels"
 import type { AnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
+import { InlineReviewAction } from "../shared/inline-review-action"
+import { AlertTriangle, Code, ShieldAlert } from "lucide-react"
 
 export function OverviewTab({
   workspace,
@@ -19,12 +21,16 @@ export function OverviewTab({
   locale: SupportedLocale
   labels: AnalysisWorkspaceLabels["overview"]
 }) {
-  const { overview, reportStatus, driftStatus } = workspace
+  const { overview, reportStatus, driftStatus, risks, impactGroups } = workspace
   const counts = overview.counts
 
+  const topRisks = risks.filter(r => r.reviewDecision === "needs_review").slice(0, 3)
+  const topImpacts = impactGroups.flatMap(g => g.artifacts).filter(a => a.reviewDecision === "needs_review").slice(0, 3)
+
   return (
-    <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-      <div className="rounded-lg border border-border/60 bg-surface p-4">
+    <section className="flex flex-col gap-4">
+      <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="rounded-lg border border-border/60 bg-surface p-4">
         <h2 className="text-sm font-semibold text-foreground">{labels.currentState}</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <InfoRow label={labels.requirementRevision} value={overview.requirement.revisionId} mono />
@@ -57,6 +63,59 @@ export function OverviewTab({
           <InfoRow label={labels.freshnessBasis} value={driftStatus.basis} />
           <InfoRow label={labels.snapshotCommit} value={driftStatus.snapshotCommitSha} mono />
           <InfoRow label={labels.latestObservedCommit} value={driftStatus.latestObservedCommitSha ?? getLocalizedLabel(exportStatusLabels, "not_applicable", locale)} mono />
+        </div>
+      </div>
+      </div>
+
+      {/* Dense Dashboard Section */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Top Critical Insights */}
+        <div className="rounded-lg border border-border/60 bg-surface flex flex-col overflow-hidden">
+          <div className="px-4 py-3 border-b border-border/60 bg-surface-muted/30 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 text-warning" />
+              <h2 className="text-sm font-semibold text-foreground">Top Critical Insights to Review</h2>
+            </div>
+            {topRisks.length > 0 && <span className="text-[10px] font-medium bg-warning/10 text-warning px-1.5 py-0.5 rounded">{counts.pendingReviewItems} pending</span>}
+          </div>
+          <div className="p-0 flex flex-col divide-y divide-border/60">
+            {topRisks.length === 0 ? (
+              <div className="p-6 text-center text-sm text-muted-foreground">No critical insights pending review.</div>
+            ) : (
+              topRisks.map((risk) => (
+                <div key={risk.insightId} className="flex items-start gap-3 p-4 hover:bg-surface-muted/30 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground leading-tight">{risk.title}</p>
+                    <p className="text-[12px] text-muted-foreground mt-1 line-clamp-2">{risk.whyItMatters}</p>
+                  </div>
+                  <InlineReviewAction analysisId={overview.analysisId} itemId={risk.insightId ?? risk.riskId} itemType="insight" currentStatus={risk.reviewDecision.toUpperCase()} />
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Top Impacted Artifacts */}
+        <div className="rounded-lg border border-border/60 bg-surface flex flex-col overflow-hidden">
+          <div className="px-4 py-3 border-b border-border/60 bg-surface-muted/30 flex items-center gap-2">
+            <Code className="w-4 h-4 text-primary" />
+            <h2 className="text-sm font-semibold text-foreground">Top Impacted Artifacts</h2>
+          </div>
+          <div className="p-0 flex flex-col divide-y divide-border/60">
+            {topImpacts.length === 0 ? (
+              <div className="p-6 text-center text-sm text-muted-foreground">No impacted artifacts pending review.</div>
+            ) : (
+              topImpacts.map((artifact) => (
+                <div key={artifact.artifactId} className="flex items-start justify-between gap-3 p-4 hover:bg-surface-muted/30 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{artifact.name}</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 font-mono truncate">{artifact.filePath}</p>
+                  </div>
+                  <InlineReviewAction analysisId={overview.analysisId} itemId={artifact.traceabilityLinkIds[0]} itemType="impact" currentStatus={artifact.reviewDecision.toUpperCase()} />
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
     </section>

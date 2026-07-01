@@ -132,6 +132,9 @@ importers:
       '@ba-helper/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@ba-helper/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@google/generative-ai':
         specifier: ^0.24.1
         version: 0.24.1
@@ -362,6 +365,9 @@ importers:
       '@ba-helper/backend-runtime':
         specifier: workspace:*
         version: link:../../packages/backend-runtime
+      '@ba-helper/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@google/generative-ai':
         specifier: ^0.24.1
         version: 0.24.1
@@ -465,6 +471,9 @@ importers:
       openai:
         specifier: ^6.39.0
         version: 6.39.0(ws@8.21.0)(zod@3.23.8)
+      pg:
+        specifier: 8.16.3
+        version: 8.16.3
     devDependencies:
       '@nestjs/common':
         specifier: ^11.1.24

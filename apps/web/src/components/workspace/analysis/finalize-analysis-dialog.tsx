@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { useFinalizeAnalysis } from "@/hooks/api/use-analyses"
+import { useReviewCompletion } from "@/hooks/api/use-review-completion"
 import { X, CheckCircle2, AlertTriangle, FileText } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
@@ -37,9 +38,11 @@ export function FinalizeAnalysisDialog({
   const [open, setOpen] = useState(false)
   const [acknowledgeUnreviewed, setAcknowledgeUnreviewed] = useState(false)
   const { mutateAsync: finalizeAnalysis, isPending } = useFinalizeAnalysis(undefined, analysisId)
+  const { data: reviewCompletion, isLoading: isCheckingCompletion } = useReviewCompletion(analysisId)
   const router = useRouter()
 
   const hasUnreviewedItems = stats.needsReview > 0
+  const isHardBlocked = reviewCompletion?.blockingReasons && reviewCompletion.blockingReasons.length > 0
 
   const handleFinalize = async () => {
     try {
@@ -124,14 +127,27 @@ export function FinalizeAnalysisDialog({
                 {!hasUnreviewedItems ? (
                   <CheckCircle2 className="w-4 h-4 text-success" />
                 ) : (
-                  <AlertTriangle className="w-4 h-4 text-warning" />
+                  <AlertTriangle className={`w-4 h-4 ${isHardBlocked ? "text-destructive" : "text-warning"}`} />
                 )}
-                <span className={`text-[12px] ${!hasUnreviewedItems ? "text-foreground" : "text-warning font-medium"}`}>
+                <span className={`text-[12px] ${!hasUnreviewedItems ? "text-foreground" : isHardBlocked ? "text-destructive font-medium" : "text-warning font-medium"}`}>
                   {!hasUnreviewedItems ? labels.reviewed : `${stats.needsReview} ${labels.unreviewed}`}
                 </span>
               </div>
               
-              {hasUnreviewedItems && (
+              {isHardBlocked && reviewCompletion && (
+                <div className="flex flex-col gap-1 mt-1 ml-6 p-2 rounded border border-destructive/20 bg-destructive/10">
+                  <span className="text-[11px] font-semibold text-destructive">
+                    Critical review coverage is incomplete. Please review the following before finalizing:
+                  </span>
+                  <ul className="list-disc pl-4 text-[11px] text-destructive">
+                    {reviewCompletion.blockingReasons.map((reason) => (
+                      <li key={reason}>{formatReviewApprovalBlocker(reason)}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {hasUnreviewedItems && !isHardBlocked && (
                 <div className="flex items-center gap-2 mt-1 ml-6 bg-warning/10 p-2 rounded border border-warning/20">
                   <input
                     type="checkbox"
@@ -172,7 +188,7 @@ export function FinalizeAnalysisDialog({
           <Button 
             size="sm" 
             className="h-8 shadow-none bg-success hover:bg-success/90 text-white disabled:opacity-50" 
-            disabled={isPending || (hasUnreviewedItems && !acknowledgeUnreviewed) || isStale} 
+            disabled={isPending || isCheckingCompletion || (hasUnreviewedItems && !acknowledgeUnreviewed && !isHardBlocked) || isHardBlocked || isStale} 
             onClick={handleFinalize}
           >
             {isPending ? labels.finalizing : labels.confirmFinalize}

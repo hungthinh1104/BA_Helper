@@ -45,7 +45,7 @@ export function resolveAiConfig(env: NodeJS.ProcessEnv): AiConfig {
   switch (provider) {
     case 'openai': apiKey = env.OPENAI_API_KEY; break;
     case 'anthropic': apiKey = env.ANTHROPIC_API_KEY; break;
-    case 'google': apiKey = env.GEMINI_API_KEY ?? env.GOOGLE_API_KEY ?? env.GOOGLE_AI_API_KEY; break;
+    case 'google': apiKey = env.GEMINI_API_KEY || env.GOOGLE_API_KEY || env.GOOGLE_AI_API_KEY; break;
     case 'deepseek':
       apiKey = env.DEEPSEEK_API_KEY;
       baseUrl = env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com';

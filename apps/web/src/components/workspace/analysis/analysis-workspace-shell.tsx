@@ -128,7 +128,7 @@ export function AnalysisWorkspaceShell({
       </header>
 
       {activeTab === "overview" && <OverviewTab workspace={workspace} locale={locale} labels={labels.overview} />}
-      {activeTab === "impact" && <ImpactMapTab groups={workspace.impactGroups} locale={locale} labels={labels.impactMap} />}
+      {activeTab === "impact" && <ImpactMapTab groups={workspace.impactGroups} locale={locale} labels={labels.impactMap} analysisId={workspace.overview.analysisId} />}
       {activeTab === "evidence" && <EvidenceTab evidenceCards={workspace.evidenceCards} labels={labels.evidence} />}
       {activeTab === "risks-qa" && (
         <RisksQaTab
@@ -137,6 +137,7 @@ export function AnalysisWorkspaceShell({
           qaScenarios={workspace.qaScenarios}
           locale={locale}
           labels={labels.risksQa}
+          analysisId={workspace.overview.analysisId}
         />
       )}
       {activeTab === "review-report" && (

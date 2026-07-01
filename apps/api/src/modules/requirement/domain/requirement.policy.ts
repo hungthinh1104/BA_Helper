@@ -37,14 +37,6 @@ export const RequirementPolicy = {
         issues: ['Requirement text is too vague.'],
       };
     }
-
-    if (!/cancel|refund|booking|payment/.test(normalized)) {
-      return {
-        status: 'NEEDS_CLARIFICATION' as const,
-        issues: ['Requirement text lacks actionable domain terms.'],
-      };
-    }
-
     return { status: 'READY_FOR_ANALYSIS' as const, issues: [] };
   },
   enforceImmutableRevision: () => {

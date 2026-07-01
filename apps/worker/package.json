@@ -15,6 +15,7 @@
     "@ba-helper/analyzer": "workspace:*",
     "@ba-helper/application": "workspace:*",
     "@ba-helper/backend-runtime": "workspace:*",
+    "@ba-helper/shared": "workspace:*",
     "@google/generative-ai": "^0.24.1",
     "@nestjs/bullmq": "11.0.4",
     "@nestjs/common": "11.1.24",

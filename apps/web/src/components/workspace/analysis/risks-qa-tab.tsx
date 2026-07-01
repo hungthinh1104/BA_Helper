@@ -4,6 +4,7 @@ import type { ReactNode } from "react"
 import type { AnalysisWorkspaceResponse } from "@ba-helper/contracts"
 import type { AnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
 import { getLocalizedLabel, reviewDecisionLabels, type SupportedLocale } from "@/lib/i18n/status-labels"
+import { InlineReviewAction } from "../shared/inline-review-action"
 
 export function RisksQaTab({
   risks,
@@ -11,18 +12,25 @@ export function RisksQaTab({
   qaScenarios,
   locale,
   labels,
+  analysisId,
 }: {
   risks: AnalysisWorkspaceResponse["risks"]
   unknowns: AnalysisWorkspaceResponse["unknowns"]
   qaScenarios: AnalysisWorkspaceResponse["qaScenarios"]
   locale: SupportedLocale
   labels: AnalysisWorkspaceLabels["risksQa"]
+  analysisId: string
 }) {
   return (
     <section className="grid gap-4 xl:grid-cols-2">
       <Panel title={labels.risks} count={risks.length} emptyLabel={labels.empty}>
         {risks.map((risk) => (
-          <Item key={risk.riskId} title={risk.title} meta={`${risk.severity} · ${risk.category}`}>
+          <Item 
+            key={risk.riskId} 
+            title={risk.title} 
+            meta={`${risk.severity} · ${risk.category}`}
+            action={risk.sourceInsightId ? <InlineReviewAction analysisId={analysisId} itemId={risk.sourceInsightId} itemType="insight" currentStatus={risk.reviewDecision.toUpperCase()} /> : null}
+          >
             {risk.whyItMatters}
           </Item>
         ))}
@@ -30,7 +38,12 @@ export function RisksQaTab({
 
       <Panel title={labels.unknowns} count={unknowns.length} emptyLabel={labels.empty}>
         {unknowns.map((unknown) => (
-          <Item key={unknown.unknownId} title={unknown.title} meta={getLocalizedLabel(reviewDecisionLabels, unknown.reviewDecision, locale)}>
+          <Item 
+            key={unknown.unknownId} 
+            title={unknown.title} 
+            meta=""
+            action={unknown.sourceInsightId ? <InlineReviewAction analysisId={analysisId} itemId={unknown.sourceInsightId} itemType="insight" currentStatus={unknown.reviewDecision.toUpperCase()} /> : null}
+          >
             {unknown.question}
           </Item>
         ))}
@@ -39,8 +52,13 @@ export function RisksQaTab({
       <div className="xl:col-span-2">
         <Panel title={labels.qaScenarios} count={qaScenarios.length} emptyLabel={labels.empty}>
           {qaScenarios.map((scenario) => (
-            <article key={scenario.scenarioId} className="rounded-md border border-border/50 bg-background/40 p-3">
-              <h3 className="text-sm font-medium text-foreground">{scenario.title}</h3>
+            <article key={scenario.scenarioId} className="rounded-md border border-border/50 bg-background/40 p-3 relative">
+              <div className="flex items-start justify-between gap-3 pr-2">
+                <h3 className="text-sm font-medium text-foreground">{scenario.title}</h3>
+                {scenario.sourceInsightId && (
+                  <InlineReviewAction analysisId={analysisId} itemId={scenario.sourceInsightId} itemType="insight" currentStatus={scenario.reviewDecision.toUpperCase()} />
+                )}
+              </div>
               <div className="mt-3 grid gap-2 text-sm text-muted-foreground md:grid-cols-3">
                 <Step label={labels.given} value={scenario.given} />
                 <Step label={labels.when} value={scenario.when} />
@@ -71,12 +89,15 @@ function Panel({ title, count, emptyLabel, children }: { title: string; count: n
   )
 }
 
-function Item({ title, meta, children }: { title: string; meta: string; children: ReactNode }) {
+function Item({ title, meta, children, action }: { title: string; meta?: string; children: ReactNode; action?: ReactNode }) {
   return (
     <article className="rounded-md border border-border/50 bg-background/40 p-3">
       <div className="flex items-start justify-between gap-3">
-        <h3 className="text-sm font-medium text-foreground">{title}</h3>
-        <span className="shrink-0 text-xs text-muted-foreground">{meta}</span>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-medium text-foreground">{title}</h3>
+          {meta && <span className="block mt-1 text-xs text-muted-foreground">{meta}</span>}
+        </div>
+        {action && <div className="shrink-0">{action}</div>}
       </div>
       <p className="mt-2 text-sm text-muted-foreground">{children}</p>
     </article>

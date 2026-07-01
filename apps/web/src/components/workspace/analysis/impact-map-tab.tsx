@@ -4,6 +4,7 @@ import type { AnalysisWorkspaceResponse } from "@ba-helper/contracts"
 import { ArtifactKindBadge } from "@/components/workspace/shared/status-badges"
 import { evidenceBasisLabels, getLocalizedLabel, reviewDecisionLabels, type SupportedLocale } from "@/lib/i18n/status-labels"
 import type { AnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
+import { InlineReviewAction } from "../shared/inline-review-action"
 
 type ImpactGroup = AnalysisWorkspaceResponse["impactGroups"][number]
 
@@ -11,10 +12,12 @@ export function ImpactMapTab({
   groups,
   locale,
   labels,
+  analysisId,
 }: {
   groups: ImpactGroup[]
   locale: SupportedLocale
   labels: AnalysisWorkspaceLabels["impactMap"]
+  analysisId: string
 }) {
   if (groups.length === 0) {
     return <EmptyState title={labels.empty} />
@@ -43,7 +46,10 @@ export function ImpactMapTab({
                       {artifact.filePath}
                     </p>
                   </div>
-                  <ArtifactKindBadge kind={artifact.universalKind} />
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    <ArtifactKindBadge kind={artifact.universalKind} />
+                    <InlineReviewAction analysisId={analysisId} itemId={artifact.traceabilityLinkIds[0]} itemType="impact" currentStatus={artifact.reviewDecision.toUpperCase()} />
+                  </div>
                 </div>
                 <p className="mt-3 text-sm text-muted-foreground">{artifact.impactReason}</p>
                 <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
