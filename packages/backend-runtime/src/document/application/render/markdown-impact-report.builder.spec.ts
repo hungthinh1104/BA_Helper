@@ -199,7 +199,7 @@ describe('MarkdownImpactReportBuilder', () => {
     const rawEvidence = 'booking.status = BookingStatus.CANCELLED;';
 
     const report = builder.build({
-      locale: 'vi',
+      locale: 'vi-VN',
       analysis: viAnalysis,
       insights: [
         {
@@ -254,7 +254,7 @@ describe('MarkdownImpactReportBuilder', () => {
     };
 
     const report = builder.build({
-      locale: 'vi',
+      locale: 'vi-VN',
       analysis: viAnalysis,
       insights: [],
       traceabilityLinks: [],

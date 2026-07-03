@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 // Impact Analysis output schema
 export const impactAnalysisAiSchema = z.object({
+  executiveSummary: z.string().optional(),
   insights: z.array(z.object({
     insightKey: z.string(),
     insightType: z.enum(['CLAIM','UNKNOWN','QUESTION','ACCEPTANCE_CRITERIA','QA_SCENARIO']),

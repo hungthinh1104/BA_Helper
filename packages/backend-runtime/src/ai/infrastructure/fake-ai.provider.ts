@@ -25,6 +25,7 @@ export class FakeLlmProvider extends LlmProvider {
 
     if (isOrderInventory) {
       mockData = {
+        executiveSummary: 'The current order cancellation flow calls OrderService.cancelOrder and InventoryService.releaseReservation. The required change must ensure stock is released atomically on cancellation. The main risk is partial failure: if inventory release fails after order status update, stock may be permanently locked.',
         insights: [
           {
             insightKey: 'claim:cancel-order-route',
@@ -99,6 +100,7 @@ export class FakeLlmProvider extends LlmProvider {
       };
     } else if (isBookingRefund) {
       mockData = {
+        executiveSummary: 'The current cancellation flow invokes payment.service.refund and slot.service.releaseSlot. The required change must add ownership and eligibility checks before allowing cancellation. The main risks are: refund policy is not confirmed in evidence, and who may cancel is not enforced at the controller level.',
         insights: [
           {
             insightKey: 'claim:cancel-route',
@@ -171,6 +173,7 @@ export class FakeLlmProvider extends LlmProvider {
       };
     } else {
       mockData = {
+        executiveSummary: 'The specific behavior for this change request is not confirmed from the provided evidence. Evidence coverage is insufficient to determine primary impacts; manual inspection is required.',
         insights: [],
         unknowns: [
           {

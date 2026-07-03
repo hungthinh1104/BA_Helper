@@ -210,7 +210,13 @@ export const reportStatusCardSchema = z.object({
 	generatedDocumentId: z.string().uuid().nullable(),
 	documentJobId: z.string().uuid().nullable(),
 	reviewedReportSnapshotId: z.string().uuid().nullable(),
+	canFinalize: z.boolean(),
+	requiresUnreviewedAcknowledgement: z.boolean(),
+	canViewReport: z.boolean(),
 	canExport: z.boolean(),
+	canRetryReportGeneration: z.boolean(),
+	finalizeBlockingReasons: z.array(z.string()),
+	exportBlockingReasons: z.array(z.string()),
 	lastGeneratedAt: z.string().nullable(),
 	failureMessage: z.string().nullable(),
 });

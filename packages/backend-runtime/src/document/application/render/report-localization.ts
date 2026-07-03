@@ -5,7 +5,9 @@ import { DEFAULT_REPORT_LOCALE, ReportLabels, ReportLocale } from './report-loca
 export { DEFAULT_REPORT_LOCALE, ReportLabels, ReportLocale };
 
 export function normalizeReportLocale(value?: string | null): ReportLocale {
-  return value === 'vi' ? 'vi' : DEFAULT_REPORT_LOCALE;
+  if (value === 'vi-VN' || value === 'vi') return 'vi-VN';
+  if (value === 'ja-JP' || value === 'ja') return 'ja-JP';
+  return DEFAULT_REPORT_LOCALE;
 }
 
 const REPORT_LABELS: Record<ReportLocale, ReportLabels> = {
@@ -93,6 +95,11 @@ const REPORT_LABELS: Record<ReportLocale, ReportLabels> = {
     conflictingEvidence: 'Conflicting evidence',
     inferredLinks: 'Inferred links',
     reviewRequired: 'Review required',
+    derivedArtifact: 'Derived artifact (QA/AC)',
+    partiallyReviewed: 'Partially Reviewed — Insights Approved / Traceability Pending',
+    primaryImpacted: 'Primary Impacted',
+    supportingContext: 'Supporting / Context Evidence',
+    lowRelevance: 'Low Relevance',
     artifact: 'Artifact',
     quality: 'Quality',
     reason: 'Reason',
@@ -124,11 +131,11 @@ const REPORT_LABELS: Record<ReportLocale, ReportLabels> = {
     rejectedExcluded: 'Rejected insights are excluded from this approved report.',
     unreviewedAcknowledged: 'This report was finalized with unreviewed items acknowledged.',
     diagramTruncated: 'Diagram truncated to the most relevant impacted artifacts. See the Impacted Areas and Evidence Appendix for full details.',
-    executiveSummaryLine: (claims, qaScenarios, openQuestions) =>
+    executiveSummaryLine: (claims: number, qaScenarios: number, openQuestions: number) =>
       `This analysis identified **${claims}** evidence-backed impacts, **${qaScenarios}** QA scenarios, and **${openQuestions}** open questions.`,
-    primaryImpactedAreas: (areas) => `The primary impacted areas are **${areas.toLowerCase()}** layers.`,
+    primaryImpactedAreas: (areas: string) => `The primary impacted areas are **${areas.toLowerCase()}** layers.`,
   },
-  vi: {
+  'vi-VN': {
     titlePrefix: 'Báo cáo phân tích tác động',
     status: 'Trạng thái',
     approved: 'Đã phê duyệt',
@@ -212,6 +219,11 @@ const REPORT_LABELS: Record<ReportLocale, ReportLabels> = {
     conflictingEvidence: 'Bằng chứng mâu thuẫn',
     inferredLinks: 'Link suy luận',
     reviewRequired: 'Cần review',
+    derivedArtifact: 'Artifact dẫn xuất (QA/AC)',
+    partiallyReviewed: 'Đã duyệt một phần — Insight đã duyệt / Traceability còn chờ',
+    primaryImpacted: 'Tác động chính',
+    supportingContext: 'Hỗ trợ / Bằng chứng ngữ cảnh',
+    lowRelevance: 'Liên quan thấp',
     artifact: 'Artifact',
     quality: 'Chất lượng',
     reason: 'Lý do',
@@ -243,10 +255,134 @@ const REPORT_LABELS: Record<ReportLocale, ReportLabels> = {
     rejectedExcluded: 'Insight bị reject đã được loại khỏi report đã phê duyệt.',
     unreviewedAcknowledged: 'Report này được finalize với các item chưa review đã được acknowledge.',
     diagramTruncated: 'Sơ đồ đã được rút gọn vào các artifact tác động quan trọng nhất. Xem Khu vực bị tác động và Phụ lục bằng chứng để biết đầy đủ.',
-    executiveSummaryLine: (claims, qaScenarios, openQuestions) =>
+    executiveSummaryLine: (claims: number, qaScenarios: number, openQuestions: number) =>
       `Analysis này xác định **${claims}** tác động có bằng chứng, **${qaScenarios}** kịch bản QA, và **${openQuestions}** câu hỏi mở.`,
-    primaryImpactedAreas: (areas) => `Khu vực tác động chính là các layer **${areas.toLowerCase()}**.`,
+    primaryImpactedAreas: (areas: string) => `Khu vực tác động chính là các layer **${areas.toLowerCase()}**.`,
   },
+  'ja-JP': {
+    titlePrefix: 'Impact Analysis Report',
+    status: 'Status',
+    approved: 'Approved',
+    requirement: 'Requirement',
+    snapshotCommit: 'Snapshot Commit',
+    repository: 'Repository',
+    targetRef: 'Target Ref',
+    generatedAt: 'Generated At',
+    provenance: 'Provenance',
+    analysisId: 'Analysis ID',
+    generatedDocumentId: 'Generated Document ID',
+    projectId: 'Project ID',
+    repositoryId: 'Repository ID',
+    snapshotId: 'Snapshot ID',
+    commitSha: 'Commit SHA',
+    analyzerVersion: 'Analyzer Version',
+    finalizedAt: 'Finalized At',
+    domainPack: 'Domain Pack',
+    partialDomainPackWarning: 'Domain hints are limited and require source evidence.',
+    administrativeWorkflowOnly: 'This pack supports administrative workflow impact analysis only.',
+    noMedicalClinicalCompliance: 'It does not provide medical advice, clinical decision support, or compliance validation.',
+    scannerCapabilityProfile: 'Scanner Capability Profile',
+    scannerDiagnosticsAndRisks: 'Scanner Diagnostics & Risks',
+    language: 'Language',
+    framework: 'Framework',
+    maturityStatus: 'Maturity Status',
+    confidenceLevel: 'Confidence Level',
+    terminology: 'Domain Terminology',
+    impactFlowDiagram: 'Impact Flow Diagram',
+    executiveSummary: 'Executive Summary',
+    impactedAreas: 'Impacted Areas',
+    reviewerNotesOnImpactedAreas: 'Reviewer Notes on Impacted Areas',
+    evidenceBackedImpacts: 'Evidence-backed Impacts',
+    certainty: 'Certainty',
+    reviewerNote: 'Reviewer Note',
+    reasoning: 'Reasoning',
+    evidence: 'Evidence',
+    noEvidenceAttached: '_No evidence attached._',
+    acceptanceCriteria: 'Acceptance Criteria',
+    notDirectlyEvidenced: '_Not directly evidenced; derived from requirement and should be confirmed._',
+    qaScenarios: 'QA Scenarios',
+    scenario: 'Scenario',
+    precondition: 'Precondition',
+    action: 'Action',
+    expectedResult: 'Expected Result',
+    openQuestions: 'Open Questions / Unknowns',
+    question: 'Question',
+    whyThisMatters: 'Why this matters',
+    derivedFromScannerDiagnostic: '_Derived from scanner diagnostic_',
+    clarifications: 'Clarifications',
+    answered: 'Answered',
+    answer: 'Answer',
+    disposition: 'Disposition',
+    convertedToRequirementRevision: 'Converted to Requirement Revision',
+    stillOpen: 'Still Open',
+    dismissed: 'Dismissed',
+    dismissedDuringReview: 'Dismissed during review.',
+    evidenceAppendix: 'Evidence Appendix',
+    secretsRedacted: 'Secrets were redacted before storage, embedding, or LLM processing.',
+    file: 'File',
+    lines: 'Lines',
+    reviewDecisionHistory: 'Review Decision History',
+    time: 'Time',
+    reviewer: 'Reviewer',
+    decision: 'Decision',
+    note: 'Note',
+    reviewCoverage: 'Review Coverage',
+    insightsReviewed: 'Insights reviewed',
+    traceabilityLinksReviewed: 'Traceability links reviewed',
+    acceptedItems: 'Accepted items',
+    rejectedItems: 'Rejected items',
+    needsClarificationItems: 'Needs clarification items',
+    weakOrMissingEvidence: 'Weak/missing evidence',
+    evidenceQuality: 'Evidence Quality & Dataset Readiness',
+    evidenceBackedLinks: 'Evidence-backed links',
+    strongSourceEvidence: 'Strong source evidence',
+    weakSourceEvidence: 'Weak source evidence',
+    inferredFromStructure: 'Inferred from structure',
+    domainHintOnly: 'Domain hint only',
+    missingEvidence: 'Missing evidence',
+    conflictingEvidence: 'Conflicting evidence',
+    inferredLinks: 'Inferred links',
+    reviewRequired: 'Review required',
+    derivedArtifact: 'Derived artifact (QA/AC)',
+    partiallyReviewed: 'Partially Reviewed — Insights Approved / Traceability Pending',
+    primaryImpacted: 'Primary Impacted',
+    supportingContext: 'Supporting / Context Evidence',
+    lowRelevance: 'Low Relevance',
+    artifact: 'Artifact',
+    quality: 'Quality',
+    reason: 'Reason',
+    evaluationContext: 'Evaluation Context',
+    datasetVersion: 'Dataset Version',
+    subsetId: 'Subset ID',
+    subsetSize: 'Subset Size',
+    illustrativeOnly: 'Illustrative Only',
+    interpretation: 'Interpretation',
+    researchArtifact: 'Research Artifact',
+    comparisonArtifact: 'Comparison Artifact',
+    knownLimits: 'Known Limits',
+    evidenceQualityNotes: 'Evidence Quality Notes',
+    datasetExpansionRecommendations: 'Dataset Expansion Recommendations',
+    impactDiffSnapshot: 'Impact Diff Snapshot',
+    derivedFromBaseline: 'This analysis was derived from baseline analysis',
+    summary: 'Summary',
+    addedCodeImpacts: 'Added code impacts',
+    removedCodeImpacts: 'Removed code impacts',
+    resolvedUnknowns: 'Resolved unknowns',
+    newUnknowns: 'New unknowns',
+    addedQaScenarios: 'Added QA scenarios',
+    area: 'Area',
+    reviewStatus: 'Review Status',
+    confirmed: 'Confirmed',
+    needsReview: 'Needs Review',
+    unknown: 'Unknown',
+    methodUnknown: 'Method: UNKNOWN',
+    rejectedExcluded: 'Rejected insights are excluded from this approved report.',
+    unreviewedAcknowledged: 'This report was finalized with unreviewed items acknowledged.',
+    diagramTruncated: 'Diagram truncated to the most relevant impacted artifacts. See the Impacted Areas and Evidence Appendix for full details.',
+    executiveSummaryLine: (claims: number, qaScenarios: number, openQuestions: number) =>
+      `This analysis identified **${claims}** evidence-backed impacts, **${qaScenarios}** QA scenarios, and **${openQuestions}** open questions.`,
+    primaryImpactedAreas: (areas: string) => `The primary impacted areas are **${areas.toLowerCase()}** layers.`,
+  }
 };
 
 export function getReportLabels(locale: ReportLocale = DEFAULT_REPORT_LOCALE): ReportLabels {
@@ -262,8 +398,9 @@ export function getDomainTerminology(
     return [];
   }
 
-  const glossary = readGlossary(normalizedDomain, locale) ??
-    readGlossary(normalizedDomain, DEFAULT_REPORT_LOCALE);
+  const glossaryLocale = toDomainGlossaryLocale(locale);
+  const glossary = readGlossary(normalizedDomain, glossaryLocale) ??
+    readGlossary(normalizedDomain, toDomainGlossaryLocale(DEFAULT_REPORT_LOCALE));
 
   if (!glossary) {
     return [];
@@ -274,7 +411,7 @@ export function getDomainTerminology(
 
 function readGlossary(
   domain: string,
-  locale: ReportLocale,
+  locale: 'en' | 'vi',
 ): { terms: Record<string, string> } | null {
   const file = resolve(
     process.cwd(),
@@ -298,4 +435,8 @@ function readGlossary(
   }
 
   return { terms: terms as Record<string, string> };
+}
+
+function toDomainGlossaryLocale(locale: ReportLocale): 'en' | 'vi' {
+  return locale === 'vi-VN' ? 'vi' : 'en';
 }

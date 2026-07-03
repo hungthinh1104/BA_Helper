@@ -6,9 +6,13 @@ export function renderReportHeader(context: MarkdownReportRenderContext): string
   const labels = getReportLabels(context.locale);
   const lines: string[] = [];
 
+  const reviewStatus = context.hasUnreviewedItems
+    ? labels.partiallyReviewed
+    : labels.approved;
+
   lines.push(`# ${labels.titlePrefix}: ${analysis.requirementRevision.title}`);
   lines.push('');
-  lines.push(`**${labels.status}:** ${labels.approved}  `);
+  lines.push(`**${labels.status}:** ${reviewStatus}  `);
   lines.push(`**${labels.requirement}:** ${analysis.requirementRevision.title}  `);
   lines.push(`**${labels.snapshotCommit}:** \`${analysis.snapshot.commitSha}\`  `);
   lines.push(`**${labels.repository}:** \`${analysis.snapshot.repository.canonicalUrl}\`  `);
@@ -50,7 +54,7 @@ export function renderReportHeader(context: MarkdownReportRenderContext): string
   }
 
   const terminology = getDomainTerminology(resolveDomainPackId(analysis), context.locale);
-  if (context.locale === 'vi' && terminology.length > 0) {
+  if (context.locale === 'vi-VN' && terminology.length > 0) {
     lines.push(`## ${labels.terminology}`);
     lines.push('');
     for (const term of terminology) {

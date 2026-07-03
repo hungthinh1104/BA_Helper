@@ -12,6 +12,7 @@ export const buildCompletedAnalysisMetadata = (params: {
 
   return {
     retrieval: evidenceResult.retrievalMetadata,
+    ...(aiResult.executiveSummary ? { executiveSummary: aiResult.executiveSummary } : {}),
     llm: {
       provider: aiResult.llmMetadata?.provider || 'unknown',
       model: aiResult.llmMetadata?.model || 'unknown',

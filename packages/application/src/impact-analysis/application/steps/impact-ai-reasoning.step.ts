@@ -137,6 +137,7 @@ export class ImpactAiReasoningStep {
       evidenceTruncated,
       evidenceCandidatesLength: evidenceCandidates.length,
       promptVersion: version,
+      executiveSummary: llmResponse.executiveSummary,
     };
   }
 }

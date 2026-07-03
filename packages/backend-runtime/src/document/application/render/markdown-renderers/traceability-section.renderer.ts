@@ -29,7 +29,7 @@ export function renderReviewCoverage(context: MarkdownReportRenderContext): stri
 }
 
 export function renderImpactedAreas(context: MarkdownReportRenderContext): string[] {
-  const { analysis, traceabilityLinks, reviewNotes } = context;
+  const { analysis, traceabilityLinks, reviewNotes, insights } = context;
   const labels = getReportLabels(context.locale);
   const lines: string[] = [];
 
@@ -40,24 +40,46 @@ export function renderImpactedAreas(context: MarkdownReportRenderContext): strin
   const diagnostics = (analysis.snapshot.diagnostics as any as any[]) || [];
   const capabilitySummary = diagnostics.find(d => d.code === 'SCANNER_CAPABILITY_SUMMARY');
 
-  lines.push(`## ${labels.impactedAreas}`);
-  lines.push('');
-  // Group links by type
-  const groupedLinks = new Map<string, typeof traceabilityLinks>();
-  const sortedLinks = [...traceabilityLinks].sort((a, b) => a.reviewStatus.localeCompare(b.reviewStatus));
-  
-  for (const link of sortedLinks) {
-    const type = resolveArtifactDisplayType(link.artifact);
-    if (!groupedLinks.has(type)) {
-      groupedLinks.set(type, []);
+  // Determine which artifact keys are cited by EVIDENCED CLAIMs
+  const evidencedClaimArtifactKeys = new Set<string>();
+  // Artifact keys cited by any insight (QUESTION/UNKNOWN/QA etc.)
+  const anyInsightArtifactKeys = new Set<string>();
+
+  for (const insight of insights) {
+    const isEvidencedClaim =
+      insight.insightType === 'CLAIM' && insight.certainty === 'EVIDENCED';
+    for (const evidenceLink of insight.evidenceLinks ?? []) {
+      const artifactKey = (evidenceLink.evidence as any)?.artifact?.artifactKey ??
+                          (evidenceLink.evidence as any)?.artifactKey;
+      if (!artifactKey) continue;
+      if (isEvidencedClaim) evidencedClaimArtifactKeys.add(artifactKey);
+      anyInsightArtifactKeys.add(artifactKey);
     }
-    groupedLinks.get(type)!.push(link);
   }
 
-  for (const [type, links] of groupedLinks.entries()) {
-    lines.push(`### ${type}`);
+  const primaryLinks: typeof traceabilityLinks = [];
+  const supportingLinks: typeof traceabilityLinks = [];
+  const lowRelevanceLinks: typeof traceabilityLinks = [];
+
+  for (const link of traceabilityLinks) {
+    const key = link.artifact?.artifactKey;
+    if (key && evidencedClaimArtifactKeys.has(key)) {
+      primaryLinks.push(link);
+    } else if (key && anyInsightArtifactKeys.has(key)) {
+      supportingLinks.push(link);
+    } else {
+      lowRelevanceLinks.push(link);
+    }
+  }
+
+  lines.push(`## ${labels.impactedAreas}`);
+  lines.push('');
+
+  const renderGroup = (groupLabel: string, groupLinks: typeof traceabilityLinks) => {
+    if (groupLinks.length === 0) return;
+    lines.push(`### ${groupLabel}`);
     lines.push('');
-    for (const link of links) {
+    for (const link of groupLinks) {
       const nameRaw = link.artifact?.name ? `\`${link.artifact.name}\`` : labels.unknown;
       let maturityLabel = '';
       if (capabilitySummary?.payload) {
@@ -68,7 +90,7 @@ export function renderImpactedAreas(context: MarkdownReportRenderContext): strin
       } else if (link.artifact?.artifactKey?.startsWith('go_') || link.artifact?.artifactKey?.startsWith('java_')) {
         maturityLabel = link.artifact.artifactKey.startsWith('go_') ? ' (EXPERIMENTAL)' : ' (PARTIAL)';
       }
-      
+
       let methodLabel = '';
       if (link.artifact?.name?.includes('UNKNOWN')) {
         methodLabel = ` **[${labels.methodUnknown}]**`;
@@ -76,12 +98,19 @@ export function renderImpactedAreas(context: MarkdownReportRenderContext): strin
 
       const name = nameRaw + maturityLabel + methodLabel;
       const file = link.artifact?.filePath ? `\`${link.artifact.filePath}\`` : labels.unknown;
-      const status = link.reviewStatus === 'CONFIRMED' ? labels.confirmed : link.reviewStatus === 'NEEDS_REVIEW' ? labels.needsReview : link.reviewStatus;
-      
+      const status = link.reviewStatus === 'CONFIRMED' ? labels.confirmed
+        : link.reviewStatus === 'REJECTED' ? labels.rejectedItems
+        : link.reviewStatus === 'NEEDS_REVIEW' ? labels.needsReview
+        : link.reviewStatus;
+
       lines.push(`- ${name} in ${file} — **${status}**`);
     }
     lines.push('');
-  }
+  };
+
+  renderGroup(labels.primaryImpacted, primaryLinks);
+  renderGroup(labels.supportingContext, supportingLinks);
+  renderGroup(labels.lowRelevance, lowRelevanceLinks);
 
   const linkNotes = reviewNotes.filter(n => n.traceabilityLinkId && traceabilityLinks.some(l => l.id === n.traceabilityLinkId));
   if (linkNotes.length > 0) {
@@ -120,6 +149,7 @@ export function renderEvidenceQuality(context: MarkdownReportRenderContext): str
     lines.push(`- ${labels.missingEvidence}: ${readSummaryCount(summary, 'missingEvidence', 'MISSING_EVIDENCE')}`);
     lines.push(`- ${labels.conflictingEvidence}: ${readSummaryCount(summary, 'conflictingEvidence', 'CONFLICTING_EVIDENCE')}`);
     lines.push(`- ${labels.reviewRequired}: ${readSummaryCount(summary, 'reviewRequired', 'REVIEW_REQUIRED')}`);
+    lines.push(`- ${labels.derivedArtifact}: ${readSummaryCount(summary, 'derivedArtifact', 'DERIVED_ARTIFACT')}`);
   } else {
     const linkAnnotations = traceabilityLinks.map(link => ({
       link,
@@ -134,12 +164,13 @@ export function renderEvidenceQuality(context: MarkdownReportRenderContext): str
     lines.push(`- ${labels.missingEvidence}: ${summary.missingEvidence}`);
     lines.push(`- ${labels.conflictingEvidence}: ${summary.conflictingEvidence}`);
     lines.push(`- ${labels.reviewRequired}: ${summary.reviewRequired}`);
+    lines.push(`- ${labels.derivedArtifact}: ${summary.derivedArtifact}`);
   }
 
   lines.push('');
   lines.push(`| ${labels.artifact} | ${labels.quality} | ${labels.reason} |`);
   lines.push('|---|---|---|');
-  
+
   if (reviewDecisionsSnapshot) {
     for (const item of reviewDecisionsSnapshot) {
       lines.push(`| \`${item.artifact}\` | ${item.quality} | ${item.reasons.join(', ')} |`);
@@ -169,3 +200,4 @@ function readSummaryCount(summary: Record<string, unknown>, ...keys: string[]): 
   }
   return 0;
 }
+

@@ -33,7 +33,8 @@ export type QualityLabel =
   | 'DOMAIN_HINT_ONLY'
   | 'MISSING_EVIDENCE'
   | 'CONFLICTING_EVIDENCE'
-  | 'REVIEW_REQUIRED';
+  | 'REVIEW_REQUIRED'
+  | 'DERIVED_ARTIFACT';
 
 export interface QualityAnnotation {
   label: QualityLabel;
@@ -60,6 +61,7 @@ export type EvidenceQualitySummary = Record<QualityLabel, number> & {
   missingEvidence: number;
   conflictingEvidence: number;
   reviewRequired: number;
+  derivedArtifact: number;
   evidenced: number;
   inferred: number;
   weakEvidence: number;

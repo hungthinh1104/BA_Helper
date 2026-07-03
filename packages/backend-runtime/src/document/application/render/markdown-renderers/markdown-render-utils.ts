@@ -12,7 +12,7 @@ export function resolveArtifactDisplayType(artifact?: { artifactType?: string | 
 }
 
 export function formatCertainty(certainty: string, locale: ReportLocale = 'en'): string {
-  if (locale === 'vi') {
+  if (locale === 'vi-VN') {
     switch (certainty) {
       case 'EVIDENCED': return 'Có bằng chứng';
       case 'INFERRED': return 'Suy luận';

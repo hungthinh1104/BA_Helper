@@ -73,6 +73,8 @@ export const evidenceQualitySummarySchema = z.object({
 	MISSING_EVIDENCE: z.number().optional(),
 	CONFLICTING_EVIDENCE: z.number().optional(),
 	REVIEW_REQUIRED: z.number().optional(),
+	DERIVED_ARTIFACT: z.number().optional(),
+	derivedArtifact: z.number().optional(),
 });
 
 const evidenceQualityLabelSchema = z.enum([
@@ -86,6 +88,7 @@ const evidenceQualityLabelSchema = z.enum([
 	'EVIDENCED',
 	'INFERRED',
 	'WEAK_EVIDENCE',
+	'DERIVED_ARTIFACT',
 ]);
 
 export const evidenceQualityItemSchema = z.object({

@@ -1,4 +1,4 @@
-export type ReportLocale = 'en' | 'vi';
+export type ReportLocale = 'en' | 'vi-VN' | 'ja-JP';
 
 export const DEFAULT_REPORT_LOCALE: ReportLocale = 'en';
 
@@ -86,6 +86,11 @@ export type ReportLabels = {
   conflictingEvidence: string;
   inferredLinks: string;
   reviewRequired: string;
+  derivedArtifact: string;
+  partiallyReviewed: string;
+  primaryImpacted: string;
+  supportingContext: string;
+  lowRelevance: string;
   artifact: string;
   quality: string;
   reason: string;

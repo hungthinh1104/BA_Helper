@@ -72,6 +72,15 @@ export class EvidenceQualityAnnotator {
     const reasons = buildEvidenceReasons(facts);
     const metadata = readRecord(insight.metadata);
 
+    // Derived artifacts: generated QA/AC are not source evidence
+    const isDerivedType =
+      insight.insightType === 'QA_SCENARIO' ||
+      insight.insightType === 'ACCEPTANCE_CRITERIA';
+    if (isDerivedType) {
+      reasons.push('derivedArtifact');
+      return { label: 'DERIVED_ARTIFACT', reasons };
+    }
+
     if (insight.certainty === 'CONFLICTING') {
       reasons.push('conflictingCertainty');
       return { label: 'CONFLICTING_EVIDENCE', reasons };
@@ -126,6 +135,7 @@ export class EvidenceQualityAnnotator {
     counts.missingEvidence = counts.MISSING_EVIDENCE;
     counts.conflictingEvidence = counts.CONFLICTING_EVIDENCE;
     counts.reviewRequired = counts.REVIEW_REQUIRED;
+    counts.derivedArtifact = counts.DERIVED_ARTIFACT;
     counts.evidenced = counts.strongSourceEvidence;
     counts.inferred = counts.inferredFromStructure;
     counts.weakEvidence = counts.weakSourceEvidence;

@@ -38,4 +38,5 @@ export type ImpactAiReasoningResult = {
   evidenceTruncated: boolean;
   evidenceCandidatesLength: number;
   promptVersion: string;
+  executiveSummary?: string;
 };

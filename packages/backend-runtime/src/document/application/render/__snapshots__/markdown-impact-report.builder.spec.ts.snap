@@ -3,7 +3,7 @@
 exports[`MarkdownImpactReportBuilder Golden Characterization Snapshot matches the golden characterization snapshot for a full comprehensive report 1`] = `
 "# Impact Analysis Report: Paid booking cancellation refund
 
-**Status:** Approved  
+**Status:** Partially Reviewed — Insights Approved / Traceability Pending  
 **Requirement:** Paid booking cancellation refund  
 **Snapshot Commit:** \`f26cd56837cd10a1c00bb89d74d97519abc6f732\`  
 **Repository:** \`https://github.com/ndmen/booking\`  
@@ -52,7 +52,7 @@ The primary impacted areas are **service** layers.
 
 ## Impacted Areas
 
-### Service
+### Low Relevance
 
 - \`GoldenService\` in \`src/golden.ts\` — **Confirmed**
 
@@ -130,6 +130,7 @@ const golden = true;
 - Missing evidence: 0
 - Conflicting evidence: 0
 - Review required: 0
+- Derived artifact (QA/AC): 0
 
 | Artifact | Quality | Reason |
 |---|---|---|

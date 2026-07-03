@@ -11,7 +11,7 @@ describe('review report locale contracts', () => {
   });
 
   it('accepts explicit Vietnamese locale', () => {
-    expect(localeAwareReportQuerySchema.parse({ locale: 'vi' })).toEqual({ locale: 'vi' });
+    expect(localeAwareReportQuerySchema.parse({ locale: 'vi-VN' })).toEqual({ locale: 'vi-VN' });
   });
 
   it('rejects unsupported locales', () => {
@@ -22,7 +22,7 @@ describe('review report locale contracts', () => {
     const payload: FinalReviewedReportResponse = {
       analysisId: 'analysis-1',
       snapshotId: 'snapshot-1',
-      locale: 'vi',
+      locale: 'vi-VN',
       markdown: '# Báo cáo phân tích tác động',
       createdAt: '2026-06-25T00:00:00.000Z',
       reviewCompletion: {
