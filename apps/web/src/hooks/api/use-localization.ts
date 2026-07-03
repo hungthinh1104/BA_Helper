@@ -12,7 +12,7 @@ export function useGenerateLocalizedReport(analysisId: string) {
   return useMutation({
     mutationFn: async (data: GenerateLocalizedReportRequest) => {
       const response = await apiPost<LocalizedReportArtifact>(
-        `/v1/analyses/${analysisId}/localization`,
+        `/api/v1/analyses/${analysisId}/localization`,
         data
       );
       return response;
@@ -25,7 +25,7 @@ export function useLocalizationStatus(analysisId: string, locale: string) {
     queryKey: localizationKeys.status(analysisId, locale),
     queryFn: async () => {
       const response = await apiGet<{ status: 'READY' | 'NOT_TRANSLATED' | 'QUEUED' | 'FAILED' | 'OUT_OF_SYNC' | 'SOURCE_NOT_READY' }>(
-        `/v1/analyses/${analysisId}/localization/${locale}/status`
+        `/api/v1/analyses/${analysisId}/localization/${locale}/status`
       );
       return response;
     },

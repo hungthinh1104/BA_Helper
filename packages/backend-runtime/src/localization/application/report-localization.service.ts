@@ -43,15 +43,15 @@ export class ReportLocalizationService {
       repositoryProfileDomain: profileDomain,
     });
     
-    // In our ADR: "Domain-specific localization must fail closed if glossary is unavailable."
-    // If we only have FALLBACK pack for this domain, we probably shouldn't translate
-    if (domainPackSelection.pack.status === 'FALLBACK') {
+    // Fail closed only if there is no pack at all (no ID), not just because it's general-purpose
+    // FALLBACK = GeneralDomainPack which is still usable for translation without a domain glossary.
+    if (!domainPackSelection.pack.id) {
       return this.failLocalization(
-        sourceDocumentId, 
-        targetLocale, 
-        sourceContentHash, 
+        sourceDocumentId,
+        targetLocale,
+        sourceContentHash,
         'GLOSSARY_NOT_AVAILABLE',
-        existing?.id
+        existing?.id,
       );
     }
 
@@ -82,7 +82,7 @@ export class ReportLocalizationService {
       // 4. Re-merge Translated Text with Canonical Structural Data
       const localizedContext = mergeTranslatedFields(canonicalContext, translationResult.translatedPayload);
       // Ensure locale is updated for rendering (mapping vi-VN to vi if needed)
-      localizedContext.locale = targetLocale.startsWith('vi') ? 'vi' : 'en';
+      localizedContext.locale = targetLocale.startsWith('vi') ? 'vi-VN' : 'en';
 
       // 5. Render Final Markdown
       const contentMarkdown = this.reportBuilder.build(localizedContext);

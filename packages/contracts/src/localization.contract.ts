@@ -1,6 +1,7 @@
 import { z } from 'zod';
+import { supportedAppLocales } from './locale.contract';
 
-export const supportedReportLocales = ['en', 'vi-VN', 'ja-JP'] as const;
+export const supportedReportLocales = supportedAppLocales;
 export type SupportedReportLocale = typeof supportedReportLocales[number];
 
 export const localizationStatusSchema = z.enum(['QUEUED', 'COMPLETED', 'FAILED']);
