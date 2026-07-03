@@ -1,4 +1,5 @@
 import React from "react"
+import { useTranslations } from "next-intl"
 import { Info, Settings2, ChevronDown, ChevronRight, Calculator } from "lucide-react"
 import { RetrievalMetadata } from "@ba-helper/contracts"
 
@@ -29,15 +30,16 @@ export function RetrievalSignalBadge({ retrieval }: { retrieval?: RetrievalMetad
 }
 
 export function RetrievalReason({ retrieval }: { retrieval?: RetrievalMetadata }) {
+  const t = useTranslations("workspace")
   if (!retrieval) return null;
 
-  const reason = retrieval.reason || "Evidence linked to this insight.";
+  const reason = retrieval.reason || t("evidenceLinkedToInsight");
 
   return (
     <div className="flex items-start gap-2 mt-2 px-3 py-2 bg-surface border-l-2 border-primary text-[12px] text-foreground/90 leading-snug">
       <Info className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5 opacity-80" />
       <div>
-        <span className="font-medium mr-1">Why selected:</span>
+        <span className="font-medium mr-1">{t("whySelected")}:</span>
         <span className="text-muted-foreground">{reason}</span>
       </div>
     </div>
@@ -45,6 +47,7 @@ export function RetrievalReason({ retrieval }: { retrieval?: RetrievalMetadata }
 }
 
 export function RetrievalDebugPanel({ retrieval }: { retrieval?: RetrievalMetadata }) {
+  const t = useTranslations("workspace")
   const [isOpen, setIsOpen] = React.useState(false);
 
   if (!retrieval || !retrieval.score) return null;
@@ -58,7 +61,7 @@ export function RetrievalDebugPanel({ retrieval }: { retrieval?: RetrievalMetada
       >
         <div className="flex items-center gap-1.5">
           <Settings2 className="w-3 h-3 opacity-70" />
-          <span>Retrieval Diagnostics</span>
+          <span>{t("retrievalDiagnostics")}</span>
           <span className="opacity-50">({retrieval.strategyVersion || 'legacy'})</span>
         </div>
         {isOpen ? <ChevronDown className="w-3 h-3 opacity-50" /> : <ChevronRight className="w-3 h-3 opacity-50" />}
@@ -69,25 +72,25 @@ export function RetrievalDebugPanel({ retrieval }: { retrieval?: RetrievalMetada
           <div className="flex justify-between items-center py-0.5 border-b border-border/50 col-span-2 mb-1">
             <span className="font-semibold text-foreground flex items-center gap-1.5">
               <Calculator className="w-3 h-3 opacity-70" />
-              Final Score
+              {t("finalScore")}
             </span>
             <span className="font-semibold text-primary">{score.final.toFixed(3)}</span>
           </div>
           
           <div className="flex justify-between items-center py-0.5">
-            <span>Lexical Score</span>
+            <span>{t("lexicalScore")}</span>
             <span className="text-foreground/80">{score.lexical !== undefined ? score.lexical.toFixed(3) : '-'}</span>
           </div>
           <div className="flex justify-between items-center py-0.5">
-            <span>Graph Score</span>
+            <span>{t("graphScore")}</span>
             <span className="text-foreground/80">{score.graph !== undefined ? score.graph.toFixed(3) : '-'}</span>
           </div>
           <div className="flex justify-between items-center py-0.5">
-            <span>Vector Score</span>
+            <span>{t("vectorScore")}</span>
             <span className="text-foreground/80">{score.vector !== undefined ? score.vector.toFixed(3) : '-'}</span>
           </div>
           <div className="flex justify-between items-center py-0.5">
-            <span>Domain Boost</span>
+            <span>{t("domainBoost")}</span>
             <span className="text-foreground/80">{score.domain !== undefined ? score.domain.toFixed(3) : '-'}</span>
           </div>
         </div>

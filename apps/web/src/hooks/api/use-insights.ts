@@ -57,6 +57,9 @@ export function useReviewInsight(projectId: string | undefined, analysisId: stri
       queryClient.invalidateQueries({
         queryKey: queryKeys.analyses.workspace(analysisId),
       })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.analyses.reviewCompletion(analysisId),
+      })
     }
   })
 }
@@ -69,6 +72,7 @@ export function traceabilityReviewInvalidationKeys(projectId: string, analysisId
     queryKeys.analyses.detail(analysisId),
     queryKeys.analyses.list(projectId),
     queryKeys.analyses.report(analysisId),
+    queryKeys.analyses.reviewCompletion(analysisId),
   ] as const
 }
 

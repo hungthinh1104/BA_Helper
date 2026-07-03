@@ -1,4 +1,5 @@
 import { TraceabilityLinkListResponse } from "@ba-helper/contracts"
+import { useTranslations } from "next-intl"
 import { RetrievalSignalBadge } from "@/components/workspace/analysis/retrieval/retrieval-signals"
 
 type TraceabilityLink = TraceabilityLinkListResponse["items"][number]
@@ -18,7 +19,8 @@ function getReviewIcon(status: TraceabilityLink["reviewStatus"]) {
 import { CertaintyBadge, ArtifactKindBadge } from "@/components/workspace/shared/status-badges"
 
 export function AffectedArtifactCard({ link, isSelected, onClick }: AffectedArtifactCardProps) {
-  const filePath = link.evidence[0]?.filePath ?? "Unknown File"
+  const t = useTranslations("workspace")
+  const filePath = link.evidence[0]?.filePath ?? t("unknownFile")
   const fileName = filePath.split("/").pop() ?? filePath
   const fileDir = filePath.split("/").slice(-2, -1)[0]
 

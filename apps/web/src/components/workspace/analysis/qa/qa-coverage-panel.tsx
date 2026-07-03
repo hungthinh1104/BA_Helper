@@ -1,4 +1,5 @@
 import React, { useState } from "react"
+import { useTranslations } from "next-intl"
 import { ShieldCheck, ShieldAlert, Shield, ChevronRight, FileCode2 } from "lucide-react"
 import { QaCoverageItem } from "@ba-helper/contracts"
 
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export function QaCoveragePanel({ coverageItems, onSelectArtifact }: Props) {
+  const t = useTranslations("workspace")
   const [filter, setFilter] = useState<"ALL" | "GAP_ONLY">("ALL")
   
   const displayItems = filter === "GAP_ONLY" 
@@ -18,21 +20,21 @@ export function QaCoveragePanel({ coverageItems, onSelectArtifact }: Props) {
     <div className="flex flex-col gap-6 max-w-4xl pb-12">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">QA Coverage Gap Map</h2>
-          <p className="text-[11px] text-muted-foreground mt-0.5">Test coverage derived from graph dependency structure</p>
+          <h2 className="text-sm font-semibold text-foreground">{t("qaCoverageGapMap")}</h2>
+          <p className="text-[11px] text-muted-foreground mt-0.5">{t("qaCoverageDescription")}</p>
         </div>
         <div className="flex bg-surface-muted border border-border rounded-md overflow-hidden text-[11px] font-medium">
           <button 
             className={`px-3 py-1.5 ${filter === "ALL" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
             onClick={() => setFilter("ALL")}
           >
-            All
+            {t("all")}
           </button>
           <button 
             className={`px-3 py-1.5 border-l border-border ${filter === "GAP_ONLY" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
             onClick={() => setFilter("GAP_ONLY")}
           >
-            Gaps Only
+            {t("gapsOnly")}
           </button>
         </div>
       </div>
@@ -41,7 +43,7 @@ export function QaCoveragePanel({ coverageItems, onSelectArtifact }: Props) {
         {displayItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
             <ShieldCheck className="w-10 h-10 mb-2 opacity-50" />
-            <p className="text-sm font-medium">No artifacts found</p>
+            <p className="text-sm font-medium">{t("noArtifactsFound")}</p>
           </div>
         ) : (
           displayItems.map(item => (
@@ -54,22 +56,23 @@ export function QaCoveragePanel({ coverageItems, onSelectArtifact }: Props) {
 }
 
 function QaCoverageRow({ item, onClick }: { item: QaCoverageItem, onClick: () => void }) {
+  const t = useTranslations("workspace")
   let colorClass = "bg-muted text-muted-foreground border-border/50"
   let Icon = Shield
-  let statusText = "Structural"
+  let statusText = t("structural")
 
   if (item.status === "COVERED") {
     colorClass = "bg-success/10 text-success border-success/30"
     Icon = ShieldCheck
-    statusText = "Covered"
+    statusText = t("covered")
   } else if (item.status === "INDIRECT_ONLY") {
     colorClass = "bg-warning/10 text-warning border-warning/30"
     Icon = Shield
-    statusText = "Indirect Only"
+    statusText = t("indirectOnly")
   } else if (item.status === "NO_TEST_FOUND") {
     colorClass = "bg-danger/10 text-danger border-danger/30"
     Icon = ShieldAlert
-    statusText = "No Test Found"
+    statusText = t("noTestFound")
   }
   
   let riskClass = "text-muted-foreground"
@@ -94,27 +97,27 @@ function QaCoverageRow({ item, onClick }: { item: QaCoverageItem, onClick: () =>
       </div>
 
       <div className="grid grid-cols-[100px_1fr] gap-x-4 gap-y-2 mt-2">
-        <div className="text-[10px] uppercase font-semibold text-muted-foreground">Status</div>
+        <div className="text-[10px] uppercase font-semibold text-muted-foreground">{t("status")}</div>
         <div className="flex items-center gap-1.5">
           <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${colorClass}`}>
             <Icon className="w-3 h-3" />
             {statusText}
           </span>
           <span className={`text-[10px] font-semibold uppercase tracking-wider ${riskClass}`}>
-            ({item.severity} Risk)
+            ({t("riskSuffix", { severity: item.severity })})
           </span>
         </div>
         
         {item.status === "COVERED" && item.testArtifacts.length > 0 && (
           <>
-            <div className="text-[10px] uppercase font-semibold text-muted-foreground">Tests</div>
+            <div className="text-[10px] uppercase font-semibold text-muted-foreground">{t("tests")}</div>
             <div className="text-[11px] font-mono text-foreground/80 truncate">
               {item.testArtifacts.map(n => n.label).join(", ")}
             </div>
           </>
         )}
 
-        <div className="text-[10px] uppercase font-semibold text-muted-foreground mt-0.5">Action</div>
+        <div className="text-[10px] uppercase font-semibold text-muted-foreground mt-0.5">{t("action")}</div>
         <div className="text-[11px] text-foreground/80 leading-snug">
           {item.suggestedAction}
         </div>

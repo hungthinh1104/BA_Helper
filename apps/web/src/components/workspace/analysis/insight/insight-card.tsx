@@ -1,4 +1,5 @@
 import { InsightListResponse } from "@ba-helper/contracts"
+import { useTranslations } from "next-intl"
 import { GitCommitHorizontal } from "lucide-react"
 import { ReviewStatusBadge, CertaintyBadge } from "@/components/workspace/shared/status-badges"
 
@@ -10,18 +11,18 @@ interface InsightCardProps {
   onClick?: (insight: Insight) => void
 }
 
-function getCategoryLabel(category: Insight["category"]) {
+function getCategoryLabel(category: Insight["category"], t: ReturnType<typeof useTranslations<"workspace">>) {
   switch (category) {
     case "CLAIM":
-      return "Claim"
+      return t("claim")
     case "UNKNOWN":
-      return "Unknown"
+      return t("unknown")
     case "QUESTION":
-      return "Question"
+      return t("question")
     case "QA_SCENARIO":
-      return "QA"
+      return t("qa")
     case "ACCEPTANCE_CRITERIA":
-      return "AC"
+      return t("acceptanceCriteriaShort")
     default:
       return category
   }
@@ -44,6 +45,7 @@ function formatImpactPath(filePath?: string | null) {
 }
 
 export function InsightCard({ insight, isSelected, onClick }: InsightCardProps) {
+  const t = useTranslations("workspace")
   const primaryEvidence = insight.evidence[0]
   const evidenceCount = insight.evidence.length
 
@@ -65,10 +67,10 @@ export function InsightCard({ insight, isSelected, onClick }: InsightCardProps) 
           <ReviewStatusBadge status={insight.reviewStatus} />
           <CertaintyBadge certainty={insight.certainty} />
           <span className="rounded-md border border-border/60 bg-surface px-2 py-0.5 text-xs font-medium text-muted-foreground">
-            {getCategoryLabel(insight.category)}
+            {getCategoryLabel(insight.category, t)}
           </span>
           <span className="text-xs text-muted-foreground">
-            {evidenceCount} evidence
+            {t("evidenceCount", { count: evidenceCount })}
           </span>
         </div>
 

@@ -1,5 +1,9 @@
+"use client"
+
+import { useLocale } from "next-intl"
 import { cn } from "@/lib/utils"
 import { getDomainCapabilityBadge, type SupportedLocale } from "@/lib/i18n/status-labels"
+import { normalizeAppLocale, type AppLocale } from "@ba-helper/contracts"
 
 type BadgeTone = "neutral" | "success" | "warning" | "danger" | "info" | "muted"
 
@@ -47,57 +51,224 @@ function defaultLabel(value: string) {
   return value.replace(/_/g, " ")
 }
 
-export function getMaturityMeta(maturity: string): StatusMeta {
+type MetaTranslations = Record<AppLocale, Record<string, Omit<StatusMeta, "tone" | "pulse">>>
+
+const maturityLabels: MetaTranslations = {
+  en: {
+    STABLE: { label: "Stable", description: "Primary supported scanner path." },
+    PARTIAL: { label: "Partial", description: "Usable with bounded scanner coverage." },
+    EXPERIMENTAL: { label: "Experimental", description: "Capability proof only; manual review required." },
+  },
+  "vi-VN": {
+    STABLE: { label: "Ổn định", description: "Luồng scanner được hỗ trợ chính." },
+    PARTIAL: { label: "Một phần", description: "Dùng được nhưng coverage scanner có giới hạn." },
+    EXPERIMENTAL: { label: "Thử nghiệm", description: "Chỉ là proof capability; cần review thủ công." },
+  },
+  "ja-JP": {
+    STABLE: { label: "安定", description: "主要なサポート済み scanner path。" },
+    PARTIAL: { label: "部分対応", description: "限定された scanner coverage で利用可能。" },
+    EXPERIMENTAL: { label: "実験的", description: "Capability proof のみ。手動レビューが必要。" },
+  },
+}
+
+const certaintyLabels: MetaTranslations = {
+  en: {
+    EVIDENCED: { label: "Evidenced", description: "Backed by persisted repository evidence." },
+    INFERRED: { label: "Inferred", description: "Derived from evidence, not directly proven." },
+    UNKNOWN: { label: "Unknown", description: "Insufficient support; needs clarification or review." },
+    CONFLICTING: { label: "Conflicting", description: "Evidence conflicts or suggests risk." },
+  },
+  "vi-VN": {
+    EVIDENCED: { label: "Có bằng chứng", description: "Được hỗ trợ bởi evidence repository đã persist." },
+    INFERRED: { label: "Suy luận", description: "Suy ra từ evidence, chưa chứng minh trực tiếp." },
+    UNKNOWN: { label: "Chưa rõ", description: "Chưa đủ support; cần clarification hoặc review." },
+    CONFLICTING: { label: "Mâu thuẫn", description: "Evidence mâu thuẫn hoặc chỉ ra rủi ro." },
+  },
+  "ja-JP": {
+    EVIDENCED: { label: "証拠あり", description: "Persisted repository evidence に基づきます。" },
+    INFERRED: { label: "推論", description: "Evidence から派生していますが直接証明ではありません。" },
+    UNKNOWN: { label: "不明", description: "根拠不足。clarification または review が必要です。" },
+    CONFLICTING: { label: "矛盾", description: "Evidence が矛盾しているか risk を示します。" },
+  },
+}
+
+const reviewStatusLabels: MetaTranslations = {
+  en: {
+    NEEDS_REVIEW: { label: "Needs Review", description: "A reviewer decision is still required." },
+    CONFIRMED: { label: "Confirmed", description: "Human review accepted this item." },
+    REJECTED: { label: "Rejected", description: "Human review rejected this item." },
+  },
+  "vi-VN": {
+    NEEDS_REVIEW: { label: "Cần review", description: "Vẫn cần reviewer quyết định." },
+    CONFIRMED: { label: "Đã xác nhận", description: "Review thủ công đã chấp nhận mục này." },
+    REJECTED: { label: "Đã bác bỏ", description: "Review thủ công đã bác bỏ mục này." },
+  },
+  "ja-JP": {
+    NEEDS_REVIEW: { label: "レビュー待ち", description: "Reviewer decision がまだ必要です。" },
+    CONFIRMED: { label: "確認済み", description: "人のレビューでこの項目は承認されました。" },
+    REJECTED: { label: "却下", description: "人のレビューでこの項目は却下されました。" },
+  },
+}
+
+const diagnosticSeverityLabels: MetaTranslations = {
+  en: {
+    BLOCKER: { label: "Blocker", description: "Blocks reliable extraction or review." },
+    ERROR: { label: "Error", description: "High-risk scanner diagnostic." },
+    WARN: { label: "Warn", description: "Bounded extraction warning." },
+    INFO: { label: "Info", description: "Context-only diagnostic; not a confirmed impact." },
+  },
+  "vi-VN": {
+    BLOCKER: { label: "Blocker", description: "Chặn extraction hoặc review đáng tin cậy." },
+    ERROR: { label: "Lỗi", description: "Diagnostic scanner rủi ro cao." },
+    WARN: { label: "Cảnh báo", description: "Cảnh báo extraction có giới hạn." },
+    INFO: { label: "Thông tin", description: "Chỉ là ngữ cảnh; không phải impact đã xác nhận." },
+  },
+  "ja-JP": {
+    BLOCKER: { label: "Blocker", description: "信頼できる extraction または review をブロックします。" },
+    ERROR: { label: "エラー", description: "高リスク scanner diagnostic。" },
+    WARN: { label: "警告", description: "限定された extraction warning。" },
+    INFO: { label: "情報", description: "Context-only diagnostic。confirmed impact ではありません。" },
+  },
+}
+
+const analysisStatusDescriptions: MetaTranslations = {
+  en: {
+    RUNNING: { label: "Running", description: "Analysis is processing persisted evidence." },
+    WAITING_FOR_REVIEW: { label: "Waiting for Review", description: "Analysis output exists but review is incomplete." },
+    COMPLETED: { label: "Completed", description: "Analysis is finalized." },
+    FAILED: { label: "Failed", description: "Analysis stopped and needs remediation or rerun." },
+    QUEUED: { label: "Queued" },
+    CANCELLED: { label: "Cancelled" },
+    STALE: { label: "Stale", description: "Repository target moved since this result was created." },
+  },
+  "vi-VN": {
+    RUNNING: { label: "Đang chạy", description: "Phân tích đang xử lý evidence đã persist." },
+    WAITING_FOR_REVIEW: { label: "Chờ review", description: "Output phân tích đã có nhưng review chưa hoàn tất." },
+    COMPLETED: { label: "Đã hoàn tất", description: "Phân tích đã finalize." },
+    FAILED: { label: "Thất bại", description: "Phân tích đã dừng và cần xử lý hoặc rerun." },
+    QUEUED: { label: "Đang chờ" },
+    CANCELLED: { label: "Đã hủy" },
+    STALE: { label: "Đã cũ", description: "Repository target đã thay đổi sau khi kết quả này được tạo." },
+  },
+  "ja-JP": {
+    RUNNING: { label: "実行中", description: "分析は persisted evidence を処理中です。" },
+    WAITING_FOR_REVIEW: { label: "レビュー待ち", description: "分析出力はありますがレビュー未完了です。" },
+    COMPLETED: { label: "完了", description: "分析は finalized です。" },
+    FAILED: { label: "失敗", description: "分析は停止し、remediation または rerun が必要です。" },
+    QUEUED: { label: "待機中" },
+    CANCELLED: { label: "キャンセル済み" },
+    STALE: { label: "古い", description: "この結果の作成後に repository target が移動しました。" },
+  },
+}
+
+const scanStatusDescriptions: MetaTranslations = {
+  en: {
+    QUEUED: { label: "Queued" },
+    RUNNING: { label: "Running", description: "Scanner is indexing repository evidence." },
+    COMPLETED: { label: "Completed" },
+    FAILED: { label: "Failed", description: "Scan failed; evidence is unavailable or incomplete." },
+    CANCELLED: { label: "Cancelled" },
+  },
+  "vi-VN": {
+    QUEUED: { label: "Đang chờ" },
+    RUNNING: { label: "Đang chạy", description: "Scanner đang index evidence repository." },
+    COMPLETED: { label: "Đã hoàn tất" },
+    FAILED: { label: "Thất bại", description: "Scan thất bại; evidence không khả dụng hoặc chưa đầy đủ." },
+    CANCELLED: { label: "Đã hủy" },
+  },
+  "ja-JP": {
+    QUEUED: { label: "待機中" },
+    RUNNING: { label: "実行中", description: "Scanner は repository evidence を index 中です。" },
+    COMPLETED: { label: "完了" },
+    FAILED: { label: "失敗", description: "Scan 失敗。evidence は利用不可または不完全です。" },
+    CANCELLED: { label: "キャンセル済み" },
+  },
+}
+
+const coverageStatusDescriptions: MetaTranslations = {
+  en: {
+    READY: { label: "Ready", description: "Snapshot is analysis-ready." },
+    FULL: { label: "Ready", description: "Snapshot is analysis-ready." },
+    PARTIAL: { label: "Partial", description: "Snapshot is usable but coverage is bounded." },
+    FAILED: { label: "Failed", description: "Scanner could not produce usable evidence." },
+  },
+  "vi-VN": {
+    READY: { label: "Sẵn sàng", description: "Snapshot đã sẵn sàng để phân tích." },
+    FULL: { label: "Sẵn sàng", description: "Snapshot đã sẵn sàng để phân tích." },
+    PARTIAL: { label: "Một phần", description: "Snapshot dùng được nhưng coverage có giới hạn." },
+    FAILED: { label: "Thất bại", description: "Scanner không tạo được evidence dùng được." },
+  },
+  "ja-JP": {
+    READY: { label: "Ready", description: "Snapshot は analysis-ready です。" },
+    FULL: { label: "Ready", description: "Snapshot は analysis-ready です。" },
+    PARTIAL: { label: "Partial", description: "Snapshot は利用可能ですが coverage は限定的です。" },
+    FAILED: { label: "失敗", description: "Scanner は利用可能な evidence を生成できませんでした。" },
+  },
+}
+
+function resolveMeta(
+  labels: MetaTranslations,
+  locale: AppLocale,
+  key: string,
+): Omit<StatusMeta, "tone" | "pulse"> {
+  return labels[locale][key] ?? labels.en[key] ?? { label: defaultLabel(key) }
+}
+
+function useBadgeLocale(): AppLocale {
+  return normalizeAppLocale(useLocale())
+}
+
+export function getMaturityMeta(maturity: string, locale: AppLocale = "en"): StatusMeta {
   switch (maturity) {
     case "STABLE":
-      return { label: "Stable", tone: "success", description: "Primary supported scanner path." }
+      return { ...resolveMeta(maturityLabels, locale, maturity), tone: "success" }
     case "PARTIAL":
-      return { label: "Partial", tone: "warning", description: "Usable with bounded scanner coverage." }
+      return { ...resolveMeta(maturityLabels, locale, maturity), tone: "warning" }
     case "EXPERIMENTAL":
-      return { label: "Experimental", tone: "info", description: "Capability proof only; manual review required." }
+      return { ...resolveMeta(maturityLabels, locale, maturity), tone: "info" }
     default:
       return { label: defaultLabel(maturity), tone: "neutral" }
   }
 }
 
-export function getCertaintyMeta(certainty: string): StatusMeta {
+export function getCertaintyMeta(certainty: string, locale: AppLocale = "en"): StatusMeta {
   switch (certainty) {
     case "EVIDENCED":
-      return { label: "Evidenced", tone: "success", description: "Backed by persisted repository evidence." }
+      return { ...resolveMeta(certaintyLabels, locale, certainty), tone: "success" }
     case "INFERRED":
-      return { label: "Inferred", tone: "info", description: "Derived from evidence, not directly proven." }
+      return { ...resolveMeta(certaintyLabels, locale, certainty), tone: "info" }
     case "UNKNOWN":
-      return { label: "Unknown", tone: "muted", description: "Insufficient support; needs clarification or review." }
+      return { ...resolveMeta(certaintyLabels, locale, certainty), tone: "muted" }
     case "CONFLICTING":
-      return { label: "Conflicting", tone: "danger", description: "Evidence conflicts or suggests risk." }
+      return { ...resolveMeta(certaintyLabels, locale, certainty), tone: "danger" }
     default:
       return { label: defaultLabel(certainty), tone: "neutral" }
   }
 }
 
-export function getReviewStatusMeta(status: string): StatusMeta {
+export function getReviewStatusMeta(status: string, locale: AppLocale = "en"): StatusMeta {
   switch (status) {
     case "NEEDS_REVIEW":
-      return { label: "Needs Review", tone: "warning", description: "A reviewer decision is still required." }
+      return { ...resolveMeta(reviewStatusLabels, locale, status), tone: "warning" }
     case "CONFIRMED":
-      return { label: "Confirmed", tone: "success", description: "Human review accepted this item." }
+      return { ...resolveMeta(reviewStatusLabels, locale, status), tone: "success" }
     case "REJECTED":
-      return { label: "Rejected", tone: "danger", description: "Human review rejected this item." }
+      return { ...resolveMeta(reviewStatusLabels, locale, status), tone: "danger" }
     default:
       return { label: defaultLabel(status), tone: "neutral" }
   }
 }
 
-export function getDiagnosticSeverityMeta(severity: string): StatusMeta {
+export function getDiagnosticSeverityMeta(severity: string, locale: AppLocale = "en"): StatusMeta {
   switch (severity) {
     case "BLOCKER":
-      return { label: "Blocker", tone: "danger", description: "Blocks reliable extraction or review." }
+      return { ...resolveMeta(diagnosticSeverityLabels, locale, severity), tone: "danger" }
     case "ERROR":
-      return { label: "Error", tone: "danger", description: "High-risk scanner diagnostic." }
+      return { ...resolveMeta(diagnosticSeverityLabels, locale, severity), tone: "danger" }
     case "WARN":
-      return { label: "Warn", tone: "warning", description: "Bounded extraction warning." }
+      return { ...resolveMeta(diagnosticSeverityLabels, locale, severity), tone: "warning" }
     case "INFO":
-      return { label: "Info", tone: "info", description: "Context-only diagnostic; not a confirmed impact." }
+      return { ...resolveMeta(diagnosticSeverityLabels, locale, severity), tone: "info" }
     default:
       return { label: defaultLabel(severity), tone: "neutral" }
   }
@@ -125,72 +296,72 @@ export function getArtifactKindMeta(kind: string): StatusMeta {
   return { label: kind, tone: "neutral" }
 }
 
-export function getAnalysisStatusMeta(status: string): StatusMeta {
+export function getAnalysisStatusMeta(status: string, locale: AppLocale = "en"): StatusMeta {
   switch (status) {
     case "QUEUED":
-      return { label: "Queued", tone: "neutral" }
+      return { ...resolveMeta(analysisStatusDescriptions, locale, status), tone: "neutral" }
     case "RUNNING":
-      return { label: "Running", tone: "info", pulse: true, description: "Analysis is processing persisted evidence." }
+      return { ...resolveMeta(analysisStatusDescriptions, locale, status), tone: "info", pulse: true }
     case "WAITING_FOR_REVIEW":
-      return { label: "Waiting for Review", tone: "warning", description: "Analysis output exists but review is incomplete." }
+      return { ...resolveMeta(analysisStatusDescriptions, locale, status), tone: "warning" }
     case "COMPLETED":
-      return { label: "Completed", tone: "success", description: "Analysis is finalized." }
+      return { ...resolveMeta(analysisStatusDescriptions, locale, status), tone: "success" }
     case "FAILED":
-      return { label: "Failed", tone: "danger", description: "Analysis stopped and needs remediation or rerun." }
+      return { ...resolveMeta(analysisStatusDescriptions, locale, status), tone: "danger" }
     case "CANCELLED":
-      return { label: "Cancelled", tone: "muted" }
+      return { ...resolveMeta(analysisStatusDescriptions, locale, status), tone: "muted" }
     case "STALE":
-      return { label: "Stale", tone: "warning", description: "Repository target moved since this result was created." }
+      return { ...resolveMeta(analysisStatusDescriptions, locale, status), tone: "warning" }
     default:
       return { label: defaultLabel(status), tone: "neutral" }
   }
 }
 
-export function getScanStatusMeta(status: string): StatusMeta {
+export function getScanStatusMeta(status: string, locale: AppLocale = "en"): StatusMeta {
   switch (status) {
     case "QUEUED":
-      return { label: "Queued", tone: "neutral" }
+      return { ...resolveMeta(scanStatusDescriptions, locale, status), tone: "neutral" }
     case "RUNNING":
-      return { label: "Running", tone: "info", pulse: true, description: "Scanner is indexing repository evidence." }
+      return { ...resolveMeta(scanStatusDescriptions, locale, status), tone: "info", pulse: true }
     case "COMPLETED":
-      return { label: "Completed", tone: "success" }
+      return { ...resolveMeta(scanStatusDescriptions, locale, status), tone: "success" }
     case "FAILED":
-      return { label: "Failed", tone: "danger", description: "Scan failed; evidence is unavailable or incomplete." }
+      return { ...resolveMeta(scanStatusDescriptions, locale, status), tone: "danger" }
     case "CANCELLED":
-      return { label: "Cancelled", tone: "muted" }
+      return { ...resolveMeta(scanStatusDescriptions, locale, status), tone: "muted" }
     default:
       return { label: defaultLabel(status), tone: "neutral" }
   }
 }
 
-export function getCoverageStatusMeta(status: string): StatusMeta {
+export function getCoverageStatusMeta(status: string, locale: AppLocale = "en"): StatusMeta {
   switch (status) {
     case "READY":
     case "FULL":
-      return { label: "Ready", tone: "success", description: "Snapshot is analysis-ready." }
+      return { ...resolveMeta(coverageStatusDescriptions, locale, status), tone: "success" }
     case "PARTIAL":
-      return { label: "Partial", tone: "warning", description: "Snapshot is usable but coverage is bounded." }
+      return { ...resolveMeta(coverageStatusDescriptions, locale, status), tone: "warning" }
     case "FAILED":
-      return { label: "Failed", tone: "danger", description: "Scanner could not produce usable evidence." }
+      return { ...resolveMeta(coverageStatusDescriptions, locale, status), tone: "danger" }
     default:
       return { label: defaultLabel(status), tone: "muted" }
   }
 }
 
 export function MaturityBadge({ maturity, className }: { maturity: string; className?: string }) {
-  return renderBadge(getMaturityMeta(maturity), className)
+  return renderBadge(getMaturityMeta(maturity, useBadgeLocale()), className)
 }
 
 export function CertaintyBadge({ certainty, className }: { certainty: string; className?: string }) {
-  return renderBadge(getCertaintyMeta(certainty), className)
+  return renderBadge(getCertaintyMeta(certainty, useBadgeLocale()), className)
 }
 
 export function ReviewStatusBadge({ status, className }: { status: string; className?: string }) {
-  return renderBadge(getReviewStatusMeta(status), className)
+  return renderBadge(getReviewStatusMeta(status, useBadgeLocale()), className)
 }
 
 export function DiagnosticRiskBadge({ severity, className }: { severity: string; className?: string }) {
-  return renderBadge(getDiagnosticSeverityMeta(severity), className)
+  return renderBadge(getDiagnosticSeverityMeta(severity, useBadgeLocale()), className)
 }
 
 export function ArtifactKindBadge({ kind, className }: { kind: string; className?: string }) {
@@ -198,15 +369,15 @@ export function ArtifactKindBadge({ kind, className }: { kind: string; className
 }
 
 export function AnalysisStatusBadge({ status, className }: { status: string; className?: string }) {
-  return renderBadge(getAnalysisStatusMeta(status), className)
+  return renderBadge(getAnalysisStatusMeta(status, useBadgeLocale()), className)
 }
 
 export function ScanStatusBadge({ status, className }: { status: string; className?: string }) {
-  return renderBadge(getScanStatusMeta(status), className)
+  return renderBadge(getScanStatusMeta(status, useBadgeLocale()), className)
 }
 
 export function CoverageStatusBadge({ status, className }: { status: string; className?: string }) {
-  return renderBadge(getCoverageStatusMeta(status), className)
+  return renderBadge(getCoverageStatusMeta(status, useBadgeLocale()), className)
 }
 
 export function DomainStatusBadge({ 
@@ -218,7 +389,8 @@ export function DomainStatusBadge({
   locale?: SupportedLocale
   className?: string 
 }) {
-  const badgeData = getDomainCapabilityBadge({ domainPackStatus, locale })
+  const currentLocale = useBadgeLocale()
+  const badgeData = getDomainCapabilityBadge({ domainPackStatus, locale: locale ?? currentLocale })
   
   let tone: BadgeTone = "muted"
   if (badgeData.status === "STABLE") tone = "success"

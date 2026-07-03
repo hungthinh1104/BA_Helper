@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useTranslations } from "next-intl"
 import { Activity, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, FileCode, Layers, SearchX } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -33,36 +34,41 @@ export function parseScanHealthPayload(payload: unknown): ScanHealthPayload | nu
   return p as unknown as ScanHealthPayload
 }
 
-const HUMAN_READABLE_REASONS: Record<string, string> = {
-  IGNORED_DIRECTORY: "Ignored directories",
-  UNSUPPORTED_EXTENSION: "Unsupported file types",
-  GENERATED_FILE: "Generated files",
-  VENDOR_FILE: "Vendor dependencies",
-  BUILD_OUTPUT: "Build outputs",
-  FILE_TOO_LARGE: "Files too large",
-  REPO_FILE_LIMIT_EXCEEDED: "Repository file limit hit",
-  REPO_SIZE_LIMIT_EXCEEDED: "Repository size limit hit",
-  SYMLINK_OUTSIDE_ROOT: "Unsafe symlinks",
-  BINARY_FILE: "Binary files",
-  READ_ERROR: "File read errors",
-  UNSUPPORTED_FRAMEWORK: "Unsupported frameworks",
-  UNSUPPORTED_LANGUAGE: "Unsupported languages",
+const SKIP_REASON_MESSAGE_KEYS: Record<string, string> = {
+  IGNORED_DIRECTORY: "skipReasonIgnoredDirectory",
+  UNSUPPORTED_EXTENSION: "skipReasonUnsupportedExtension",
+  GENERATED_FILE: "skipReasonGeneratedFile",
+  VENDOR_FILE: "skipReasonVendorFile",
+  BUILD_OUTPUT: "skipReasonBuildOutput",
+  FILE_TOO_LARGE: "skipReasonFileTooLarge",
+  REPO_FILE_LIMIT_EXCEEDED: "skipReasonRepoFileLimitExceeded",
+  REPO_SIZE_LIMIT_EXCEEDED: "skipReasonRepoSizeLimitExceeded",
+  SYMLINK_OUTSIDE_ROOT: "skipReasonSymlinkOutsideRoot",
+  BINARY_FILE: "skipReasonBinaryFile",
+  READ_ERROR: "skipReasonReadError",
+  UNSUPPORTED_FRAMEWORK: "skipReasonUnsupportedFramework",
+  UNSUPPORTED_LANGUAGE: "skipReasonUnsupportedLanguage",
 }
 
 export function ScanHealthCard({ payload }: { payload?: unknown }) {
+  const t = useTranslations("workspace")
   const [showAllPaths, setShowAllPaths] = useState(false)
   const [expandedPaths, setExpandedPaths] = useState(false)
 
   const data = parseScanHealthPayload(payload)
+  const getSkipReasonLabel = (reason: string) => {
+    const key = SKIP_REASON_MESSAGE_KEYS[reason]
+    return key ? t(key) : reason
+  }
 
   if (!data) {
     return (
       <div className="flex flex-col gap-2 p-5 rounded-xl border border-border/40 bg-surface/50 backdrop-blur-xl shadow-sm">
         <h3 className="text-[13px] font-semibold text-foreground flex items-center gap-2">
           <Activity className="w-4 h-4 text-muted-foreground" />
-          Scan Health
+          {t("scanHealth")}
         </h3>
-        <p className="text-[12px] text-muted-foreground">Unable to display scan health details.</p>
+        <p className="text-[12px] text-muted-foreground">{t("unableDisplayScanHealth")}</p>
       </div>
     )
   }
@@ -79,7 +85,7 @@ export function ScanHealthCard({ payload }: { payload?: unknown }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Activity className="w-4 h-4 text-muted-foreground" />
-          <h3 className="text-[13px] font-semibold text-foreground">Scan Health Overview</h3>
+          <h3 className="text-[13px] font-semibold text-foreground">{t("scanHealthOverview")}</h3>
           <div className="flex items-center gap-2 ml-2">
             <span className="text-[10px] font-mono text-muted-foreground px-1.5 py-0.5 rounded border border-border/50">
               {data.scannerVersion}
@@ -108,23 +114,23 @@ export function ScanHealthCard({ payload }: { payload?: unknown }) {
 
       {data.coverageStatus === 'PARTIAL' && (
         <p className="text-[12px] text-warning/90 -mt-1 leading-relaxed">
-          PARTIAL means the scanner completed with bounded skips, limits, or pilot adapter constraints. It does not mean the scan fully failed.
+          {t("partialScanHealthDescription")}
         </p>
       )}
 
       <div className="grid grid-cols-3 gap-3 mt-1">
-        <MetricCard label="Scanned Files" value={data.scannedFileCount} icon={<FileCode className="w-4 h-4" />} />
-        <MetricCard label="Skipped Files" value={data.skippedFileCount} icon={<SearchX className="w-4 h-4" />} />
-        <MetricCard label="Artifacts Extracted" value={data.artifactCount} icon={<Layers className="w-4 h-4" />} />
+        <MetricCard label={t("scannedFiles")} value={data.scannedFileCount} icon={<FileCode className="w-4 h-4" />} />
+        <MetricCard label={t("skippedFiles")} value={data.skippedFileCount} icon={<SearchX className="w-4 h-4" />} />
+        <MetricCard label={t("artifactsExtracted")} value={data.artifactCount} icon={<Layers className="w-4 h-4" />} />
       </div>
 
       {sortedSummary.length > 0 && (
         <div className="flex flex-col gap-2 mt-2">
-          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Skip Reasons</span>
+          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">{t("skipReasons")}</span>
           <div className="flex flex-wrap gap-2">
             {sortedSummary.map(([reason, count]) => (
               <span key={reason} className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-surface-hover/50 px-2 py-1 text-[11px] text-foreground">
-                <span className="font-medium text-muted-foreground">{HUMAN_READABLE_REASONS[reason] || reason}</span>
+                <span className="font-medium text-muted-foreground">{getSkipReasonLabel(reason)}</span>
                 <span className="font-bold">{count}</span>
               </span>
             ))}
@@ -138,7 +144,7 @@ export function ScanHealthCard({ payload }: { payload?: unknown }) {
             onClick={() => setExpandedPaths(!expandedPaths)}
             className="flex items-center justify-between w-full p-3 text-left transition-colors hover:bg-surface-soft/60 bg-surface-soft/30"
           >
-            <span className="text-[12px] font-medium text-foreground">View Sample Paths ({samplePaths.length})</span>
+            <span className="text-[12px] font-medium text-foreground">{t("viewSamplePaths", { count: samplePaths.length })}</span>
             {expandedPaths ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
           </button>
           
@@ -149,7 +155,7 @@ export function ScanHealthCard({ payload }: { payload?: unknown }) {
                   <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 py-1 border-b border-border/20 last:border-0">
                     <span className="text-[11px] font-mono text-muted-foreground break-all">{item.path}</span>
                     <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border border-border/40 bg-surface text-muted-foreground whitespace-nowrap w-fit">
-                      {HUMAN_READABLE_REASONS[item.reason] || item.reason}
+                      {getSkipReasonLabel(item.reason)}
                     </span>
                   </div>
                 ))}
@@ -163,7 +169,7 @@ export function ScanHealthCard({ payload }: { payload?: unknown }) {
                     className="h-7 text-[11px] text-muted-foreground hover:text-foreground"
                     onClick={() => setShowAllPaths(!showAllPaths)}
                   >
-                    {showAllPaths ? "Show less" : `Show all sampled paths (${samplePaths.length})`}
+                    {showAllPaths ? t("showLess") : t("showAllSampledPaths", { count: samplePaths.length })}
                   </Button>
                 </div>
               )}

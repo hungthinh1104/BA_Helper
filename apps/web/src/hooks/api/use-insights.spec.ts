@@ -11,6 +11,7 @@ describe('traceabilityReviewInvalidationKeys', () => {
       ['impact-analyses', 'detail', 'analysis-1'],
       ['impact-analyses', 'list', 'project-1', undefined],
       ['impact-analyses', 'approved-report', 'analysis-1'],
+      ['impact-analyses', 'review-completion', 'analysis-1'],
     ]);
   });
 });

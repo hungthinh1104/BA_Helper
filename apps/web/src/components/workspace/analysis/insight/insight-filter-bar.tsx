@@ -1,4 +1,5 @@
 
+import { useTranslations } from "next-intl"
 
 export type InsightFilterValue = "ALL" | "EVIDENCED" | "INFERRED" | "UNKNOWN" | "CONFLICTING" | "NEEDS_REVIEW"
 
@@ -10,13 +11,14 @@ interface InsightFilterBarProps {
 }
 
 export function InsightFilterBar({ currentFilter, onFilterChange, counts, totalVisible }: InsightFilterBarProps) {
+  const t = useTranslations("workspace")
   const filters: { value: InsightFilterValue; label: string; activeClass: string }[] = [
-    { value: "ALL", label: "All", activeClass: "bg-foreground text-background border-foreground" },
-    { value: "NEEDS_REVIEW", label: "Needs Review", activeClass: "bg-warning/15 text-warning border-warning/40" },
-    { value: "EVIDENCED", label: "Evidenced", activeClass: "bg-info/15 text-info border-info/40" },
-    { value: "INFERRED", label: "Inferred", activeClass: "bg-primary/15 text-primary border-primary/40" },
-    { value: "UNKNOWN", label: "Unknown", activeClass: "bg-surface-muted text-muted-foreground border-border" },
-    { value: "CONFLICTING", label: "Conflicting", activeClass: "bg-danger/15 text-danger border-danger/40" }
+    { value: "ALL", label: t("all"), activeClass: "bg-foreground text-background border-foreground" },
+    { value: "NEEDS_REVIEW", label: t("needsReview"), activeClass: "bg-warning/15 text-warning border-warning/40" },
+    { value: "EVIDENCED", label: t("evidenced"), activeClass: "bg-info/15 text-info border-info/40" },
+    { value: "INFERRED", label: t("inferred"), activeClass: "bg-primary/15 text-primary border-primary/40" },
+    { value: "UNKNOWN", label: t("unknown"), activeClass: "bg-surface-muted text-muted-foreground border-border" },
+    { value: "CONFLICTING", label: t("conflicting"), activeClass: "bg-danger/15 text-danger border-danger/40" }
   ]
 
   return (
@@ -41,7 +43,7 @@ export function InsightFilterBar({ currentFilter, onFilterChange, counts, totalV
       ))}
       {currentFilter !== "ALL" && totalVisible !== undefined && (
         <span className="text-[11px] text-muted-foreground ml-2 whitespace-nowrap">
-          {totalVisible} result{totalVisible !== 1 ? "s" : ""}
+          {t("resultsCount", { count: totalVisible })}
         </span>
       )}
     </div>

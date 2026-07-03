@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useCallback, useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import { useCurrentWorkspace } from "@/lib/project-context"
 import { canRunAnalysis } from "@/lib/permissions"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog"
@@ -10,13 +11,18 @@ import { useRepositories } from "@/hooks/api/use-repositories"
 import { useCreateAnalysis, useCreateMultiRepoAnalyses } from "@/hooks/api/use-analyses"
 import { useDomainPacks } from "@/hooks/api/use-domain-packs"
 import { RequirementListItemResponse, RepositoryListItemResponse, MultiRepoImpactAnalysisCreateResponse } from "@ba-helper/contracts"
-import { X, ChevronRight } from "lucide-react"
+import { X } from "lucide-react"
 import { toast } from "sonner"
 import { NewAnalysisDialogProps, Step } from "./new-analysis-types"
-import { getAnalysisErrorMessage } from "./new-analysis-utils"
+import {
+  getAnalysisErrorMessage,
+  repositoryNeedsPartialAcknowledgement,
+} from "./new-analysis-utils"
 import { RequirementSelectionStep } from "./requirement-selection-step"
 import { RepositorySelectionStep } from "./repository-selection-step"
 import { ConfirmationStep } from "./confirmation-step"
+import { StepProgress } from "./step-progress"
+import { useLocalizedHref } from "@/i18n/navigation"
 
 export function NewAnalysisDialog({
   children,
@@ -28,6 +34,8 @@ export function NewAnalysisDialog({
   oldAnalysisSnapshotCommit,
 }: NewAnalysisDialogProps) {
   const router = useRouter()
+  const href = useLocalizedHref()
+  const t = useTranslations("newAnalysis")
   const { data: reqData, isLoading: reqsLoading, error: reqsError } = useRequirements()
   const { data: repoData, isLoading: reposLoading, error: reposError } = useRepositories()
   const { data: domainPackData, isLoading: domainPacksLoading, error: domainPacksError } = useDomainPacks()
@@ -59,7 +67,7 @@ export function NewAnalysisDialog({
   const readyReqs = useMemo(
     () =>
       reqData?.items.filter(
-        (r) => r.latestRevision.readinessStatus === "READY_FOR_ANALYSIS",
+        (r) => r.canStartAnalysis,
       ) || [],
     [reqData],
   )
@@ -86,15 +94,10 @@ export function NewAnalysisDialog({
 
   const hasPreselectedRepo = Boolean(preselectedRepoId)
   const hasPreselectedReq = Boolean(preselectedReqId)
-  const hasPartialRepo = selectedRepos.some((repo) => {
-    const profile = repo.latestSnapshot?.profile
-    const maturity = profile 
-      ? (profile.language === "TYPESCRIPT" && profile.framework === "NESTJS" ? "STABLE" 
-        : profile.language === "JAVA" && profile.framework === "SPRING_BOOT" ? "PARTIAL" 
-        : profile.framework !== "UNKNOWN" ? "EXPERIMENTAL" : "UNKNOWN")
-      : "—"
-    return repo.latestSnapshot?.coverageStatus === "PARTIAL" || maturity === "PARTIAL" || maturity === "EXPERIMENTAL"
-  })
+  const hasPartialRepo = useMemo(
+    () => selectedRepos.some(repositoryNeedsPartialAcknowledgement),
+    [selectedRepos],
+  )
   const canProceedStep3 =
     selectedRepos.length > 0 && (!hasPartialRepo || acknowledgePartial)
 
@@ -112,7 +115,7 @@ export function NewAnalysisDialog({
     setBatchError(null)
   }
 
-  const toggleRepository = (repo: RepositoryListItemResponse) => {
+  const toggleRepository = useCallback((repo: RepositoryListItemResponse) => {
     if (hasPreselectedRepo) return
 
     setSelectedRepos((current) => {
@@ -124,7 +127,14 @@ export function NewAnalysisDialog({
     })
     setAcknowledgePartial(false)
     setBatchError(null)
-  }
+  }, [hasPreselectedRepo])
+
+  const handleRepositoryBack = useCallback(() => setStep(1), [])
+  const handleRepositoryNext = useCallback(() => setStep(3), [])
+  const handleConfirmBack = useCallback(
+    () => setStep(hasPreselectedRepo ? 1 : 2),
+    [hasPreselectedRepo],
+  )
 
   const handleSubmit = async () => {
     if (!selectedReq || selectedRepos.length === 0) return
@@ -137,8 +147,8 @@ export function NewAnalysisDialog({
         const repo = selectedRepos[0]
         const sourceTargetId = repo.latestTarget?.id
         if (!sourceTargetId) {
-          toast.error("Cannot start analysis", {
-            description: "Repository has no resolved target. Run a scan first.",
+          toast.error(t("cannotStartAnalysis"), {
+            description: t("noResolvedTarget"),
           })
           return
         }
@@ -156,10 +166,10 @@ export function NewAnalysisDialog({
           },
         })
 
-        toast.success("Analysis started successfully")
+        toast.success(t("analysisStarted"))
         setOpen(false)
         reset()
-        router.push(`/analyses/${newAnalysis.id}`)
+        router.push(href(`/analyses/${newAnalysis.id}`))
         return
       }
 
@@ -172,17 +182,17 @@ export function NewAnalysisDialog({
       })
 
       setBatchSuccess(result)
-      toast.success(`Created ${result.items.length} analyses`)
+      toast.success(t("createdAnalyses", { count: result.items.length }))
     } catch (err: unknown) {
       const description = getAnalysisErrorMessage(err)
       setBatchError(description)
-      toast.error("Failed to start analyses", {
+      toast.error(t("failedToStartAnalyses"), {
         description,
       })
     }
   }
 
-  const stepLabel = ["Select Requirement", "Select Repository", "Confirm & Run"]
+  const stepLabel = [t("stepRequirement"), t("stepRepository"), t("stepConfirm")]
 
   const handleNextFromStep1 = () => {
     if (hasPreselectedRepo) {
@@ -197,7 +207,7 @@ export function NewAnalysisDialog({
     setOpen(false)
     const runId = batchSuccess.runId
     reset()
-    router.push(`/analyses/runs/${runId}`)
+    router.push(href(`/analyses/runs/${runId}`))
   }
 
   return (
@@ -215,46 +225,17 @@ export function NewAnalysisDialog({
       >
         <DialogHeader className="px-6 pt-5 pb-4 border-b border-border/60">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-[15px]">New Impact Analysis</DialogTitle>
+            <DialogTitle className="text-[15px]">{t("title")}</DialogTitle>
             <DialogClose className="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-surface-muted transition-colors">
               <X className="w-4 h-4" />
             </DialogClose>
           </div>
-          <div className="flex items-center gap-1 mt-3">
-            {([1, 2, 3] as Step[])
-              .filter((item) => !(hasPreselectedRepo && item === 2) && !(hasPreselectedReq && item === 1))
-              .map((item, index, arr) => (
-                <div key={item} className="flex items-center gap-1">
-                  <div
-                    className={`flex items-center gap-1.5 text-[11px] font-medium transition-colors ${
-                      step === item ? "text-foreground" : step > item ? "text-success" : "text-muted-foreground/50"
-                    }`}
-                  >
-                    <div
-                      className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors ${
-                        step > item
-                          ? "bg-success text-white"
-                          : step === item
-                            ? "bg-foreground text-background"
-                            : "bg-surface-muted border border-border text-muted-foreground"
-                      }`}
-                    >
-                      {step > item
-                        ? "✓"
-                        : item === 3 && hasPreselectedRepo
-                          ? "2"
-                          : item === 3 && hasPreselectedReq
-                            ? "2"
-                            : item === 2 && hasPreselectedReq
-                              ? "1"
-                              : item}
-                    </div>
-                    <span className="hidden sm:inline">{stepLabel[item - 1]}</span>
-                  </div>
-                  {index < arr.length - 1 && <ChevronRight className="w-3 h-3 text-border mx-1" />}
-                </div>
-              ))}
-          </div>
+          <StepProgress
+            currentStep={step}
+            labels={stepLabel}
+            hasPreselectedRepo={hasPreselectedRepo}
+            hasPreselectedRequirement={hasPreselectedReq}
+          />
         </DialogHeader>
 
         {step === 1 && !hasPreselectedReq && (
@@ -276,8 +257,8 @@ export function NewAnalysisDialog({
             selectedRepos={selectedRepos}
             toggleRepository={toggleRepository}
             hasPreselectedReq={hasPreselectedReq}
-            handleBack={() => setStep(1)}
-            handleNext={() => setStep(3)}
+            handleBack={handleRepositoryBack}
+            handleNext={handleRepositoryNext}
           />
         )}
 
@@ -300,7 +281,7 @@ export function NewAnalysisDialog({
             canProceed={canProceedStep3}
             loading={loading}
             canRun={canRun}
-            handleBack={() => setStep(hasPreselectedRepo ? 1 : 2)}
+            handleBack={handleConfirmBack}
             handleSubmit={handleSubmit}
             handleOpenRun={handleOpenRun}
           />
