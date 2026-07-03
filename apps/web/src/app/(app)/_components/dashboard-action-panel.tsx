@@ -1,10 +1,12 @@
 import type { ReactNode } from "react"
 import Link from "next/link"
+import { useTranslations } from "next-intl"
 import { ActionPanel } from "@/components/workspace/shared/primitives"
 import { NewAnalysisDialog } from "@/components/workspace/analysis/new-analysis/new-analysis-dialog"
 import { ConnectRepoDialog } from "@/components/workspace/repository/connect-repo-dialog"
 import { NewRequirementDialog } from "@/components/workspace/requirement/new-requirement-dialog"
 import { Button } from "@/components/ui/button"
+import { useLocalizedHref } from "@/i18n/navigation"
 import type { RepositoryListResponse, ImpactAnalysisListResponse, RequirementListResponse } from "@ba-helper/contracts"
 
 interface DashboardActionPanelProps {
@@ -34,6 +36,9 @@ export function DashboardActionPanel({
   canRev,
   isLoading,
 }: DashboardActionPanelProps) {
+  const t = useTranslations("dashboard")
+  const href = useLocalizedHref()
+
   if (isLoading) return null
 
   let nextAction: { title: string; description: string; action?: ReactNode } | null = null
@@ -41,63 +46,65 @@ export function DashboardActionPanel({
   if (repos.length === 0) {
     nextAction = canManageRepo
       ? {
-          title: "Connect the first repository",
-          description: "Start by indexing one repository so the app has persisted evidence to work from.",
+          title: t("connectFirstRepository"),
+          description: t("connectFirstRepositoryDescription"),
           action: (
             <ConnectRepoDialog>
-              <Button size="sm" className="shadow-none">Connect Repository</Button>
+              <Button size="sm" className="shadow-none">{t("connectRepository")}</Button>
             </ConnectRepoDialog>
           ),
         }
       : {
-          title: "Repository connection required",
-          description: "A Maintainer or Owner needs to connect a repository before anyone can run the evidence flow.",
+          title: t("repositoryConnectionRequired"),
+          description: t("repositoryConnectionRequiredDescription"),
         }
   } else if (reqs.length === 0) {
     nextAction = canCreateReq
       ? {
-          title: "Create the first requirement",
-          description: "Define one analysis-ready requirement revision to drive the impact workflow.",
+          title: t("createFirstRequirement"),
+          description: t("createFirstRequirementDescription"),
           action: (
             <NewRequirementDialog>
-              <Button size="sm" className="shadow-none">New Requirement</Button>
+              <Button size="sm" className="shadow-none">{t("newRequirement")}</Button>
             </NewRequirementDialog>
           ),
         }
       : {
-          title: "Requirement input missing",
-          description: "An Analyst or Owner needs to create a requirement revision before analysis can start.",
+          title: t("requirementInputMissing"),
+          description: t("requirementInputMissingDescription"),
         }
   } else if (analyses.length === 0 && readyRepos.length > 0 && readyReqs.length > 0) {
     nextAction = canRun
       ? {
-          title: "Run the first impact analysis",
-          description: "You already have a usable snapshot and a ready requirement. Start the requirement-to-code workflow.",
+          title: t("runFirstAnalysis"),
+          description: t("runFirstAnalysisDescription"),
           action: (
             <NewAnalysisDialog>
-              <Button size="sm" className="shadow-none">Start Analysis</Button>
+              <Button size="sm" className="shadow-none">{t("startAnalysis")}</Button>
             </NewAnalysisDialog>
           ),
         }
       : {
-          title: "Analysis is ready to start",
-          description: "An Analyst or Owner can now start the first impact analysis from the current repository snapshot.",
+          title: t("analysisReadyToStart"),
+          description: t("analysisReadyToStartDescription"),
         }
   } else if (reviewBlocked > 0) {
     const reviewAnalysis = analyses.find(a => a.status === "WAITING_FOR_REVIEW")
     nextAction = canRev
       ? {
-          title: "Review blocking evidence decisions",
-          description: `The latest analysis for "${reviewAnalysis?.requirementRevisionTitle}" is waiting for review before finalization.`,
+          title: t("reviewBlockingEvidence"),
+          description: t("reviewBlockingEvidenceDescription", {
+            title: reviewAnalysis?.requirementRevisionTitle ?? t("unknown"),
+          }),
           action: (
-            <Link href={`/analyses/${reviewAnalysis?.id}?tab=review-queue`}>
-              <Button size="sm" className="shadow-none">Open Review Queue</Button>
+            <Link href={href(`/analyses/${reviewAnalysis?.id}?tab=review-queue`)}>
+              <Button size="sm" className="shadow-none">{t("openReviewQueue")}</Button>
             </Link>
           ),
         }
       : {
-          title: "Review is blocking finalization",
-          description: "A Reviewer or Owner needs to finish evidence decisions before the latest analysis can be finalized.",
+          title: t("reviewBlockingFinalization"),
+          description: t("reviewBlockingFinalizationDescription"),
         }
   }
 

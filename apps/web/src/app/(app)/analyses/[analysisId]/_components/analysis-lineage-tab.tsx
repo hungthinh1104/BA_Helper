@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useTranslations } from "next-intl"
 import { useAnalysisLineage } from "@/hooks/api/use-analyses"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -56,6 +57,7 @@ function EventIcon({ type, status }: { type: LineageTimelineEvent['type'], statu
 }
 
 function CollapsibleText({ text, maxChars = 300 }: { text: string, maxChars?: number }) {
+  const t = useTranslations("workspace")
   const [expanded, setExpanded] = useState(false)
   
   if (!text) return null
@@ -73,9 +75,9 @@ function CollapsibleText({ text, maxChars = 300 }: { text: string, maxChars?: nu
         className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
       >
         {expanded ? (
-          <><ChevronUp className="w-3 h-3" /> Show Less</>
+          <><ChevronUp className="w-3 h-3" /> {t("showLess")}</>
         ) : (
-          <><ChevronDown className="w-3 h-3" /> Show More</>
+          <><ChevronDown className="w-3 h-3" /> {t("showMore")}</>
         )}
       </button>
     </div>
@@ -83,6 +85,7 @@ function CollapsibleText({ text, maxChars = 300 }: { text: string, maxChars?: nu
 }
 
 function LineageEventCard({ event, isCurrentAnalysis }: { event: LineageTimelineEvent, isCurrentAnalysis: boolean }) {
+  const t = useTranslations("workspace")
   const isAnalysisRootEvent = event.type === 'ANALYSIS_CREATED' || event.type === 'DERIVED_ANALYSIS_CREATED'
   const isCurrentAnalysisScope = isCurrentAnalysis
   const isHighlighted = isAnalysisRootEvent || event.type === 'REVIEW_DECISION'
@@ -117,10 +120,10 @@ function LineageEventCard({ event, isCurrentAnalysis }: { event: LineageTimeline
               <span className="text-[13px] font-semibold text-foreground flex items-center gap-2">
                 {event.title}
                 {event.type === 'DERIVED_ANALYSIS_CREATED' && (
-                  <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[9px] uppercase tracking-wider">Derived</span>
+                  <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[9px] uppercase tracking-wider">{t("derived")}</span>
                 )}
                 {event.type === 'IMPACT_DIFF_AVAILABLE' && (
-                  <span className="px-1.5 py-0.5 rounded bg-secondary/10 text-secondary text-[9px] uppercase tracking-wider">Diff Ready</span>
+                  <span className="px-1.5 py-0.5 rounded bg-secondary/10 text-secondary text-[9px] uppercase tracking-wider">{t("diffReady")}</span>
                 )}
               </span>
               <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
@@ -128,7 +131,7 @@ function LineageEventCard({ event, isCurrentAnalysis }: { event: LineageTimeline
                 {event.actor && (
                   <>
                     <span className="w-1 h-1 rounded-full bg-border" />
-                    <span>by {event.actor}</span>
+                    <span>{t("byActor", { actor: event.actor })}</span>
                   </>
                 )}
               </div>
@@ -139,7 +142,7 @@ function LineageEventCard({ event, isCurrentAnalysis }: { event: LineageTimeline
               <a 
                 href={`/analyses/${event.analysisId}`}
                 className="shrink-0 flex items-center justify-center w-7 h-7 rounded-md bg-surface-muted hover:bg-muted border border-border/50 text-muted-foreground hover:text-foreground transition-colors"
-                title="View Analysis"
+                title={t("viewAnalysis")}
               >
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
@@ -154,6 +157,7 @@ function LineageEventCard({ event, isCurrentAnalysis }: { event: LineageTimeline
 }
 
 export function AnalysisLineageTab({ analysisId }: { analysisId: string }) {
+  const t = useTranslations("workspace")
   const { data: lineageData, isLoading } = useAnalysisLineage(analysisId)
 
   if (isLoading) {
@@ -173,8 +177,8 @@ export function AnalysisLineageTab({ analysisId }: { analysisId: string }) {
     return (
       <div className="mt-8 flex flex-col items-center justify-center p-12 text-center rounded-xl border border-dashed border-border">
         <GitMerge className="w-8 h-8 text-muted-foreground/50 mb-3" />
-        <h3 className="text-sm font-semibold text-foreground">No Lineage Found</h3>
-        <p className="text-xs text-muted-foreground mt-1">This analysis does not have any traceability events yet.</p>
+        <h3 className="text-sm font-semibold text-foreground">{t("noLineageFound")}</h3>
+        <p className="text-xs text-muted-foreground mt-1">{t("noLineageDescription")}</p>
       </div>
     )
   }
@@ -185,13 +189,13 @@ export function AnalysisLineageTab({ analysisId }: { analysisId: string }) {
     <div className="mt-4 flex flex-col gap-6 max-w-3xl pb-16">
       <div className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-surface/30">
         <div className="flex flex-col gap-1">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Audit Trail</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("auditTrail")}</h3>
           <p className="text-[13px] text-foreground">
-            {depth === 0 ? "This is a baseline analysis." : `This is a derived analysis (Depth: ${depth}).`}
+            {depth === 0 ? t("baselineAnalysis") : t("derivedAnalysisDepth", { depth })}
           </p>
         </div>
         <div className="flex items-center gap-x-2 text-[11px] text-muted-foreground">
-          <span>Root Baseline:</span>
+          <span>{t("rootBaseline")}:</span>
           <code className="text-foreground bg-surface border border-border px-1.5 py-0.5 rounded text-[10px]">{rootAnalysisId.slice(0, 8)}</code>
         </div>
       </div>

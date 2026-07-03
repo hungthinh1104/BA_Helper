@@ -3,6 +3,8 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Workflow, PanelLeftClose, PanelLeftOpen, Database, FileText, Activity, BarChart2, Users } from "lucide-react"
+import { useTranslations } from "next-intl"
+import { useLocalizedHref } from "@/i18n/navigation"
 
 interface AppSidebarProps {
   isCollapsed?: boolean
@@ -11,6 +13,8 @@ interface AppSidebarProps {
 
 export function AppSidebar({ isCollapsed, onToggle }: AppSidebarProps) {
   const pathname = usePathname()
+  const t = useTranslations("app.sidebar")
+  const href = useLocalizedHref()
   const active = (prefix: string) => pathname?.startsWith(prefix) ? "true" : undefined
 
   return (
@@ -25,8 +29,8 @@ export function AppSidebar({ isCollapsed, onToggle }: AppSidebarProps) {
           <button 
             onClick={onToggle}
             className={`absolute right-1 w-6 h-6 rounded-md hover:bg-surface-soft flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors ${isCollapsed ? 'hidden' : ''}`}
-            title="Collapse Sidebar"
-            aria-label="Collapse Sidebar"
+            title={t("collapse")}
+            aria-label={t("collapse")}
           >
             <PanelLeftClose className="w-4 h-4" />
           </button>
@@ -34,46 +38,46 @@ export function AppSidebar({ isCollapsed, onToggle }: AppSidebarProps) {
       </div>
 
       <nav className={`app-nav-section ${isCollapsed ? "items-center" : ""}`}>
-        {!isCollapsed && <div className="app-nav-label">Workspace</div>}
-        <Link href="/" className={`app-nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={pathname === "/" ? "true" : undefined} title="Dashboard">
+        {!isCollapsed && <div className="app-nav-label">{t("workspace")}</div>}
+        <Link href={href("/")} className={`app-nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={pathname === "/" ? "true" : undefined} title={t("dashboard")}>
           <Workflow className="w-4 h-4 shrink-0" />
-          {!isCollapsed && <span>Dashboard</span>}
+          {!isCollapsed && <span>{t("dashboard")}</span>}
         </Link>
-        <Link href="/repositories" className={`app-nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/repositories")} title="Repositories">
+        <Link href={href("/repositories")} className={`app-nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/repositories")} title={t("repositories")}>
           <Database className="w-4 h-4 shrink-0" />
-          {!isCollapsed && <span>Repositories</span>}
+          {!isCollapsed && <span>{t("repositories")}</span>}
         </Link>
-        <Link href="/requirements" className={`app-nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/requirements")} title="Requirements">
+        <Link href={href("/requirements")} className={`app-nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/requirements")} title={t("requirements")}>
           <FileText className="w-4 h-4 shrink-0" />
-          {!isCollapsed && <span>Requirements</span>}
+          {!isCollapsed && <span>{t("requirements")}</span>}
         </Link>
-        <Link href="/analyses" className={`app-nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/analyses")} title="Impact Analyses">
+        <Link href={href("/analyses")} className={`app-nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/analyses")} title={t("impactAnalyses")}>
           <Activity className="w-4 h-4 shrink-0" />
-          {!isCollapsed && <span>Impact Analyses</span>}
+          {!isCollapsed && <span>{t("impactAnalyses")}</span>}
         </Link>
-        <Link href="/reports" className={`app-nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/reports")} title="Finalized Analyses">
+        <Link href={href("/reports")} className={`app-nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/reports")} title={t("finalizedAnalyses")}>
           <BarChart2 className="w-4 h-4 shrink-0" />
-          {!isCollapsed && <span>Finalized Analyses</span>}
+          {!isCollapsed && <span>{t("finalizedAnalyses")}</span>}
         </Link>
       </nav>
 
       <nav className={`app-nav-section mt-8 ${isCollapsed ? "items-center" : ""}`}>
-        {!isCollapsed && <div className="app-nav-label">Advanced / Experimental</div>}
-        <Link href="/analyses/runs" className={`app-nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/analyses/runs")} title="Multi-repo Runs">
+        {!isCollapsed && <div className="app-nav-label">{t("advanced")}</div>}
+        <Link href={href("/analyses/runs")} className={`app-nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/analyses/runs")} title={t("multiRepoRuns")}>
           <Database className="w-4 h-4 shrink-0" />
-          {!isCollapsed && <span>Multi-repo Runs</span>}
+          {!isCollapsed && <span>{t("multiRepoRuns")}</span>}
         </Link>
       </nav>
 
       <nav className={`app-nav-section mt-8 ${isCollapsed ? "items-center" : ""}`}>
-        {!isCollapsed && <div className="app-nav-label">Settings & Diagnostics</div>}
-        <Link href="/settings/profile" className={`app-nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={pathname === "/settings/profile" ? "true" : undefined} title="Diagnostics">
+        {!isCollapsed && <div className="app-nav-label">{t("settings")}</div>}
+        <Link href={href("/settings/profile")} className={`app-nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={pathname === "/settings/profile" ? "true" : undefined} title={t("diagnostics")}>
           <Activity className="w-4 h-4 shrink-0" />
-          {!isCollapsed && <span>Diagnostics</span>}
+          {!isCollapsed && <span>{t("diagnostics")}</span>}
         </Link>
-        <Link href="/settings/members" className={`app-nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={pathname === "/settings/members" ? "true" : undefined} title="Members">
+        <Link href={href("/settings/members")} className={`app-nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={pathname === "/settings/members" ? "true" : undefined} title={t("members")}>
           <Users className="w-4 h-4 shrink-0" />
-          {!isCollapsed && <span>Members</span>}
+          {!isCollapsed && <span>{t("members")}</span>}
         </Link>
       </nav>
       
@@ -82,8 +86,8 @@ export function AppSidebar({ isCollapsed, onToggle }: AppSidebarProps) {
           <button 
             onClick={onToggle}
             className="w-8 h-8 rounded-md hover:bg-surface-soft flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-            title="Expand Sidebar"
-            aria-label="Expand Sidebar"
+            title={t("expand")}
+            aria-label={t("expand")}
           >
             <PanelLeftOpen className="w-4 h-4" />
           </button>

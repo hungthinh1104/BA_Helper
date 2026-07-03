@@ -1,6 +1,7 @@
 import { ApprovedImpactReportResponse } from "@ba-helper/contracts";
 import { Badge } from "@/components/ui/badge";
 import { ReviewDecisionControls } from "./review-decision-controls";
+import { useTranslations } from "next-intl";
 
 interface EvidenceQualityTableProps {
   analysisId: string;
@@ -8,20 +9,21 @@ interface EvidenceQualityTableProps {
 }
 
 export function EvidenceQualityTable({ analysisId, items }: EvidenceQualityTableProps) {
+  const t = useTranslations("reports");
   if (!items || items.length === 0) return null;
 
   return (
     <div className="mt-6 space-y-4">
-      <h3 className="text-base font-semibold text-foreground tracking-tight">Evidence Quality Details</h3>
+      <h3 className="text-base font-semibold text-foreground tracking-tight">{t("evidenceQualityDetails")}</h3>
       <div className="rounded-lg border border-border/50 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-[13px] border-collapse">
             <thead className="bg-surface-muted border-b border-border/50 text-muted-foreground uppercase tracking-wider">
               <tr>
-                <th className="px-4 py-3 font-medium whitespace-nowrap">Artifact</th>
-                <th className="px-4 py-3 font-medium whitespace-nowrap">Quality</th>
-                <th className="px-4 py-3 font-medium whitespace-nowrap">Review Decision</th>
-                <th className="px-4 py-3 font-medium">Reason</th>
+                <th className="px-4 py-3 font-medium whitespace-nowrap">{t("artifact")}</th>
+                <th className="px-4 py-3 font-medium whitespace-nowrap">{t("quality")}</th>
+                <th className="px-4 py-3 font-medium whitespace-nowrap">{t("reviewDecision")}</th>
+                <th className="px-4 py-3 font-medium">{t("reason")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40 bg-surface">
@@ -42,7 +44,7 @@ export function EvidenceQualityTable({ analysisId, items }: EvidenceQualityTable
                       />
                     ) : (
                       <span className="text-[12px] text-muted-foreground">
-                        {item.itemType === "INSIGHT" ? "Insight review state" : "Not available"}
+                        {item.itemType === "INSIGHT" ? t("insightReviewState") : t("notAvailable")}
                       </span>
                     )}
                     {item.reviewDecision?.note && (

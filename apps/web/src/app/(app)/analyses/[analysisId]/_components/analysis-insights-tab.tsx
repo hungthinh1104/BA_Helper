@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from "next-intl"
 import { InsightList } from "@/components/workspace/analysis/insight/insight-list"
 import { AffectedArtifactCard } from "@/components/workspace/analysis/affected-artifact-card"
 import { InsightFilterBar, type InsightFilterValue } from "@/components/workspace/analysis/insight/insight-filter-bar"
@@ -59,6 +60,8 @@ export function AnalysisInsightsTab({
   onFilterChange,
   onGoToReviewQueue,
 }: AnalysisInsightsTabProps) {
+  const t = useTranslations("workspace")
+
   return (
     <div className="mt-4">
       <div className="flex items-center gap-3 mb-6">
@@ -76,26 +79,26 @@ export function AnalysisInsightsTab({
             size="sm"
             className="h-8 shadow-none shrink-0"
           >
-            {blockingRemaining > 0 ? `Start Review (${blockingRemaining})` : "Review Complete"}
+            {blockingRemaining > 0 ? t("startReviewWithCount", { count: blockingRemaining }) : t("reviewComplete")}
           </Button>
         )}
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
         <div className="rounded-lg border border-border/60 bg-surface-muted/40 px-3 py-2">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Evidence-backed claims</p>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{t("evidenceBackedClaims")}</p>
           <p className="mt-1 text-sm font-semibold text-foreground">{claims.length}</p>
         </div>
         <div className="rounded-lg border border-border/60 bg-surface-muted/40 px-3 py-2">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Unknowns / Risks</p>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{t("unknownsRisks")}</p>
           <p className="mt-1 text-sm font-semibold text-foreground">{unknowns.length}</p>
         </div>
         <div className="rounded-lg border border-border/60 bg-surface-muted/40 px-3 py-2">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">QA scenarios</p>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{t("qaScenarios")}</p>
           <p className="mt-1 text-sm font-semibold text-foreground">{qaScenarios.length}</p>
         </div>
         <div className="rounded-lg border border-border/60 bg-surface-muted/40 px-3 py-2">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Review remaining</p>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{t("reviewRemaining")}</p>
           <p className="mt-1 text-sm font-semibold text-foreground">{blockingRemaining}</p>
         </div>
       </div>
@@ -104,9 +107,9 @@ export function AnalysisInsightsTab({
         {links.length > 0 && filter === "ALL" && (
           <div className="flex flex-col gap-3">
             <div className="px-1">
-              <h3 className="text-sm font-semibold mb-1">Impacted Artifacts</h3>
+              <h3 className="text-sm font-semibold mb-1">{t("impactedArtifacts")}</h3>
               <p className="text-[12px] text-muted-foreground">
-                These artifacts are linked to the current requirement through persisted snapshot evidence.
+                {t("impactedArtifactsDescription")}
               </p>
             </div>
             {links.map((link) => (
@@ -122,7 +125,7 @@ export function AnalysisInsightsTab({
 
         {claims.length > 0 && (
           <InsightList
-            title="Impact Claims"
+            title={t("impactClaims")}
             insights={claims}
             selectedInsightId={selectedInsight?.id}
             onSelect={onSelectInsight}
@@ -130,7 +133,7 @@ export function AnalysisInsightsTab({
         )}
         {ac.length > 0 && (
           <InsightList
-            title="Acceptance Criteria"
+            title={t("acceptanceCriteria")}
             insights={ac}
             selectedInsightId={selectedInsight?.id}
             onSelect={onSelectInsight}
@@ -138,7 +141,7 @@ export function AnalysisInsightsTab({
         )}
         {unknowns.length > 0 && (
           <InsightList
-            title="Unknowns and Risk Signals"
+            title={t("unknownsAndRiskSignals")}
             insights={unknowns}
             selectedInsightId={selectedInsight?.id}
             onSelect={onSelectInsight}
@@ -146,7 +149,7 @@ export function AnalysisInsightsTab({
         )}
         {questions.length > 0 && (
           <InsightList
-            title="BA Clarification Questions"
+            title={t("baClarificationQuestions")}
             insights={questions}
             selectedInsightId={selectedInsight?.id}
             onSelect={onSelectInsight}
@@ -154,7 +157,7 @@ export function AnalysisInsightsTab({
         )}
         {qaScenarios.length > 0 && (
           <InsightList
-            title="QA Scenarios"
+            title={t("qaScenarios")}
             insights={qaScenarios}
             selectedInsightId={selectedInsight?.id}
             onSelect={onSelectInsight}
@@ -164,11 +167,13 @@ export function AnalysisInsightsTab({
         {filteredInsights.length === 0 && filter !== "ALL" && (
           <div className="flex flex-col items-center text-center py-12 px-8 border border-dashed border-border/50 rounded-xl bg-surface-muted/20">
             <div className="w-10 h-10 rounded-lg bg-surface border border-border/50 flex items-center justify-center mb-3">
-              <span className="text-sm text-muted-foreground">No match</span>
+              <span className="text-sm text-muted-foreground">{t("noMatch")}</span>
             </div>
-            <p className="text-[13px] font-medium text-foreground mb-1">No results</p>
+            <p className="text-[13px] font-medium text-foreground mb-1">{t("noResults")}</p>
             <p className="text-[12px] text-muted-foreground">
-              No insights match the selected filter. Try switching to <strong>All</strong>.
+              {t.rich("noInsightsMatchFilter", {
+                strong: (chunks) => <strong>{chunks}</strong>,
+              })}
             </p>
           </div>
         )}

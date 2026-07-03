@@ -1,4 +1,9 @@
 import type { AnalysisWorkspaceResponse } from '@ba-helper/contracts';
+import { buildEvidenceQualityProjection } from '../../../document/application/evidence-quality.projection';
+import {
+	buildReportApprovalGateItems,
+	ReportApprovalGatePolicy,
+} from '../../../document/application/report-approval-gate.policy';
 import type {
 	WorkspaceAnalysis,
 	WorkspaceDocumentJob,
@@ -15,18 +20,18 @@ export function buildReportStatus(
 		latestJob?.generatedDocument ?? latestSnapshot?.approvedDocument ?? null;
 
 	if (latestJob?.status === 'QUEUED' || latestJob?.status === 'RUNNING') {
-		return reportCard(latestJob.status.toLowerCase() as 'queued' | 'running', latestJob, latestSnapshot);
+		return reportCard(analysis, latestJob.status.toLowerCase() as 'queued' | 'running', latestJob, latestSnapshot);
 	}
 
 	if (generatedDocument?.status === 'APPROVED' || latestJob?.status === 'COMPLETED') {
-		return reportCard('completed', latestJob, latestSnapshot);
+		return reportCard(analysis, 'completed', latestJob, latestSnapshot);
 	}
 
 	if (latestJob?.status === 'FAILED') {
-		return reportCard('failed', latestJob, latestSnapshot);
+		return reportCard(analysis, 'failed', latestJob, latestSnapshot);
 	}
 
-	return reportCard('missing', latestJob, latestSnapshot);
+	return reportCard(analysis, 'missing', latestJob, latestSnapshot);
 }
 
 export function buildDriftStatus(
@@ -60,17 +65,27 @@ export function buildDriftStatus(
 }
 
 export function reportCard(
+	analysis: WorkspaceAnalysis,
 	status: AnalysisWorkspaceResponse['reportStatus']['status'],
 	job: WorkspaceDocumentJob | null,
 	snapshot: WorkspaceReviewedReportSnapshot | null,
 ): AnalysisWorkspaceResponse['reportStatus'] {
 	const document = job?.generatedDocument ?? snapshot?.approvedDocument ?? null;
+	const stale = isAnalysisStale(analysis);
+	const finalizeBlockingReasons = buildFinalizeBlockingReasons(analysis, stale);
+	const exportBlockingReasons = buildExportBlockingReasons(status, stale);
 	return {
 		status,
 		generatedDocumentId: document?.id ?? job?.generatedDocumentId ?? null,
 		documentJobId: job?.id ?? null,
 		reviewedReportSnapshotId: snapshot?.id ?? null,
-		canExport: status === 'completed',
+		canFinalize: finalizeBlockingReasons.length === 0,
+		requiresUnreviewedAcknowledgement: hasUnreviewedItems(analysis),
+		canViewReport: status === 'completed',
+		canExport: status === 'completed' && !stale,
+		canRetryReportGeneration: status === 'failed' && analysis.status === 'COMPLETED' && !stale,
+		finalizeBlockingReasons,
+		exportBlockingReasons,
 		lastGeneratedAt:
 			job?.completedAt?.toISOString() ??
 			document?.updatedAt?.toISOString() ??
@@ -78,6 +93,63 @@ export function reportCard(
 			null,
 		failureMessage: status === 'failed' ? stringifyJobError(job?.error) : null,
 	};
+}
+
+function isAnalysisStale(analysis: WorkspaceAnalysis): boolean {
+	const target = analysis.sourceTarget;
+	if (!target || target.resolvedRefType === 'COMMIT') return false;
+	return target.latestObservedCommitSha !== analysis.snapshot.commitSha;
+}
+
+function hasUnreviewedItems(analysis: WorkspaceAnalysis): boolean {
+	return [...analysis.insights, ...analysis.traceabilityLinks].some(
+		(item) => item.reviewStatus === 'NEEDS_REVIEW',
+	);
+}
+
+function buildFinalizeBlockingReasons(
+	analysis: WorkspaceAnalysis,
+	stale: boolean,
+): string[] {
+	const reasons: string[] = [];
+
+	if (analysis.status !== 'WAITING_FOR_REVIEW') {
+		reasons.push('ANALYSIS_NOT_WAITING_FOR_REVIEW');
+	}
+	if (stale) {
+		reasons.push('ANALYSIS_STALE');
+	}
+
+	const qualityProjection = buildEvidenceQualityProjection({
+		traceabilityLinks: analysis.traceabilityLinks as any[],
+		insights: analysis.insights as any[],
+	});
+	const gate = ReportApprovalGatePolicy.evaluate(buildReportApprovalGateItems({
+		items: qualityProjection.items,
+		insights: analysis.insights,
+		traceabilityLinks: analysis.traceabilityLinks.map((link) => ({
+			id: link.id,
+			linkType: 'AFFECTED',
+			linkBasis: link.linkBasis,
+		})),
+	}));
+	if (!gate.canApprove) {
+		reasons.push(...gate.blockingReasons);
+	}
+
+	return Array.from(new Set(reasons));
+}
+
+function buildExportBlockingReasons(
+	status: AnalysisWorkspaceResponse['reportStatus']['status'],
+	stale: boolean,
+): string[] {
+	const reasons: string[] = [];
+	if (status === 'missing') reasons.push('REPORT_NOT_GENERATED');
+	if (status === 'queued' || status === 'running') reasons.push('REPORT_GENERATION_IN_PROGRESS');
+	if (status === 'failed') reasons.push('REPORT_GENERATION_FAILED');
+	if (stale) reasons.push('REPORT_STALE');
+	return reasons;
 }
 
 export function deriveReviewStatus(

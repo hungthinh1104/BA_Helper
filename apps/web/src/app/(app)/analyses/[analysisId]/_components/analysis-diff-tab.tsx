@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from "next-intl"
 import { useAnalysisDiff } from "@/hooks/api/use-analyses"
 import { useReviewDecisions } from "@/hooks/api/use-review-decisions"
 import { ImpactAnalysisDetailResponse } from "@ba-helper/contracts"
@@ -16,6 +17,7 @@ interface AnalysisDiffTabProps {
 }
 
 export function AnalysisDiffTab({ analysisId, analysis }: AnalysisDiffTabProps) {
+  const t = useTranslations("workspace")
   const router = useRouter()
   const { data: diff, isLoading: diffLoading, error: diffError, refetch } = useAnalysisDiff(analysisId)
   const { data: decisions, isLoading: decisionsLoading } = useReviewDecisions(analysisId)
@@ -24,7 +26,7 @@ export function AnalysisDiffTab({ analysisId, analysis }: AnalysisDiffTabProps) 
     return (
       <div className="py-20 flex flex-col items-center justify-center gap-3 text-muted-foreground">
         <Loader2 className="w-6 h-6 animate-spin text-primary" />
-        <span className="text-sm">Analyzing impact changes...</span>
+        <span className="text-sm">{t("analyzingImpactChanges")}</span>
       </div>
     )
   }
@@ -35,14 +37,14 @@ export function AnalysisDiffTab({ analysisId, analysis }: AnalysisDiffTabProps) 
         <div className="w-12 h-12 rounded-full bg-danger/10 flex items-center justify-center">
           <AlertCircle className="w-6 h-6 text-danger" />
         </div>
-        <p className="text-sm font-medium text-foreground">Failed to load diff analysis</p>
-        <p className="text-xs text-muted-foreground mb-2">{(diffError as Error)?.message || "An unexpected error occurred"}</p>
+        <p className="text-sm font-medium text-foreground">{t("failedLoadDiffAnalysis")}</p>
+        <p className="text-xs text-muted-foreground mb-2">{(diffError as Error)?.message || t("unexpectedError")}</p>
         <button
           onClick={() => refetch()}
           className="flex items-center gap-2 text-xs font-medium bg-surface border border-border/60 hover:bg-surface-soft px-3 py-1.5 rounded-lg transition-colors"
         >
           <RefreshCw className="w-3.5 h-3.5" />
-          Try Again
+          {t("tryAgain")}
         </button>
       </div>
     )

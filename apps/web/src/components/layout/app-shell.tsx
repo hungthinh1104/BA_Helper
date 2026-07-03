@@ -12,6 +12,7 @@ interface AppShellProps {
 import { useRef, useState, useCallback } from "react"
 import { Group, Panel, Separator, PanelImperativeHandle } from "react-resizable-panels"
 import { useMediaQuery } from "@/hooks/ui/use-media-query"
+import { useTranslations } from "next-intl"
 
 export function AppShell({ children }: AppShellProps) {
   return (
@@ -20,6 +21,7 @@ export function AppShell({ children }: AppShellProps) {
 }
 
 function AppShellInner({ children }: AppShellProps) {
+  const t = useTranslations("app.shell")
   const status = useProjectStatus()
   const sidebarRef = useRef<PanelImperativeHandle>(null)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
@@ -47,7 +49,7 @@ function AppShellInner({ children }: AppShellProps) {
     return (
       <div className="app-shell flex items-center justify-center">
         <main className="p-6 text-sm text-muted-foreground">
-          Initializing workspace...
+          {t("initializing")}
         </main>
       </div>
     )
@@ -58,11 +60,11 @@ function AppShellInner({ children }: AppShellProps) {
       <div className="app-shell flex items-center justify-center">
         <main className="p-6">
           <div className="max-w-2xl rounded-xl border border-destructive/20 bg-destructive/5 p-4 text-sm">
-            <div className="font-medium text-destructive">Workspace bootstrap failed</div>
+            <div className="font-medium text-destructive">{t("bootstrapFailed")}</div>
             <p className="mt-1 text-destructive/90">{status.message}</p>
             <div className="mt-3 space-y-1 text-xs text-muted-foreground">
-              <p>Error code: <span className="font-mono">{status.code}</span></p>
-              <p>API URL: <span className="font-mono">{status.apiBaseUrl ?? "unresolved"}</span></p>
+              <p>{t("errorCode")}: <span className="font-mono">{status.code}</span></p>
+              <p>{t("apiUrl")}: <span className="font-mono">{status.apiBaseUrl ?? t("unresolved")}</span></p>
             </div>
           </div>
         </main>

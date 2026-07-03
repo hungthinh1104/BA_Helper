@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import { useTranslations } from "next-intl"
 import { AlertTriangle, ChevronLeft } from "lucide-react"
 import Link from "next/link"
 
@@ -12,6 +13,7 @@ export default function AnalysisError({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  const t = useTranslations("settings")
   useEffect(() => {
     console.error("[AnalysisError]", error)
   }, [error])
@@ -23,9 +25,9 @@ export default function AnalysisError({
           <AlertTriangle className="w-5 h-5 text-danger" />
         </div>
         <div>
-          <p className="text-[14px] font-semibold text-foreground mb-1">Failed to load analysis</p>
+          <p className="text-[14px] font-semibold text-foreground mb-1">{t("failedLoadAnalysis")}</p>
           <p className="text-[12px] text-muted-foreground">
-            The analysis may have been deleted or is temporarily unavailable.
+            {t("failedLoadAnalysisDescription")}
           </p>
           {error.digest && (
             <p className="text-[11px] text-muted-foreground/40 mt-1">digest: {error.digest}</p>
@@ -37,10 +39,10 @@ export default function AnalysisError({
           className="inline-flex items-center gap-1 h-8 px-3 text-[13px] font-medium rounded-md border border-border bg-transparent text-foreground hover:bg-surface-muted transition-colors shadow-none"
         >
           <ChevronLeft className="w-3.5 h-3.5" />
-          All Analyses
+          {t("allAnalyses")}
         </Link>
           <Button size="sm" className="h-8 shadow-none" onClick={reset}>
-            Retry
+            {t("retry")}
           </Button>
         </div>
       </div>

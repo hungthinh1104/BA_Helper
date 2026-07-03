@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useTranslations } from "next-intl"
 import { useReviewClarifications, useCreateReviewClarification, useAnswerReviewClarification, useCreateDerivedAnalysisFromClarification } from "@/hooks/api/use-analyses"
 import { useCurrentWorkspace } from "@/lib/project-context"
 import { canWriteClarification } from "@/lib/permissions"
@@ -9,6 +10,7 @@ import { HelpCircle, ArrowRight, CornerDownRight, CheckCircle2 } from "lucide-re
 import type { ReviewDecisionResponse } from "@ba-helper/contracts"
 
 export function AnalysisClarificationBlock({ analysisId, latestDecision }: { analysisId: string, latestDecision?: ReviewDecisionResponse }) {
+  const t = useTranslations("workspace")
   const { data: clarificationsData, isLoading } = useReviewClarifications(analysisId)
   const createClarification = useCreateReviewClarification(analysisId)
   const answerClarification = useAnswerReviewClarification(analysisId)
@@ -44,11 +46,11 @@ export function AnalysisClarificationBlock({ analysisId, latestDecision }: { ana
           question,
         }
       })
-      toast.success("Clarification request sent.")
+      toast.success(t("clarificationRequestSent"))
       setQuestion("")
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      toast.error(e?.response?.data?.message || "Failed to create clarification.")
+      toast.error(e?.response?.data?.message || t("failedCreateClarification"))
     }
   }
 
@@ -58,21 +60,21 @@ export function AnalysisClarificationBlock({ analysisId, latestDecision }: { ana
         clarificationId,
         data: { answer }
       })
-      toast.success("Clarification answered.")
+      toast.success(t("clarificationAnsweredToast"))
       setAnswer("")
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      toast.error(e?.response?.data?.message || "Failed to answer clarification.")
+      toast.error(e?.response?.data?.message || t("failedAnswerClarification"))
     }
   }
 
   const handleCreateDerivedAnalysis = async (clarificationId: string) => {
     try {
       await createDerivedAnalysis.mutateAsync(clarificationId)
-      toast.success("Derived analysis created successfully.")
+      toast.success(t("derivedAnalysisCreated"))
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      toast.error(e?.response?.data?.message || "Failed to create derived analysis.")
+      toast.error(e?.response?.data?.message || t("failedCreateDerivedAnalysis"))
     }
   }
 
@@ -80,28 +82,28 @@ export function AnalysisClarificationBlock({ analysisId, latestDecision }: { ana
     <div className="flex flex-col gap-4 mt-6 p-5 rounded-xl border border-warning/30 bg-warning/5 text-sm">
       <div className="flex items-center gap-2 mb-2 text-warning font-semibold">
         <HelpCircle className="w-5 h-5" />
-        <h3>Clarification Workflow</h3>
+        <h3>{t("clarificationWorkflow")}</h3>
       </div>
       
       {!activeClarification && isClarificationNeeded && (
         <div className="flex flex-col gap-3">
-          <p className="text-muted-foreground text-xs">The latest review decision requested more clarification. Please submit your question for the stakeholder.</p>
+          <p className="text-muted-foreground text-xs">{t("latestReviewNeedsClarification")}</p>
           <textarea
             value={question}
             onChange={e => setQuestion(e.target.value)}
             disabled={isViewer}
-            placeholder={isViewer ? "Clarification requests are disabled for view-only users." : "Enter clarification question..."}
+            placeholder={isViewer ? t("clarificationDisabledViewer") : t("enterClarificationQuestion")}
             className={`w-full min-h-[80px] p-3 rounded-lg bg-surface border border-border/60 text-[13px] text-foreground focus:outline-none focus:ring-1 focus:ring-warning focus:border-warning resize-y ${isViewer ? 'opacity-50 cursor-not-allowed bg-surface-muted' : ''}`}
-            title={isViewer ? "You have view-only access. Reviewer or Admin role required." : undefined}
+            title={isViewer ? t("viewOnlyReviewerAdminRequired") : undefined}
           />
           <div className="flex justify-end">
             <Button 
               onClick={handleCreateClarification} 
               disabled={!question.trim() || createClarification.isPending || isViewer}
               className="bg-warning hover:bg-warning/90 text-warning-foreground h-8 text-xs"
-              title={isViewer ? "You have view-only access. Reviewer or Admin role required." : undefined}
+              title={isViewer ? t("viewOnlyReviewerAdminRequired") : undefined}
             >
-              Request Clarification
+              {t("requestClarification")}
             </Button>
           </div>
         </div>
@@ -110,30 +112,30 @@ export function AnalysisClarificationBlock({ analysisId, latestDecision }: { ana
       {activeClarification && activeClarification.status === 'OPEN' && (
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1 p-3 rounded-lg bg-surface/50 border border-border/40">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Question</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("question")}</span>
             <span className="text-[13px] text-foreground whitespace-pre-wrap">{activeClarification.question}</span>
           </div>
           
           <div className="flex flex-col gap-2">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-              <CornerDownRight className="w-3.5 h-3.5" /> Stakeholder Answer
+              <CornerDownRight className="w-3.5 h-3.5" /> {t("stakeholderAnswer")}
             </span>
             <textarea 
               value={answer}
               onChange={(e) => setAnswer(e.target.value)}
               disabled={!canWrite}
-              placeholder={!canWrite ? "Answering clarifications is disabled for view-only users." : "Enter stakeholder answer here..."}
+              placeholder={!canWrite ? t("answerClarificationDisabledViewer") : t("enterStakeholderAnswer")}
               className={`w-full min-h-[80px] p-3 rounded-lg bg-surface border border-border/60 text-[13px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary resize-y ${!canWrite ? 'opacity-50 cursor-not-allowed bg-surface-muted' : ''}`}
-              title={!canWrite ? "You have view-only access. Reviewer or Analyst role required." : undefined}
+              title={!canWrite ? t("viewOnlyReviewerAnalystRequired") : undefined}
             />
             <div className="flex justify-end mt-1">
               <Button 
                 onClick={() => handleAnswerClarification(activeClarification.id)} 
                 disabled={!answer.trim() || answerClarification.isPending || !canWrite}
                 className="h-8 text-xs"
-                title={!canWrite ? "Analyst or Reviewer role required." : undefined}
+                title={!canWrite ? t("analystReviewerRequired") : undefined}
               >
-                Submit Answer
+                {t("submitAnswer")}
               </Button>
             </div>
           </div>
@@ -143,13 +145,13 @@ export function AnalysisClarificationBlock({ analysisId, latestDecision }: { ana
       {activeClarification && activeClarification.status === 'ANSWERED' && (
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1 p-3 rounded-lg bg-surface/50 border border-border/40">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Question</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("question")}</span>
             <span className="text-[13px] text-foreground whitespace-pre-wrap">{activeClarification.question}</span>
           </div>
           
           <div className="flex flex-col gap-1 p-3 rounded-lg bg-primary/5 border border-primary/20">
             <span className="text-xs font-semibold text-primary uppercase tracking-wider flex items-center gap-1">
-              <CornerDownRight className="w-3.5 h-3.5" /> Answer
+              <CornerDownRight className="w-3.5 h-3.5" /> {t("answer")}
             </span>
             <span className="text-[13px] text-foreground whitespace-pre-wrap">{activeClarification.answer}</span>
           </div>
@@ -157,7 +159,7 @@ export function AnalysisClarificationBlock({ analysisId, latestDecision }: { ana
           <div className="flex items-center justify-between mt-2 pt-4 border-t border-warning/20">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-success" />
-              <span className="text-sm font-medium">Clarification resolved.</span>
+              <span className="text-sm font-medium">{t("clarificationResolved")}</span>
             </div>
             
             {activeClarification.derivedAnalyses && activeClarification.derivedAnalyses.length > 0 ? (
@@ -165,16 +167,16 @@ export function AnalysisClarificationBlock({ analysisId, latestDecision }: { ana
                 href={`/analyses/${activeClarification.derivedAnalyses[0].id}`}
                 className="inline-flex items-center justify-center rounded-lg border border-primary text-primary hover:bg-primary/5 h-8 px-3 text-xs font-medium transition-colors"
               >
-                View Derived Analysis <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                {t("viewDerivedAnalysis")} <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
               </a>
             ) : (
               <Button 
                 onClick={() => handleCreateDerivedAnalysis(activeClarification.id)} 
                 disabled={createDerivedAnalysis.isPending || isViewer}
                 className="h-8 text-xs bg-primary hover:bg-primary/90 text-white"
-                title={isViewer ? "You have view-only access. Reviewer or Admin role required." : undefined}
+                title={isViewer ? t("viewOnlyReviewerAdminRequired") : undefined}
               >
-                Create Derived Analysis
+                {t("createDerivedAnalysis")}
               </Button>
             )}
           </div>

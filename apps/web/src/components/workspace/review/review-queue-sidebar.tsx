@@ -1,4 +1,7 @@
+"use client"
+
 import React from "react"
+import { useTranslations } from "next-intl"
 import { ReviewQueueItem, ReviewQueueResponse } from "@ba-helper/contracts"
 import { Badge } from "@/components/ui/badge"
 import { SkipForward, LayoutList, AlertCircle } from "lucide-react"
@@ -87,6 +90,7 @@ export function ReviewQueueSidebar({
   setPage,
   onSelect
 }: ReviewQueueSidebarProps) {
+  const t = useTranslations("workspace")
   const totalActiveItems = summary.totalActiveItems ?? summary.total
   const decisionRequiredRemaining = summary.decisionRequiredRemaining ?? summary.remaining
   const diagnosticRemaining = summary.diagnosticRemaining ?? Math.max(totalActiveItems - decisionRequiredRemaining, 0)
@@ -97,14 +101,14 @@ export function ReviewQueueSidebar({
       {/* Header */}
       <div className="px-3 py-3 border-b border-border">
         <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-3">
-          <LayoutList className="w-3.5 h-3.5" /> Review Queue
+          <LayoutList className="w-3.5 h-3.5" /> {t("reviewQueue")}
         </h2>
 
         {/* Progress bar */}
         <div className="space-y-1">
           <div className="flex justify-between text-[11px] text-muted-foreground">
-            <span>{totalActiveItems - decisionRequiredRemaining - diagnosticRemaining} / {totalActiveItems} resolved</span>
-            <span className="font-medium text-foreground">{decisionRequiredRemaining} decisions left</span>
+            <span>{t("resolvedCount", { resolved: totalActiveItems - decisionRequiredRemaining - diagnosticRemaining, total: totalActiveItems })}</span>
+            <span className="font-medium text-foreground">{t("decisionsLeft", { count: decisionRequiredRemaining })}</span>
           </div>
           <div className="bg-border h-1 w-full rounded-full overflow-hidden">
             <div
@@ -116,20 +120,20 @@ export function ReviewQueueSidebar({
 
         {diagnosticRemaining > 0 && (
           <div className="mt-2 text-[10px] text-muted-foreground">
-            {diagnosticRemaining} diagnostic-only items stay visible for awareness but do not block finalize.
+            {t("diagnosticOnlyItems", { count: diagnosticRemaining })}
           </div>
         )}
 
         {summary.highRiskRemaining > 0 && (
           <div className="flex items-center gap-1.5 text-[11px] text-danger mt-2.5 bg-danger/8 px-2 py-1.5 rounded border border-danger/20">
             <AlertCircle className="w-3 h-3 shrink-0" />
-            <span>{summary.highRiskRemaining} high-risk unresolved</span>
+            <span>{t("highRiskUnresolved", { count: summary.highRiskRemaining })}</span>
           </div>
         )}
 
         {skippedLocal.size > 0 && (
           <p className="text-[10px] text-muted-foreground mt-2">
-            {skippedLocal.size} skipped in this session. Review status is unchanged.
+            {t("skippedThisSession", { count: skippedLocal.size })}
           </p>
         )}
       </div>
@@ -158,7 +162,7 @@ export function ReviewQueueSidebar({
       {items.length > REVIEW_QUEUE_PAGE_SIZE && (
         <div className="flex items-center justify-between border-t border-border px-3 py-2 text-xs text-muted-foreground">
           <span>
-            Showing {pageStart + 1}-{pageEnd} of {items.length}
+            {t("showingRange", { start: pageStart + 1, end: pageEnd, total: items.length })}
           </span>
           <div className="flex items-center gap-2">
             <Button
@@ -168,7 +172,7 @@ export function ReviewQueueSidebar({
               onClick={() => setPage(currentPage - 1)}
               disabled={currentPage <= 1}
             >
-              Prev
+              {t("prev")}
             </Button>
             <span>{currentPage}/{totalPages}</span>
             <Button
@@ -178,7 +182,7 @@ export function ReviewQueueSidebar({
               onClick={() => setPage(currentPage + 1)}
               disabled={currentPage >= totalPages}
             >
-              Next
+              {t("next")}
             </Button>
           </div>
         </div>

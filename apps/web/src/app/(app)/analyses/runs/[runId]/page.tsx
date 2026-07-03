@@ -5,6 +5,7 @@ import { use } from "react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { AlertCircle, GitBranch } from "lucide-react"
+import { useLocale, useTranslations } from "next-intl"
 import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
 import { DataList, DataListCell, DataListHeader, DataListRow } from "@/components/workspace/shared/data-list"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -15,34 +16,29 @@ import { toast } from "sonner"
 import { MetricCard } from "@/components/workspace/shared/primitives"
 import {
   formatMultiRepoMergedReportBlockers,
-  MULTI_REPO_CHILD_BLOCKING_REASON_LABEL,
+  getMultiRepoChildBlockingReasonLabel,
 } from "@/lib/multi-repo-report-labels"
+import { analysisStatusLabels, getLocalizedLabel, reviewDecisionLabels } from "@/lib/i18n/status-labels"
+import { useLocalizedHref } from "@/i18n/navigation"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ImpactMatrixTable } from "@/components/workspace/matrix/impact-matrix-table"
 import { MatrixRowDetailDrawer } from "@/components/workspace/matrix/matrix-row-detail-drawer"
 import { ReviewCoveragePanel } from "@/components/workspace/review/review-coverage-panel"
 
-const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  QUEUED:             { label: "Queued",       className: "bg-[var(--surface-muted)] text-[var(--text-tertiary)] border-[var(--border)]" },
-  RUNNING:            { label: "Running",      className: "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent-soft)]" },
-  WAITING_FOR_REVIEW: { label: "Needs Review", className: "bg-[var(--warning-soft)] text-[var(--warning)] border-[var(--warning-soft)]" },
-  COMPLETED:          { label: "Completed",    className: "bg-[var(--success-soft)] text-[var(--success)] border-[var(--success-soft)]" },
-  FAILED:             { label: "Failed",       className: "bg-[var(--danger-soft)] text-[var(--danger)] border-[var(--danger-soft)]" },
-  CANCELLED:          { label: "Cancelled",    className: "bg-[var(--surface-muted)] text-[var(--text-tertiary)] border-[var(--border)]" },
+const STATUS_BADGE: Record<string, { className: string }> = {
+  QUEUED:             { className: "bg-[var(--surface-muted)] text-[var(--text-tertiary)] border-[var(--border)]" },
+  RUNNING:            { className: "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent-soft)]" },
+  WAITING_FOR_REVIEW: { className: "bg-[var(--warning-soft)] text-[var(--warning)] border-[var(--warning-soft)]" },
+  COMPLETED:          { className: "bg-[var(--success-soft)] text-[var(--success)] border-[var(--success-soft)]" },
+  FAILED:             { className: "bg-[var(--danger-soft)] text-[var(--danger)] border-[var(--danger-soft)]" },
+  CANCELLED:          { className: "bg-[var(--surface-muted)] text-[var(--text-tertiary)] border-[var(--border)]" },
 }
 
 const gridCols = "minmax(180px, 1.8fr) minmax(120px, 1fr) 130px 110px minmax(150px, 1.3fr) minmax(120px, 1fr)"
 
-const MERGED_REPORT_STATUS_LABEL: Record<string, string> = {
-  NOT_CREATED: "Ready to finalize",
-  CURRENT: "Current",
-  STALE: "Stale",
-  BLOCKED: "Blocked",
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleString("en-US", {
+function formatDate(iso: string, locale: string) {
+  return new Date(iso).toLocaleString(locale, {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -58,6 +54,9 @@ export default function MultiRepoAnalysisRunDetailPage({
   params: Promise<{ runId: string }>
 }) {
   const { runId } = use(params)
+  const t = useTranslations("multiRepo")
+  const locale = useLocale()
+  const href = useLocalizedHref()
   const { data, isLoading, error } = useMultiRepoAnalysisRunDetail(runId)
   const { data: approvedReport, error: approvedReportError } = useApprovedMultiRepoReport(runId)
   const finalizeReport = useFinalizeMultiRepoReport(runId)
@@ -81,10 +80,10 @@ export default function MultiRepoAnalysisRunDetailPage({
   const handleFinalizeMergedReport = async () => {
     try {
       await finalizeReport.mutateAsync()
-      toast.success("Merged report finalized.")
-      router.push(`/analyses/runs/${runId}/merged-report`)
+      toast.success(t("reportFinalized"))
+      router.push(href(`/analyses/runs/${runId}/merged-report`))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to finalize merged report.")
+      toast.error(error instanceof Error ? error.message : t("failedFinalize"))
     }
   }
 
@@ -92,19 +91,19 @@ export default function MultiRepoAnalysisRunDetailPage({
     <div className="app-page-scroll">
       <div className="max-w-5xl mx-auto w-full py-4">
         <WorkspacePageHeader
-          title="Multi-repo Analysis Run"
+          title={t("detailTitle")}
           description={
             data ? (
               <div className="space-y-1">
                 <div>
-                  Requirement: <span className="font-medium text-foreground">{data.requirementTitle}</span>
+                  {t("requirement")}: <span className="font-medium text-foreground">{data.requirementTitle}</span>
                 </div>
                 <div>
-                  Created by {data.createdBy} on {formatDate(data.createdAt)}
+                  {t("createdByOn", { createdBy: data.createdBy, date: formatDate(data.createdAt, locale) })}
                 </div>
               </div>
             ) : (
-              "Grouped child analyses created from one multi-repo request."
+              t("detailDescription")
             )
           }
         >
@@ -113,10 +112,10 @@ export default function MultiRepoAnalysisRunDetailPage({
               data.capabilities.canFinalizeMergedReport || data.capabilities.canRefreshMergedReport ? (
                 <>
                   <Link
-                    href={`/analyses/runs/${runId}/merged-report`}
+                    href={href(`/analyses/runs/${runId}/merged-report`)}
                     className="text-[12px] text-[var(--accent)] hover:underline"
                   >
-                    View merged report
+                    {t("viewMergedReport")}
                   </Link>
                   <Button
                     size="sm"
@@ -126,38 +125,38 @@ export default function MultiRepoAnalysisRunDetailPage({
                     disabled={!canFinalizeMergedReport || finalizeReport.isPending}
                   >
                     {finalizeReport.isPending
-                      ? "Finalizing..."
+                      ? t("finalizing")
                       : data.capabilities.canRefreshMergedReport
-                        ? "Refresh merged report"
-                        : "Finalize merged report"}
+                        ? t("refreshMergedReport")
+                        : t("finalizeMergedReport")}
                   </Button>
                 </>
               ) : hasApprovedMergedReport ? (
                 <>
                   <Link
-                    href={`/analyses/runs/${runId}/merged-report`}
+                    href={href(`/analyses/runs/${runId}/merged-report`)}
                     className="text-[12px] text-[var(--accent)] hover:underline"
                   >
-                    View approved merged report
+                    {t("viewApprovedMergedReport")}
                   </Link>
                   <span
                     className="text-[12px] text-[var(--text-tertiary)]"
-                    title={formatMultiRepoMergedReportBlockers(data.capabilities.blockedReasons)}
+                    title={formatMultiRepoMergedReportBlockers(data.capabilities.blockedReasons, locale)}
                   >
-                    {data.mergedReportStatus === "CURRENT" ? "Current snapshot" : "Refresh blocked"}
+                    {data.mergedReportStatus === "CURRENT" ? t("currentSnapshot") : t("refreshBlocked")}
                   </span>
                 </>
               ) : (
                 <span
                   className="text-[12px] text-[var(--text-tertiary)]"
-                  title={formatMultiRepoMergedReportBlockers(data.capabilities.blockedReasons)}
+                  title={formatMultiRepoMergedReportBlockers(data.capabilities.blockedReasons, locale)}
                 >
-                  Merged report not ready
+                  {t("mergedReportNotReady")}
                 </span>
               )
             )}
-            <Link href="/analyses/runs" className="text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]">
-              Back to runs
+            <Link href={href("/analyses/runs")} className="text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]">
+              {t("backToRuns")}
             </Link>
           </div>
         </WorkspacePageHeader>
@@ -165,15 +164,20 @@ export default function MultiRepoAnalysisRunDetailPage({
         {data && (
           <div className="mb-4 space-y-4">
             <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3">
-              <MetricCard label="Total" value={data.runReadiness.totalAnalyses} />
-              <MetricCard label="Completed" value={data.runReadiness.completedAnalyses} accent="success" />
-              <MetricCard label="Failed" value={data.runReadiness.failedAnalyses} accent={data.runReadiness.hasFailures ? "danger" : "default"} />
-              <MetricCard label="Needs Review" value={data.runReadiness.waitingForReviewAnalyses} accent={data.runReadiness.waitingForReviewAnalyses > 0 ? "warning" : "default"} />
-              <MetricCard label="Accepted" value={data.childReviewSummary.accepted} accent="success" />
-              <MetricCard label="Pending Review" value={data.childReviewSummary.pendingReview} accent={data.childReviewSummary.pendingReview > 0 ? "warning" : "default"} />
+              <MetricCard label={t("total")} value={data.runReadiness.totalAnalyses} />
+              <MetricCard label={t("completed")} value={data.runReadiness.completedAnalyses} accent="success" />
+              <MetricCard label={t("failed")} value={data.runReadiness.failedAnalyses} accent={data.runReadiness.hasFailures ? "danger" : "default"} />
+              <MetricCard label={t("needsReview")} value={data.runReadiness.waitingForReviewAnalyses} accent={data.runReadiness.waitingForReviewAnalyses > 0 ? "warning" : "default"} />
+              <MetricCard label={t("accepted")} value={data.childReviewSummary.accepted} accent="success" />
+              <MetricCard label={t("pendingReview")} value={data.childReviewSummary.pendingReview} accent={data.childReviewSummary.pendingReview > 0 ? "warning" : "default"} />
               <MetricCard
-                label="Merged Report"
-                value={MERGED_REPORT_STATUS_LABEL[data.mergedReportStatus] ?? data.mergedReportStatus}
+                label={t("mergedReport")}
+                value={{
+                  NOT_CREATED: t("readyToFinalize"),
+                  CURRENT: t("current"),
+                  STALE: t("stale"),
+                  BLOCKED: t("blocked"),
+                }[data.mergedReportStatus] ?? data.mergedReportStatus}
                 accent={
                   data.mergedReportStatus === "CURRENT" || data.mergedReportStatus === "NOT_CREATED"
                     ? "success"
@@ -185,11 +189,16 @@ export default function MultiRepoAnalysisRunDetailPage({
             </div>
 
             <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2 text-[12px] text-[var(--text-secondary)]">
-              Review summary: accepted {data.childReviewSummary.accepted} • rejected {data.childReviewSummary.rejected} • needs clarification {data.childReviewSummary.needsMoreClarification} • pending {data.childReviewSummary.pendingReview}
+              {t("reviewSummary", {
+                accepted: data.childReviewSummary.accepted,
+                rejected: data.childReviewSummary.rejected,
+                needsClarification: data.childReviewSummary.needsMoreClarification,
+                pending: data.childReviewSummary.pendingReview,
+              })}
             </div>
             {data.capabilities.blockedReasons.length > 0 && data.mergedReportStatus !== "CURRENT" && (
               <div className="rounded-lg border border-[var(--warning-soft)] bg-[var(--warning-soft)]/40 px-3 py-2 text-[12px] text-[var(--warning)]">
-                Merged report blocker: {formatMultiRepoMergedReportBlockers(data.capabilities.blockedReasons)}
+                {t("mergedReportBlocker", { reason: formatMultiRepoMergedReportBlockers(data.capabilities.blockedReasons, locale) })}
               </div>
             )}
           </div>
@@ -199,8 +208,8 @@ export default function MultiRepoAnalysisRunDetailPage({
 
         <Tabs defaultValue="matrix" className="mt-6">
           <TabsList>
-            <TabsTrigger value="matrix">Impact Matrix</TabsTrigger>
-            <TabsTrigger value="list">Child Analyses</TabsTrigger>
+            <TabsTrigger value="matrix">{t("impactMatrix")}</TabsTrigger>
+            <TabsTrigger value="list">{t("childAnalyses")}</TabsTrigger>
           </TabsList>
           
           <TabsContent value="matrix" className="mt-4">
@@ -210,12 +219,12 @@ export default function MultiRepoAnalysisRunDetailPage({
           <TabsContent value="list" className="mt-4">
             <DataList>
               <DataListHeader gridCols={gridCols}>
-                <DataListCell>Repository</DataListCell>
-                <DataListCell>Commit</DataListCell>
-                <DataListCell>Status</DataListCell>
-                <DataListCell>Freshness</DataListCell>
-                <DataListCell>Latest Review</DataListCell>
-                <DataListCell>Blocking</DataListCell>
+                <DataListCell>{t("repository")}</DataListCell>
+                <DataListCell>{t("commit")}</DataListCell>
+                <DataListCell>{t("status")}</DataListCell>
+                <DataListCell>{t("freshness")}</DataListCell>
+                <DataListCell>{t("latestReview")}</DataListCell>
+                <DataListCell>{t("blocking")}</DataListCell>
               </DataListHeader>
 
               {isLoading && (
@@ -236,7 +245,7 @@ export default function MultiRepoAnalysisRunDetailPage({
               {error && !isLoading && (
                 <div className="flex flex-col items-center py-16 text-[var(--text-tertiary)]">
                   <AlertCircle className="w-6 h-6 text-[var(--danger)] mb-4" />
-                  <p className="text-[13px] font-medium text-[var(--text-primary)]">Failed to load multi-repo run</p>
+                  <p className="text-[13px] font-medium text-[var(--text-primary)]">{t("failedToLoadRun")}</p>
                   <p className="text-[12px]">{error.message}</p>
                 </div>
               )}
@@ -248,7 +257,7 @@ export default function MultiRepoAnalysisRunDetailPage({
                   <DataListRow
                     key={item.analysisId}
                     gridCols={gridCols}
-                    href={`/analyses/${item.analysisId}`}
+                    href={href(`/analyses/${item.analysisId}`)}
                   >
                     <DataListCell>
                       <div className="font-medium text-[13px] text-[var(--text-primary)] leading-snug">{item.repositoryDisplayName}</div>
@@ -262,12 +271,12 @@ export default function MultiRepoAnalysisRunDetailPage({
                     </DataListCell>
                     <DataListCell>
                       <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 border rounded-md text-[10px] font-semibold tracking-wide uppercase ${badge.className}`}>
-                        {badge.label}
+                        {getLocalizedLabel(analysisStatusLabels, item.status, locale)}
                       </span>
                     </DataListCell>
                     <DataListCell>
                       <span className={`text-[12px] ${item.isStale ? "text-[var(--warning)]" : "text-[var(--text-tertiary)]"}`}>
-                        {item.isStale ? "Stale" : "Current"}
+                        {item.isStale ? t("stale") : t("current")}
                       </span>
                     </DataListCell>
                     <DataListCell>
@@ -275,21 +284,21 @@ export default function MultiRepoAnalysisRunDetailPage({
                         <div className="space-y-0.5">
                           <div className="text-[12px] text-[var(--text-primary)]">
                             {item.latestReviewDecision === "NEEDS_MORE_CLARIFICATION"
-                              ? "Needs clarification"
-                              : item.latestReviewDecision.charAt(0) + item.latestReviewDecision.slice(1).toLowerCase()}
+                              ? t("needsClarification")
+                              : getLocalizedLabel(reviewDecisionLabels, item.latestReviewDecision, locale)}
                           </div>
                           <div className="text-[11px] text-[var(--text-tertiary)]">
-                            {item.reviewedBy ?? "Unknown"}
-                            {item.latestReviewDecisionAt ? ` • ${formatDate(item.latestReviewDecisionAt)}` : ""}
+                            {item.reviewedBy ?? t("unknown")}
+                            {item.latestReviewDecisionAt ? ` • ${formatDate(item.latestReviewDecisionAt, locale)}` : ""}
                           </div>
                         </div>
                       ) : (
-                        <span className="text-[12px] text-[var(--text-tertiary)]">Pending review</span>
+                        <span className="text-[12px] text-[var(--text-tertiary)]">{t("pendingReview")}</span>
                       )}
                     </DataListCell>
                     <DataListCell>
                       <span className={`text-[12px] ${item.blockingReason === "NONE" ? "text-[var(--success)]" : "text-[var(--warning)]"}`}>
-                        {MULTI_REPO_CHILD_BLOCKING_REASON_LABEL[item.blockingReason]}
+                        {getMultiRepoChildBlockingReasonLabel(item.blockingReason, locale)}
                       </span>
                     </DataListCell>
                   </DataListRow>

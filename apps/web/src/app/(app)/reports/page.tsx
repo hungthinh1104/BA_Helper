@@ -11,8 +11,11 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Suspense } from "react"
 import { AnalysisStatusBadge } from "@/components/workspace/shared/status-badges"
+import { normalizeAppLocale } from "@/i18n/app-locale"
+import { useTranslations } from "next-intl"
 
 function ReportsPageContent() {
+  const t = useTranslations("reports")
   const gridCols = "minmax(200px, 2fr) minmax(130px, 1fr) minmax(130px, 1.2fr) minmax(150px, 1.5fr) 100px"
   
   const { data, isLoading, error } = useAnalyses()
@@ -24,7 +27,7 @@ function ReportsPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const urlAnalysisId = searchParams?.get("analysisId")
-  const urlLocale = searchParams?.get("locale") || "en"
+  const urlLocale = normalizeAppLocale(searchParams?.get("locale"))
   const activeAnalysisId =
     urlAnalysisId && completedAnalyses.some((analysis) => analysis.id === urlAnalysisId)
       ? urlAnalysisId
@@ -36,7 +39,7 @@ function ReportsPageContent() {
     } else {
       setSelectedAnalysisId(null)
       if (urlAnalysisId === docId || urlAnalysisId) {
-        router.replace("/reports")
+        router.replace(urlLocale === "en" ? "/reports" : `/reports?locale=${urlLocale}`)
       }
     }
   }
@@ -47,17 +50,17 @@ function ReportsPageContent() {
       <div className="app-page-scroll">
         <div className="max-w-4xl mx-auto w-full py-4">
         <WorkspacePageHeader 
-          title="Reports from Finalized Analyses" 
-          description="Reports are generated from finalized analyses. If an approved report snapshot is missing, the viewer will show that state explicitly."
+          title={t("pageTitle")}
+          description={t("pageDescription")}
         />
 
         {urlAnalysisId && !completedAnalyses.some(a => a.id === urlAnalysisId) && !isLoading && (
           <div className="mb-6 flex items-start gap-3 p-4 bg-warning/10 border border-warning/20 rounded-xl">
             <AlertTriangle className="w-5 h-5 text-warning shrink-0 mt-0.5" />
             <div className="flex flex-col gap-1">
-              <h3 className="text-[13px] font-semibold text-warning">Report Unavailable</h3>
+              <h3 className="text-[13px] font-semibold text-warning">{t("reportUnavailable")}</h3>
               <p className="text-[12px] text-warning/80">
-                The requested report is not available. Finalization is required before a report can exist, and some finalized analyses may still have no approved report snapshot available to read.
+                {t("reportUnavailableDescription")}
               </p>
             </div>
           </div>
@@ -65,11 +68,11 @@ function ReportsPageContent() {
 
         <DataList>
           <DataListHeader gridCols={gridCols}>
-            <DataListCell>Requirement</DataListCell>
-            <DataListCell>Type</DataListCell>
-            <DataListCell>Status</DataListCell>
-            <DataListCell>Analyzed On</DataListCell>
-            <DataListCell className="text-right">Actions</DataListCell>
+            <DataListCell>{t("requirement")}</DataListCell>
+            <DataListCell>{t("type")}</DataListCell>
+            <DataListCell>{t("status")}</DataListCell>
+            <DataListCell>{t("analyzedOn")}</DataListCell>
+            <DataListCell className="text-right">{t("actions")}</DataListCell>
           </DataListHeader>
           
           {isLoading && (
@@ -89,15 +92,15 @@ function ReportsPageContent() {
           {error && (
             <div className="flex flex-col items-center py-16 text-muted-foreground">
               <AlertCircle className="w-6 h-6 text-destructive mb-4" />
-              <p className="text-[13px] font-medium text-foreground">Failed to load reports</p>
+              <p className="text-[13px] font-medium text-foreground">{t("failedToLoad")}</p>
               <p className="text-[12px]">{error.message}</p>
             </div>
           )}
 
           {!isLoading && !error && completedAnalyses.length === 0 && (
             <div className="flex flex-col items-center text-center py-16 text-muted-foreground">
-              <p className="text-[13px] font-medium text-foreground mb-1">No reports yet</p>
-              <p className="text-[12px]">Finalize an impact analysis to generate a report.</p>
+              <p className="text-[13px] font-medium text-foreground mb-1">{t("noReports")}</p>
+              <p className="text-[12px]">{t("noReportsDescription")}</p>
             </div>
           )}
           
@@ -116,7 +119,7 @@ function ReportsPageContent() {
                     </DataListCell>
                     <DataListCell>
                       <span className="px-2 py-0.5 bg-surface-muted text-muted-foreground border border-border rounded-md text-[10px] font-medium tracking-wide uppercase">
-                        Impact Report
+                        {t("impactReport")}
                       </span>
                     </DataListCell>
                     <DataListCell>
@@ -128,7 +131,7 @@ function ReportsPageContent() {
                       </span>
                     </DataListCell>
                     <DataListCell className="text-right lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
-                      <span className="text-[12px] font-medium text-accent">View Report &rarr;</span>
+                      <span className="text-[12px] font-medium text-accent">{t("viewReport")}</span>
                     </DataListCell>
                   </DataListRow>
                 </div>
@@ -139,7 +142,7 @@ function ReportsPageContent() {
                   <div className="h-14 border-b border-border/60 bg-surface flex items-center justify-between px-6 shrink-0 z-10 print:hidden">
                     <div className="flex items-center gap-3">
                       <span className="font-semibold text-sm text-foreground line-clamp-1">
-                        {selectedDoc?.requirementRevisionTitle ?? "Report View"}
+                        {selectedDoc?.requirementRevisionTitle ?? t("reportView")}
                       </span>
                       {selectedDoc && (
                         <AnalysisStatusBadge status={selectedDoc.isStale ? "STALE" : "COMPLETED"} />

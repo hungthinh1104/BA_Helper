@@ -49,6 +49,52 @@ describe('GetAnalysisWorkspaceUseCase', () => {
 		expect(result.overview.status.analysisStatus).toBe('WAITING_FOR_REVIEW');
 		expect(result.overview.status.reportStatus).toBe('missing');
 		expect(result.reportStatus.status).toBe('missing');
+		expect(result.reportStatus.canViewReport).toBe(false);
+		expect(result.reportStatus.canExport).toBe(false);
+		expect(result.reportStatus.exportBlockingReasons).toContain('REPORT_NOT_GENERATED');
+	});
+
+	it('exposes backend-authored finalize capability and blockers', async () => {
+		const result = await executeWith(createAnalysis());
+
+		expect(result.reportStatus.canFinalize).toBe(false);
+		expect(result.reportStatus.requiresUnreviewedAcknowledgement).toBe(true);
+		expect(result.reportStatus.finalizeBlockingReasons).toEqual(
+			expect.arrayContaining([
+				'CONFLICTING_EVIDENCE_UNREVIEWED',
+				'HIGH_RISK_INSIGHT_UNREVIEWED',
+			]),
+		);
+	});
+
+	it('allows finalize capability when critical review blockers are resolved', async () => {
+		const result = await executeWith(
+			createAnalysis({
+				insights: [
+					riskInsight({ reviewStatus: 'CONFIRMED' }),
+					unknownInsight({ reviewStatus: 'CONFIRMED' }),
+					qaInsight(),
+				],
+				traceabilityLinks: [
+					traceabilityLink({
+						reviewStatus: 'CONFIRMED',
+						reviewDecision: {
+							id: '00000000-0000-4000-8000-000000000015',
+							analysisId: ids.analysis,
+							traceabilityLinkId: ids.link,
+							decision: 'ACCEPTED',
+							note: null,
+							reviewedByUserId: null,
+							reviewedAt: new Date('2026-06-24T00:00:00.000Z'),
+						},
+					}),
+				],
+			}),
+		);
+
+		expect(result.reportStatus.canFinalize).toBe(true);
+		expect(result.reportStatus.requiresUnreviewedAcknowledgement).toBe(false);
+		expect(result.reportStatus.finalizeBlockingReasons).toEqual([]);
 	});
 
 	it('keeps completed historical output visible when the analysis is stale', async () => {
@@ -67,6 +113,9 @@ describe('GetAnalysisWorkspaceUseCase', () => {
 
 		expect(result.overview.status.reportStatus).toBe('completed');
 		expect(result.reportStatus.generatedDocumentId).toBe(ids.document);
+		expect(result.reportStatus.canViewReport).toBe(true);
+		expect(result.reportStatus.canExport).toBe(false);
+		expect(result.reportStatus.exportBlockingReasons).toContain('REPORT_STALE');
 		expect(result.overview.status.driftStatus).toBe('stale');
 		expect(result.driftStatus.isStale).toBe(true);
 	});
@@ -185,7 +234,7 @@ function baseEvidence() {
 	};
 }
 
-function riskInsight() {
+function riskInsight(overrides: Record<string, unknown> = {}) {
 	return {
 		id: ids.riskInsight,
 		insightKey: 'risk:duplicate-refund',
@@ -197,10 +246,11 @@ function riskInsight() {
 		reasoning: 'No idempotency evidence is linked.',
 		metadata: { kind: 'risk', severity: 'high', category: 'payment' },
 		evidenceLinks: [{ evidenceId: ids.evidence, evidence: baseEvidence() }],
+		...overrides,
 	};
 }
 
-function unknownInsight() {
+function unknownInsight(overrides: Record<string, unknown> = {}) {
 	return {
 		id: '00000000-0000-4000-8000-000000000014',
 		insightKey: 'unknown:refund-policy',
@@ -212,6 +262,7 @@ function unknownInsight() {
 		reasoning: 'Policy is absent from code evidence.',
 		metadata: {},
 		evidenceLinks: [{ evidenceId: ids.evidence, evidence: baseEvidence() }],
+		...overrides,
 	};
 }
 
@@ -230,7 +281,7 @@ function qaInsight() {
 	};
 }
 
-function traceabilityLink() {
+function traceabilityLink(overrides: Record<string, unknown> = {}) {
 	return {
 		id: ids.link,
 		linkBasis: 'EVIDENCED',
@@ -244,6 +295,7 @@ function traceabilityLink() {
 		},
 		evidenceLinks: [{ evidenceId: ids.evidence, evidence: baseEvidence() }],
 		reviewDecision: null,
+		...overrides,
 	};
 }
 

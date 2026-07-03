@@ -85,7 +85,7 @@ export class ImpactAnalysisReadModelController {
   async getMatrixRowDetailEndpoint(
     @Param('runId') runId: string,
     @Param('analysisId') analysisId: string,
-    actor: any,
+    @CurrentUser() actor: RequestUser,
   ) {
     await this.permissions.assertCanReadMultiRepoRun(actor, runId);
     // Extra guard: analysis membership to project is naturally enforced because actor must have access to runId,
@@ -97,9 +97,9 @@ export class ImpactAnalysisReadModelController {
   @Get('/impact-analyses/:analysisId/lineage')
   async getLineageTimeline(
     @Param('analysisId') analysisId: string,
-    actor: any,
+    @CurrentUser() actor: RequestUser,
   ) {
-    
+    await this.permissions.assertCanReadAnalysis(actor, analysisId);
     const lineage = await this.getLineage.execute(analysisId);
     return lineageTimelineResponseSchema.parse(lineage);
   }
@@ -107,9 +107,9 @@ export class ImpactAnalysisReadModelController {
   @Get('/impact-analyses/:analysisId/graph')
   async graph(
     @Param('analysisId') analysisId: string,
-    actor: any,
+    @CurrentUser() actor: RequestUser,
   ) {
-    
+    await this.permissions.assertCanReadAnalysis(actor, analysisId);
     const result = await this.getImpactGraph.execute(analysisId);
     return impactGraphResponseSchema.parse(result);
   }
@@ -117,9 +117,9 @@ export class ImpactAnalysisReadModelController {
   @Get('/impact-analyses/:analysisId/workspace')
   async workspace(
     @Param('analysisId') analysisId: string,
-    actor: any,
+    @CurrentUser() actor: RequestUser,
   ) {
-    
+    await this.permissions.assertCanReadAnalysis(actor, analysisId);
     const result = await this.getAnalysisWorkspace.execute(analysisId);
     return analysisWorkspaceResponseSchema.parse(result);
   }
@@ -127,9 +127,9 @@ export class ImpactAnalysisReadModelController {
   @Get('/impact-analyses/:analysisId/qa-coverage')
   async qaCoverage(
     @Param('analysisId') analysisId: string,
-    actor: any,
+    @CurrentUser() actor: RequestUser,
   ) {
-    
+    await this.permissions.assertCanReadAnalysis(actor, analysisId);
     const result = await this.getQaCoverage.execute(analysisId);
     return qaCoverageResponseSchema.parse(result);
   }
@@ -137,9 +137,9 @@ export class ImpactAnalysisReadModelController {
   @Get('/impact-analyses/:analysisId/review-queue')
   async reviewQueue(
     @Param('analysisId') analysisId: string,
-    actor: any,
+    @CurrentUser() actor: RequestUser,
   ) {
-    
+    await this.permissions.assertCanReadAnalysis(actor, analysisId);
     const result = await this.getReviewQueue.execute(analysisId);
     return reviewQueueResponseSchema.parse(result);
   }
@@ -147,9 +147,9 @@ export class ImpactAnalysisReadModelController {
   @Get('/impact-analyses/:analysisId/diff')
   async diff(
     @Param('analysisId') analysisId: string,
-    actor: any,
+    @CurrentUser() actor: RequestUser,
   ) {
-    
+    await this.permissions.assertCanReadAnalysis(actor, analysisId);
     const result = await this.getImpactDiff.execute(analysisId);
     return impactAnalysisDiffResponseSchema.parse(result);
   }
@@ -158,9 +158,9 @@ export class ImpactAnalysisReadModelController {
   async driftFreshness(
     @Param('projectId') projectId: string,
     @Param('analysisId') analysisId: string,
-    actor: any,
+    @CurrentUser() actor: RequestUser,
   ) {
-    
+    await this.permissions.assertCanReadAnalysis(actor, analysisId);
     const result = await this.getAnalysisDriftFreshness.execute(projectId, analysisId);
     return driftFreshnessRecommendationSchema.parse(result);
   }

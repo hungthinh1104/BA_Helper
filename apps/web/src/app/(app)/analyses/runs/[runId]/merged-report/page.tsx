@@ -4,6 +4,7 @@ import { use } from "react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { AlertCircle, AlertTriangle, CheckCircle2, FileWarning, MessageSquareWarning, XCircle } from "lucide-react"
+import { useLocale, useTranslations } from "next-intl"
 import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
@@ -16,13 +17,7 @@ import { ReportMarkdown } from "@/components/report/report-markdown"
 import { MergedReportActions } from "./_components/merged-report-actions"
 import { MergedReportReviewPanel } from "./_components/merged-report-review-panel"
 import { formatMultiRepoMergedReportBlockers } from "@/lib/multi-repo-report-labels"
-
-const MERGED_REPORT_STATUS_LABEL: Record<string, string> = {
-  NOT_CREATED: "Not created",
-  CURRENT: "Current",
-  STALE: "Stale",
-  BLOCKED: "Blocked",
-}
+import { useLocalizedHref } from "@/i18n/navigation"
 
 export default function ApprovedMultiRepoReportPage({
   params,
@@ -30,6 +25,9 @@ export default function ApprovedMultiRepoReportPage({
   params: Promise<{ runId: string }>
 }) {
   const { runId } = use(params)
+  const t = useTranslations("multiRepo")
+  const locale = useLocale()
+  const href = useLocalizedHref()
   const { data: runDetail } = useMultiRepoAnalysisRunDetail(runId)
   const { data, isLoading, error } = useApprovedMultiRepoReport(runId)
   const { data: latestDecision, error: latestDecisionError } = useLatestMergedMultiRepoReportReviewDecision(runId)
@@ -59,9 +57,9 @@ export default function ApprovedMultiRepoReportPage({
   const handleFinalize = async () => {
     try {
       await finalizeReport.mutateAsync()
-      toast.success("Merged report finalized.")
+      toast.success(t("reportFinalized"))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to finalize merged report.")
+      toast.error(error instanceof Error ? error.message : t("failedFinalize"))
     }
   }
 
@@ -81,12 +79,12 @@ export default function ApprovedMultiRepoReportPage({
       anchor.click()
       document.body.removeChild(anchor)
       URL.revokeObjectURL(url)
-      toast.success("Merged report exported.", {
+      toast.success(t("reportExported"), {
         description: file.filename,
       })
     } catch (error) {
-      toast.error("Export failed", {
-        description: error instanceof Error ? error.message : "Failed to export merged report.",
+      toast.error(t("exportFailed"), {
+        description: error instanceof Error ? error.message : t("failedExportDescription"),
       })
     } finally {
       setExportingFormat(null)
@@ -101,10 +99,10 @@ export default function ApprovedMultiRepoReportPage({
           note: formData.note.trim() || undefined,
         },
       })
-      toast.success("Merged report review decision recorded.")
+      toast.success(t("reviewRecorded"))
     } catch (error) {
-      toast.error("Failed to submit merged report review decision.", {
-        description: error instanceof Error ? error.message : "Unknown error",
+      toast.error(t("reviewSubmitFailed"), {
+        description: error instanceof Error ? error.message : t("unknownError"),
       })
     }
   }
@@ -112,17 +110,17 @@ export default function ApprovedMultiRepoReportPage({
   const decisionMeta = latestReviewedDecision?.decision
     ? {
         ACCEPTED: {
-          label: "Accepted",
+          label: t("accepted"),
           icon: <CheckCircle2 className="w-3.5 h-3.5" />,
           variant: "default" as const,
         },
         REJECTED: {
-          label: "Rejected",
+          label: t("rejected"),
           icon: <XCircle className="w-3.5 h-3.5" />,
           variant: "destructive" as const,
         },
         NEEDS_MORE_CLARIFICATION: {
-          label: "Needs More Clarification",
+          label: t("needsClarification"),
           icon: <MessageSquareWarning className="w-3.5 h-3.5" />,
           variant: "secondary" as const,
         },
@@ -133,16 +131,19 @@ export default function ApprovedMultiRepoReportPage({
     <div className="app-page-scroll">
       <div className="max-w-5xl mx-auto w-full py-4">
         <WorkspacePageHeader
-          title="Approved Merged Report"
+          title={t("reportTitle")}
           description={
             data
-              ? `${data.requirementTitle} • approved ${new Date(data.approvedAt).toLocaleString("en-US")}`
-              : "Persisted approved merged Markdown snapshot for the multi-repo run."
+              ? t("approvedAt", {
+                  title: data.requirementTitle,
+                  date: new Date(data.approvedAt).toLocaleString(locale),
+                })
+              : t("reportDescription")
           }
         >
           <div className="flex items-center gap-2">
-            <Link href={`/analyses/runs/${runId}`} className="text-[12px] text-muted-foreground hover:text-foreground">
-              Back to run
+            <Link href={href(`/analyses/runs/${runId}`)} className="text-[12px] text-muted-foreground hover:text-foreground">
+              {t("backToRun")}
             </Link>
           </div>
         </WorkspacePageHeader>
@@ -158,9 +159,9 @@ export default function ApprovedMultiRepoReportPage({
         {error && !isLoading && code === "MERGED_MULTI_REPO_REPORT_NOT_FOUND" && (
           <div className="flex flex-col items-center justify-center p-12 text-muted-foreground border rounded-xl bg-surface-muted/30">
             <AlertCircle className="w-8 h-8 text-warning mb-3" />
-            <p className="font-medium text-foreground">No approved merged report yet</p>
+            <p className="font-medium text-foreground">{t("noApprovedReport")}</p>
             <p className="text-[13px] text-center max-w-xl mb-4">
-              Finalize the merged report to persist an approved Markdown snapshot for this run.
+              {t("noApprovedReportDescription")}
             </p>
             <Button
               size="sm"
@@ -168,7 +169,7 @@ export default function ApprovedMultiRepoReportPage({
               onClick={() => void handleFinalize()}
               disabled={!canFinalize || finalizeReport.isPending}
             >
-              {finalizeReport.isPending ? "Finalizing..." : "Finalize merged report"}
+              {finalizeReport.isPending ? t("finalizing") : t("finalizeMergedReport")}
             </Button>
           </div>
         )}
@@ -176,7 +177,7 @@ export default function ApprovedMultiRepoReportPage({
         {error && !isLoading && code !== "MERGED_MULTI_REPO_REPORT_NOT_FOUND" && (
           <div className="flex flex-col items-center justify-center p-12 text-muted-foreground border rounded-xl bg-surface-muted/30">
             <AlertCircle className="w-8 h-8 text-destructive mb-3" />
-            <p className="font-medium text-foreground">Failed to load approved merged report</p>
+            <p className="font-medium text-foreground">{t("failedToLoadApprovedReport")}</p>
             <p className="text-[13px] text-center max-w-xl">{error.message}</p>
           </div>
         )}
@@ -185,11 +186,16 @@ export default function ApprovedMultiRepoReportPage({
           <div className="rounded-xl border border-border/50 bg-surface/40 p-6">
             <div className="mb-4 flex flex-wrap items-center gap-2">
               <Badge variant={data.mergedReportStatus === "CURRENT" ? "default" : data.mergedReportStatus === "STALE" ? "secondary" : "outline"}>
-                {MERGED_REPORT_STATUS_LABEL[data.mergedReportStatus] ?? data.mergedReportStatus}
+                {{
+                  NOT_CREATED: t("notCreated"),
+                  CURRENT: t("current"),
+                  STALE: t("stale"),
+                  BLOCKED: t("blocked"),
+                }[data.mergedReportStatus] ?? data.mergedReportStatus}
               </Badge>
               {data.capabilities.blockedReasons.length > 0 && data.mergedReportStatus !== "CURRENT" && (
                 <span className="text-[12px] text-muted-foreground">
-                  Blocked by {formatMultiRepoMergedReportBlockers(data.capabilities.blockedReasons)}
+                  {t("blockedBy", { reason: formatMultiRepoMergedReportBlockers(data.capabilities.blockedReasons, locale) })}
                 </span>
               )}
             </div>
@@ -198,9 +204,9 @@ export default function ApprovedMultiRepoReportPage({
               <div className="flex items-start gap-3 p-4 mb-6 bg-warning/10 border border-warning/25 rounded-lg text-warning">
                 <FileWarning className="w-5 h-5 shrink-0 mt-0.5" />
                 <div className="flex flex-col gap-1">
-                  <span className="font-semibold text-[13px] uppercase tracking-wider">Stale Report Warning</span>
+                  <span className="font-semibold text-[13px] uppercase tracking-wider">{t("staleReportWarning")}</span>
                   <span className="text-[13px] text-warning/80">
-                    {data.staleReason || "Child analysis state changed after approval."} Export is blocked until the snapshot is refreshed and approved again.
+                    {t("exportBlockedUntilRefresh", { reason: data.staleReason || t("childStateChanged") })}
                   </span>
                 </div>
               </div>
@@ -211,28 +217,31 @@ export default function ApprovedMultiRepoReportPage({
                 <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
                 <div className="flex flex-col gap-1 text-[13px] leading-relaxed">
                   <span className="font-semibold text-foreground">
-                    {data.provenance.domainPack.domainPackId}@{data.provenance.domainPack.domainPackVersion} is PARTIAL
+                    {t("partialPack", {
+                      id: data.provenance.domainPack.domainPackId,
+                      version: data.provenance.domainPack.domainPackVersion,
+                    })}
                   </span>
-                  <span>Domain hints are limited and require source evidence.</span>
-                  <span>This pack supports administrative workflow impact analysis only.</span>
-                  <span>It does not provide medical advice, clinical decision support, or compliance validation.</span>
+                  <span>{t("partialWarning1")}</span>
+                  <span>{t("partialWarning2")}</span>
+                  <span>{t("partialWarning3")}</span>
                 </div>
               </div>
             )}
 
             <div className="mb-6 flex flex-wrap items-center gap-3 text-[12px] text-muted-foreground">
-              <span>Run: <span className="font-mono">{data.runId}</span></span>
-              <span>Requirement: <span className="text-foreground">{data.requirementTitle}</span></span>
-              <span>Child analyses: {data.provenance.childAnalyses.length}</span>
+              <span>{t("run")}: <span className="font-mono">{data.runId}</span></span>
+              <span>{t("requirement")}: <span className="text-foreground">{data.requirementTitle}</span></span>
+              <span>{t("childAnalysesCount", { count: data.provenance.childAnalyses.length })}</span>
               <span className="flex items-center gap-2">
-                Latest merged review:
+                {t("latestMergedReview")}
                 {decisionMeta ? (
                   <Badge variant={decisionMeta.variant} className="h-6 gap-1.5 px-2">
                     {decisionMeta.icon}
                     {decisionMeta.label}
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="h-6">Pending</Badge>
+                  <Badge variant="outline" className="h-6">{t("pending")}</Badge>
                 )}
               </span>
               <MergedReportActions

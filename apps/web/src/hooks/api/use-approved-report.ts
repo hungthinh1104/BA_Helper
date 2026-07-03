@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { apiGet } from "@/lib/api-client"
 import { queryKeys } from "@/lib/api/query-keys"
-import { ApprovedImpactReportResponse, approvedImpactReportResponseSchema, finalReviewedReportResponseSchema, FinalReviewedReportResponse } from "@ba-helper/contracts"
+import { ApprovedImpactReportResponse, approvedImpactReportResponseSchema, finalReviewedReportResponseSchema, FinalReviewedReportResponse, normalizeAppLocale, type ReportLocale } from "@ba-helper/contracts"
 import { z } from "zod"
 
 export function useApprovedReport(analysisId: string, analysisStatus?: string) {
@@ -14,11 +14,12 @@ export function useApprovedReport(analysisId: string, analysisStatus?: string) {
   })
 }
 
-export function useFinalReviewedReport(analysisId: string, locale?: string) {
+export function useFinalReviewedReport(analysisId: string, locale?: ReportLocale | string) {
+  const normalizedLocale = normalizeAppLocale(locale)
   return useQuery({
-    queryKey: [...queryKeys.analyses.report(analysisId), "final-reviewed", locale || "en"],
+    queryKey: [...queryKeys.analyses.report(analysisId), "final-reviewed", normalizedLocale],
     queryFn: async () => {
-      const qs = locale && locale !== 'en' ? `?locale=${locale}` : ''
+      const qs = normalizedLocale !== 'en' ? `?locale=${normalizedLocale}` : ''
       return apiGet<FinalReviewedReportResponse>(`/api/v1/impact-analyses/${analysisId}/final-reviewed-report${qs}`, finalReviewedReportResponseSchema as unknown as z.ZodType<FinalReviewedReportResponse>)
     },
     enabled: Boolean(analysisId),

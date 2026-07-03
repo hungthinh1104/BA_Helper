@@ -6,6 +6,7 @@ import {
   FileText,
   ListChecks,
 } from "lucide-react"
+import { useLocale, useTranslations } from "next-intl"
 
 import {
   MetricCard,
@@ -27,9 +28,12 @@ import {
   canReview,
   canRunAnalysis,
 } from "@/lib/permissions"
+import { analysisStatusLabels, getLocalizedLabel } from "@/lib/i18n/status-labels"
 
 
 export default function DashboardPage() {
+  const t = useTranslations("dashboard")
+  const locale = useLocale()
   const { data: reposData, isLoading: reposLoading } = useRepositories({ limit: 4 })
   const { data: analysesData, isLoading: analysesLoading } = useAnalyses({ limit: 4 })
   const { data: reqsData, isLoading: reqsLoading } = useRequirements()
@@ -57,44 +61,44 @@ export default function DashboardPage() {
   return (
     <PageShell>
       <WorkspacePageHeader
-        title="Project Dashboard"
-        description="Monitor repository readiness, active analyses, review blockers, and the next action for the primary evidence-first workflow."
+        title={t("title")}
+        description={t("description")}
         className="mb-0"
       />
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3">
         <MetricCard
-          label="Repositories"
+          label={t("repositories")}
           value={`${repos.length}`}
-          detail={`${readyRepos.length} ready · ${partialRepos.length} partial`}
+          detail={t("readyPartial", { ready: readyRepos.length, partial: partialRepos.length })}
           accent={repos.length > 0 ? "success" : "default"}
           icon={<Database className="h-4 w-4" />}
         />
         <MetricCard
-          label="Requirements"
+          label={t("requirements")}
           value={`${readyReqs.length}`}
-          detail={`${reqs.length} total revisions in workspace`}
+          detail={t("totalRevisions", { total: reqs.length })}
           accent={readyReqs.length > 0 ? "success" : "default"}
           icon={<FileText className="h-4 w-4" />}
         />
         <MetricCard
-          label="Latest Analysis"
-          value={analyses[0]?.status?.replace(/_/g, " ") ?? "None"}
-          detail={analyses[0] ? analyses[0].requirementRevisionTitle : "No analysis has been run yet"}
+          label={t("latestAnalysis")}
+          value={analyses[0] ? getLocalizedLabel(analysisStatusLabels, analyses[0].status, locale) : t("none")}
+          detail={analyses[0] ? analyses[0].requirementRevisionTitle : t("noAnalysisRun")}
           accent={analyses[0]?.status === "FAILED" ? "danger" : analyses[0]?.status === "WAITING_FOR_REVIEW" ? "warning" : "default"}
           icon={<Activity className="h-4 w-4" />}
         />
         <MetricCard
-          label="Review Blocking"
+          label={t("reviewBlocking")}
           value={`${reviewBlocked}`}
-          detail={reviewBlocked > 0 ? "Analyses waiting on evidence decisions" : "No current review blockers"}
+          detail={reviewBlocked > 0 ? t("reviewBlockingDetail") : t("noReviewBlockers")}
           accent={reviewBlocked > 0 ? "warning" : "success"}
           icon={<ListChecks className="h-4 w-4" />}
         />
         <MetricCard
-          label="Latest Report"
-          value={latestCompleted ? "Available" : "Unavailable"}
-          detail={latestCompleted ? latestCompleted.requirementRevisionTitle : "No finalized analysis yet"}
+          label={t("latestReport")}
+          value={latestCompleted ? t("available") : t("unavailable")}
+          detail={latestCompleted ? latestCompleted.requirementRevisionTitle : t("noFinalizedAnalysis")}
           accent={latestCompleted ? "success" : "default"}
           icon={<FileText className="h-4 w-4" />}
         />

@@ -1,12 +1,14 @@
 import { useEffect, useRef } from "react"
 import { toast } from "sonner"
 import { useQueryClient } from "@tanstack/react-query"
+import { useTranslations } from "next-intl"
 import { queryKeys } from "@/lib/api/query-keys"
 import { useRepositoryDetail } from "../api/use-repositories"
 import { useAnalysisDetail } from "../api/use-analyses"
 import { isScanJobActive, isScanJobTerminal, isAnalysisActive, isAnalysisTerminal } from "@/lib/status-helpers"
 
 export function useRepositoryStatusWatcher(projectId: string | undefined, repositoryId: string) {
+  const t = useTranslations("statusWatcher")
   const { data } = useRepositoryDetail(projectId, repositoryId)
   const queryClient = useQueryClient()
   
@@ -26,9 +28,9 @@ export function useRepositoryStatusWatcher(projectId: string | undefined, reposi
       const toastId = `repo-scan:${data.id}:${currentStatus}`
       
       if (currentStatus === "COMPLETED") {
-        toast.success("Repository scan completed.", { id: toastId })
+        toast.success(t("repositoryScanCompleted"), { id: toastId })
       } else if (currentStatus === "FAILED") {
-        toast.error(`Scan failed: ${data.latestScanJob.error?.code || 'UNKNOWN'}`, {
+        toast.error(t("scanFailed", { code: data.latestScanJob.error?.code || "UNKNOWN" }), {
           description: data.latestScanJob.error?.message,
           id: toastId,
         })
@@ -42,10 +44,11 @@ export function useRepositoryStatusWatcher(projectId: string | undefined, reposi
     }
 
     prevStatusRef.current = currentStatus
-  }, [data, projectId, repositoryId, queryClient])
+  }, [data, projectId, repositoryId, queryClient, t])
 }
 
 export function useAnalysisStatusWatcher(projectId: string | undefined, analysisId: string) {
+  const t = useTranslations("statusWatcher")
   const { data } = useAnalysisDetail(analysisId)
   const queryClient = useQueryClient()
   
@@ -65,16 +68,16 @@ export function useAnalysisStatusWatcher(projectId: string | undefined, analysis
       const toastId = `analysis:${data.id}:${currentStatus}`
       
       if (currentStatus === "WAITING_FOR_REVIEW") {
-        toast.success("Analysis ready for review.", { id: toastId })
+        toast.success(t("analysisReadyForReview"), { id: toastId })
         // Invalidate review related queries
         queryClient.invalidateQueries({ queryKey: queryKeys.analyses.insights(analysisId) })
         queryClient.invalidateQueries({ queryKey: queryKeys.analyses.traceability(analysisId) })
       } else if (currentStatus === "COMPLETED") {
-        toast.success("Analysis finalized.", { id: toastId })
+        toast.success(t("analysisFinalized"), { id: toastId })
         queryClient.invalidateQueries({ queryKey: queryKeys.analyses.report(analysisId) })
       } else if (currentStatus === "FAILED") {
-        toast.error(`Analysis failed: ${data.error?.code || 'UNKNOWN'}`, {
-          description: data.error?.message || 'Something went wrong.',
+        toast.error(t("analysisFailed", { code: data.error?.code || "UNKNOWN" }), {
+          description: data.error?.message || t("somethingWentWrong"),
           id: toastId,
         })
       }
@@ -85,5 +88,5 @@ export function useAnalysisStatusWatcher(projectId: string | undefined, analysis
     }
 
     prevStatusRef.current = currentStatus
-  }, [data, projectId, analysisId, queryClient])
+  }, [data, projectId, analysisId, queryClient, t])
 }

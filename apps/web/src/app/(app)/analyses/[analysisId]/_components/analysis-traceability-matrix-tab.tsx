@@ -1,6 +1,7 @@
 "use client"
 
 import { Fragment, useCallback } from "react"
+import { useTranslations } from "next-intl"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import type {
@@ -34,6 +35,7 @@ export function AnalysisTraceabilityMatrixTab({
   onSelectLink,
   onSelectInsight,
 }: AnalysisTraceabilityMatrixTabProps) {
+  const t = useTranslations("workspace")
   const matrix = useTraceabilityMatrix(insights, links, graphNodes)
 
   const handleRowClick = useCallback((row: MatrixRow) => {
@@ -48,9 +50,9 @@ export function AnalysisTraceabilityMatrixTab({
   if (matrix.rows.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center p-12 text-center text-muted-foreground">
-        <p className="text-sm font-medium text-foreground">No traceability data available</p>
+        <p className="text-sm font-medium text-foreground">{t("noTraceabilityData")}</p>
         <p className="mt-2 text-sm opacity-70">
-          This matrix will populate once the impact analysis is complete.
+          {t("traceabilityMatrixWillPopulate")}
         </p>
       </div>
     )
@@ -77,21 +79,21 @@ export function AnalysisTraceabilityMatrixTab({
           <Table>
             <TableHeader className="sticky top-0 z-10 bg-background shadow-sm">
               <TableRow className="h-8 text-xs hover:bg-transparent">
-                <TableHead className="w-[280px] h-8 px-3">Artifact / Item</TableHead>
-                <TableHead className="w-[120px] h-8 px-3">Kind</TableHead>
-                <TableHead className="w-[220px] h-8 px-3">Path</TableHead>
-                <TableHead className="w-[170px] h-8 px-3">Trace Type</TableHead>
-                <TableHead className="w-[120px] h-8 px-3">Certainty</TableHead>
-                <TableHead className="w-[120px] h-8 px-3">Evidence</TableHead>
-                <TableHead className="w-[130px] h-8 px-3">Review</TableHead>
+                <TableHead className="w-[280px] h-8 px-3">{t("artifactItem")}</TableHead>
+                <TableHead className="w-[120px] h-8 px-3">{t("kind")}</TableHead>
+                <TableHead className="w-[220px] h-8 px-3">{t("path")}</TableHead>
+                <TableHead className="w-[170px] h-8 px-3">{t("traceType")}</TableHead>
+                <TableHead className="w-[120px] h-8 px-3">{t("certainty")}</TableHead>
+                <TableHead className="w-[120px] h-8 px-3">{t("evidence")}</TableHead>
+                <TableHead className="w-[130px] h-8 px-3">{t("review")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {matrix.filteredRows.length > 0 && (
                 <TableRow className="bg-muted/30 hover:bg-muted/30">
                   <TableCell colSpan={7} className="py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Requirement: {analysis.requirement.revisionTitle || analysis.requirement.id || "Current requirement change"}
-                    <span className="ml-2 font-normal lowercase">({matrix.filteredRows.length} rows)</span>
+                    {t("requirement")}: {analysis.requirement.revisionTitle || analysis.requirement.id || t("currentRequirementChange")}
+                    <span className="ml-2 font-normal lowercase">({t("rowsCount", { count: matrix.filteredRows.length })})</span>
                   </TableCell>
                 </TableRow>
               )}
@@ -99,7 +101,7 @@ export function AnalysisTraceabilityMatrixTab({
               {matrix.filteredRows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                    No matching rows found.
+                    {t("noMatchingRows")}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -111,7 +113,7 @@ export function AnalysisTraceabilityMatrixTab({
                     <Fragment key={group.type}>
                       <TableRow className="bg-surface-muted/30 hover:bg-surface-muted/30">
                         <TableCell colSpan={7} className="border-t py-1 text-[11px] font-semibold uppercase tracking-wider text-foreground/70">
-                          {group.label} <span className="ml-1 opacity-70">({rowsInGroup.length})</span>
+                          {t(`traceGroup.${group.type}`)} <span className="ml-1 opacity-70">({rowsInGroup.length})</span>
                         </TableCell>
                       </TableRow>
                       {rowsInGroup.map(row => (
@@ -134,7 +136,7 @@ export function AnalysisTraceabilityMatrixTab({
       <div className="border-t border-border/40 px-4 py-3">
         <div className="flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <span>
-            Showing {matrix.visibleStart}-{matrix.pageEnd} of {matrix.filteredRows.length}
+            {t("showingRange", { start: matrix.visibleStart, end: matrix.pageEnd, total: matrix.filteredRows.length })}
           </span>
           <div className="flex items-center gap-2">
             <Button
@@ -144,10 +146,10 @@ export function AnalysisTraceabilityMatrixTab({
               onClick={() => matrix.setPage(matrix.currentPage - 1)}
               disabled={matrix.currentPage <= 1}
             >
-              Previous
+              {t("prev")}
             </Button>
             <span className="min-w-[88px] text-center text-xs">
-              Page {matrix.currentPage} / {matrix.totalPages}
+              {t("pageOf", { current: matrix.currentPage, total: matrix.totalPages })}
             </span>
             <Button
               size="sm"
@@ -156,7 +158,7 @@ export function AnalysisTraceabilityMatrixTab({
               onClick={() => matrix.setPage(matrix.currentPage + 1)}
               disabled={matrix.currentPage >= matrix.totalPages}
             >
-              Next
+              {t("next")}
             </Button>
           </div>
         </div>

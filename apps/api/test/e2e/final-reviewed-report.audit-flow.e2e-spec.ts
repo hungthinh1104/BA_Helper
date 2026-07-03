@@ -5,7 +5,7 @@ import { resetDatabase } from './helpers/reset-db';
 import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { grantProjectMembership } from './helpers/grant-project-membership';
-import { PrismaService } from "@ba-helper/backend-runtime";
+import { PrismaService, RunDocumentJobUseCase } from "@ba-helper/backend-runtime";
 
 describe('Final Reviewed Report Audit Flow (e2e)', () => {
   let app: INestApplication;
@@ -188,6 +188,13 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
     return { analysisId, link1Id, link2Id, docId };
   }
 
+  async function markAnalysisCompleted(analysisId: string) {
+    await prisma.impactAnalysis.update({
+      where: { id: analysisId },
+      data: { status: 'COMPLETED' },
+    });
+  }
+
   it('complete reviewed flow returns final report', async () => {
     const { analysisId, link1Id, link2Id, docId } = await setupBasicAnalysisWithLinks();
 
@@ -207,6 +214,8 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ decision: 'ACCEPTED', note: 'ok' })
       .expect(200);
+
+    await markAnalysisCompleted(analysisId);
 
     // 2. Create snapshot
     const snapRes = await request(app.getHttpServer())
@@ -253,7 +262,9 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       .send({ decision: 'ACCEPTED' })
       .expect(200);
 
-    // Force create snapshot (API might allow snapshotting even if incomplete? E15C allows it, UI gate is in E16)
+    await markAnalysisCompleted(analysisId);
+
+    // Force create snapshot from a completed analysis with incomplete review coverage.
     await request(app.getHttpServer())
       .post(`/api/v1/impact-analyses/${analysisId}/reviewed-report-snapshot`)
       .set('Authorization', `Bearer ${adminToken}`)
@@ -316,6 +327,8 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       .send({ decision: 'ACCEPTED' })
       .expect(200);
 
+    await markAnalysisCompleted(analysisId);
+
     // 2. Create snapshot
     const snapshotRes = await request(app.getHttpServer())
       .post(`/api/v1/impact-analyses/${analysisId}/reviewed-report-snapshot`)
@@ -327,12 +340,12 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       data: { approvedDocumentId: docId },
     });
 
-    // 3. Mutate one link to REJECTED after snapshot
-    await request(app.getHttpServer())
-      .put(`/api/v1/traceability-links/${link2Id}/review-decision`)
-      .set('Authorization', `Bearer ${adminToken}`)
-      .send({ decision: 'REJECTED' })
-      .expect(200);
+    // 3. Mutate one link to REJECTED after snapshot.
+    // Bypass the API because completed analyses reject review mutation.
+    await prisma.traceabilityReviewDecision.updateMany({
+      where: { traceabilityLinkId: link2Id },
+      data: { decision: 'REJECTED' },
+    });
 
     // Note: Mutating the decision does not clear the snapshot, and because all links still have a decision, isComplete remains true.
     const finalRes = await request(app.getHttpServer())
@@ -352,7 +365,7 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
 
   it('GeneratedDocument markdown reflects the snapshot payload, not the live mutated state', async () => {
     const { analysisId, link1Id, link2Id } = await setupBasicAnalysisWithLinks();
-    const runDocumentJob = app.get(require('../../src/modules/document/application/jobs/run-document-job.usecase').RunDocumentJobUseCase);
+    const runDocumentJob = app.get(RunDocumentJobUseCase);
 
     // 1. Assign ACCEPTED to both links
     await request(app.getHttpServer())

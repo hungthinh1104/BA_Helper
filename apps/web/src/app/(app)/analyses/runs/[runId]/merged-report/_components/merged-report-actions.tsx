@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button"
 import { Download, Loader2 } from "lucide-react"
+import { useTranslations } from "next-intl"
 
 interface MergedReportActionsProps {
   isStale: boolean
@@ -20,6 +21,8 @@ export function MergedReportActions({
   onExport,
   onRefresh,
 }: MergedReportActionsProps) {
+  const t = useTranslations("multiRepo")
+
   return (
     <>
       <div className="ml-auto flex items-center gap-2">
@@ -29,10 +32,10 @@ export function MergedReportActions({
           className="h-8 shadow-none"
           onClick={() => onExport("md")}
           disabled={!canExport || exportingFormat !== null}
-          title={isStale ? "Merged report is stale; refresh the snapshot before export." : undefined}
+          title={isStale ? t("staleExportTitle") : undefined}
         >
           {exportingFormat === "md" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-          Export Markdown
+          {t("exportMarkdown")}
         </Button>
         <Button
           size="sm"
@@ -40,10 +43,10 @@ export function MergedReportActions({
           className="h-8 shadow-none"
           onClick={() => onExport("pdf")}
           disabled={!canExport || exportingFormat !== null}
-          title={isStale ? "Merged report is stale; refresh the snapshot before export." : undefined}
+          title={isStale ? t("staleExportTitle") : undefined}
         >
           {exportingFormat === "pdf" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-          Export PDF
+          {t("exportPdf")}
         </Button>
       </div>
       <Button
@@ -53,7 +56,7 @@ export function MergedReportActions({
         onClick={onRefresh}
         disabled={!canFinalize || isFinalizing}
       >
-        {isFinalizing ? "Refreshing..." : "Refresh snapshot"}
+        {isFinalizing ? t("refreshing") : t("refreshSnapshot")}
       </Button>
     </>
   )

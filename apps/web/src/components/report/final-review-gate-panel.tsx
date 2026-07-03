@@ -3,15 +3,16 @@ import { useReviewCompletion } from "@/hooks/api/use-review-completion"
 import { Button } from "@/components/ui/button"
 import { ShieldCheck, ShieldAlert, Loader2, FileCheck2, Download } from "lucide-react"
 import { FinalReviewedReportViewer } from "./final-reviewed-report-viewer"
-import { apiGet } from "@/lib/api-client"
-import { finalReviewedReportResponseSchema } from "@ba-helper/contracts"
+import { apiGetFile } from "@/lib/api-client"
 import { toast } from "sonner"
+import { useTranslations } from "next-intl"
 
 interface FinalReviewGatePanelProps {
   analysisId: string
 }
 
 export function FinalReviewGatePanel({ analysisId }: FinalReviewGatePanelProps) {
+  const t = useTranslations("reports")
   const { data: completion, isLoading, error } = useReviewCompletion(analysisId)
   const [viewerOpen, setViewerOpen] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
@@ -19,27 +20,22 @@ export function FinalReviewGatePanel({ analysisId }: FinalReviewGatePanelProps) 
   const handleDownloadMarkdown = async () => {
     try {
       setIsDownloading(true)
-      const report = await apiGet(
-        `/api/v1/impact-analyses/${analysisId}/final-reviewed-report`,
-        finalReviewedReportResponseSchema
-      )
-
-      const blob = new Blob([report.markdown || ""], { type: "text/markdown;charset=utf-8" })
-      const url = URL.createObjectURL(blob)
+      const file = await apiGetFile(`/api/v1/impact-analyses/${analysisId}/approved-report/export.md`)
+      const url = URL.createObjectURL(file.blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `final-reviewed-report-${analysisId}-${report.snapshotId}.md`
+      a.download = file.filename
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
 
-      toast.success("Markdown downloaded successfully", {
-        description: `File: ${a.download}`,
+      toast.success(t("markdownDownloaded"), {
+        description: `${t("file")}: ${file.filename}`,
       })
     } catch (err) {
-      toast.error("Download failed", {
-        description: err instanceof Error ? err.message : "Could not fetch final reviewed report.",
+      toast.error(t("downloadFailed"), {
+        description: err instanceof Error ? err.message : t("couldNotFetchFinalReport"),
       })
     } finally {
       setIsDownloading(false)
@@ -50,7 +46,7 @@ export function FinalReviewGatePanel({ analysisId }: FinalReviewGatePanelProps) 
     return (
       <div className="mt-8 border-t border-border/50 pt-8 print:hidden flex items-center justify-center p-8 bg-surface-muted/50 rounded-lg border border-dashed border-border/40 text-muted-foreground">
         <Loader2 className="w-5 h-5 animate-spin mr-3 opacity-70" />
-        <span className="text-[13px] tracking-wide uppercase font-medium">Checking Final Review Gate...</span>
+        <span className="text-[13px] tracking-wide uppercase font-medium">{t("checkingFinalReviewGate")}</span>
       </div>
     )
   }
@@ -59,7 +55,7 @@ export function FinalReviewGatePanel({ analysisId }: FinalReviewGatePanelProps) 
     return (
       <div className="mt-8 border-t border-border/50 pt-8 print:hidden flex items-center p-6 bg-destructive/5 rounded-lg border border-destructive/20 text-destructive/80">
         <ShieldAlert className="w-5 h-5 mr-3 shrink-0" />
-        <span className="text-[13px]">Failed to load review completion status.</span>
+        <span className="text-[13px]">{t("failedReviewCompletionStatus")}</span>
       </div>
     )
   }
@@ -69,19 +65,19 @@ export function FinalReviewGatePanel({ analysisId }: FinalReviewGatePanelProps) 
   const formatBlockingReason = (reason: string) => {
     switch (reason) {
       case 'UNREVIEWED_TRACEABILITY_LINKS':
-        return "Blocked: unreviewed traceability links remain"
+        return t("blockedTraceabilityLinks")
       case 'REVIEWED_SNAPSHOT_MISSING':
-        return "Blocked: reviewed snapshot is missing"
+        return t("blockedSnapshotMissing")
       case 'CONFLICTING_EVIDENCE_UNREVIEWED':
-        return "Blocked: conflicting evidence still needs human review"
+        return t("blockedConflictingEvidence")
       case 'CRITICAL_MISSING_EVIDENCE':
-        return "Blocked: critical item is missing source evidence"
+        return t("blockedCriticalMissingEvidence")
       case 'REVIEW_REQUIRED_ITEMS':
-        return "Blocked: review-required items remain"
+        return t("blockedReviewRequired")
       case 'HIGH_RISK_INSIGHT_UNREVIEWED':
-        return "Blocked: high-risk insight has no review decision"
+        return t("blockedHighRiskInsight")
       default:
-        return `Blocked: ${reason}`
+        return t("blockedGeneric", { reason })
     }
   }
 
@@ -104,36 +100,36 @@ export function FinalReviewGatePanel({ analysisId }: FinalReviewGatePanelProps) 
               ) : (
                 <ShieldAlert className="w-5 h-5 text-warning" />
               )}
-              <h3 className="text-base font-semibold text-foreground tracking-tight">Final Review Gate</h3>
+              <h3 className="text-base font-semibold text-foreground tracking-tight">{t("finalReviewGate")}</h3>
             </div>
             
             <p className="text-[13px] text-muted-foreground leading-relaxed max-w-xl">
-              This gate verifies that all traceability links have been human-reviewed and an immutable snapshot has been taken.
+              {t("finalReviewGateDescription")}
             </p>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-4">
               <div className="bg-background rounded-md border border-border/50 p-3">
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">Total</div>
+                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">{t("total")}</div>
                 <div className="font-mono text-base">{totalLinks}</div>
               </div>
               <div className="bg-background rounded-md border border-border/50 p-3">
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">Accepted</div>
+                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">{t("accepted")}</div>
                 <div className="font-mono text-base text-success">{accepted}</div>
               </div>
               <div className="bg-background rounded-md border border-border/50 p-3">
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">Rejected</div>
+                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">{t("rejected")}</div>
                 <div className="font-mono text-base text-destructive">{rejected}</div>
               </div>
               <div className="bg-background rounded-md border border-border/50 p-3">
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">Needs Rev.</div>
+                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">{t("needsReviewShort")}</div>
                 <div className="font-mono text-base text-info">{needsReview}</div>
               </div>
               <div className="bg-background rounded-md border border-border/50 p-3">
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">More Evid.</div>
+                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">{t("moreEvidenceShort")}</div>
                 <div className="font-mono text-base text-warning">{needsMoreEvidence}</div>
               </div>
               <div className={`bg-background rounded-md border p-3 ${unreviewed > 0 ? 'border-warning/30' : 'border-border/50'}`}>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">Unreviewed</div>
+                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">{t("unreviewed")}</div>
                 <div className={`font-mono text-base ${unreviewed > 0 ? 'text-warning' : 'text-muted-foreground'}`}>{unreviewed}</div>
               </div>
             </div>
@@ -146,7 +142,7 @@ export function FinalReviewGatePanel({ analysisId }: FinalReviewGatePanelProps) 
               ))}
               {!isComplete && !hasReviewedSnapshot && !blockingReasons.includes('REVIEWED_SNAPSHOT_MISSING') && (
                 <div className="flex items-center text-[12px] text-warning font-medium bg-warning-soft w-fit px-2 py-1 rounded-sm border border-warning/20">
-                  <span className="mr-2">•</span> Blocked: reviewed snapshot is missing
+                  <span className="mr-2">•</span> {t("blockedSnapshotMissing")}
                 </div>
               )}
             </div>
@@ -155,7 +151,7 @@ export function FinalReviewGatePanel({ analysisId }: FinalReviewGatePanelProps) 
           <div className="flex flex-col items-end shrink-0 gap-3">
             {isComplete && (
               <span className="text-[12px] font-medium text-success tracking-wide uppercase">
-                Ready for audited export
+                {t("readyForAuditedExport")}
               </span>
             )}
             
@@ -167,7 +163,7 @@ export function FinalReviewGatePanel({ analysisId }: FinalReviewGatePanelProps) 
                 className="w-full md:w-auto font-medium"
               >
                 {isDownloading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
-                Download .md
+                {t("downloadMd")}
               </Button>
               <Button
                 disabled={!isComplete}
@@ -175,13 +171,13 @@ export function FinalReviewGatePanel({ analysisId }: FinalReviewGatePanelProps) 
                 className="w-full md:w-auto font-medium"
               >
                 <FileCheck2 className="w-4 h-4 mr-2" />
-                View Final Reviewed Report
+                {t("viewFinalReviewedReport")}
               </Button>
             </div>
             
             {!isComplete && (
               <span className="text-[11px] text-muted-foreground max-w-[200px] text-right">
-                Complete all reviews and take a snapshot to unlock final report
+                {t("completeReviewsUnlock")}
               </span>
             )}
           </div>

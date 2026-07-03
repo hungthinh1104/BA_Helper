@@ -13,7 +13,16 @@ describe('GetReviewCompletionUseCase', () => {
     } as unknown as jest.Mocked<PrismaService>;
 
     const traceabilityRepo = {
-      listByAnalysis: jest.fn().mockResolvedValue([]),
+      listByAnalysis: jest.fn().mockResolvedValue([
+        {
+          id: 'link-1',
+          linkType: 'AFFECTED',
+          linkBasis: 'INFERRED',
+          reviewStatus: 'NEEDS_REVIEW',
+          reviewDecision: null,
+          evidenceLinks: [],
+        },
+      ]),
     } as unknown as jest.Mocked<TraceabilityRepository>;
 
     const insightRepo = {
