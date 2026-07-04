@@ -3,6 +3,7 @@ import { useTranslations } from "next-intl"
 import { useRepositorySnapshotDrift } from "@/hooks/api/use-snapshot-drift"
 import { Activity, AlertTriangle, ChevronDown, ChevronUp, Layers, CheckCircle, ShieldAlert } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { DenseCard } from "@/components/workspace/shared/dense-card"
 
 interface SnapshotDriftCardProps {
   projectId: string
@@ -223,7 +224,7 @@ interface SampleItem {
 function SampleList({ title, count, items, isExpanded, onToggle }: { title: string, count: number, items: Array<SampleItem>, isExpanded: boolean, onToggle: () => void }) {
   const t = useTranslations("workspace")
   return (
-    <div className="flex flex-col border border-border/40 rounded-lg overflow-hidden">
+    <DenseCard>
       <button
         onClick={onToggle}
         className="flex items-center justify-between w-full p-3 text-left transition-colors hover:bg-surface-soft/60 bg-surface-soft/30"
@@ -245,6 +246,6 @@ function SampleList({ title, count, items, isExpanded, onToggle }: { title: stri
           </div>
         </div>
       )}
-    </div>
+    </DenseCard>
   )
 }

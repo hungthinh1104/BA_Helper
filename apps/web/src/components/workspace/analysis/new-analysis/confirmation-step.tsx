@@ -6,6 +6,7 @@ import {
   getScannerMaturity,
   getScannerProfileLabel,
 } from "./new-analysis-utils"
+import { DenseCard, DenseAlert } from "@/components/workspace/shared/dense-card"
 
 function SummaryRow({ label, value, mono = true }: { label: string; value: string; mono?: boolean }) {
   return (
@@ -49,7 +50,7 @@ export function ConfirmationStep({
     return (
       <div className="flex flex-col">
         <div className="px-6 py-5 flex flex-col gap-4">
-          <div className="flex items-start gap-3 rounded-lg border border-success/25 bg-success/8 px-4 py-3">
+          <DenseAlert variant="success" className="px-4 py-3">
             <CheckCircle2 className="w-5 h-5 text-success shrink-0 mt-0.5" />
             <div>
               <p className="text-[13px] font-medium text-foreground">
@@ -59,8 +60,8 @@ export function ConfirmationStep({
                 {t("batchCreatedDescription")}
               </p>
             </div>
-          </div>
-          <div className="flex flex-col divide-y divide-border/60 border border-border/60 rounded-lg overflow-hidden bg-surface-muted/30">
+          </DenseAlert>
+          <DenseCard variant="muted" className="divide-y divide-border/60">
             {batchSuccess.items.map((item) => (
               <div key={item.analysisId} className="grid grid-cols-[1fr_auto] gap-3 px-4 py-3">
                 <div className="min-w-0">
@@ -76,7 +77,7 @@ export function ConfirmationStep({
                 </span>
               </div>
             ))}
-          </div>
+          </DenseCard>
         </div>
         <div className="px-6 py-4 border-t border-border/60 bg-surface-muted/30 flex justify-end">
           <Button size="sm" className="h-8 shadow-none" onClick={handleOpenRun}>
@@ -90,7 +91,7 @@ export function ConfirmationStep({
   return (
     <div className="flex flex-col">
       <div className="px-6 py-5 flex flex-col gap-4">
-        <div className="flex flex-col divide-y divide-border/60 border border-border/60 rounded-lg overflow-hidden bg-surface-muted/30">
+        <DenseCard variant="muted" className="divide-y divide-border/60">
           <SummaryRow label={t("requirement")} value={selectedReq.latestRevision.title} mono={false} />
           <SummaryRow
             label={t("revisionId")}
@@ -153,9 +154,9 @@ export function ConfirmationStep({
                 </p>
               </div>
             )}
-        </div>
+        </DenseCard>
 
-        <div className="flex flex-col gap-3 p-4 border border-border/60 rounded-lg bg-surface-muted/30">
+        <DenseCard variant="muted" className="gap-3 p-4">
           <div>
             <label
               htmlFor="domain-pack-selector"
@@ -184,26 +185,26 @@ export function ConfirmationStep({
             </p>
           )}
           {selectedDomainPack?.status === "PARTIAL" && (
-            <div className="flex items-start gap-2 rounded-md border border-warning/25 bg-warning/8 p-3">
+            <DenseAlert variant="warning" className="gap-2 p-3">
               <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
               <div className="text-[12px] text-foreground/80 leading-relaxed">
                 <p>{t("partialWarning1")}</p>
                 <p>{t("partialWarning2")}</p>
                 <p>{t("partialWarning3")}</p>
               </div>
-            </div>
+            </DenseAlert>
           )}
-        </div>
+        </DenseCard>
 
         {batchError && (
-          <div className="flex items-start gap-2 p-4 bg-danger/8 border border-danger/25 rounded-lg">
+          <DenseAlert variant="danger" className="gap-2 p-4">
             <AlertCircle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
             <p className="text-[12px] text-foreground/80 leading-relaxed">{batchError}</p>
-          </div>
+          </DenseAlert>
         )}
 
         {hasPartialRepo && (
-          <div className="flex flex-col gap-3 p-4 bg-warning/8 border border-warning/25 rounded-lg">
+          <DenseAlert variant="warning" layout="col" className="p-4">
             <div className="flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
               <p className="text-[12px] text-foreground/80 leading-relaxed">
@@ -221,7 +222,7 @@ export function ConfirmationStep({
                 {t("ackPartial")}
               </span>
             </label>
-          </div>
+          </DenseAlert>
         )}
       </div>
       <div className="px-6 py-4 border-t border-border/60 bg-surface-muted/30 flex justify-between gap-2">

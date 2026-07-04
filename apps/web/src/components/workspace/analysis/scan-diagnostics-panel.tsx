@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 import { DiagnosticItem, scannerCapabilitySummaryPayloadSchema } from "@ba-helper/contracts"
 
 import { DiagnosticRiskBadge } from "@/components/workspace/shared/status-badges"
+import { DenseCard } from "@/components/workspace/shared/dense-card"
 
 export function ScanDiagnosticsPanel({ diagnostics }: { diagnostics: DiagnosticItem[] }) {
   const t = useTranslations("workspace")
@@ -91,7 +92,7 @@ export function ScanDiagnosticsPanel({ diagnostics }: { diagnostics: DiagnosticI
 
       <div className="flex flex-col gap-2">
         {scannerDiagnostics.map((diag) => (
-          <div key={diag.code} className="flex flex-col border border-border rounded-lg overflow-hidden bg-surface-soft/30">
+          <DenseCard variant="soft" key={diag.code}>
             <button
               onClick={() => toggle(diag.code)}
               className={cn(
@@ -143,7 +144,7 @@ export function ScanDiagnosticsPanel({ diagnostics }: { diagnostics: DiagnosticI
                 )}
               </div>
             )}
-          </div>
+          </DenseCard>
         ))}
       </div>
     </div>

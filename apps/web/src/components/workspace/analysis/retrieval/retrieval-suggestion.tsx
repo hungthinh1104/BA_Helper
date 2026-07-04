@@ -2,6 +2,7 @@ import React from "react"
 import { useTranslations } from "next-intl"
 import { ShieldAlert, Info, Lightbulb, Activity, CheckCircle2 } from "lucide-react"
 import { RetrievalMetadata } from "@ba-helper/contracts"
+import { DenseCard } from "@/components/workspace/shared/dense-card"
 
 // Frontend now uses the suggestion provided by the backend.
 
@@ -25,7 +26,7 @@ export function RetrievalSuggestion({ retrieval }: { retrieval?: RetrievalMetada
   }
 
   return (
-    <div className="mt-3 border border-border rounded-lg overflow-hidden bg-surface flex flex-col shadow-sm">
+    <DenseCard className="mt-3 shadow-sm">
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-surface-muted">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex-1">
           {t("reviewSuggestion")}
@@ -74,6 +75,6 @@ export function RetrievalSuggestion({ retrieval }: { retrieval?: RetrievalMetada
           </div>
         )}
       </div>
-    </div>
+    </DenseCard>
   );
 }

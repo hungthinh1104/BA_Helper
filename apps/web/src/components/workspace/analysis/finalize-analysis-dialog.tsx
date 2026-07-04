@@ -12,6 +12,7 @@ import { ApiError } from "@/lib/api-error"
 import type { AnalysisWorkspaceResponse } from "@ba-helper/contracts"
 import { useLocale } from "next-intl"
 import { DEFAULT_APP_LOCALE, normalizeAppLocale } from "@/i18n/app-locale"
+import { DenseCard, DenseAlert } from "@/components/workspace/shared/dense-card"
 
 interface FinalizeAnalysisDialogProps {
   children: React.ReactNode
@@ -112,22 +113,22 @@ export function FinalizeAnalysisDialog({
             {labels.description}
           </p>
 
-          <div className="flex flex-col divide-y divide-border/60 border border-border/60 rounded-lg overflow-hidden bg-surface-muted/30">
+          <DenseCard variant="muted" className="divide-y divide-border/60">
             <SummaryRow label={labels.totalInsights} value={String(stats.total)} />
             <SummaryRow label={labels.confirmed} value={String(stats.confirmed)} valueColor="text-success" />
             <SummaryRow label={labels.rejected} value={String(stats.rejected)} valueColor="text-destructive" />
             <SummaryRow label={labels.unknownConflicts} value={String(stats.unknowns + stats.conflicts)} valueColor="text-warning" />
             <SummaryRow label={labels.snapshotCommit} value={commitSha.substring(0, 7)} mono />
-          </div>
+          </DenseCard>
 
-          <div className="flex items-start gap-3 p-3 bg-primary/10 border border-primary/20 rounded-lg text-primary">
+          <DenseAlert variant="primary" className="p-3">
             <FileText className="w-4 h-4 mt-0.5 shrink-0" />
             <p className="text-[12px] font-medium leading-relaxed">
               {labels.reportNotice}
             </p>
-          </div>
+          </DenseAlert>
 
-          <div className="flex flex-col gap-2 p-3 bg-surface border border-border/60 rounded-lg">
+          <DenseCard className="gap-2 p-3 border-border/60">
             <h4 className="text-[12px] font-semibold text-foreground mb-1">{labels.preflightChecklist}</h4>
             
             <div className="flex flex-col gap-1.5">
@@ -188,7 +189,7 @@ export function FinalizeAnalysisDialog({
                 {labels.coverageMapGenerated}
               </span>
             </div>
-          </div>
+          </DenseCard>
         </div>
 
         <div className="px-6 py-4 border-t border-border/60 bg-surface-muted/30 flex justify-end gap-2">

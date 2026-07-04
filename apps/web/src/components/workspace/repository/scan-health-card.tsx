@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { Activity, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, FileCode, Layers, SearchX } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { DenseCard } from "@/components/workspace/shared/dense-card"
 
 export interface ScanHealthPayload {
   coverageStatus: 'FULL' | 'PARTIAL' | 'FAILED'
@@ -139,7 +140,7 @@ export function ScanHealthCard({ payload }: { payload?: unknown }) {
       )}
 
       {samplePaths.length > 0 && (
-        <div className="flex flex-col border border-border/40 rounded-lg overflow-hidden mt-2">
+        <DenseCard className="mt-2">
           <button
             onClick={() => setExpandedPaths(!expandedPaths)}
             className="flex items-center justify-between w-full p-3 text-left transition-colors hover:bg-surface-soft/60 bg-surface-soft/30"
@@ -175,7 +176,7 @@ export function ScanHealthCard({ payload }: { payload?: unknown }) {
               )}
             </div>
           )}
-        </div>
+        </DenseCard>
       )}
     </div>
   )

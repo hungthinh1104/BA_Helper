@@ -9,6 +9,7 @@ import { NewAnalysisDialog } from "@/components/workspace/analysis/new-analysis/
 import { ClarificationItemDto } from '@ba-helper/contracts';
 import { useCurrentWorkspace } from '@/lib/project-context';
 import { canWriteClarification, canCreateRequirement } from '@/lib/permissions';
+import { DenseCard, DenseAlert } from "@/components/workspace/shared/dense-card";
 
 interface ClarificationWidgetProps {
   analysisId: string;
@@ -40,7 +41,7 @@ export function ClarificationWidget({ analysisId, insightId }: ClarificationWidg
   if (!clarification) {
     if (isCompleted) return null;
     return (
-      <div className="bg-surface-muted/30 border border-border/50 rounded-lg p-4 flex flex-col items-center justify-center text-center">
+      <DenseCard variant="muted" className="p-4 items-center justify-center text-center">
         <HelpCircle className="w-8 h-8 text-muted-foreground/60 mb-2" />
         <h4 className="text-sm font-semibold mb-1">{t("clarificationNeeded")}</h4>
         <p className="text-xs text-muted-foreground mb-4 max-w-[240px]">
@@ -55,12 +56,12 @@ export function ClarificationWidget({ analysisId, insightId }: ClarificationWidg
         >
           {ensureMut.isPending ? t("requesting") : t("requestClarification")}
         </Button>
-      </div>
+      </DenseCard>
     );
   }
 
   return (
-    <div className={`border rounded-lg p-4 ${
+    <DenseCard className={`p-4 ${
       clarification.status === 'OPEN' ? 'bg-warning/5 border-warning/20' : 
       clarification.status === 'ANSWERED' ? 'bg-success/5 border-success/20' : 
       'bg-surface-muted/30 border-border/50'
@@ -115,7 +116,7 @@ export function ClarificationWidget({ analysisId, insightId }: ClarificationWidg
         )}
 
         {clarification.status === 'CONVERTED_TO_REVISION' && (
-          <div className="mt-4 pt-3 border-t border-success/20 flex flex-col items-start gap-2 bg-success/5 p-3 rounded">
+          <DenseAlert variant="success" layout="col" className="mt-4 p-3">
             <p className="text-sm text-foreground">{t("convertedToRequirementRevision")}</p>
             <NewAnalysisDialog
               preselectedReqId={analysis?.requirement.id}
@@ -129,7 +130,7 @@ export function ClarificationWidget({ analysisId, insightId }: ClarificationWidg
                 {t("runAnalysisWithRevision")}
               </Button>
             </NewAnalysisDialog>
-          </div>
+          </DenseAlert>
         )}
 
         {clarification.status === 'DISMISSED' && (
@@ -200,6 +201,6 @@ export function ClarificationWidget({ analysisId, insightId }: ClarificationWidg
           </div>
         )}
       </div>
-    </div>
+    </DenseCard>
   );
 }

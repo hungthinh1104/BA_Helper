@@ -9,6 +9,7 @@ import { useCreateRequirement } from "@/hooks/api/use-requirements"
 import { X, AlertCircle, CheckCircle2, FileText } from "lucide-react"
 import { toast } from "sonner"
 import { useTranslations } from "next-intl"
+import { DenseAlert } from "@/components/workspace/shared/dense-card"
 
 interface NewRequirementDialogProps {
   children: React.ReactNode
@@ -219,25 +220,25 @@ function ResultBanner({ status, issues }: { status: RequirementCreateResponse["r
   const t = useTranslations("workspaceLists")
   if (status === "READY_FOR_ANALYSIS") {
     return (
-      <div className="flex items-start gap-3 p-4 bg-success/8 border border-success/25 rounded-lg">
+      <DenseAlert variant="success">
         <CheckCircle2 className="w-5 h-5 text-success shrink-0 mt-0.5" />
         <div>
           <p className="text-[13px] font-semibold text-success mb-1">{t("readyForAnalysis")}</p>
           <p className="text-[12px] text-foreground/70">{t("readyForAnalysisDescription")}</p>
         </div>
-      </div>
+      </DenseAlert>
     )
   }
   if (status === "NEEDS_CLARIFICATION") {
     return (
       <div className="flex flex-col gap-3">
-        <div className="flex items-start gap-3 p-4 bg-danger/8 border border-danger/25 rounded-lg">
+        <DenseAlert variant="danger">
           <AlertCircle className="w-5 h-5 text-danger shrink-0 mt-0.5" />
           <div>
             <p className="text-[13px] font-semibold text-danger mb-1">{t("needsClarification")}</p>
             <p className="text-[12px] text-foreground/70">{t("needsClarificationDescription")}</p>
           </div>
-        </div>
+        </DenseAlert>
         <ul className="flex flex-col gap-1.5">
           {issues.map((issue, i) => (
             <li key={i} className="flex items-start gap-2 text-[12px] text-foreground/80">
@@ -249,10 +250,10 @@ function ResultBanner({ status, issues }: { status: RequirementCreateResponse["r
     )
   }
   return (
-    <div className="flex items-start gap-3 p-4 bg-surface-muted border border-border rounded-lg">
+    <DenseAlert variant="default">
       <FileText className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
       <p className="text-[12px] text-muted-foreground">{t("savedAsDraftDescription")}</p>
-    </div>
+    </DenseAlert>
   )
 }
 

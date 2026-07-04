@@ -2,6 +2,7 @@ import React from "react"
 import { useTranslations } from "next-intl"
 import { Info, Settings2, ChevronDown, ChevronRight, Calculator } from "lucide-react"
 import { RetrievalMetadata } from "@ba-helper/contracts"
+import { DenseCard } from "@/components/workspace/shared/dense-card"
 
 export function RetrievalSignalBadge({ retrieval }: { retrieval?: RetrievalMetadata }) {
   if (!retrieval) return null;
@@ -54,7 +55,7 @@ export function RetrievalDebugPanel({ retrieval }: { retrieval?: RetrievalMetada
   const score = retrieval.score;
 
   return (
-    <div className="mt-2 border border-border rounded-md overflow-hidden bg-surface-muted">
+    <DenseCard variant="muted" className="mt-2 rounded-md">
       <button 
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center justify-between w-full px-3 py-1.5 text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors"
@@ -95,6 +96,6 @@ export function RetrievalDebugPanel({ retrieval }: { retrieval?: RetrievalMetada
           </div>
         </div>
       )}
-    </div>
+    </DenseCard>
   );
 }
