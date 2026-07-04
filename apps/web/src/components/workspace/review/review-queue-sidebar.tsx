@@ -36,7 +36,7 @@ const QueueListItem = React.memo(({
       onClick={onSelect}
       className={`
         w-full text-left px-3 py-2 border-b border-border last:border-0 transition-colors
-        ${isActive ? "bg-surface-soft" : "hover:bg-surface-muted/60"}
+        ${isActive ? "bg-surface-soft" : "hover:bg-surface-soft"}
         ${isCompleted ? "opacity-50" : ""}
       `}
     >
@@ -145,7 +145,7 @@ export function ReviewQueueSidebar({
       </div>
 
       {/* Queue items */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
         {pagedItems.map((item, idx) => {
           const absoluteIndex = pageStart + idx
           const isActive    = absoluteIndex === activeItemIndex

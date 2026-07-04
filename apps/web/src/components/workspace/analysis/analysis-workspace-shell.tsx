@@ -128,7 +128,7 @@ export function AnalysisWorkspaceShell({
 
         <nav
           aria-label={labels.navLabel}
-          className="flex gap-6 overflow-x-auto border-b border-border/40 pb-[1px]"
+          className="flex gap-6 overflow-x-auto border-b border-border/40 pb-[1px] custom-scrollbar"
         >
           {tabs.map((tab) => (
             <button
@@ -136,6 +136,7 @@ export function AnalysisWorkspaceShell({
               type="button"
               className={cn(
                 "h-9 shrink-0 text-[13px] font-medium transition-colors border-b-2 whitespace-nowrap",
+                tab.id === "graph" ? "hidden md:inline-flex" : "",
                 activeTab === tab.id
                   ? "border-primary text-foreground"
                   : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30",
