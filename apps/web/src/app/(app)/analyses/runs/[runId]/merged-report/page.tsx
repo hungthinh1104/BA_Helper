@@ -18,6 +18,7 @@ import { MergedReportActions } from "./_components/merged-report-actions"
 import { MergedReportReviewPanel } from "./_components/merged-report-review-panel"
 import { formatMultiRepoMergedReportBlockers } from "@/lib/multi-repo-report-labels"
 import { useLocalizedHref } from "@/i18n/navigation"
+import { DenseAlert, DenseCard } from "@/components/workspace/shared/dense-card"
 
 export default function ApprovedMultiRepoReportPage({
   params,
@@ -157,7 +158,7 @@ export default function ApprovedMultiRepoReportPage({
         )}
 
         {error && !isLoading && code === "MERGED_MULTI_REPO_REPORT_NOT_FOUND" && (
-          <div className="flex flex-col items-center justify-center p-12 text-muted-foreground border rounded-xl bg-surface-muted/30">
+          <DenseCard variant="muted" className="items-center justify-center p-12 text-muted-foreground">
             <AlertCircle className="w-8 h-8 text-warning mb-3" />
             <p className="font-medium text-foreground">{t("noApprovedReport")}</p>
             <p className="text-[13px] text-center max-w-xl mb-4">
@@ -171,19 +172,19 @@ export default function ApprovedMultiRepoReportPage({
             >
               {finalizeReport.isPending ? t("finalizing") : t("finalizeMergedReport")}
             </Button>
-          </div>
+          </DenseCard>
         )}
 
         {error && !isLoading && code !== "MERGED_MULTI_REPO_REPORT_NOT_FOUND" && (
-          <div className="flex flex-col items-center justify-center p-12 text-muted-foreground border rounded-xl bg-surface-muted/30">
+          <DenseCard variant="muted" className="items-center justify-center p-12 text-muted-foreground">
             <AlertCircle className="w-8 h-8 text-destructive mb-3" />
             <p className="font-medium text-foreground">{t("failedToLoadApprovedReport")}</p>
             <p className="text-[13px] text-center max-w-xl">{error.message}</p>
-          </div>
+          </DenseCard>
         )}
 
         {data && (
-          <div className="rounded-xl border border-border/50 bg-surface/40 p-6">
+          <DenseCard className="bg-surface/40 p-6">
             <div className="mb-4 flex flex-wrap items-center gap-2">
               <Badge variant={data.mergedReportStatus === "CURRENT" ? "default" : data.mergedReportStatus === "STALE" ? "secondary" : "outline"}>
                 {{
@@ -201,7 +202,7 @@ export default function ApprovedMultiRepoReportPage({
             </div>
 
             {data.isStale && (
-              <div className="flex items-start gap-3 p-4 mb-6 bg-warning/10 border border-warning/25 rounded-lg text-warning">
+              <DenseAlert variant="warning" className="mb-6 gap-3 p-4">
                 <FileWarning className="w-5 h-5 shrink-0 mt-0.5" />
                 <div className="flex flex-col gap-1">
                   <span className="font-semibold text-[13px] uppercase tracking-wider">{t("staleReportWarning")}</span>
@@ -209,11 +210,11 @@ export default function ApprovedMultiRepoReportPage({
                     {t("exportBlockedUntilRefresh", { reason: data.staleReason || t("childStateChanged") })}
                   </span>
                 </div>
-              </div>
+              </DenseAlert>
             )}
 
             {data.provenance.domainPack?.domainPackStatus === "PARTIAL" && (
-              <div className="mb-6 flex items-start gap-3 rounded-lg border border-warning/25 bg-warning/8 p-4 text-foreground/80">
+              <DenseAlert variant="warning" className="mb-6 gap-3 p-4 text-foreground/80">
                 <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
                 <div className="flex flex-col gap-1 text-[13px] leading-relaxed">
                   <span className="font-semibold text-foreground">
@@ -226,7 +227,7 @@ export default function ApprovedMultiRepoReportPage({
                   <span>{t("partialWarning2")}</span>
                   <span>{t("partialWarning3")}</span>
                 </div>
-              </div>
+              </DenseAlert>
             )}
 
             <div className="mb-6 flex flex-wrap items-center gap-3 text-[12px] text-muted-foreground">
@@ -266,7 +267,7 @@ export default function ApprovedMultiRepoReportPage({
             />
 
             <ReportMarkdown markdown={data.markdown} />
-          </div>
+          </DenseCard>
         )}
       </div>
     </div>

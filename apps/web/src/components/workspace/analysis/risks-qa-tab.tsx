@@ -4,6 +4,7 @@ import type { ReactNode } from "react"
 import type { AnalysisWorkspaceResponse } from "@ba-helper/contracts"
 import type { AnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
 import { InlineReviewAction } from "../shared/inline-review-action"
+import { DenseCard, DenseCardHeader, DenseCardTitle } from "../shared/dense-card"
 
 export function RisksQaTab({
   risks,
@@ -110,15 +111,15 @@ export function RisksQaTab({
 
 function Panel({ title, count, emptyLabel, children }: { title: string; count: number; emptyLabel: string; children: ReactNode }) {
   return (
-    <div className="rounded-lg border border-border/40 bg-surface flex flex-col overflow-hidden">
-      <div className="px-4 py-3 border-b border-border/40 bg-surface-muted/30 flex items-center justify-between">
-        <h2 className="text-[13px] font-semibold text-foreground">{title}</h2>
+    <DenseCard>
+      <DenseCardHeader className="flex-row items-center justify-between border-b border-border/40 bg-surface-muted/30 px-4 py-3">
+        <DenseCardTitle>{title}</DenseCardTitle>
         <span className="text-[11px] font-medium bg-foreground/10 px-1.5 py-0.5 rounded text-foreground">{count}</span>
-      </div>
+      </DenseCardHeader>
       <div className="flex flex-col divide-y divide-border/40">
         {count > 0 ? children : <p className="p-6 text-center text-[13px] text-muted-foreground">{emptyLabel}</p>}
       </div>
-    </div>
+    </DenseCard>
   )
 }
 

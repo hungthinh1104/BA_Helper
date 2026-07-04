@@ -6,6 +6,7 @@ import { FinalReviewedReportViewer } from "./final-reviewed-report-viewer"
 import { apiGetFile } from "@/lib/api-client"
 import { toast } from "sonner"
 import { useTranslations } from "next-intl"
+import { DenseAlert, DenseCard } from "@/components/workspace/shared/dense-card"
 
 interface FinalReviewGatePanelProps {
   analysisId: string
@@ -44,19 +45,19 @@ export function FinalReviewGatePanel({ analysisId }: FinalReviewGatePanelProps) 
 
   if (isLoading) {
     return (
-      <div className="mt-8 border-t border-border/50 pt-8 print:hidden flex items-center justify-center p-8 bg-surface-muted/50 rounded-lg border border-dashed border-border/40 text-muted-foreground">
+      <DenseCard variant="dashed" className="mt-8 items-center justify-center p-8 text-muted-foreground print:hidden">
         <Loader2 className="w-5 h-5 animate-spin mr-3 opacity-70" />
         <span className="text-[13px] tracking-wide uppercase font-medium">{t("checkingFinalReviewGate")}</span>
-      </div>
+      </DenseCard>
     )
   }
 
   if (error || !completion) {
     return (
-      <div className="mt-8 border-t border-border/50 pt-8 print:hidden flex items-center p-6 bg-destructive/5 rounded-lg border border-destructive/20 text-destructive/80">
+      <DenseAlert variant="danger" className="mt-8 items-center p-6 text-destructive/80 print:hidden">
         <ShieldAlert className="w-5 h-5 mr-3 shrink-0" />
         <span className="text-[13px]">{t("failedReviewCompletionStatus")}</span>
-      </div>
+      </DenseAlert>
     )
   }
 
@@ -83,7 +84,7 @@ export function FinalReviewGatePanel({ analysisId }: FinalReviewGatePanelProps) 
 
   return (
     <div className="mt-8 border-t border-border/50 pt-8 print:hidden">
-      <div className={`p-6 rounded-lg border ${isComplete ? 'bg-success-soft border-success/20' : 'bg-surface border-border/50'} relative overflow-hidden`}>
+      <DenseCard className={`relative p-6 ${isComplete ? 'bg-success-soft border-success/20' : 'bg-surface border-border/50'}`}>
         
         {/* Subtle background decoration */}
         {isComplete && (
@@ -108,30 +109,17 @@ export function FinalReviewGatePanel({ analysisId }: FinalReviewGatePanelProps) 
             </p>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-4">
-              <div className="bg-background rounded-md border border-border/50 p-3">
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">{t("total")}</div>
-                <div className="font-mono text-base">{totalLinks}</div>
-              </div>
-              <div className="bg-background rounded-md border border-border/50 p-3">
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">{t("accepted")}</div>
-                <div className="font-mono text-base text-success">{accepted}</div>
-              </div>
-              <div className="bg-background rounded-md border border-border/50 p-3">
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">{t("rejected")}</div>
-                <div className="font-mono text-base text-destructive">{rejected}</div>
-              </div>
-              <div className="bg-background rounded-md border border-border/50 p-3">
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">{t("needsReviewShort")}</div>
-                <div className="font-mono text-base text-info">{needsReview}</div>
-              </div>
-              <div className="bg-background rounded-md border border-border/50 p-3">
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">{t("moreEvidenceShort")}</div>
-                <div className="font-mono text-base text-warning">{needsMoreEvidence}</div>
-              </div>
-              <div className={`bg-background rounded-md border p-3 ${unreviewed > 0 ? 'border-warning/30' : 'border-border/50'}`}>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">{t("unreviewed")}</div>
-                <div className={`font-mono text-base ${unreviewed > 0 ? 'text-warning' : 'text-muted-foreground'}`}>{unreviewed}</div>
-              </div>
+              <GateMetric label={t("total")} value={totalLinks} />
+              <GateMetric label={t("accepted")} value={accepted} valueClassName="text-success" />
+              <GateMetric label={t("rejected")} value={rejected} valueClassName="text-destructive" />
+              <GateMetric label={t("needsReviewShort")} value={needsReview} valueClassName="text-info" />
+              <GateMetric label={t("moreEvidenceShort")} value={needsMoreEvidence} valueClassName="text-warning" />
+              <GateMetric
+                label={t("unreviewed")}
+                value={unreviewed}
+                className={unreviewed > 0 ? "border-warning/30" : undefined}
+                valueClassName={unreviewed > 0 ? "text-warning" : "text-muted-foreground"}
+              />
             </div>
 
             <div className="mt-4 flex flex-col gap-2">
@@ -182,7 +170,7 @@ export function FinalReviewGatePanel({ analysisId }: FinalReviewGatePanelProps) 
             )}
           </div>
         </div>
-      </div>
+      </DenseCard>
 
       <FinalReviewedReportViewer 
         analysisId={analysisId} 
@@ -190,5 +178,24 @@ export function FinalReviewGatePanel({ analysisId }: FinalReviewGatePanelProps) 
         onOpenChange={setViewerOpen} 
       />
     </div>
+  )
+}
+
+function GateMetric({
+  label,
+  value,
+  className,
+  valueClassName,
+}: {
+  label: string
+  value: number
+  className?: string
+  valueClassName?: string
+}) {
+  return (
+    <DenseCard className={`bg-background p-3 ${className ?? ""}`}>
+      <div className="mb-1 text-[11px] uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className={`font-mono text-base tabular-nums ${valueClassName ?? ""}`}>{value}</div>
+    </DenseCard>
   )
 }

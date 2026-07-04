@@ -8,6 +8,7 @@ import { E2ETimeline } from "@/components/workspace/analysis/e2e-timeline"
 import type { ImpactAnalysisResponse } from "@ba-helper/contracts"
 import { getAnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
 import { useAnalysisWorkspace as useAnalysisWorkspaceReadModel } from "@/hooks/api/use-analyses"
+import { DenseAlert, DenseCard } from "@/components/workspace/shared/dense-card"
 
 type TabValue = "insights" | "graph" | "traceability-matrix" | "qa-coverage" | "review-queue" | "diff" | "lineage"
 
@@ -60,7 +61,7 @@ export function AnalysisTabBar({
         />
       </div>
 
-      <div className="mb-4 rounded-lg border border-border/50 bg-surface px-4 py-2 shadow-sm">
+      <DenseCard className="mb-4 px-4 py-2 shadow-sm">
         <details className="group">
           <summary className="mb-1.5 flex cursor-pointer items-center gap-2 select-none text-xs font-medium text-muted-foreground transition-colors hover:text-foreground">
             <span className="group-open:rotate-90 transition-transform">▶</span>
@@ -77,7 +78,7 @@ export function AnalysisTabBar({
             />
           </div>
         </details>
-      </div>
+      </DenseCard>
 
       <div className="analysis-sticky-header">
         {/* Tab bar */}
@@ -116,14 +117,14 @@ export function AnalysisTabBar({
 
         {/* Global banners */}
         {analysis.freshness.isStale && analysis.status === "WAITING_FOR_REVIEW" && (
-          <div className="mt-3 flex items-center gap-3 px-4 py-2.5 bg-warning/10 border border-warning/25 rounded-lg text-sm text-warning font-medium">
+          <DenseAlert variant="warning" className="mt-3 items-center gap-3 px-4 py-2.5 text-sm font-medium">
             <AlertCircle className="w-5 h-5" />
             This analysis is stale because the repository snapshot has changed. You can still review insights, but finalization is disabled.
-          </div>
+          </DenseAlert>
         )}
 
         {!analysis.freshness.isStale && analysis.status === "WAITING_FOR_REVIEW" && (
-          <div
+          <DenseAlert
             className={`mt-3 flex items-center justify-between gap-3 px-4 py-2.5 border rounded-lg text-sm font-medium ${
               canOpenFinalizeDialog
                 ? "bg-success/10 border-success/25 text-success"
@@ -171,7 +172,7 @@ export function AnalysisTabBar({
                 Finalization is unavailable for this analysis.
               </span>
             )}
-          </div>
+          </DenseAlert>
         )}
       </div>
     </div>

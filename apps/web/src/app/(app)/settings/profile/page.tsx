@@ -4,7 +4,14 @@ import { useTranslations } from "next-intl"
 import { Input } from "@/components/ui/input"
 
 import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
-import { WorkspacePanel, WorkspacePanelSection, WorkspaceProperty } from "@/components/workspace/shared/panel"
+import {
+  DenseCard,
+  DenseCardContent,
+  DenseCardDescription,
+  DenseCardHeader,
+  DenseCardTitle,
+} from "@/components/workspace/shared/dense-card"
+import { WorkspaceProperty } from "@/components/workspace/shared/panel"
 import { useCurrentWorkspace, useWorkspaceRuntime } from "@/lib/project-context"
 import { useSystemHealth } from "@/hooks/api/use-system"
 import type { SystemJobQueueSummary } from "@ba-helper/contracts"
@@ -29,12 +36,13 @@ function ProfileSettingsContent() {
           description={t("runtimeDiagnosticsDescription")}
         />
 
-        <WorkspacePanel>
-          <WorkspacePanelSection
-            title={t("workspaceRuntime")}
-            description={t("workspaceRuntimeDescription")}
-            isLast={true}
-          >
+        <DenseCard className="shadow-sm">
+          <DenseCardContent className="flex flex-col gap-6 p-5 sm:p-6">
+            <DenseCardHeader className="px-0 pb-0 pt-0">
+              <DenseCardTitle>{t("workspaceRuntime")}</DenseCardTitle>
+              <DenseCardDescription>{t("workspaceRuntimeDescription")}</DenseCardDescription>
+            </DenseCardHeader>
+
             <WorkspaceProperty
               label={t("workspaceMode")}
               description={t("workspaceModeDescription")}
@@ -140,8 +148,8 @@ function ProfileSettingsContent() {
                 <JobQueueSummary label={t("documentJobs")} summary={health.data?.operations.documentJobs} />
               </div>
             </WorkspaceProperty>
-          </WorkspacePanelSection>
-        </WorkspacePanel>
+          </DenseCardContent>
+        </DenseCard>
       </div>
     </div>
   )
@@ -150,12 +158,12 @@ function ProfileSettingsContent() {
 function HealthPill({ label, value }: { label: string; value?: "up" | "down" }) {
   const resolved = value ?? "down"
   return (
-    <div className="flex items-center justify-between rounded-md border border-border/60 bg-surface-muted/40 px-3 py-2">
+    <DenseCard variant="muted" className="flex-row items-center justify-between px-3 py-2">
       <span className="font-medium text-foreground/80">{label}</span>
       <span className={resolved === "up" ? "text-success" : "text-destructive"}>
         {resolved.toUpperCase()}
       </span>
-    </div>
+    </DenseCard>
   )
 }
 
@@ -169,7 +177,7 @@ function JobQueueSummary({
   const t = useTranslations("settings")
   const status = summary?.status ?? "down"
   return (
-    <div className="grid grid-cols-1 gap-2 rounded-md border border-border/60 bg-surface-muted/40 px-3 py-2 text-[12px] sm:grid-cols-[1fr_repeat(4,auto)] sm:items-center">
+    <DenseCard variant="muted" className="grid grid-cols-1 gap-2 px-3 py-2 text-[12px] sm:grid-cols-[1fr_repeat(4,auto)] sm:items-center">
       <span className="font-medium text-foreground/80">{label}</span>
       <span className={status === "up" ? "text-success" : "text-destructive"}>
         {status.toUpperCase()}
@@ -177,6 +185,6 @@ function JobQueueSummary({
       <span className="text-muted-foreground">{t("pendingCount", { count: summary?.pending ?? 0 })}</span>
       <span className="text-muted-foreground">{t("runningCount", { count: summary?.running ?? 0 })}</span>
       <span className="text-muted-foreground">{t("failedCount", { count: summary?.failed ?? 0 })}</span>
-    </div>
+    </DenseCard>
   )
 }

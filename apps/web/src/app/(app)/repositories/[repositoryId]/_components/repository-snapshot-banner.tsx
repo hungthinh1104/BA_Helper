@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { ScanJobProgress } from "@/components/workspace/repository/scan-job-progress"
 import type { DiagnosticItem, RepositoryDetailResponse } from "@ba-helper/contracts"
 import { useTranslations } from "next-intl"
+import { DenseAlert, DenseCard } from "@/components/workspace/shared/dense-card"
 
 interface RepositorySnapshotBannerProps {
   job: RepositoryDetailResponse["latestScanJob"] | undefined | null
@@ -45,7 +46,7 @@ export function RepositorySnapshotBanner({
   const failureGuidance = t(getFailureGuidanceKey(job?.error?.code, job?.error?.message ?? primaryDiagnostic?.message))
 
   return (
-    <div className="flex flex-col gap-3 p-5 rounded-xl border border-border/40 bg-surface/50 backdrop-blur-xl shadow-sm">
+    <DenseCard className="gap-3 bg-surface/50 p-5 shadow-sm">
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1 w-full max-w-sm">
           <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">{t("currentSnapshot")}</span>
@@ -58,20 +59,20 @@ export function RepositorySnapshotBanner({
           </div>
         </div>
         {isPartial && !isBlocked && (
-          <div className="flex items-center gap-2 px-3 py-2 bg-warning/10 border border-warning/25 rounded-lg shrink-0">
+          <DenseAlert variant="warning" className="shrink-0 items-center gap-2 px-3 py-2">
             <AlertTriangle className="w-4 h-4 text-warning" />
             <div className="flex flex-col">
               <span className="text-[12px] font-bold text-warning">{t("partialCoverage")}</span>
             </div>
-          </div>
+          </DenseAlert>
         )}
         {isBlocked && (
-          <div className="flex items-center gap-2 px-3 py-2 bg-danger/10 border border-danger/25 rounded-lg shrink-0">
+          <DenseAlert variant="danger" className="shrink-0 items-center gap-2 px-3 py-2">
             <ShieldAlert className="w-4 h-4 text-danger" />
             <div className="flex flex-col">
               <span className="text-[12px] font-bold text-danger">{t("blocked")}</span>
             </div>
-          </div>
+          </DenseAlert>
         )}
       </div>
 
@@ -88,7 +89,7 @@ export function RepositorySnapshotBanner({
       )}
 
       {job?.status === "FAILED" && (
-        <div className="mt-2 flex items-center justify-between p-3 rounded-lg border border-danger/30 bg-danger/5">
+        <DenseAlert variant="danger" className="mt-2 items-center justify-between p-3">
           <div className="flex items-center gap-3">
             <AlertCircle className="w-4 h-4 text-danger shrink-0" />
             <div className="flex flex-col gap-1">
@@ -110,19 +111,19 @@ export function RepositorySnapshotBanner({
           >
             {isRetrying ? t("retrying") : t("rerunScan")}
           </Button>
-        </div>
+        </DenseAlert>
       )}
 
       {job?.status === "FAILED" && (
-        <div className="rounded-lg border border-warning/20 bg-warning/5 p-3">
+        <DenseAlert variant="warning" layout="col" className="gap-1 p-3">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-warning mb-1">
             {t("recommendedAction")}
           </p>
           <p className="text-[12px] text-foreground/85">
             {failureGuidance}
           </p>
-        </div>
+        </DenseAlert>
       )}
-    </div>
+    </DenseCard>
   )
 }

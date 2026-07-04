@@ -1,12 +1,13 @@
 import { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
+import { DenseCard } from "./dense-card"
 
 export function DataList({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("flex flex-col border border-border/60 rounded-xl bg-surface shadow-sm relative", className)}>
+    <DenseCard className={cn("relative shadow-sm", className)}>
       {children}
-    </div>
+    </DenseCard>
   )
 }
 

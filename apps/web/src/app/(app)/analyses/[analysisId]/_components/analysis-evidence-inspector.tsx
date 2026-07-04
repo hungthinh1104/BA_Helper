@@ -5,6 +5,7 @@ import { CodeEvidenceBlock } from "@/components/workspace/analysis/retrieval/cod
 import { ImpactGraphInspector } from "@/components/graph/impact-graph-inspector"
 import { AlertCircle, FileCode2 } from "lucide-react"
 import { ClarificationWidget } from "@/components/workspace/analysis/clarification/clarification-widget"
+import { DenseAlert, DenseCard } from "@/components/workspace/shared/dense-card"
 import type {
   InsightListResponse,
   TraceabilityLinkListResponse,
@@ -96,12 +97,12 @@ export function AnalysisEvidenceInspector({
     return (
       <div className="h-full flex flex-col">
         {!isKnownType && (
-          <div className="mb-4 flex items-start gap-2.5 p-3 bg-warning/10 border border-warning/20 rounded-lg text-sm text-warning">
+          <DenseAlert variant="warning" className="mb-4 gap-2.5 p-3 text-sm">
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
             <p className="leading-snug">
               {t("graphNodeUnsupportedDescription")}
             </p>
-          </div>
+          </DenseAlert>
         )}
         <ImpactGraphInspector
           node={selectedGraphNode}
@@ -127,7 +128,7 @@ export function AnalysisEvidenceInspector({
 
       <div>
         {activeEvidence.length === 0 ? (
-          <div className="flex flex-col items-center text-center py-16 px-4">
+          <DenseCard variant="muted" className="items-center px-4 py-16 text-center">
             <div className="w-14 h-14 rounded-full bg-surface-muted/50 border border-border/40 flex items-center justify-center mb-4 text-muted-foreground shadow-sm">
               <FileCode2 className="w-6 h-6 opacity-60" />
             </div>
@@ -135,7 +136,7 @@ export function AnalysisEvidenceInspector({
             <p className="text-[12px] text-muted-foreground max-w-[240px] leading-relaxed">
               {t("noCodeEvidenceLinkedDescription")}
             </p>
-          </div>
+          </DenseCard>
         ) : (
           activeEvidence.map((ev, i) => (
             <CodeEvidenceBlock key={ev.id} evidence={ev} index={i} total={activeEvidence.length} />

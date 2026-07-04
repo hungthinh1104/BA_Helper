@@ -3,7 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const denseCardVariants = cva(
-  "flex flex-col border rounded-lg overflow-hidden",
+  "flex flex-col overflow-hidden rounded-lg border",
   {
     variants: {
       variant: {
@@ -47,16 +47,28 @@ const DenseCardHeader = React.forwardRef<
 DenseCardHeader.displayName = "DenseCardHeader"
 
 const DenseCardTitle = React.forwardRef<
-  HTMLParagraphElement,
+  HTMLHeadingElement,
   React.HTMLAttributes<HTMLHeadingElement>
 >(({ className, ...props }, ref) => (
   <h3
     ref={ref}
-    className={cn("font-semibold leading-none tracking-tight", className)}
+    className={cn("text-[13px] font-semibold leading-snug text-foreground", className)}
     {...props}
   />
 ))
 DenseCardTitle.displayName = "DenseCardTitle"
+
+const DenseCardDescription = React.forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLParagraphElement>
+>(({ className, ...props }, ref) => (
+  <p
+    ref={ref}
+    className={cn("text-[12px] leading-relaxed text-muted-foreground", className)}
+    {...props}
+  />
+))
+DenseCardDescription.displayName = "DenseCardDescription"
 
 const DenseCardContent = React.forwardRef<
   HTMLDivElement,
@@ -73,8 +85,8 @@ const denseAlertVariants = cva(
       variant: {
         default: "bg-surface-muted border-border text-foreground",
         primary: "bg-primary/10 border-primary/20 text-primary",
-        success: "bg-success/8 border-success/25 text-success-foreground",
-        warning: "bg-warning/8 border-warning/25 text-warning-foreground",
+        success: "bg-success/8 border-success/25 text-success",
+        warning: "bg-warning/8 border-warning/25 text-warning",
         danger: "bg-danger/8 border-danger/25 text-danger",
         info: "bg-info/8 border-info/25 text-info",
       },
@@ -95,14 +107,27 @@ export interface DenseAlertProps
     VariantProps<typeof denseAlertVariants> {}
 
 const DenseAlert = React.forwardRef<HTMLDivElement, DenseAlertProps>(
-  ({ className, variant, layout, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn(denseAlertVariants({ variant, layout }), className)}
-      {...props}
-    />
-  )
+  ({ className, variant, layout, role, ...props }, ref) => {
+    const alertRole =
+      role ?? (variant === "danger" || variant === "warning" ? "alert" : "status")
+
+    return (
+      <div
+        ref={ref}
+        role={alertRole}
+        className={cn(denseAlertVariants({ variant, layout }), className)}
+        {...props}
+      />
+    )
+  }
 )
 DenseAlert.displayName = "DenseAlert"
 
-export { DenseCard, DenseCardHeader, DenseCardTitle, DenseCardContent, DenseAlert }
+export {
+  DenseCard,
+  DenseCardHeader,
+  DenseCardTitle,
+  DenseCardDescription,
+  DenseCardContent,
+  DenseAlert,
+}

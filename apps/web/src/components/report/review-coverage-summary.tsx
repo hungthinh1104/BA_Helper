@@ -1,5 +1,6 @@
 import type { ApprovedImpactReportResponse } from "@ba-helper/contracts"
 import { useTranslations } from "next-intl"
+import { DenseCard } from "@/components/workspace/shared/dense-card"
 
 interface ReviewCoverageSummaryProps {
   summary: ApprovedImpactReportResponse["reviewCoverageSummary"]
@@ -38,11 +39,11 @@ export function ReviewCoverageSummary({ summary }: ReviewCoverageSummaryProps) {
 
 function CoverageMetric({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="flex flex-col rounded-lg border border-border/50 bg-surface px-4 py-3">
+    <DenseCard className="px-4 py-3">
       <span className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
         {label}
       </span>
       <span className="text-xl font-semibold text-foreground">{value}</span>
-    </div>
+    </DenseCard>
   )
 }

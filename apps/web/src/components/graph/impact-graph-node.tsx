@@ -8,6 +8,7 @@ import {
   Route, Settings, Database, FlaskConical,
   Lightbulb, HelpCircle, ClipboardCheck, FileText, Activity
 } from "lucide-react"
+import { DenseCard } from "@/components/workspace/shared/dense-card"
 
 const TYPE_CONFIG: Record<string, { icon: React.FC<{ className?: string }>, color: string, bg: string, border: string }> = {
   REQUIREMENT:    { icon: FileText,       color: "text-accent",   bg: "bg-accent/10",    border: "border-accent/30" },
@@ -45,9 +46,10 @@ export const ImpactGraphNodeComponent = memo(function ImpactGraphNodeComponent({
   const isAbsoluteRoot = data.type === "REQUIREMENT"
 
   return (
-    <div
+    <DenseCard
+      aria-selected={selected}
       className={`
-        group relative flex flex-col gap-1 px-3 py-2 rounded-xl border transition-all duration-150 cursor-pointer min-w-[160px] max-w-[220px]
+        group relative flex flex-col gap-1 px-3 py-2 transition-all duration-150 cursor-pointer min-w-[160px] max-w-[220px]
         ${cfg.bg} ${cfg.border} border
         ${selected ? "ring-2 ring-offset-1 ring-offset-transparent ring-primary shadow-lg shadow-primary/20" : "hover:shadow-md hover:shadow-black/20"}
         ${reviewClass}
@@ -96,6 +98,6 @@ export const ImpactGraphNodeComponent = memo(function ImpactGraphNodeComponent({
           return null
         })()}
       </div>
-    </div>
+    </DenseCard>
   )
 })

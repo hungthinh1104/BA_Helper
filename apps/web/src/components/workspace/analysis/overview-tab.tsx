@@ -12,6 +12,7 @@ import type { AnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
 import { InlineReviewAction } from "../shared/inline-review-action"
 import { AlertTriangle, Code, ShieldAlert } from "lucide-react"
 import { EvidenceCommandCenter } from "./evidence-command-center"
+import { DenseCard, DenseCardHeader, DenseCardTitle } from "../shared/dense-card"
 
 export function OverviewTab({
   workspace,
@@ -45,10 +46,10 @@ export function OverviewTab({
   return (
     <section className="flex flex-col gap-4">
       {/* Executive Summary */}
-      <div className="rounded-lg border border-border/40 bg-surface flex flex-col overflow-hidden">
-        <div className="px-4 py-3 border-b border-border/40 bg-surface-muted/30">
-          <h2 className="text-[13px] font-semibold text-foreground">{labels.derivedAnalysisSummary}</h2>
-        </div>
+      <DenseCard>
+        <DenseCardHeader className="border-b border-border/40 bg-surface-muted/30 px-4 py-3">
+          <DenseCardTitle>{labels.derivedAnalysisSummary}</DenseCardTitle>
+        </DenseCardHeader>
         <div className="p-4">
           <p className="text-[13px] text-foreground leading-relaxed">{derivedSummary}</p>
           <p className="mt-3 text-[12px] text-muted-foreground bg-surface-muted/50 p-2 rounded">
@@ -61,17 +62,17 @@ export function OverviewTab({
           <InfoRow label={labels.reportStatus} value={getLocalizedLabel(reportStatusLabels, reportStatus.status, locale)} />
           <InfoRow label={labels.driftStatus} value={getLocalizedLabel(driftStatusLabels, driftStatus.status, locale)} />
         </div>
-      </div>
+      </DenseCard>
 
       <EvidenceCommandCenter workspace={workspace} labels={labels} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Top Next Actions */}
-        <div className="rounded-lg border border-border/40 bg-surface flex flex-col overflow-hidden">
-          <div className="px-4 py-3 border-b border-border/40 bg-surface-muted/30 flex items-center justify-between">
-            <h2 className="text-[13px] font-semibold text-foreground">{labels.topNextActions}</h2>
+        <DenseCard>
+          <DenseCardHeader className="flex-row items-center justify-between border-b border-border/40 bg-surface-muted/30 px-4 py-3">
+            <DenseCardTitle>{labels.topNextActions}</DenseCardTitle>
             {topActions.length > 0 && <span className="text-[10px] font-medium bg-foreground/10 px-1.5 py-0.5 rounded uppercase">{labels.totalPending.replace("{count}", String(counts.pendingReviewItems))}</span>}
-          </div>
+          </DenseCardHeader>
           <div className="flex flex-col divide-y divide-border/40">
             {topActions.length === 0 ? (
               <div className="p-6 text-center text-[13px] text-muted-foreground">{labels.noPendingActions}</div>
@@ -89,14 +90,14 @@ export function OverviewTab({
               ))
             )}
           </div>
-        </div>
+        </DenseCard>
 
         {/* Top Blocking Items */}
-        <div className="rounded-lg border border-border/40 bg-surface flex flex-col overflow-hidden">
-          <div className="px-4 py-3 border-b border-border/40 bg-surface-muted/30 flex items-center gap-2">
+        <DenseCard>
+          <DenseCardHeader className="flex-row items-center gap-2 border-b border-border/40 bg-surface-muted/30 px-4 py-3">
             <ShieldAlert className="w-4 h-4 text-destructive" />
-            <h2 className="text-[13px] font-semibold text-foreground">{labels.topFinalizeBlockers}</h2>
-          </div>
+            <DenseCardTitle>{labels.topFinalizeBlockers}</DenseCardTitle>
+          </DenseCardHeader>
           <div className="flex flex-col divide-y divide-border/40">
             {topBlockers.length === 0 ? (
               <div className="p-6 text-center text-[13px] text-muted-foreground">{labels.noBlockingItems}</div>
@@ -114,14 +115,14 @@ export function OverviewTab({
               ))
             )}
           </div>
-        </div>
+        </DenseCard>
 
         {/* Top Impacted Artifacts */}
-        <div className="rounded-lg border border-border/40 bg-surface flex flex-col overflow-hidden">
-          <div className="px-4 py-3 border-b border-border/40 bg-surface-muted/30 flex items-center gap-2">
+        <DenseCard>
+          <DenseCardHeader className="flex-row items-center gap-2 border-b border-border/40 bg-surface-muted/30 px-4 py-3">
             <Code className="w-4 h-4 text-primary" />
-            <h2 className="text-[13px] font-semibold text-foreground">{labels.topImpactedArtifacts}</h2>
-          </div>
+            <DenseCardTitle>{labels.topImpactedArtifacts}</DenseCardTitle>
+          </DenseCardHeader>
           <div className="flex flex-col divide-y divide-border/40">
             {topImpacts.length === 0 ? (
               <div className="p-6 text-center text-[13px] text-muted-foreground">{labels.noImpactedArtifacts}</div>
@@ -139,14 +140,14 @@ export function OverviewTab({
               ))
             )}
           </div>
-        </div>
+        </DenseCard>
 
         {/* Top Risks and Unknowns */}
-        <div className="rounded-lg border border-border/40 bg-surface flex flex-col overflow-hidden">
-          <div className="px-4 py-3 border-b border-border/40 bg-surface-muted/30 flex items-center gap-2">
+        <DenseCard>
+          <DenseCardHeader className="flex-row items-center gap-2 border-b border-border/40 bg-surface-muted/30 px-4 py-3">
             <AlertTriangle className="w-4 h-4 text-warning" />
-            <h2 className="text-[13px] font-semibold text-foreground">{labels.topHighRisksUnknowns}</h2>
-          </div>
+            <DenseCardTitle>{labels.topHighRisksUnknowns}</DenseCardTitle>
+          </DenseCardHeader>
           <div className="flex flex-col divide-y divide-border/40">
             {topRisksAndUnknowns.length === 0 ? (
               <div className="p-6 text-center text-[13px] text-muted-foreground">{labels.noHighRisksUnknowns}</div>
@@ -164,7 +165,7 @@ export function OverviewTab({
               ))
             )}
           </div>
-        </div>
+        </DenseCard>
       </div>
     </section>
   )

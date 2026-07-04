@@ -13,6 +13,7 @@ import { Suspense } from "react"
 import { AnalysisStatusBadge } from "@/components/workspace/shared/status-badges"
 import { normalizeAppLocale } from "@/i18n/app-locale"
 import { useTranslations } from "next-intl"
+import { DenseAlert } from "@/components/workspace/shared/dense-card"
 
 function ReportsPageContent() {
   const t = useTranslations("reports")
@@ -55,7 +56,7 @@ function ReportsPageContent() {
         />
 
         {urlAnalysisId && !completedAnalyses.some(a => a.id === urlAnalysisId) && !isLoading && (
-          <div className="mb-6 flex items-start gap-3 p-4 bg-warning/10 border border-warning/20 rounded-xl">
+          <DenseAlert variant="warning" className="mb-6 gap-3 p-4">
             <AlertTriangle className="w-5 h-5 text-warning shrink-0 mt-0.5" />
             <div className="flex flex-col gap-1">
               <h3 className="text-[13px] font-semibold text-warning">{t("reportUnavailable")}</h3>
@@ -63,7 +64,7 @@ function ReportsPageContent() {
                 {t("reportUnavailableDescription")}
               </p>
             </div>
-          </div>
+          </DenseAlert>
         )}
 
         <DataList>

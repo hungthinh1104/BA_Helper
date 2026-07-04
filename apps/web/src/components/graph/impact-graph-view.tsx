@@ -18,6 +18,7 @@ import "@xyflow/react/dist/style.css"
 import dagre from "dagre"
 import { ImpactGraphNode, ImpactGraphEdge } from "@ba-helper/contracts"
 import { ImpactGraphNodeComponent } from "./impact-graph-node"
+import { DenseAlert } from "@/components/workspace/shared/dense-card"
 
 const NODE_WIDTH = 220
 const NODE_HEIGHT = 90
@@ -105,9 +106,9 @@ export function ImpactGraphView({ nodes: rawNodes, edges: rawEdges, isTruncated,
   return (
     <div className="relative h-full w-full bg-surface">
       {isTruncated && (
-        <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 px-2.5 py-1.5 bg-warning/10 border border-warning/30 rounded-lg text-[11px] text-warning font-medium shadow-sm">
+        <DenseAlert variant="warning" className="absolute left-3 top-3 z-10 items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium shadow-sm">
           ⚠ Graph truncated — showing most relevant nodes
-        </div>
+        </DenseAlert>
       )}
       <ReactFlow
         nodes={nodes}
@@ -124,9 +125,9 @@ export function ImpactGraphView({ nodes: rawNodes, edges: rawEdges, isTruncated,
         attributionPosition="bottom-right"
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="var(--border)" />
-        <Controls className="!bg-surface !border-border !rounded-xl" />
+        <Controls className="!rounded-lg !border-border !bg-surface" />
         <MiniMap
-          className="!bg-surface !border-border !rounded-xl"
+          className="!rounded-lg !border-border !bg-surface"
           nodeColor={(n) => {
             const t = (n.data as ImpactGraphNode).type
             return t === "REQUIREMENT" ? "var(--accent)" :

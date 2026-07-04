@@ -5,6 +5,7 @@ import { ArtifactKindBadge } from "@/components/workspace/shared/status-badges"
 import { evidenceBasisLabels, getLocalizedLabel, type SupportedLocale } from "@/lib/i18n/status-labels"
 import type { AnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
 import { InlineReviewAction } from "../shared/inline-review-action"
+import { DenseCard, DenseCardDescription, DenseCardHeader, DenseCardTitle } from "../shared/dense-card"
 
 type ImpactGroup = AnalysisWorkspaceResponse["impactGroups"][number]
 type EvidenceCard = AnalysisWorkspaceResponse["evidenceCards"][number]
@@ -31,11 +32,11 @@ export function ImpactMapTab({
   return (
     <section className="grid gap-4">
       {groups.map((group) => (
-        <div key={group.group} className="rounded-lg border border-border/40 bg-surface flex flex-col overflow-hidden">
-          <div className="px-4 py-3 border-b border-border/40 bg-surface-muted/30">
-            <h2 className="text-[13px] font-semibold text-foreground">{group.title}</h2>
-            <p className="text-[12px] text-muted-foreground mt-0.5">{group.description}</p>
-          </div>
+        <DenseCard key={group.group}>
+          <DenseCardHeader className="border-b border-border/40 bg-surface-muted/30 px-4 py-3">
+            <DenseCardTitle>{group.title}</DenseCardTitle>
+            <DenseCardDescription>{group.description}</DenseCardDescription>
+          </DenseCardHeader>
           <div className="flex flex-col divide-y divide-border/40">
             {group.artifacts.map((artifact) => {
               const firstEvidence = artifact.evidenceIds.length > 0 
@@ -83,7 +84,7 @@ export function ImpactMapTab({
               )
             })}
           </div>
-        </div>
+        </DenseCard>
       ))}
     </section>
   )
@@ -91,8 +92,8 @@ export function ImpactMapTab({
 
 function EmptyState({ title }: { title: string }) {
   return (
-    <div className="rounded-lg border border-border/60 bg-surface p-8 text-center text-sm text-muted-foreground">
+    <DenseCard className="p-8 text-center text-sm text-muted-foreground">
       {title}
-    </div>
+    </DenseCard>
   )
 }

@@ -5,6 +5,12 @@ import type { ReactNode } from "react"
 import type { AnalysisWorkspaceResponse } from "@ba-helper/contracts"
 import { AlertTriangle, Code, FileWarning, ShieldCheck } from "lucide-react"
 import type { AnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
+import {
+  DenseCard,
+  DenseCardDescription,
+  DenseCardHeader,
+  DenseCardTitle,
+} from "../shared/dense-card"
 
 type OverviewLabels = AnalysisWorkspaceLabels["overview"]
 
@@ -18,22 +24,18 @@ export function EvidenceCommandCenter({
   const model = useMemo(() => buildEvidenceModel(workspace), [workspace])
 
   return (
-    <section className="rounded-lg border border-border/40 bg-surface flex flex-col overflow-hidden">
-      <div className="border-b border-border/40 bg-surface-muted/30 px-4 py-3">
+    <DenseCard>
+      <DenseCardHeader className="border-b border-border/40 bg-surface-muted/30 px-4 py-3">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-[13px] font-semibold text-foreground">
-              {labels.evidenceCommandCenter}
-            </h2>
-            <p className="text-[12px] text-muted-foreground">
-              {labels.evidenceCommandCenterDescription}
-            </p>
+            <DenseCardTitle>{labels.evidenceCommandCenter}</DenseCardTitle>
+            <DenseCardDescription>{labels.evidenceCommandCenterDescription}</DenseCardDescription>
           </div>
           <span className="w-fit rounded border border-border/60 bg-background/60 px-2 py-1 text-[11px] font-mono text-muted-foreground">
             {labels.sourceSnapshot.replace("{commit}", workspace.overview.snapshot.commitSha.slice(0, 7))}
           </span>
         </div>
-      </div>
+      </DenseCardHeader>
 
       <div className="grid gap-px bg-border/40 md:grid-cols-4">
         <EvidenceStat
@@ -142,7 +144,7 @@ export function EvidenceCommandCenter({
           </div>
         </div>
       </div>
-    </section>
+    </DenseCard>
   )
 }
 

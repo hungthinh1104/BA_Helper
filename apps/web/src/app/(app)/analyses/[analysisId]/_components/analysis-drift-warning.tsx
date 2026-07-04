@@ -11,6 +11,7 @@ import { DriftDetailsDrawer } from "./drift-details-drawer"
 import { v4 as uuidv4 } from "uuid"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
+import { DenseAlert } from "@/components/workspace/shared/dense-card"
 
 interface AnalysisDriftWarningProps {
   projectId: string | undefined
@@ -83,18 +84,18 @@ export function AnalysisDriftWarning({ projectId, analysisId, analysis }: Analys
 
   if (status === 'CURRENT') {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 bg-surface-soft/40 border border-border/30 rounded-lg text-muted-foreground">
+      <DenseAlert className="items-center gap-2 border-border/30 bg-surface-soft/40 px-3 py-2 text-muted-foreground">
         <Info className="w-4 h-4 shrink-0 text-foreground/50" />
         <span className="text-[12px] font-medium leading-relaxed">
           {reason || "This analysis is based on the latest usable repository snapshot."}
         </span>
-      </div>
+      </DenseAlert>
     )
   }
 
   if (status === 'UNKNOWN') {
     return (
-      <div className="flex items-center gap-3 px-4 py-3 bg-warning/5 border border-warning/20 rounded-lg text-foreground/80 shadow-sm">
+      <DenseAlert variant="warning" className="items-center gap-3 px-4 py-3 text-foreground/80 shadow-sm">
         <AlertCircle className="w-5 h-5 shrink-0 text-warning" />
         <span className="text-[13px] font-medium leading-relaxed">
           {reason || "Repository freshness cannot be fully determined because some artifacts do not have content hashes."}
@@ -108,19 +109,19 @@ export function AnalysisDriftWarning({ projectId, analysisId, analysis }: Analys
           baseSnapshotId={analysis.snapshot.id}
           targetCommitSha={repoDetail?.latestSnapshot?.commitSha}
         />
-      </div>
+      </DenseAlert>
     )
   }
 
   if (status === 'INCOMPATIBLE') {
     return (
-      <div className="flex items-center gap-3 px-4 py-3 bg-danger/10 border border-danger/20 rounded-lg text-foreground/90 shadow-sm">
+      <DenseAlert variant="danger" className="items-center gap-3 px-4 py-3 text-foreground/90 shadow-sm">
         <ShieldAlert className="w-5 h-5 shrink-0 text-danger" />
         <span className="text-[13px] font-medium leading-relaxed flex-1">
           {reason || "Repository scanner/analyzer versions changed significantly. Re-analysis is recommended."}
         </span>
         {rerunCTA}
-      </div>
+      </DenseAlert>
     )
   }
 
@@ -129,11 +130,11 @@ export function AnalysisDriftWarning({ projectId, analysisId, analysis }: Analys
 
   return (
     <>
-      <div className={cn(
-        "flex items-center gap-3 px-4 py-3 rounded-lg border shadow-sm",
+      <DenseAlert className={cn(
+        "items-center gap-3 px-4 py-3 shadow-sm",
         isHighSeverity
           ? "bg-warning/10 border-warning/30 text-foreground/90"
-          : "bg-warning/5 border-warning/20 text-foreground/80"
+          : "bg-warning/5 border-warning/20 text-foreground/80",
       )}>
         <AlertCircle className={cn("w-5 h-5 shrink-0", isHighSeverity ? "text-warning" : "text-warning/80")} />
 
@@ -166,7 +167,7 @@ export function AnalysisDriftWarning({ projectId, analysisId, analysis }: Analys
           {reviewCTA}
           {shouldRerunAnalysis && rerunCTA}
         </div>
-      </div>
+      </DenseAlert>
 
       <DriftDetailsDrawer
         open={drawerOpen}

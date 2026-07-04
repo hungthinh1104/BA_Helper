@@ -17,6 +17,7 @@ import type { AnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
 import { InlineReviewAction } from "../shared/inline-review-action"
 import { useTranslations } from "next-intl"
 import { DEFAULT_APP_LOCALE } from "@/i18n/app-locale"
+import { DenseAlert, DenseCard, DenseCardHeader, DenseCardTitle } from "../shared/dense-card"
 
 export function ReviewReportTab({
   workspace,
@@ -71,11 +72,11 @@ export function ReviewReportTab({
 
   return (
     <section className="grid gap-4 xl:grid-cols-[1fr_360px]">
-      <div className="rounded-lg border border-border/40 bg-surface flex flex-col overflow-hidden">
-        <div className="flex flex-col gap-3 px-4 py-3 border-b border-border/40 bg-surface-muted/30">
+      <DenseCard>
+        <DenseCardHeader className="gap-3 border-b border-border/40 bg-surface-muted/30 px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-[13px] font-semibold text-foreground">{labels.reviewQueue}</h2>
+              <DenseCardTitle>{labels.reviewQueue}</DenseCardTitle>
               <p className="mt-0.5 text-[12px] text-muted-foreground">
                 {t("reviewedCount", { reviewed: reviewedItems, total: totalItems })} · {t("blockingFinalizationCount", { count: blockingCount })}
               </p>
@@ -95,7 +96,7 @@ export function ReviewReportTab({
               </button>
             ))}
           </div>
-        </div>
+        </DenseCardHeader>
 
         <div className="flex flex-col divide-y divide-border/40">
           {filteredQueue.length === 0 ? (
@@ -140,12 +141,12 @@ export function ReviewReportTab({
             ))
           )}
         </div>
-      </div>
+      </DenseCard>
 
-      <aside className="rounded-lg border border-border/40 bg-surface flex flex-col overflow-hidden">
-        <div className="px-4 py-3 border-b border-border/40 bg-surface-muted/30">
-          <h2 className="text-[13px] font-semibold text-foreground">{labels.reportStatus}</h2>
-        </div>
+      <DenseCard className="flex flex-col">
+        <DenseCardHeader className="border-b border-border/40 bg-surface-muted/30 px-4 py-3">
+          <DenseCardTitle>{labels.reportStatus}</DenseCardTitle>
+        </DenseCardHeader>
         <div className="flex flex-col divide-y divide-border/40">
           <StatusLine label={labels.report} value={getLocalizedLabel(reportStatusLabels, reportStatus.status, locale)} />
           <StatusLine label={labels.drift} value={getLocalizedLabel(driftStatusLabels, workspace.driftStatus.status, locale)} />
@@ -155,7 +156,7 @@ export function ReviewReportTab({
           <StatusLine label={labels.reviewedSnapshot} value={reportStatus.reviewedReportSnapshotId ?? getLocalizedLabel(exportStatusLabels, "none", locale)} mono />
         </div>
         {reportStatus.finalizeBlockingReasons.length > 0 ? (
-          <div className="border-t border-border/40 bg-destructive/5 px-4 py-3">
+          <DenseAlert variant="danger" layout="col" className="rounded-none border-x-0 border-b-0 border-t border-border/40 px-4 py-3">
             <div className="text-[10px] font-semibold uppercase tracking-wide text-destructive">
               {hasLegacyReportStatusContract(reportStatus.finalizeBlockingReasons)
                 ? t("backendCapabilityUnavailable")
@@ -171,7 +172,7 @@ export function ReviewReportTab({
                 </span>
               ))}
             </div>
-          </div>
+          </DenseAlert>
         ) : null}
 
         <div className="p-4 border-t border-border/40 bg-surface-muted/10">
@@ -210,7 +211,7 @@ export function ReviewReportTab({
             />
           </div>
         </div>
-      </aside>
+      </DenseCard>
     </section>
   )
 }

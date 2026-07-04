@@ -5,6 +5,7 @@ import type { AnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
 import { Copy } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { DenseCard } from "../shared/dense-card"
 
 type EvidenceCard = AnalysisWorkspaceResponse["evidenceCards"][number]
 
@@ -17,15 +18,15 @@ export function EvidenceTab({
 }) {
   if (evidenceCards.length === 0) {
     return (
-      <div className="rounded-lg border border-border/60 bg-surface p-8 text-center text-sm text-muted-foreground">
+      <DenseCard className="p-8 text-center text-sm text-muted-foreground">
         {labels.empty}
-      </div>
+      </DenseCard>
     )
   }
 
   return (
     <section className="flex flex-col gap-4">
-      <div className="rounded-lg border border-border/40 bg-surface flex flex-col overflow-hidden">
+      <DenseCard>
         <div className="flex flex-col divide-y divide-border/40">
           {evidenceCards.map((card) => (
             <article key={card.evidenceId} className="flex flex-col p-4 hover:bg-surface-muted/30 transition-colors gap-3">
@@ -74,7 +75,7 @@ export function EvidenceTab({
             </article>
           ))}
         </div>
-      </div>
+      </DenseCard>
     </section>
   )
 }

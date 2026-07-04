@@ -2,6 +2,7 @@ import React, { useState } from "react"
 import { useTranslations } from "next-intl"
 import { ShieldCheck, ShieldAlert, Shield, ChevronRight, FileCode2 } from "lucide-react"
 import { QaCoverageItem } from "@ba-helper/contracts"
+import { DenseCard, DenseCardDescription, DenseCardHeader, DenseCardTitle } from "../../shared/dense-card"
 
 interface Props {
   coverageItems: QaCoverageItem[]
@@ -18,10 +19,10 @@ export function QaCoveragePanel({ coverageItems, onSelectArtifact }: Props) {
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl pb-12">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">{t("qaCoverageGapMap")}</h2>
-          <p className="text-[11px] text-muted-foreground mt-0.5">{t("qaCoverageDescription")}</p>
+      <DenseCardHeader className="flex-row items-center justify-between p-0">
+        <div className="space-y-0.5">
+          <DenseCardTitle>{t("qaCoverageGapMap")}</DenseCardTitle>
+          <DenseCardDescription>{t("qaCoverageDescription")}</DenseCardDescription>
         </div>
         <div className="flex bg-surface-muted border border-border rounded-md overflow-hidden text-[11px] font-medium">
           <button 
@@ -37,14 +38,14 @@ export function QaCoveragePanel({ coverageItems, onSelectArtifact }: Props) {
             {t("gapsOnly")}
           </button>
         </div>
-      </div>
+      </DenseCardHeader>
       
       <div className="flex flex-col gap-3">
         {displayItems.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+          <DenseCard variant="muted" className="flex flex-col items-center justify-center py-10 text-muted-foreground">
             <ShieldCheck className="w-10 h-10 mb-2 opacity-50" />
             <p className="text-sm font-medium">{t("noArtifactsFound")}</p>
-          </div>
+          </DenseCard>
         ) : (
           displayItems.map(item => (
             <QaCoverageRow key={item.artifactId} item={item} onClick={() => onSelectArtifact(item.artifactId)} />
@@ -80,9 +81,17 @@ function QaCoverageRow({ item, onClick }: { item: QaCoverageItem, onClick: () =>
   else if (item.severity === "MEDIUM" && item.status === "NO_TEST_FOUND") riskClass = "text-warning"
   
   return (
-    <div 
-      className="group relative flex flex-col p-3 rounded-lg border border-border bg-surface hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer overflow-hidden"
+    <DenseCard
+      role="button"
+      tabIndex={0}
+      className="group relative flex flex-col p-3 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer"
       onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault()
+          onClick()
+        }
+      }}
     >
       <div className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition-opacity">
         <ChevronRight className="w-4 h-4 text-muted-foreground" />
@@ -122,6 +131,6 @@ function QaCoverageRow({ item, onClick }: { item: QaCoverageItem, onClick: () =>
           {item.suggestedAction}
         </div>
       </div>
-    </div>
+    </DenseCard>
   )
 }

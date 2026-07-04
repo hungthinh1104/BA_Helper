@@ -6,6 +6,7 @@ import { AffectedArtifactCard } from "@/components/workspace/analysis/affected-a
 import { InsightFilterBar, type InsightFilterValue } from "@/components/workspace/analysis/insight/insight-filter-bar"
 import { Button } from "@/components/ui/button"
 import type { InsightListResponse, TraceabilityLinkListResponse } from "@ba-helper/contracts"
+import { DenseCard } from "@/components/workspace/shared/dense-card"
 
 type Insight = InsightListResponse["items"][number]
 type TraceabilityLink = TraceabilityLinkListResponse["items"][number]
@@ -85,22 +86,10 @@ export function AnalysisInsightsTab({
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <div className="rounded-lg border border-border/60 bg-surface-muted/40 px-3 py-2">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{t("evidenceBackedClaims")}</p>
-          <p className="mt-1 text-sm font-semibold text-foreground">{claims.length}</p>
-        </div>
-        <div className="rounded-lg border border-border/60 bg-surface-muted/40 px-3 py-2">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{t("unknownsRisks")}</p>
-          <p className="mt-1 text-sm font-semibold text-foreground">{unknowns.length}</p>
-        </div>
-        <div className="rounded-lg border border-border/60 bg-surface-muted/40 px-3 py-2">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{t("qaScenarios")}</p>
-          <p className="mt-1 text-sm font-semibold text-foreground">{qaScenarios.length}</p>
-        </div>
-        <div className="rounded-lg border border-border/60 bg-surface-muted/40 px-3 py-2">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{t("reviewRemaining")}</p>
-          <p className="mt-1 text-sm font-semibold text-foreground">{blockingRemaining}</p>
-        </div>
+        <InsightMetric label={t("evidenceBackedClaims")} value={claims.length} />
+        <InsightMetric label={t("unknownsRisks")} value={unknowns.length} />
+        <InsightMetric label={t("qaScenarios")} value={qaScenarios.length} />
+        <InsightMetric label={t("reviewRemaining")} value={blockingRemaining} />
       </div>
 
       <div className="flex flex-col gap-7 max-w-4xl pb-12">
@@ -165,7 +154,7 @@ export function AnalysisInsightsTab({
         )}
 
         {filteredInsights.length === 0 && filter !== "ALL" && (
-          <div className="flex flex-col items-center text-center py-12 px-8 border border-dashed border-border/50 rounded-xl bg-surface-muted/20">
+          <DenseCard variant="dashed" className="items-center px-8 py-12 text-center">
             <div className="w-10 h-10 rounded-lg bg-surface border border-border/50 flex items-center justify-center mb-3">
               <span className="text-sm text-muted-foreground">{t("noMatch")}</span>
             </div>
@@ -175,9 +164,18 @@ export function AnalysisInsightsTab({
                 strong: (chunks) => <strong>{chunks}</strong>,
               })}
             </p>
-          </div>
+          </DenseCard>
         )}
       </div>
     </div>
+  )
+}
+
+function InsightMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <DenseCard variant="muted" className="px-3 py-2">
+      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-foreground tabular-nums">{value}</p>
+    </DenseCard>
   )
 }

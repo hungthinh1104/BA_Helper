@@ -7,6 +7,13 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { useReviewCoverage } from "@/hooks/api/use-review-coverage"
 import { ReviewCoverageGate } from "@ba-helper/contracts"
 import { MetricCard } from "@/components/workspace/shared/primitives"
+import {
+  DenseAlert,
+  DenseCard,
+  DenseCardContent,
+  DenseCardHeader,
+  DenseCardTitle,
+} from "@/components/workspace/shared/dense-card"
 
 
 function GateStatusBadge({ status }: { status: "PASS" | "WARN" | "FAIL" }) {
@@ -43,7 +50,7 @@ function GateItem({ gate }: { gate: ReviewCoverageGate }) {
   const affectedRepoCount = gate.affectedRepositoryIds?.length ?? 0
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-3 text-[13px] transition-colors hover:bg-[var(--surface-soft)]">
+    <DenseCard variant="muted" className="gap-2 p-3 text-[13px] transition-colors hover:bg-surface-soft">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
@@ -88,7 +95,7 @@ function GateItem({ gate }: { gate: ReviewCoverageGate }) {
           )}
         </div>
       </div>
-    </div>
+    </DenseCard>
   )
 }
 
@@ -100,7 +107,7 @@ export function ReviewCoveragePanel({ runId }: { runId: string }) {
     return (
       <div className="mb-6 space-y-4">
         <div className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">{t("reviewCoverage")}</div>
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+        <DenseCard className="p-4 shadow-sm">
           <div className="space-y-4">
             <Skeleton className="h-10 w-full max-w-sm" />
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
@@ -109,7 +116,7 @@ export function ReviewCoveragePanel({ runId }: { runId: string }) {
               ))}
             </div>
           </div>
-        </div>
+        </DenseCard>
       </div>
     )
   }
@@ -118,10 +125,10 @@ export function ReviewCoveragePanel({ runId }: { runId: string }) {
     return (
       <div className="mb-6 space-y-4">
         <div className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">{t("reviewCoverage")}</div>
-        <div className="rounded-xl border border-[var(--danger-soft)] bg-[var(--danger-soft)] p-4 text-[13px] text-[var(--danger)] shadow-sm">
+        <DenseAlert variant="danger" className="text-[13px] shadow-sm">
           <AlertCircle className="mr-2 inline-block h-4 w-4" />
           {t("unableLoadReviewCoverage")}
-        </div>
+        </DenseAlert>
       </div>
     )
   }
@@ -132,8 +139,8 @@ export function ReviewCoveragePanel({ runId }: { runId: string }) {
     <div className="mb-6 space-y-4">
       <div className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">{t("reviewCoverage")}</div>
       
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-[var(--border)] bg-[var(--surface-muted)]">
+      <DenseCard className="shadow-sm">
+        <DenseCardHeader className="border-b border-border/40 bg-surface-muted/30 px-4 py-3">
           <div className="flex items-center gap-3">
             {data.status === "PASS" && (
               <div className="flex items-center gap-2 text-[var(--success)]">
@@ -154,9 +161,9 @@ export function ReviewCoveragePanel({ runId }: { runId: string }) {
               </div>
             )}
           </div>
-        </div>
+        </DenseCardHeader>
 
-        <div className="p-4">
+        <DenseCardContent className="p-4">
           <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3 mb-6">
             <MetricCard label={t("reposAccepted")} value={data.summary.acceptedRepositories} />
             <MetricCard label={t("impactedArtifacts")} value={data.summary.impactedArtifacts} />
@@ -183,7 +190,7 @@ export function ReviewCoveragePanel({ runId }: { runId: string }) {
           </div>
 
           <div className="space-y-3">
-            <h3 className="text-sm font-medium text-[var(--text-primary)]">{t("coverageGates")}</h3>
+            <DenseCardTitle>{t("coverageGates")}</DenseCardTitle>
             {data.gates.length === 0 ? (
               <div className="text-[13px] text-[var(--text-tertiary)] italic">
                 {data.status === "PASS" ? t("noReviewCoverageGaps") : t("noGateDataAvailable")}
@@ -198,8 +205,8 @@ export function ReviewCoveragePanel({ runId }: { runId: string }) {
               </ScrollArea>
             )}
           </div>
-        </div>
-      </div>
+        </DenseCardContent>
+      </DenseCard>
     </div>
   )
 }

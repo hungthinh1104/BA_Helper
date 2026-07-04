@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { SkipForward, LayoutList, AlertCircle } from "lucide-react"
 import { ReviewStatusBadge } from "@/components/workspace/shared/status-badges"
 import { Button } from "@/components/ui/button"
+import { DenseAlert, DenseCard } from "@/components/workspace/shared/dense-card"
 
 export function getPriorityBadgeClass(priority: string) {
   switch (priority) {
@@ -97,7 +98,12 @@ export function ReviewQueueSidebar({
   const percentComplete = totalActiveItems > 0 ? ((totalActiveItems - decisionRequiredRemaining - diagnosticRemaining) / totalActiveItems) * 100 : 100
 
   return (
-    <aside className="flex w-full lg:w-[360px] max-lg:h-[40vh] shrink-0 flex-col border-b lg:border-b-0 lg:border-r border-border bg-surface-muted/20">
+    <DenseCard
+      role="complementary"
+      aria-label={t("reviewQueue")}
+      variant="muted"
+      className="w-full shrink-0 rounded-none border-x-0 border-t-0 lg:w-[360px] max-lg:h-[40vh] lg:border-b-0 lg:border-r"
+    >
       {/* Header */}
       <div className="px-3 py-3 border-b border-border">
         <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-3">
@@ -125,10 +131,10 @@ export function ReviewQueueSidebar({
         )}
 
         {summary.highRiskRemaining > 0 && (
-          <div className="flex items-center gap-1.5 text-[11px] text-danger mt-2.5 bg-danger/8 px-2 py-1.5 rounded border border-danger/20">
+          <DenseAlert variant="danger" className="mt-2.5 items-center gap-1.5 px-2 py-1.5 text-[11px]">
             <AlertCircle className="w-3 h-3 shrink-0" />
             <span>{t("highRiskUnresolved", { count: summary.highRiskRemaining })}</span>
-          </div>
+          </DenseAlert>
         )}
 
         {skippedLocal.size > 0 && (
@@ -187,6 +193,6 @@ export function ReviewQueueSidebar({
           </div>
         </div>
       )}
-    </aside>
+    </DenseCard>
   )
 }
