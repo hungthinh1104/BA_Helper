@@ -85,7 +85,7 @@ jobs:
           fi
 
       - name: Backend-runtime duplication boundary check
-        run: pnpm verify:backend-runtime-boundary
+        run: pnpm verify:architecture-boundaries
 
       - name: Lint
         run: pnpm lint
@@ -95,6 +95,9 @@ jobs:
 
       - name: Web production build
         run: pnpm --filter web... build
+
+      - name: Build application
+        run: pnpm --filter @ba-helper/application build
 
       - name: Build backend-runtime
         run: pnpm --filter @ba-helper/backend-runtime build

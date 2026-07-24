@@ -4,6 +4,28 @@
   "private": true,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./document": {
+      "types": "./dist/document/index.d.ts",
+      "default": "./dist/document/index.js"
+    },
+    "./embedding": {
+      "types": "./dist/embedding/index.d.ts",
+      "default": "./dist/embedding/index.js"
+    },
+    "./impact-analysis": {
+      "types": "./dist/impact-analysis/index.d.ts",
+      "default": "./dist/impact-analysis/index.js"
+    },
+    "./scanner": {
+      "types": "./dist/scanner/index.d.ts",
+      "default": "./dist/scanner/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "eslint \"src/**/*.ts\"",

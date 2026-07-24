@@ -1,7 +1,6 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
-// v0.1 constraint: RunDocumentJobUseCase lives in apps/api until extracted to a shared package.
-import { RunDocumentJobUseCase } from '@ba-helper/backend-runtime';
+import { RunDocumentJobUseCase } from '@ba-helper/application/document';
 
 @Processor('document-job')
 export class DocumentJobWorker extends WorkerHost {

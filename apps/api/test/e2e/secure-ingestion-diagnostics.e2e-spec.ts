@@ -77,7 +77,8 @@ import {
   scanJobResponseSchema,
 } from '@ba-helper/contracts';
 import { grantProjectMembership } from './helpers/grant-project-membership';
-import { PrismaService, RunScanJobUseCase } from "@ba-helper/backend-runtime";
+import { PrismaService } from "@ba-helper/backend-runtime";
+import { RunScanJobUseCase } from "@ba-helper/application";
 
 const analyzer = jest.requireMock('@ba-helper/analyzer') as {
   GitHubUrlValidator: { validate: jest.Mock };

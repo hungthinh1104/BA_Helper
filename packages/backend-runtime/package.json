@@ -4,6 +4,36 @@
   "private": true,
   "main": "dist/backend-runtime/src/index.js",
   "types": "dist/backend-runtime/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/backend-runtime/src/index.d.ts",
+      "default": "./dist/backend-runtime/src/index.js"
+    },
+    "./ai": {
+      "types": "./dist/backend-runtime/src/ai/index.d.ts",
+      "default": "./dist/backend-runtime/src/ai/index.js"
+    },
+    "./document": {
+      "types": "./dist/backend-runtime/src/document/index.d.ts",
+      "default": "./dist/backend-runtime/src/document/index.js"
+    },
+    "./embedding": {
+      "types": "./dist/backend-runtime/src/embedding/index.d.ts",
+      "default": "./dist/backend-runtime/src/embedding/index.js"
+    },
+    "./prisma": {
+      "types": "./dist/backend-runtime/src/prisma/index.d.ts",
+      "default": "./dist/backend-runtime/src/prisma/index.js"
+    },
+    "./queue": {
+      "types": "./dist/backend-runtime/src/queue/index.d.ts",
+      "default": "./dist/backend-runtime/src/queue/index.js"
+    },
+    "./scanner": {
+      "types": "./dist/backend-runtime/src/scanner/index.d.ts",
+      "default": "./dist/backend-runtime/src/scanner/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "eslint \"src/**/*.ts\"",

@@ -1,5 +1,9 @@
 import { Module } from '@nestjs/common';
-import { RunDocumentJobUseCase } from './application/run-document-job.usecase';
+import {
+  DocumentJobRunnerPort,
+  RunDocumentJobUseCase,
+} from '@ba-helper/application/document';
+import { RuntimeDocumentJobRunnerAdapter } from './infrastructure/runtime-document-job-runner.adapter';
 import { MarkdownImpactReportBuilder } from './application/render/markdown-impact-report.builder';
 import { ReviewedSnapshotReportContextAdapter } from './application/render/reviewed-snapshot-report-context.adapter';
 import { MermaidImpactDiagramBuilder } from './application/mermaid-impact-diagram.builder';
@@ -20,7 +24,17 @@ import { ImpactAnalysisRepository } from '../impact-analysis/infrastructure/impa
 @Module({
   imports: [PrismaModule, EventLogModule],
   providers: [
-    RunDocumentJobUseCase,
+    RuntimeDocumentJobRunnerAdapter,
+    {
+      provide: DocumentJobRunnerPort,
+      useExisting: RuntimeDocumentJobRunnerAdapter,
+    },
+    {
+      provide: RunDocumentJobUseCase,
+      useFactory: (runner: DocumentJobRunnerPort) =>
+        new RunDocumentJobUseCase(runner),
+      inject: [DocumentJobRunnerPort],
+    },
     MarkdownImpactReportBuilder,
     ReviewedSnapshotReportContextAdapter,
     MermaidImpactDiagramBuilder,

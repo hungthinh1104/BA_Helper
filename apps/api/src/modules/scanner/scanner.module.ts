@@ -7,26 +7,14 @@ import { ArtifactModule } from '../artifact/artifact.module';
 import { EvidenceModule } from '../evidence/evidence.module';
 import { ProjectModule } from '../project/project.module';
 import { GraphModule } from '../graph/graph.module';
-import { PrismaModule, PrismaService, RepositoryRepository, ArtifactRepository, RunScanJobPersistenceStep, RunScanJobUseCase, ScanJobRepository, QueueModule, QueueService, EventLogService } from "@ba-helper/backend-runtime";
+import { ScannerRuntimeModule } from "@ba-helper/backend-runtime/scanner";
 
 @Module({
-  imports: [PrismaModule, EventLogModule, RepositoryModule, ArtifactModule, QueueModule, EvidenceModule, ProjectModule, GraphModule],
+  imports: [ScannerRuntimeModule, EventLogModule, RepositoryModule, ArtifactModule, EvidenceModule, ProjectModule, GraphModule],
   controllers: [ScanJobController],
   providers: [
-    {
-      provide: ScanJobRepository,
-      useFactory: (prisma: PrismaService) => new ScanJobRepository(prisma),
-      inject: [PrismaService],
-    },
-    {
-      provide: RepositoryRepository,
-      useFactory: (prisma: PrismaService) => new RepositoryRepository(prisma),
-      inject: [PrismaService],
-    },
-    RunScanJobPersistenceStep,
-    RunScanJobUseCase,
     CreateScanJobUseCase,
   ],
-  exports: [RunScanJobUseCase, ScanJobRepository],
+  exports: [ScannerRuntimeModule],
 })
 export class ScannerModule {}

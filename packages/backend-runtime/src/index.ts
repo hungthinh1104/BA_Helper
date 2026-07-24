@@ -18,7 +18,8 @@ export * from './ai/infrastructure/google.provider';
 export * from './ai/infrastructure/deepseek.provider';
 
 export * from './scanner/infrastructure/scan-job.repository';
-export * from './scanner/application/run-scan-job.usecase';
+export * from './scanner/infrastructure/runtime-scan-job-runner.adapter';
+export * from './scanner/scanner-runtime.module';
 export * from './scanner/application/run-scan-job-persistence.step';
 export * from './scanner/application/incremental-scan-classifier';
 export * from './scanner/application/scan-diagnostic-summary';
@@ -59,7 +60,7 @@ export * from './embedding/infrastructure/fake-embedding.provider';
 export * from './queue/queue.module';
 export * from './queue/queue.service';
 export * from './queue/domain/queue.policy';
-export * from './document/application/run-document-job.usecase';
+export * from './document/infrastructure/runtime-document-job-runner.adapter';
 export * from './localization/localization.module';
 export * from './localization/application/report-localization.service';
 export { computeCanonicalReportHash } from './localization/domain/report-hash';

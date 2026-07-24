@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ScanJobRepository } from '../infrastructure/scan-job.repository';
+import { ScanJobRepository } from './scan-job.repository';
 import { EventLogService } from '../../event-log/application/event-log.service';
 import { AppError } from '@ba-helper/shared';
 import { ScanJobStatus, ScanJobStage } from '@prisma/client';;
@@ -23,9 +23,10 @@ import type {
   ScanResult,
 } from '@ba-helper/analyzer';
 import type { DiagnosticItem } from '@ba-helper/contracts';
-import { summarizeDiagnostics } from './scan-diagnostic-summary';
-import { RunScanJobPersistenceStep } from './run-scan-job-persistence.step';
-import { ScanWorkspaceCleanupPolicy } from './scan-workspace-cleanup.policy';
+import { ScanJobRunnerPort } from '@ba-helper/application/scanner';
+import { summarizeDiagnostics } from '../application/scan-diagnostic-summary';
+import { RunScanJobPersistenceStep } from '../application/run-scan-job-persistence.step';
+import { ScanWorkspaceCleanupPolicy } from '../application/scan-workspace-cleanup.policy';
 
 const toProfileFrameworkHint = (framework?: string): DetectedRepositoryProfile['framework'] | undefined => {
   if (framework === 'nestjs') return 'NESTJS';
@@ -52,8 +53,8 @@ const toProfileLanguageHint = (language?: string): DetectedRepositoryProfile['la
 };
 
 @Injectable()
-export class RunScanJobUseCase {
-  private readonly logger = new Logger(RunScanJobUseCase.name);
+export class RuntimeScanJobRunnerAdapter extends ScanJobRunnerPort {
+  private readonly logger = new Logger(RuntimeScanJobRunnerAdapter.name);
 
   private readonly scannerAdapterRegistry = new ScannerAdapterRegistry();
   private readonly cleanupPolicy = new ScanWorkspaceCleanupPolicy();
@@ -63,9 +64,11 @@ export class RunScanJobUseCase {
     private readonly eventLogService: EventLogService,
     private readonly queueService: QueueService,
     private readonly persistenceStep: RunScanJobPersistenceStep,
-  ) {}
+  ) {
+    super();
+  }
 
-  async execute(params: { jobId: string }): Promise<void> {
+  async run(params: { jobId: string }): Promise<void> {
     const job = await this.scanJobRepository.findById(params.jobId);
     if (!job) {
       throw new AppError('SCAN_JOB_NOT_FOUND', 'Scan job not found.');

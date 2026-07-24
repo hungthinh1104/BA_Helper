@@ -106,6 +106,9 @@ Source and module decomposition must follow
 into a large orchestration/service file as features are added.
 Cross-cutting dependency, adapter, error/logging, async and CI rules are in
 [code-quality-governance.md](code-quality-governance.md).
+Executable package direction and infrastructure ownership are defined by
+[ADR-0010](../adr/adr-0010-application-runtime-boundary.md) and the
+[backend package dependency diagram](backend-package-dependencies.md).
 
 ## Dependency Direction
 

@@ -42,7 +42,7 @@ for (const [basename, apiRelPath] of apiFiles.entries()) {
 
 if (duplicates.length > 0) {
   console.error('\n❌ BOUNDARY VIOLATION DETECTED: File Duplication between apps/api and packages/backend-runtime');
-  console.error('The following files exist in both contexts. Infrastructure and core use-cases must live in only one place (typically backend-runtime) to avoid technical debt.\n');
+  console.error('The following files exist in both contexts. Infrastructure belongs to backend-runtime and use cases belong to application; each implementation must have one owner.\n');
   console.error(duplicates.join('\n\n'));
   process.exit(1);
 }

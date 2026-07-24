@@ -5,7 +5,8 @@ import { resetDatabase } from './helpers/reset-db';
 import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { grantProjectMembership } from './helpers/grant-project-membership';
-import { PrismaService, RunDocumentJobUseCase } from "@ba-helper/backend-runtime";
+import { PrismaService } from "@ba-helper/backend-runtime";
+import { RunDocumentJobUseCase } from "@ba-helper/application";
 
 describe('Final Reviewed Report Audit Flow (e2e)', () => {
   let app: INestApplication;

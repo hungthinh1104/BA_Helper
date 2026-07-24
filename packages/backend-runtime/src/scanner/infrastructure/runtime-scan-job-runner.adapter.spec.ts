@@ -1,6 +1,6 @@
 import type { AppError } from '@ba-helper/shared';
-import { RunScanJobPersistenceStep } from './run-scan-job-persistence.step';
-import { RunScanJobUseCase } from './run-scan-job.usecase';
+import { RunScanJobPersistenceStep } from '../application/run-scan-job-persistence.step';
+import { RuntimeScanJobRunnerAdapter } from './runtime-scan-job-runner.adapter';
 import * as fs from 'node:fs/promises';
 import { ScanJobStage, ScanJobStatus } from '@prisma/client';;
 
@@ -123,9 +123,9 @@ const analyzer = jest.requireMock('@ba-helper/analyzer') as {
   scanGoHttpProject: jest.Mock;
 };
 
-describe('RunScanJobUseCase', () => {
+describe('RuntimeScanJobRunnerAdapter', () => {
   const originalPreserveScanWorkspaceEnv = process.env.BA_HELPER_PRESERVE_SCAN_WORKSPACE;
-  let useCase: RunScanJobUseCase;
+  let useCase: RuntimeScanJobRunnerAdapter;
   let scanJobRepository: any;
   let artifactRepository: any;
   let graphRepository: any;
@@ -208,7 +208,7 @@ describe('RunScanJobUseCase', () => {
       scanJobRepository,
     );
 
-    useCase = new RunScanJobUseCase(
+    useCase = new RuntimeScanJobRunnerAdapter(
       scanJobRepository,
       eventLogService,
       queueService,
@@ -322,7 +322,7 @@ describe('RunScanJobUseCase', () => {
       sourceRoot: '/tmp/ba-scan-success',
     });
 
-    await useCase.execute({ jobId: 'job-1' });
+    await useCase.run({ jobId: 'job-1' });
 
     expect(prisma.repositoryProfile.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -398,7 +398,7 @@ describe('RunScanJobUseCase', () => {
       coverage: { status: 'READY', skippedSummary: {} },
     });
 
-    await useCase.execute({ jobId: 'job-1' });
+    await useCase.run({ jobId: 'job-1' });
 
     // 1. Assert exact domain-critical fields in Artifact persistence
     expect(artifactRepository.createMany).toHaveBeenCalledWith([
@@ -470,7 +470,7 @@ describe('RunScanJobUseCase', () => {
       milestones.push('enqueue');
     });
 
-    await useCase.execute({ jobId: 'job-1' });
+    await useCase.run({ jobId: 'job-1' });
 
     expect(milestones).toEqual(['clone', 'scan', 'tx:start', 'tx:commit', 'enqueue']);
   });
@@ -478,7 +478,7 @@ describe('RunScanJobUseCase', () => {
   it('marks scan completed inside the persistence transaction before embedding enqueue', async () => {
     mockSuccessfulTypeScriptScan();
 
-    await useCase.execute({ jobId: 'job-1' });
+    await useCase.run({ jobId: 'job-1' });
 
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
     expect(scanJobRepository.updateState).toHaveBeenCalledWith({
@@ -494,7 +494,7 @@ describe('RunScanJobUseCase', () => {
     mockSuccessfulTypeScriptScan();
     prisma.$transaction.mockRejectedValueOnce(new Error('commit failed'));
 
-    await expect(useCase.execute({ jobId: 'job-1' })).rejects.toThrow('commit failed');
+    await expect(useCase.run({ jobId: 'job-1' })).rejects.toThrow('commit failed');
 
     expect(queueService.enqueueSnapshotEmbedding).not.toHaveBeenCalled();
     expect(eventLogService.recordEvent).not.toHaveBeenCalledWith(
@@ -539,7 +539,7 @@ describe('RunScanJobUseCase', () => {
     mockSuccessfulTypeScriptScan();
     setupFailure();
 
-    await expect(useCase.execute({ jobId: 'job-1' })).rejects.toThrow(expectedMessage);
+    await expect(useCase.run({ jobId: 'job-1' })).rejects.toThrow(expectedMessage);
 
     expect(prisma.repositorySnapshot.update).not.toHaveBeenCalledWith(
       expect.objectContaining({
@@ -558,7 +558,7 @@ describe('RunScanJobUseCase', () => {
     mockSuccessfulTypeScriptScan();
     queueService.enqueueSnapshotEmbedding.mockRejectedValueOnce(new Error('redis down'));
 
-    await useCase.execute({ jobId: 'job-1' });
+    await useCase.run({ jobId: 'job-1' });
 
     expect(scanJobRepository.updateState).toHaveBeenCalledWith({
       jobId: 'job-1',
@@ -629,8 +629,8 @@ describe('RunScanJobUseCase', () => {
       },
     ]);
 
-    await useCase.execute({ jobId: 'job-1' });
-    await useCase.execute({ jobId: 'job-1' });
+    await useCase.run({ jobId: 'job-1' });
+    await useCase.run({ jobId: 'job-1' });
 
     expect(prisma.repositorySnapshot.upsert).toHaveBeenCalledTimes(2);
     for (const call of prisma.repositorySnapshot.upsert.mock.calls) {
@@ -694,7 +694,7 @@ describe('RunScanJobUseCase', () => {
       profileVersion: 'repo-profile@0.1.0',
     });
 
-    await expect(useCase.execute({ jobId: 'job-1' })).rejects.toMatchObject({
+    await expect(useCase.run({ jobId: 'job-1' })).rejects.toMatchObject({
       code: 'CLONE_FAILED',
       message: 'network down',
     } satisfies Partial<AppError>);
@@ -731,7 +731,7 @@ describe('RunScanJobUseCase', () => {
     analyzer.GitHubUrlValidator.validate.mockReturnValue({ isValid: true });
     analyzer.GitRepositoryFetcher.fetch.mockRejectedValue(new Error('network down'));
 
-    await expect(useCase.execute({ jobId: 'job-1' })).rejects.toMatchObject({
+    await expect(useCase.run({ jobId: 'job-1' })).rejects.toMatchObject({
       code: 'CLONE_FAILED',
       message: 'network down',
     } satisfies Partial<AppError>);
@@ -779,7 +779,7 @@ describe('RunScanJobUseCase', () => {
       { artifactKey: 'api:booking.controller.other', contentHash: 'hash-def', universalKind: 'API_ROUTE', filePath: 'src/other.ts' },
     ]);
 
-    await useCase.execute({ jobId: 'job-1' });
+    await useCase.run({ jobId: 'job-1' });
 
     expect(prisma.repositorySnapshot.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -830,7 +830,7 @@ describe('RunScanJobUseCase', () => {
       coverage: { status: 'READY', skippedSummary: {} },
     });
 
-    await useCase.execute({ jobId: 'job-1' });
+    await useCase.run({ jobId: 'job-1' });
 
     const updateCall = prisma.repositorySnapshot.update.mock.calls[0][0];
     const diagnosticCodes: string[] = updateCall.data.diagnostics.map((d: any) => d.code);
@@ -863,7 +863,7 @@ describe('RunScanJobUseCase', () => {
       enumerate: jest.fn().mockResolvedValue({ tsFiles: [], allFiles: [], diagnostics: [], isPartial: false }),
     }));
 
-    await expect(useCase.execute({ jobId: 'job-1' })).rejects.toThrow('No scanner adapter found');
+    await expect(useCase.run({ jobId: 'job-1' })).rejects.toThrow('No scanner adapter found');
 
     // Should not call scanProject (TypeScript default)
     expect(analyzer.scanProject).not.toHaveBeenCalled();
@@ -936,7 +936,7 @@ describe('RunScanJobUseCase', () => {
       coverage: { status: 'PARTIAL', skippedSummary: {} },
     });
 
-    await useCase.execute({ jobId: 'job-1' });
+    await useCase.run({ jobId: 'job-1' });
 
     expect(analyzer.scanJavaSpringProject).toHaveBeenCalled();
     expect(analyzer.scanProject).not.toHaveBeenCalled();
@@ -980,7 +980,7 @@ describe('RunScanJobUseCase', () => {
     // Simulate DB failure when persisting final diagnostics
     prisma.repositorySnapshot.update.mockRejectedValueOnce(new Error('db connection lost'));
 
-    await expect(useCase.execute({ jobId: 'job-1' })).rejects.toThrow('db connection lost');
+    await expect(useCase.run({ jobId: 'job-1' })).rejects.toThrow('db connection lost');
 
     // Job must be marked FAILED — not COMPLETED
     const finalState = scanJobRepository.updateState.mock.calls.at(-1)?.[0];

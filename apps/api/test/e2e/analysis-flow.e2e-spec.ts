@@ -17,7 +17,8 @@ import {
   impactAnalysisResponseSchema,
   approvedImpactReportResponseSchema,
 } from '@ba-helper/contracts';
-import { PrismaService, RunDocumentJobUseCase } from "@ba-helper/backend-runtime";
+import { PrismaService } from "@ba-helper/backend-runtime";
+import { RunDocumentJobUseCase } from "@ba-helper/application";
 
 describe('Analysis Flow (E2E)', () => {
   let app: INestApplication;

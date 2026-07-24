@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { DocumentJobStatus } from '@prisma/client';;
+import {
+  DocumentJobRunnerPort,
+  type DocumentJobRunResult,
+} from '@ba-helper/application/document';
 import { PrismaService } from '../../prisma/prisma.service';
-import { MarkdownImpactReportBuilder } from './render/markdown-impact-report.builder';
+import { MarkdownImpactReportBuilder } from '../application/render/markdown-impact-report.builder';
 import { InsightRepository } from '../../insight/infrastructure/insight.repository';
 import { TraceabilityRepository } from '../../traceability/infrastructure/traceability.repository';
 import { ReviewNoteRepository } from '../../impact-analysis/infrastructure/review-note.repository';
@@ -9,20 +13,22 @@ import { GraphRepository } from '../../graph/infrastructure/graph.repository';
 import { ReviewClarificationRepository } from '../../impact-analysis/infrastructure/review-clarification.repository';
 import { ReviewDecisionRepository } from '../../impact-analysis/infrastructure/review-decision.repository';
 import { GetImpactDiffUseCase } from '../../impact-analysis/application/queries/get-impact-diff.usecase';
-import { DocumentRepository } from '../infrastructure/document.repository';
-import { ReviewedSnapshotReportContextAdapter } from './render/reviewed-snapshot-report-context.adapter';
+import { DocumentRepository } from './document.repository';
+import { ReviewedSnapshotReportContextAdapter } from '../application/render/reviewed-snapshot-report-context.adapter';
 import { AppError } from '@ba-helper/shared';
 
 @Injectable()
-export class RunDocumentJobUseCase {
+export class RuntimeDocumentJobRunnerAdapter extends DocumentJobRunnerPort {
   constructor(
     private readonly prisma: PrismaService,
     private readonly reportBuilder: MarkdownImpactReportBuilder,
     private readonly documentRepo: DocumentRepository,
     private readonly contextAdapter: ReviewedSnapshotReportContextAdapter,
-  ) {}
+  ) {
+    super();
+  }
 
-  async execute(params: { documentJobId: string }) {
+  async run(params: { documentJobId: string }): Promise<DocumentJobRunResult> {
     const docJob = await this.markRunning(params.documentJobId);
 
     try {
