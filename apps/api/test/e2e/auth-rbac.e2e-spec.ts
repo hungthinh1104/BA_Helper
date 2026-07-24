@@ -7,11 +7,13 @@ import { resetDatabase } from './helpers/reset-db';
 import { grantProjectMembership } from './helpers/grant-project-membership';
 import { artifactListResponseSchema } from '@ba-helper/contracts';
 import { PrismaService } from "@ba-helper/backend-runtime";
+import { PasswordHashService } from '../../src/modules/auth/application/password-hash.service';
 
 describe('Auth and RBAC (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let jwtService: JwtService;
+  let passwordHashService: PasswordHashService;
 
   let adminToken: string;
   let reviewerToken: string;
@@ -26,6 +28,7 @@ describe('Auth and RBAC (e2e)', () => {
     app = await createTestApp();
     prisma = app.get(PrismaService);
     jwtService = app.get(JwtService);
+    passwordHashService = app.get(PasswordHashService);
   });
 
   afterAll(async () => {
@@ -241,6 +244,57 @@ describe('Auth and RBAC (e2e)', () => {
     expect(res.body.user.role).toBe('REVIEWER');
   });
 
+  it('logs in with persisted password hash and does not mutate role', async () => {
+    const passwordHash = await passwordHashService.hashPassword('admin-password-123');
+    await prisma.user.update({
+      where: { id: adminUserId },
+      data: { passwordHash },
+    });
+
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ email: 'admin@ba-helper.local', password: 'admin-password-123' })
+      .expect(200);
+
+    expect(res.body.accessToken).toEqual(expect.any(String));
+    expect(res.body.user).toMatchObject({
+      email: 'admin@ba-helper.local',
+      role: 'ADMIN',
+    });
+
+    const persisted = await prisma.user.findUniqueOrThrow({
+      where: { id: adminUserId },
+    });
+    expect(persisted.role).toBe('ADMIN');
+  });
+
+  it('returns generic 401 for wrong password, unknown email, and missing hash', async () => {
+    const passwordHash = await passwordHashService.hashPassword('admin-password-123');
+    await prisma.user.update({
+      where: { id: adminUserId },
+      data: { passwordHash },
+    });
+
+    const wrongPassword = await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ email: 'admin@ba-helper.local', password: 'wrong-password-123' })
+      .expect(401);
+
+    const unknownEmail = await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ email: 'unknown@ba-helper.local', password: 'wrong-password-123' })
+      .expect(401);
+
+    const missingHash = await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ email: 'viewer@ba-helper.local', password: 'viewer-password-123' })
+      .expect(401);
+
+    expect(wrongPassword.body.message).toBe('Invalid email or password.');
+    expect(unknownEmail.body.message).toBe('Invalid email or password.');
+    expect(missingHash.body.message).toBe('Invalid email or password.');
+  });
+
   it('allows unauthenticated workspace bootstrap through GET /api/v1/workspace/current', async () => {
     process.env.WORKSPACE_MODE = 'dev-single-user';
 
@@ -295,6 +349,80 @@ describe('Auth and RBAC (e2e)', () => {
       userId: expect.any(String),
       role: 'OWNER',
     });
+  });
+
+  it('lets project owner create password user and does not overwrite existing user password', async () => {
+    const project = await prisma.project.create({
+      data: { id: crypto.randomUUID(), name: 'Member Password Project' },
+    });
+    await grantProjectMembership(prisma, {
+      projectId: project.id,
+      userId: adminUserId,
+      role: 'OWNER',
+    });
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/projects/${project.id}/members`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        email: 'new-member@ba-helper.local',
+        name: 'New Member',
+        initialPassword: 'member-password-123',
+        role: 'ANALYST',
+      })
+      .expect(201);
+
+    const created = await prisma.user.findUniqueOrThrow({
+      where: { email: 'new-member@ba-helper.local' },
+    });
+    expect(created.passwordHash).toEqual(expect.stringMatching(/^scrypt\$/));
+    expect(created.passwordHash).not.toContain('member-password-123');
+
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ email: 'new-member@ba-helper.local', password: 'member-password-123' })
+      .expect(200);
+
+    const originalHash = created.passwordHash;
+    await request(app.getHttpServer())
+      .post(`/api/v1/projects/${project.id}/members`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        email: 'new-member@ba-helper.local',
+        initialPassword: 'replacement-password-123',
+        role: 'REVIEWER',
+      })
+      .expect(201);
+
+    const afterUpsert = await prisma.user.findUniqueOrThrow({
+      where: { email: 'new-member@ba-helper.local' },
+    });
+    expect(afterUpsert.passwordHash).toBe(originalHash);
+  });
+
+  it('blocks non-owner from creating project members', async () => {
+    const project = await prisma.project.create({
+      data: { id: crypto.randomUUID(), name: 'Blocked Member Project' },
+    });
+    await grantProjectMembership(prisma, {
+      projectId: project.id,
+      userId: viewerUserId,
+      role: 'VIEWER',
+    });
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/projects/${project.id}/members`)
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .send({
+        email: 'blocked-member@ba-helper.local',
+        initialPassword: 'member-password-123',
+        role: 'VIEWER',
+      })
+      .expect(403);
+
+    await expect(
+      prisma.user.findUnique({ where: { email: 'blocked-member@ba-helper.local' } }),
+    ).resolves.toBeNull();
   });
 
   it('blocks reviewer from admin-only setup, scan, requirement, base-analysis, and finalize operations', async () => {

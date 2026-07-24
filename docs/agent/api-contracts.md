@@ -14,6 +14,7 @@ Keep contracts in `packages/contracts` after workspace scaffolding exists.
 ## MVP Resources
 
 ```http
+POST /api/v1/auth/login
 POST /api/v1/auth/dev-login
 GET  /api/v1/auth/me
 
@@ -200,18 +201,22 @@ Project list response includes:
 }
 ```
 
-Project membership management uses existing users only:
+Project membership management can attach existing users or create a password
+user when an initial password is supplied:
 
 ```json
 {
   "email": "reviewer@ba-helper.local",
+  "name": "Reviewer",
+  "initialPassword": "change-this-password",
   "role": "REVIEWER"
 }
 ```
 
-The web app signs in through `/login` using dev-login (email + role, no
-password). App routes are middleware-gated, and backend RBAC remains the
-authoritative permission source. Disabled controls in the frontend are UX only.
+The web app signs in through `/login` using email + password. Role selection is
+not part of production login; role and project capability state come from
+backend-owned user and project membership records. Dev-login remains a
+local/test-only fallback.
 
 Runtime health for deploy/debug visibility uses:
 

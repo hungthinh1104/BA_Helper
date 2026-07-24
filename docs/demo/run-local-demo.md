@@ -62,10 +62,16 @@ pnpm dev:web
 
 Open [http://localhost:3000/login](http://localhost:3000/login) in your browser.
 
-Because we are running in `dev-single-user` mode (defined in `.env`), you will
-see the dev sign-in form. Enter a demo operator email and choose the Admin role
-to authenticate locally. Do not expose this dev-login endpoint on a public API
-host.
+Sign in with the user provisioned by `pnpm db:seed:demo`:
+
+```text
+Email: demo@ba-helper.local
+Password: demo-password-2026
+```
+
+These credentials are local-demo data only. Dev-login remains available only
+as a local/test fallback when explicitly enabled; do not expose that endpoint
+on a public API host.
 
 Navigate to the project dropdown and select the **BA Helper Demo: Booking Cancellation** project. You will see two pre-seeded analyses ready for review.
 

@@ -18,6 +18,7 @@ import { UpsertProjectMemberUseCase } from './application/upsert-project-member.
 import { UpdateProjectMemberUseCase } from './application/update-project-member.usecase';
 import { RemoveProjectMemberUseCase } from './application/remove-project-member.usecase';
 import { PrismaModule, PrismaService, EventLogService } from "@ba-helper/backend-runtime";
+import { PasswordHashService } from '../auth/application/password-hash.service';
 
 @Module({
   imports: [PrismaModule, EventLogModule, AuthModule],
@@ -80,8 +81,9 @@ import { PrismaModule, PrismaService, EventLogService } from "@ba-helper/backend
         repo: ProjectRepository,
         permissions: ProjectPermissionService,
         eventLog: EventLogService,
-      ) => new UpsertProjectMemberUseCase(repo, permissions, eventLog),
-      inject: [ProjectRepository, ProjectPermissionService, EventLogService],
+        passwords: PasswordHashService,
+      ) => new UpsertProjectMemberUseCase(repo, permissions, eventLog, passwords),
+      inject: [ProjectRepository, ProjectPermissionService, EventLogService, PasswordHashService],
     },
     {
       provide: UpdateProjectMemberUseCase,

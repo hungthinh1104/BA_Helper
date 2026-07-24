@@ -1,11 +1,19 @@
-import { BadRequestException, Body, Controller, ForbiddenException, Get, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, ForbiddenException, Get, HttpCode, Post, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Public } from '../application/jwt-auth.guard';
 import { CurrentUser } from './current-user.decorator';
 import { getRuntimeConfig } from '../../../bootstrap/runtime-config';
-import { loginRequestSchema, RequestUser, type LoginRequest, type LoginResponse } from '@ba-helper/contracts';
+import {
+  devLoginRequestSchema,
+  loginRequestSchema,
+  RequestUser,
+  type DevLoginRequest,
+  type LoginRequest,
+  type LoginResponse,
+} from '@ba-helper/contracts';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { PrismaService } from "@ba-helper/backend-runtime";
+import { PasswordHashService } from '../application/password-hash.service';
 
 @ApiTags('Auth')
 @Controller('/api/v1/auth')
@@ -13,7 +21,46 @@ export class AuthController {
   constructor(
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
+    private readonly passwords: PasswordHashService,
   ) {}
+
+  @Public()
+  @Post('login')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Login with email and password' })
+  @ApiResponse({ status: 200, description: 'Returns JWT and user profile' })
+  async login(@Body() body: unknown): Promise<LoginResponse> {
+    const parsed = loginRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.errors);
+    }
+    const input: LoginRequest = parsed.data;
+
+    const user = await this.prisma.user.findUnique({
+      where: { email: input.email },
+    });
+
+    if (!user?.passwordHash) {
+      await this.burnPasswordVerificationCost(input.password);
+      throw invalidCredentials();
+    }
+
+    const passwordMatches = await this.passwords.verifyPassword(
+      user.passwordHash,
+      input.password,
+    );
+
+    if (!passwordMatches) {
+      throw invalidCredentials();
+    }
+
+    return this.issueLoginResponse({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    });
+  }
 
   @Public()
   @Post('dev-login')
@@ -25,11 +72,11 @@ export class AuthController {
       throw new ForbiddenException('Dev login is disabled by runtime policy. Set ENABLE_DEV_LOGIN=true and ensure mode allows it.');
     }
 
-    const parsed = loginRequestSchema.safeParse(body);
+    const parsed = devLoginRequestSchema.safeParse(body);
     if (!parsed.success) {
       throw new BadRequestException(parsed.error.errors);
     }
-    const input: LoginRequest = parsed.data;
+    const input: DevLoginRequest = parsed.data;
 
     let user = await this.prisma.user.findUnique({
       where: { email: input.email },
@@ -52,6 +99,21 @@ export class AuthController {
       });
     }
 
+    return this.issueLoginResponse(user);
+  }
+
+  @Get('me')
+  @ApiOperation({ summary: 'Get current authenticated user' })
+  async getMe(@CurrentUser() user: RequestUser): Promise<RequestUser> {
+    return user;
+  }
+
+  private issueLoginResponse(user: {
+    id: string;
+    email: string;
+    name: string | null;
+    role: string;
+  }): LoginResponse {
     const payload = { sub: user.id, email: user.email, role: user.role, name: user.name };
     const accessToken = this.jwtService.sign(payload);
 
@@ -66,9 +128,11 @@ export class AuthController {
     };
   }
 
-  @Get('me')
-  @ApiOperation({ summary: 'Get current authenticated user' })
-  async getMe(@CurrentUser() user: RequestUser): Promise<RequestUser> {
-    return user;
+  private async burnPasswordVerificationCost(password: string): Promise<void> {
+    await this.passwords.hashPassword(password);
   }
+}
+
+function invalidCredentials(): UnauthorizedException {
+  return new UnauthorizedException('Invalid email or password.');
 }

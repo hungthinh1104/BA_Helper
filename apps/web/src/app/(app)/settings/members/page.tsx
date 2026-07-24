@@ -71,6 +71,8 @@ export default function ProjectMembersPage() {
   const updateMember = useUpdateProjectMember(workspace.projectId)
   const removeMember = useRemoveProjectMember(workspace.projectId)
   const [email, setEmail] = useState("")
+  const [name, setName] = useState("")
+  const [initialPassword, setInitialPassword] = useState("")
   const [role, setRole] = useState<ProjectRole>("VIEWER")
 
   const canManage = canManageMembers(workspace.membershipRole)
@@ -84,9 +86,13 @@ export default function ProjectMembersPage() {
     try {
       await addMember.mutateAsync({
         email: email.trim(),
+        name: name.trim() || undefined,
+        initialPassword: initialPassword || undefined,
         role,
       })
       setEmail("")
+      setName("")
+      setInitialPassword("")
       setRole("VIEWER")
       toast.success(t("memberUpdated"))
     } catch (error) {
@@ -194,31 +200,50 @@ export default function ProjectMembersPage() {
             <CardTitle>{t("addProjectMember")}</CardTitle>
             <CardDescription>{t("addProjectMemberDescription")}</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-[1fr_180px_auto]">
+          <CardContent className="grid gap-3">
             <Input
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              placeholder="existing-user@ba-helper.local"
+              placeholder="analyst@ba-helper.local"
               disabled={!canManage || addMember.isPending}
             />
-            <select
-              value={role}
-              onChange={(event) => setRole(event.target.value as ProjectRole)}
-              disabled={!canManage || addMember.isPending}
-              className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50"
-            >
-              {ROLE_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {t(`roles.${option}.title`)}
-                </option>
-              ))}
-            </select>
-            <Button
-              onClick={() => void handleAddMember()}
-              disabled={!canManage || addMember.isPending || !email.trim()}
-            >
-              {t("addMember")}
-            </Button>
+            <div className="grid gap-3 sm:grid-cols-[1fr_1fr_180px_auto]">
+              <Input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder={t("displayNameOptional")}
+                disabled={!canManage || addMember.isPending}
+              />
+              <Input
+                type="password"
+                autoComplete="new-password"
+                value={initialPassword}
+                onChange={(event) => setInitialPassword(event.target.value)}
+                placeholder={t("initialPasswordPlaceholder")}
+                disabled={!canManage || addMember.isPending}
+              />
+              <select
+                value={role}
+                onChange={(event) => setRole(event.target.value as ProjectRole)}
+                disabled={!canManage || addMember.isPending}
+                className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50"
+              >
+                {ROLE_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {t(`roles.${option}.title`)}
+                  </option>
+                ))}
+              </select>
+              <Button
+                onClick={() => void handleAddMember()}
+                disabled={!canManage || addMember.isPending || !email.trim()}
+              >
+                {t("addMember")}
+              </Button>
+            </div>
+            <p className="text-[12px] text-muted-foreground">
+              {t("initialPasswordHelp")}
+            </p>
           </CardContent>
         </Card>
 

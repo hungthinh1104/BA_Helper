@@ -5,6 +5,7 @@ import { AuthController } from './api/auth.controller';
 import { JwtStrategy } from './application/jwt.strategy';
 import { resolveJwtSecret } from './application/jwt-config';
 import { PrismaModule } from "@ba-helper/backend-runtime";
+import { PasswordHashService } from './application/password-hash.service';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { PrismaModule } from "@ba-helper/backend-runtime";
     }),
   ],
   controllers: [AuthController],
-  providers: [JwtStrategy],
-  exports: [JwtModule],
+  providers: [JwtStrategy, PasswordHashService],
+  exports: [JwtModule, PasswordHashService],
 })
 export class AuthModule {}

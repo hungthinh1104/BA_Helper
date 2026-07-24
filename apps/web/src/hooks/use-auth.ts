@@ -1,7 +1,7 @@
 'use client';
 
 import { useSession, signIn, signOut } from 'next-auth/react';
-import type { UserRole } from '@ba-helper/contracts';
+import type { LoginRequest, UserRole } from '@ba-helper/contracts';
 import { normalizeAuthErrorCode, type AuthErrorCode } from '@/lib/auth-errors';
 
 type SessionUser = {
@@ -26,10 +26,10 @@ export function useAuth() {
     role: sessionUser.role,
   } : null;
 
-  const login = async (email: string, role: UserRole, next = "/"): Promise<LoginResult> => {
+  const login = async (credentials: LoginRequest, next = "/"): Promise<LoginResult> => {
     const result = await signIn("credentials", {
-      email,
-      role,
+      email: credentials.email,
+      password: credentials.password,
       redirect: false,
       callbackUrl: next,
     })

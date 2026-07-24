@@ -157,8 +157,16 @@ Public endpoints must be explicit:
 ```text
 - GET /api/v1/system/health
 - GET /api/v1/workspace/current
+- POST /api/v1/auth/login
 - POST /api/v1/auth/dev-login only when ENABLE_DEV_LOGIN=true
 ```
+
+`POST /api/v1/auth/login` is the normal web sign-in path. It accepts email and
+password, verifies the persisted password hash, and returns a JWT user session.
+Login failures use a generic invalid-credentials response to avoid account
+enumeration. Password hashes are stored with Node `crypto.scrypt` using
+OWASP-minimum scrypt parameters because the local package manager blocks native
+Argon2 build scripts in this repo environment.
 
 `POST /api/v1/auth/dev-login` is for local development and private controlled
 demos only. It is explicitly rate-limited by the backend public-beta limiter
@@ -168,7 +176,6 @@ dev-login enabled.
 Required auth-related env for the current MVP web experience:
 
 ```text
-ENABLE_DEV_LOGIN=true on the API to allow dev sign-in
 NEXT_PUBLIC_API_URL pointing at the API origin
 NEXTAUTH_SECRET configured for stable session signing
 JWT_SECRET configured for API auth tokens
@@ -195,6 +202,7 @@ TRACEABILITY_LINK_CONFIRMED
 TRACEABILITY_LINK_REJECTED
 ANALYSIS_FINALIZED
 DOCUMENT_EXPORTED
+PROJECT_MEMBER_UPSERTED
 ```
 
 Events record actor identity/type, project or analysis context, timestamp, and
@@ -204,6 +212,6 @@ appropriate payload metadata without storing secrets.
 privileged mutation. `VIEWER` may export an approved non-stale report. Export
 remains blocked when the report is stale, missing, or otherwise not exportable.
 
-Web app routes are middleware-gated. The sign-in route is `/login`, and dev
-login uses email + role without a password. Backend RBAC is authoritative;
-frontend disabled controls are UX only.
+Web app routes are middleware-gated. The sign-in route is `/login`, and normal
+login uses email + password. Dev-login remains a local/test fallback only.
+Backend RBAC is authoritative; frontend disabled controls are UX only.

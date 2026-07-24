@@ -32,8 +32,8 @@ cp apps/web/.env.example apps/web/.env.local
 ## Login
 
 1. Open `http://localhost:3000/login`
-2. Sign in with dev-login
-3. Use `ADMIN` for the full demo path
+2. Sign in with `demo@ba-helper.local` / `demo-password-2026`
+3. Use a user whose backend project membership has OWNER or equivalent access for the full demo path
 
 ## Project switching and membership
 
