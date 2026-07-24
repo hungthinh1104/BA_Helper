@@ -2,12 +2,15 @@
 
 import type { AnalysisWorkspaceResponse } from "@ba-helper/contracts"
 import { ArtifactKindBadge } from "@/components/workspace/shared/status-badges"
+import { cn } from "@/lib/utils"
 import { evidenceBasisLabels, getLocalizedLabel, type SupportedLocale } from "@/lib/i18n/status-labels"
 import type { AnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
 import { InlineReviewAction } from "../shared/inline-review-action"
 import { DenseCard, DenseCardDescription, DenseCardHeader, DenseCardTitle } from "../shared/dense-card"
+import { toConfidencePercent } from "./impact-map-presentation"
 
 type ImpactGroup = AnalysisWorkspaceResponse["impactGroups"][number]
+type Artifact = ImpactGroup["artifacts"][number]
 type EvidenceCard = AnalysisWorkspaceResponse["evidenceCards"][number]
 
 export function ImpactMapTab({
@@ -39,7 +42,7 @@ export function ImpactMapTab({
           </DenseCardHeader>
           <div className="flex flex-col divide-y divide-border/40">
             {group.artifacts.map((artifact) => {
-              const firstEvidence = artifact.evidenceIds.length > 0 
+              const firstEvidence = artifact.evidenceIds.length > 0
                 ? evidenceCards.find(e => e.evidenceId === artifact.evidenceIds[0])
                 : undefined;
 
@@ -65,7 +68,7 @@ export function ImpactMapTab({
                       <p className="mt-2 text-[13px] text-muted-foreground leading-relaxed">
                         {artifact.impactReason || labels.fallbackImpactReason}
                       </p>
-                      
+
                       {firstEvidence && (
                         <pre className="mt-3 overflow-x-auto rounded border border-border/40 bg-background/60 p-2 text-[11px] leading-relaxed text-foreground font-mono">
                           <code>{firstEvidence.excerpt}</code>
@@ -74,9 +77,14 @@ export function ImpactMapTab({
                     </div>
                     <div className="flex flex-col items-end gap-3 shrink-0">
                       <InlineReviewAction analysisId={analysisId} itemId={artifact.traceabilityLinkIds[0]} itemType="impact" itemTitle={artifact.name} currentStatus={artifact.reviewDecision.toUpperCase()} isStale={isStale} />
-                      <div className="flex flex-col items-end gap-1 text-[10px] text-muted-foreground uppercase tracking-wide font-medium">
-                        <span>{labels.basis}: {getLocalizedLabel(evidenceBasisLabels, artifact.impactBasis, locale)}</span>
-                        <span>{artifact.evidenceIds.length} {labels.evidence}</span>
+                      <div className="flex flex-col items-end gap-1.5">
+                        <ImpactBasisBadge basis={artifact.impactBasis} locale={locale} labels={labels} />
+                        {artifact.confidence !== undefined && (
+                          <ConfidenceBar confidence={artifact.confidence} basis={artifact.impactBasis} label={labels.confidence} />
+                        )}
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">
+                          {artifact.evidenceIds.length} {labels.evidence}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -87,6 +95,85 @@ export function ImpactMapTab({
         </DenseCard>
       ))}
     </section>
+  )
+}
+
+function ImpactBasisBadge({
+  basis,
+  locale,
+  labels,
+}: {
+  basis: Artifact["impactBasis"]
+  locale: SupportedLocale
+  labels: AnalysisWorkspaceLabels["impactMap"]
+}) {
+  const config = {
+    evidenced: {
+      className: "border-success/30 bg-success/10 text-success",
+      title: labels.evidencedDescription,
+    },
+    inferred: {
+      className: "border-warning/30 bg-warning/10 text-warning",
+      title: labels.inferredDescription,
+    },
+    unknown: {
+      className: "border-border/60 bg-surface-muted text-muted-foreground",
+      title: labels.unknownDescription,
+    },
+    conflicting: {
+      className: "border-danger/30 bg-danger/10 text-danger",
+      title: labels.conflictingDescription,
+    },
+  } as const
+
+  const meta = config[basis] ?? config.unknown
+  const label = getLocalizedLabel(evidenceBasisLabels, basis, locale)
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+        meta.className,
+      )}
+      title={meta.title}
+    >
+      {basis === "inferred" && (
+        <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
+      )}
+      {label}
+    </span>
+  )
+}
+
+function ConfidenceBar({
+  confidence,
+  basis,
+  label,
+}: {
+  confidence: number
+  basis: Artifact["impactBasis"]
+  label: string
+}) {
+  const pct = toConfidencePercent(confidence)
+  const title = label.replace("{confidence}", `${pct}%`)
+  const barColor =
+    basis === "evidenced" ? "bg-success/70"
+    : basis === "inferred" ? "bg-warning/70"
+    : "bg-muted-foreground/40"
+
+  return (
+    <div
+      className="flex items-center gap-1.5"
+      title={title}
+    >
+      <div className="h-1 w-16 rounded-full bg-muted overflow-hidden">
+        <div
+          className={cn("h-full rounded-full transition-all", barColor)}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="text-[10px] text-muted-foreground tabular-nums">{pct}%</span>
+    </div>
   )
 }
 
