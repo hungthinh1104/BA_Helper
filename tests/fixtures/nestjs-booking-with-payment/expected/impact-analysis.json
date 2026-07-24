@@ -38,5 +38,34 @@
       "linkType": "AFFECTED",
       "linkBasis": "EVIDENCED"
     }
+  ],
+  "questions": [
+    {
+      "insightKey": "question:who-may-cancel",
+      "certainty": "UNKNOWN"
+    }
+  ],
+  "acceptanceCriteria": [
+    {
+      "insightKey": "ac:cancel-paid-booking-refund",
+      "certainty": "INFERRED"
+    }
+  ],
+  "qaScenarios": [
+    {
+      "insightKey": "qa:cancel-paid-booking-refunds-payment",
+      "certainty": "INFERRED"
+    },
+    {
+      "insightKey": "qa:duplicate-cancel-does-not-double-refund",
+      "certainty": "INFERRED"
+    }
+  ],
+  "risks": [
+    {
+      "insightKey": "risk:refund-policy-gap",
+      "certainty": "INFERRED",
+      "severity": "HIGH"
+    }
   ]
 }

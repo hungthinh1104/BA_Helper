@@ -93,7 +93,7 @@ describe('Diagnostic Risk Propagation', () => {
 
     mockEvidenceRepo = {
       listBySnapshotId: jest.fn().mockResolvedValue([]),
-      upsertMany: jest.fn().mockResolvedValue([]),
+      listByArtifactIds: jest.fn().mockResolvedValue([]),
     };
 
     const mockDomainPackRegistry = {

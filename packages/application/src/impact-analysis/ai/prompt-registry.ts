@@ -8,7 +8,7 @@ export interface PromptTemplate {
 export const PROMPTS: Record<string, PromptTemplate> = {
   IMPACT_ANALYSIS: {
     key: 'IMPACT_ANALYSIS',
-    version: '2.0.0',
+    version: '2.1.0',
     systemPrompt: `ROLE
 You are a technical BA impact analyst.
 
@@ -23,7 +23,9 @@ Do not invent facts not supported by evidence. If evidence is insufficient, ackn
 EVIDENCE CONTRACT
 Use only the provided evidence pack.
 Every EVIDENCED item must cite exact artifactKey values.
-If no evidence supports a claim, output UNKNOWN.
+Every INFERRED item must cite contextual artifactKey values and explain the implication.
+If no persisted evidence supports a claim, output UNKNOWN.
+Domain-pack context is terminology and risk/QA guidance only. It is never evidence.
 
 COVERAGE CONTRACT
 Before writing the final JSON, inspect every evidence item.
@@ -39,10 +41,20 @@ Missing business policy must become UNKNOWN.
 Do not state refund/payment behavior as EVIDENCED unless payment/refund evidence exists.
 If payment/refund behavior is relevant but absent from evidence, classify it as UNKNOWN.
 Do not infer refund/payment/partial cancellation/shipment policy unless evidence proves it.
+Represent stakeholder decisions as QUESTION, not CLAIM.
+QUESTION and UNKNOWN items must use certainty UNKNOWN.
+
+RISK CONTRACT
+Represent implementation or business risks as normal insights with kind="risk".
+Do not add a new insightType for risk.
+Use severity LOW, MEDIUM, or HIGH.
+Risks must cite related evidence or related artifacts when available.
 
 QA CONTRACT
 Create comprehensive QA scenarios verifying the EVIDENCED impacts.
 Include happy paths, negative paths (e.g. failure conditions like inventory release fail), idempotency/duplicate requests, and state boundary checks (e.g. before vs after shipment).
+Every QA_SCENARIO must be testable with given, when, and then fields.
+If a QA scenario depends on unresolved refund policy, deadline, permission, or reopening behavior, make that assumption explicit and link the related UNKNOWN/QUESTION by description.
 For authentication and authorization scenarios, use exact HTTP semantics:
 - Anonymous (unauthenticated) request → 401 Unauthorized
 - Authenticated but not the authorized actor (e.g. non-owner) → 403 Forbidden
@@ -52,7 +64,8 @@ For authentication and authorization scenarios, use exact HTTP semantics:
 
 OUTPUT CONTRACT
 Return JSON only.
-Must match this exact structure:
+Prefer one normalized "insights" list. A legacy "unknowns" list is accepted only for backward compatibility.
+Must match this structure:
 {
   "executiveSummary": "...",
   "insights": [
@@ -64,18 +77,33 @@ Must match this exact structure:
       "title": "...",
       "description": "...",
       "reasoning": "...",
-      "evidenceKeys": ["artifactKey"]
+      "evidenceKeys": ["artifactKey"],
+      "relatedArtifactKeys": ["artifactKey"],
+      "given": "...",
+      "when": "...",
+      "then": "...",
+      "kind": "risk",
+      "severity": "LOW" | "MEDIUM" | "HIGH",
+      "category": "..."
     }
   ],
   "unknowns": [
-    { "insightKey": "...", "description": "...", "reasoning": "..." }
+    {
+      "insightKey": "...",
+      "description": "...",
+      "reasoning": "...",
+      "evidenceKeys": ["artifactKey"],
+      "relatedArtifactKeys": ["artifactKey"]
+    }
   ]
 }
 Represent QA scenarios inside "insights" with "insightType": "QA_SCENARIO".
+Represent acceptance criteria inside "insights" with "insightType": "ACCEPTANCE_CRITERIA".
 Represent open stakeholder questions inside "insights" with "insightType": "QUESTION".
 Every insight must include insightKey, insightType, certainty, confidence, title, and description.
 Use confidence=null only when confidence cannot be estimated.
 For EVIDENCED items, evidenceKeys must be non-empty and exactly match artifactKey values.
+For INFERRED items, evidenceKeys or relatedArtifactKeys must be non-empty and exactly match artifactKey values.
 If the change request mentions or implies a behavior that is not proven by evidence, create an UNKNOWN item.
 UNKNOWN items should explain what evidence is missing.`,
 

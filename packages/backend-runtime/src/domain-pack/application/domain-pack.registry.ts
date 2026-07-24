@@ -232,7 +232,9 @@ export class DomainPackRegistry {
     selectedBy: DomainPackSelectedBy;
   }): ResolvedDomainPackSelection {
     return {
-      requestedDomainPackId: params.requestedDomainPackId,
+      requestedDomainPackId: params.requestedDomainPackId
+        ? this.normalizePackId(params.requestedDomainPackId)
+        : null,
       resolvedDomainPackId: params.pack.id,
       resolvedDomainPackVersion: params.pack.version,
       resolvedDomainPackStatus: params.pack.status,

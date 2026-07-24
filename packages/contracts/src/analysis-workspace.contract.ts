@@ -111,6 +111,7 @@ export const impactArtifactCardSchema = z.object({
 	universalKind: universalArtifactKindSchema,
 	impactBasis: analysisWorkspaceEvidenceBasisSchema,
 	impactReason: z.string(),
+	confidence: z.number().min(0).max(1).optional(),
 	traceabilityLinkIds: z.array(z.string().uuid()),
 	evidenceIds: z.array(z.string().uuid()),
 	reviewDecision: analysisWorkspaceReviewDecisionSchema,

@@ -114,6 +114,20 @@ describe('DomainPackRegistry', () => {
       expect(result.pack.version).toBe('0.1.0');
       expect(result.pack.status).toBe('PARTIAL');
       expect(result.selectedBy).toBe('EXPLICIT');
+      expect(result.resolved.requestedDomainPackId).toBe('healthcare');
+    });
+
+    it('manual versioned alias resolves to canonical requested domain id', () => {
+      const result = registry.selectPack({ manualPackId: 'ECOMMERCE@0.1.0' });
+      expect(result.pack.id).toBe('ecommerce');
+      expect(result.pack.status).toBe('PARTIAL');
+      expect(result.selectedBy).toBe('EXPLICIT');
+      expect(result.resolved).toMatchObject({
+        requestedDomainPackId: 'ecommerce',
+        resolvedDomainPackId: 'ecommerce',
+        resolvedDomainPackVersion: '0.1.0',
+        resolvedDomainPackStatus: 'PARTIAL',
+      });
     });
 
     it('unsupported manual pack version throws controlled error', () => {

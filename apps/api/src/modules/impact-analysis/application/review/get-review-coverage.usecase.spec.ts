@@ -46,6 +46,39 @@ describe('GetReviewCoverageUseCase', () => {
     expect(result.gates.every((g) => g.status === 'PASS')).toBe(true);
   });
 
+  it('counts metadata risk insights when checking QA coverage', async () => {
+    prismaMock.multiRepoAnalysisRun.findUnique.mockResolvedValue({
+      id: runId,
+      analyses: [
+        {
+          id: 'analysis-1',
+          sourceTarget: { repositoryId: 'repo-1' },
+          reviewDecisions: [{ decision: 'ACCEPTED' }],
+          traceabilityLinks: [
+            { artifactId: 'art-1', evidenceLinks: [{ evidenceId: 'ev-1' }] },
+          ],
+          insights: [
+            {
+              id: 'risk-1',
+              insightType: 'CLAIM',
+              certainty: 'INFERRED',
+              metadata: { kind: 'RISK' },
+              evidenceLinks: [{ evidenceId: 'ev-2' }],
+            },
+            { id: 'qa-1', insightType: 'QA_SCENARIO', evidenceLinks: [{ evidenceId: 'ev-2' }] },
+          ],
+        },
+      ],
+    });
+
+    const result = await useCase.execute(mockActor, runId);
+
+    expect(result.summary.risks).toBe(1);
+    expect(result.summary.risksWithQa).toBe(1);
+    expect(result.summary.risksWithoutQa).toBe(0);
+    expect(result.gates.find((g) => g.category === 'QA_COVERAGE')?.status).toBe('PASS');
+  });
+
   it('FAIL when any child analysis has no review decision', async () => {
     prismaMock.multiRepoAnalysisRun.findUnique.mockResolvedValue({
       id: runId,

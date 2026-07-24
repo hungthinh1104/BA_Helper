@@ -4,9 +4,9 @@ import { buildDomainPackPromptContext } from '../../domain/domain-pack-context';
 import { impactAnalysisAiSchema } from '../../ai/ai.schema';
 import { EvidencePackFormatter, type EvidenceCandidate } from '../../ai/evidence-pack.formatter';
 import type { ImpactAiReasoningResult, ImpactEvidenceCollectionResult } from '../../domain/impact-analysis-step.types';
-import type { InsightInputParams } from '../../ports/insight.repository.port';
 import type { DomainPackSelectionResult } from '../../ports/domain-pack-selection.port';
 import type { ImpactAnalysisRecord } from '../../ports/impact-analysis.repository.port';
+import { normalizeImpactAiOutput } from './impact-ai-output-normalizer';
 
 export class ImpactAiReasoningStep {
   constructor(private readonly llmProvider: LlmProviderPort) {}
@@ -30,7 +30,9 @@ export class ImpactAiReasoningStep {
       if (!persistedArtifact) continue;
 
       const evidenceRecord = evidenceResult.evidenceById.get(persistedArtifact.id);
-      let excerpt = evidenceRecord?.excerpt || '';
+      if (!evidenceRecord) continue;
+
+      let excerpt = evidenceRecord.excerpt;
 
       if (totalEvidenceChars + excerpt.length > MAX_TOTAL_EVIDENCE_CHARS) {
         const remainingSpace = MAX_TOTAL_EVIDENCE_CHARS - totalEvidenceChars;
@@ -70,68 +72,17 @@ export class ImpactAiReasoningStep {
       impactAnalysisAiSchema,
     );
 
-    const insightInputs: InsightInputParams[] = [];
-    const evidencedInsightMap: Array<{ insightKey: string; artifactKeys: string[] }> = [];
-    const resolvableEvidencedInsightKeys = new Set<string>();
-
-    for (const insight of llmResponse.insights) {
-      let certainty = insight.certainty;
-      let insightMetadata: Record<string, unknown> | undefined;
-      const requestedEvidenceKeys = insight.evidenceKeys ?? [];
-
-      if (insight.certainty === 'EVIDENCED') {
-        const resolvableArtifactKeys = requestedEvidenceKeys.filter((artifactKey) =>
-          evidenceResult.evidenceByKey.has(artifactKey),
-        );
-
-        if (resolvableArtifactKeys.length === 0) {
-          certainty = requestedEvidenceKeys.length > 0 ? 'INFERRED' : 'UNKNOWN';
-          insightMetadata = {
-            evidenceIntegrity: 'EVIDENCED_DOWNGRADED_NO_PERSISTED_EVIDENCE',
-            originalCertainty: 'EVIDENCED',
-            requestedEvidenceKeys,
-          };
-        } else {
-          resolvableEvidencedInsightKeys.add(insight.insightKey);
-          evidencedInsightMap.push({
-            insightKey: insight.insightKey,
-            artifactKeys: resolvableArtifactKeys,
-          });
-        }
-      }
-
-      insightInputs.push({
-        impactAnalysisId: analysis.id,
-        insightKey: insight.insightKey,
-        insightType: insight.insightType,
-        certainty,
-        reviewStatus: 'NEEDS_REVIEW',
-        confidence: insight.confidence,
-        title: insight.title,
-        description: insight.description,
-        reasoning: insight.reasoning,
-        metadata: insightMetadata,
-      });
-    }
-
-    insightInputs.push(
-      ...llmResponse.unknowns.map((unknown) => ({
-        impactAnalysisId: analysis.id,
-        insightKey: unknown.insightKey,
-        insightType: 'UNKNOWN' as const,
-        certainty: 'UNKNOWN' as const,
-        reviewStatus: 'NEEDS_REVIEW' as const,
-        confidence: null,
-        title: unknown.description,
-        description: unknown.description,
-        reasoning: unknown.reasoning,
-      })),
-    );
+    const normalizedOutput = normalizeImpactAiOutput({
+      impactAnalysisId: analysis.id,
+      response: {
+        ...llmResponse,
+        unknowns: llmResponse.unknowns ?? [],
+      },
+      evidenceResult,
+    });
 
     return {
-      insightInputs,
-      evidencedInsightMap,
-      resolvableEvidencedInsightKeys,
+      ...normalizedOutput,
       llmMetadata: metadata,
       totalEvidenceChars,
       evidenceTruncated,

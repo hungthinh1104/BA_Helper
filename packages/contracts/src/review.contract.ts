@@ -26,6 +26,7 @@ export const reviewCompletionResponseSchema = z.object({
     'CRITICAL_MISSING_EVIDENCE',
     'REVIEW_REQUIRED_ITEMS',
     'HIGH_RISK_INSIGHT_UNREVIEWED',
+    'INFERRED_LINKS_UNREVIEWED',
   ])),
 });
 

@@ -5,6 +5,10 @@ import { AppError } from '@ba-helper/shared';
 import { ImpactAnalysisPolicy } from '../../domain/impact-analysis.policy';
 import { DomainPackRegistry, PrismaService, ImpactAnalysisRepository, QueueService, EventLogService } from '@ba-helper/backend-runtime';
 import type { ResolvedDomainPackSelection } from '@ba-helper/contracts';
+import {
+  readResolvedDomainPackSelection,
+  sameResolvedDomainPackSelection,
+} from '@ba-helper/application';
 
 
 @Injectable()
@@ -169,8 +173,8 @@ export class CreateImpactAnalysisUseCase {
       (existingByRequestKey.snapshotId !== params.snapshotId ||
         existingByRequestKey.sourceTargetId !== params.sourceTargetId ||
         existingByRequestKey.requirementRevisionId !== params.requirementRevisionId ||
-        !sameResolvedDomainPack(
-          readSelectedDomainPack(existingByRequestKey),
+        !sameResolvedDomainPackSelection(
+          readResolvedDomainPackSelection(existingByRequestKey),
           selectedDomainPack,
         ))
     ) {
@@ -262,102 +266,4 @@ export class CreateImpactAnalysisUseCase {
 
     return analysis;
   }
-}
-
-function sameResolvedDomainPack(
-  existing: ResolvedDomainPackSelection | null,
-  next: ResolvedDomainPackSelection,
-) {
-  return (
-    existing?.resolvedDomainPackId === next.resolvedDomainPackId &&
-    existing?.resolvedDomainPackVersion === next.resolvedDomainPackVersion &&
-    existing?.resolvedDomainPackStatus === next.resolvedDomainPackStatus &&
-    existing?.selectedBy === next.selectedBy
-  );
-}
-
-function readSelectedDomainPack(record: {
-  requestedDomainPackId?: string | null;
-  resolvedDomainPackId?: string | null;
-  resolvedDomainPackVersion?: string | null;
-  resolvedDomainPackStatus?: string | null;
-  domainPackSelectedBy?: string | null;
-  domainPackResolvedAt?: Date | string | null;
-  metadata?: unknown;
-}): ResolvedDomainPackSelection | null {
-  if (
-    typeof record.resolvedDomainPackId === 'string' &&
-    typeof record.resolvedDomainPackVersion === 'string' &&
-    isDomainPackStatus(record.resolvedDomainPackStatus) &&
-    isDomainPackSelectedBy(record.domainPackSelectedBy)
-  ) {
-    return {
-      requestedDomainPackId: record.requestedDomainPackId ?? null,
-      resolvedDomainPackId: record.resolvedDomainPackId,
-      resolvedDomainPackVersion: record.resolvedDomainPackVersion,
-      resolvedDomainPackStatus: record.resolvedDomainPackStatus,
-      selectedBy: record.domainPackSelectedBy,
-      resolvedAt: normalizeResolvedAt(record.domainPackResolvedAt),
-    };
-  }
-
-  const { metadata } = record;
-  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
-    return null;
-  }
-
-  const selected = (metadata as Record<string, unknown>).selectedDomainPack;
-  if (!selected || typeof selected !== 'object' || Array.isArray(selected)) {
-    return null;
-  }
-
-  const data = selected as Record<string, unknown>;
-  if (
-    typeof data.requestedDomainPackId !== 'string' &&
-    data.requestedDomainPackId !== null
-  ) {
-    return null;
-  }
-
-  if (
-    typeof data.resolvedDomainPackId !== 'string' ||
-    typeof data.resolvedDomainPackVersion !== 'string' ||
-    typeof data.resolvedDomainPackStatus !== 'string' ||
-    typeof data.selectedBy !== 'string' ||
-    typeof data.resolvedAt !== 'string'
-  ) {
-    return null;
-  }
-
-  return data as ResolvedDomainPackSelection;
-}
-
-function normalizeResolvedAt(value: Date | string | null | undefined): string {
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-  return typeof value === 'string' && value.trim().length > 0
-    ? value
-    : new Date(0).toISOString();
-}
-
-function isDomainPackStatus(
-  value: unknown,
-): value is ResolvedDomainPackSelection['resolvedDomainPackStatus'] {
-  return (
-    value === 'STABLE' ||
-    value === 'PARTIAL' ||
-    value === 'EXPERIMENTAL' ||
-    value === 'FALLBACK'
-  );
-}
-
-function isDomainPackSelectedBy(
-  value: unknown,
-): value is ResolvedDomainPackSelection['selectedBy'] {
-  return (
-    value === 'EXPLICIT' ||
-    value === 'REPOSITORY_PROFILE' ||
-    value === 'FALLBACK'
-  );
 }

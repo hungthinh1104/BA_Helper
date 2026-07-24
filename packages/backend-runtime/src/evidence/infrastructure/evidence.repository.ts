@@ -19,6 +19,19 @@ export class EvidenceRepository {
     });
   }
 
+  async listByArtifactIds(params: { snapshotId: string; artifactIds: string[] }) {
+    if (params.artifactIds.length === 0) {
+      return [];
+    }
+
+    return this.prisma.evidence.findMany({
+      where: {
+        snapshotId: params.snapshotId,
+        artifactId: { in: Array.from(new Set(params.artifactIds)) },
+      },
+    });
+  }
+
   async upsertMany(
     items: Array<{
       provenanceKey: string;

@@ -1,4 +1,5 @@
 import type { AnalysisWorkspaceResponse } from '@ba-helper/contracts';
+import { projectDomainPackSelection } from '@ba-helper/application';
 import { buildEvidenceQualityProjection } from '../../../document/application/evidence-quality.projection';
 import {
 	buildReportApprovalGateItems,
@@ -166,18 +167,24 @@ export function deriveReviewStatus(
 }
 
 export function isRiskInsight(insight: WorkspaceInsight): boolean {
-	return insight.certainty === 'CONFLICTING' || readMetadata(insight.metadata, 'kind') === 'risk';
+	return insight.certainty === 'CONFLICTING' || normalizeMetadataKind(
+		readMetadata(insight.metadata, 'kind'),
+	) === 'risk';
 }
 
 export function deriveRiskSeverity(
 	insight: WorkspaceInsight,
 ): AnalysisWorkspaceResponse['risks'][number]['severity'] {
-	const severity = readMetadata(insight.metadata, 'severity');
+	const severity = normalizeRiskSeverity(readMetadata(insight.metadata, 'severity'));
 	return severity === 'low' || severity === 'medium' || severity === 'high'
 		? severity
 		: insight.certainty === 'CONFLICTING'
 			? 'high'
 			: 'medium';
+}
+
+function normalizeRiskSeverity(value: unknown): string | null {
+	return typeof value === 'string' ? value.toLowerCase() : null;
 }
 
 export function toReviewDecision(
@@ -235,54 +242,23 @@ export function buildWorkspaceDomainPack(
 		| 'domainPackSelectedBy'
 	>,
 ): AnalysisWorkspaceResponse['overview']['requirement']['domainPack'] {
-	const selectedByFromColumns = normalizeDomainPackSelectedBy(
-		analysis.domainPackSelectedBy,
-	);
-	if (
-		typeof analysis.resolvedDomainPackId === 'string' &&
-		typeof analysis.resolvedDomainPackVersion === 'string' &&
-		isDomainPackStatus(analysis.resolvedDomainPackStatus) &&
-		selectedByFromColumns
-	) {
-		return {
-			id: analysis.resolvedDomainPackId,
-			version: analysis.resolvedDomainPackVersion,
-			status: analysis.resolvedDomainPackStatus,
-			selectedBy: selectedByFromColumns,
-		};
-	}
-
-	const { metadata } = analysis;
-	const domainPack = readMetadata(metadata, 'domainPack');
-	if (!domainPack || typeof domainPack !== 'object' || Array.isArray(domainPack)) {
-		return null;
-	}
-
-	const data = domainPack as Record<string, unknown>;
-	const selectedBy = normalizeDomainPackSelectedBy(data.selectedBy);
-	if (
-		typeof data.id !== 'string' ||
-		typeof data.version !== 'string' ||
-		!isDomainPackStatus(data.status) ||
-		!selectedBy
-	) {
-		return null;
-	}
-
-	return {
-		id: data.id,
-		version: data.version,
-		status: data.status,
-		selectedBy,
-	};
+	return projectDomainPackSelection(analysis);
 }
 
 export function evidenceArtifactKeys(insight: WorkspaceInsight): string[] {
+	const metadataKeys = [
+		...readStringArrayMetadata(insight.metadata, 'resolvedRelatedArtifactKeys'),
+		...readStringArrayMetadata(insight.metadata, 'relatedArtifactKeys'),
+	];
+
 	return Array.from(
 		new Set(
-			insight.evidenceLinks
-				.map((link) => link.evidence.artifact?.artifactKey)
-				.filter((key): key is string => Boolean(key)),
+			[
+				...insight.evidenceLinks
+					.map((link) => link.evidence.artifact?.artifactKey)
+					.filter((key): key is string => Boolean(key)),
+				...metadataKeys,
+			],
 		),
 	);
 }
@@ -305,10 +281,20 @@ export function readMetadata(metadata: unknown, key: string): unknown {
 export function reviewItemTypeForInsight(
 	insight: WorkspaceInsight,
 ): AnalysisWorkspaceResponse['reviewQueue'][number]['itemType'] {
+	if (isRiskInsight(insight)) return 'risk';
 	if (insight.insightType === 'UNKNOWN') return 'unknown';
 	if (insight.insightType === 'QA_SCENARIO') return 'qa_scenario';
-	if (isRiskInsight(insight)) return 'risk';
 	return 'evidence';
+}
+
+function normalizeMetadataKind(value: unknown): string | null {
+	return typeof value === 'string' ? value.toLowerCase() : null;
+}
+
+function readStringArrayMetadata(metadata: unknown, key: string): string[] {
+	const value = readMetadata(metadata, key);
+	if (!Array.isArray(value)) return [];
+	return value.filter((item): item is string => typeof item === 'string');
 }
 
 export function impactGroupTitle(
@@ -355,35 +341,4 @@ function stringifyJobError(error: unknown) {
 		return String((error as { message?: unknown }).message);
 	}
 	return 'Document generation failed.';
-}
-
-function isDomainPackStatus(
-	value: unknown,
-): value is NonNullable<AnalysisWorkspaceResponse['overview']['requirement']['domainPack']>['status'] {
-	return (
-		value === 'STABLE' ||
-		value === 'PARTIAL' ||
-		value === 'EXPERIMENTAL' ||
-		value === 'FALLBACK'
-	);
-}
-
-function isDomainPackSelectedBy(
-	value: unknown,
-): value is NonNullable<AnalysisWorkspaceResponse['overview']['requirement']['domainPack']>['selectedBy'] {
-	return (
-		value === 'EXPLICIT' ||
-		value === 'REPOSITORY_PROFILE' ||
-		value === 'FALLBACK'
-	);
-}
-
-function normalizeDomainPackSelectedBy(
-	value: unknown,
-): NonNullable<AnalysisWorkspaceResponse['overview']['requirement']['domainPack']>['selectedBy'] | null {
-	if (isDomainPackSelectedBy(value)) return value;
-	if (value === 'manual_config') return 'EXPLICIT';
-	if (value === 'repository_profile') return 'REPOSITORY_PROFILE';
-	if (value === 'safe_default') return 'FALLBACK';
-	return null;
 }

@@ -162,7 +162,7 @@ export class GetReviewCoverageUseCase {
 
       for (const insight of analysis.insights) {
         const isConflicting = insight.certainty === 'CONFLICTING';
-        const isRisk = insight.insightType === 'UNKNOWN' || isConflicting;
+        const isRisk = insight.insightType === 'UNKNOWN' || isConflicting || hasRiskMetadata(insight);
         const isQa = insight.insightType === 'QA_SCENARIO';
 
         if (isRisk) {
@@ -348,4 +348,14 @@ export class GetReviewCoverageUseCase {
       gates,
     };
   }
+}
+
+function hasRiskMetadata(insight: { metadata?: unknown }): boolean {
+  const { metadata } = insight;
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return false;
+  }
+
+  const kind = (metadata as Record<string, unknown>).kind;
+  return typeof kind === 'string' && kind.toLowerCase() === 'risk';
 }

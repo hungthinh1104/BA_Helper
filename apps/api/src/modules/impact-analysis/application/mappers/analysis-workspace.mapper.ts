@@ -39,7 +39,7 @@ export function mapAnalysisWorkspace(
 	const evidenceCards = buildEvidenceCards(analysis);
 	const risks = analysis.insights.filter(isRiskInsight).map(mapRisk);
 	const unknowns = analysis.insights
-		.filter((insight) => insight.insightType === 'UNKNOWN')
+		.filter((insight) => insight.insightType === 'UNKNOWN' && !isRiskInsight(insight))
 		.map(mapUnknown);
 	const qaScenarios = analysis.insights
 		.filter((insight) => insight.insightType === 'QA_SCENARIO')
@@ -119,6 +119,7 @@ function buildImpactGroups(
 			universalKind: normalizeUniversalKind(link.artifact.universalKind),
 			impactBasis: toEvidenceBasis(link.linkBasis),
 			impactReason: `Traceability link ${link.id} is ${link.linkBasis.toLowerCase()}.`,
+			confidence: link.confidence ?? undefined,
 			traceabilityLinkIds: [link.id],
 			evidenceIds: link.evidenceLinks.map((item) => item.evidenceId),
 			reviewDecision: toReviewDecision(

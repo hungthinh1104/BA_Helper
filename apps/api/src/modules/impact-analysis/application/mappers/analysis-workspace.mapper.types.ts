@@ -56,6 +56,7 @@ export type WorkspaceInsight = {
 export type WorkspaceTraceabilityLink = {
 	id: string;
 	linkBasis: string;
+	confidence?: number | null;
 	reviewStatus: string;
 	artifact: {
 		id: string;

@@ -4,6 +4,16 @@ export { ImpactEvidenceCollectionStep } from './application/steps/impact-evidenc
 export { ImpactAiReasoningStep } from './application/steps/impact-ai-reasoning.step';
 export { ImpactDiagnosticPropagationStep } from './application/steps/impact-diagnostic-propagation.step';
 export { buildDomainPackPromptContext } from './domain/domain-pack-context';
+export {
+  normalizeResolvedDomainPackSelection,
+  projectDomainPackSelection,
+  readResolvedDomainPackSelection,
+  sameResolvedDomainPackSelection,
+} from './domain/domain-pack-selection-normalizer';
+export type {
+  DomainPackProjection,
+  DomainPackSelectionRecord,
+} from './domain/domain-pack-selection-normalizer';
 
 // Ports
 export type { ImpactAnalysisRepositoryPort, ImpactAnalysisRecord, ImpactAnalysisStatusUpdate } from './ports/impact-analysis.repository.port';

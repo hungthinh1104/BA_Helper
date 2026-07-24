@@ -37,6 +37,48 @@ describe('GetAnalysisWorkspaceUseCase', () => {
 		expect(result.qaScenarios).toHaveLength(1);
 	});
 
+	it('maps EVIDENCED traceability link to impactBasis=evidenced with confidence', async () => {
+		const result = await executeWith(createAnalysis());
+		const artifact = result.impactGroups[0]?.artifacts[0];
+
+		expect(artifact).toBeDefined();
+		expect(artifact.impactBasis).toBe('evidenced');
+		expect(artifact.confidence).toBeCloseTo(0.95);
+	});
+
+	it('maps INFERRED traceability link to impactBasis=inferred with confidence', async () => {
+		const result = await executeWith(
+			createAnalysis({
+				traceabilityLinks: [
+					traceabilityLink({
+						linkBasis: 'INFERRED',
+						confidence: 0.5,
+					}),
+				],
+			}),
+		);
+		const artifact = result.impactGroups[0]?.artifacts[0];
+
+		expect(artifact).toBeDefined();
+		expect(artifact.impactBasis).toBe('inferred');
+		expect(artifact.confidence).toBeCloseTo(0.5);
+	});
+
+	it('omits confidence when traceability link has no confidence value', async () => {
+		const result = await executeWith(
+			createAnalysis({
+				traceabilityLinks: [
+					traceabilityLink({ confidence: null }),
+				],
+			}),
+		);
+		const artifact = result.impactGroups[0]?.artifacts[0];
+
+		expect(artifact).toBeDefined();
+		expect(artifact.confidence).toBeUndefined();
+		expect(() => analysisWorkspaceResponseSchema.parse(result)).not.toThrow();
+	});
+
 	it('does not infer report completion from analysis progress', async () => {
 		const result = await executeWith(
 			createAnalysis({
@@ -97,6 +139,62 @@ describe('GetAnalysisWorkspaceUseCase', () => {
 		expect(result.reportStatus.finalizeBlockingReasons).toEqual([]);
 	});
 
+	it('blocks finalize when an INFERRED traceability link has not been reviewed', async () => {
+		const result = await executeWith(
+			createAnalysis({
+				insights: [
+					riskInsight({ reviewStatus: 'CONFIRMED' }),
+					unknownInsight({ reviewStatus: 'CONFIRMED' }),
+					qaInsight(),
+				],
+				traceabilityLinks: [
+					traceabilityLink({
+						linkBasis: 'INFERRED',
+						reviewStatus: 'NEEDS_REVIEW',
+						reviewDecision: null,
+					}),
+				],
+			}),
+		);
+
+		expect(result.reportStatus.canFinalize).toBe(false);
+		expect(result.reportStatus.finalizeBlockingReasons).toContain(
+			'INFERRED_LINKS_UNREVIEWED',
+		);
+	});
+
+	it('unblocks finalize when an INFERRED traceability link is explicitly accepted', async () => {
+		const result = await executeWith(
+			createAnalysis({
+				insights: [
+					riskInsight({ reviewStatus: 'CONFIRMED' }),
+					unknownInsight({ reviewStatus: 'CONFIRMED' }),
+					qaInsight(),
+				],
+				traceabilityLinks: [
+					traceabilityLink({
+						linkBasis: 'INFERRED',
+						reviewStatus: 'CONFIRMED',
+						reviewDecision: {
+							id: '00000000-0000-4000-8000-000000000016',
+							analysisId: ids.analysis,
+							traceabilityLinkId: ids.link,
+							decision: 'ACCEPTED',
+							note: null,
+							reviewedByUserId: null,
+							reviewedAt: new Date('2026-06-24T00:00:00.000Z'),
+						},
+					}),
+				],
+			}),
+		);
+
+		expect(result.reportStatus.canFinalize).toBe(true);
+		expect(result.reportStatus.finalizeBlockingReasons).not.toContain(
+			'INFERRED_LINKS_UNREVIEWED',
+		);
+	});
+
 	it('keeps completed historical output visible when the analysis is stale', async () => {
 		const result = await executeWith(
 			createAnalysis({
@@ -132,19 +230,139 @@ describe('GetAnalysisWorkspaceUseCase', () => {
 		expect(evidence.linkedTraceabilityLinkIds).toContain(ids.link);
 	});
 
+	it('normalizes AI risk severity metadata to the public workspace contract', async () => {
+		const result = await executeWith(
+			createAnalysis({
+				insights: [
+					riskInsight({
+						insightType: 'UNKNOWN',
+						certainty: 'INFERRED',
+						metadata: {
+							kind: 'RISK',
+							severity: 'HIGH',
+							category: 'payment',
+							resolvedRelatedArtifactKeys: ['service-method:booking.service.cancelBooking'],
+						},
+					}),
+				],
+				traceabilityLinks: [],
+			}),
+		);
+
+		expect(result.risks).toEqual([
+			expect.objectContaining({
+				riskId: 'risk:duplicate-refund',
+				severity: 'high',
+				relatedArtifactKeys: [
+					'api:booking.controller.cancel',
+					'service-method:booking.service.cancelBooking',
+				],
+			}),
+		]);
+		expect(result.unknowns).toEqual([]);
+		expect(result.reviewQueue).toEqual([
+			expect.objectContaining({
+				itemId: ids.riskInsight,
+				itemType: 'risk',
+				linkedArtifactKeys: [
+					'api:booking.controller.cancel',
+					'service-method:booking.service.cancelBooking',
+				],
+			}),
+		]);
+	});
+
 	it('counts pending review items from insight and traceability state', async () => {
 		const result = await executeWith(createAnalysis());
 
-			expect(result.reviewQueue).toHaveLength(3);
-			expect(result.overview.counts.pendingReviewItems).toBe(3);
-		});
+		expect(result.reviewQueue).toHaveLength(3);
+		expect(result.overview.counts.pendingReviewItems).toBe(3);
+	});
 
-		it('does not derive domain pack capability when backend metadata is missing', async () => {
-			const result = await executeWith(createAnalysis({ metadata: null }));
+	it('does not derive domain pack capability when backend metadata is missing', async () => {
+		const result = await executeWith(createAnalysis({ metadata: null }));
 
-			expect(result.overview.requirement.domainProfileId).toBe('booking@repo-profile@0.1.0');
-			expect(result.overview.requirement.domainPack).toBeNull();
+		expect(result.overview.requirement.domainProfileId).toBe('booking@repo-profile@0.1.0');
+		expect(result.overview.requirement.domainPack).toBeNull();
+	});
+
+	it('projects canonical domain pack values from persisted columns', async () => {
+		const result = await executeWith(createAnalysis({
+			requestedDomainPackId: 'HEALTHCARE@0.1.0',
+			resolvedDomainPackId: 'HEALTHCARE@0.1.0',
+			resolvedDomainPackVersion: '0.1.0',
+			resolvedDomainPackStatus: 'partial',
+			domainPackSelectedBy: 'manual_config',
+			metadata: null,
+		}));
+
+		expect(result.overview.requirement.domainPack).toEqual({
+			id: 'healthcare',
+			version: '0.1.0',
+			status: 'PARTIAL',
+			selectedBy: 'EXPLICIT',
 		});
+	});
+
+	it('prefers domain pack columns over stale metadata', async () => {
+		const result = await executeWith(createAnalysis({
+			requestedDomainPackId: 'ecommerce',
+			resolvedDomainPackId: 'ecommerce',
+			resolvedDomainPackVersion: '0.1.0',
+			resolvedDomainPackStatus: 'PARTIAL',
+			domainPackSelectedBy: 'EXPLICIT',
+			metadata: {
+				domainPack: {
+					id: 'booking',
+					version: '0.1.0',
+					status: 'STABLE',
+					selectedBy: 'REPOSITORY_PROFILE',
+				},
+			},
+		}));
+
+		expect(result.overview.requirement.domainPack).toEqual({
+			id: 'ecommerce',
+			version: '0.1.0',
+			status: 'PARTIAL',
+			selectedBy: 'EXPLICIT',
+		});
+	});
+
+	it('projects legacy domain pack metadata with canonical casing', async () => {
+		const result = await executeWith(createAnalysis({
+			metadata: {
+				domainPack: {
+					id: 'ECOMMERCE@0.1.0',
+					version: '0.1.0',
+					status: 'partial',
+					selectedBy: 'manual_config',
+				},
+			},
+		}));
+
+		expect(result.overview.requirement.domainPack).toEqual({
+			id: 'ecommerce',
+			version: '0.1.0',
+			status: 'PARTIAL',
+			selectedBy: 'EXPLICIT',
+		});
+	});
+
+	it('returns null for invalid legacy domain pack metadata', async () => {
+		const result = await executeWith(createAnalysis({
+			metadata: {
+				domainPack: {
+					id: 'booking',
+					version: '0.1.0',
+					status: 'SUPPORTED',
+					selectedBy: 'automatic',
+				},
+			},
+		}));
+
+		expect(result.overview.requirement.domainPack).toBeNull();
+	});
 
 	it('derives drift independently from lifecycle status', async () => {
 		const result = await executeWith(
@@ -285,6 +503,7 @@ function traceabilityLink(overrides: Record<string, unknown> = {}) {
 	return {
 		id: ids.link,
 		linkBasis: 'EVIDENCED',
+		confidence: 0.95,
 		reviewStatus: 'NEEDS_REVIEW',
 		artifact: {
 			id: ids.artifact,
