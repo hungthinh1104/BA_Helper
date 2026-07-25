@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "suite": "nestjs-booking-stable",
+  "caseCount": 5,
+  "metrics": {
+    "criticalArtifactRecall": 1,
+    "artifactPrecision": 0.404,
+    "evidenceCoverage": 1,
+    "negativeControlPassRate": 1,
+    "orphanEvidencedClaims": 0
+  },
+  "thresholds": {
+    "criticalArtifactRecall": 1,
+    "artifactPrecision": 0.4,
+    "evidenceCoverage": 1,
+    "negativeControlPassRate": 1,
+    "orphanEvidencedClaims": 0
+  },
+  "regressionTolerance": 0.01
+}

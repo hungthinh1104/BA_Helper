@@ -129,7 +129,6 @@ export const analysisWorkspaceLabels = {
       inferredDescription: "Semantically matched, not directly proven by lexical evidence. Reviewer confirmation required.",
       unknownDescription: "Impact basis is undetermined.",
       conflictingDescription: "Evidence conflicts; treat with caution.",
-      confidence: "Confidence: {confidence}",
     },
     evidence: {
       empty: "No evidence cards are available for this analysis.",
@@ -371,7 +370,6 @@ export const analysisWorkspaceLabels = {
       inferredDescription: "Được semantic match nhưng chưa được lexical evidence chứng minh trực tiếp. Cần reviewer xác nhận.",
       unknownDescription: "Chưa xác định được cơ sở tác động.",
       conflictingDescription: "Evidence đang mâu thuẫn; cần xem xét thận trọng.",
-      confidence: "Độ tin cậy: {confidence}",
     },
     evidence: {
       empty: "Không có thẻ bằng chứng cho phân tích này.",
@@ -613,7 +611,6 @@ export const analysisWorkspaceLabels = {
       inferredDescription: "Semantic match ですが lexical evidence による直接証明ではありません。Reviewer の確認が必要です。",
       unknownDescription: "Impact basis は未確定です。",
       conflictingDescription: "Evidence が矛盾しています。注意して確認してください。",
-      confidence: "Confidence: {confidence}",
     },
     evidence: {
       empty: "この分析の evidence card はありません。",

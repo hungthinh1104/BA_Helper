@@ -7,7 +7,6 @@ import { evidenceBasisLabels, getLocalizedLabel, type SupportedLocale } from "@/
 import type { AnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
 import { InlineReviewAction } from "../shared/inline-review-action"
 import { DenseCard, DenseCardDescription, DenseCardHeader, DenseCardTitle } from "../shared/dense-card"
-import { toConfidencePercent } from "./impact-map-presentation"
 
 type ImpactGroup = AnalysisWorkspaceResponse["impactGroups"][number]
 type Artifact = ImpactGroup["artifacts"][number]
@@ -79,9 +78,6 @@ export function ImpactMapTab({
                       <InlineReviewAction analysisId={analysisId} itemId={artifact.traceabilityLinkIds[0]} itemType="impact" itemTitle={artifact.name} currentStatus={artifact.reviewDecision.toUpperCase()} isStale={isStale} />
                       <div className="flex flex-col items-end gap-1.5">
                         <ImpactBasisBadge basis={artifact.impactBasis} locale={locale} labels={labels} />
-                        {artifact.confidence !== undefined && (
-                          <ConfidenceBar confidence={artifact.confidence} basis={artifact.impactBasis} label={labels.confidence} />
-                        )}
                         <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">
                           {artifact.evidenceIds.length} {labels.evidence}
                         </span>
@@ -142,38 +138,6 @@ function ImpactBasisBadge({
       )}
       {label}
     </span>
-  )
-}
-
-function ConfidenceBar({
-  confidence,
-  basis,
-  label,
-}: {
-  confidence: number
-  basis: Artifact["impactBasis"]
-  label: string
-}) {
-  const pct = toConfidencePercent(confidence)
-  const title = label.replace("{confidence}", `${pct}%`)
-  const barColor =
-    basis === "evidenced" ? "bg-success/70"
-    : basis === "inferred" ? "bg-warning/70"
-    : "bg-muted-foreground/40"
-
-  return (
-    <div
-      className="flex items-center gap-1.5"
-      title={title}
-    >
-      <div className="h-1 w-16 rounded-full bg-muted overflow-hidden">
-        <div
-          className={cn("h-full rounded-full transition-all", barColor)}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <span className="text-[10px] text-muted-foreground tabular-nums">{pct}%</span>
-    </div>
   )
 }
 

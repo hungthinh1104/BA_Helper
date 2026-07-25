@@ -70,6 +70,16 @@ jobs:
       - name: Domain pack governance
         run: pnpm verify:domain-packs
 
+      - name: Analyzer quality gate
+        run: pnpm verify:analyzer-quality
+
+      - name: Upload analyzer scorecard
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: analyzer-quality-scorecard
+          path: artifacts/evaluation/analyzer-scorecard.json
+
       - name: Worker boundary check (no api imports)
         run: |
           if grep -rE 'from.*(@ba-helper/api|apps/api/)' apps/worker/src/; then
