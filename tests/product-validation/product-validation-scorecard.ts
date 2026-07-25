@@ -86,7 +86,11 @@ export type ProductValidationDataset = z.infer<
 >;
 
 export function findCliInputArgument(arguments_: string[]): string | undefined {
-  return arguments_.find((argument) => argument !== '--');
+  return findCliInputArguments(arguments_)[0];
+}
+
+export function findCliInputArguments(arguments_: string[]): string[] {
+  return arguments_.filter((argument) => argument !== '--');
 }
 
 function ratio(numerator: number, denominator: number): number | null {
@@ -173,5 +177,136 @@ export function buildProductValidationScorecard(input: unknown) {
         totals.rerunsReviewed,
       ),
     },
+  };
+}
+
+type Scorecard = ReturnType<typeof buildProductValidationScorecard>;
+type RateMetric = Exclude<
+  keyof Scorecard['metrics'],
+  'manualAnalysisMinutes' | 'assistedAnalysisMinutes'
+>;
+
+const HIGHER_IS_BETTER: RateMetric[] = [
+  'analysisTimeReductionRate',
+  'criticalArtifactRecall',
+  'usefulUnknownRate',
+  'acceptedQaScenarioRate',
+  'reviewerConfirmedEvidenceRate',
+  'rerunOrDriftUsefulnessRate',
+];
+
+const LOWER_IS_BETTER: RateMetric[] = ['falsePositiveReviewBurden'];
+
+function scopeMismatchReasons(
+  candidate: ProductValidationDataset,
+  baseline: ProductValidationDataset,
+): string[] {
+  if (candidate.cases.length !== baseline.cases.length) {
+    return ['Candidate and baseline must contain the same number of cases.'];
+  }
+
+  const baselineById = new Map(
+    baseline.cases.map((item) => [item.caseId, item]),
+  );
+  const reasons: string[] = [];
+
+  for (const candidateCase of candidate.cases) {
+    const baselineCase = baselineById.get(candidateCase.caseId);
+    const sameScope =
+      baselineCase &&
+      baselineCase.repository.url === candidateCase.repository.url &&
+      baselineCase.repository.commitSha === candidateCase.repository.commitSha &&
+      baselineCase.requirement === candidateCase.requirement &&
+      baselineCase.reviewerRole === candidateCase.reviewerRole &&
+      baselineCase.measurements.manualAnalysisMinutes ===
+        candidateCase.measurements.manualAnalysisMinutes &&
+      baselineCase.measurements.criticalArtifactsExpected ===
+        candidateCase.measurements.criticalArtifactsExpected;
+
+    if (!sameScope) {
+      reasons.push(
+        `Case ${candidateCase.caseId} does not match the baseline scope.`,
+      );
+    }
+  }
+
+  return reasons;
+}
+
+export function compareProductValidationDatasets(
+  candidateInput: unknown,
+  baselineInput: unknown,
+  options: { rateTolerance?: number } = {},
+) {
+  const candidate = productValidationDatasetSchema.parse(candidateInput);
+  const baseline = productValidationDatasetSchema.parse(baselineInput);
+  const candidateScorecard = buildProductValidationScorecard(candidate);
+  const baselineScorecard = buildProductValidationScorecard(baseline);
+  const reasons = scopeMismatchReasons(candidate, baseline);
+
+  if (
+    candidateScorecard.status !== 'READY_FOR_PRODUCT_DECISION' ||
+    baselineScorecard.status !== 'READY_FOR_PRODUCT_DECISION'
+  ) {
+    reasons.push('Candidate and baseline each require at least three cases.');
+  }
+
+  const rateTolerance = options.rateTolerance ?? 0.01;
+  const metrics = [...HIGHER_IS_BETTER, ...LOWER_IS_BETTER].map((metric) => {
+    const candidateValue = candidateScorecard.metrics[metric];
+    const baselineValue = baselineScorecard.metrics[metric];
+    const rawDelta =
+      candidateValue === null || baselineValue === null
+        ? null
+        : candidateValue - baselineValue;
+    const improvementDelta =
+      rawDelta === null
+        ? null
+        : LOWER_IS_BETTER.includes(metric)
+          ? -rawDelta
+          : rawDelta;
+    const tolerance =
+      metric === 'criticalArtifactRecall' ? 0 : rateTolerance;
+
+    if ((candidateValue === null) !== (baselineValue === null)) {
+      reasons.push(`${metric} is not observable in both datasets.`);
+    }
+
+    return {
+      metric,
+      baseline: baselineValue,
+      candidate: candidateValue,
+      delta: rawDelta,
+      outcome:
+        improvementDelta === null
+          ? ('NOT_OBSERVED' as const)
+          : improvementDelta > tolerance
+            ? ('IMPROVED' as const)
+            : improvementDelta < -tolerance
+              ? ('REGRESSED' as const)
+              : ('UNCHANGED' as const),
+    };
+  });
+  const improvements = metrics
+    .filter((item) => item.outcome === 'IMPROVED')
+    .map((item) => item.metric);
+  const regressions = metrics
+    .filter((item) => item.outcome === 'REGRESSED')
+    .map((item) => item.metric);
+
+  return {
+    decision:
+      reasons.length > 0
+        ? ('INCONCLUSIVE' as const)
+        : regressions.length > 0 || improvements.length === 0
+          ? ('DEFER' as const)
+          : ('PROMOTE' as const),
+    rateTolerance,
+    candidateCollectedAt: candidate.collectedAt,
+    baselineCollectedAt: baseline.collectedAt,
+    improvements,
+    regressions,
+    reasons,
+    metrics,
   };
 }

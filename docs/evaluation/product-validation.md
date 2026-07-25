@@ -59,10 +59,29 @@ The command writes
 produce `INSUFFICIENT_CASES` and exit code 2. Three cases make the dataset ready
 for a product decision; they do not automatically prove product success.
 
+To evaluate a feature candidate against a prior baseline collected on the same
+case scope:
+
+```bash
+pnpm validate:product-beta -- candidate.json baseline.json
+```
+
+This also writes `artifacts/product-validation/comparison.json`:
+
+- `PROMOTE`: at least one observed metric improved beyond the 1 percentage
+  point tolerance and none regressed.
+- `DEFER`: no observed metric improved, or at least one metric regressed.
+- `INCONCLUSIVE`: fewer than three cases, mismatched case scope, or a metric is
+  observable in only one dataset.
+
+Critical artifact recall has zero regression tolerance. Candidate and baseline
+must use the same case IDs, repository commits, requirements, reviewer roles,
+manual timings, and critical artifact ground truth. Metrics unavailable in both
+datasets are reported as `NOT_OBSERVED` and are not silently converted to zero.
+
 ## Decision rule
 
 Establish thresholds only after the first reviewed baseline is collected.
 Features that do not improve time, recall, review burden, useful unknowns,
 accepted QA scenarios, confirmed evidence, or rerun/drift usefulness should be
 deferred. Never tune or omit cases merely to improve the aggregate score.
-

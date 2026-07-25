@@ -1,6 +1,8 @@
 import {
   buildProductValidationScorecard,
+  compareProductValidationDatasets,
   findCliInputArgument,
+  findCliInputArguments,
   productValidationDatasetSchema,
 } from './product-validation-scorecard';
 
@@ -39,6 +41,9 @@ describe('product validation scorecard', () => {
         'tests/product-validation/dataset.template.json',
       ]),
     ).toBe('tests/product-validation/dataset.template.json');
+    expect(
+      findCliInputArguments(['--', 'candidate.json', 'baseline.json']),
+    ).toEqual(['candidate.json', 'baseline.json']);
   });
 
   it('aggregates the Phase 4 BA/QC metrics using weighted counts', () => {
@@ -134,5 +139,131 @@ describe('product validation scorecard', () => {
         cases: [completeCase, completeCase],
       }),
     ).toThrow(/caseId values must be unique/);
+  });
+
+  it('promotes a candidate only when at least one metric improves without regression', () => {
+    const baselineCases = [
+      completeCase,
+      { ...completeCase, caseId: 'case-2' },
+      { ...completeCase, caseId: 'case-3' },
+    ];
+    const comparison = compareProductValidationDatasets(
+      {
+        datasetVersion: 1,
+        collectedAt: '2026-07-26',
+        cases: baselineCases.map((item) => ({
+          ...item,
+          measurements: {
+            ...item.measurements,
+            assistedAnalysisMinutes: 20,
+            falsePositiveArtifacts: 1,
+          },
+        })),
+      },
+      {
+        datasetVersion: 1,
+        collectedAt: '2026-07-25',
+        cases: baselineCases,
+      },
+    );
+
+    expect(comparison.decision).toBe('PROMOTE');
+    expect(comparison.improvements).toEqual(
+      expect.arrayContaining([
+        'analysisTimeReductionRate',
+        'falsePositiveReviewBurden',
+      ]),
+    );
+    expect(comparison.regressions).toEqual([]);
+  });
+
+  it('defers a candidate when critical recall regresses, regardless of tolerance', () => {
+    const baselineCases = [
+      completeCase,
+      { ...completeCase, caseId: 'case-2' },
+      { ...completeCase, caseId: 'case-3' },
+    ];
+    const candidateCases = baselineCases.map((item, index) =>
+      index === 0
+        ? {
+            ...item,
+            measurements: {
+              ...item.measurements,
+              criticalArtifactsFound: 4,
+              assistedAnalysisMinutes: 20,
+            },
+          }
+        : item,
+    );
+
+    const comparison = compareProductValidationDatasets(
+      {
+        datasetVersion: 1,
+        collectedAt: '2026-07-26',
+        cases: candidateCases,
+      },
+      {
+        datasetVersion: 1,
+        collectedAt: '2026-07-25',
+        cases: baselineCases,
+      },
+      { rateTolerance: 0.1 },
+    );
+
+    expect(comparison.decision).toBe('DEFER');
+    expect(comparison.regressions).toContain('criticalArtifactRecall');
+  });
+
+  it('defers a feature that does not improve any measured outcome', () => {
+    const cases = [
+      completeCase,
+      { ...completeCase, caseId: 'case-2' },
+      { ...completeCase, caseId: 'case-3' },
+    ];
+    const comparison = compareProductValidationDatasets(
+      {
+        datasetVersion: 1,
+        collectedAt: '2026-07-26',
+        cases,
+      },
+      {
+        datasetVersion: 1,
+        collectedAt: '2026-07-25',
+        cases,
+      },
+    );
+
+    expect(comparison.decision).toBe('DEFER');
+    expect(comparison.improvements).toEqual([]);
+    expect(comparison.regressions).toEqual([]);
+  });
+
+  it('is inconclusive when candidate and baseline do not use the same case scope', () => {
+    const cases = [
+      completeCase,
+      { ...completeCase, caseId: 'case-2' },
+      { ...completeCase, caseId: 'case-3' },
+    ];
+    const comparison = compareProductValidationDatasets(
+      {
+        datasetVersion: 1,
+        collectedAt: '2026-07-26',
+        cases,
+      },
+      {
+        datasetVersion: 1,
+        collectedAt: '2026-07-25',
+        cases: cases.map((item, index) =>
+          index === 0
+            ? { ...item, requirement: 'A different requirement.' }
+            : item,
+        ),
+      },
+    );
+
+    expect(comparison.decision).toBe('INCONCLUSIVE');
+    expect(comparison.reasons).toContain(
+      'Case cancel-paid-booking does not match the baseline scope.',
+    );
   });
 });
