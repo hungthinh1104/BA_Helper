@@ -27,6 +27,20 @@ multi-tenancy, billing, and non-NestJS scanners are not supported beta paths.
 6. Provision the first local-password account through the authenticated
    operator bootstrap process. Never enable dev-login in production.
 
+## Trace one operation
+
+Every API response includes `x-request-id`; API completion logs include the same
+value without request bodies or query strings. Capture that ID and the returned
+resource/job ID. Worker structured logs then expose deterministic BullMQ job
+IDs plus scan job, analysis, document, snapshot, and report identifiers.
+Persisted domain events provide the final lifecycle/audit link. This is the
+supported trace chain:
+
+```text
+x-request-id -> API response job/resource id -> worker job log
+-> snapshot/analysis/document id -> persisted domain events/report
+```
+
 ## Seed/demo path
 
 The demo seed is local-only:

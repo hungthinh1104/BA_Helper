@@ -1,4 +1,10 @@
 services:
+  postgres:
+    environment:
+      POSTGRES_DB: ba_helper
+      POSTGRES_USER: ba_helper
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+
   migrate:
     environment:
       NODE_ENV: production
