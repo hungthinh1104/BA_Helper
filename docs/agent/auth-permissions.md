@@ -164,7 +164,9 @@ Public endpoints must be explicit:
 `POST /api/v1/auth/login` is the normal web sign-in path. It accepts email and
 password, verifies the persisted password hash, and returns a JWT user session.
 Login failures use a generic invalid-credentials response to avoid account
-enumeration. Password hashes are stored with Node `crypto.scrypt` using
+enumeration. Login and dev-login are throttled through the shared Redis-backed
+rate limiter, so horizontally scaled API processes enforce one counter.
+Password hashes are stored with Node `crypto.scrypt` using
 OWASP-minimum scrypt parameters because the local package manager blocks native
 Argon2 build scripts in this repo environment.
 

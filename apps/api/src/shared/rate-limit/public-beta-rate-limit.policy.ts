@@ -15,6 +15,7 @@ type Bucket = {
 };
 
 const LIMITED_ROUTES = [
+  { method: 'POST', pattern: /^\/api\/v1\/auth\/login$/ },
   { method: 'POST', pattern: /^\/api\/v1\/auth\/dev-login$/ },
   { method: 'POST', pattern: /^\/api\/v1\/repositories\/[^/]+\/scan-jobs$/ },
   { method: 'POST', pattern: /^\/api\/v1\/projects\/[^/]+\/requirements$/ },

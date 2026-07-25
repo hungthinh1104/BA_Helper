@@ -14,6 +14,13 @@ export type OperationsQueueSummary = {
   documentJobs: QueueJobCountSummary;
 };
 
+export type DistributedRateLimitDecision = {
+  allowed: boolean;
+  retryAfterMs: number;
+  limit: number;
+  windowMs: number;
+};
+
 export class QueueService {
   constructor(
     @InjectQueue('impact-analysis')
@@ -67,6 +74,38 @@ export class QueueService {
         backoff: { type: 'exponential', delay: 2000 }
       },
     );
+  }
+
+  async consumeRateLimit(params: {
+    key: string;
+    maxRequests: number;
+    windowMs: number;
+  }): Promise<DistributedRateLimitDecision> {
+    const client = (await this.scanJobQueue.client) as unknown as {
+      eval: (
+        script: string,
+        keyCount: number,
+        key: string,
+        windowMs: string,
+      ) => Promise<[number, number]>;
+    };
+    const [count, ttl] = await client.eval(
+      [
+        "local count = redis.call('INCR', KEYS[1])",
+        "if count == 1 then redis.call('PEXPIRE', KEYS[1], ARGV[1]) end",
+        "return {count, redis.call('PTTL', KEYS[1])}",
+      ].join('\n'),
+      1,
+      `ba-helper:rate-limit:${params.key}`,
+      String(params.windowMs),
+    );
+
+    return {
+      allowed: count <= params.maxRequests,
+      retryAfterMs: Math.max(0, ttl),
+      limit: params.maxRequests,
+      windowMs: params.windowMs,
+    };
   }
 
   async checkQueueHealth(): Promise<{ redis: boolean; queue: boolean }> {

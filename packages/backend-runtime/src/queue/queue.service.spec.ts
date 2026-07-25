@@ -2,7 +2,10 @@ import { QueueService } from '../index';
 
 const makeQueue = () => ({
   add: jest.fn().mockResolvedValue(undefined),
-  client: Promise.resolve({ ping: jest.fn().mockResolvedValue('PONG') }),
+  client: Promise.resolve({
+    ping: jest.fn().mockResolvedValue('PONG'),
+    eval: jest.fn().mockResolvedValue([1, 60_000]),
+  }),
   getJobCounts: jest.fn().mockResolvedValue({}),
 });
 
@@ -34,6 +37,40 @@ describe('QueueService', () => {
       'embed_snapshot',
       { snapshotId: 'snapshot-1' },
       { jobId: 'embed-snapshot-1' },
+    );
+  });
+
+  it('uses an atomic Redis counter for distributed rate limiting', async () => {
+    const impactQueue = makeQueue();
+    const embeddingQueue = makeQueue();
+    const scanJobQueue = makeQueue();
+    const documentJobQueue = makeQueue();
+    const client = await scanJobQueue.client;
+    client.eval.mockResolvedValue([3, 42_000]);
+    const service = new QueueService(
+      impactQueue as never,
+      embeddingQueue as never,
+      scanJobQueue as never,
+      documentJobQueue as never,
+    );
+
+    await expect(
+      service.consumeRateLimit({
+        key: 'hashed-scope',
+        maxRequests: 2,
+        windowMs: 60_000,
+      }),
+    ).resolves.toEqual({
+      allowed: false,
+      retryAfterMs: 42_000,
+      limit: 2,
+      windowMs: 60_000,
+    });
+    expect(client.eval).toHaveBeenCalledWith(
+      expect.stringContaining("redis.call('INCR', KEYS[1])"),
+      1,
+      'ba-helper:rate-limit:hashed-scope',
+      '60000',
     );
   });
 
