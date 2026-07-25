@@ -86,6 +86,19 @@ datasets are reported as `NOT_OBSERVED` and are not silently converted to zero.
 The candidate must identify a different tool commit and cannot have a collection
 date earlier than the baseline.
 
+## Phase 5 entry
+
+SaaS work remains locked until a real comparison returns `PROMOTE`. Verify the
+comparison artifact with:
+
+```bash
+pnpm verify:saas-entry -- artifacts/product-validation/comparison.json
+```
+
+This emits `artifacts/release/saas-entry.json`. The gate rejects insufficient
+case counts, no measured improvement, any regression, identical tool commits,
+or a `DEFER`/`INCONCLUSIVE` comparison.
+
 ## Decision rule
 
 Establish thresholds only after the first reviewed baseline is collected.

@@ -97,6 +97,16 @@ jobs:
       - name: Backend-runtime duplication boundary check
         run: pnpm verify:architecture-boundaries
 
+      - name: Controlled-beta readiness evidence
+        run: pnpm verify:controlled-beta-readiness
+
+      - name: Upload controlled-beta readiness
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: controlled-beta-readiness
+          path: artifacts/release/controlled-beta-readiness.json
+
       - name: Lint
         run: pnpm lint
 

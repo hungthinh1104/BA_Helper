@@ -2,8 +2,8 @@
 
 This document acts as the final gate to verify that the Requirement-to-Code
 Impact Analyzer is prepared for controlled beta or portfolio demo review. The
-current release boundary is private preview unless a real hosted auth flow is
-added.
+supported beta boundary is local-password accounts against public GitHub
+TypeScript/NestJS repositories; hosted SaaS capabilities remain locked.
 
 ## Verification Tasks
 
@@ -20,6 +20,13 @@ added.
 - [x] **Visual Proof Pack Checked:** Public-facing docs link only to existing
       visual proof material and do not include broken screenshot or GIF
       placeholders.
+- [x] **Production Startup Drilled:** API, worker, and web production images
+      started successfully with database, pgvector, Redis, and queue health up.
+- [x] **Restore Drilled:** A logical backup was restored into an isolated
+      database and representative persisted counts plus pgvector were verified.
+- [x] **Machine Gate Added:** `pnpm verify:controlled-beta-readiness` validates
+      the versioned evidence above and CI uploads its scorecard.
 
-_Current status: controlled-demo-ready after running the verification commands
-listed in the demo checklist._
+_Current engineering status: controlled-beta ready. Product validation still
+requires real BA/QC observations; SaaS remains locked until that comparison
+returns `PROMOTE`._

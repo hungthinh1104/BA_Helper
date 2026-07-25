@@ -327,6 +327,8 @@ export function compareProductValidationDatasets(
     rateTolerance,
     candidateTool: candidate.tool,
     baselineTool: baseline.tool,
+    candidateCaseCount: candidate.cases.length,
+    baselineCaseCount: baseline.cases.length,
     candidateCollectedAt: candidate.collectedAt,
     baselineCollectedAt: baseline.collectedAt,
     improvements,

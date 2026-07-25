@@ -25,3 +25,4 @@ tests/benchmark/reports/generated/
 docs/runbooks/diagnostics/
 artifacts/evaluation/
 artifacts/product-validation/
+artifacts/release/
