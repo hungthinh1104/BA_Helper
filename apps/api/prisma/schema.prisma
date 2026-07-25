@@ -240,6 +240,8 @@ model User {
   email             String   @unique
   name              String?
   passwordHash      String?  @map("password_hash")
+  credentialsVersion Int     @default(1) @map("credentials_version")
+  disabledAt        DateTime? @map("disabled_at")
   role              UserRole @default(REVIEWER)
   selectedProjectId String?  @map("selected_project_id")
 

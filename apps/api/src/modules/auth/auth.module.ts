@@ -4,12 +4,13 @@ import { PassportModule } from '@nestjs/passport';
 import { AuthController } from './api/auth.controller';
 import { JwtStrategy } from './application/jwt.strategy';
 import { resolveJwtSecret } from './application/jwt-config';
-import { PrismaModule } from "@ba-helper/backend-runtime";
+import { EventLogModule, PrismaModule } from "@ba-helper/backend-runtime";
 import { PasswordHashService } from './application/password-hash.service';
 
 @Module({
   imports: [
     PrismaModule,
+    EventLogModule,
     PassportModule,
     JwtModule.register({
       secret: resolveJwtSecret(),

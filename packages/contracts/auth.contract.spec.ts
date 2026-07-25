@@ -1,4 +1,6 @@
 import {
+  accountPasswordResetRequestSchema,
+  accountProvisionRequestSchema,
   devLoginRequestSchema,
   loginRequestSchema,
 } from './src/auth.contract';
@@ -51,6 +53,21 @@ describe('auth contracts', () => {
         email: 'analyst@ba-helper.local',
         role: 'OWNER',
       }),
+    ).toThrow();
+  });
+
+  it('requires strong explicit credentials for account operations', () => {
+    expect(
+      accountProvisionRequestSchema.parse({
+        email: 'operator@example.com',
+        password: 'initial-password-123',
+      }),
+    ).toMatchObject({
+      email: 'operator@example.com',
+      role: 'REVIEWER',
+    });
+    expect(() =>
+      accountPasswordResetRequestSchema.parse({ password: 'short' }),
     ).toThrow();
   });
 });

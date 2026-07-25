@@ -161,6 +161,20 @@ Public endpoints must be explicit:
 - POST /api/v1/auth/dev-login only when ENABLE_DEV_LOGIN=true
 ```
 
+Controlled-beta account operations are backend-only `ADMIN` actions:
+
+```text
+POST /api/v1/auth/accounts
+POST /api/v1/auth/accounts/:userId/reset-password
+POST /api/v1/auth/accounts/:userId/disable
+```
+
+Provisioning requires an explicit initial password. Password reset and disable
+increment `User.credentialsVersion`, invalidating previously issued JWTs.
+Disabled accounts fail login with the same generic invalid-credentials response
+as unknown accounts and wrong passwords. Administrators cannot disable their
+own account through the API.
+
 `POST /api/v1/auth/login` is the normal web sign-in path. It accepts email and
 password, verifies the persisted password hash, and returns a JWT user session.
 Login failures use a generic invalid-credentials response to avoid account
@@ -205,6 +219,11 @@ TRACEABILITY_LINK_REJECTED
 ANALYSIS_FINALIZED
 DOCUMENT_EXPORTED
 PROJECT_MEMBER_UPSERTED
+AUTH_LOGIN_SUCCEEDED
+AUTH_LOGIN_FAILED
+ACCOUNT_PROVISIONED
+ACCOUNT_PASSWORD_RESET
+ACCOUNT_DISABLED
 ```
 
 Events record actor identity/type, project or analysis context, timestamp, and

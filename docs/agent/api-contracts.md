@@ -16,6 +16,9 @@ Keep contracts in `packages/contracts` after workspace scaffolding exists.
 ```http
 POST /api/v1/auth/login
 POST /api/v1/auth/dev-login
+POST /api/v1/auth/accounts
+POST /api/v1/auth/accounts/:userId/reset-password
+POST /api/v1/auth/accounts/:userId/disable
 GET  /api/v1/auth/me
 
 GET  /api/v1/projects

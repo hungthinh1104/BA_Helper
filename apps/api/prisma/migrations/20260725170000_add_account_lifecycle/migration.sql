@@ -1,0 +1,3 @@
+ALTER TABLE "user"
+ADD COLUMN "credentials_version" INTEGER NOT NULL DEFAULT 1,
+ADD COLUMN "disabled_at" TIMESTAMP(3);

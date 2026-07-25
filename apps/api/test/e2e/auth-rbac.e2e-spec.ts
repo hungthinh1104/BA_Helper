@@ -326,6 +326,88 @@ describe('Auth and RBAC (e2e)', () => {
     });
   });
 
+  it('provisions, resets, disables, and audits a local-password account', async () => {
+    const provision = await request(app.getHttpServer())
+      .post('/api/v1/auth/accounts')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        email: 'operator@ba-helper.local',
+        name: 'Operator',
+        password: 'initial-password-123',
+        role: 'REVIEWER',
+      })
+      .expect(201);
+
+    const userId = provision.body.userId as string;
+    const firstLogin = await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({
+        email: 'operator@ba-helper.local',
+        password: 'initial-password-123',
+      })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/auth/accounts/${userId}/reset-password`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ password: 'replacement-password-123' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .get('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${firstLogin.body.accessToken}`)
+      .expect(401);
+
+    const secondLogin = await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({
+        email: 'operator@ba-helper.local',
+        password: 'replacement-password-123',
+      })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/auth/accounts/${userId}/disable`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .get('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${secondLogin.body.accessToken}`)
+      .expect(401);
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({
+        email: 'operator@ba-helper.local',
+        password: 'replacement-password-123',
+      })
+      .expect(401);
+
+    const events = await prisma.domainEvent.findMany({
+      where: {
+        eventType: {
+          in: [
+            'ACCOUNT_PROVISIONED',
+            'ACCOUNT_PASSWORD_RESET',
+            'ACCOUNT_DISABLED',
+            'AUTH_LOGIN_SUCCEEDED',
+            'AUTH_LOGIN_FAILED',
+          ],
+        },
+      },
+    });
+    expect(new Set(events.map((event) => event.eventType))).toEqual(
+      new Set([
+        'ACCOUNT_PROVISIONED',
+        'ACCOUNT_PASSWORD_RESET',
+        'ACCOUNT_DISABLED',
+        'AUTH_LOGIN_SUCCEEDED',
+        'AUTH_LOGIN_FAILED',
+      ]),
+    );
+    expect(JSON.stringify(events)).not.toContain('replacement-password-123');
+  });
+
   it('enforces admin-only project creation', async () => {
     await request(app.getHttpServer())
       .post('/api/v1/projects')

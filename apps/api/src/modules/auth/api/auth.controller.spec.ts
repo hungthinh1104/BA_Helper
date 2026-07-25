@@ -5,6 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { BadRequestException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from "@ba-helper/backend-runtime";
 import { PasswordHashService } from '../application/password-hash.service';
+import { EventLogService } from '@ba-helper/backend-runtime';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -35,6 +36,12 @@ describe('AuthController', () => {
           useValue: {
             hashPassword: jest.fn().mockResolvedValue('scrypt$mock'),
             verifyPassword: jest.fn(),
+          },
+        },
+        {
+          provide: EventLogService,
+          useValue: {
+            recordEvent: jest.fn().mockResolvedValue(undefined),
           },
         },
       ],
