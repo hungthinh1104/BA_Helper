@@ -7,6 +7,7 @@ const makeQueue = () => ({
     eval: jest.fn().mockResolvedValue([1, 60_000]),
   }),
   getJobCounts: jest.fn().mockResolvedValue({}),
+  getJob: jest.fn(),
 });
 
 describe('QueueService', () => {
@@ -30,14 +31,49 @@ describe('QueueService', () => {
       1,
       'embed_snapshot',
       { snapshotId: 'snapshot-1' },
-      { jobId: 'embed-snapshot-1' },
+      expect.objectContaining({
+        jobId: 'embed-snapshot-1',
+        attempts: 3,
+        removeOnFail: false,
+      }),
     );
     expect(embeddingQueue.add).toHaveBeenNthCalledWith(
       2,
       'embed_snapshot',
       { snapshotId: 'snapshot-1' },
-      { jobId: 'embed-snapshot-1' },
+      expect.objectContaining({
+        jobId: 'embed-snapshot-1',
+        attempts: 3,
+        removeOnFail: false,
+      }),
     );
+  });
+
+  it('retries only jobs retained in the failed dead-letter set', async () => {
+    const impactQueue = makeQueue();
+    const embeddingQueue = makeQueue();
+    const scanJobQueue = makeQueue();
+    const documentJobQueue = makeQueue();
+    const job = {
+      getState: jest.fn().mockResolvedValue('failed'),
+      retry: jest.fn().mockResolvedValue(undefined),
+    };
+    scanJobQueue.getJob.mockResolvedValue(job);
+    const service = new QueueService(
+      impactQueue as never,
+      embeddingQueue as never,
+      scanJobQueue as never,
+      documentJobQueue as never,
+    );
+
+    await expect(
+      service.retryFailedJob('scan-job', 'scan-job-1'),
+    ).resolves.toEqual({
+      queueName: 'scan-job',
+      jobId: 'scan-job-1',
+      status: 'RETRIED',
+    });
+    expect(job.retry).toHaveBeenCalledWith('failed');
   });
 
   it('uses an atomic Redis counter for distributed rate limiting', async () => {

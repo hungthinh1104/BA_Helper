@@ -21,6 +21,19 @@ export type DistributedRateLimitDecision = {
   windowMs: number;
 };
 
+export type RecoverableQueueName =
+  | 'scan-job'
+  | 'embedding'
+  | 'impact-analysis'
+  | 'document-job';
+
+const RETRYABLE_JOB_OPTIONS = {
+  attempts: 3,
+  backoff: { type: 'exponential' as const, delay: 2000 },
+  removeOnComplete: { count: 1000 },
+  removeOnFail: false,
+};
+
 export class QueueService {
   constructor(
     @InjectQueue('impact-analysis')
@@ -39,8 +52,7 @@ export class QueueService {
       { analysisId },
       { 
         jobId: `impact-${analysisId}`,
-        attempts: 3,
-        backoff: { type: 'exponential', delay: 2000 }
+        ...RETRYABLE_JOB_OPTIONS,
       },
     );
   }
@@ -49,7 +61,7 @@ export class QueueService {
     await this.embeddingQueue.add(
       'embed_snapshot',
       { snapshotId },
-      { jobId: `embed-${snapshotId}` },
+      { jobId: `embed-${snapshotId}`, ...RETRYABLE_JOB_OPTIONS },
     );
   }
 
@@ -57,7 +69,7 @@ export class QueueService {
     await this.scanJobQueue.add(
       'scan',
       { jobId },
-      { jobId: `scan-${jobId}` },
+      { jobId: `scan-${jobId}`, ...RETRYABLE_JOB_OPTIONS },
     );
   }
 
@@ -70,10 +82,22 @@ export class QueueService {
       { documentJobId },
       { 
         jobId: uniqueJobId,
-        attempts: 3,
-        backoff: { type: 'exponential', delay: 2000 }
+        ...RETRYABLE_JOB_OPTIONS,
       },
     );
+  }
+
+  async retryFailedJob(
+    queueName: RecoverableQueueName,
+    jobId: string,
+  ): Promise<{ queueName: RecoverableQueueName; jobId: string; status: 'RETRIED' }> {
+    const queue = this.getQueue(queueName);
+    const job = await queue.getJob(jobId);
+    if (!job || (await job.getState()) !== 'failed') {
+      throw new Error(`Failed job ${queueName}/${jobId} was not found.`);
+    }
+    await job.retry('failed');
+    return { queueName, jobId, status: 'RETRIED' };
   }
 
   async consumeRateLimit(params: {
@@ -179,6 +203,19 @@ export class QueueService {
         running: 0,
         failed: 0,
       };
+    }
+  }
+
+  private getQueue(queueName: RecoverableQueueName): Queue {
+    switch (queueName) {
+      case 'scan-job':
+        return this.scanJobQueue;
+      case 'embedding':
+        return this.embeddingQueue;
+      case 'impact-analysis':
+        return this.impactQueue;
+      case 'document-job':
+        return this.documentJobQueue;
     }
   }
 }
