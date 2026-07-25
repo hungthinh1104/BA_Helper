@@ -26,6 +26,7 @@
     "typecheck": "tsc --noEmit",
     "verify:domain-packs": "tsx scripts/verify-domain-packs.ts",
     "verify:analyzer-quality": "tsx scripts/run-analyzer-quality-gate.ts",
+    "validate:product-beta": "tsx scripts/run-product-validation-scorecard.ts",
     "verify:architecture-boundaries": "tsx scripts/verify-architecture-boundaries.ts && pnpm verify:backend-runtime-boundary",
     "verify:backend-runtime-boundary": "tsx scripts/verify-backend-runtime-boundary.ts",
     "verify:stability": "pnpm infra:up && pnpm db:migrate && pnpm verify:domain-packs && pnpm verify:analyzer-quality && pnpm verify:architecture-boundaries && pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e && pnpm demo:golden-path && pnpm demo:multi-repo-golden-path"

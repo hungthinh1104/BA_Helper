@@ -1,0 +1,33 @@
+{
+  "datasetVersion": 1,
+  "collectedAt": "2026-07-25",
+  "cases": [
+    {
+      "caseId": "replace-with-real-case-id",
+      "repository": {
+        "url": "https://github.com/owner/public-nestjs-repository",
+        "commitSha": "0123456789abcdef0123456789abcdef01234567"
+      },
+      "requirement": "Replace with the exact requirement used in the review.",
+      "reviewerRole": "TECHNICAL_BA",
+      "measurements": {
+        "manualAnalysisMinutes": 0,
+        "assistedAnalysisMinutes": 0,
+        "criticalArtifactsExpected": 0,
+        "criticalArtifactsFound": 0,
+        "artifactsReviewed": 0,
+        "falsePositiveArtifacts": 0,
+        "unknownsReviewed": 0,
+        "usefulUnknowns": 0,
+        "qaScenariosReviewed": 0,
+        "acceptedQaScenarios": 0,
+        "evidenceItemsReviewed": 0,
+        "reviewerConfirmedEvidenceItems": 0,
+        "rerunOrDriftReviewed": false,
+        "rerunOrDriftUseful": null
+      },
+      "notes": "Record reviewer rationale without personal data."
+    }
+  ]
+}
+
