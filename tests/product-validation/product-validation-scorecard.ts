@@ -51,6 +51,9 @@ const measurementsSchema = z
 
 const validationCaseSchema = z.object({
   caseId: z.string().trim().min(1),
+  analysisId: z.string().uuid(),
+  reviewedReportSnapshotId: z.string().uuid(),
+  reviewedAt: z.string().datetime({ offset: true }),
   repository: z.object({
     url: z
       .string()
@@ -68,16 +71,27 @@ export const productValidationDatasetSchema = z
   .object({
     datasetVersion: z.literal(1),
     collectedAt: z.string().date(),
+    tool: z.object({
+      commitSha: z.string().regex(/^[a-f0-9]{40}$/i),
+      appVersion: z.string().trim().min(1),
+    }),
     cases: z.array(validationCaseSchema).min(1),
   })
   .superRefine((value, context) => {
-    const ids = value.cases.map((item) => item.caseId);
-    if (new Set(ids).size !== ids.length) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['cases'],
-        message: 'caseId values must be unique',
-      });
+    const uniqueFields = [
+      'caseId',
+      'analysisId',
+      'reviewedReportSnapshotId',
+    ] as const;
+    for (const field of uniqueFields) {
+      const values = value.cases.map((item) => item[field]);
+      if (new Set(values).size !== values.length) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['cases'],
+          message: `${field} values must be unique`,
+        });
+      }
     }
   });
 
@@ -244,6 +258,15 @@ export function compareProductValidationDatasets(
   const baselineScorecard = buildProductValidationScorecard(baseline);
   const reasons = scopeMismatchReasons(candidate, baseline);
 
+  if (candidate.tool.commitSha === baseline.tool.commitSha) {
+    reasons.push(
+      'Candidate and baseline must identify different tool commits.',
+    );
+  }
+  if (candidate.collectedAt < baseline.collectedAt) {
+    reasons.push('Candidate collection date must not precede the baseline.');
+  }
+
   if (
     candidateScorecard.status !== 'READY_FOR_PRODUCT_DECISION' ||
     baselineScorecard.status !== 'READY_FOR_PRODUCT_DECISION'
@@ -302,6 +325,8 @@ export function compareProductValidationDatasets(
           ? ('DEFER' as const)
           : ('PROMOTE' as const),
     rateTolerance,
+    candidateTool: candidate.tool,
+    baselineTool: baseline.tool,
     candidateCollectedAt: candidate.collectedAt,
     baselineCollectedAt: baseline.collectedAt,
     improvements,

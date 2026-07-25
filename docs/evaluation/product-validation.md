@@ -22,6 +22,11 @@ commit SHA. For each requirement:
 Do not store reviewer names, emails, repository credentials, or private source
 content in the dataset.
 
+Each dataset identifies the exact BA Helper application version and 40-character
+tool commit. Every case must reference its persisted `analysisId`, immutable
+`reviewedReportSnapshotId`, and `reviewedAt` timestamp. Numbers without this
+provenance are rejected instead of being accepted as product evidence.
+
 ## Metrics
 
 The scorecard reports weighted aggregate values:
@@ -78,6 +83,8 @@ Critical artifact recall has zero regression tolerance. Candidate and baseline
 must use the same case IDs, repository commits, requirements, reviewer roles,
 manual timings, and critical artifact ground truth. Metrics unavailable in both
 datasets are reported as `NOT_OBSERVED` and are not silently converted to zero.
+The candidate must identify a different tool commit and cannot have a collection
+date earlier than the baseline.
 
 ## Decision rule
 

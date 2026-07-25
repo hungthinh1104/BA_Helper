@@ -8,6 +8,9 @@ import {
 
 const completeCase = {
   caseId: 'cancel-paid-booking',
+  analysisId: '11111111-1111-4111-8111-111111111111',
+  reviewedReportSnapshotId: '22222222-2222-4222-8222-222222222222',
+  reviewedAt: '2026-07-25T08:00:00.000Z',
   repository: {
     url: 'https://github.com/example/public-nest-app',
     commitSha: '0123456789abcdef0123456789abcdef01234567',
@@ -33,7 +36,25 @@ const completeCase = {
   notes: 'Reviewed against the pinned public commit.',
 };
 
+function makeCase(caseId: string, suffix: number) {
+  return {
+    ...completeCase,
+    caseId,
+    analysisId: `11111111-1111-4111-8111-${String(suffix).padStart(12, '0')}`,
+    reviewedReportSnapshotId: `22222222-2222-4222-8222-${String(suffix).padStart(12, '0')}`,
+  };
+}
+
 describe('product validation scorecard', () => {
+  const baselineTool = {
+    commitSha: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    appVersion: '0.1.0',
+  };
+  const candidateTool = {
+    commitSha: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+    appVersion: '0.1.1',
+  };
+
   it('accepts the pnpm argument separator used by the documented command', () => {
     expect(
       findCliInputArgument([
@@ -50,11 +71,11 @@ describe('product validation scorecard', () => {
     const scorecard = buildProductValidationScorecard({
       datasetVersion: 1,
       collectedAt: '2026-07-25',
+      tool: candidateTool,
       cases: [
         completeCase,
         {
-          ...completeCase,
-          caseId: 'prevent-double-refund',
+          ...makeCase('prevent-double-refund', 2),
           reviewerRole: 'QC' as const,
           measurements: {
             ...completeCase.measurements,
@@ -95,10 +116,11 @@ describe('product validation scorecard', () => {
     const scorecard = buildProductValidationScorecard({
       datasetVersion: 1,
       collectedAt: '2026-07-25',
+      tool: candidateTool,
       cases: [
         completeCase,
-        { ...completeCase, caseId: 'case-2' },
-        { ...completeCase, caseId: 'case-3' },
+        makeCase('case-2', 2),
+        makeCase('case-3', 3),
       ],
     });
 
@@ -112,6 +134,7 @@ describe('product validation scorecard', () => {
       productValidationDatasetSchema.parse({
         datasetVersion: 1,
         collectedAt: '2026-07-25',
+        tool: candidateTool,
         cases: [
           {
             ...completeCase,
@@ -136,6 +159,7 @@ describe('product validation scorecard', () => {
       productValidationDatasetSchema.parse({
         datasetVersion: 1,
         collectedAt: '2026-07-25',
+        tool: candidateTool,
         cases: [completeCase, completeCase],
       }),
     ).toThrow(/caseId values must be unique/);
@@ -144,13 +168,14 @@ describe('product validation scorecard', () => {
   it('promotes a candidate only when at least one metric improves without regression', () => {
     const baselineCases = [
       completeCase,
-      { ...completeCase, caseId: 'case-2' },
-      { ...completeCase, caseId: 'case-3' },
+      makeCase('case-2', 2),
+      makeCase('case-3', 3),
     ];
     const comparison = compareProductValidationDatasets(
       {
         datasetVersion: 1,
         collectedAt: '2026-07-26',
+        tool: candidateTool,
         cases: baselineCases.map((item) => ({
           ...item,
           measurements: {
@@ -163,6 +188,7 @@ describe('product validation scorecard', () => {
       {
         datasetVersion: 1,
         collectedAt: '2026-07-25',
+        tool: baselineTool,
         cases: baselineCases,
       },
     );
@@ -180,8 +206,8 @@ describe('product validation scorecard', () => {
   it('defers a candidate when critical recall regresses, regardless of tolerance', () => {
     const baselineCases = [
       completeCase,
-      { ...completeCase, caseId: 'case-2' },
-      { ...completeCase, caseId: 'case-3' },
+      makeCase('case-2', 2),
+      makeCase('case-3', 3),
     ];
     const candidateCases = baselineCases.map((item, index) =>
       index === 0
@@ -200,11 +226,13 @@ describe('product validation scorecard', () => {
       {
         datasetVersion: 1,
         collectedAt: '2026-07-26',
+        tool: candidateTool,
         cases: candidateCases,
       },
       {
         datasetVersion: 1,
         collectedAt: '2026-07-25',
+        tool: baselineTool,
         cases: baselineCases,
       },
       { rateTolerance: 0.1 },
@@ -217,18 +245,20 @@ describe('product validation scorecard', () => {
   it('defers a feature that does not improve any measured outcome', () => {
     const cases = [
       completeCase,
-      { ...completeCase, caseId: 'case-2' },
-      { ...completeCase, caseId: 'case-3' },
+      makeCase('case-2', 2),
+      makeCase('case-3', 3),
     ];
     const comparison = compareProductValidationDatasets(
       {
         datasetVersion: 1,
         collectedAt: '2026-07-26',
+        tool: candidateTool,
         cases,
       },
       {
         datasetVersion: 1,
         collectedAt: '2026-07-25',
+        tool: baselineTool,
         cases,
       },
     );
@@ -241,18 +271,20 @@ describe('product validation scorecard', () => {
   it('is inconclusive when candidate and baseline do not use the same case scope', () => {
     const cases = [
       completeCase,
-      { ...completeCase, caseId: 'case-2' },
-      { ...completeCase, caseId: 'case-3' },
+      makeCase('case-2', 2),
+      makeCase('case-3', 3),
     ];
     const comparison = compareProductValidationDatasets(
       {
         datasetVersion: 1,
         collectedAt: '2026-07-26',
+        tool: candidateTool,
         cases,
       },
       {
         datasetVersion: 1,
         collectedAt: '2026-07-25',
+        tool: baselineTool,
         cases: cases.map((item, index) =>
           index === 0
             ? { ...item, requirement: 'A different requirement.' }
@@ -264,6 +296,49 @@ describe('product validation scorecard', () => {
     expect(comparison.decision).toBe('INCONCLUSIVE');
     expect(comparison.reasons).toContain(
       'Case cancel-paid-booking does not match the baseline scope.',
+    );
+  });
+
+  it('requires provenance for every reviewed observation', () => {
+    const { analysisId: _analysisId, ...withoutAnalysis } = completeCase;
+
+    expect(() =>
+      productValidationDatasetSchema.parse({
+        datasetVersion: 1,
+        collectedAt: '2026-07-25',
+        tool: candidateTool,
+        cases: [withoutAnalysis],
+      }),
+    ).toThrow();
+  });
+
+  it('is inconclusive when comparing the same build or an older candidate', () => {
+    const cases = [
+      completeCase,
+      makeCase('case-2', 2),
+      makeCase('case-3', 3),
+    ];
+    const comparison = compareProductValidationDatasets(
+      {
+        datasetVersion: 1,
+        collectedAt: '2026-07-24',
+        tool: baselineTool,
+        cases,
+      },
+      {
+        datasetVersion: 1,
+        collectedAt: '2026-07-25',
+        tool: baselineTool,
+        cases,
+      },
+    );
+
+    expect(comparison.decision).toBe('INCONCLUSIVE');
+    expect(comparison.reasons).toEqual(
+      expect.arrayContaining([
+        'Candidate and baseline must identify different tool commits.',
+        'Candidate collection date must not precede the baseline.',
+      ]),
     );
   });
 });
