@@ -5,8 +5,9 @@ import { resetDatabase } from './helpers/reset-db';
 import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { grantProjectMembership } from './helpers/grant-project-membership';
-import { PrismaService } from "@ba-helper/backend-runtime";
-import { RunDocumentJobUseCase } from "@ba-helper/application";
+import { PrismaService } from '@ba-helper/backend-runtime';
+import { RunDocumentJobUseCase } from '@ba-helper/application';
+import { ApprovedReportContextReader } from '../../src/modules/document/application/queries/approved-report-context.reader';
 
 describe('Final Reviewed Report Audit Flow (e2e)', () => {
   let app: INestApplication;
@@ -249,8 +250,37 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       .expect(200);
 
     expect(finalRes.body.markdown).toBe('# Live Generated Report');
+    expect(finalRes.body.locale).toBe('en');
     expect(finalRes.body.snapshotId).toBeDefined();
     expect(finalRes.body.reviewCompletion.isComplete).toBe(true);
+
+    const contextReader = app.get(ApprovedReportContextReader);
+    const context = await contextReader.readContext(analysisId);
+    await prisma.localizedReportArtifact.create({
+      data: {
+        sourceDocumentId: docId,
+        locale: 'vi-VN',
+        sourceLocale: 'en',
+        localizationStatus: 'COMPLETED',
+        contentMarkdown: '# Báo cáo đã duyệt\n\n## Phụ lục bằng chứng',
+        sourceContentHash: context.sourceContentHash,
+        provider: 'deterministic-e2e',
+      },
+    });
+
+    const vietnameseRes = await request(app.getHttpServer())
+      .get(
+        `/api/v1/impact-analyses/${analysisId}/final-reviewed-report?locale=vi-VN`,
+      )
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(vietnameseRes.body).toMatchObject({
+      analysisId,
+      locale: 'vi-VN',
+      markdown: '# Báo cáo đã duyệt\n\n## Phụ lục bằng chứng',
+    });
+    expect(vietnameseRes.body.snapshotId).toBe(finalRes.body.snapshotId);
   });
 
   it('unreviewed link blocks final report', async () => {
