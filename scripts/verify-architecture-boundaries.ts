@@ -65,21 +65,13 @@ for (const scope of ['apps/api', 'apps/worker', 'packages']) {
 
 // ADR-0010: backend-runtime owns adapters + composition only. It must NOT own
 // business use cases (`*.usecase.ts`) or domain policies (`domain/*.policy.ts`).
-// This is a GENERAL rule (any new offender is caught), with an explicit allowlist
-// for known legacy files that are tracked as ADR-0010 migration debt.
-const runtimeUseCasePolicyDebt = new Set([
-  // Prisma-coupled query; needs a repository-port extraction before it can move.
-  'packages/backend-runtime/src/impact-analysis/application/queries/get-impact-diff.usecase.ts',
-  // Domain policies pending relocation to packages/application.
-  'packages/backend-runtime/src/event-log/domain/event-log.policy.ts',
-  'packages/backend-runtime/src/queue/domain/queue.policy.ts',
-  'packages/backend-runtime/src/scanner/domain/scan-job.policy.ts',
-]);
+// The former migration-debt allowlist is now empty — every such file lives in
+// packages/application — so the rule is unconditional and catches any new offender.
 for (const file of sourceFiles('packages/backend-runtime/src')) {
   const rel = relative(file);
   const isUseCase = /\.usecase\.ts$/.test(file);
   const isDomainPolicy = /\/domain\/[^/]+\.policy\.ts$/.test(file);
-  if ((isUseCase || isDomainPolicy) && !runtimeUseCasePolicyDebt.has(rel)) {
+  if (isUseCase || isDomainPolicy) {
     violations.push(
       `${rel} is a business use case or domain policy and must live in packages/application (ADR-0010)`,
     );

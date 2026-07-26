@@ -12,7 +12,7 @@ import { ReviewNoteRepository } from '../../impact-analysis/infrastructure/revie
 import { GraphRepository } from '../../graph/infrastructure/graph.repository';
 import { ReviewClarificationRepository } from '../../impact-analysis/infrastructure/review-clarification.repository';
 import { ReviewDecisionRepository } from '../../impact-analysis/infrastructure/review-decision.repository';
-import { GetImpactDiffUseCase } from '../../impact-analysis/application/queries/get-impact-diff.usecase';
+import { GetImpactDiffUseCase } from '../../impact-analysis/infrastructure/get-impact-diff.provider';
 import { DocumentRepository } from './document.repository';
 import { ReviewedSnapshotReportContextAdapter } from '../application/render/reviewed-snapshot-report-context.adapter';
 import { AppError } from '@ba-helper/shared';

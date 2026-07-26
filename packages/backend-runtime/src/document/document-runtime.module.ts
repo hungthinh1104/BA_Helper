@@ -8,7 +8,7 @@ import { MarkdownImpactReportBuilder } from './application/render/markdown-impac
 import { ReviewedSnapshotReportContextAdapter } from './application/render/reviewed-snapshot-report-context.adapter';
 import { MermaidImpactDiagramBuilder } from './application/mermaid-impact-diagram.builder';
 import { EvaluationContextAdapter } from './application/evaluation-context.adapter';
-import { GetImpactDiffUseCase } from '../impact-analysis/application/queries/get-impact-diff.usecase';
+import { GetImpactDiffUseCase } from '../impact-analysis/infrastructure/get-impact-diff.provider';
 import { EventLogModule } from '../event-log/event-log.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PrismaService } from '../prisma/prisma.service';

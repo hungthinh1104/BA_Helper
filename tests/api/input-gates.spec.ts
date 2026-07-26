@@ -1,7 +1,7 @@
 import { RepositoryPolicy } from '../../apps/api/src/modules/repository/domain/repository.policy';
 import { RequirementPolicy } from '../../apps/api/src/modules/requirement/domain/requirement.policy';
 import { AppError } from '@ba-helper/shared';
-import { ScanJobPolicy } from "@ba-helper/backend-runtime";
+import { ScanJobPolicy } from "@ba-helper/application/scanner";
 
 describe('input gate policies', () => {
   const getErrorCode = (fn: () => void) => {

@@ -1,7 +1,8 @@
 import { CreateScanJobUseCase } from './create-scan-job.usecase';
 import type { ScanJobRepository, EventLogService } from '@ba-helper/backend-runtime';
 import { AppError } from '@ba-helper/shared';
-import { RepositoryRepository, QueueService, ScanJobPolicy } from "@ba-helper/backend-runtime";
+import { RepositoryRepository, QueueService } from "@ba-helper/backend-runtime";
+import { ScanJobPolicy } from "@ba-helper/application/scanner";
 
 
 describe('CreateScanJobUseCase', () => {

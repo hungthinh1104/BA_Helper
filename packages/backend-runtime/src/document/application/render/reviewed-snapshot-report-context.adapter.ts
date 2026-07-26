@@ -7,7 +7,7 @@ import { ReviewNoteRepository } from '../../../impact-analysis/infrastructure/re
 import { GraphRepository } from '../../../graph/infrastructure/graph.repository';
 import { ReviewClarificationRepository } from '../../../impact-analysis/infrastructure/review-clarification.repository';
 import { ReviewDecisionRepository } from '../../../impact-analysis/infrastructure/review-decision.repository';
-import { GetImpactDiffUseCase } from '../../../impact-analysis/application/queries/get-impact-diff.usecase';
+import { GetImpactDiffUseCase } from '../../../impact-analysis/infrastructure/get-impact-diff.provider';
 import { DEFAULT_REPORT_LOCALE, ReportLocale } from './report-localization';
 import type { ApprovedReportMetadata } from '../../domain/approved-report-metadata';
 import { buildReportReviewCoverageSummaryFromSnapshot } from '../report-review-coverage.summary';

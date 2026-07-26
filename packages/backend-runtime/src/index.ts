@@ -8,7 +8,6 @@ export * from './event-log/event-log.module';
 export * from './event-log/application/event-log.service';
 export * from './event-log/infrastructure/event-log.repository';
 export * from './event-log/infrastructure/event-log-port.adapter';
-export * from './event-log/domain/event-log.policy';
 
 export * from './ai/ai.module';
 export * from './ai/infrastructure/fake-ai.provider';
@@ -25,7 +24,6 @@ export * from './scanner/application/incremental-scan-classifier';
 export * from './scanner/application/scan-diagnostic-summary';
 export * from './scanner/application/scan-persistence-mappers';
 export * from './scanner/application/scan-workspace-cleanup.policy';
-export * from './scanner/domain/scan-job.policy';
 
 export * from './repository/infrastructure/repository.repository';
 export * from './impact-analysis/infrastructure/impact-analysis.repository';
@@ -35,7 +33,7 @@ export * from './impact-analysis/infrastructure/review-decision.repository';
 export * from './impact-analysis/infrastructure/multi-repo-analysis-run.repository';
 export * from './impact-analysis/infrastructure/multi-repo-merged-report.repository';
 export * from './impact-analysis/infrastructure/merged-multi-repo-report-review-decision.repository';
-export * from './impact-analysis/application/queries/get-impact-diff.usecase';
+export * from './impact-analysis/infrastructure/get-impact-diff.provider';
 export * from './artifact/infrastructure/artifact.repository';
 export * from './evidence/infrastructure/evidence.repository';
 export * from './clarification/infrastructure/clarification.repository';
@@ -59,7 +57,6 @@ export * from './embedding/infrastructure/fake-embedding.provider';
 
 export * from './queue/queue.module';
 export * from './queue/queue.service';
-export * from './queue/domain/queue.policy';
 export * from './document/infrastructure/runtime-document-job-runner.adapter';
 export * from './localization/localization.module';
 export * from './localization/application/report-localization.service';

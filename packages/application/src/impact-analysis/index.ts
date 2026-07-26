@@ -1,5 +1,6 @@
 // Application use cases
 export { RunImpactAnalysisUseCase } from './application/run-impact-analysis.usecase';
+export { GetImpactDiff } from './application/queries/get-impact-diff.usecase';
 export { ImpactEvidenceCollectionStep } from './application/steps/impact-evidence-collection.step';
 export { ImpactAiReasoningStep } from './application/steps/impact-ai-reasoning.step';
 export { ImpactDiagnosticPropagationStep } from './application/steps/impact-diagnostic-propagation.step';
@@ -26,6 +27,12 @@ export { LlmProviderPort } from './ports/llm-provider.port';
 export type { LlmRequest, LlmRequestOptions, LlmCallMetadata, LlmResult } from './ports/llm-provider.port';
 export type { EventLogPort } from './ports/event-log.port';
 export type { DomainPackSelectionPort, DomainPackSelectionInput, DomainPackSelectionResult } from './ports/domain-pack-selection.port';
+export type {
+  ImpactDiffRepositoryPort,
+  ImpactDiffAnalysisRecord,
+  ImpactDiffArtifactLink,
+  ImpactDiffInsightRecord,
+} from './ports/impact-diff.repository.port';
 
 // Domain types
 export type { ImpactEvidenceCollectionResult, ImpactAiReasoningResult } from './domain/impact-analysis-step.types';

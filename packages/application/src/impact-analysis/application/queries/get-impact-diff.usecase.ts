@@ -1,12 +1,22 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { AppError, AppErrorCode } from '@ba-helper/shared';
-import { ImpactAnalysisDiffResponse, DiffArtifact, DiffInsight, DiagnosticItem } from '@ba-helper/contracts';
-import { InsightType } from '@prisma/client';;
+import { AppError, type AppErrorCode } from '@ba-helper/shared';
+import type {
+  ImpactAnalysisDiffResponse,
+  DiffArtifact,
+  DiffInsight,
+  DiagnosticItem,
+} from '@ba-helper/contracts';
+import type {
+  ImpactDiffRepositoryPort,
+  ImpactDiffInsightRecord,
+} from '../../ports/impact-diff.repository.port';
 
-@Injectable()
-export class GetImpactDiffUseCase {
-  constructor(private prisma: PrismaService) {}
+/**
+ * Computes the diff between an impact analysis and its baseline. Pure business
+ * logic: all persistence is delegated to {@link ImpactDiffRepositoryPort}, so
+ * this use case carries no framework or database coupling (ADR-0010).
+ */
+export class GetImpactDiff {
+  constructor(private readonly repository: ImpactDiffRepositoryPort) {}
 
   async execute(analysisId: string): Promise<ImpactAnalysisDiffResponse> {
     const result = await this.computeForAnalysis(analysisId);
@@ -26,12 +36,7 @@ export class GetImpactDiffUseCase {
   }
 
   async computeForAnalysis(analysisId: string): Promise<{ computable: boolean; reason?: AppErrorCode; diff?: ImpactAnalysisDiffResponse }> {
-    const currentAnalysis = await this.prisma.impactAnalysis.findUnique({
-      where: { id: analysisId },
-      include: {
-        snapshot: true,
-      },
-    });
+    const currentAnalysis = await this.repository.getAnalysis(analysisId);
 
     if (!currentAnalysis) {
       return { computable: false, reason: 'CURRENT_ANALYSIS_MISSING' };
@@ -45,12 +50,7 @@ export class GetImpactDiffUseCase {
       return { computable: false, reason: 'CURRENT_NOT_COMPLETED' };
     }
 
-    const baseAnalysis = await this.prisma.impactAnalysis.findUnique({
-      where: { id: currentAnalysis.derivedFromAnalysisId },
-      include: {
-        snapshot: true,
-      },
-    });
+    const baseAnalysis = await this.repository.getAnalysis(currentAnalysis.derivedFromAnalysisId);
 
     if (!baseAnalysis) {
       return { computable: false, reason: 'BASELINE_ANALYSIS_MISSING' };
@@ -82,23 +82,8 @@ export class GetImpactDiffUseCase {
     };
 
     // 2. Diff TraceabilityLinks (Impacted Artifacts)
-    const baseLinks = await this.prisma.traceabilityLink.findMany({
-      where: {
-        impactAnalysisId: baseAnalysis.id,
-        linkType: 'AFFECTED',
-        reviewStatus: { not: 'REJECTED' },
-      },
-      include: { artifact: true },
-    });
-
-    const currentLinks = await this.prisma.traceabilityLink.findMany({
-      where: {
-        impactAnalysisId: currentAnalysis.id,
-        linkType: 'AFFECTED',
-        reviewStatus: { not: 'REJECTED' },
-      },
-      include: { artifact: true },
-    });
+    const baseLinks = await this.repository.getAffectedArtifactLinks(baseAnalysis.id);
+    const currentLinks = await this.repository.getAffectedArtifactLinks(currentAnalysis.id);
 
     const baseArtifactsMap = new Map<string, typeof baseLinks[0]>();
     for (const link of baseLinks) {
@@ -119,7 +104,7 @@ export class GetImpactDiffUseCase {
         artifactKey: key,
         name: currentLink.artifact.name,
         artifactType: currentLink.artifact.artifactType,
-        universalKind: currentLink.artifact.universalKind as DiffArtifact['universalKind'],
+        universalKind: currentLink.artifact.universalKind,
         filePath: currentLink.artifact.filePath,
         reviewStatus: currentLink.reviewStatus,
       };
@@ -137,7 +122,7 @@ export class GetImpactDiffUseCase {
           artifactKey: key,
           name: baseLink.artifact.name,
           artifactType: baseLink.artifact.artifactType,
-          universalKind: baseLink.artifact.universalKind as DiffArtifact['universalKind'],
+          universalKind: baseLink.artifact.universalKind,
           filePath: baseLink.artifact.filePath,
           reviewStatus: baseLink.reviewStatus, // using the old status
         });
@@ -145,27 +130,16 @@ export class GetImpactDiffUseCase {
     }
 
     // 3. Diff Insights (UNKNOWN, QA_SCENARIO)
-    const baseInsights = await this.prisma.baInsight.findMany({
-      where: {
-        impactAnalysisId: baseAnalysis.id,
-        insightType: { in: ['UNKNOWN', 'QA_SCENARIO'] },
-      },
-    });
+    const baseInsights = await this.repository.getDiffInsights(baseAnalysis.id);
+    const currentInsights = await this.repository.getDiffInsights(currentAnalysis.id);
 
-    const currentInsights = await this.prisma.baInsight.findMany({
-      where: {
-        impactAnalysisId: currentAnalysis.id,
-        insightType: { in: ['UNKNOWN', 'QA_SCENARIO'] },
-      },
-    });
-
-    const buildInsightDiffKey = (type: InsightType, insightKey: string, title: string, statement: string) => {
+    const buildInsightDiffKey = (type: DiffInsight['category'], insightKey: string, title: string, statement: string) => {
       // Rule 1: insightKey if present (in our model, insightKey is generated, it should be stable if deterministically computed)
       // Actually, if we use UUID for insightKey sometimes, we might need to fallback.
       // We will create a normalized statement hash.
       const normalizedTitle = title.trim().toLowerCase();
       const normalizedStatement = statement.trim().toLowerCase();
-      
+
       if (type === 'UNKNOWN') {
         return `UNKNOWN::${normalizedStatement}`;
       } else if (type === 'QA_SCENARIO') {
@@ -175,13 +149,13 @@ export class GetImpactDiffUseCase {
       }
     };
 
-    const baseInsightsMap = new Map<string, typeof baseInsights[0]>();
+    const baseInsightsMap = new Map<string, ImpactDiffInsightRecord>();
     for (const insight of baseInsights) {
       const key = buildInsightDiffKey(insight.insightType, insight.insightKey, insight.title, insight.description);
       baseInsightsMap.set(key, insight);
     }
 
-    const currentInsightsMap = new Map<string, typeof currentInsights[0]>();
+    const currentInsightsMap = new Map<string, ImpactDiffInsightRecord>();
     for (const insight of currentInsights) {
       const key = buildInsightDiffKey(insight.insightType, insight.insightKey, insight.title, insight.description);
       currentInsightsMap.set(key, insight);
@@ -191,6 +165,13 @@ export class GetImpactDiffUseCase {
     const removedUnknowns: DiffInsight[] = [];
     const newUnknowns: DiffInsight[] = [];
     const addedQaScenarios: DiffInsight[] = [];
+
+    // A removed UNKNOWN counts as resolved when the current analysis's source
+    // clarification traces back to it. The clarification is constant per
+    // analysis, so resolve its source insight once.
+    const clarificationSourceInsightId = currentAnalysis.sourceClarificationId
+      ? await this.repository.getClarificationSourceInsightId(currentAnalysis.sourceClarificationId)
+      : null;
 
     // Check for resolved / removed unknowns
     for (const [key, baseInsight] of baseInsightsMap) {
@@ -203,17 +184,8 @@ export class GetImpactDiffUseCase {
         };
 
         if (baseInsight.insightType === 'UNKNOWN') {
-          // Check if this unknown has a matching clarification lineage
-          let isResolved = false;
-          if (currentAnalysis.sourceClarificationId) {
-            const clarification = await this.prisma.clarificationItem.findUnique({
-              where: { id: currentAnalysis.sourceClarificationId },
-            });
-            if (clarification && clarification.sourceInsightId === baseInsight.id) {
-              isResolved = true;
-            }
-          }
-          
+          const isResolved = clarificationSourceInsightId === baseInsight.id;
+
           if (isResolved) {
             resolvedUnknowns.push(mapped);
           } else {

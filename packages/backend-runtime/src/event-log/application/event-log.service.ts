@@ -1,5 +1,5 @@
 import type { EventLogRepository } from '../infrastructure/event-log.repository';
-import { EventLogPolicy } from '../domain/event-log.policy';
+import { EventLogPolicy } from '@ba-helper/application';
 import type { EventLogDto } from '@ba-helper/contracts';
 
 export class EventLogService {
