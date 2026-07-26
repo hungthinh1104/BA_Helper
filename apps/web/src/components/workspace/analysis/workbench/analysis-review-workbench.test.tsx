@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, within } from "@testing-library/react"
 import { describe, expect, it, jest, beforeEach } from "@jest/globals"
 import type { AnalysisWorkspaceResponse } from "@ba-helper/contracts"
 import { analysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
@@ -82,6 +82,10 @@ function renderWorkbench() {
   )
 }
 
+// The mobile sticky bar duplicates Accept/Reject (hidden by CSS, which jsdom
+// ignores), so scope decision-button queries to the decision panel.
+const panel = () => within(document.querySelector("[data-decision-panel]") as HTMLElement)
+
 describe("AnalysisReviewWorkbench decision loop", () => {
   beforeEach(() => {
     push.mockClear()
@@ -91,7 +95,7 @@ describe("AnalysisReviewWorkbench decision loop", () => {
 
   it("accepts the item and auto-advances to the next", () => {
     renderWorkbench()
-    fireEvent.click(screen.getByRole("button", { name: "Accept" }))
+    fireEvent.click(panel().getByRole("button", { name: "Accept" }))
     expect(decide).toHaveBeenCalledTimes(1)
     expect((decide.mock.calls[0][0] as { action: string }).action).toBe("accept")
     // onSuccess ran → advanced to the second item.
@@ -100,13 +104,13 @@ describe("AnalysisReviewWorkbench decision loop", () => {
 
   it("blocks reject until a rationale is entered", () => {
     renderWorkbench()
-    fireEvent.click(screen.getByRole("button", { name: "Reject" }))
+    fireEvent.click(panel().getByRole("button", { name: "Reject" }))
     expect(decide).not.toHaveBeenCalled()
 
     fireEvent.change(screen.getByLabelText(labels.reviewWorkbench.decision.rationaleLabel), {
       target: { value: "duplicate" },
     })
-    fireEvent.click(screen.getByRole("button", { name: "Reject" }))
+    fireEvent.click(panel().getByRole("button", { name: "Reject" }))
     expect(decide).toHaveBeenCalledTimes(1)
     expect((decide.mock.calls[0][0] as { action: string; rationale: string })).toMatchObject({
       action: "reject",
@@ -131,6 +135,6 @@ describe("AnalysisReviewWorkbench decision loop", () => {
   it("disables actions while a mutation is in flight (no double submit)", () => {
     pending = true
     renderWorkbench()
-    expect(screen.getByRole("button", { name: "Accept" })).toBeDisabled()
+    expect(panel().getByRole("button", { name: "Accept" })).toBeDisabled()
   })
 })

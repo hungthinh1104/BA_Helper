@@ -7,6 +7,18 @@ export interface AnalysisWorkbenchUrlState {
   display: ReviewDisplay
 }
 
+// Legacy `?tab=` values from the previous analysis UI, mapped onto the current
+// view/display model so old bookmarks and deep-links keep working.
+const legacyTabMap: Record<string, { view: AnalysisWorkspaceMode; display?: ReviewDisplay }> = {
+  "review-queue": { view: "review" },
+  insights: { view: "summary" },
+  graph: { view: "review", display: "dependency-path" },
+  "traceability-matrix": { view: "review" },
+  "qa-coverage": { view: "risks-qa" },
+  diff: { view: "history" },
+  lineage: { view: "history" },
+}
+
 const modes = new Set<AnalysisWorkspaceMode>(["summary", "review", "risks-qa", "history"])
 const filters = new Set<ReviewFilter>([
   "all",
@@ -25,11 +37,14 @@ export function readAnalysisWorkbenchUrlState(
   const filter = params.get("filter")
   const display = params.get("display")
 
+  // Fall back to the legacy `?tab=` mapping only when no explicit `view` is set.
+  const legacy = view ? undefined : legacyTabMap[params.get("tab") ?? ""]
+
   return {
-    view: view && modes.has(view as AnalysisWorkspaceMode) ? view as AnalysisWorkspaceMode : null,
+    view: view && modes.has(view as AnalysisWorkspaceMode) ? (view as AnalysisWorkspaceMode) : legacy?.view ?? null,
     item: params.get("item") || null,
-    filter: filter && filters.has(filter as ReviewFilter) ? filter as ReviewFilter : "all",
-    display: display && displays.has(display as ReviewDisplay) ? display as ReviewDisplay : "evidence",
+    filter: filter && filters.has(filter as ReviewFilter) ? (filter as ReviewFilter) : "all",
+    display: display && displays.has(display as ReviewDisplay) ? (display as ReviewDisplay) : legacy?.display ?? "evidence",
   }
 }
 

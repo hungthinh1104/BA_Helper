@@ -97,7 +97,7 @@ export function DashboardActionPanel({
             title: reviewAnalysis?.requirementRevisionTitle ?? t("unknown"),
           }),
           action: (
-            <Link href={href(`/analyses/${reviewAnalysis?.id}?tab=review-queue`)}>
+            <Link href={href(`/analyses/${reviewAnalysis?.id}?view=review&filter=blocking`)}>
               <Button size="sm" className="shadow-none">{t("openReviewQueue")}</Button>
             </Link>
           ),

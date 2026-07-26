@@ -102,7 +102,7 @@ export function DashboardRecentAnalyses({
 
                   <div className="shrink-0">
                     {isReview ? (
-                      <Link href={href(`/analyses/${analysis.id}?tab=review-queue`)}>
+                      <Link href={href(`/analyses/${analysis.id}?view=review`)}>
                         <Button size="sm" className="border border-warning/20 bg-warning/10 text-warning shadow-none hover:bg-warning/20">
                           {t("reviewQueue")}
                         </Button>

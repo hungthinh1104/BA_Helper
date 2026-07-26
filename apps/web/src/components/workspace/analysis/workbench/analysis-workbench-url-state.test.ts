@@ -12,4 +12,17 @@ describe("analysis workbench URL state", () => {
     expect(readAnalysisWorkbenchUrlState(current)).toEqual({ view: null, item: null, filter: "all", display: "evidence" })
     expect(writeAnalysisWorkbenchUrlState(current, { view: "review", item: "impact-1" }).toString()).toBe("locale=vi-VN&view=review&item=impact-1")
   })
+
+  it("maps legacy ?tab= deep-links onto the current view/display model", () => {
+    expect(readAnalysisWorkbenchUrlState(new URLSearchParams("tab=review-queue")).view).toBe("review")
+    expect(readAnalysisWorkbenchUrlState(new URLSearchParams("tab=insights")).view).toBe("summary")
+    expect(readAnalysisWorkbenchUrlState(new URLSearchParams("tab=qa-coverage")).view).toBe("risks-qa")
+    expect(readAnalysisWorkbenchUrlState(new URLSearchParams("tab=lineage")).view).toBe("history")
+    const graph = readAnalysisWorkbenchUrlState(new URLSearchParams("tab=graph"))
+    expect(graph).toMatchObject({ view: "review", display: "dependency-path" })
+  })
+
+  it("prefers an explicit view over a legacy tab", () => {
+    expect(readAnalysisWorkbenchUrlState(new URLSearchParams("view=summary&tab=graph")).view).toBe("summary")
+  })
 })

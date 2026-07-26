@@ -136,34 +136,54 @@ export function AnalysisReviewWorkbench({
   const detail = <ReviewItemDetail workspace={workspace} viewModel={viewModel} item={selectedItem} locale={locale} labels={labels} />
 
   return (
-    <section className="grid min-h-0 gap-4 xl:grid-cols-[300px_minmax(0,1fr)_280px]" data-review-workbench>
-      <ReviewQueue viewModel={viewModel} locale={locale} labels={queueLabels} />
-      <div className="min-w-0 rounded-lg border border-border/50 bg-surface p-4">
-        <div className="mb-4 flex gap-2" role="group" aria-label={labels.reviewDetail}>
-          <Button type="button" size="sm" variant={urlState.display === "evidence" ? "secondary" : "outline"} aria-pressed={urlState.display === "evidence"} onClick={() => pushUrl({ display: "evidence" })}>
-            {labels.evidence}
+    <div data-review-workbench>
+      <section className="grid min-h-0 gap-4 xl:grid-cols-[300px_minmax(0,1fr)_280px]">
+        <ReviewQueue viewModel={viewModel} locale={locale} labels={queueLabels} />
+        <div className="min-w-0 rounded-lg border border-border/50 bg-surface p-4">
+          <div className="mb-4 hidden gap-2 lg:flex" role="group" aria-label={labels.reviewDetail}>
+            <Button type="button" size="sm" variant={urlState.display === "evidence" ? "secondary" : "outline"} aria-pressed={urlState.display === "evidence"} onClick={() => pushUrl({ display: "evidence" })}>
+              {labels.evidence}
+            </Button>
+            <Button type="button" size="sm" variant={urlState.display === "dependency-path" ? "secondary" : "outline"} aria-pressed={urlState.display === "dependency-path"} onClick={() => pushUrl({ display: "dependency-path" })}>
+              {labels.dependencyPath}
+            </Button>
+          </div>
+          {/* Mobile shows the detail only inside the sheet — never duplicated inline. */}
+          <div className="lg:hidden"><MobileEvidenceSheet labels={labels}>{detail}</MobileEvidenceSheet></div>
+          <div className="hidden lg:block">
+            {urlState.display === "dependency-path" ? <GraphTab graph={graph} isLoading={graphLoading} labels={graphLabels} /> : detail}
+          </div>
+        </div>
+        <DecisionPanel
+          item={selectedItem}
+          locale={locale}
+          labels={labels.decision}
+          rationale={rationale}
+          onRationaleChange={setRationale}
+          onDecide={handleDecide}
+          onNavigate={navigate}
+          onRetry={() => lastAction && handleDecide(lastAction)}
+          isPending={decision.isPending}
+          hasError={Boolean(decision.error)}
+          canPrevious={selectedIndex > 0}
+          canNext={selectedIndex >= 0 && selectedIndex < visibleItems.length - 1}
+        />
+      </section>
+
+      {/* Sticky decision action bar for the mobile single-pane flow. */}
+      {selectedItem ? (
+        <div
+          className="sticky bottom-2 z-10 mt-3 flex gap-2 rounded-lg border border-border/50 bg-surface/95 p-2 shadow-lg backdrop-blur lg:hidden"
+          data-mobile-action-bar
+        >
+          <Button type="button" size="sm" variant="secondary" className="flex-1" disabled={decision.isPending} onClick={() => handleDecide("accept")}>
+            {labels.decision.accept}
           </Button>
-          <Button type="button" size="sm" variant={urlState.display === "dependency-path" ? "secondary" : "outline"} aria-pressed={urlState.display === "dependency-path"} onClick={() => pushUrl({ display: "dependency-path" })}>
-            {labels.dependencyPath}
+          <Button type="button" size="sm" variant="destructive" className="flex-1" disabled={decision.isPending || rationale.trim().length === 0} onClick={() => handleDecide("reject")}>
+            {labels.decision.reject}
           </Button>
         </div>
-        <div className="mb-4 lg:hidden"><MobileEvidenceSheet labels={labels}>{detail}</MobileEvidenceSheet></div>
-        {urlState.display === "dependency-path" ? <GraphTab graph={graph} isLoading={graphLoading} labels={graphLabels} /> : detail}
-      </div>
-      <DecisionPanel
-        item={selectedItem}
-        locale={locale}
-        labels={labels.decision}
-        rationale={rationale}
-        onRationaleChange={setRationale}
-        onDecide={handleDecide}
-        onNavigate={navigate}
-        onRetry={() => lastAction && handleDecide(lastAction)}
-        isPending={decision.isPending}
-        hasError={Boolean(decision.error)}
-        canPrevious={selectedIndex > 0}
-        canNext={selectedIndex >= 0 && selectedIndex < visibleItems.length - 1}
-      />
-    </section>
+      ) : null}
+    </div>
   )
 }
