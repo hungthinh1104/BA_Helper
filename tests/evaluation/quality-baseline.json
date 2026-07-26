@@ -1,7 +1,7 @@
 {
   "version": 2,
   "suite": "nestjs-production-path-stable",
-  "caseCount": 9,
+  "caseCount": 20,
   "metrics": {
     "criticalArtifactRecall": 1,
     "overallArtifactRecall": 0.9,

@@ -243,4 +243,60 @@ export const productionStableEvaluationCases: EvaluationCase[] = [
     },
     domain: { packId: 'ecommerce', expectedConceptKeys: ['order', 'cancellation'] },
   },
+  {
+    id: 'prod-booking-notify-owner',
+    requirementTitle: 'Notify owner on booking cancellation',
+    requirementText:
+      'When a paid booking is cancelled, notifyOwner must inform the booking owner, and the cancellation triggers a payment refund.',
+    targetFixture: BOOKING,
+    expected: {
+      criticalArtifactKeys: [
+        'api:booking.controller.cancel',
+        'service-method:notification.service.notifyOwner',
+      ],
+      impactedArtifactKeys: [
+        'api:booking.controller.cancel',
+        'service-method:booking.service.cancelBooking',
+        'service-method:payment.service.refund',
+        'service-method:notification.service.notifyOwner',
+        'entity:paymenttransaction',
+      ],
+      // refund-report is retrieved (layer 1) but must never be committed.
+      negativeArtifactKeys: [BOOKING_NEGATIVE],
+      requiredEvidenceAnchors: [
+        { artifactKey: 'service-method:notification.service.notifyOwner', contains: 'notifyOwner' },
+        { artifactKey: 'service-method:payment.service.refund', contains: 'REFUNDED' },
+      ],
+    },
+    domain: { packId: 'booking', expectedConceptKeys: ['booking', 'cancellation', 'notification', 'refund'] },
+  },
+  {
+    id: 'prod-order-release-inventory',
+    requirementTitle: 'Release reserved inventory on cancellation',
+    requirementText:
+      'Cancelling an order must call releaseReservation to release the reserved inventory stock for the cancelled order.',
+    targetFixture: ORDER,
+    expected: {
+      criticalArtifactKeys: [
+        'api:order.controller.cancelOrder',
+        'service-method:inventory.service.releaseReservation',
+      ],
+      impactedArtifactKeys: [
+        'api:order.controller.cancelOrder',
+        'service-method:order.service.cancelOrder',
+        'service-method:inventory.service.releaseReservation',
+        'entity:order',
+      ],
+      // shipOrder (controller + service) is retrieved but must never be committed.
+      negativeArtifactKeys: [
+        'service-method:order.service.shipOrder',
+        'api:order.controller.shipOrder',
+      ],
+      requiredEvidenceAnchors: [
+        { artifactKey: 'service-method:inventory.service.releaseReservation', contains: 'releaseReservation' },
+        { artifactKey: 'api:order.controller.cancelOrder', contains: 'cancel' },
+      ],
+    },
+    domain: { packId: 'ecommerce', expectedConceptKeys: ['order', 'inventory', 'cancellation'] },
+  },
 ];

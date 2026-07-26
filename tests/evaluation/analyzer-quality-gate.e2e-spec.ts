@@ -11,6 +11,7 @@ import { prepareIsolatedTestEnv } from '../../apps/api/test/e2e/helpers/prepare-
 import { resetDatabase } from '../../apps/api/test/e2e/helpers/reset-db';
 import { ProductionPathEvaluationAdapter } from './adapters/production-path.adapter';
 import { productionStableEvaluationCases } from './cases/stable-production';
+import { userOnboardingEvaluationCases } from './cases/user-onboarding-stable';
 import {
   runStableQualityGate,
   type QualityBaseline,
@@ -62,7 +63,7 @@ describe('Production-path analyzer quality gate', () => {
 
     const scorecard = await runStableQualityGate({
       adapter,
-      cases: productionStableEvaluationCases,
+      cases: [...productionStableEvaluationCases, ...userOnboardingEvaluationCases],
       baseline,
       generatedAt: '2026-01-01T00:00:00.000Z',
     });
