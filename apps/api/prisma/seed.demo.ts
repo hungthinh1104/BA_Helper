@@ -104,9 +104,39 @@ async function main() {
         where: { repositoryId: repo.id },
       });
       for (const snap of snapshots) {
+        // Delete analysis dependents before evidence/artifacts they reference:
+        // InsightEvidence/TraceabilityEvidence → Evidence and
+        // TraceabilityLink/BaInsight → ImpactAnalysis are all Restrict FKs, so a
+        // naive evidence-first delete throws P2003 on re-seed.
+        const analyses = await prisma.impactAnalysis.findMany({
+          where: { snapshotId: snap.id },
+          select: { id: true },
+        });
+        const analysisIds = analyses.map((a) => a.id);
+        if (analysisIds.length > 0) {
+          const links = await prisma.traceabilityLink.findMany({
+            where: { impactAnalysisId: { in: analysisIds } },
+            select: { id: true },
+          });
+          const insights = await prisma.baInsight.findMany({
+            where: { impactAnalysisId: { in: analysisIds } },
+            select: { id: true },
+          });
+          const linkIds = links.map((l) => l.id);
+          const insightIds = insights.map((i) => i.id);
+          if (linkIds.length > 0) {
+            await prisma.traceabilityEvidence.deleteMany({ where: { traceabilityLinkId: { in: linkIds } } });
+          }
+          if (insightIds.length > 0) {
+            await prisma.insightEvidence.deleteMany({ where: { insightId: { in: insightIds } } });
+          }
+          await prisma.traceabilityLink.deleteMany({ where: { impactAnalysisId: { in: analysisIds } } });
+          await prisma.baInsight.deleteMany({ where: { impactAnalysisId: { in: analysisIds } } });
+          // Cascades review decisions, notes, clarifications, and report snapshots.
+          await prisma.impactAnalysis.deleteMany({ where: { id: { in: analysisIds } } });
+        }
         await prisma.evidence.deleteMany({ where: { snapshotId: snap.id } });
         await prisma.codeArtifact.deleteMany({ where: { snapshotId: snap.id } });
-        await prisma.impactAnalysis.deleteMany({ where: { snapshotId: snap.id } });
       }
       await prisma.scanJob.deleteMany({ where: { repositoryId: repo.id } });
       await prisma.repositorySnapshot.deleteMany({ where: { repositoryId: repo.id } });
