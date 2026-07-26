@@ -9,7 +9,7 @@ import {
   repositoryDetailResponseSchema,
   requirementCreateResponseSchema,
   scanJobResponseSchema,
-  systemHealthResponseSchema,
+  systemReadinessResponseSchema,
   impactAnalysisResponseSchema,
   loginResponseSchema,
 } from '@ba-helper/contracts';
@@ -66,7 +66,7 @@ async function main() {
     let health;
     for (let i = 0; i < 15; i++) {
       try {
-        health = await apiGet('/api/v1/system/health', systemHealthResponseSchema);
+        health = await apiGet('/api/v1/system/ready', systemReadinessResponseSchema);
         break;
       } catch (e: any) {
         if (i === 14) throw e;

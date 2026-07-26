@@ -15,7 +15,7 @@ describe('System observability (e2e)', () => {
 
   it('returns a safe caller-provided request id', async () => {
     const response = await request(app.getHttpServer())
-      .get('/api/v1/system/health')
+      .get('/api/v1/system/live')
       .set('x-request-id', 'beta-check-12345')
       .expect(200);
 
@@ -24,7 +24,7 @@ describe('System observability (e2e)', () => {
 
   it('replaces an invalid request id', async () => {
     const response = await request(app.getHttpServer())
-      .get('/api/v1/system/health')
+      .get('/api/v1/system/live')
       .set('x-request-id', 'unsafe value with spaces')
       .expect(200);
 

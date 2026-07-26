@@ -8,14 +8,14 @@ import type {
   InsightListResponse,
   RepositoryDetailResponse,
   ScanJobResponse,
-  SystemHealthResponse,
+  SystemReadinessResponse,
   CurrentWorkspaceResponse,
   ReviewQueueResponse,
 } from '@ba-helper/contracts';
 import type { PublicGitHubSmokeManifest } from './public-github-smoke.manifest';
 
 export interface SmokePreflightResult {
-  health: SystemHealthResponse;
+  health: SystemReadinessResponse;
   workspace: CurrentWorkspaceResponse;
 }
 
@@ -100,7 +100,7 @@ export type SmokeFailureStage =
 const TEMP_DIR_PREFIX = 'ba-scan-';
 
 export function assertPreflight(
-  health: SystemHealthResponse,
+  health: SystemReadinessResponse,
   workspace: CurrentWorkspaceResponse,
 ): SmokePreflightResult {
   if (health.status !== 'ok') {

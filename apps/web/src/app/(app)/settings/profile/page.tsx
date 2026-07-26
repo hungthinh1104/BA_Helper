@@ -13,7 +13,8 @@ import {
 } from "@/components/workspace/shared/dense-card"
 import { WorkspaceProperty } from "@/components/workspace/shared/panel"
 import { useCurrentWorkspace, useWorkspaceRuntime } from "@/lib/project-context"
-import { useSystemHealth } from "@/hooks/api/use-system"
+import { useSystemOperations, useSystemReadiness } from "@/hooks/api/use-system"
+import { useAuth } from "@/hooks/use-auth"
 import type { SystemJobQueueSummary } from "@ba-helper/contracts"
 
 export default function ProfileSettingsPage() {
@@ -26,7 +27,10 @@ function ProfileSettingsContent() {
   const t = useTranslations("settings")
   const workspace = useCurrentWorkspace()
   const workspaceRuntime = useWorkspaceRuntime()
-  const health = useSystemHealth()
+  const { role } = useAuth()
+  const isAdmin = role === "ADMIN"
+  const health = useSystemReadiness()
+  const operations = useSystemOperations(isAdmin)
 
   return (
     <div className="app-page-scroll">
@@ -138,16 +142,18 @@ function ProfileSettingsContent() {
               </div>
             </WorkspaceProperty>
 
-            <WorkspaceProperty
-              label={t("jobOperations")}
-              description={t("jobOperationsDescription")}
-            >
-              <div className="grid w-full max-w-2xl gap-2">
-                <JobQueueSummary label={t("scanJobs")} summary={health.data?.operations.scanJobs} />
-                <JobQueueSummary label={t("analysisJobs")} summary={health.data?.operations.analysisJobs} />
-                <JobQueueSummary label={t("documentJobs")} summary={health.data?.operations.documentJobs} />
-              </div>
-            </WorkspaceProperty>
+            {isAdmin && (
+              <WorkspaceProperty
+                label={t("jobOperations")}
+                description={t("jobOperationsDescription")}
+              >
+                <div className="grid w-full max-w-2xl gap-2">
+                  <JobQueueSummary label={t("scanJobs")} summary={operations.data?.operations.scanJobs} />
+                  <JobQueueSummary label={t("analysisJobs")} summary={operations.data?.operations.analysisJobs} />
+                  <JobQueueSummary label={t("documentJobs")} summary={operations.data?.operations.documentJobs} />
+                </div>
+              </WorkspaceProperty>
+            )}
           </DenseCardContent>
         </DenseCard>
       </div>

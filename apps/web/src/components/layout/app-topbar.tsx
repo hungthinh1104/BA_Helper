@@ -19,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ChevronRight, ChevronsUpDown, FolderKanban, Menu, UserCircle } from "lucide-react"
-import { useSystemHealth } from "@/hooks/api/use-system"
+import { useSystemReadiness } from "@/hooks/api/use-system"
 import { useAuth } from "@/hooks/use-auth"
 import { useWorkspaceRuntime } from "@/lib/project-context"
 import { toast } from "sonner"
@@ -80,7 +80,7 @@ export function AppTopbar({ isMobile }: { isMobile?: boolean }) {
   const tLocale = useTranslations("app.locale")
   const href = useLocalizedHref()
   const workspace = useWorkspaceRuntime()
-  const health = useSystemHealth()
+  const health = useSystemReadiness()
   const { user, logout } = useAuth()
 
   const healthLabel = health.isLoading
