@@ -16,6 +16,11 @@ jest.mock("./finalize-analysis-dialog", () => ({
   formatReviewApprovalBlocker: (reason: string) => reason,
 }))
 
+// The rerun dialog pulls in react-query mutation hooks; render its trigger only.
+jest.mock("./rerun-analysis-dialog", () => ({
+  RerunAnalysisDialog: ({ children }: { children: React.ReactNode }) => <div data-testid="rerun-dialog">{children}</div>,
+}))
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { AnalysisPrimaryCta } = require("./analysis-primary-cta") as typeof import("./analysis-primary-cta")
 
@@ -81,10 +86,11 @@ describe("AnalysisPrimaryCta", () => {
     expect(push).toHaveBeenCalledWith("/reports?analysisId=a1")
   })
 
-  it("surfaces a rerun CTA for a stale analysis", () => {
+  it("surfaces a rerun CTA (via the rerun dialog) for a stale analysis", () => {
     renderCta(workspace({ isStale: true, queue: [queueItem("needs_review", true)] }))
-    fireEvent.click(screen.getByRole("button", { name: labels.primaryCta.rerun }))
-    expect(push).toHaveBeenCalledWith(expect.stringContaining("view=history"), { scroll: false })
+    expect(screen.getByTestId("rerun-dialog")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: labels.primaryCta.rerun })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: labels.primaryCta.continueReview })).toBeNull()
   })
 
   it("shows blocker reasons beside the CTA", () => {
@@ -103,8 +109,8 @@ describe("AnalysisPrimaryCta", () => {
     renderCta(workspace({ analysisStatus: "FAILED" }))
     expect(screen.queryByRole("button", { name: labels.primaryCta.continueReview })).toBeNull()
     expect(screen.getByText(labels.primaryCta.failed)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole("button", { name: labels.primaryCta.rerun }))
-    expect(push).toHaveBeenCalledWith(expect.stringContaining("view=history"), { scroll: false })
+    expect(screen.getByTestId("rerun-dialog")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: labels.primaryCta.rerun })).toBeInTheDocument()
   })
 
   it("shows a report-generating state after finalize", () => {

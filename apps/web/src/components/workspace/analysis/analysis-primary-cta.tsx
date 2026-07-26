@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import type { AnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
 import { resolveAnalysisExperienceState } from "./analysis-experience-state"
 import { FinalizeAnalysisDialog, formatReviewApprovalBlocker } from "./finalize-analysis-dialog"
+import { RerunAnalysisDialog } from "./rerun-analysis-dialog"
 import { writeAnalysisWorkbenchUrlState } from "./workbench/analysis-workbench-url-state"
 
 /**
@@ -69,9 +70,21 @@ export function AnalysisPrimaryCta({
           <AlertCircle aria-hidden="true" className="h-3.5 w-3.5" />
           {cta.failed}
         </span>
-        <Button size="sm" variant="outline" onClick={() => pushWorkbench({ view: "history" })}>
-          {cta.rerun}
-        </Button>
+        <RerunAnalysisDialog workspace={workspace} labels={labels.rerunDialog}>
+          <Button size="sm" variant="outline">{cta.rerun}</Button>
+        </RerunAnalysisDialog>
+      </div>
+    )
+  }
+
+  if (state.primaryAction === "rerun") {
+    return (
+      <div className="flex flex-col items-start gap-1 lg:items-end">
+        <RerunAnalysisDialog workspace={workspace} labels={labels.rerunDialog}>
+          <Button size="sm" variant="outline">{cta.rerun}</Button>
+        </RerunAnalysisDialog>
+        {summary}
+        {blockerReasons}
       </div>
     )
   }
@@ -97,20 +110,13 @@ export function AnalysisPrimaryCta({
   const onClick =
     state.primaryAction === "view_report"
       ? () => router.push(`/reports?analysisId=${workspace.overview.analysisId}`)
-      : state.primaryAction === "rerun"
-        ? () => pushWorkbench({ view: "history" })
-        : () => pushWorkbench({ view: "review", filter: state.recommendedFilter })
+      : () => pushWorkbench({ view: "review", filter: state.recommendedFilter })
 
-  const label =
-    state.primaryAction === "view_report"
-      ? cta.viewReport
-      : state.primaryAction === "rerun"
-        ? cta.rerun
-        : cta.continueReview
+  const label = state.primaryAction === "view_report" ? cta.viewReport : cta.continueReview
 
   return (
     <div className="flex flex-col items-start gap-1 lg:items-end">
-      <Button size="sm" variant={state.primaryAction === "rerun" ? "outline" : "default"} onClick={onClick}>
+      <Button size="sm" onClick={onClick}>
         {label}
       </Button>
       {summary}
