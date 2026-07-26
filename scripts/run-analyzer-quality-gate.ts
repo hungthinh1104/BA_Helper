@@ -1,43 +1,26 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import path from 'node:path';
-import { LexicalRetrievalEvaluationAdapter } from '../tests/evaluation/adapters/lexical-retrieval.adapter';
-import { bookingStableEvaluationCases } from '../tests/evaluation/cases';
-import {
-  runStableQualityGate,
-  type QualityBaseline,
-} from '../tests/evaluation/stable-quality-gate';
+import { spawnSync } from 'node:child_process';
 
-async function main(): Promise<void> {
-  const root = process.cwd();
-  const baseline = JSON.parse(
-    await readFile(
-      path.join(root, 'tests/evaluation/quality-baseline.json'),
-      'utf8',
-    ),
-  ) as QualityBaseline;
-  const scorecard = await runStableQualityGate({
-    adapter: new LexicalRetrievalEvaluationAdapter(),
-    cases: bookingStableEvaluationCases,
-    baseline,
-  });
-  const outputDirectory = path.join(root, 'artifacts/evaluation');
-  const outputPath = path.join(outputDirectory, 'analyzer-scorecard.json');
+/**
+ * Analyzer quality gate entry point.
+ *
+ * The gate runs the REAL runtime pipeline (scan → retrieval → impact-analysis
+ * orchestration → deterministic fake AI) against pinned fixtures and enforces
+ * two-layer recall/precision/evidence/negative-control/orphan floors. Because it
+ * needs a live pgvector Postgres and the full Nest DI graph, it is implemented as
+ * a Jest e2e spec that also writes `artifacts/evaluation/analyzer-scorecard.json`
+ * (even on failure, so CI can always upload it).
+ */
+const result = spawnSync(
+  'pnpm',
+  [
+    'exec',
+    'jest',
+    '--config',
+    'jest.e2e.config.ts',
+    '--runInBand',
+    'tests/evaluation/analyzer-quality-gate.e2e-spec.ts',
+  ],
+  { stdio: 'inherit' },
+);
 
-  await mkdir(outputDirectory, { recursive: true });
-  await writeFile(outputPath, `${JSON.stringify(scorecard, null, 2)}\n`);
-
-  console.log(
-    `Analyzer quality gate: ${scorecard.status} (${scorecard.caseCount} cases)`,
-  );
-  console.log(`Scorecard: ${path.relative(root, outputPath)}`);
-  console.log(JSON.stringify(scorecard.metrics));
-
-  if (scorecard.status === 'FAIL') {
-    for (const failure of scorecard.failures) {
-      console.error(`- ${failure}`);
-    }
-    process.exitCode = 1;
-  }
-}
-
-void main();
+process.exit(result.status ?? 1);

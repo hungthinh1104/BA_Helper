@@ -1,20 +1,27 @@
 {
-  "version": 1,
-  "suite": "nestjs-booking-stable",
-  "caseCount": 5,
+  "version": 2,
+  "suite": "nestjs-production-path-stable",
+  "caseCount": 9,
   "metrics": {
     "criticalArtifactRecall": 1,
-    "artifactPrecision": 0.404,
+    "overallArtifactRecall": 0.9,
+    "artifactPrecision": 1,
     "evidenceCoverage": 1,
     "negativeControlPassRate": 1,
     "orphanEvidencedClaims": 0
   },
   "thresholds": {
     "criticalArtifactRecall": 1,
-    "artifactPrecision": 0.4,
+    "overallArtifactRecall": 0.85,
+    "artifactPrecision": 0.7,
     "evidenceCoverage": 1,
     "negativeControlPassRate": 1,
     "orphanEvidencedClaims": 0
   },
-  "regressionTolerance": 0.01
+  "perCaseFloors": {
+    "criticalArtifactRecall": 1,
+    "overallArtifactRecall": 0.8,
+    "artifactPrecision": 0.7
+  },
+  "regressionTolerance": 0.05
 }
