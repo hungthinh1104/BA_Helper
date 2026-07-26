@@ -59,6 +59,76 @@ describe('HybridRetrievalService', () => {
     });
   });
 
+  describe('configurable tuning', () => {
+    // A vector-only paraphrase hit whose real cosine similarity (0.6) falls below
+    // the default 0.72 floor — the exact shape of the tracked semantic-recall gap
+    // (e.g. `releaseReservation` for "abort a purchase").
+    const buildService = () => {
+      const prisma = {
+        repositorySnapshot: {
+          findUnique: jest
+            .fn()
+            .mockResolvedValue({ indexStatus: 'VECTOR_READY', profile: null }),
+        },
+        $queryRaw: jest.fn().mockResolvedValue([]), // no lexical hits → vector-only
+        $queryRawUnsafe: jest.fn(),
+        codeArtifact: { findMany: jest.fn() },
+      } as any;
+      return new HybridRetrievalService(
+        {
+          searchSimilar: jest
+            .fn()
+            .mockResolvedValue([{ artifactId: 'weak-1', similarity: 0.6 }]),
+        } as any,
+        { embed: jest.fn().mockResolvedValue({ embeddings: [[0.1, 0.2, 0.3]] }) } as any,
+        {
+          findById: jest.fn().mockResolvedValue({
+            id: 'weak-1',
+            artifactKey: 'service-method:inventory.service.releaseReservation',
+            filePath: 'src/inventory/inventory.service.ts',
+            name: 'releaseReservation',
+            artifactType: 'SERVICE_METHOD',
+            universalKind: 'DOMAIN_SERVICE',
+          }),
+        } as any,
+        { expandFromSeeds: jest.fn() } as any,
+        prisma,
+        new DomainPackRegistry(),
+      );
+    };
+
+    const request = {
+      projectId: '11111111-1111-1111-1111-111111111111',
+      repositoryId: '22222222-2222-2222-2222-222222222222',
+      snapshotId: '33333333-3333-3333-3333-333333333333',
+      changeRequest: 'abort a purchase before fulfilment and restore reserved stock',
+      maxResults: 10,
+    };
+
+    it('drops a weak vector-only hit below the default floor', async () => {
+      const result = await buildService().retrieve(request);
+      expect(result.find((r) => r.artifactId === 'weak-1')).toBeUndefined();
+    });
+
+    it('keeps the weak vector-only hit when keepWeakVectorOnly is enabled', async () => {
+      const result = await buildService().retrieve({
+        ...request,
+        tuning: { keepWeakVectorOnly: true },
+      });
+      const weak = result.find((r) => r.artifactId === 'weak-1');
+      expect(weak).toBeDefined();
+      expect(weak?.retrievalSignals).toContain('VECTOR');
+    });
+
+    it('keeps the hit when the minVectorSimilarity floor is lowered', async () => {
+      const result = await buildService().retrieve({
+        ...request,
+        tuning: { minVectorSimilarity: 0.5 },
+      });
+      expect(result.find((r) => r.artifactId === 'weak-1')).toBeDefined();
+    });
+  });
+
   describe('profile-aware retrieval hints (Phase 20C)', () => {
     it('loads profile domain and applies multi-label intent detection to boost order', async () => {
       const prisma = {

@@ -1,5 +1,10 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
-import { RetrievalRequest, RetrievedArtifact } from '../domain/retrieval.types';
+import {
+  RetrievalRequest,
+  RetrievedArtifact,
+  RetrievalTuning,
+  DEFAULT_RETRIEVAL_TUNING,
+} from '../domain/retrieval.types';
 import { buildRetrievalSuggestion } from '../domain/retrieval-suggestion';
 import { EmbeddingChunkRepository } from '../../embedding/infrastructure/embedding-chunk.repository';
 import { EmbeddingProviderPort } from '@ba-helper/application';
@@ -14,15 +19,6 @@ import {
   matchDomainPackTerms,
 } from '../../domain-pack/application/domain-pack-terminology';
 
-const WEIGHTS = {
-  lexical: 0.45,
-  vector: 0.35,
-  graph: 0.15,
-  kindBoost: 0.05,
-} as const;
-
-const MIN_VECTOR_SIMILARITY = 0.72;
-const WEAK_VECTOR_THRESHOLD = 0.75;
 const MAX_RETRIEVAL_RESULTS = 100;
 
 type Candidate = {
@@ -52,6 +48,7 @@ export class HybridRetrievalService {
   ) {}
 
   async retrieve(request: RetrievalRequest): Promise<RetrievedArtifact[]> {
+    const tuning = this.resolveTuning(request.tuning);
     const maxResults = this.normalizeLimit(request.maxResults ?? 20);
     // MVP: tenantId = projectId. Future: pass organizationId.
     const tenantId = request.tenantId ?? request.projectId;
@@ -245,23 +242,28 @@ export class HybridRetrievalService {
       const hasLexical = c.signals.has('LEXICAL');
       const hasVector = c.signals.has('VECTOR');
       
-      const isWeakVector = hasVector && c.vectorScoreNorm < WEAK_VECTOR_THRESHOLD;
-      const isTooWeakToKeep = hasVector && c.vectorScoreNorm < MIN_VECTOR_SIMILARITY;
+      const isWeakVector = hasVector && c.vectorScoreNorm < tuning.weakVectorThreshold;
+      const isTooWeakToKeep = hasVector && c.vectorScoreNorm < tuning.minVectorSimilarity;
       const isVectorOnly = hasVector && !hasLexical && !hasGraph;
-      
+      const keptWeakVectorOnly = isVectorOnly && isTooWeakToKeep && tuning.keepWeakVectorOnly;
+
       // Filter graph depth > 2
       if (c.graphDepth !== undefined && c.graphDepth > 2) {
-         continue; 
+         continue;
       }
-      
-      // Drop vector-only low similarity candidate
-      if (isVectorOnly && isTooWeakToKeep) {
-         continue; 
+
+      // Drop vector-only low-similarity candidates unless configured to keep them
+      // as low-confidence signals (surfaces cross-vocabulary paraphrase matches).
+      if (isVectorOnly && isTooWeakToKeep && !tuning.keepWeakVectorOnly) {
+         continue;
       }
       
       // Apply noise penalties
       if (isNoisySupport) {
          c.noisePenalty = 0.15;
+      } else if (keptWeakVectorOnly) {
+         // Kept below the floor: surfaced for the reviewer, but ranked low.
+         c.noisePenalty = 0.12;
       } else if (isWeakVector && isVectorOnly) {
          if (isTest && !mentionsTest) {
              c.noisePenalty = 0.05;
@@ -281,11 +283,11 @@ export class HybridRetrievalService {
         c.signals.add('KIND');
       }
 
-      const finalScore = 
-        (c.lexicalScoreNorm * WEIGHTS.lexical) + 
-        (c.graphScoreNorm * WEIGHTS.graph) + 
-        (c.vectorScoreNorm * WEIGHTS.vector) + 
-        (c.kindBoostNorm * WEIGHTS.kindBoost) - 
+      const finalScore =
+        (c.lexicalScoreNorm * tuning.weights.lexical) +
+        (c.graphScoreNorm * tuning.weights.graph) +
+        (c.vectorScoreNorm * tuning.weights.vector) +
+        (c.kindBoostNorm * tuning.weights.kindBoost) -
         c.noisePenalty;
         
       if (finalScore <= 0) continue;
@@ -363,6 +365,14 @@ export class HybridRetrievalService {
     }
 
     return Math.max(1, Math.min(Math.trunc(value), MAX_RETRIEVAL_RESULTS));
+  }
+
+  private resolveTuning(override?: Partial<RetrievalTuning>): RetrievalTuning {
+    return {
+      ...DEFAULT_RETRIEVAL_TUNING,
+      ...override,
+      weights: { ...DEFAULT_RETRIEVAL_TUNING.weights, ...override?.weights },
+    };
   }
 
   private extractKeywords(text: string, domainPack: DomainPack): { glossaryMatches: string[], symbolMatches: string[] } {
