@@ -261,18 +261,20 @@ Built as a TypeScript modular monolith to balance speed of development with even
 
 ## Roadmap Status
 
-- Refactor boundary, analyzer quality gate, and controlled-beta hardening are
-  complete.
+- Refactor boundary and analyzer quality gate are complete; controlled-beta
+  hardening is engineering-complete with **executable** release evidence
+  available (an executable release drill + a migration-upgrade/data-survival
+  gate), pending field validation.
 - Product-validation tooling is complete and waiting for real BA/QC field
   observations.
 - SaaS work is locked until a provenance-backed comparison demonstrates a
   positive product signal.
 
 See the [roadmap closure status](docs/release/roadmap-status.md). Before a beta
-release, run:
+release, run the executable drill and the readiness gate:
 
 ```bash
-pnpm verify:controlled-beta-readiness
+pnpm verify:release-drill && pnpm verify:controlled-beta-readiness
 ```
 
 ## Documentation & Assets

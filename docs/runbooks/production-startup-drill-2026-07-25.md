@@ -1,5 +1,11 @@
 # Production Startup Drill — 2026-07-25
 
+> **Superseded by the executable drill.** `scripts/run-release-drill.ts`
+> (`pnpm verify:release-drill`) now performs this startup verification and emits
+> machine-readable evidence to `artifacts/release/production-release-drill.json`,
+> which is the authoritative source for the `production-startup` readiness check.
+> This document is retained as a human-readable narrative of the 2026-07-25 run.
+
 ## Scope
 
 Verify that the controlled-beta production artifacts build and start from the

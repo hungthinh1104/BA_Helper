@@ -13,9 +13,24 @@ const validEvidence: ReadinessEvidence = {
     'email + password Redis-backed rate limiter audit login permission events',
   architectureDecision: 'Status\nAccepted.\napplication backend-runtime boundary',
   productionProfile: 'NODE_ENV: production\nENABLE_DEV_LOGIN: "false"',
-  startupDrill:
-    'Status: **PASS**\ndatabase, pgvector, queue, and Redis all reported `up`.',
-  restoreDrill: 'Status: **PASS**\npgvector extension | present | present',
+  releaseDrill: {
+    status: 'PASS_WITH_SKIPS',
+    commitSha: 'a'.repeat(40),
+    checks: [
+      { id: 'stack-boot', status: 'PASS' },
+      { id: 'migrations-applied', status: 'PASS' },
+      { id: 'dev-login-disabled', status: 'PASS' },
+      { id: 'health-live', status: 'PASS' },
+      { id: 'health-ready', status: 'PASS' },
+      { id: 'operations-admin-gated', status: 'PASS' },
+      { id: 'boot-guard-fails-closed', status: 'PASS' },
+      { id: 'web-login-200', status: 'PASS' },
+      { id: 'restart-survival', status: 'PASS' },
+      { id: 'backup-restore', status: 'PASS' },
+      { id: 'live-analysis', status: 'SKIPPED' },
+    ],
+  },
+  expectedCommitSha: 'a'.repeat(40),
   incidentRunbook: 'Incident And Rollback\nApplication rollback\nRecovery',
   localizationTest:
     "expect(finalRes.body.locale).toBe('en'); locale: 'vi-VN'",
@@ -67,6 +82,34 @@ describe('controlled beta readiness', () => {
     expect(result.failures).toEqual(
       expect.arrayContaining(['production-profile', 'external-repository-review']),
     );
+  });
+
+  it('fails the startup and restore checks without executed release-drill evidence', () => {
+    const missing = evaluateControlledBetaReadiness({
+      ...validEvidence,
+      releaseDrill: null,
+    });
+    expect(missing.failures).toEqual(
+      expect.arrayContaining(['production-startup', 'restore-drill']),
+    );
+
+    const failed = evaluateControlledBetaReadiness({
+      ...validEvidence,
+      releaseDrill: {
+        status: 'FAIL',
+        commitSha: 'a'.repeat(40),
+        checks: [{ id: 'stack-boot', status: 'FAIL' }],
+      },
+    });
+    expect(failed.failures).toContain('production-startup');
+  });
+
+  it('fails production-startup when the drill evidence commit does not match the certified head', () => {
+    const stale = evaluateControlledBetaReadiness({
+      ...validEvidence,
+      expectedCommitSha: 'b'.repeat(40),
+    });
+    expect(stale.failures).toContain('production-startup');
   });
 });
 

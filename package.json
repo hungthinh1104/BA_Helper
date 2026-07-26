@@ -28,11 +28,12 @@
     "verify:analyzer-quality": "tsx scripts/run-analyzer-quality-gate.ts",
     "validate:product-beta": "tsx scripts/run-product-validation-scorecard.ts",
     "verify:controlled-beta-readiness": "tsx scripts/verify-controlled-beta-readiness.ts",
+    "verify:release-drill": "tsx scripts/run-release-drill.ts",
     "verify:migration-upgrade": "tsx scripts/verify-migration-upgrade.ts",
     "verify:saas-entry": "tsx scripts/verify-saas-entry.ts",
     "verify:architecture-boundaries": "tsx scripts/verify-architecture-boundaries.ts && pnpm verify:backend-runtime-boundary",
     "verify:backend-runtime-boundary": "tsx scripts/verify-backend-runtime-boundary.ts",
-    "verify:stability": "pnpm infra:up && pnpm db:migrate && pnpm verify:migration-upgrade && pnpm verify:domain-packs && pnpm verify:analyzer-quality && pnpm verify:architecture-boundaries && pnpm verify:controlled-beta-readiness && pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e && pnpm demo:golden-path && pnpm demo:multi-repo-golden-path"
+    "verify:stability": "pnpm infra:up && pnpm db:migrate && pnpm verify:migration-upgrade && pnpm verify:domain-packs && pnpm verify:analyzer-quality && pnpm verify:architecture-boundaries && pnpm verify:release-drill && pnpm verify:controlled-beta-readiness && pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e && pnpm demo:golden-path && pnpm demo:multi-repo-golden-path"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

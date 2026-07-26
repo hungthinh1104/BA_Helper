@@ -1,6 +1,19 @@
+import { execFileSync } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { evaluateControlledBetaReadiness } from '../tests/release/controlled-beta-readiness';
+import {
+  evaluateControlledBetaReadiness,
+  type ReleaseDrillEvidence,
+} from '../tests/release/controlled-beta-readiness';
+
+/** The commit under certification. The drill evidence must match this. */
+function resolveHeadSha(): string {
+  try {
+    return execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  } catch {
+    return '';
+  }
+}
 
 async function text(root: string, relativePath: string): Promise<string> {
   return readFile(path.join(root, relativePath), 'utf8');
@@ -8,6 +21,18 @@ async function text(root: string, relativePath: string): Promise<string> {
 
 async function json(root: string, relativePath: string): Promise<unknown> {
   return JSON.parse(await text(root, relativePath)) as unknown;
+}
+
+/** Returns null when the file is absent — a missing drill fails the gate. */
+async function optionalJson(
+  root: string,
+  relativePath: string,
+): Promise<unknown> {
+  try {
+    return JSON.parse(await text(root, relativePath)) as unknown;
+  } catch {
+    return null;
+  }
 }
 
 async function main(): Promise<void> {
@@ -27,14 +52,11 @@ async function main(): Promise<void> {
       'docs/adr/adr-0010-application-runtime-boundary.md',
     ),
     productionProfile: await text(root, 'docker-compose.production.yml'),
-    startupDrill: await text(
+    releaseDrill: (await optionalJson(
       root,
-      'docs/runbooks/production-startup-drill-2026-07-25.md',
-    ),
-    restoreDrill: await text(
-      root,
-      'docs/runbooks/restore-drill-2026-07-25.md',
-    ),
+      'artifacts/release/production-release-drill.json',
+    )) as ReleaseDrillEvidence | null,
+    expectedCommitSha: resolveHeadSha(),
     incidentRunbook: await text(root, 'docs/runbooks/incident-rollback.md'),
     localizationTest: await text(
       root,

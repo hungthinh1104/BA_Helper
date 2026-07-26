@@ -6,14 +6,31 @@ interface ExternalRepositoryReview {
   frameworkDetected: string;
 }
 
+export interface ReleaseDrillCheck {
+  id: string;
+  status: 'PASS' | 'FAIL' | 'SKIPPED';
+}
+
+/**
+ * Machine-readable evidence emitted by `scripts/run-release-drill.ts`. The
+ * production-startup and restore checks below derive their PASS from this
+ * executed evidence — not from hand-written runbook substrings.
+ */
+export interface ReleaseDrillEvidence {
+  status: 'PASS' | 'PASS_WITH_SKIPS' | 'FAIL';
+  commitSha: string;
+  checks: ReleaseDrillCheck[];
+}
+
 export interface ReadinessEvidence {
   capabilityMatrix: string;
   operationsRunbook: string;
   authDocumentation: string;
   architectureDecision: string;
   productionProfile: string;
-  startupDrill: string;
-  restoreDrill: string;
+  releaseDrill: ReleaseDrillEvidence | null;
+  /** The commit being certified — the drill evidence must match it (freshness). */
+  expectedCommitSha: string;
   incidentRunbook: string;
   localizationTest: string;
   publicRepositories: { repositories: ExternalRepositoryReview[] };
@@ -30,6 +47,31 @@ interface ReadinessCheck {
 
 function check(id: string, passed: boolean, detail: string): ReadinessCheck {
   return { id, status: passed ? 'PASS' : 'FAIL', detail };
+}
+
+/**
+ * The executable release drill checks that together prove the production
+ * startup path (boot, migrate, health, boot-guard-fails-closed, web, restart).
+ */
+const STARTUP_DRILL_CHECK_IDS = [
+  'stack-boot',
+  'migrations-applied',
+  'dev-login-disabled',
+  'health-live',
+  'health-ready',
+  'operations-admin-gated',
+  'boot-guard-fails-closed',
+  'web-login-200',
+  'restart-survival',
+];
+
+function drillCheckPassed(
+  drill: ReleaseDrillEvidence | null,
+  id: string,
+): boolean {
+  if (!drill) return false;
+  const found = drill.checks.find((entry) => entry.id === id);
+  return found?.status === 'PASS';
 }
 
 export function evaluateControlledBetaReadiness(
@@ -67,17 +109,20 @@ export function evaluateControlledBetaReadiness(
     ),
     check(
       'production-startup',
-      evidence.startupDrill.includes('Status: **PASS**') &&
-        ['database', 'pgvector', 'queue', 'Redis'].every((dependency) =>
-          evidence.startupDrill.includes(dependency),
+      evidence.releaseDrill !== null &&
+        evidence.releaseDrill.status !== 'FAIL' &&
+        /^[a-f0-9]{40}$/i.test(evidence.releaseDrill.commitSha) &&
+        evidence.releaseDrill.commitSha.toLowerCase() ===
+          evidence.expectedCommitSha.toLowerCase() &&
+        STARTUP_DRILL_CHECK_IDS.every((id) =>
+          drillCheckPassed(evidence.releaseDrill, id),
         ),
-      'Production API, worker, web, and dependencies passed startup verification.',
+      'Executable release drill booted the production stack at the certified commit and passed startup, health, boot-guard, and restart checks.',
     ),
     check(
       'restore-drill',
-      evidence.restoreDrill.includes('Status: **PASS**') &&
-        evidence.restoreDrill.includes('pgvector'),
-      'Backup restore was exercised against a temporary database.',
+      drillCheckPassed(evidence.releaseDrill, 'backup-restore'),
+      'Executable release drill restored a logical backup into a temporary database with data and pgvector.',
     ),
     check(
       'operations-recovery',

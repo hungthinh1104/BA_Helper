@@ -71,7 +71,9 @@ services:
       migrate:
         condition: service_completed_successfully
     ports:
-      - "3001:3001"
+      # Host port is configurable so an isolated stack (e.g. the release drill)
+      # can publish on a free port; defaults to 3001 for local development.
+      - "${API_HOST_PORT:-3001}:3001"
     restart: unless-stopped
   web:
     build:
@@ -88,7 +90,7 @@ services:
       api:
         condition: service_started
     ports:
-      - "3000:3000"
+      - "${WEB_HOST_PORT:-3000}:3000"
     restart: unless-stopped
   worker:
     build:

@@ -67,7 +67,7 @@ Known scope bounds (honest, not fabricated):
 
 ## Phase 3 — Controlled beta hardening
 
-Status: **ENGINEERING_IMPLEMENTED / EXECUTABLE_RELEASE_EVIDENCE_PENDING**
+Status: **ENGINEERING_IMPLEMENTED / EXECUTABLE_RELEASE_EVIDENCE_AVAILABLE**
 
 Implemented and unit/e2e-tested:
 
@@ -97,21 +97,35 @@ Implemented and unit/e2e-tested:
 - English and Vietnamese final reports have E2E coverage.
 - Public GitHub TypeScript/NestJS is the only `STABLE` beta path.
 
-Pending executable release evidence (see Phase 4 of the working plan):
+Executable release evidence:
 
-- The controlled-beta readiness gate still derives PASS from documentation
-  substrings, not an executed drill. An executable release drill (build images →
-  boot clean prod stack → migrate → golden path → EN/VI export → restart → retry
-  a failed job → DB backup/restore → machine-readable JSON evidence) and a
-  migration-upgrade/data-survival test are **not yet built**. Until they run and
-  pass on the branch head, production startup/backup/restore are documented and
-  code-level tested but **not** executably verified.
+- An **executable release drill** (`pnpm verify:release-drill`,
+  `scripts/run-release-drill.ts`) builds the production images, boots the
+  production compose profile in isolation (on free ephemeral ports, hermetic
+  env), migrates, and asserts the release path: dev-login disabled, non-leaking
+  `/live` + `/ready`, ADMIN-gated `/system/operations`, a weak-secret **boot
+  guard that fails closed**, the web login page, **api + worker restart
+  survival**, and a **logical backup restore** into a temporary database
+  (pgvector + a seeded row survive). It emits machine-readable evidence to
+  `artifacts/release/production-release-drill.json`. The live scan → analyze →
+  finalize → EN/VI export leg is **skipped** (the prod boot guard forbids the
+  fake provider and the drill uses no live credentials); that path is covered
+  deterministically by `verify:analyzer-quality` and `demo:golden-path`.
+- The **controlled-beta readiness gate** now derives its `production-startup` and
+  `restore-drill` PASS from that executed drill evidence — and asserts the drill
+  ran on the commit being certified (freshness) — instead of grepping
+  documentation substrings.
+- A **migration-upgrade / data-survival** gate (`pnpm verify:migration-upgrade`)
+  applies the previous schema, seeds legacy data, applies this branch's
+  migrations, and asserts the data survived and the upgrades took effect; it runs
+  in per-push CI.
+
+The full pre-tag gate runs via `pnpm verify:stability` (which now runs
+`verify:release-drill` before the readiness gate).
 
 ```bash
-pnpm verify:controlled-beta-readiness
+pnpm verify:release-drill && pnpm verify:controlled-beta-readiness
 ```
-
-CI uploads `artifacts/release/controlled-beta-readiness.json`.
 
 ## Phase 4 — Product validation
 
