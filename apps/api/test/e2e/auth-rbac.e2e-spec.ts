@@ -408,6 +408,170 @@ describe('Auth and RBAC (e2e)', () => {
     expect(JSON.stringify(events)).not.toContain('replacement-password-123');
   });
 
+  it('normalizes account emails: case-insensitive login and rejects case-variant duplicates', async () => {
+    const provision = await request(app.getHttpServer())
+      .post('/api/v1/auth/accounts')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        email: '  Mixed.Case@Example.COM ',
+        name: 'Mixed',
+        password: 'initial-password-123',
+        role: 'REVIEWER',
+      })
+      .expect(201);
+
+    // Stored in canonical (normalized) form.
+    const stored = await prisma.user.findUniqueOrThrow({
+      where: { id: provision.body.userId as string },
+    });
+    expect(stored.email).toBe('mixed.case@example.com');
+
+    // Login succeeds regardless of the casing the user types.
+    const login = await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ email: 'MIXED.case@example.com', password: 'initial-password-123' })
+      .expect(200);
+    expect(login.body.user.email).toBe('mixed.case@example.com');
+
+    // A case-variant of an existing address is a duplicate, not a new account.
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/accounts')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        email: 'mixed.CASE@Example.com',
+        name: 'Dup',
+        password: 'initial-password-123',
+        role: 'REVIEWER',
+      })
+      .expect(409);
+
+    const count = await prisma.user.count({ where: { email: 'mixed.case@example.com' } });
+    expect(count).toBe(1);
+  });
+
+  it('completes the account lifecycle (list/get/role/enable/self-password) and audits every step', async () => {
+    const provision = await request(app.getHttpServer())
+      .post('/api/v1/auth/accounts')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        email: 'lifecycle-op@ba-helper.local',
+        name: 'Lifecycle Operator',
+        password: 'initial-password-123',
+        role: 'REVIEWER',
+      })
+      .expect(201);
+    const userId = provision.body.userId as string;
+
+    // List is admin-only.
+    await request(app.getHttpServer())
+      .get('/api/v1/auth/accounts')
+      .set('Authorization', `Bearer ${reviewerToken}`)
+      .expect(403);
+    const list = await request(app.getHttpServer())
+      .get('/api/v1/auth/accounts')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(
+      list.body.items.some(
+        (a: { id: string; status: string }) => a.id === userId && a.status === 'ACTIVE',
+      ),
+    ).toBe(true);
+
+    // Get single account.
+    const detail = await request(app.getHttpServer())
+      .get(`/api/v1/auth/accounts/${userId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(detail.body).toMatchObject({ id: userId, role: 'REVIEWER', status: 'ACTIVE' });
+
+    // Role update revokes existing sessions (credentialsVersion bump).
+    const opLogin = await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ email: 'lifecycle-op@ba-helper.local', password: 'initial-password-123' })
+      .expect(200);
+    await request(app.getHttpServer())
+      .post(`/api/v1/auth/accounts/${userId}/role`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ role: 'VIEWER' })
+      .expect(201);
+    await request(app.getHttpServer())
+      .get('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${opLogin.body.accessToken}`)
+      .expect(401);
+    // Admin cannot change their own role (lockout guard).
+    await request(app.getHttpServer())
+      .post(`/api/v1/auth/accounts/${adminUserId}/role`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ role: 'VIEWER' })
+      .expect(400);
+
+    // Disable then re-enable restores login.
+    await request(app.getHttpServer())
+      .post(`/api/v1/auth/accounts/${userId}/disable`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(201);
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ email: 'lifecycle-op@ba-helper.local', password: 'initial-password-123' })
+      .expect(401);
+    await request(app.getHttpServer())
+      .post(`/api/v1/auth/accounts/${userId}/enable`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(201);
+    const reLogin = await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ email: 'lifecycle-op@ba-helper.local', password: 'initial-password-123' })
+      .expect(200);
+
+    // Self change-password: verifies current password and revokes other sessions.
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/me/change-password')
+      .set('Authorization', `Bearer ${reLogin.body.accessToken}`)
+      .send({ currentPassword: 'wrong-password', newPassword: 'brand-new-password-123' })
+      .expect(401);
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/me/change-password')
+      .set('Authorization', `Bearer ${reLogin.body.accessToken}`)
+      .send({ currentPassword: 'initial-password-123', newPassword: 'brand-new-password-123' })
+      .expect(201);
+    await request(app.getHttpServer())
+      .get('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${reLogin.body.accessToken}`)
+      .expect(401);
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ email: 'lifecycle-op@ba-helper.local', password: 'brand-new-password-123' })
+      .expect(200);
+
+    // Audit trail is admin-only and records every account operation with an actor.
+    await request(app.getHttpServer())
+      .get('/api/v1/auth/accounts/audit')
+      .set('Authorization', `Bearer ${reviewerToken}`)
+      .expect(403);
+    const audit = await request(app.getHttpServer())
+      .get('/api/v1/auth/accounts/audit')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    const auditedTypes = new Set(
+      audit.body.items.map((e: { eventType: string }) => e.eventType),
+    );
+    expect([...auditedTypes]).toEqual(
+      expect.arrayContaining([
+        'ACCOUNT_PROVISIONED',
+        'ACCOUNT_ROLE_UPDATED',
+        'ACCOUNT_DISABLED',
+        'ACCOUNT_ENABLED',
+        'ACCOUNT_PASSWORD_CHANGED',
+      ]),
+    );
+    expect(
+      audit.body.items.every(
+        (e: { subjectUserId: string | null; actorUserId: string | null }) =>
+          e.subjectUserId && e.actorUserId,
+      ),
+    ).toBe(true);
+  });
+
   it('enforces admin-only project creation', async () => {
     await request(app.getHttpServer())
       .post('/api/v1/projects')

@@ -13,6 +13,7 @@ type RateLimitedRequest = {
   url?: string;
   params?: Record<string, string>;
   ip?: string;
+  body?: { email?: unknown };
   user?: {
     id?: string;
     email?: string;
@@ -43,32 +44,75 @@ export class PublicBetaRateLimitGuard implements CanActivate {
     if (!config.enabled || !this.policy.shouldLimit(request.method, path)) {
       return true;
     }
-    const decision = await this.queueService.consumeRateLimit({
-      key: buildRateLimitKey(request, path),
-      maxRequests: config.maxRequests,
-      windowMs: config.windowMs,
-    });
 
-    if (decision.allowed) return true;
+    // Login routes are throttled on TWO independent dimensions so neither a single
+    // hostile IP nor a targeted account can be brute-forced: rotating IPs are
+    // bounded by the per-email bucket, and a shared NAT IP cannot lock out a whole
+    // office because each victim account has its own budget.
+    const scopeKeys = this.buildScopeKeys(request, path);
 
-    throw new AppError(
-      'RATE_LIMITED',
-      'Too many public beta requests. Please retry after the rate limit window resets.',
-      {
-        retryAfterMs: decision.retryAfterMs,
-        limit: decision.limit,
-        windowMs: decision.windowMs,
-      },
-    );
+    for (const scopeKey of scopeKeys) {
+      let decision;
+      try {
+        decision = await this.queueService.consumeRateLimit({
+          key: scopeKey,
+          maxRequests: config.maxRequests,
+          windowMs: config.windowMs,
+        });
+      } catch {
+        // Redis is the source of truth for the limiter. If it is unavailable we
+        // fail CLOSED — refusing with a clear, typed 503 rather than silently
+        // allowing unlimited attempts.
+        throw new AppError(
+          'RATE_LIMITER_UNAVAILABLE',
+          'Rate limiting is temporarily unavailable. Please retry shortly.',
+          { reason: 'RATE_LIMITER_BACKEND_UNAVAILABLE' },
+        );
+      }
+
+      if (!decision.allowed) {
+        throw new AppError(
+          'RATE_LIMITED',
+          'Too many public beta requests. Please retry after the rate limit window resets.',
+          {
+            retryAfterMs: decision.retryAfterMs,
+            limit: decision.limit,
+            windowMs: decision.windowMs,
+          },
+        );
+      }
+    }
+
+    return true;
+  }
+
+  private buildScopeKeys(request: RateLimitedRequest, path: string): string[] {
+    const normalizedPath = path.split('?')[0];
+    const method = request.method.toUpperCase();
+    const suffix = `${method}:${normalizedPath}`;
+
+    if (this.policy.isLoginRoute(method, normalizedPath)) {
+      const ip = request.ip ?? 'anonymous';
+      const email = normalizeEmail(request.body?.email);
+      return [
+        hashScope(`ip:${ip}:${suffix}`),
+        hashScope(`email:${email}:${suffix}`),
+      ];
+    }
+
+    const principal =
+      request.user?.id ?? request.user?.email ?? request.ip ?? 'anonymous';
+    const project = request.params?.projectId ?? 'global';
+    return [hashScope(`${principal}:${project}:${suffix}`)];
   }
 }
 
-function buildRateLimitKey(
-  request: RateLimitedRequest,
-  path: string,
-): string {
-  const user = request.user?.id ?? request.user?.email ?? request.ip ?? 'anonymous';
-  const project = request.params?.projectId ?? 'global';
-  const rawScope = `${user}:${project}:${request.method.toUpperCase()}:${path.split('?')[0]}`;
+function normalizeEmail(value: unknown): string {
+  return typeof value === 'string' && value.trim().length > 0
+    ? value.trim().toLowerCase()
+    : 'anonymous';
+}
+
+function hashScope(rawScope: string): string {
   return createHash('sha256').update(rawScope).digest('hex');
 }

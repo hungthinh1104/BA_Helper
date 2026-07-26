@@ -1,4 +1,4 @@
-import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, HttpCode, Param, Post, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, HttpCode, NotFoundException, Param, Post, Query, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Public } from '../application/jwt-auth.guard';
 import { CurrentUser } from './current-user.decorator';
@@ -8,8 +8,13 @@ import {
   loginRequestSchema,
   accountPasswordResetRequestSchema,
   accountProvisionRequestSchema,
+  accountRoleUpdateRequestSchema,
+  changeOwnPasswordRequestSchema,
   RequestUser,
+  type AccountAuditListResponse,
+  type AccountListResponse,
   type AccountOperationResponse,
+  type AccountSummary,
   type DevLoginRequest,
   type LoginRequest,
   type LoginResponse,
@@ -119,6 +124,37 @@ export class AuthController {
     return user;
   }
 
+  @Post('me/change-password')
+  @ApiOperation({ summary: 'Change the current user password' })
+  async changeOwnPassword(
+    @Body() body: unknown,
+    @CurrentUser() actor: RequestUser,
+  ): Promise<AccountOperationResponse> {
+    const input = changeOwnPasswordRequestSchema.parse(body);
+    const user = await this.prisma.user.findUnique({ where: { id: actor.id } });
+    // A verifiable current password is required; local accounts without a hash
+    // must go through an admin reset instead of self-service change.
+    if (!user?.passwordHash || user.disabledAt) {
+      await this.burnPasswordVerificationCost(input.currentPassword);
+      throw invalidCredentials();
+    }
+    const matches = await this.passwords.verifyPassword(
+      user.passwordHash,
+      input.currentPassword,
+    );
+    if (!matches) {
+      throw invalidCredentials();
+    }
+    const passwordHash = await this.passwords.hashPassword(input.newPassword);
+    const updated = await this.prisma.user.update({
+      where: { id: user.id },
+      // Bumping credentialsVersion revokes every other active session.
+      data: { passwordHash, credentialsVersion: { increment: 1 } },
+    });
+    await this.recordAccountEvent('ACCOUNT_PASSWORD_CHANGED', actor.id, updated.id);
+    return { userId: updated.id, status: 'PASSWORD_CHANGED' };
+  }
+
   @Post('accounts')
   @Roles('ADMIN')
   async provisionAccount(
@@ -185,6 +221,119 @@ export class AuthController {
     return { userId: user.id, status: 'DISABLED' };
   }
 
+  @Post('accounts/:userId/enable')
+  @Roles('ADMIN')
+  async enableAccount(
+    @Param('userId') userId: string,
+    @CurrentUser() actor: RequestUser,
+  ): Promise<AccountOperationResponse> {
+    const existing = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!existing) {
+      throw new NotFoundException('Account not found.');
+    }
+    // Re-enabling only clears the disabled flag; it does not revoke sessions
+    // (a disabled account already had none), so credentialsVersion is untouched.
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: { disabledAt: null },
+    });
+    await this.recordAccountEvent('ACCOUNT_ENABLED', actor.id, user.id);
+    return { userId: user.id, status: 'ENABLED' };
+  }
+
+  @Post('accounts/:userId/role')
+  @Roles('ADMIN')
+  async updateAccountRole(
+    @Param('userId') userId: string,
+    @Body() body: unknown,
+    @CurrentUser() actor: RequestUser,
+  ): Promise<AccountOperationResponse> {
+    const input = accountRoleUpdateRequestSchema.parse(body);
+    if (actor.id === userId) {
+      // Prevent an admin from demoting themselves into a lockout.
+      throw new BadRequestException('Administrators cannot change their own role.');
+    }
+    const existing = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!existing) {
+      throw new NotFoundException('Account not found.');
+    }
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      // Bumping credentialsVersion forces re-auth so tokens carrying the old role
+      // stop working immediately.
+      data: { role: input.role, credentialsVersion: { increment: 1 } },
+    });
+    await this.recordAccountEvent('ACCOUNT_ROLE_UPDATED', actor.id, user.id);
+    return { userId: user.id, status: 'ROLE_UPDATED' };
+  }
+
+  @Get('accounts')
+  @Roles('ADMIN')
+  async listAccounts(): Promise<AccountListResponse> {
+    const users = await this.prisma.user.findMany({
+      orderBy: { createdAt: 'asc' },
+    });
+    return { items: users.map((user) => this.toAccountSummary(user)) };
+  }
+
+  @Get('accounts/audit')
+  @Roles('ADMIN')
+  async listAccountAudit(
+    @Query('limit') limit?: string,
+  ): Promise<AccountAuditListResponse> {
+    const take = Math.min(Math.max(Number.parseInt(limit ?? '', 10) || 100, 1), 500);
+    const events = await this.prisma.domainEvent.findMany({
+      where: { eventType: { in: [...ACCOUNT_AUDIT_EVENT_TYPES] } },
+      orderBy: { createdAt: 'desc' },
+      take,
+    });
+    return {
+      items: events.map((event) => {
+        const payload = (event.payload ?? {}) as {
+          actorUserId?: string;
+          subjectUserId?: string;
+        };
+        return {
+          id: event.id,
+          eventType: event.eventType,
+          actorUserId: payload.actorUserId ?? null,
+          subjectUserId: payload.subjectUserId ?? null,
+          createdAt: event.createdAt.toISOString(),
+        };
+      }),
+    };
+  }
+
+  @Get('accounts/:userId')
+  @Roles('ADMIN')
+  async getAccount(
+    @Param('userId') userId: string,
+  ): Promise<AccountSummary> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('Account not found.');
+    }
+    return this.toAccountSummary(user);
+  }
+
+  private toAccountSummary(user: {
+    id: string;
+    email: string;
+    name: string | null;
+    role: string;
+    disabledAt: Date | null;
+    createdAt: Date;
+  }): AccountSummary {
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role as AccountSummary['role'],
+      status: user.disabledAt ? 'DISABLED' : 'ACTIVE',
+      createdAt: user.createdAt.toISOString(),
+    };
+  }
+
   private issueLoginResponse(user: {
     id: string;
     email: string;
@@ -232,10 +381,7 @@ export class AuthController {
   }
 
   private async recordAccountEvent(
-    eventType:
-      | 'ACCOUNT_PROVISIONED'
-      | 'ACCOUNT_PASSWORD_RESET'
-      | 'ACCOUNT_DISABLED',
+    eventType: (typeof ACCOUNT_AUDIT_EVENT_TYPES)[number],
     actorUserId: string,
     subjectUserId: string,
   ): Promise<void> {
@@ -247,6 +393,15 @@ export class AuthController {
     });
   }
 }
+
+const ACCOUNT_AUDIT_EVENT_TYPES = [
+  'ACCOUNT_PROVISIONED',
+  'ACCOUNT_PASSWORD_RESET',
+  'ACCOUNT_PASSWORD_CHANGED',
+  'ACCOUNT_DISABLED',
+  'ACCOUNT_ENABLED',
+  'ACCOUNT_ROLE_UPDATED',
+] as const;
 
 function invalidCredentials(): UnauthorizedException {
   return new UnauthorizedException('Invalid email or password.');

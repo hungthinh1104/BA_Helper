@@ -47,6 +47,8 @@ export class AppExceptionFilter implements ExceptionFilter {
         return HttpStatus.PAYLOAD_TOO_LARGE;
       case 'RATE_LIMITED':
         return HttpStatus.TOO_MANY_REQUESTS;
+      case 'RATE_LIMITER_UNAVAILABLE':
+        return HttpStatus.SERVICE_UNAVAILABLE;
       case 'CLONE_FAILED':
         return HttpStatus.BAD_GATEWAY;
       case 'SECURITY_RISK_BLOCKED':
@@ -67,6 +69,7 @@ export class AppExceptionFilter implements ExceptionFilter {
       case 'SOURCE_TARGET_NOT_FOUND':
       case 'IMPACT_ANALYSIS_NOT_FOUND':
       case 'APPROVED_REPORT_NOT_FOUND':
+      case 'FAILED_JOB_NOT_FOUND':
         return HttpStatus.NOT_FOUND;
       case 'REQUEST_KEY_MISMATCH':
       case 'REPOSITORY_NOT_ANALYZABLE':

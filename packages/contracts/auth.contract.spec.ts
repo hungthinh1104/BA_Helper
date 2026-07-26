@@ -56,6 +56,29 @@ describe('auth contracts', () => {
     ).toThrow();
   });
 
+  it('normalizes email to trimmed lowercase across login, dev-login, and provision', () => {
+    expect(
+      loginRequestSchema.parse({
+        email: '  Analyst@BA-Helper.LOCAL ',
+        password: 'correct-password-123',
+      }).email,
+    ).toBe('analyst@ba-helper.local');
+
+    expect(
+      devLoginRequestSchema.parse({
+        email: 'Mixed.Case@Example.COM',
+        role: 'REVIEWER',
+      }).email,
+    ).toBe('mixed.case@example.com');
+
+    expect(
+      accountProvisionRequestSchema.parse({
+        email: 'OPERATOR@Example.com',
+        password: 'initial-password-123',
+      }).email,
+    ).toBe('operator@example.com');
+  });
+
   it('requires strong explicit credentials for account operations', () => {
     expect(
       accountProvisionRequestSchema.parse({

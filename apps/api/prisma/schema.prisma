@@ -782,6 +782,7 @@ model DomainEvent {
   createdAt      DateTime @default(now())
 
   @@unique([idempotencyKey])
+  @@index([eventType, createdAt])
 }
 
 model ReviewNote {
