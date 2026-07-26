@@ -5,6 +5,7 @@ interface RuntimeEnv {
   apiUrl?: string
   internalApiUrl?: string
   nodeEnv?: string
+  isBrowser?: boolean
 }
 
 function validateApiUrl(value: string): string {
@@ -37,7 +38,17 @@ export function getApiBaseUrl(env: RuntimeEnv = {
   internalApiUrl:
     typeof window === "undefined" ? process.env.INTERNAL_API_URL : undefined,
   nodeEnv: process.env.NODE_ENV,
+  isBrowser: typeof window !== "undefined",
 }): string {
+  // Browser: use a same-origin base ("") so requests go to `/api/v1/*` on the web
+  // origin and are proxied to the API by Next rewrites (next.config.ts). No API
+  // origin is baked into the client bundle, which removes the build-time
+  // NEXT_PUBLIC_API_URL inlining hazard.
+  if (env.isBrowser) {
+    return ""
+  }
+
+  // Server-side (SSR / server actions / NextAuth): call the API directly.
   if (env.internalApiUrl?.trim()) {
     return validateApiUrl(env.internalApiUrl.trim())
   }
