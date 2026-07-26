@@ -693,6 +693,11 @@
     "submitReview": "Review を送信"
   },
   "workspace": {
+    "analysisNavigation": "分析ワークスペースのビュー",
+    "summary": "概要",
+    "review": "レビュー",
+    "risksQa": "リスク & QA",
+    "history": "履歴",
     "finalize": "Finalize",
     "backendFinalizeBlockers": "Backend finalize blockers",
     "backendCapabilityUnavailable": "Backend capability contract unavailable",

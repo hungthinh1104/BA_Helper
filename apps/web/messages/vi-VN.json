@@ -693,6 +693,11 @@
     "submitReview": "Gửi review"
   },
   "workspace": {
+    "analysisNavigation": "Các chế độ của không gian phân tích",
+    "summary": "Tổng quan",
+    "review": "Xem xét",
+    "risksQa": "Rủi ro & QA",
+    "history": "Lịch sử",
     "finalize": "Finalize",
     "backendFinalizeBlockers": "Các blocker finalize từ backend",
     "backendCapabilityUnavailable": "Không có contract capability từ backend",

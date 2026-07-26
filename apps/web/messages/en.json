@@ -693,6 +693,11 @@
     "submitReview": "Submit review"
   },
   "workspace": {
+    "analysisNavigation": "Analysis workspace views",
+    "summary": "Summary",
+    "review": "Review",
+    "risksQa": "Risks & QA",
+    "history": "History",
     "finalize": "Finalize",
     "backendFinalizeBlockers": "Backend finalize blockers",
     "backendCapabilityUnavailable": "Backend capability contract unavailable",
