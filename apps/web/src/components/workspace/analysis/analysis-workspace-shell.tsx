@@ -128,8 +128,7 @@ export function AnalysisWorkspaceShell({
           unknowns={workspace.unknowns}
           qaScenarios={workspace.qaScenarios}
           labels={labels.risksQa}
-          analysisId={workspace.overview.analysisId}
-          isStale={workspace.driftStatus.isStale}
+          locale={locale}
         />
       )}
       {activeMode === "history" && (

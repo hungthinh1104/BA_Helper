@@ -5,15 +5,20 @@ import {
   driftStatusLabels,
   getLocalizedLabel,
   reportStatusLabels,
+  reviewDecisionLabels,
   analysisStatusLabels,
   type SupportedLocale,
 } from "@/lib/i18n/status-labels"
 import type { AnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
-import { InlineReviewAction } from "../shared/inline-review-action"
-import { AlertTriangle, Code, ShieldAlert } from "lucide-react"
-import { EvidenceCommandCenter } from "./evidence-command-center"
+import { Badge } from "@/components/ui/badge"
+import { AlertTriangle, Code } from "lucide-react"
 import { DenseCard, DenseCardHeader, DenseCardTitle } from "../shared/dense-card"
 
+/**
+ * Summary is a read-only executive overview. It never repeats the review queue
+ * or the evidence explorer and never mutates a decision — the review workbench
+ * is the only place decisions are made.
+ */
 export function OverviewTab({
   workspace,
   locale,
@@ -26,10 +31,11 @@ export function OverviewTab({
   const { overview, reportStatus, driftStatus, risks, impactGroups, unknowns } = workspace
   const counts = overview.counts
 
-  const topActions = workspace.reviewQueue.filter(r => r.currentDecision === "needs_review").slice(0, 3)
-  const topBlockers = workspace.reviewQueue.filter(r => r.blockingFinalize && r.currentDecision === "needs_review").slice(0, 5)
-  const topRisksAndUnknowns = [...risks.filter(r => r.severity === "high").map(r => ({ ...r, type: "risk" as const })), ...unknowns.map(u => ({ ...u, type: "unknown" as const }))].slice(0, 5)
-  const topImpacts = impactGroups.flatMap(g => g.artifacts).filter(a => a.reviewDecision === "needs_review").slice(0, 3)
+  const topRisksAndUnknowns = [
+    ...risks.filter((r) => r.severity === "high").map((r) => ({ ...r, type: "risk" as const })),
+    ...unknowns.map((u) => ({ ...u, type: "unknown" as const })),
+  ].slice(0, 5)
+  const topImpacts = impactGroups.flatMap((g) => g.artifacts).slice(0, 5)
 
   const derivedSummary = formatDerivedSummary({
     requirementTitle: overview.requirement.title,
@@ -64,60 +70,8 @@ export function OverviewTab({
         </div>
       </DenseCard>
 
-      <EvidenceCommandCenter workspace={workspace} labels={labels} />
-
       <div className="grid gap-4 lg:grid-cols-2">
-        {/* Top Next Actions */}
-        <DenseCard>
-          <DenseCardHeader className="flex-row items-center justify-between border-b border-border/40 bg-surface-muted/30 px-4 py-3">
-            <DenseCardTitle>{labels.topNextActions}</DenseCardTitle>
-            {topActions.length > 0 && <span className="text-[10px] font-medium bg-foreground/10 px-1.5 py-0.5 rounded uppercase">{labels.totalPending.replace("{count}", String(counts.pendingReviewItems))}</span>}
-          </DenseCardHeader>
-          <div className="flex flex-col divide-y divide-border/40">
-            {topActions.length === 0 ? (
-              <div className="p-6 text-center text-[13px] text-muted-foreground">{labels.noPendingActions}</div>
-            ) : (
-              topActions.map((action) => (
-                <div key={action.itemId} className="flex items-start gap-4 p-4 hover:bg-surface-muted/30 transition-colors">
-                  <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-                    <p className="text-[13px] font-semibold text-foreground leading-tight">{action.title}</p>
-                    <p className="text-[11px] text-muted-foreground uppercase tracking-wider">{action.itemType}</p>
-                  </div>
-                  <div className="shrink-0">
-                    <InlineReviewAction analysisId={overview.analysisId} itemId={action.itemId} itemType={action.itemType === "impact" ? "impact" : "insight"} itemTitle={action.title} currentStatus={action.currentDecision.toUpperCase()} isStale={driftStatus.isStale} disabled={action.itemType === "report"} />
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </DenseCard>
-
-        {/* Top Blocking Items */}
-        <DenseCard>
-          <DenseCardHeader className="flex-row items-center gap-2 border-b border-border/40 bg-surface-muted/30 px-4 py-3">
-            <ShieldAlert className="w-4 h-4 text-destructive" />
-            <DenseCardTitle>{labels.topFinalizeBlockers}</DenseCardTitle>
-          </DenseCardHeader>
-          <div className="flex flex-col divide-y divide-border/40">
-            {topBlockers.length === 0 ? (
-              <div className="p-6 text-center text-[13px] text-muted-foreground">{labels.noBlockingItems}</div>
-            ) : (
-              topBlockers.map((blocker) => (
-                <div key={blocker.itemId} className="flex items-start gap-4 p-4 hover:bg-surface-muted/30 transition-colors">
-                  <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-                    <p className="text-[13px] font-semibold text-foreground leading-tight">{blocker.title}</p>
-                    <p className="text-[11px] text-muted-foreground uppercase tracking-wider">{blocker.itemType}</p>
-                  </div>
-                  <div className="shrink-0">
-                    <InlineReviewAction analysisId={overview.analysisId} itemId={blocker.itemId} itemType={blocker.itemType === "impact" ? "impact" : "insight"} itemTitle={blocker.title} currentStatus={blocker.currentDecision.toUpperCase()} isStale={driftStatus.isStale} disabled={blocker.itemType === "report"} />
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </DenseCard>
-
-        {/* Top Impacted Artifacts */}
+        {/* Top Impacted Artifacts (read-only) */}
         <DenseCard>
           <DenseCardHeader className="flex-row items-center gap-2 border-b border-border/40 bg-surface-muted/30 px-4 py-3">
             <Code className="w-4 h-4 text-primary" />
@@ -128,21 +82,21 @@ export function OverviewTab({
               <div className="p-6 text-center text-[13px] text-muted-foreground">{labels.noImpactedArtifacts}</div>
             ) : (
               topImpacts.map((artifact) => (
-                <div key={artifact.artifactId} className="flex items-center justify-between gap-4 p-4 hover:bg-surface-muted/30 transition-colors">
+                <div key={artifact.artifactId} className="flex items-center justify-between gap-4 p-4">
                   <div className="flex-1 min-w-0 flex flex-col gap-1.5">
                     <p className="text-[13px] font-semibold text-foreground truncate">{artifact.name}</p>
                     <p className="text-[11px] text-muted-foreground font-mono truncate">{artifact.filePath}</p>
                   </div>
-                  <div className="shrink-0">
-                    <InlineReviewAction analysisId={overview.analysisId} itemId={artifact.traceabilityLinkIds[0]} itemType="impact" itemTitle={artifact.name} currentStatus={artifact.reviewDecision.toUpperCase()} isStale={driftStatus.isStale} />
-                  </div>
+                  <Badge variant="outline" className="shrink-0">
+                    {getLocalizedLabel(reviewDecisionLabels, artifact.reviewDecision, locale)}
+                  </Badge>
                 </div>
               ))
             )}
           </div>
         </DenseCard>
 
-        {/* Top Risks and Unknowns */}
+        {/* Top Risks and Unknowns (read-only) */}
         <DenseCard>
           <DenseCardHeader className="flex-row items-center gap-2 border-b border-border/40 bg-surface-muted/30 px-4 py-3">
             <AlertTriangle className="w-4 h-4 text-warning" />
@@ -153,14 +107,14 @@ export function OverviewTab({
               <div className="p-6 text-center text-[13px] text-muted-foreground">{labels.noHighRisksUnknowns}</div>
             ) : (
               topRisksAndUnknowns.map((item) => (
-                <div key={item.type === "risk" ? item.riskId : item.unknownId} className="flex items-start gap-4 p-4 hover:bg-surface-muted/30 transition-colors">
+                <div key={item.type === "risk" ? item.riskId : item.unknownId} className="flex items-start justify-between gap-4 p-4">
                   <div className="flex-1 min-w-0 flex flex-col gap-1.5">
                     <p className="text-[13px] font-semibold text-foreground leading-tight">{item.title}</p>
                     <p className="text-[11px] text-muted-foreground uppercase tracking-wider">{item.type}</p>
                   </div>
-                  <div className="shrink-0">
-                    <InlineReviewAction analysisId={overview.analysisId} itemId={item.sourceInsightId ?? (item.type === "risk" ? item.riskId : item.unknownId)} itemType="insight" itemTitle={item.title} currentStatus={item.reviewDecision.toUpperCase()} isStale={driftStatus.isStale} />
-                  </div>
+                  <Badge variant="outline" className="shrink-0">
+                    {getLocalizedLabel(reviewDecisionLabels, item.reviewDecision, locale)}
+                  </Badge>
                 </div>
               ))
             )}
@@ -212,12 +166,8 @@ function formatDerivedSummary({
 function InfoRow({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="flex flex-col justify-center p-4 min-w-0">
-      <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-        {label}
-      </span>
-      <span className={`mt-1 truncate text-[13px] text-foreground ${mono ? "font-mono text-[12px]" : "font-medium"}`}>
-        {value}
-      </span>
+      <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
+      <span className={`mt-1 truncate text-[13px] text-foreground ${mono ? "font-mono text-[12px]" : "font-medium"}`}>{value}</span>
     </div>
   )
 }

@@ -3,23 +3,27 @@
 import type { ReactNode } from "react"
 import type { AnalysisWorkspaceResponse } from "@ba-helper/contracts"
 import type { AnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
-import { InlineReviewAction } from "../shared/inline-review-action"
+import { Badge } from "@/components/ui/badge"
+import { getLocalizedLabel, reviewDecisionLabels, type SupportedLocale } from "@/lib/i18n/status-labels"
 import { DenseCard, DenseCardHeader, DenseCardTitle } from "../shared/dense-card"
+
+// Read-only status badge. Decisions are made only in the review workbench.
+function DecisionBadge({ decision, locale }: { decision: AnalysisWorkspaceResponse["risks"][number]["reviewDecision"]; locale: SupportedLocale }) {
+  return <Badge variant="outline">{getLocalizedLabel(reviewDecisionLabels, decision, locale)}</Badge>
+}
 
 export function RisksQaTab({
   risks,
   unknowns,
   qaScenarios,
   labels,
-  analysisId,
-  isStale,
+  locale,
 }: {
   risks: AnalysisWorkspaceResponse["risks"]
   unknowns: AnalysisWorkspaceResponse["unknowns"]
   qaScenarios: AnalysisWorkspaceResponse["qaScenarios"]
   labels: AnalysisWorkspaceLabels["risksQa"]
-  analysisId: string
-  isStale: boolean
+  locale: SupportedLocale
 }) {
   const highRisks = risks.filter(r => r.severity === "high")
   const otherRisks = risks.filter(r => r.severity !== "high")
@@ -34,7 +38,7 @@ export function RisksQaTab({
             meta={`${risk.severity} · ${risk.category}`}
             evidenceCount={risk.relatedEvidenceIds.length}
             evidenceLabel={labels.evidence}
-            action={risk.sourceInsightId ? <InlineReviewAction analysisId={analysisId} itemId={risk.sourceInsightId} itemType="insight" itemTitle={risk.title} currentStatus={risk.reviewDecision.toUpperCase()} isStale={isStale} /> : null}
+            action={<DecisionBadge decision={risk.reviewDecision} locale={locale} />}
           >
             {risk.whyItMatters}
           </Item>
@@ -49,7 +53,7 @@ export function RisksQaTab({
             meta={`${risk.severity} · ${risk.category}`}
             evidenceCount={risk.relatedEvidenceIds.length}
             evidenceLabel={labels.evidence}
-            action={risk.sourceInsightId ? <InlineReviewAction analysisId={analysisId} itemId={risk.sourceInsightId} itemType="insight" itemTitle={risk.title} currentStatus={risk.reviewDecision.toUpperCase()} isStale={isStale} /> : null}
+            action={<DecisionBadge decision={risk.reviewDecision} locale={locale} />}
           >
             {risk.whyItMatters}
           </Item>
@@ -65,7 +69,7 @@ export function RisksQaTab({
               meta=""
               evidenceCount={unknown.relatedEvidenceIds.length}
               evidenceLabel={labels.evidence}
-              action={unknown.sourceInsightId ? <InlineReviewAction analysisId={analysisId} itemId={unknown.sourceInsightId} itemType="insight" itemTitle={unknown.title} currentStatus={unknown.reviewDecision.toUpperCase()} isStale={isStale} /> : null}
+              action={<DecisionBadge decision={unknown.reviewDecision} locale={locale} />}
             >
               <div className="flex flex-col gap-2 mt-1">
                 <p><strong>{labels.question}:</strong> {unknown.question}</p>
@@ -93,9 +97,7 @@ export function RisksQaTab({
                   </p>
                 </div>
                 <div className="flex flex-col items-end gap-3 shrink-0">
-                  {scenario.sourceInsightId && (
-                    <InlineReviewAction analysisId={analysisId} itemId={scenario.sourceInsightId} itemType="insight" itemTitle={scenario.title} currentStatus={scenario.reviewDecision.toUpperCase()} isStale={isStale} />
-                  )}
+                  <DecisionBadge decision={scenario.reviewDecision} locale={locale} />
                   <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">
                     {scenario.relatedEvidenceIds.length} {labels.evidence}
                   </span>
