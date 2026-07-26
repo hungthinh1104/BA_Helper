@@ -127,6 +127,43 @@ describe('HybridRetrievalService', () => {
       });
       expect(result.find((r) => r.artifactId === 'weak-1')).toBeDefined();
     });
+
+    it('retains a close-scored tail candidate with a positive adaptiveTailGap', async () => {
+      const twoEqualHits = () => {
+        const prisma = {
+          repositorySnapshot: {
+            findUnique: jest
+              .fn()
+              .mockResolvedValue({ indexStatus: 'NOT_INDEXED', profile: null }),
+          },
+          $queryRaw: jest.fn().mockResolvedValue([
+            { id: 'a', artifactKey: 'k-a', filePath: 'src/a.ts', symbolName: 'BookingService', artifactType: 'SERVICE', universalKind: 'DOMAIN_SERVICE', name: 'BookingService' },
+            { id: 'b', artifactKey: 'k-b', filePath: 'src/b.ts', symbolName: 'BookingService', artifactType: 'SERVICE', universalKind: 'DOMAIN_SERVICE', name: 'BookingService' },
+          ]),
+          $queryRawUnsafe: jest.fn(),
+          codeArtifact: { findMany: jest.fn() },
+        } as any;
+        return new HybridRetrievalService(
+          { searchSimilar: jest.fn() } as any,
+          { embed: jest.fn() } as any,
+          { findById: jest.fn() } as any,
+          { expandFromSeeds: jest.fn() } as any,
+          prisma,
+          new DomainPackRegistry(),
+        );
+      };
+      const req = {
+        projectId: '11111111-1111-1111-1111-111111111111',
+        repositoryId: '22222222-2222-2222-2222-222222222222',
+        snapshotId: '33333333-3333-3333-3333-333333333333',
+        changeRequest: 'Update BookingService cancel flow',
+        maxResults: 1,
+      };
+
+      expect(await twoEqualHits().retrieve(req)).toHaveLength(1);
+      const adaptive = await twoEqualHits().retrieve({ ...req, tuning: { adaptiveTailGap: 0.1 } });
+      expect(adaptive.length).toBeGreaterThan(1);
+    });
   });
 
   describe('profile-aware retrieval hints (Phase 20C)', () => {

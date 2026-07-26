@@ -66,6 +66,12 @@ export interface RetrievalTuning {
    * matches that a fixed floor would otherwise silently discard.
    */
   keepWeakVectorOnly: boolean;
+  /**
+   * Rerank cutoff: after the top-N slice, also retain the next candidates whose
+   * score is within this fraction of the last kept score — a high-confidence
+   * tail a hard top-N cutoff would otherwise drop. 0 = hard cutoff (default).
+   */
+  adaptiveTailGap: number;
 }
 
 export const DEFAULT_RETRIEVAL_TUNING: RetrievalTuning = {
@@ -73,6 +79,7 @@ export const DEFAULT_RETRIEVAL_TUNING: RetrievalTuning = {
   minVectorSimilarity: 0.72,
   weakVectorThreshold: 0.75,
   keepWeakVectorOnly: false,
+  adaptiveTailGap: 0,
 };
 
 export interface RetrievalRequest {

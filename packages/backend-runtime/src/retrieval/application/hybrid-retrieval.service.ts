@@ -356,7 +356,30 @@ export class HybridRetrievalService {
     }
 
     finalResults.sort((a, b) => b.score - a.score);
-    return finalResults.slice(0, maxResults);
+    return this.applyAdaptiveCutoff(finalResults, maxResults, tuning.adaptiveTailGap);
+  }
+
+  /**
+   * Rerank cutoff. A hard top-N slice can drop a borderline-but-critical artifact
+   * ranked just outside N. With a positive tail gap, retain any next candidates
+   * whose score is within `tailGap` of the last kept score (capped), keeping the
+   * high-confidence tail. tailGap <= 0 preserves the plain top-N slice.
+   */
+  private applyAdaptiveCutoff(
+    sorted: RetrievedArtifact[],
+    maxResults: number,
+    tailGap: number,
+  ): RetrievedArtifact[] {
+    if (tailGap <= 0 || sorted.length <= maxResults) {
+      return sorted.slice(0, maxResults);
+    }
+    const threshold = sorted[maxResults - 1].score * (1 - tailGap);
+    const hardCap = Math.min(sorted.length, MAX_RETRIEVAL_RESULTS);
+    let end = maxResults;
+    while (end < hardCap && sorted[end].score >= threshold) {
+      end += 1;
+    }
+    return sorted.slice(0, end);
   }
 
   private normalizeLimit(value: number): number {
