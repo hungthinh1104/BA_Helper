@@ -3,7 +3,7 @@
 import { useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 import type { AnalysisWorkspaceResponse } from "@ba-helper/contracts"
-import { AlertTriangle } from "lucide-react"
+import { AlertCircle, AlertTriangle, Loader2 } from "lucide-react"
 import {
   DEFAULT_ANALYSIS_WORKSPACE_LOCALE,
   analysisStatusLabels,
@@ -12,9 +12,10 @@ import {
   reviewStatusLabels,
   type SupportedLocale,
 } from "@/lib/i18n/status-labels"
-import { getAnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
+import { getAnalysisWorkspaceLabels, type AnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
 import { DomainStatusBadge } from "./../shared/status-badges"
 import { AnalysisPrimaryCta } from "./analysis-primary-cta"
+import { resolveAnalysisExperienceState } from "./analysis-experience-state"
 import { AnalysisTrustMetricsPanel } from "./analysis-trust-metrics-panel"
 import { OverviewTab } from "./overview-tab"
 import { RisksQaTab } from "./risks-qa-tab"
@@ -39,6 +40,7 @@ export function AnalysisWorkspaceShell({
     [workspace, urlState.item],
   )
   const activeMode = urlState.view ?? workbench.defaultMode
+  const experience = resolveAnalysisExperienceState(workspace)
   return (
     <div className="app-page-scroll flex min-h-0 flex-col gap-4 p-4 md:p-6 lg:p-8">
       <header className="flex flex-col gap-4">
@@ -103,41 +105,80 @@ export function AnalysisWorkspaceShell({
           </div>
         )}
 
-        <AnalysisWorkspaceNavigation defaultMode={workbench.defaultMode} labels={labels.tabs} />
+        {experience.isReviewable ? (
+          <AnalysisWorkspaceNavigation defaultMode={workbench.defaultMode} labels={labels.tabs} />
+        ) : null}
       </header>
 
-      <AnalysisTrustMetricsPanel
-        workspace={workspace}
-        labels={labels.metrics}
-      />
+      {experience.isReviewable ? (
+        <>
+          <AnalysisTrustMetricsPanel
+            workspace={workspace}
+            labels={labels.metrics}
+          />
 
-      {activeMode === "summary" && <OverviewTab workspace={workspace} locale={locale} labels={labels.overview} />}
-      {activeMode === "review" && (
-        <AnalysisReviewWorkbench
-          workspace={workspace}
-          viewModel={workbench}
-          locale={locale}
-          labels={labels.reviewWorkbench}
-          queueLabels={labels.reviewQueue}
-          graphLabels={labels.graph}
+          {activeMode === "summary" && <OverviewTab workspace={workspace} locale={locale} labels={labels.overview} />}
+          {activeMode === "review" && (
+            <AnalysisReviewWorkbench
+              workspace={workspace}
+              viewModel={workbench}
+              locale={locale}
+              labels={labels.reviewWorkbench}
+              queueLabels={labels.reviewQueue}
+              graphLabels={labels.graph}
+            />
+          )}
+          {activeMode === "risks-qa" && (
+            <RisksQaTab
+              risks={workspace.risks}
+              unknowns={workspace.unknowns}
+              qaScenarios={workspace.qaScenarios}
+              labels={labels.risksQa}
+              locale={locale}
+            />
+          )}
+          {activeMode === "history" && (
+            <LineageDiffTab
+              workspace={workspace}
+              locale={locale}
+              labels={labels.lineageDiff}
+            />
+          )}
+        </>
+      ) : (
+        <AnalysisLifecycleNotice
+          phase={experience.primaryAction === "failed" ? "failed" : "processing"}
+          labels={labels.lifecycle}
         />
       )}
-      {activeMode === "risks-qa" && (
-        <RisksQaTab
-          risks={workspace.risks}
-          unknowns={workspace.unknowns}
-          qaScenarios={workspace.qaScenarios}
-          labels={labels.risksQa}
-          locale={locale}
-        />
+    </div>
+  )
+}
+
+function AnalysisLifecycleNotice({
+  phase,
+  labels,
+}: {
+  phase: "processing" | "failed"
+  labels: AnalysisWorkspaceLabels["lifecycle"]
+}) {
+  const failed = phase === "failed"
+  return (
+    <div
+      data-lifecycle-notice={phase}
+      className="flex min-h-[280px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border/60 p-8 text-center"
+    >
+      {failed ? (
+        <AlertCircle className="h-8 w-8 text-destructive" aria-hidden="true" />
+      ) : (
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden="true" />
       )}
-      {activeMode === "history" && (
-        <LineageDiffTab
-          workspace={workspace}
-          locale={locale}
-          labels={labels.lineageDiff}
-        />
-      )}
+      <h2 className="text-base font-semibold text-foreground">
+        {failed ? labels.failedTitle : labels.processingTitle}
+      </h2>
+      <p className="max-w-md text-sm text-muted-foreground">
+        {failed ? labels.failedBody : labels.processingBody}
+      </p>
     </div>
   )
 }

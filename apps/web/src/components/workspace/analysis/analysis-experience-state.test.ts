@@ -23,15 +23,19 @@ const item = (overrides: Partial<QueueItem>): QueueItem => ({
 
 const workspace = (overrides: {
   queue?: QueueItem[]
+  analysisStatus?: AnalysisWorkspaceResponse["overview"]["status"]["analysisStatus"]
+  reportStatus?: AnalysisWorkspaceResponse["reportStatus"]["status"]
   isStale?: boolean
   canFinalize?: boolean
   canViewReport?: boolean
   finalizeBlockingReasons?: string[]
 }): AnalysisWorkspaceResponse =>
   ({
+    overview: { status: { analysisStatus: overrides.analysisStatus ?? "WAITING_FOR_REVIEW" } },
     reviewQueue: overrides.queue ?? [],
     driftStatus: { isStale: overrides.isStale ?? false },
     reportStatus: {
+      status: overrides.reportStatus ?? "missing",
       canFinalize: overrides.canFinalize ?? false,
       canViewReport: overrides.canViewReport ?? false,
       finalizeBlockingReasons: overrides.finalizeBlockingReasons ?? [],
@@ -76,9 +80,44 @@ describe("resolveAnalysisExperienceState", () => {
 
   it("offers view report when finalized and nothing pending", () => {
     const state = resolveAnalysisExperienceState(
-      workspace({ queue: [item({ currentDecision: "accepted" })], canViewReport: true }),
+      workspace({ analysisStatus: "COMPLETED", queue: [item({ currentDecision: "accepted" })], canViewReport: true, reportStatus: "completed" }),
     )
     expect(state.primaryAction).toBe("view_report")
     expect(state.recommendedMode).toBe("summary")
+  })
+
+  it("surfaces a processing analysis and marks it non-reviewable", () => {
+    for (const analysisStatus of ["QUEUED", "RUNNING"] as const) {
+      const state = resolveAnalysisExperienceState(
+        // A still-running analysis must never offer continue_review even with queued items.
+        workspace({ analysisStatus, queue: [item({ currentDecision: "needs_review", blockingFinalize: true })] }),
+      )
+      expect(state.primaryAction).toBe("processing")
+      expect(state.isReviewable).toBe(false)
+    }
+  })
+
+  it("surfaces a failed (or cancelled) analysis and marks it non-reviewable", () => {
+    for (const analysisStatus of ["FAILED", "CANCELLED"] as const) {
+      const state = resolveAnalysisExperienceState(workspace({ analysisStatus }))
+      expect(state.primaryAction).toBe("failed")
+      expect(state.isReviewable).toBe(false)
+    }
+  })
+
+  it("distinguishes an in-progress report generation from a viewable report", () => {
+    const generating = resolveAnalysisExperienceState(
+      workspace({ analysisStatus: "COMPLETED", reportStatus: "running" }),
+    )
+    expect(generating.primaryAction).toBe("report_generating")
+    expect(generating.isReviewable).toBe(true)
+  })
+
+  it("keeps a completed analysis reviewable and routed to its report", () => {
+    const state = resolveAnalysisExperienceState(
+      workspace({ analysisStatus: "COMPLETED", reportStatus: "missing" }),
+    )
+    expect(state.primaryAction).toBe("view_report")
+    expect(state.isReviewable).toBe(true)
   })
 })

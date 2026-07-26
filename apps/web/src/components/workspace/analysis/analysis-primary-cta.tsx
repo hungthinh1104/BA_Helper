@@ -1,6 +1,7 @@
 "use client"
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { AlertCircle, Loader2 } from "lucide-react"
 import type { AnalysisWorkspaceResponse } from "@ba-helper/contracts"
 import { Button } from "@/components/ui/button"
 import type { AnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
@@ -49,6 +50,31 @@ export function AnalysisPrimaryCta({
         <span>: {state.blockingReasons.map(formatReviewApprovalBlocker).join(" · ")}</span>
       </div>
     ) : null
+
+  if (state.primaryAction === "processing" || state.primaryAction === "report_generating") {
+    return (
+      <div className="flex flex-col items-start gap-1 lg:items-end" data-cta-status={state.primaryAction}>
+        <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground">
+          <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
+          {state.primaryAction === "processing" ? cta.processing : cta.reportGenerating}
+        </span>
+      </div>
+    )
+  }
+
+  if (state.primaryAction === "failed") {
+    return (
+      <div className="flex flex-col items-start gap-1 lg:items-end" data-cta-failed>
+        <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-destructive">
+          <AlertCircle aria-hidden="true" className="h-3.5 w-3.5" />
+          {cta.failed}
+        </span>
+        <Button size="sm" variant="outline" onClick={() => pushWorkbench({ view: "history" })}>
+          {cta.rerun}
+        </Button>
+      </div>
+    )
+  }
 
   if (state.primaryAction === "finalize") {
     return (

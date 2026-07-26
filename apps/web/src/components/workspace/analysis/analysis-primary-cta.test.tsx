@@ -38,16 +38,18 @@ const queueItem = (decision: AnalysisWorkspaceResponse["reviewQueue"][number]["c
 
 const workspace = (over: {
   queue?: AnalysisWorkspaceResponse["reviewQueue"]
+  analysisStatus?: AnalysisWorkspaceResponse["overview"]["status"]["analysisStatus"]
+  reportStatus?: AnalysisWorkspaceResponse["reportStatus"]["status"]
   isStale?: boolean
   canFinalize?: boolean
   canViewReport?: boolean
   finalizeBlockingReasons?: string[]
 }): AnalysisWorkspaceResponse =>
   ({
-    overview: { analysisId: "a1", snapshot: { commitSha: "abcdef1" }, counts: { unknowns: 0 } },
+    overview: { analysisId: "a1", snapshot: { commitSha: "abcdef1" }, counts: { unknowns: 0 }, status: { analysisStatus: over.analysisStatus ?? "WAITING_FOR_REVIEW" } },
     impactGroups: [],
     reviewQueue: over.queue ?? [],
-    reportStatus: { canFinalize: over.canFinalize ?? false, canViewReport: over.canViewReport ?? false, finalizeBlockingReasons: over.finalizeBlockingReasons ?? [], requiresUnreviewedAcknowledgement: false, exportBlockingReasons: [] },
+    reportStatus: { status: over.reportStatus ?? "missing", canFinalize: over.canFinalize ?? false, canViewReport: over.canViewReport ?? false, finalizeBlockingReasons: over.finalizeBlockingReasons ?? [], requiresUnreviewedAcknowledgement: false, exportBlockingReasons: [] },
     driftStatus: { isStale: over.isStale ?? false },
   }) as unknown as AnalysisWorkspaceResponse
 
@@ -89,5 +91,25 @@ describe("AnalysisPrimaryCta", () => {
     renderCta(workspace({ queue: [queueItem("accepted")], finalizeBlockingReasons: ["CRITICAL_MISSING_EVIDENCE"] }))
     expect(screen.getByText(labels.primaryCta.blockedTitle, { exact: false })).toBeInTheDocument()
     expect(screen.getByText(/CRITICAL_MISSING_EVIDENCE/)).toBeInTheDocument()
+  })
+
+  it("does not offer continue review while the analysis is still processing", () => {
+    renderCta(workspace({ analysisStatus: "RUNNING", queue: [queueItem("needs_review", true)] }))
+    expect(screen.queryByRole("button", { name: labels.primaryCta.continueReview })).toBeNull()
+    expect(screen.getByText(labels.primaryCta.processing)).toBeInTheDocument()
+  })
+
+  it("offers a rerun (not continue review) when the analysis failed", () => {
+    renderCta(workspace({ analysisStatus: "FAILED" }))
+    expect(screen.queryByRole("button", { name: labels.primaryCta.continueReview })).toBeNull()
+    expect(screen.getByText(labels.primaryCta.failed)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: labels.primaryCta.rerun }))
+    expect(push).toHaveBeenCalledWith(expect.stringContaining("view=history"), { scroll: false })
+  })
+
+  it("shows a report-generating state after finalize", () => {
+    renderCta(workspace({ analysisStatus: "COMPLETED", reportStatus: "running" }))
+    expect(screen.queryByRole("button", { name: labels.primaryCta.continueReview })).toBeNull()
+    expect(screen.getByText(labels.primaryCta.reportGenerating)).toBeInTheDocument()
   })
 })
