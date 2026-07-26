@@ -51,9 +51,9 @@ reviewed/expected totals.
 
 ## Running the scorecard
 
-Copy `tests/product-validation/dataset.template.json` outside the repository or
-to a deliberately reviewed dataset file, replace all placeholder values with
-real observations, then run:
+Copy `tests/product-validation/dataset.template.json` (a three-case scaffold —
+the minimum for a decision) to a deliberately reviewed dataset file, replace all
+placeholder values with real observations, then run:
 
 ```bash
 pnpm validate:product-beta -- path/to/product-validation-dataset.json
@@ -65,7 +65,10 @@ produce `INSUFFICIENT_CASES` and exit code 2. Three cases make the dataset ready
 for a product decision; they do not automatically prove product success.
 
 To evaluate a feature candidate against a prior baseline collected on the same
-case scope:
+case scope, start the baseline from
+`tests/product-validation/baseline.template.json` — it mirrors the candidate's
+case scope with a different `tool.commitSha` and an earlier `collectedAt` — then
+run:
 
 ```bash
 pnpm validate:product-beta -- candidate.json baseline.json
