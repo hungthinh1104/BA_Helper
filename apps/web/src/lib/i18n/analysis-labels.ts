@@ -7,6 +7,16 @@ export const analysisWorkspaceLabels = {
   en: {
     title: "Analysis Workspace",
     navLabel: "Analysis workspace sections",
+    primaryCta: {
+      continueReview: "Continue review",
+      finalize: "Finalize",
+      viewReport: "View report",
+      rerun: "Re-run analysis",
+      blockers: "{count} blockers",
+      pending: "{count} pending",
+      evidenceGaps: "{count} evidence gaps",
+      blockedTitle: "Finalization blocked",
+    },
     tabs: {
       navigationLabel: "Analysis workspace views",
       summary: "Summary",
@@ -323,6 +333,16 @@ export const analysisWorkspaceLabels = {
   "vi-VN": {
     title: "Không gian phân tích",
     navLabel: "Các phần của không gian phân tích",
+    primaryCta: {
+      continueReview: "Tiếp tục review",
+      finalize: "Finalize",
+      viewReport: "Xem báo cáo",
+      rerun: "Chạy lại phân tích",
+      blockers: "{count} blocker",
+      pending: "{count} đang chờ",
+      evidenceGaps: "{count} thiếu bằng chứng",
+      blockedTitle: "Finalize bị chặn",
+    },
     tabs: {
       navigationLabel: "Các chế độ của không gian phân tích",
       summary: "Tổng quan",
@@ -639,6 +659,16 @@ export const analysisWorkspaceLabels = {
   "ja-JP": {
     title: "分析ワークスペース",
     navLabel: "分析ワークスペースのセクション",
+    primaryCta: {
+      continueReview: "レビューを続ける",
+      finalize: "Finalize",
+      viewReport: "レポートを表示",
+      rerun: "分析を再実行",
+      blockers: "{count} 件のブロッカー",
+      pending: "{count} 件保留",
+      evidenceGaps: "{count} 件の証拠不足",
+      blockedTitle: "Finalize がブロックされています",
+    },
     tabs: {
       navigationLabel: "分析ワークスペースのビュー",
       summary: "概要",

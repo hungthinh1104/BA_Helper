@@ -243,7 +243,7 @@ function formatReviewApprovalBlockers(details: unknown): string {
   return reasons.map((reason) => formatReviewApprovalBlocker(String(reason))).join(" · ")
 }
 
-function formatReviewApprovalBlocker(reason: string): string {
+export function formatReviewApprovalBlocker(reason: string): string {
   switch (reason) {
     case "CONFLICTING_EVIDENCE_UNREVIEWED":
       return "conflicting evidence needs review"

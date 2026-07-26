@@ -14,6 +14,7 @@ import {
 } from "@/lib/i18n/status-labels"
 import { getAnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
 import { DomainStatusBadge } from "./../shared/status-badges"
+import { AnalysisPrimaryCta } from "./analysis-primary-cta"
 import { AnalysisTrustMetricsPanel } from "./analysis-trust-metrics-panel"
 import { OverviewTab } from "./overview-tab"
 import { RisksQaTab } from "./risks-qa-tab"
@@ -59,7 +60,9 @@ export function AnalysisWorkspaceShell({
               {workspace.overview.requirement.summary}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-4 mt-3">
+          <div className="mt-3 flex flex-col gap-3 lg:items-end">
+            <AnalysisPrimaryCta workspace={workspace} labels={labels} />
+            <div className="flex flex-wrap items-center gap-4 lg:justify-end">
             <StatusPill
               label={labels.status.commit}
               value={workspace.overview.snapshot.commitSha.substring(0, 7)}
@@ -85,6 +88,7 @@ export function AnalysisWorkspaceShell({
               label={labels.status.drift}
               value={getLocalizedLabel(driftStatusLabels, workspace.overview.status.driftStatus, locale)}
             />
+            </div>
           </div>
         </div>
 
