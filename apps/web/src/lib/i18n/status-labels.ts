@@ -152,6 +152,33 @@ export const reviewDecisionLabels = {
   },
 } as const satisfies LocalizedLabelMap
 
+export const reviewItemTypeLabels = {
+  en: {
+    impact: "Impacted artifact",
+    evidence: "Evidence",
+    risk: "Risk",
+    unknown: "Unknown",
+    qa_scenario: "QA scenario",
+    report: "Report",
+  },
+  "vi-VN": {
+    impact: "Artifact ảnh hưởng",
+    evidence: "Bằng chứng",
+    risk: "Rủi ro",
+    unknown: "Điểm chưa rõ",
+    qa_scenario: "Kịch bản QA",
+    report: "Báo cáo",
+  },
+  "ja-JP": {
+    impact: "影響 artifact",
+    evidence: "証拠",
+    risk: "リスク",
+    unknown: "不明点",
+    qa_scenario: "QA シナリオ",
+    report: "レポート",
+  },
+} as const satisfies LocalizedLabelMap
+
 export const evidenceBasisLabels = {
   en: {
     evidenced: "Evidenced",

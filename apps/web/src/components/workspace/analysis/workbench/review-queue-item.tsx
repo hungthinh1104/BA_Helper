@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { evidenceBasisLabels, getLocalizedLabel, reviewDecisionLabels, type SupportedLocale } from "@/lib/i18n/status-labels"
+import { evidenceBasisLabels, getLocalizedLabel, reviewDecisionLabels, reviewItemTypeLabels, type SupportedLocale } from "@/lib/i18n/status-labels"
 import type { AnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
 import type { ReviewWorkbenchItem } from "./analysis-workbench-types"
 
@@ -21,6 +21,7 @@ export function ReviewQueueItem({
 }) {
   const basis = item.impactBasis
   const decision = getLocalizedLabel(reviewDecisionLabels, item.currentDecision, locale)
+  const itemType = getLocalizedLabel(reviewItemTypeLabels, item.itemType, locale)
 
   return (
     <button
@@ -34,16 +35,15 @@ export function ReviewQueueItem({
       aria-current={isSelected ? "true" : undefined}
       aria-label={labels.itemAriaLabel
         .replace("{title}", item.title)
-        .replace("{type}", item.itemType)
+        .replace("{type}", itemType)
         .replace("{decision}", decision)
         .replace("{blocker}", item.blockingFinalize ? labels.blocking : labels.notBlocking)}
-      title={item.itemId}
       onClick={onSelect}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-foreground">{item.title}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{item.itemType}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{itemType}</p>
         </div>
         {item.blockingFinalize ? <Badge variant="destructive">{labels.blocking}</Badge> : null}
       </div>

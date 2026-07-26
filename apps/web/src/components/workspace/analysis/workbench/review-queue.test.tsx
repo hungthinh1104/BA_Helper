@@ -59,7 +59,7 @@ const viewModel: AnalysisWorkbenchViewModel = {
 describe("ReviewQueue", () => {
   it("makes the backend-prioritized blocker selected and readable", () => {
     render(<ReviewQueue viewModel={viewModel} locale="en" labels={labels} />)
-    expect(screen.getByRole("button", { name: /cancel booking\. impact\. needs review\. blocking/i }).getAttribute("aria-current")).toBe("true")
+    expect(screen.getByRole("button", { name: /cancel booking\. impacted artifact\. needs review\. blocking/i }).getAttribute("aria-current")).toBe("true")
     expect(screen.queryByText("1 linked artifacts")).not.toBeNull()
   })
 
