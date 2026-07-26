@@ -24,8 +24,9 @@ TypeScript/NestJS repositories; hosted SaaS capabilities remain locked.
       started successfully with database, pgvector, Redis, and queue health up.
 - [x] **Restore Drilled:** A logical backup was restored into an isolated
       database and representative persisted counts plus pgvector were verified.
-- [x] **Machine Gate Added:** `pnpm verify:controlled-beta-readiness` validates
-      the versioned evidence above and CI uploads its scorecard.
+- [x] **Machine Gate Added:** `pnpm verify:release-drill && pnpm verify:controlled-beta-readiness`
+      boots the production stack and validates the executed, commit-matched
+      evidence above (production-startup + restore-drill derive from the drill).
 
 _Current engineering status: controlled-beta ready. Product validation still
 requires real BA/QC observations; SaaS remains locked until that comparison

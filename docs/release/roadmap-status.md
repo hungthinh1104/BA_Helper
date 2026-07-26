@@ -53,12 +53,12 @@ Status: **ENGINEERING_IMPLEMENTED**
 
 Known scope bounds (honest, not fabricated):
 
-- The suite currently has **9** genuinely-passing production-path cases across
-  two pinned fixtures (`nestjs-booking-with-payment`, `nestjs-order-inventory`).
-  Reaching the 20-case target with the full orchestration is bounded by the
-  deterministic fake AI provider's scenario coverage (booking-refund and
-  order-inventory) — growing it requires additional fixtures plus matching
-  deterministic AI branches, which must be authored, not faked.
+- The suite has **20** genuinely-passing production-path cases across the pinned
+  fixtures (`nestjs-booking-with-payment`, `nestjs-order-inventory`), recorded as
+  `caseCount: 20` in `tests/evaluation/quality-baseline.json`. It was grown from
+  the original nine with additional authored fixtures plus matching deterministic
+  AI branches — authored, not faked. Further growth remains bounded by the
+  deterministic fake AI provider's scenario coverage.
 - A measured retrieval recall gap exists on `nestjs-order-inventory`
   (`inventory.service.releaseReservation` is not surfaced for the order-cancel
   requirement); order cases are scoped to the reliably-retrieved cancel flow and
