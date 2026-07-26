@@ -97,6 +97,15 @@ describe("DecisionPanel", () => {
     expect(screen.getByRole("status")).toHaveTextContent(labels.saving)
   })
 
+  it("locks every action and shows a notice when the analysis is stale", () => {
+    renderPanel({ isStale: true, rationale: "x", item: item({ currentDecision: "accepted" }) })
+    expect(screen.getByRole("button", { name: "Accept" })).toBeDisabled()
+    expect(screen.getByRole("button", { name: "Reject" })).toBeDisabled()
+    expect(screen.getByRole("button", { name: "More evidence" })).toBeDisabled()
+    expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled()
+    expect(screen.getByText(labels.staleNotice)).toBeInTheDocument()
+  })
+
   it("surfaces an error with a retry", () => {
     const { onRetry } = renderPanel({ hasError: true })
     expect(screen.getByRole("alert")).toHaveTextContent(labels.errorTitle)

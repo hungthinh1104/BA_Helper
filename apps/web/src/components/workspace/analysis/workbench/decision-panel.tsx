@@ -27,6 +27,7 @@ export function DecisionPanel({
   onNavigate,
   onRetry,
   isPending,
+  isStale = false,
   hasError,
   canPrevious,
   canNext,
@@ -40,6 +41,7 @@ export function DecisionPanel({
   onNavigate: (direction: -1 | 1) => void
   onRetry: () => void
   isPending: boolean
+  isStale?: boolean
   hasError: boolean
   canPrevious: boolean
   canNext: boolean
@@ -47,6 +49,7 @@ export function DecisionPanel({
   const actions = item ? supportedDecisionActions(item.itemType) : []
   const hasDecision = Boolean(item && item.currentDecision !== "needs_review")
   const rationaleMissing = rationale.trim().length === 0
+  const locked = isPending || isStale
 
   return (
     <aside
@@ -80,7 +83,7 @@ export function DecisionPanel({
               onChange={(event) => onRationaleChange(event.target.value)}
               placeholder={labels.rationalePlaceholder}
               rows={3}
-              disabled={isPending}
+              disabled={locked}
               className="mt-1.5 text-sm"
             />
             {rationaleMissing ? (
@@ -88,15 +91,25 @@ export function DecisionPanel({
             ) : null}
           </div>
 
+          {isStale ? (
+            <p
+              className="rounded-md border border-warning/30 bg-warning/5 p-2 text-[11px] text-foreground/80"
+              role="note"
+              data-stale-notice
+            >
+              {labels.staleNotice}
+            </p>
+          ) : null}
+
           <div className="grid grid-cols-2 gap-2">
-            <Button type="button" size="sm" variant="secondary" disabled={isPending} onClick={() => onDecide("accept")}>
+            <Button type="button" size="sm" variant="secondary" disabled={locked} onClick={() => onDecide("accept")}>
               {labels.accept}
             </Button>
             <Button
               type="button"
               size="sm"
               variant="destructive"
-              disabled={isPending || rationaleMissing}
+              disabled={locked || rationaleMissing}
               onClick={() => onDecide("reject")}
             >
               {labels.reject}
@@ -106,7 +119,7 @@ export function DecisionPanel({
                 type="button"
                 size="sm"
                 variant="outline"
-                disabled={isPending || rationaleMissing}
+                disabled={locked || rationaleMissing}
                 onClick={() => onDecide("needs_more_evidence")}
               >
                 {labels.needsMoreEvidence}
@@ -117,7 +130,7 @@ export function DecisionPanel({
                 type="button"
                 size="sm"
                 variant="ghost"
-                disabled={isPending || !hasDecision}
+                disabled={locked || !hasDecision}
                 onClick={() => onDecide("undo")}
               >
                 {labels.undo}

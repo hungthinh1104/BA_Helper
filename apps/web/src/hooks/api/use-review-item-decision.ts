@@ -2,11 +2,40 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { apiPut } from "@/lib/api-client"
 import { queryKeys } from "@/lib/api/query-keys"
 import { useOptionalProjectId } from "@/lib/project-context"
-import type { AnalysisWorkspaceReviewQueueItem } from "@ba-helper/contracts"
+import type {
+  AnalysisWorkspaceResponse,
+  AnalysisWorkspaceReviewQueueItem,
+} from "@ba-helper/contracts"
 
 export type ReviewDecisionAction = "accept" | "reject" | "needs_more_evidence" | "undo"
 
 type ItemType = AnalysisWorkspaceReviewQueueItem["itemType"]
+type ReviewDecision = AnalysisWorkspaceReviewQueueItem["currentDecision"]
+
+const ACTION_DECISION: Record<ReviewDecisionAction, ReviewDecision> = {
+  accept: "accepted",
+  reject: "rejected",
+  needs_more_evidence: "needs_more_evidence",
+  undo: "needs_review",
+}
+
+/**
+ * Applies a decision to the workspace review queue, used for the optimistic
+ * cache update so the queue, panel, and counts reflect the choice immediately.
+ */
+export function applyOptimisticDecision(
+  workspace: AnalysisWorkspaceResponse,
+  itemId: string,
+  action: ReviewDecisionAction,
+): AnalysisWorkspaceResponse {
+  const currentDecision = ACTION_DECISION[action]
+  return {
+    ...workspace,
+    reviewQueue: workspace.reviewQueue.map((item) =>
+      item.itemId === itemId ? { ...item, currentDecision } : item,
+    ),
+  }
+}
 
 /**
  * Which decision actions the review UI offers for an item type. Impact
@@ -38,6 +67,7 @@ export interface ReviewDecisionInput {
 export function useReviewItemDecision(analysisId: string) {
   const queryClient = useQueryClient()
   const projectId = useOptionalProjectId()
+  const workspaceKey = queryKeys.analyses.workspace(analysisId)
 
   const mutation = useMutation({
     mutationFn: async ({ item, action, rationale }: ReviewDecisionInput) => {
@@ -51,7 +81,23 @@ export function useReviewItemDecision(analysisId: string) {
         },
       )
     },
-    onSuccess: () => {
+    onMutate: async ({ item, action }: ReviewDecisionInput) => {
+      // Reflect the decision immediately and snapshot the prior state so a
+      // failed request rolls the queue back rather than leaving a phantom
+      // decision on screen.
+      await queryClient.cancelQueries({ queryKey: workspaceKey })
+      const previous = queryClient.getQueryData<AnalysisWorkspaceResponse>(workspaceKey)
+      if (previous) {
+        queryClient.setQueryData(workspaceKey, applyOptimisticDecision(previous, item.itemId, action))
+      }
+      return { previous }
+    },
+    onError: (_error, _variables, context) => {
+      const previous = (context as { previous?: AnalysisWorkspaceResponse } | undefined)?.previous
+      if (previous) queryClient.setQueryData(workspaceKey, previous)
+    },
+    onSettled: () => {
+      // Reconcile with the server on both success and rollback.
       const keys = [
         queryKeys.analyses.workspace(analysisId),
         queryKeys.analyses.reviewQueue(analysisId),

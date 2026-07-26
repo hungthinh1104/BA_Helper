@@ -75,11 +75,11 @@ const workspace: AnalysisWorkspaceResponse = {
 
 const labels = analysisWorkspaceLabels.en
 
-function renderWorkbench() {
-  const viewModel = createAnalysisWorkbenchViewModel(workspace)
+function renderWorkbench(ws: AnalysisWorkspaceResponse = workspace) {
+  const viewModel = createAnalysisWorkbenchViewModel(ws)
   return render(
     <AnalysisReviewWorkbench
-      workspace={workspace}
+      workspace={ws}
       viewModel={viewModel}
       locale="en"
       labels={labels.reviewWorkbench}
@@ -143,5 +143,32 @@ describe("AnalysisReviewWorkbench decision loop", () => {
     pending = true
     renderWorkbench()
     expect(panel().getByRole("button", { name: "Accept" })).toBeDisabled()
+  })
+
+  it("locks decisions and shows a notice on a stale analysis", () => {
+    const stale = {
+      ...workspace,
+      driftStatus: { ...workspace.driftStatus, isStale: true },
+    } as AnalysisWorkspaceResponse
+    renderWorkbench(stale)
+    expect(panel().getByRole("button", { name: "Accept" })).toBeDisabled()
+    expect(screen.getByText(labels.reviewWorkbench.decision.staleNotice)).toBeInTheDocument()
+    // Keyboard shortcuts are inert while stale.
+    fireEvent.keyDown(document.body, { key: "a" })
+    expect(decide).not.toHaveBeenCalled()
+  })
+
+  it("surfaces a completion notice once every item is decided", () => {
+    const complete = {
+      ...workspace,
+      reviewQueue: workspace.reviewQueue.map((item) => ({
+        ...item,
+        currentDecision: "accepted" as const,
+        blockingFinalize: false,
+      })),
+    } as AnalysisWorkspaceResponse
+    renderWorkbench(complete)
+    expect(document.querySelector("[data-review-complete]")).not.toBeNull()
+    expect(screen.getByText(labels.reviewWorkbench.reviewComplete)).toBeInTheDocument()
   })
 })

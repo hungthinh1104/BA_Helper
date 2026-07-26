@@ -51,6 +51,12 @@ export function AnalysisReviewWorkbench({
   const [rationale, setRationale] = useState("")
   const [lastAction, setLastAction] = useState<ReviewDecisionAction | null>(null)
 
+  // A stale analysis no longer reflects the repository, so decisions on it are
+  // rejected by the backend; disable mutation in the UI too (the reviewer is
+  // steered to re-run instead).
+  const isStale = workspace.driftStatus.isStale
+  const reviewComplete = viewModel.counts.total > 0 && viewModel.counts.pending === 0
+
   const { data: graph, isLoading: graphLoading } = useImpactGraph(workspace.overview.analysisId, {
     enabled: urlState.display === "dependency-path",
   })
@@ -82,7 +88,7 @@ export function AnalysisReviewWorkbench({
   }
 
   const handleDecide = (action: ReviewDecisionAction) => {
-    if (!selectedItem || decision.isPending) return
+    if (!selectedItem || decision.isPending || isStale) return
     if (decisionRequiresRationale(action) && rationale.trim().length === 0) return
     setLastAction(action)
     const from = selectedIndex >= 0 ? selectedIndex : 0
@@ -137,6 +143,12 @@ export function AnalysisReviewWorkbench({
 
   return (
     <div data-review-workbench>
+      {reviewComplete ? (
+        <div data-review-complete className="mb-3 rounded-lg border border-success/30 bg-success/5 p-3">
+          <p className="text-sm font-medium text-foreground">{labels.reviewComplete}</p>
+          <p className="text-xs text-muted-foreground">{labels.reviewCompleteHint}</p>
+        </div>
+      ) : null}
       <section className="grid min-h-0 gap-4 xl:grid-cols-[300px_minmax(0,1fr)_280px]">
         <ReviewQueue viewModel={viewModel} locale={locale} labels={queueLabels} />
         <div className="min-w-0 rounded-lg border border-border/50 bg-surface p-4">
@@ -164,6 +176,7 @@ export function AnalysisReviewWorkbench({
           onNavigate={navigate}
           onRetry={() => lastAction && handleDecide(lastAction)}
           isPending={decision.isPending}
+          isStale={isStale}
           hasError={Boolean(decision.error)}
           canPrevious={selectedIndex > 0}
           canNext={selectedIndex >= 0 && selectedIndex < visibleItems.length - 1}
@@ -176,10 +189,10 @@ export function AnalysisReviewWorkbench({
           className="sticky bottom-2 z-10 mt-3 flex gap-2 rounded-lg border border-border/50 bg-surface/95 p-2 shadow-lg backdrop-blur lg:hidden"
           data-mobile-action-bar
         >
-          <Button type="button" size="sm" variant="secondary" className="flex-1" disabled={decision.isPending} onClick={() => handleDecide("accept")}>
+          <Button type="button" size="sm" variant="secondary" className="flex-1" disabled={decision.isPending || isStale} onClick={() => handleDecide("accept")}>
             {labels.decision.accept}
           </Button>
-          <Button type="button" size="sm" variant="destructive" className="flex-1" disabled={decision.isPending || rationale.trim().length === 0} onClick={() => handleDecide("reject")}>
+          <Button type="button" size="sm" variant="destructive" className="flex-1" disabled={decision.isPending || isStale || rationale.trim().length === 0} onClick={() => handleDecide("reject")}>
             {labels.decision.reject}
           </Button>
         </div>
