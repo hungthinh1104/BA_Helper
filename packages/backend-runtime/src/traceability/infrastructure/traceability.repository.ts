@@ -51,6 +51,7 @@ export class TraceabilityRepository {
             sourceTarget: true,
           },
         },
+        reviewDecision: true,
       },
     });
   }

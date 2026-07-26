@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { apiDelete, apiPost, apiPut } from "@/lib/api-client"
+import { apiPut } from "@/lib/api-client"
 import { queryKeys } from "@/lib/api/query-keys"
 import { useOptionalProjectId } from "@/lib/project-context"
 import type { AnalysisWorkspaceReviewQueueItem } from "@ba-helper/contracts"
@@ -8,21 +8,10 @@ export type ReviewDecisionAction = "accept" | "reject" | "needs_more_evidence" |
 
 type ItemType = AnalysisWorkspaceReviewQueueItem["itemType"]
 
-const IMPACT_DECISION: Record<Exclude<ReviewDecisionAction, "undo">, string> = {
-  accept: "ACCEPTED",
-  reject: "REJECTED",
-  needs_more_evidence: "NEEDS_MORE_EVIDENCE",
-}
-
-const INSIGHT_STATUS: Partial<Record<ReviewDecisionAction, string>> = {
-  accept: "CONFIRMED",
-  reject: "REJECTED",
-}
-
 /**
- * Which decision actions the backend actually supports for an item type.
- * Impact (traceability) items support the full decision set plus undo; insight
- * items (risk / unknown / qa / evidence) only support accept/reject.
+ * Which decision actions the review UI offers for an item type. Impact
+ * (traceability) items support the full decision set plus undo; insight items
+ * (risk / unknown / qa / evidence) offer accept/reject.
  */
 export function supportedDecisionActions(itemType: ItemType): ReviewDecisionAction[] {
   if (itemType === "impact") return ["accept", "reject", "needs_more_evidence", "undo"]
@@ -52,21 +41,15 @@ export function useReviewItemDecision(analysisId: string) {
 
   const mutation = useMutation({
     mutationFn: async ({ item, action, rationale }: ReviewDecisionInput) => {
-      const note = rationale?.trim() ? rationale.trim() : null
-      if (item.itemType === "impact") {
-        if (action === "undo") {
-          return apiDelete(`/api/v1/traceability-links/${item.itemId}/review-decision`)
-        }
-        return apiPut(`/api/v1/traceability-links/${item.itemId}/review-decision`, {
-          decision: IMPACT_DECISION[action],
-          note,
-        })
-      }
-      const reviewStatus = INSIGHT_STATUS[action]
-      if (!reviewStatus) {
-        throw new Error(`Unsupported decision "${action}" for ${item.itemType}`)
-      }
-      return apiPost(`/api/v1/insights/${item.itemId}/review`, { reviewStatus })
+      const target = item.itemType === "impact" ? "impact" : "insight"
+      return apiPut(
+        `/api/v1/impact-analyses/${analysisId}/review-items/${item.itemId}/decision`,
+        {
+          target,
+          action,
+          rationale: rationale?.trim() ? rationale.trim() : null,
+        },
+      )
     },
     onSuccess: () => {
       const keys = [

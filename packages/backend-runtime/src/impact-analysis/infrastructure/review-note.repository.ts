@@ -52,4 +52,25 @@ export class ReviewNoteRepository {
       orderBy: { createdAt: 'desc' },
     });
   }
+
+  /**
+   * Removes any persisted rationale for a single review item. Used when a
+   * reviewer undoes a decision or clears a previously recorded rationale.
+   */
+  async clear(data: {
+    impactAnalysisId: string;
+    insightId?: string;
+    traceabilityLinkId?: string;
+  }) {
+    if (!data.insightId && !data.traceabilityLinkId) {
+      throw new Error('Must provide either insightId or traceabilityLinkId');
+    }
+    return this.prisma.reviewNote.deleteMany({
+      where: {
+        impactAnalysisId: data.impactAnalysisId,
+        insightId: data.insightId,
+        traceabilityLinkId: data.traceabilityLinkId,
+      },
+    });
+  }
 }

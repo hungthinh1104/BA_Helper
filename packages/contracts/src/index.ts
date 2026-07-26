@@ -13,6 +13,7 @@ export * from './insight.contract';
 export * from './retrieval.contract';
 export * from './review-queue.contract';
 export * from './review-note.contract';
+export * from './review-decision.contract';
 export * from './review-clarification.contract';
 export * from './lineage.contract';
 export * from './traceability.contract';

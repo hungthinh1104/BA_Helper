@@ -57,6 +57,7 @@ export class InsightRepository {
             sourceTarget: true,
           },
         },
+        reviewNote: true,
       },
     });
   }
@@ -73,7 +74,7 @@ export class InsightRepository {
 
   async updateReviewStatusIfCurrent(params: {
     insightId: string;
-    reviewStatus: 'CONFIRMED' | 'REJECTED';
+    reviewStatus: 'CONFIRMED' | 'REJECTED' | 'NEEDS_REVIEW';
     expectedCommitSha: string;
     expectedTargetCommitSha: string;
     expectedResolvedRefType: 'BRANCH' | 'TAG' | 'COMMIT';

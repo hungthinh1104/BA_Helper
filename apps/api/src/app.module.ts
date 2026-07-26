@@ -7,6 +7,7 @@ import { RequirementModule } from './modules/requirement/requirement.module';
 import { ImpactAnalysisModule } from './modules/impact-analysis/impact-analysis.module';
 import { InsightModule } from './modules/insight/insight.module';
 import { TraceabilityModule } from './modules/traceability/traceability.module';
+import { ReviewModule } from './modules/review/review.module';
 import { DocumentModule } from './modules/document/document.module';
 import { EvidenceModule } from './modules/evidence/evidence.module';
 import { ArtifactModule } from './modules/artifact/artifact.module';
@@ -35,6 +36,7 @@ import { PrismaModule, QueueModule, AiModule } from "@ba-helper/backend-runtime"
     ImpactAnalysisModule,
     InsightModule,
     TraceabilityModule,
+    ReviewModule,
     DocumentModule,
     EvidenceModule,
     ArtifactModule,
