@@ -1,9 +1,24 @@
+# Production overrides. Deploy with:
+#   docker compose -f docker-compose.yml -f docker-compose.production.yml up -d
+# Postgres and Redis are NOT published on the host (only the dev override does
+# that). Redis requires authentication; REDIS_URL passed to api/worker MUST embed
+# the same REDIS_PASSWORD, e.g. redis://:<password>@redis:6379.
 services:
   postgres:
     environment:
       POSTGRES_DB: ba_helper
       POSTGRES_USER: ba_helper
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+
+  redis:
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    command: ["sh", "-lc", "exec redis-server --requirepass \"$$REDIS_PASSWORD\""]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
   migrate:
     environment:

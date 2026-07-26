@@ -1,0 +1,15 @@
+# Local development overrides — auto-loaded by `docker compose` when no explicit
+# `-f` list is given. It publishes the database and cache on the host so tests
+# and local tooling can reach them at localhost:5432 / localhost:6379.
+#
+# Production deliberately does NOT load this file. Deploy with:
+#   docker compose -f docker-compose.yml -f docker-compose.production.yml up -d
+# Passing explicit `-f` files disables the automatic override, so Postgres and
+# Redis stay off the host network in production.
+services:
+  postgres:
+    ports:
+      - "5432:5432"
+  redis:
+    ports:
+      - "6379:6379"

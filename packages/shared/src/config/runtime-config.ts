@@ -52,16 +52,24 @@ export function isWeakSecret(secret?: string): boolean {
     'dev-secret-change-me',
     'dev-super-secret-key',
     'dev-only-local-jwt-secret',
+    'dev-only-local-nextauth-secret',
     'change-me',
     'replace-with-a-long-random-secret',
     'postgresql://localhost/ba_helper',
     'postgresql://ba_helper:ba_helper@localhost/ba_helper',
     'redis://localhost:6379',
+    'redis://redis:6379',
     'dev-secret',
     'secret',
   ]);
 
-  return weakSecrets.has(normalized);
+  if (weakSecrets.has(normalized)) return true;
+
+  // Reject the `.env.production.example` placeholders so a copy-paste-without-edit
+  // deploy fails fast (covers values like `replace-with-db-password`, embedded
+  // `...:replace-with-db-password@...`, and `replace-me`). No real secret contains
+  // these tokens.
+  return /replace[-_ ]?(with|me)\b/i.test(normalized);
 }
 
 export function requireEnv(key: string, devFallback?: string, nodeEnv?: string): string {
