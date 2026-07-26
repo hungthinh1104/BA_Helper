@@ -8,7 +8,9 @@ export type JobErrorRecoverability = 'RETRYABLE' | 'UNRECOVERABLE';
  * Classifies a worker job error into RETRYABLE or UNRECOVERABLE.
  *
  * Priority: typed error codes → AppError codes → fallback heuristic.
- * No string-matching on error messages except as explicit fallback boundary.
+ * No string-matching on error messages except as an explicit fallback boundary.
+ * Shared by every worker processor (scan, embedding, impact-analysis, document)
+ * so retry semantics are uniform.
  */
 export function classifyWorkerError(error: unknown): JobErrorRecoverability {
   // 1. Typed AI output errors — schema/parse failures are unrecoverable on retry
@@ -32,7 +34,9 @@ export function classifyWorkerError(error: unknown): JobErrorRecoverability {
       'AI_PROVIDER_AUTH_FAILED',
       'IMPACT_ANALYSIS_NOT_FOUND',
       'SCAN_JOB_NOT_FOUND',
+      'SNAPSHOT_NOT_FOUND',
       'UNSUPPORTED_FRAMEWORK',
+      'UNSUPPORTED_DOMAIN',
       'UNSUPPORTED_DOMAIN_PACK',
       'UNSUPPORTED_DOMAIN_PACK_VERSION',
     ]);
@@ -42,6 +46,6 @@ export function classifyWorkerError(error: unknown): JobErrorRecoverability {
     return 'RETRYABLE';
   }
 
-  // 3. Fallback: treat as retryable unless we can positively identify it as unrecoverable
+  // 3. Fallback: treat as retryable unless positively identified as unrecoverable.
   return 'RETRYABLE';
 }

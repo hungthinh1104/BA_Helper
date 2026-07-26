@@ -1,5 +1,20 @@
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { AppError } from '@ba-helper/shared';
+
+// BullMQ job ids embed the product entity id behind a per-queue prefix. Admins
+// operate on product entities, so we surface the bare entity id in responses.
+const JOB_ID_PREFIX: Record<RecoverableQueueName, string> = {
+  'scan-job': 'scan-',
+  embedding: 'embed-',
+  'impact-analysis': 'impact-',
+  'document-job': '',
+};
+
+function toProductEntityId(queueName: RecoverableQueueName, jobId: string): string {
+  const prefix = JOB_ID_PREFIX[queueName];
+  return prefix && jobId.startsWith(prefix) ? jobId.slice(prefix.length) : jobId;
+}
 
 export type QueueJobCountSummary = {
   status: 'up' | 'down';
@@ -31,7 +46,9 @@ const RETRYABLE_JOB_OPTIONS = {
   attempts: 3,
   backoff: { type: 'exponential' as const, delay: 2000 },
   removeOnComplete: { count: 1000 },
-  removeOnFail: false,
+  // Bounded failed-job retention: keep failures long enough for an admin to
+  // inspect/retry, but cap growth so the dead-letter set cannot grow unbounded.
+  removeOnFail: { age: 14 * 24 * 60 * 60, count: 5000 },
 };
 
 export class QueueService {
@@ -90,14 +107,30 @@ export class QueueService {
   async retryFailedJob(
     queueName: RecoverableQueueName,
     jobId: string,
-  ): Promise<{ queueName: RecoverableQueueName; jobId: string; status: 'RETRIED' }> {
+  ): Promise<{
+    queueName: RecoverableQueueName;
+    jobId: string;
+    productEntityId: string;
+    status: 'RETRIED';
+  }> {
     const queue = this.getQueue(queueName);
     const job = await queue.getJob(jobId);
+    // Requiring state 'failed' also guards against concurrent duplicate retries:
+    // once the first retry moves the job out of the failed set, a racing second
+    // call sees a non-failed state and is rejected rather than double-enqueuing.
     if (!job || (await job.getState()) !== 'failed') {
-      throw new Error(`Failed job ${queueName}/${jobId} was not found.`);
+      throw new AppError(
+        'FAILED_JOB_NOT_FOUND',
+        `No failed job ${queueName}/${jobId} is available to retry.`,
+      );
     }
     await job.retry('failed');
-    return { queueName, jobId, status: 'RETRIED' };
+    return {
+      queueName,
+      jobId,
+      productEntityId: toProductEntityId(queueName, jobId),
+      status: 'RETRIED',
+    };
   }
 
   async consumeRateLimit(params: {

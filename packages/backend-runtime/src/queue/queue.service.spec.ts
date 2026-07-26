@@ -34,7 +34,7 @@ describe('QueueService', () => {
       expect.objectContaining({
         jobId: 'embed-snapshot-1',
         attempts: 3,
-        removeOnFail: false,
+        removeOnFail: { age: 1209600, count: 5000 },
       }),
     );
     expect(embeddingQueue.add).toHaveBeenNthCalledWith(
@@ -44,7 +44,7 @@ describe('QueueService', () => {
       expect.objectContaining({
         jobId: 'embed-snapshot-1',
         attempts: 3,
-        removeOnFail: false,
+        removeOnFail: { age: 1209600, count: 5000 },
       }),
     );
   });
@@ -71,9 +71,37 @@ describe('QueueService', () => {
     ).resolves.toEqual({
       queueName: 'scan-job',
       jobId: 'scan-job-1',
+      productEntityId: 'job-1',
       status: 'RETRIED',
     });
     expect(job.retry).toHaveBeenCalledWith('failed');
+  });
+
+  it('rejects retrying a job that is missing or no longer in the failed set', async () => {
+    const impactQueue = makeQueue();
+    const embeddingQueue = makeQueue();
+    const scanJobQueue = makeQueue();
+    const documentJobQueue = makeQueue();
+    // Not found.
+    scanJobQueue.getJob.mockResolvedValue(undefined);
+    // Present but already moved out of the failed set (concurrent retry / running).
+    embeddingQueue.getJob.mockResolvedValue({
+      getState: jest.fn().mockResolvedValue('active'),
+      retry: jest.fn(),
+    });
+    const service = new QueueService(
+      impactQueue as never,
+      embeddingQueue as never,
+      scanJobQueue as never,
+      documentJobQueue as never,
+    );
+
+    await expect(
+      service.retryFailedJob('scan-job', 'scan-missing'),
+    ).rejects.toMatchObject({ code: 'FAILED_JOB_NOT_FOUND' });
+    await expect(
+      service.retryFailedJob('embedding', 'embed-active'),
+    ).rejects.toMatchObject({ code: 'FAILED_JOB_NOT_FOUND' });
   });
 
   it('uses an atomic Redis counter for distributed rate limiting', async () => {
