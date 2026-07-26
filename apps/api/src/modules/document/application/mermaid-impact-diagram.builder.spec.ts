@@ -1,6 +1,5 @@
 import type { RequirementRevision } from '@prisma/client';
-import type { ReportDependencyEdge } from './mermaid-impact-diagram.builder';
-import { MermaidImpactDiagramBuilder } from './mermaid-impact-diagram.builder';
+import { ReportDependencyEdge, MermaidImpactDiagramBuilder } from "@ba-helper/backend-runtime";
 
 describe('MermaidImpactDiagramBuilder', () => {
   let builder: MermaidImpactDiagramBuilder;

@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "reviewedAt": "2026-07-25",
+  "scope": "Public GitHub TypeScript/NestJS extraction smoke review",
+  "repositories": [
+    {
+      "repository": "nestjs/typescript-starter",
+      "commitSha": "c4d9330f5513eda0fb5df594f6b34a11fde1a934",
+      "reviewStatus": "REVIEWED",
+      "frameworkDetected": "nestjs",
+      "coverageStatus": "FULL",
+      "typescriptFiles": 6,
+      "artifactCount": 3,
+      "apiArtifactCount": 1,
+      "serviceArtifactCount": 1,
+      "artifactEvidenceCoverage": 1,
+      "notes": "Small canonical NestJS starter; suitable as a minimum extraction smoke case."
+    },
+    {
+      "repository": "brocoders/nestjs-boilerplate",
+      "commitSha": "549cc37a3925ab87a4e61b45efb3b86d2d8e234e",
+      "reviewStatus": "REVIEWED",
+      "frameworkDetected": "nestjs",
+      "coverageStatus": "FULL",
+      "typescriptFiles": 182,
+      "artifactCount": 117,
+      "apiArtifactCount": 24,
+      "serviceArtifactCount": 88,
+      "artifactEvidenceCoverage": 1,
+      "notes": "Application-sized repository with controllers and services; extraction completed without partial coverage."
+    },
+    {
+      "repository": "nestjs/nest",
+      "commitSha": "d8ee0143bdd76b2e81b460a196c15a9387b73ee2",
+      "reviewStatus": "REVIEWED_WITH_LIMITATION",
+      "frameworkDetected": "nestjs",
+      "coverageStatus": "FULL",
+      "typescriptFiles": 1676,
+      "artifactCount": 1016,
+      "apiArtifactCount": 325,
+      "serviceArtifactCount": 281,
+      "artifactEvidenceCoverage": 0.9990157480314961,
+      "notes": "Large framework monorepo smoke case. One extracted artifact lacked an excerpt, so this case is not part of the blocking evidence gate."
+    }
+  ]
+}

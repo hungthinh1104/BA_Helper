@@ -21,7 +21,7 @@ export function resolveEmbeddingConfig(env: NodeJS.ProcessEnv): EmbeddingConfig 
 
   switch (provider) {
     case 'openai': apiKey = env.OPENAI_API_KEY; break;
-    case 'google': apiKey = env.GEMINI_API_KEY ?? env.GOOGLE_API_KEY ?? env.GOOGLE_AI_API_KEY; break;
+    case 'google': apiKey = env.GEMINI_API_KEY || env.GOOGLE_API_KEY || env.GOOGLE_AI_API_KEY; break;
   }
 
   return { provider, apiKey };

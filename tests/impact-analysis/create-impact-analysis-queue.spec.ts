@@ -1,5 +1,5 @@
 import { CreateImpactAnalysisUseCase } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/create-impact-analysis.usecase';
-import { DomainPackRegistry } from '../../apps/api/src/modules/domain-pack/application/domain-pack.registry';
+import { DomainPackRegistry } from '@ba-helper/backend-runtime';
 
 class StubImpactRepo {
   findByRequestKey = async () => null;

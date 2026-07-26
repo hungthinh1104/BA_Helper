@@ -25,6 +25,9 @@ export type WorkspaceAnalysis = {
 			domain: string;
 			profileVersion: string;
 		} | null;
+		repository?: {
+			canonicalUrl: string;
+		} | null;
 	};
 	sourceTarget: {
 		id: string;
@@ -51,11 +54,16 @@ export type WorkspaceInsight = {
 		evidenceId: string;
 		evidence: WorkspaceEvidence;
 	}>;
+	reviewNote?: {
+		body: string;
+		updatedAt: Date;
+	} | null;
 };
 
 export type WorkspaceTraceabilityLink = {
 	id: string;
 	linkBasis: string;
+	confidence?: number | null;
 	reviewStatus: string;
 	artifact: {
 		id: string;
@@ -70,6 +78,9 @@ export type WorkspaceTraceabilityLink = {
 	}>;
 	reviewDecision?: {
 		decision: string;
+		note?: string | null;
+		reviewedByUserId?: string | null;
+		reviewedAt?: Date | null;
 	} | null;
 };
 

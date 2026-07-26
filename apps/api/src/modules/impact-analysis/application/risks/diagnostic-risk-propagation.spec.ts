@@ -4,10 +4,9 @@ import {
   ImpactDiagnosticPropagationStep,
   ImpactAiReasoningStep,
 } from '@ba-helper/application';
-import type { InsightRepository } from '../../../insight/infrastructure/insight.repository';
-import { FakeLlmProvider } from '../../../ai/infrastructure/fake-ai.provider';
 import { PrismaClient } from '@prisma/client';
 import type { DiagnosticItem } from '@ba-helper/analyzer';
+import { InsightRepository, FakeLlmProvider } from "@ba-helper/backend-runtime";
 
 describe('Diagnostic Risk Propagation', () => {
   let useCase: RunImpactAnalysisUseCase;
@@ -94,7 +93,7 @@ describe('Diagnostic Risk Propagation', () => {
 
     mockEvidenceRepo = {
       listBySnapshotId: jest.fn().mockResolvedValue([]),
-      upsertMany: jest.fn().mockResolvedValue([]),
+      listByArtifactIds: jest.fn().mockResolvedValue([]),
     };
 
     const mockDomainPackRegistry = {

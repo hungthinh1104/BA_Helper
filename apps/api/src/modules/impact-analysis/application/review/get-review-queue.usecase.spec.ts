@@ -1,9 +1,7 @@
 import { GetReviewQueueUseCase } from './get-review-queue.usecase';
 import type { ImpactGraphReadModelBuilder } from '../queries/impact-graph-read-model.builder';
 import type { QaCoverageDeriver } from '../qa/qa-coverage.deriver';
-import type { InsightRepository } from '../../../insight/infrastructure/insight.repository';
-import type { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { PrismaService, InsightRepository, TraceabilityRepository } from "@ba-helper/backend-runtime";
 
 describe('GetReviewQueueUseCase', () => {
   let useCase: GetReviewQueueUseCase;

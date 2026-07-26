@@ -1,8 +1,8 @@
 import type { TestingModule } from '@nestjs/testing';
 import { Test } from '@nestjs/testing';
 import { GetImpactAnalysisLineageUseCase } from './get-impact-analysis-lineage.usecase';
-import { PrismaService } from '../../../prisma/prisma.service';
 import { AppError } from '@ba-helper/shared';
+import { PrismaService } from "@ba-helper/backend-runtime";
 
 describe('GetImpactAnalysisLineageUseCase', () => {
   let useCase: GetImpactAnalysisLineageUseCase;

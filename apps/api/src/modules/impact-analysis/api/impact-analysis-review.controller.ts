@@ -16,6 +16,7 @@ import {
   finalizeImpactAnalysisRequestSchema,
   impactGraphResponseSchema,
   qaCoverageResponseSchema,
+  reviewCoverageResponseSchema,
   reviewQueueResponseSchema,
   paginationQuerySchema,
   impactAnalysisDiffResponseSchema,
@@ -47,7 +48,6 @@ import { ListImpactAnalysesUseCase } from '../application/lifecycle/list-impact-
 import { GetImpactGraphUseCase } from '../application/queries/get-impact-graph.usecase';
 import { GetQaCoverageUseCase } from '../application/qa/get-qa-coverage.usecase';
 import { GetReviewQueueUseCase } from '../application/review/get-review-queue.usecase';
-import { GetImpactDiffUseCase } from '../application/queries/get-impact-diff.usecase';
 import { CreateAnalysisReviewDecisionUseCase } from '../application/review/create-analysis-review-decision.usecase';
 import { ListReviewDecisionsUseCase } from '../application/review/list-review-decisions.usecase';
 import { GetLatestReviewDecisionUseCase } from '../application/review/get-latest-review-decision.usecase';
@@ -64,8 +64,7 @@ import {
 } from '../infrastructure/impact-analysis.mapper';
 
 import { ProjectPermissionService } from '../../project/application/project-permission.service';
-
-import { EventLogService } from '../../event-log/application/event-log.service';
+import { GetImpactDiffUseCase, EventLogService } from "@ba-helper/backend-runtime";
 
 @Controller('/api/v1')
 export class ImpactAnalysisReviewController {
@@ -84,7 +83,7 @@ export class ImpactAnalysisReviewController {
   ) {
     // Permission is checked within the use case
     const result = await this.getReviewCoverage.execute(actor, runId);
-    return result; // result is already validated by contract schema format implicitly, or we can use reviewCoverageResponseSchema.parse
+    return reviewCoverageResponseSchema.parse(result);
   }
 
   @Post('/impact-analyses/:analysisId/review-decisions')

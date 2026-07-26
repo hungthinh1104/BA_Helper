@@ -1,6 +1,6 @@
-import type { DocumentRepository } from '../infrastructure/document.repository';
 import { AppError } from '@ba-helper/shared';
 import type { ApprovedReportProjectionService } from './approved-report-projection.service';
+import { DocumentRepository } from "@ba-helper/backend-runtime";
 
 export class GetApprovedReportUseCase {
   constructor(

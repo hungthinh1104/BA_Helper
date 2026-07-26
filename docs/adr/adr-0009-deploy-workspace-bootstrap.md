@@ -23,7 +23,7 @@ must prepare a clean boundary for future auth.
 1. The deployed MVP continues to use `WORKSPACE_MODE=dev-single-user` as the
    only live workspace mode.
 2. The frontend bootstraps only through backend-owned contracts:
-   `GET /api/v1/workspace/current` and `GET /api/v1/system/health`.
+   `GET /api/v1/workspace/current` and `GET /api/v1/system/ready`.
 3. Workspace resolution is routed through a resolver abstraction so later auth
    can introduce new modes without rewriting the web bootstrap flow.
 4. Separate web/API deployment is the supported topology:

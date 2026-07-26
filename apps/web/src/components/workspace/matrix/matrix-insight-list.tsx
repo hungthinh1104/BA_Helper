@@ -1,4 +1,5 @@
 import { MatrixRowInsightRef } from "@ba-helper/contracts"
+import { useTranslations } from "next-intl"
 import { CertaintyBadge } from "@/components/workspace/shared/status-badges"
 
 interface MatrixInsightListProps {
@@ -8,6 +9,7 @@ interface MatrixInsightListProps {
 }
 
 export function MatrixInsightList({ insights, emptyMessage, type }: MatrixInsightListProps) {
+  const t = useTranslations("workspace")
   if (insights.length === 0) {
     return (
       <div className="text-center py-10 text-muted-foreground text-sm">
@@ -27,7 +29,7 @@ export function MatrixInsightList({ insights, emptyMessage, type }: MatrixInsigh
             <div className="flex items-center gap-1.5">
               {insight.relatedEvidenceIds.length === 0 && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border bg-warning/10 text-warning border-warning/30">
-                  Diagnostic-only
+                  {t("diagnosticOnly")}
                 </span>
               )}
               {insight.certainty && (
@@ -42,8 +44,8 @@ export function MatrixInsightList({ insights, emptyMessage, type }: MatrixInsigh
           )}
           <div className="text-[11px] text-muted-foreground">
             {insight.relatedEvidenceIds.length > 0
-              ? `${insight.relatedEvidenceIds.length} evidence references`
-              : "No code evidence linked. Treat as scanner diagnostic or review prompt, not confirmed impact."}
+              ? t("evidenceReferences", { count: insight.relatedEvidenceIds.length })
+              : t("noCodeEvidenceLinkedMatrix")}
           </div>
         </div>
       ))}

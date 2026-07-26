@@ -7,6 +7,8 @@ import { AnalysisHeader } from "@/components/workspace/analysis/analysis-header"
 import { E2ETimeline } from "@/components/workspace/analysis/e2e-timeline"
 import type { ImpactAnalysisResponse } from "@ba-helper/contracts"
 import { getAnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
+import { useAnalysisWorkspace as useAnalysisWorkspaceReadModel } from "@/hooks/api/use-analyses"
+import { DenseAlert, DenseCard } from "@/components/workspace/shared/dense-card"
 
 type TabValue = "insights" | "graph" | "traceability-matrix" | "qa-coverage" | "review-queue" | "diff" | "lineage"
 
@@ -37,6 +39,9 @@ export function AnalysisTabBar({
   blockingRemaining,
 }: AnalysisTabBarProps) {
   const labels = getAnalysisWorkspaceLabels().reviewReport.finalizeDialog
+  const { data: workspaceReadModel } = useAnalysisWorkspaceReadModel(analysis.id)
+  const reportStatus = workspaceReadModel?.reportStatus ?? null
+  const canOpenFinalizeDialog = Boolean(reportStatus?.canFinalize) && canFinalize
 
   const tabClass = (tab: TabValue) =>
     `min-h-10 shrink-0 px-3 py-2 text-sm font-medium border-b-2 transition-colors -mb-px flex items-center gap-1.5 whitespace-nowrap
@@ -56,7 +61,7 @@ export function AnalysisTabBar({
         />
       </div>
 
-      <div className="mb-4 rounded-lg border border-border/50 bg-surface px-4 py-2 shadow-sm">
+      <DenseCard className="mb-4 px-4 py-2 shadow-sm">
         <details className="group">
           <summary className="mb-1.5 flex cursor-pointer items-center gap-2 select-none text-xs font-medium text-muted-foreground transition-colors hover:text-foreground">
             <span className="group-open:rotate-90 transition-transform">▶</span>
@@ -73,7 +78,7 @@ export function AnalysisTabBar({
             />
           </div>
         </details>
-      </div>
+      </DenseCard>
 
       <div className="analysis-sticky-header">
         {/* Tab bar */}
@@ -112,61 +117,62 @@ export function AnalysisTabBar({
 
         {/* Global banners */}
         {analysis.freshness.isStale && analysis.status === "WAITING_FOR_REVIEW" && (
-          <div className="mt-3 flex items-center gap-3 px-4 py-2.5 bg-warning/10 border border-warning/25 rounded-lg text-sm text-warning font-medium">
+          <DenseAlert variant="warning" className="mt-3 items-center gap-3 px-4 py-2.5 text-sm font-medium">
             <AlertCircle className="w-5 h-5" />
             This analysis is stale because the repository snapshot has changed. You can still review insights, but finalization is disabled.
-          </div>
+          </DenseAlert>
         )}
 
         {!analysis.freshness.isStale && analysis.status === "WAITING_FOR_REVIEW" && (
-          <div
+          <DenseAlert
             className={`mt-3 flex items-center justify-between gap-3 px-4 py-2.5 border rounded-lg text-sm font-medium ${
-              blockingRemaining === 0
+              canOpenFinalizeDialog
                 ? "bg-success/10 border-success/25 text-success"
                 : "bg-surface border-border text-muted-foreground"
             }`}
           >
             <div className="flex items-center gap-3">
-              {blockingRemaining === 0 ? (
+              {canOpenFinalizeDialog ? (
                 <>
                   <div className="w-5 h-5 rounded-full bg-success/20 flex items-center justify-center shrink-0">
                     <span className="text-xs">✓</span>
                   </div>
-                  All required items have been reviewed. You can now finalize this analysis.
+                  Backend policy reports that this analysis can be finalized.
                 </>
               ) : (
                 <>
                   <AlertCircle className="w-5 h-5 shrink-0" />
-                  Cannot finalize: {blockingRemaining} items still require review.
+                  Finalization is blocked by backend capability or review policy.
                 </>
               )}
             </div>
-            {canFinalize ? (
+            {canOpenFinalizeDialog && reportStatus ? (
               <FinalizeAnalysisDialog
                 analysisId={analysis.id}
                 commitSha={analysis.snapshot.commitSha}
                 stats={stats}
                 isStale={analysis.freshness.isStale}
+                reportStatus={reportStatus}
                 labels={labels}
               >
                 <Button
                   size="sm"
                   className={`h-8 border-none shadow-none ${
-                    blockingRemaining === 0
+                    canOpenFinalizeDialog
                       ? "bg-success hover:bg-success/90 text-white"
                       : "bg-surface-muted text-muted-foreground"
                   }`}
-                  disabled={blockingRemaining > 0}
+                  disabled={false}
                 >
                   Finalize Analysis
                 </Button>
               </FinalizeAnalysisDialog>
             ) : (
               <span className="text-[12px] text-muted-foreground">
-                An Analyst or Owner can finalize this analysis.
+                Finalization is unavailable for this analysis.
               </span>
             )}
-          </div>
+          </DenseAlert>
         )}
       </div>
     </div>

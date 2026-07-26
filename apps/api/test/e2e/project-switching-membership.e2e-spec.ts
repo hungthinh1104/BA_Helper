@@ -2,10 +2,10 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '../../src/modules/prisma/prisma.service';
 import { createTestApp } from './helpers/test-app';
 import { resetDatabase } from './helpers/reset-db';
 import { grantProjectMembership } from './helpers/grant-project-membership';
+import { PrismaService } from "@ba-helper/backend-runtime";
 
 describe('Project switching and membership (e2e)', () => {
   let app: INestApplication;
@@ -216,7 +216,7 @@ describe('Project switching and membership (e2e)', () => {
     expect(firstProjectId).toBeDefined();
   });
 
-  it('allows OWNER to add members by existing email and rejects unknown email', async () => {
+  it('allows OWNER to add existing members and requires an initial password for new users', async () => {
     const { firstProjectId } = await seedProjects();
     const newUser = await prisma.user.create({
       data: {
@@ -246,10 +246,31 @@ describe('Project switching and membership (e2e)', () => {
       .post(`/api/v1/projects/${firstProjectId}/members`)
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ email: 'missing@ba-helper.local', role: 'VIEWER' })
-      .expect(404)
+      .expect(400)
       .expect(({ body }) => {
-        expect(body.code).toBe('PROJECT_MEMBER_USER_NOT_FOUND');
+        expect(body.code).toBe('PROJECT_MEMBER_INITIAL_PASSWORD_REQUIRED');
       });
+
+    const createdResponse = await request(app.getHttpServer())
+      .post(`/api/v1/projects/${firstProjectId}/members`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        email: 'new-user@ba-helper.local',
+        initialPassword: 'new-user-password-123',
+        name: 'New User',
+        role: 'VIEWER',
+      })
+      .expect(201);
+
+    expect(createdResponse.body.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          email: 'new-user@ba-helper.local',
+          name: 'New User',
+          role: 'VIEWER',
+        }),
+      ]),
+    );
   });
 
   it('blocks non-owner membership mutation and protects the last owner', async () => {

@@ -147,12 +147,19 @@ enum DocumentType {
 enum DocumentStatus {
   DRAFT
   APPROVED
+  /// @description STALE is a projection-only state derived at runtime. It is never persisted to the database.
   STALE
 }
 
 enum DocumentJobStatus {
   QUEUED
   RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum LocalizationStatus {
+  QUEUED
   COMPLETED
   FAILED
 }
@@ -232,6 +239,9 @@ model User {
   id                String   @id @default(uuid()) @db.Uuid
   email             String   @unique
   name              String?
+  passwordHash      String?  @map("password_hash")
+  credentialsVersion Int     @default(1) @map("credentials_version")
+  disabledAt        DateTime? @map("disabled_at")
   role              UserRole @default(REVIEWER)
   selectedProjectId String?  @map("selected_project_id")
 
@@ -678,9 +688,40 @@ model GeneratedDocument {
   updatedAt         DateTime                 @updatedAt
   reviewedSnapshots ReviewedReportSnapshot[]
   documentJobs      DocumentJob[]
+  localizedArtifacts LocalizedReportArtifact[]
 
   @@unique([impactAnalysisId, type, status])
   @@index([impactAnalysisId, status])
+}
+
+model LocalizedReportArtifact {
+  id                 String             @id @default(uuid())
+  sourceDocumentId   String
+  sourceDocument     GeneratedDocument  @relation(fields: [sourceDocumentId], references: [id], onDelete: Cascade)
+
+  locale             String   // BCP-47 locale tag, e.g. "vi-VN"
+  sourceLocale       String   @default("en")
+  localizationStatus LocalizationStatus
+
+  contentMarkdown    String?
+  sourceContentHash  String   // Computed from canonical JSON serialization
+  
+  // Metadata for tracing and debugging
+  glossaryVersion            String?
+  provider                   String?
+  model                      String?
+  translationPromptVersion   String?
+  structuralValidatorVersion String?
+  fieldPolicyVersion         String?
+  
+  errorCode          String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([sourceDocumentId, locale])
+  @@index([sourceDocumentId])
+  @@index([locale])
+  @@index([localizationStatus])
 }
 
 model DocumentJob {
@@ -741,6 +782,7 @@ model DomainEvent {
   createdAt      DateTime @default(now())
 
   @@unique([idempotencyKey])
+  @@index([eventType, createdAt])
 }
 
 model ReviewNote {

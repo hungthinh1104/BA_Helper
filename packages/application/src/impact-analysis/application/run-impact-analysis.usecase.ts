@@ -8,7 +8,7 @@ import { buildCompletedAnalysisMetadata } from './analysis-run-metadata';
 import type { ImpactEvidenceCollectionStep } from './steps/impact-evidence-collection.step';
 import type { ImpactDiagnosticPropagationStep } from './steps/impact-diagnostic-propagation.step';
 import type { ImpactAiReasoningStep } from './steps/impact-ai-reasoning.step';
-import type { ResolvedDomainPackSelection } from '@ba-helper/contracts';
+import { readResolvedDomainPackSelection } from '../domain/domain-pack-selection-normalizer';
 
 export class RunImpactAnalysisUseCase {
   constructor(
@@ -74,7 +74,9 @@ export class RunImpactAnalysisUseCase {
 
     try {
       const snapshotDomain = analysis.snapshot.profile?.domain;
-      const persistedDomainPack = readSelectedDomainPack(analysis);
+      const persistedDomainPack = readResolvedDomainPackSelection(analysis, {
+        ignoreUnresolvedDefaultFallback: true,
+      });
       const domainPackResult = persistedDomainPack
         ? this.domainPackSelection.selectResolvedPack(persistedDomainPack)
         : this.domainPackSelection.selectPack({
@@ -131,16 +133,14 @@ export class RunImpactAnalysisUseCase {
       // Persist all insights
       const insights = (await this.insightRepo.upsertMany(insightInputs)) as InsightRecord[];
 
-      // Link evidence to AI EVIDENCED insights
+      // Link persisted evidence to every AI insight that returned resolvable evidence keys.
       await Promise.all(
         insights
-          .filter(
-            (insight) =>
-              insight.certainty === 'EVIDENCED' &&
-              aiResult.resolvableEvidencedInsightKeys.has(insight.insightKey),
+          .filter((insight) =>
+            aiResult.insightEvidenceMap.some((item) => item.insightKey === insight.insightKey),
           )
           .map((insight) => {
-            const mapping = aiResult.evidencedInsightMap.find(
+            const mapping = aiResult.insightEvidenceMap.find(
               (item) => item.insightKey === insight.insightKey,
             );
 
@@ -221,7 +221,9 @@ export class RunImpactAnalysisUseCase {
           ? e.code
           : e instanceof AiOutputError
             ? e.code
-            : 'UNKNOWN_ANALYSIS_ERROR';
+            : (e instanceof Error && 'code' in e)
+              ? String((e as any).code)
+              : 'UNKNOWN_ANALYSIS_ERROR';
       const errorMessage = e instanceof Error ? e.message : String(e);
       const errorDetails =
         e instanceof AiOutputError
@@ -266,105 +268,4 @@ export class RunImpactAnalysisUseCase {
       throw e;
     }
   }
-}
-
-function readSelectedDomainPack(analysis: {
-  requestedDomainPackId?: string | null;
-  resolvedDomainPackId?: string | null;
-  resolvedDomainPackVersion?: string | null;
-  resolvedDomainPackStatus?: string | null;
-  domainPackSelectedBy?: string | null;
-  domainPackResolvedAt?: Date | string | null;
-  metadata?: unknown;
-}): ResolvedDomainPackSelection | null {
-  if (
-    typeof analysis.resolvedDomainPackId === 'string' &&
-    typeof analysis.resolvedDomainPackVersion === 'string' &&
-    isDomainPackStatus(analysis.resolvedDomainPackStatus) &&
-    isDomainPackSelectedBy(analysis.domainPackSelectedBy)
-  ) {
-    if (isUnresolvedDefaultFallback(analysis)) {
-      return null;
-    }
-
-    return {
-      requestedDomainPackId: analysis.requestedDomainPackId ?? null,
-      resolvedDomainPackId: analysis.resolvedDomainPackId,
-      resolvedDomainPackVersion: analysis.resolvedDomainPackVersion,
-      resolvedDomainPackStatus: analysis.resolvedDomainPackStatus,
-      selectedBy: analysis.domainPackSelectedBy,
-      resolvedAt: normalizeResolvedAt(analysis.domainPackResolvedAt),
-    };
-  }
-
-  const { metadata } = analysis;
-  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
-    return null;
-  }
-
-  const selected = (metadata as Record<string, unknown>).selectedDomainPack;
-  if (!selected || typeof selected !== 'object' || Array.isArray(selected)) {
-    return null;
-  }
-
-  const data = selected as Record<string, unknown>;
-  if (
-    typeof data.resolvedDomainPackId !== 'string' ||
-    typeof data.resolvedDomainPackVersion !== 'string' ||
-    typeof data.resolvedDomainPackStatus !== 'string' ||
-    typeof data.selectedBy !== 'string' ||
-    typeof data.resolvedAt !== 'string'
-  ) {
-    return null;
-  }
-
-  return data as ResolvedDomainPackSelection;
-}
-
-function isUnresolvedDefaultFallback(analysis: {
-  requestedDomainPackId?: string | null;
-  resolvedDomainPackId?: string | null;
-  resolvedDomainPackVersion?: string | null;
-  resolvedDomainPackStatus?: string | null;
-  domainPackSelectedBy?: string | null;
-  metadata?: unknown;
-}) {
-  return (
-    !analysis.metadata &&
-    !analysis.requestedDomainPackId &&
-    analysis.resolvedDomainPackId === 'general' &&
-    analysis.resolvedDomainPackVersion === '0.0.0' &&
-    analysis.resolvedDomainPackStatus === 'FALLBACK' &&
-    analysis.domainPackSelectedBy === 'FALLBACK'
-  );
-}
-
-function normalizeResolvedAt(value: Date | string | null | undefined): string {
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-  return typeof value === 'string' && value.trim().length > 0
-    ? value
-    : new Date(0).toISOString();
-}
-
-function isDomainPackStatus(
-  value: unknown,
-): value is ResolvedDomainPackSelection['resolvedDomainPackStatus'] {
-  return (
-    value === 'STABLE' ||
-    value === 'PARTIAL' ||
-    value === 'EXPERIMENTAL' ||
-    value === 'FALLBACK'
-  );
-}
-
-function isDomainPackSelectedBy(
-  value: unknown,
-): value is ResolvedDomainPackSelection['selectedBy'] {
-  return (
-    value === 'EXPLICIT' ||
-    value === 'REPOSITORY_PROFILE' ||
-    value === 'FALLBACK'
-  );
 }

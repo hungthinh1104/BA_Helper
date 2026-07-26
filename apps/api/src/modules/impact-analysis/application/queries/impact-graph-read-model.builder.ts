@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../../../prisma/prisma.service';
 import { AppError } from '@ba-helper/shared';
 import {
   ImpactGraphResponse,
@@ -8,6 +7,7 @@ import {
   GraphNodeType,
   GraphEdgeType,
 } from '@ba-helper/contracts';
+import { PrismaService } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class ImpactGraphReadModelBuilder {

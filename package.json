@@ -23,14 +23,25 @@
     "test:integration": "jest --config jest.integration.config.ts",
     "test:e2e": "jest --config jest.e2e.config.ts --runInBand",
     "test:e2e:watch": "jest --config jest.e2e.config.ts --watch",
+    "test:pw": "playwright test",
+    "test:pw:report": "playwright show-report e2e/.artifacts/report",
     "typecheck": "tsc --noEmit",
     "verify:domain-packs": "tsx scripts/verify-domain-packs.ts",
-    "verify:stability": "pnpm infra:up && pnpm db:migrate && pnpm verify:domain-packs && pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e && pnpm demo:golden-path && pnpm demo:multi-repo-golden-path"
+    "verify:analyzer-quality": "tsx scripts/run-analyzer-quality-gate.ts",
+    "validate:product-beta": "tsx scripts/run-product-validation-scorecard.ts",
+    "verify:controlled-beta-readiness": "tsx scripts/verify-controlled-beta-readiness.ts",
+    "verify:release-drill": "tsx scripts/run-release-drill.ts",
+    "verify:migration-upgrade": "tsx scripts/verify-migration-upgrade.ts",
+    "verify:saas-entry": "tsx scripts/verify-saas-entry.ts",
+    "verify:architecture-boundaries": "tsx scripts/verify-architecture-boundaries.ts && pnpm verify:backend-runtime-boundary",
+    "verify:backend-runtime-boundary": "tsx scripts/verify-backend-runtime-boundary.ts",
+    "verify:stability": "pnpm infra:up && pnpm db:migrate && pnpm verify:migration-upgrade && pnpm verify:domain-packs && pnpm verify:analyzer-quality && pnpm verify:architecture-boundaries && pnpm verify:release-drill && pnpm verify:controlled-beta-readiness && pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e && pnpm demo:golden-path && pnpm demo:multi-repo-golden-path"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@jest/globals": "^30.4.1",
     "@nestjs/testing": "^11.1.24",
+    "@playwright/test": "1.62.0",
     "@prisma/client": "7.8.0",
     "@swc/core": "1.15.40",
     "@swc/jest": "0.2.39",
@@ -61,6 +72,7 @@
     "zod": "3.23.8"
   },
   "dependencies": {
+    "@ba-helper/backend-runtime": "workspace:*",
     "@ba-helper/contracts": "workspace:*",
     "react": "19.2.4",
     "react-dom": "19.2.4"

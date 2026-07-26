@@ -3,15 +3,17 @@ import type {
   RequestUser,
 } from '@ba-helper/contracts';
 import { AppError } from '@ba-helper/shared';
-import type { EventLogService } from '../../event-log/application/event-log.service';
 import type { ProjectPermissionService } from './project-permission.service';
 import type { ProjectRepository } from '../infrastructure/project.repository';
+import type { EventLogService } from "@ba-helper/backend-runtime";
+import type { PasswordHashService } from '../../auth/application/password-hash.service';
 
 export class UpsertProjectMemberUseCase {
   constructor(
     private readonly repository: ProjectRepository,
     private readonly permissions: ProjectPermissionService,
     private readonly eventLog: EventLogService,
+    private readonly passwords: PasswordHashService,
   ) {}
 
   async execute(
@@ -26,12 +28,21 @@ export class UpsertProjectMemberUseCase {
       'Project member',
     );
 
-    const user = await this.repository.findUserByEmail(input.email);
+    let user = await this.repository.findUserByEmail(input.email);
     if (!user) {
-      throw new AppError(
-        'PROJECT_MEMBER_USER_NOT_FOUND',
-        'User for project membership was not found.',
-      );
+      if (!input.initialPassword) {
+        throw new AppError(
+          'PROJECT_MEMBER_INITIAL_PASSWORD_REQUIRED',
+          'Initial password is required when creating a new user.',
+        );
+      }
+
+      const passwordHash = await this.passwords.hashPassword(input.initialPassword);
+      user = await this.repository.createUserWithPassword({
+        email: input.email,
+        name: input.name,
+        passwordHash,
+      });
     }
 
     const member = await this.repository.ensureProjectMember(

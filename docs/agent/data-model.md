@@ -500,3 +500,10 @@ Lifecycle status is historical; freshness is separate. When a newer target
 commit is known, responses for output based on the older snapshot return
 `isStale=true` and exports are disabled by default. The persisted output
 remains `DRAFT` or `APPROVED` for auditability.
+## Local Account Lifecycle
+
+`User.passwordHash` stores the scrypt credential hash.
+`User.credentialsVersion` starts at `1` and is copied into issued JWTs.
+Password reset and account disable increment this value so existing sessions
+are rejected on their next authenticated request. `User.disabledAt` is nullable;
+a non-null value prevents both password login and JWT validation.

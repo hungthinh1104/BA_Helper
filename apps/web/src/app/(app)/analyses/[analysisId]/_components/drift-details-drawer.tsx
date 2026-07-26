@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useTranslations } from "next-intl"
 import {
   Sheet,
   SheetContent,
@@ -29,6 +30,7 @@ export function DriftDetailsDrawer({
   baseSnapshotId,
   targetCommitSha,
 }: DriftDetailsDrawerProps) {
+  const t = useTranslations("workspace")
   // We only enable the query when the drawer is open to fetch lazily
   const { data: drift, isLoading, isError } = useSnapshotDrift(
     projectId,
@@ -42,9 +44,9 @@ export function DriftDetailsDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-xl overflow-hidden flex flex-col">
         <SheetHeader className="pb-4 border-b">
-          <SheetTitle>Snapshot Drift Details</SheetTitle>
+          <SheetTitle>{t("snapshotDriftDetails")}</SheetTitle>
           <SheetDescription>
-            Changes in the repository since the analysis was created.
+            {t("snapshotDriftDetailsDescription")}
           </SheetDescription>
         </SheetHeader>
 
@@ -52,13 +54,13 @@ export function DriftDetailsDrawer({
           {isLoading && (
             <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
               <Loader2 className="w-6 h-6 animate-spin mb-2" />
-              <p>Loading drift details...</p>
+              <p>{t("loadingDriftDetails")}</p>
             </div>
           )}
 
           {isError && (
             <div className="text-destructive text-sm py-4">
-              Failed to load drift details.
+              {t("failedLoadDriftDetails")}
             </div>
           )}
 
@@ -67,7 +69,7 @@ export function DriftDetailsDrawer({
               {drift.samples.addedArtifacts.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="font-semibold text-sm flex items-center gap-2 text-success">
-                    <FilePlus className="w-4 h-4" /> Added Artifacts ({drift.samples.addedArtifacts.length})
+                    <FilePlus className="w-4 h-4" /> {t("addedArtifactsWithCount", { count: drift.samples.addedArtifacts.length })}
                   </h4>
                   <ul className="text-sm space-y-1 pl-6">
                     {drift.samples.addedArtifacts.map((art) => (
@@ -80,7 +82,7 @@ export function DriftDetailsDrawer({
               {drift.samples.removedArtifacts.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="font-semibold text-sm flex items-center gap-2 text-danger">
-                    <FileMinus className="w-4 h-4" /> Removed Artifacts ({drift.samples.removedArtifacts.length})
+                    <FileMinus className="w-4 h-4" /> {t("removedArtifactsWithCount", { count: drift.samples.removedArtifacts.length })}
                   </h4>
                   <ul className="text-sm space-y-1 pl-6">
                     {drift.samples.removedArtifacts.map((art) => (
@@ -93,7 +95,7 @@ export function DriftDetailsDrawer({
               {drift.samples.changedArtifacts.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="font-semibold text-sm flex items-center gap-2 text-info">
-                    <FileEdit className="w-4 h-4" /> Changed Artifacts ({drift.samples.changedArtifacts.length})
+                    <FileEdit className="w-4 h-4" /> {t("changedArtifactsWithCount", { count: drift.samples.changedArtifacts.length })}
                   </h4>
                   <ul className="text-sm space-y-1 pl-6">
                     {drift.samples.changedArtifacts.map((art) => (
@@ -106,7 +108,7 @@ export function DriftDetailsDrawer({
               {drift.samples.unknownChangedArtifacts.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="font-semibold text-sm flex items-center gap-2 text-warning">
-                    <HelpCircle className="w-4 h-4" /> Hash Unavailable / Unknown Changes ({drift.samples.unknownChangedArtifacts.length})
+                    <HelpCircle className="w-4 h-4" /> {t("unknownChangedArtifactsWithCount", { count: drift.samples.unknownChangedArtifacts.length })}
                   </h4>
                   <ul className="text-sm space-y-1 pl-6">
                     {drift.samples.unknownChangedArtifacts.map((art) => (
@@ -120,7 +122,7 @@ export function DriftDetailsDrawer({
                 drift.samples.removedArtifacts.length === 0 &&
                 drift.samples.changedArtifacts.length === 0 &&
                 drift.samples.unknownChangedArtifacts.length === 0 && (
-                <p className="text-sm text-muted-foreground italic">No artifact changes detected.</p>
+                <p className="text-sm text-muted-foreground italic">{t("noArtifactChangesDetected")}</p>
               )}
             </div>
           )}

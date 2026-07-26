@@ -2,13 +2,16 @@ import type { TestingModule } from '@nestjs/testing';
 import { Test } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '../../prisma/prisma.service';
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import { PrismaService } from "@ba-helper/backend-runtime";
+import { PasswordHashService } from '../application/password-hash.service';
+import { EventLogService } from '@ba-helper/backend-runtime';
 
 describe('AuthController', () => {
   let controller: AuthController;
   let jwtService: JwtService;
   let prismaService: PrismaService;
+  let passwordHashService: PasswordHashService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -28,16 +31,120 @@ describe('AuthController', () => {
             },
           },
         },
+        {
+          provide: PasswordHashService,
+          useValue: {
+            hashPassword: jest.fn().mockResolvedValue('scrypt$mock'),
+            verifyPassword: jest.fn(),
+          },
+        },
+        {
+          provide: EventLogService,
+          useValue: {
+            recordEvent: jest.fn().mockResolvedValue(undefined),
+          },
+        },
       ],
     }).compile();
 
     controller = module.get<AuthController>(AuthController);
     jwtService = module.get<JwtService>(JwtService);
     prismaService = module.get<PrismaService>(PrismaService);
+    passwordHashService = module.get<PasswordHashService>(PasswordHashService);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('login', () => {
+    it('should issue token with valid email and password', async () => {
+      (prismaService.user.findUnique as jest.Mock).mockResolvedValue({
+        id: 'user-id',
+        email: 'test@example.com',
+        name: 'test',
+        role: 'REVIEWER',
+        passwordHash: 'scrypt$stored',
+      });
+      (passwordHashService.verifyPassword as jest.Mock).mockResolvedValue(true);
+
+      const result = await controller.login({
+        email: 'test@example.com',
+        password: 'correct-password',
+      });
+
+      expect(passwordHashService.verifyPassword).toHaveBeenCalledWith(
+        'scrypt$stored',
+        'correct-password',
+      );
+      expect(prismaService.user.update).not.toHaveBeenCalled();
+      expect(result.accessToken).toBe('mocked-token');
+      expect(result.user).toEqual({
+        id: 'user-id',
+        email: 'test@example.com',
+        name: 'test',
+        role: 'REVIEWER',
+      });
+    });
+
+    it('should return generic UnauthorizedException for unknown email', async () => {
+      (prismaService.user.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(
+        controller.login({
+          email: 'missing@example.com',
+          password: 'correct-password',
+        }),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(passwordHashService.hashPassword).toHaveBeenCalledWith('correct-password');
+      expect(passwordHashService.verifyPassword).not.toHaveBeenCalled();
+    });
+
+    it('should return generic UnauthorizedException for user without password hash', async () => {
+      (prismaService.user.findUnique as jest.Mock).mockResolvedValue({
+        id: 'user-id',
+        email: 'test@example.com',
+        name: 'test',
+        role: 'REVIEWER',
+        passwordHash: null,
+      });
+
+      await expect(
+        controller.login({
+          email: 'test@example.com',
+          password: 'correct-password',
+        }),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(passwordHashService.hashPassword).toHaveBeenCalledWith('correct-password');
+      expect(passwordHashService.verifyPassword).not.toHaveBeenCalled();
+    });
+
+    it('should return generic UnauthorizedException for wrong password', async () => {
+      (prismaService.user.findUnique as jest.Mock).mockResolvedValue({
+        id: 'user-id',
+        email: 'test@example.com',
+        name: 'test',
+        role: 'REVIEWER',
+        passwordHash: 'scrypt$stored',
+      });
+      (passwordHashService.verifyPassword as jest.Mock).mockResolvedValue(false);
+
+      await expect(
+        controller.login({
+          email: 'test@example.com',
+          password: 'wrong-password',
+        }),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should reject invalid password shape with 400', async () => {
+      await expect(
+        controller.login({ email: 'test@example.com', password: 'short' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prismaService.user.findUnique).not.toHaveBeenCalled();
+    });
   });
 
   describe('devLogin', () => {

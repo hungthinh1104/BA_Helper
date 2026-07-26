@@ -1,4 +1,4 @@
-import type { PrismaService } from '../../../src/modules/prisma/prisma.service';
+import { PrismaService } from "@ba-helper/backend-runtime";
 
 export async function resetDatabase(prisma: PrismaService) {
   // Fetch all table names dynamically

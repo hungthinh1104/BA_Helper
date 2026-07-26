@@ -1,6 +1,7 @@
 "use client"
 
 import { ReactNode } from "react"
+import { useTranslations } from "next-intl"
 import { FileText } from "lucide-react"
 
 interface EvidenceInspectorProps {
@@ -20,6 +21,7 @@ export function EvidenceInspector({
   children,
   footer,
 }: EvidenceInspectorProps) {
+  const t = useTranslations("workspace")
   return (
     <aside
       className="app-inspector flex flex-col h-full overflow-hidden"
@@ -31,7 +33,7 @@ export function EvidenceInspector({
         <div className="flex items-center justify-between gap-2 mb-3">
           <span className="inline-flex items-center gap-1.5 rounded-md border border-info/25 bg-info/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-info">
             <FileText className="w-3 h-3" />
-            Evidence
+            {t("evidence")}
           </span>
           <div className="flex items-center gap-1.5">
             {category && (

@@ -67,6 +67,39 @@ jobs:
       - name: Apply Prisma migrations
         run: pnpm --dir apps/api exec prisma migrate deploy --config prisma.config.ts --schema prisma/schema.prisma
 
+      - name: Domain pack governance
+        run: pnpm verify:domain-packs
+
+      - name: Analyzer quality gate
+        run: pnpm verify:analyzer-quality
+
+      - name: Upload analyzer scorecard
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: analyzer-quality-scorecard
+          path: artifacts/evaluation/analyzer-scorecard.json
+
+      - name: Worker boundary check (no api imports)
+        run: |
+          if grep -rE 'from.*(@ba-helper/api|apps/api/)' apps/worker/src/; then
+            echo "BOUNDARY VIOLATION: worker must not import from apps/api"
+            exit 1
+          fi
+
+      - name: Backend-runtime boundary check (no api decorators)
+        run: |
+          if grep -rE '@Controller|@UseGuards|@CurrentUser|@Req|@Get|@Post|@Put|@Delete|@Patch|JwtAuthGuard|RolesGuard' packages/backend-runtime/src/; then
+            echo "BOUNDARY VIOLATION: backend-runtime must not contain HTTP controllers or guards"
+            exit 1
+          fi
+
+      - name: Backend-runtime duplication boundary check
+        run: pnpm verify:architecture-boundaries
+
+      - name: Migration upgrade / data survival
+        run: pnpm verify:migration-upgrade
+
       - name: Lint
         run: pnpm lint
 
@@ -75,6 +108,18 @@ jobs:
 
       - name: Web production build
         run: pnpm --filter web... build
+
+      - name: Build application
+        run: pnpm --filter @ba-helper/application build
+
+      - name: Build backend-runtime
+        run: pnpm --filter @ba-helper/backend-runtime build
+
+      - name: Build api
+        run: pnpm --filter @ba-helper/api build
+
+      - name: Build worker
+        run: pnpm --filter @ba-helper/worker build
 
       - name: Analyzer tests
         run: pnpm test:analyzer

@@ -25,12 +25,16 @@ import { AuditTimeline } from "@/components/workspace/shared/audit-timeline"
 import { RepositorySnapshotBanner } from "./_components/repository-snapshot-banner"
 import { RepositoryScannerProfile } from "./_components/repository-scanner-profile"
 import { RepositoryArtifactAnalytics } from "./_components/repository-artifact-analytics"
+import { useTranslations } from "next-intl"
+import { useLocalizedHref } from "@/i18n/navigation"
 
 interface PageProps {
   params: Promise<{ repositoryId: string }>
 }
 
 export default function RepositoryDetailsPage({ params }: PageProps) {
+  const t = useTranslations("workspaceLists")
+  const localizedHref = useLocalizedHref()
   // Since Next.js 15, params is a Promise that needs to be unwrapped with React.use
   const { repositoryId } = use(params)
   const activeProjectId = useOptionalProjectId()
@@ -69,20 +73,20 @@ export default function RepositoryDetailsPage({ params }: PageProps) {
               <AlertCircle className="w-5 h-5 text-danger shrink-0 mt-0.5" />
               <div className="flex flex-col gap-1">
                 <p className="text-[15px] font-semibold text-foreground">
-                  {status === 404 ? "Repository not available" : "Failed to load repository"}
+                  {status === 404 ? t("repositoryNotAvailable") : t("failedLoadRepository")}
                 </p>
                 <p className="text-[13px] text-muted-foreground">
                   {status === 404
-                    ? "This repository does not exist in the current workspace anymore, or the workspace context changed."
+                    ? t("repositoryNoLongerExists")
                     : error instanceof Error
                       ? error.message
-                      : "The repository detail request failed."}
+                      : t("repositoryDetailRequestFailed")}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <BackButton href="/repositories" label="Back to Repositories" className="mb-0 w-fit" />
+              <BackButton href={localizedHref("/repositories")} label={t("backToRepositories")} className="mb-0 w-fit" />
             </div>
           </div>
         </div>
@@ -127,7 +131,7 @@ export default function RepositoryDetailsPage({ params }: PageProps) {
     <div className="app-page-scroll">
         <div className="max-w-4xl mx-auto w-full flex flex-col gap-8 py-4 pb-20">
         {/* Back Link */}
-        <BackButton href="/repositories" label="Back to Repositories" className="mb-0 w-fit" />
+        <BackButton href={localizedHref("/repositories")} label={t("backToRepositories")} className="mb-0 w-fit" />
 
         {/* Header */}
         <WorkspacePageHeader
@@ -144,7 +148,7 @@ export default function RepositoryDetailsPage({ params }: PageProps) {
           {isReady && (
             <NewAnalysisDialog preselectedRepoId={repo.id}>
               <Button size="sm" className="h-8 shadow-none gap-1.5">
-                <Play className="w-3.5 h-3.5 fill-current" /> Start New Analysis
+                <Play className="w-3.5 h-3.5 fill-current" /> {t("startNewAnalysis")}
               </Button>
             </NewAnalysisDialog>
           )}
@@ -184,12 +188,12 @@ export default function RepositoryDetailsPage({ params }: PageProps) {
 
           {!job && (
             <div className="rounded-xl border border-border/40 bg-surface/50 p-5 shadow-sm">
-              <p className="text-[13px] font-medium text-foreground mb-1">Repository connected but not scanned yet</p>
+              <p className="text-[13px] font-medium text-foreground mb-1">{t("repositoryConnectedNotScanned")}</p>
               <p className="text-[12px] text-muted-foreground mb-4">
-                Start a scan to build the snapshot, artifact graph, and analysis-ready evidence.
+                {t("startScanToBuild")}
               </p>
-              <Button size="sm" className="h-8 shadow-none" onClick={() => canScan && handleRetryScan()} disabled={isRetrying || !canScan} title={!canScan ? "Maintainer role required to run scans." : undefined}>
-                {isRetrying ? "Starting..." : "Start Scan"}
+              <Button size="sm" className="h-8 shadow-none" onClick={() => canScan && handleRetryScan()} disabled={isRetrying || !canScan} title={!canScan ? t("maintainerRequiredScan") : undefined}>
+                {isRetrying ? t("starting") : t("startScan")}
               </Button>
             </div>
           )}
@@ -198,7 +202,7 @@ export default function RepositoryDetailsPage({ params }: PageProps) {
 
           {job && (
             <AuditTimeline
-              title="Scan Activity"
+              title={t("scanActivity")}
               events={scanEventsData?.items || []}
               isLoading={isLoadingEvents}
             />

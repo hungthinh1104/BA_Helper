@@ -4,8 +4,9 @@ import { ImpactAnalysisWorkerModule } from './impact-analysis/impact-analysis.wo
 import { ScanJobWorkerModule } from './scan-job/scan-job.worker.module';
 import { EmbeddingWorkerModule } from './embedding/embedding.worker.module';
 import { DocumentJobWorkerModule } from './document-job/document-job.worker.module';
-import { AiModule } from '../../api/src/modules/ai/ai.module';
-import { requireEnv } from '../../api/src/bootstrap/runtime-config';
+import { StaleJobRecoveryModule } from './shared/stale-job-recovery.module';
+import { AiModule } from '@ba-helper/backend-runtime';
+import { requireEnv } from '@ba-helper/shared';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { requireEnv } from '../../api/src/bootstrap/runtime-config';
     ScanJobWorkerModule,
     EmbeddingWorkerModule,
     DocumentJobWorkerModule,
+    StaleJobRecoveryModule,
   ],
 })
 export class AppModule {}

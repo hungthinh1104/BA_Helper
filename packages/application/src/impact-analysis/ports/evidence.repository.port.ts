@@ -20,5 +20,8 @@ export type EvidenceRecord = {
 };
 
 export interface EvidenceRepositoryPort {
-  upsertMany(items: EvidenceUpsertInput[]): Promise<EvidenceRecord[]>;
+  listByArtifactIds(params: {
+    snapshotId: string;
+    artifactIds: string[];
+  }): Promise<EvidenceRecord[]>;
 }

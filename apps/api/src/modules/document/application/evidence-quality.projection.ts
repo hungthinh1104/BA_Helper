@@ -1,10 +1,4 @@
-import { EvidenceQualityAnnotator } from './evidence-quality.annotator';
-import type {
-  EvidenceQualityItem,
-  EvidenceQualitySummary,
-  InsightForAnnotation,
-  TraceabilityLinkForAnnotation,
-} from './evidence-quality.types';
+import { EvidenceQualityAnnotator, EvidenceQualityItem, EvidenceQualitySummary, InsightForAnnotation, TraceabilityLinkForAnnotation } from "@ba-helper/backend-runtime";
 
 export function buildEvidenceQualityProjection(params: {
   traceabilityLinks: TraceabilityLinkForAnnotation[];

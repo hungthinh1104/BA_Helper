@@ -4,6 +4,8 @@ packages:
   - "tests"
 allowBuilds:
   '@nestjs/core': false
+  '@parcel/watcher': true
+  '@prisma/client': set this to true or false
   '@prisma/engines': false
   '@scarf/scarf': false
   '@swc/core': false

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { DomainPackRegistry } from '../../apps/api/src/modules/domain-pack/application/domain-pack.registry';
-import { BookingDomainPack } from '../../apps/api/src/modules/domain-pack/packs/booking.v0.1.0';
+import { DomainPackRegistry } from '@ba-helper/backend-runtime';
+import { BookingDomainPack } from '@ba-helper/backend-runtime';
 import { evaluationCaseSchema } from './evaluation-types';
 import { bookingStableEvaluationCases } from './cases';
 

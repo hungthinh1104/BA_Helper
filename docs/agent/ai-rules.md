@@ -84,6 +84,15 @@ UNKNOWN     a reason and retrieval/search scope, evidence optional
 CONFLICTING at least two conflicting evidence references plus explanation
 ```
 
+Analyst output may include claims, unknowns, stakeholder questions, acceptance
+criteria, QA scenarios, and risks. Risks are represented through insight
+metadata such as `kind = risk`, `severity`, and `category`; do not add a new
+risk enum until the persistence/read-model contract is explicitly scoped.
+
+QA scenarios must be testable with Given/When/Then structure. Malformed QA
+output is normalized into an UNKNOWN review item instead of being persisted as
+a usable scenario.
+
 `CONFIRMED` is reserved for a human review decision; it is not an AI certainty.
 
 ## Untrusted Inputs

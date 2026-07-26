@@ -1,0 +1,203 @@
+import type { MarkdownReportRenderContext } from '../../markdown-impact-report.types';
+import { resolveArtifactDisplayType } from './markdown-render-utils';
+import { EvidenceQualityAnnotator } from '../../evidence-quality.annotator';
+import { getReportLabels } from '../report-localization';
+
+export function renderReviewCoverage(context: MarkdownReportRenderContext): string[] {
+  const summary = context.reviewCoverageSummarySnapshot;
+  if (!summary) {
+    return [];
+  }
+
+  const labels = getReportLabels(context.locale);
+  const weakOrMissing = summary.evidence.weak + summary.evidence.missing;
+
+  return [
+    `## ${labels.reviewCoverage}`,
+    '',
+    `- ${labels.insightsReviewed}: ${summary.insights.reviewed} / ${summary.insights.total}`,
+    `- ${labels.traceabilityLinksReviewed}: ${summary.traceabilityLinks.reviewed} / ${summary.traceabilityLinks.total}`,
+    `- ${labels.acceptedItems}: ${summary.decisions.accepted}`,
+    `- ${labels.rejectedItems}: ${summary.decisions.rejected}`,
+    `- ${labels.needsClarificationItems}: ${summary.decisions.needsClarification}`,
+    `- ${labels.strongSourceEvidence}: ${summary.evidence.strong}`,
+    `- ${labels.weakOrMissingEvidence}: ${weakOrMissing}`,
+    `- ${labels.conflictingEvidence}: ${summary.evidence.conflicting}`,
+    `- ${labels.reviewRequired}: ${summary.evidence.reviewRequired}`,
+    '',
+  ];
+}
+
+export function renderImpactedAreas(context: MarkdownReportRenderContext): string[] {
+  const { analysis, traceabilityLinks, reviewNotes, insights } = context;
+  const labels = getReportLabels(context.locale);
+  const lines: string[] = [];
+
+  if (traceabilityLinks.length === 0) {
+    return lines;
+  }
+
+  const diagnostics = (analysis.snapshot.diagnostics as any as any[]) || [];
+  const capabilitySummary = diagnostics.find(d => d.code === 'SCANNER_CAPABILITY_SUMMARY');
+
+  // Determine which artifact keys are cited by EVIDENCED CLAIMs
+  const evidencedClaimArtifactKeys = new Set<string>();
+  // Artifact keys cited by any insight (QUESTION/UNKNOWN/QA etc.)
+  const anyInsightArtifactKeys = new Set<string>();
+
+  for (const insight of insights) {
+    const isEvidencedClaim =
+      insight.insightType === 'CLAIM' && insight.certainty === 'EVIDENCED';
+    for (const evidenceLink of insight.evidenceLinks ?? []) {
+      const artifactKey = (evidenceLink.evidence as any)?.artifact?.artifactKey ??
+                          (evidenceLink.evidence as any)?.artifactKey;
+      if (!artifactKey) continue;
+      if (isEvidencedClaim) evidencedClaimArtifactKeys.add(artifactKey);
+      anyInsightArtifactKeys.add(artifactKey);
+    }
+  }
+
+  const primaryLinks: typeof traceabilityLinks = [];
+  const supportingLinks: typeof traceabilityLinks = [];
+  const lowRelevanceLinks: typeof traceabilityLinks = [];
+
+  for (const link of traceabilityLinks) {
+    const key = link.artifact?.artifactKey;
+    if (key && evidencedClaimArtifactKeys.has(key)) {
+      primaryLinks.push(link);
+    } else if (key && anyInsightArtifactKeys.has(key)) {
+      supportingLinks.push(link);
+    } else {
+      lowRelevanceLinks.push(link);
+    }
+  }
+
+  lines.push(`## ${labels.impactedAreas}`);
+  lines.push('');
+
+  const renderGroup = (groupLabel: string, groupLinks: typeof traceabilityLinks) => {
+    if (groupLinks.length === 0) return;
+    lines.push(`### ${groupLabel}`);
+    lines.push('');
+    for (const link of groupLinks) {
+      const nameRaw = link.artifact?.name ? `\`${link.artifact.name}\`` : labels.unknown;
+      let maturityLabel = '';
+      if (capabilitySummary?.payload) {
+        const p = capabilitySummary.payload;
+        if (p.status && p.status !== 'STABLE') {
+          maturityLabel = ` (${p.status})`;
+        }
+      } else if (link.artifact?.artifactKey?.startsWith('go_') || link.artifact?.artifactKey?.startsWith('java_')) {
+        maturityLabel = link.artifact.artifactKey.startsWith('go_') ? ' (EXPERIMENTAL)' : ' (PARTIAL)';
+      }
+
+      let methodLabel = '';
+      if (link.artifact?.name?.includes('UNKNOWN')) {
+        methodLabel = ` **[${labels.methodUnknown}]**`;
+      }
+
+      const name = nameRaw + maturityLabel + methodLabel;
+      const file = link.artifact?.filePath ? `\`${link.artifact.filePath}\`` : labels.unknown;
+      const status = link.reviewStatus === 'CONFIRMED' ? labels.confirmed
+        : link.reviewStatus === 'REJECTED' ? labels.rejectedItems
+        : link.reviewStatus === 'NEEDS_REVIEW' ? labels.needsReview
+        : link.reviewStatus;
+
+      lines.push(`- ${name} in ${file} — **${status}**`);
+    }
+    lines.push('');
+  };
+
+  renderGroup(labels.primaryImpacted, primaryLinks);
+  renderGroup(labels.supportingContext, supportingLinks);
+  renderGroup(labels.lowRelevance, lowRelevanceLinks);
+
+  const linkNotes = reviewNotes.filter(n => n.traceabilityLinkId && traceabilityLinks.some(l => l.id === n.traceabilityLinkId));
+  if (linkNotes.length > 0) {
+    lines.push(`### ${labels.reviewerNotesOnImpactedAreas}`);
+    lines.push('');
+    for (const note of linkNotes) {
+      const link = traceabilityLinks.find(l => l.id === note.traceabilityLinkId);
+      if (link?.artifact?.name) {
+        lines.push(`- \`${link.artifact.name}\`: ${note.body}`);
+      }
+    }
+    lines.push('');
+  }
+
+  return lines;
+}
+
+export function renderEvidenceQuality(context: MarkdownReportRenderContext): string[] {
+  const { traceabilityLinks, reviewDecisionsSnapshot, evidenceQualitySummarySnapshot } = context;
+  const labels = getReportLabels(context.locale);
+  const lines: string[] = [];
+
+  if (traceabilityLinks.length === 0) {
+    return lines;
+  }
+
+  lines.push(`## ${labels.evidenceQuality}`);
+  lines.push('');
+
+  if (evidenceQualitySummarySnapshot) {
+    const summary = evidenceQualitySummarySnapshot;
+    lines.push(`- ${labels.strongSourceEvidence}: ${readSummaryCount(summary, 'strongSourceEvidence', 'evidenced', 'STRONG_SOURCE_EVIDENCE')}`);
+    lines.push(`- ${labels.weakSourceEvidence}: ${readSummaryCount(summary, 'weakSourceEvidence', 'weakEvidence', 'WEAK_SOURCE_EVIDENCE')}`);
+    lines.push(`- ${labels.inferredFromStructure}: ${readSummaryCount(summary, 'inferredFromStructure', 'inferred', 'INFERRED_FROM_STRUCTURE')}`);
+    lines.push(`- ${labels.domainHintOnly}: ${readSummaryCount(summary, 'domainHintOnly', 'DOMAIN_HINT_ONLY')}`);
+    lines.push(`- ${labels.missingEvidence}: ${readSummaryCount(summary, 'missingEvidence', 'MISSING_EVIDENCE')}`);
+    lines.push(`- ${labels.conflictingEvidence}: ${readSummaryCount(summary, 'conflictingEvidence', 'CONFLICTING_EVIDENCE')}`);
+    lines.push(`- ${labels.reviewRequired}: ${readSummaryCount(summary, 'reviewRequired', 'REVIEW_REQUIRED')}`);
+    lines.push(`- ${labels.derivedArtifact}: ${readSummaryCount(summary, 'derivedArtifact', 'DERIVED_ARTIFACT')}`);
+  } else {
+    const linkAnnotations = traceabilityLinks.map(link => ({
+      link,
+      annotation: EvidenceQualityAnnotator.annotate(link as any)
+    }));
+
+    const summary = EvidenceQualityAnnotator.summarize(linkAnnotations.map((item) => item.annotation));
+    lines.push(`- ${labels.strongSourceEvidence}: ${summary.strongSourceEvidence}`);
+    lines.push(`- ${labels.weakSourceEvidence}: ${summary.weakSourceEvidence}`);
+    lines.push(`- ${labels.inferredFromStructure}: ${summary.inferredFromStructure}`);
+    lines.push(`- ${labels.domainHintOnly}: ${summary.domainHintOnly}`);
+    lines.push(`- ${labels.missingEvidence}: ${summary.missingEvidence}`);
+    lines.push(`- ${labels.conflictingEvidence}: ${summary.conflictingEvidence}`);
+    lines.push(`- ${labels.reviewRequired}: ${summary.reviewRequired}`);
+    lines.push(`- ${labels.derivedArtifact}: ${summary.derivedArtifact}`);
+  }
+
+  lines.push('');
+  lines.push(`| ${labels.artifact} | ${labels.quality} | ${labels.reason} |`);
+  lines.push('|---|---|---|');
+
+  if (reviewDecisionsSnapshot) {
+    for (const item of reviewDecisionsSnapshot) {
+      lines.push(`| \`${item.artifact}\` | ${item.quality} | ${item.reasons.join(', ')} |`);
+    }
+  } else {
+    const linkAnnotations = traceabilityLinks.map(link => ({
+      link,
+      annotation: EvidenceQualityAnnotator.annotate(link as any)
+    }));
+
+    for (const item of linkAnnotations) {
+      const artifactName = item.link.artifact?.filePath ? `\`${item.link.artifact.filePath}\`` : (item.link.artifact?.name || labels.unknown);
+      lines.push(`| ${artifactName} | ${item.annotation.label} | ${item.annotation.reasons.join(', ')} |`);
+    }
+  }
+  lines.push('');
+
+  return lines;
+}
+
+function readSummaryCount(summary: Record<string, unknown>, ...keys: string[]): number {
+  for (const key of keys) {
+    const value = summary[key];
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+  }
+  return 0;
+}
+

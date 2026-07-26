@@ -5,10 +5,7 @@ import { GetCurrentWorkspaceUseCase } from './application/get-current-workspace.
 import { CURRENT_WORKSPACE_RESOLVERS } from './application/current-workspace.resolver';
 import { DevSingleUserWorkspaceResolver } from './application/dev-single-user-workspace.resolver';
 import { ProjectRepository } from './infrastructure/project.repository';
-import { PrismaModule } from '../prisma/prisma.module';
-import { PrismaService } from '../prisma/prisma.service';
 import { EventLogModule } from '../event-log/event-log.module';
-import { EventLogService } from '../event-log/application/event-log.service';
 import { WorkspaceController } from './api/workspace.controller';
 import { AuthModule } from '../auth/auth.module';
 import { ProjectScopeRepository } from './infrastructure/project-scope.repository';
@@ -20,6 +17,8 @@ import { ListProjectMembersUseCase } from './application/list-project-members.us
 import { UpsertProjectMemberUseCase } from './application/upsert-project-member.usecase';
 import { UpdateProjectMemberUseCase } from './application/update-project-member.usecase';
 import { RemoveProjectMemberUseCase } from './application/remove-project-member.usecase';
+import { PrismaModule, PrismaService, EventLogService } from "@ba-helper/backend-runtime";
+import { PasswordHashService } from '../auth/application/password-hash.service';
 
 @Module({
   imports: [PrismaModule, EventLogModule, AuthModule],
@@ -82,8 +81,9 @@ import { RemoveProjectMemberUseCase } from './application/remove-project-member.
         repo: ProjectRepository,
         permissions: ProjectPermissionService,
         eventLog: EventLogService,
-      ) => new UpsertProjectMemberUseCase(repo, permissions, eventLog),
-      inject: [ProjectRepository, ProjectPermissionService, EventLogService],
+        passwords: PasswordHashService,
+      ) => new UpsertProjectMemberUseCase(repo, permissions, eventLog, passwords),
+      inject: [ProjectRepository, ProjectPermissionService, EventLogService, PasswordHashService],
     },
     {
       provide: UpdateProjectMemberUseCase,

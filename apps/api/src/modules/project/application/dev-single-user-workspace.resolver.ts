@@ -1,11 +1,11 @@
 import type { RequestUser } from '@ba-helper/contracts';
-import type { EventLogService } from '../../event-log/application/event-log.service';
 import { mapGlobalRoleToProjectRole } from '../domain/project-membership.policy';
 import type { ProjectRepository } from '../infrastructure/project.repository';
 import type {
   CurrentWorkspaceResolver,
   ResolvedWorkspace,
 } from './current-workspace.resolver';
+import { EventLogService } from "@ba-helper/backend-runtime";
 
 const DEFAULT_PROJECT_NAME = 'Default Project';
 

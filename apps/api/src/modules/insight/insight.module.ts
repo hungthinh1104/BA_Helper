@@ -2,12 +2,9 @@ import { Module } from '@nestjs/common';
 import { InsightController } from './api/insight.controller';
 import { ListInsightsUseCase } from './application/list-insights.usecase';
 import { ReviewInsightUseCase } from './application/review-insight.usecase';
-import { InsightRepository } from './infrastructure/insight.repository';
-import { PrismaModule } from '../prisma/prisma.module';
-import { PrismaService } from '../prisma/prisma.service';
 import { EventLogModule } from '../event-log/event-log.module';
-import { EventLogService } from '../event-log/application/event-log.service';
 import { ProjectModule } from '../project/project.module';
+import { PrismaModule, PrismaService, InsightRepository, EventLogService } from "@ba-helper/backend-runtime";
 
 @Module({
   imports: [PrismaModule, EventLogModule, ProjectModule],

@@ -20,7 +20,7 @@ export type ImpactEvidenceCollectionResult = {
   artifactByKey: Map<string, PersistedArtifact>;
   evidenceById: Map<string, EvidenceRecord>;
   evidenceByKey: Map<string, EvidenceRecord>;
-  traceabilityLinks: Array<{ id: string; artifactId: string }>;
+  traceabilityLinks: Array<{ id: string; artifactId: string; linkBasis: 'EVIDENCED' | 'INFERRED'; confidence: number }>;
   retrievalMetadata: {
     strategy: string;
     maxArtifacts: number;
@@ -31,6 +31,7 @@ export type ImpactEvidenceCollectionResult = {
 
 export type ImpactAiReasoningResult = {
   insightInputs: InsightInputParams[];
+  insightEvidenceMap: Array<{ insightKey: string; artifactKeys: string[] }>;
   evidencedInsightMap: Array<{ insightKey: string; artifactKeys: string[] }>;
   resolvableEvidencedInsightKeys: Set<string>;
   llmMetadata: LlmCallMetadata | null;
@@ -38,4 +39,5 @@ export type ImpactAiReasoningResult = {
   evidenceTruncated: boolean;
   evidenceCandidatesLength: number;
   promptVersion: string;
+  executiveSummary?: string;
 };

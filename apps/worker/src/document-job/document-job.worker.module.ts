@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { DocumentApplicationModule } from '../../../api/src/modules/document/document-application.module';
+import { DocumentRuntimeModule } from '@ba-helper/backend-runtime/document';
 import { DocumentJobWorker } from './document-job.processor';
 
 @Module({
-  imports: [DocumentApplicationModule],
+  imports: [DocumentRuntimeModule],
   providers: [DocumentJobWorker],
 })
 export class DocumentJobWorkerModule {}

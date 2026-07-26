@@ -1,13 +1,9 @@
 import { Injectable } from "@nestjs/common";
 
 import { CreateImpactAnalysisUseCase } from './create-impact-analysis.usecase';
-import type { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
 import type { RequirementRepository } from '../../../requirement/infrastructure/requirement.repository';
-import type { PrismaService } from '../../../prisma/prisma.service';
-import type { EventLogService } from '../../../event-log/application/event-log.service';
-import type { QueueService } from '../../../queue/queue.service';
 import { Prisma } from '@prisma/client';
-import { DomainPackRegistry } from '../../../domain-pack/application/domain-pack.registry';
+import { DomainPackRegistry, PrismaService, ImpactAnalysisRepository, QueueService, EventLogService } from '@ba-helper/backend-runtime';
 
 describe('CreateImpactAnalysisUseCase', () => {
   let useCase: CreateImpactAnalysisUseCase;
@@ -279,6 +275,48 @@ describe('CreateImpactAnalysisUseCase', () => {
     );
   });
 
+  it('persists canonical resolved domain pack metadata for uppercase explicit alias', async () => {
+    mockValidState();
+
+    await useCase.execute({
+      ...validParams,
+      domainPackId: 'HEALTHCARE',
+    });
+
+    expect(impactRepo.createQueued).toHaveBeenCalledWith(
+      expect.objectContaining({
+        selectedDomainPack: expect.objectContaining({
+          requestedDomainPackId: 'healthcare',
+          resolvedDomainPackId: 'healthcare',
+          resolvedDomainPackVersion: '0.1.0',
+          resolvedDomainPackStatus: 'PARTIAL',
+          selectedBy: 'EXPLICIT',
+        }),
+      }),
+    );
+  });
+
+  it('persists canonical resolved domain pack metadata for versioned explicit alias', async () => {
+    mockValidState();
+
+    await useCase.execute({
+      ...validParams,
+      domainPackId: 'healthcare@0.1.0',
+    });
+
+    expect(impactRepo.createQueued).toHaveBeenCalledWith(
+      expect.objectContaining({
+        selectedDomainPack: expect.objectContaining({
+          requestedDomainPackId: 'healthcare',
+          resolvedDomainPackId: 'healthcare',
+          resolvedDomainPackVersion: '0.1.0',
+          resolvedDomainPackStatus: 'PARTIAL',
+          selectedBy: 'EXPLICIT',
+        }),
+      }),
+    );
+  });
+
   it('rejects unsupported explicit domain pack version with supported canonical ids', async () => {
     mockValidState();
 
@@ -337,6 +375,39 @@ describe('CreateImpactAnalysisUseCase', () => {
       domainPackSelectedBy: 'EXPLICIT',
       domainPackResolvedAt: new Date('2026-06-27T00:00:00.000Z'),
       metadata: null,
+    } as any);
+    impactRepo.findByComposite.mockResolvedValue({
+      id: 'existing-1',
+      requirementRevisionId: 'rev-1',
+      snapshotId: 'snap-1',
+      sourceTargetId: 'target-1',
+      requestKey: 'req-key',
+    } as any);
+
+    await expect(useCase.execute({
+      ...validParams,
+      domainPackId: 'healthcare',
+    })).resolves.toMatchObject({ id: 'existing-1' });
+  });
+
+  it('requestKey comparison accepts equivalent legacy casing and alias domain pack metadata', async () => {
+    mockValidState();
+    impactRepo.findByRequestKey.mockResolvedValue({
+      id: 'existing-1',
+      requirementRevisionId: 'rev-1',
+      snapshotId: 'snap-1',
+      sourceTargetId: 'target-1',
+      requestKey: 'req-key',
+      metadata: {
+        selectedDomainPack: {
+          requestedDomainPackId: 'HEALTHCARE@0.1.0',
+          resolvedDomainPackId: 'HEALTHCARE@0.1.0',
+          resolvedDomainPackVersion: '0.1.0',
+          resolvedDomainPackStatus: 'partial',
+          selectedBy: 'manual_config',
+          resolvedAt: '2026-06-27T00:00:00.000Z',
+        },
+      },
     } as any);
     impactRepo.findByComposite.mockResolvedValue({
       id: 'existing-1',

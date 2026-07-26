@@ -6,7 +6,7 @@ import {
   buildLineageDiffSummary,
   evidenceDiffUnavailableMessage,
   getLineageDiffStatus,
-  hasMaterialDiff,
+  hasMaterialLineageChanges,
   isNoBaselineDiffError,
 } from "./lineage-diff-view-model"
 
@@ -140,7 +140,7 @@ describe("lineage diff view model", () => {
   it("reports material artifact unknown and QA diff without evidence inference", () => {
     const diff = makeDiff()
 
-    expect(hasMaterialDiff(diff)).toBe(true)
+    expect(hasMaterialLineageChanges(diff)).toBe(true)
     expect(diff.addedArtifacts).toHaveLength(1)
     expect(diff.removedArtifacts).toHaveLength(1)
     expect(diff.resolvedUnknowns).toHaveLength(1)

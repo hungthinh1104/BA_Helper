@@ -1,11 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { MultiRepoAnalysisRunRepository } from '../../infrastructure/multi-repo-analysis-run.repository';
 import { MultiRepoImpactMatrixResponse, MultiRepoImpactMatrixRow } from '@ba-helper/contracts';
 import {
   deriveChildBlockingReason,
   isChildAnalysisStale,
 } from './multi-repo-merged-report-state';
+import { PrismaService, MultiRepoAnalysisRunRepository } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class BuildMultiRepoImpactMatrixReadModel {

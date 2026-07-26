@@ -1,6 +1,6 @@
-import { EvaluationContextAdapter, RESEARCH_FINDINGS_PATH, SAME_SUBSET_COMPARISON_PATH } from './evaluation-context.adapter';
 import * as fs from 'fs';
 import * as path from 'path';
+import { EvaluationContextAdapter, RESEARCH_FINDINGS_PATH, SAME_SUBSET_COMPARISON_PATH } from "@ba-helper/backend-runtime";
 
 jest.mock('fs');
 

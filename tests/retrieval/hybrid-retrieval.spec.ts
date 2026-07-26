@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { HybridRetrievalService } from '../../apps/api/src/modules/retrieval/application/hybrid-retrieval.service';
-import { FakeEmbeddingProvider } from '../../apps/api/src/modules/embedding/infrastructure/fake-embedding.provider';
-import { DomainPackRegistry } from '../../apps/api/src/modules/domain-pack/application/domain-pack.registry';
+import { HybridRetrievalService } from '@ba-helper/backend-runtime';
+import { FakeEmbeddingProvider } from '@ba-helper/backend-runtime';
+import { DomainPackRegistry } from '@ba-helper/backend-runtime';
 
 describe('HybridRetrievalService', () => {
   let service: HybridRetrievalService;

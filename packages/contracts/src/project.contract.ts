@@ -49,6 +49,8 @@ export const projectMemberListResponseSchema = z.object({
 
 export const projectMemberUpsertRequestSchema = z.object({
 	email: z.string().trim().email().max(254),
+	name: z.string().trim().min(1).max(120).optional(),
+	initialPassword: z.string().min(12).max(128).optional(),
 	role: projectRoleSchema,
 });
 

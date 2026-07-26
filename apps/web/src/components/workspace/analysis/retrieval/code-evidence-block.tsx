@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback } from "react"
+import { useTranslations } from "next-intl"
 import { Code2, Copy, Check } from "lucide-react"
 
 import { RetrievalSignalBadge, RetrievalReason, RetrievalDebugPanel } from "@/components/workspace/analysis/retrieval/retrieval-signals"
@@ -57,6 +58,7 @@ interface CodeEvidenceBlockProps {
 }
 
 export function CodeEvidenceBlock({ evidence, index, total }: CodeEvidenceBlockProps) {
+  const t = useTranslations("workspace")
   const [copied, setCopied] = useState(false)
   const lines = evidence.excerpt.split('\n')
   const startLine = evidence.startLine ?? 1
@@ -70,7 +72,7 @@ export function CodeEvidenceBlock({ evidence, index, total }: CodeEvidenceBlockP
   }, [evidence.excerpt])
 
   // Build display path: show last 2 segments for readability
-  const fullPath = evidence.filePath ?? "Unknown Source"
+  const fullPath = evidence.filePath ?? t("unknownSource")
   const pathParts = fullPath.split('/')
   const displayPath = pathParts.length > 2
     ? pathParts.slice(-2).join('/')
@@ -108,11 +110,11 @@ export function CodeEvidenceBlock({ evidence, index, total }: CodeEvidenceBlockP
           <button
             onClick={handleCopy}
             className="flex items-center gap-1 h-6 px-2 rounded-md border border-border/60 bg-surface-muted text-[10px] font-medium text-muted-foreground hover:text-foreground hover:border-border transition-all opacity-0 group-hover/block:opacity-100"
-            title="Copy code"
+            title={t("copyCode")}
           >
             {copied
-              ? <><Check className="w-3 h-3 text-success" /><span className="text-success">Copied</span></>
-              : <><Copy className="w-3 h-3" />Copy</>
+              ? <><Check className="w-3 h-3 text-success" /><span className="text-success">{t("copied")}</span></>
+              : <><Copy className="w-3 h-3" />{t("copy")}</>
             }
           </button>
         </div>

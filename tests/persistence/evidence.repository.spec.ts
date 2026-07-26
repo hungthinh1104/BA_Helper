@@ -1,4 +1,4 @@
-import { EvidenceRepository } from '../../apps/api/src/modules/evidence/infrastructure/evidence.repository';
+import { EvidenceRepository } from "@ba-helper/backend-runtime";
 
 describe('EvidenceRepository', () => {
   it('uses createMany with skipDuplicates for upsertMany', async () => {

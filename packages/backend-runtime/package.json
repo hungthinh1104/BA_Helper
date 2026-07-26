@@ -1,0 +1,62 @@
+{
+  "name": "@ba-helper/backend-runtime",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/backend-runtime/src/index.js",
+  "types": "dist/backend-runtime/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/backend-runtime/src/index.d.ts",
+      "default": "./dist/backend-runtime/src/index.js"
+    },
+    "./ai": {
+      "types": "./dist/backend-runtime/src/ai/index.d.ts",
+      "default": "./dist/backend-runtime/src/ai/index.js"
+    },
+    "./document": {
+      "types": "./dist/backend-runtime/src/document/index.d.ts",
+      "default": "./dist/backend-runtime/src/document/index.js"
+    },
+    "./embedding": {
+      "types": "./dist/backend-runtime/src/embedding/index.d.ts",
+      "default": "./dist/backend-runtime/src/embedding/index.js"
+    },
+    "./prisma": {
+      "types": "./dist/backend-runtime/src/prisma/index.d.ts",
+      "default": "./dist/backend-runtime/src/prisma/index.js"
+    },
+    "./queue": {
+      "types": "./dist/backend-runtime/src/queue/index.d.ts",
+      "default": "./dist/backend-runtime/src/queue/index.js"
+    },
+    "./scanner": {
+      "types": "./dist/backend-runtime/src/scanner/index.d.ts",
+      "default": "./dist/backend-runtime/src/scanner/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ba-helper/application": "workspace:*",
+    "@ba-helper/analyzer": "workspace:*",
+    "@ba-helper/contracts": "workspace:*",
+    "@nestjs/bullmq": "^11.0.4",
+    "bullmq": "^5.7.8",
+    "@anthropic-ai/sdk": "^0.99.0",
+    "@google/generative-ai": "^0.24.1",
+    "@prisma/adapter-pg": "7.8.0",
+    "openai": "^6.39.0",
+    "pg": "8.16.3",
+    "@ba-helper/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@nestjs/common": "^11.1.24",
+    "@nestjs/core": "^11.1.24",
+    "@prisma/client": "7.8.0",
+    "zod": "^3.23.8",
+    "typescript": "^5.4.5"
+  }
+}

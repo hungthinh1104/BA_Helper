@@ -2,7 +2,7 @@
   "name": "@ba-helper/api",
   "version": "0.1.0",
   "private": true,
-  "main": "dist/main.js",
+  "main": "dist/apps/api/src/main.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "dotenv -e ../../.env -- pnpm exec ts-node -r tsconfig-paths/register --project tsconfig.json src/main.ts",
@@ -17,12 +17,11 @@
     "prisma:studio": "dotenv -e ../../.env -- prisma studio"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.99.0",
     "@ba-helper/analyzer": "workspace:*",
     "@ba-helper/application": "workspace:*",
+    "@ba-helper/backend-runtime": "workspace:*",
     "@ba-helper/contracts": "workspace:*",
-    "@google/generative-ai": "^0.24.1",
-    "@nestjs/bullmq": "11.0.4",
+    "@ba-helper/shared": "workspace:*",
     "@nestjs/common": "11.1.24",
     "@nestjs/core": "11.1.24",
     "@nestjs/jwt": "^11.0.2",
@@ -34,9 +33,6 @@
     "@scalar/nestjs-api-reference": "^1.1.19",
     "@types/pdfkit": "^0.17.6",
     "@types/sanitize-html": "^2.16.1",
-    "bullmq": "5.77.6",
-    "ioredis": "5.11.0",
-    "openai": "^6.39.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pdfkit": "^0.18.0",

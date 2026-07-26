@@ -3,6 +3,7 @@ import { EvaluationAdapter } from '../evaluation-runner';
 import { EvaluationCase, NormalizedEvaluationResult } from '../evaluation-types';
 import { SafeFileEnumerator } from '../../../packages/analyzer/src/scanner/core/safe-file-enumerator';
 import { scanProject } from '../../../packages/analyzer/src/scanner/scanner';
+import { buildGraph } from '../../../packages/analyzer/src/graph/graph';
 import type { ScanArtifact } from '../../../packages/analyzer/src/scanner/scanner.types';
 
 export class LexicalRetrievalEvaluationAdapter implements EvaluationAdapter {
@@ -87,7 +88,17 @@ export class LexicalRetrievalEvaluationAdapter implements EvaluationAdapter {
 
     // 5. Top N
     const topN = 20;
-    const results = scoredArtifacts.filter(s => s.score > 0).slice(0, topN);
+    const connectedArtifactKeys = new Set(
+      buildGraph(scanResult).edges.flatMap((edge) => [edge.from, edge.to]),
+    );
+    const results = scoredArtifacts
+      .filter((scored) => scored.score > 0)
+      .filter(
+        (scored) =>
+          scored.universalKind !== 'DOMAIN_SERVICE' ||
+          connectedArtifactKeys.has(scored.artifact.stableId),
+      )
+      .slice(0, topN);
 
     // 6. Map to Normalized Result
     const evidenceByArtifactKey: Record<string, string[]> = {};

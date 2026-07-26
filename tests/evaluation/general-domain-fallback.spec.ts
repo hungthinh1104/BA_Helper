@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { domainPackAppliedDiagnosticPayloadSchema } from '@ba-helper/contracts';
-import { DomainPackRegistry } from '../../apps/api/src/modules/domain-pack/application/domain-pack.registry';
-import { BookingDomainPack } from '../../apps/api/src/modules/domain-pack/packs/booking.v0.1.0';
+import { DomainPackRegistry } from '@ba-helper/backend-runtime';
+import { BookingDomainPack } from '@ba-helper/backend-runtime';
 import { EvaluationAdapter, EvaluationRunner } from './evaluation-runner';
 import { EvaluationCase, NormalizedEvaluationResult, evaluationCaseSchema } from './evaluation-types';
 import { generalFallbackEvaluationCases } from './cases';

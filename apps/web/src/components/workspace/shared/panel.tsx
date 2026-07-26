@@ -1,43 +1,6 @@
 import { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 
-export function WorkspacePanel({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <div className={cn("flex flex-col border border-border/60 rounded-xl bg-surface shadow-sm overflow-hidden", className)}>
-      {children}
-    </div>
-  )
-}
-
-export function WorkspacePanelSection({ 
-  title, 
-  description, 
-  children, 
-  className,
-  isLast = false
-}: { 
-  title: string; 
-  description?: string; 
-  children: ReactNode; 
-  className?: string;
-  isLast?: boolean;
-}) {
-  return (
-    <>
-      <div className={cn("p-6 sm:p-8", className)}>
-        <div className="mb-8">
-          <h2 className="text-sm font-semibold text-foreground tracking-tight">{title}</h2>
-          {description && <p className="mt-1 text-sm leading-6 text-muted-foreground">{description}</p>}
-        </div>
-        <div className="flex flex-col gap-6">
-          {children}
-        </div>
-      </div>
-      {!isLast && <div className="h-px bg-border/50 w-full" />}
-    </>
-  )
-}
-
 export function WorkspaceProperty({ 
   label, 
   description, 

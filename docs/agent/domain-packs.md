@@ -165,6 +165,19 @@ canonical metadata on the analysis as first-class fields:
 The worker and report renderer use this persisted resolved metadata. They must
 not reinterpret a transient queue payload or frontend label.
 
+Runtime projection precedence is:
+
+```text
+first-class resolved domain-pack columns
+-> legacy metadata.selectedDomainPack / metadata.domainPack
+-> null / fallback selection path
+```
+
+Public read models must project canonical casing: domain ids are lowercase
+without version suffixes, versions stay explicit, status values use
+`STABLE / PARTIAL / EXPERIMENTAL / FALLBACK`, and selection source values use
+`EXPLICIT / REPOSITORY_PROFILE / FALLBACK`.
+
 For compatibility, analysis metadata may also contain `selectedDomainPack`,
 `domainPack`, and `reportProvenance`, but those JSON fields are not the primary
 source of truth for new records. New runtime paths read first-class columns

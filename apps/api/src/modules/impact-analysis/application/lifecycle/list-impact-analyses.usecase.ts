@@ -1,6 +1,6 @@
-import type { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
 import type { ProjectRepository } from '../../../project/infrastructure/project.repository';
 import { AppError } from '@ba-helper/shared';
+import { ImpactAnalysisRepository } from "@ba-helper/backend-runtime";
 
 export class ListImpactAnalysesUseCase {
   constructor(

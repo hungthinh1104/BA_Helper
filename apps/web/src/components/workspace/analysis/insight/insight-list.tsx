@@ -1,5 +1,7 @@
 import { InsightListResponse } from "@ba-helper/contracts"
+import { useTranslations } from "next-intl"
 import { InsightCard } from "@/components/workspace/analysis/insight/insight-card"
+import { DenseCard } from "@/components/workspace/shared/dense-card"
 
 type Insight = InsightListResponse["items"][number]
 
@@ -11,16 +13,17 @@ interface InsightListProps {
   onSelect?: (insight: Insight) => void
 }
 
-export function InsightList({ insights, title, emptyMessage = "No items found", selectedInsightId, onSelect }: InsightListProps) {
+export function InsightList({ insights, title, emptyMessage, selectedInsightId, onSelect }: InsightListProps) {
+  const t = useTranslations("workspace")
   return (
     <div className="flex flex-col">
       {title && <h3 className="text-sm font-semibold mb-3 px-1">{title}</h3>}
       {insights.length === 0 ? (
-        <div className="text-sm text-muted-foreground italic p-4 border border-dashed rounded-lg text-center">
-          {emptyMessage}
-        </div>
+        <DenseCard variant="dashed" className="text-sm text-muted-foreground italic p-4 text-center">
+          {emptyMessage ?? t("noItemsFound")}
+        </DenseCard>
       ) : (
-        <div className="flex flex-col border border-border/60 rounded-lg overflow-hidden bg-surface">
+        <DenseCard>
           {insights.map(insight => (
             <InsightCard 
               key={insight.id} 
@@ -29,7 +32,7 @@ export function InsightList({ insights, title, emptyMessage = "No items found", 
               onClick={onSelect}
             />
           ))}
-        </div>
+        </DenseCard>
       )}
     </div>
   )

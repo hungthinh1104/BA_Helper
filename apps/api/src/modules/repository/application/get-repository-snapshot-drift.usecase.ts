@@ -1,11 +1,11 @@
 import { AppError } from '@ba-helper/shared';
-import type { PrismaService } from '../../prisma/prisma.service';
 import type {
   DriftStatus,
   DriftArtifactSample,
   DriftChangedArtifactSample,
   RepositorySnapshotDriftResponse,
 } from '@ba-helper/contracts';
+import { PrismaService } from "@ba-helper/backend-runtime";
 
 export class GetRepositorySnapshotDriftUseCase {
   constructor(private readonly prisma: PrismaService) {}

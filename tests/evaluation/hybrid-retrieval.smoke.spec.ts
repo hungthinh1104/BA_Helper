@@ -1,14 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '../../apps/api/src/app.module';
-import { PrismaService } from '../../apps/api/src/modules/prisma/prisma.service';
-import { HybridRetrievalService } from '../../apps/api/src/modules/retrieval/application/hybrid-retrieval.service';
-import { EmbeddingChunkRepository } from '../../apps/api/src/modules/embedding/infrastructure/embedding-chunk.repository';
+import { HybridRetrievalService, PrismaService } from '@ba-helper/backend-runtime';
+import { EmbeddingChunkRepository } from '@ba-helper/backend-runtime';
 import { resetDatabase } from '../../apps/api/test/e2e/helpers/reset-db';
 import { prepareIsolatedTestEnv } from '../../apps/api/test/e2e/helpers/prepare-test-env';
 import { ALL_EVALUATION_CASES } from './cases';
 import { EvaluationRunner } from './evaluation-runner';
 import { HybridRetrievalEvaluationAdapter } from './adapters/hybrid-retrieval.adapter';
-import { DomainPackRegistry } from '../../apps/api/src/modules/domain-pack/application/domain-pack.registry';
+import { DomainPackRegistry } from '@ba-helper/backend-runtime';
 // @ts-ignore
 import * as dotenv from 'dotenv';
 import { resolve } from 'node:path';

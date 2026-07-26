@@ -4,8 +4,8 @@ import request from 'supertest';
 import * as crypto from 'crypto';
 import { createTestApp } from './helpers/test-app';
 import { resetDatabase } from './helpers/reset-db';
-import { PrismaService } from '../../src/modules/prisma/prisma.service';
 import { currentWorkspaceResponseSchema } from '@ba-helper/contracts';
+import { PrismaService } from "@ba-helper/backend-runtime";
 
 describe('Workspace Resolution (E2E)', () => {
   let app: INestApplication;

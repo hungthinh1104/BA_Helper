@@ -128,12 +128,15 @@ LLM prompts, raw provider responses, or unbounded diagnostic blobs.
 
 ## Public Beta Rate Limit Boundary
 
-The API applies an in-process public beta rate limit to expensive or sensitive
+The API applies a Redis-backed, cross-process public beta rate limit to login
+and expensive or sensitive
 mutating/download actions such as dev-login, scan creation, requirement/revision
 creation, impact analysis creation, report finalization, and report export.
 The limiter scopes by authenticated user and project when project context is
 available, and by anonymous network scope for explicitly rate-limited public
-endpoints such as dev-login.
+endpoints such as login and dev-login. Redis keys use a hash of the request
+scope, method, project, and route; raw email addresses, IP addresses, request
+bodies, and credentials are not stored in limiter keys.
 
 Rules:
 
@@ -141,7 +144,8 @@ Rules:
 Health/bootstrap/read-model GET endpoints remain exempt.
 Rate-limit errors use stable code RATE_LIMITED and do not include raw request bodies.
 Rate limiting is an abuse guard, not a replacement for production tenant isolation.
-Production deploys should override PUBLIC_BETA_RATE_LIMIT_MAX and
+Production requires Redis availability for the limiter and queue runtime.
+Deploys should override PUBLIC_BETA_RATE_LIMIT_MAX and
 PUBLIC_BETA_RATE_LIMIT_WINDOW_MS according to environment capacity.
 ```
 

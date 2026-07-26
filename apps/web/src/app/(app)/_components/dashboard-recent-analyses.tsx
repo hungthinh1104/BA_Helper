@@ -1,11 +1,13 @@
 import { useMemo } from "react"
 import Link from "next/link"
 import { Activity, ChevronRight, FileText } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { NewAnalysisDialog } from "@/components/workspace/analysis/new-analysis/new-analysis-dialog"
 import { DataCard, EmptyState, SectionHeader } from "@/components/workspace/shared/primitives"
 import { AnalysisStatusBadge } from "@/components/workspace/shared/status-badges"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useLocalizedHref } from "@/i18n/navigation"
 import type { ImpactAnalysisListResponse } from "@ba-helper/contracts"
 
 interface DashboardRecentAnalysesProps {
@@ -21,6 +23,9 @@ export function DashboardRecentAnalyses({
   runningAnalyses,
   canRun,
 }: DashboardRecentAnalysesProps) {
+  const t = useTranslations("dashboard")
+  const href = useLocalizedHref()
+
   const sortedAnalyses = useMemo(() => {
     return [...analyses].sort((a, b) => {
       const rank = (status: string) => {
@@ -37,11 +42,11 @@ export function DashboardRecentAnalyses({
   return (
     <section className="space-y-4">
       <SectionHeader
-        title="Recent Analyses"
-        description="Prioritize review blockers, failed runs, and active processing before browsing completed history."
+        title={t("recentAnalyses")}
+        description={t("recentAnalysesDescription")}
         action={
-          <Link href="/analyses" className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground">
-            View all <ChevronRight className="ml-1 h-4 w-4" />
+          <Link href={href("/analyses")} className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground">
+            {t("viewAll")} <ChevronRight className="ml-1 h-4 w-4" />
           </Link>
         }
       />
@@ -54,13 +59,13 @@ export function DashboardRecentAnalyses({
           </div>
         ) : analyses.length === 0 ? (
           <EmptyState
-            title="No analyses yet"
-            description="Run one impact analysis to populate this queue with evidence-backed impacts, risks, and review work."
+            title={t("noAnalyses")}
+            description={t("noAnalysesDescription")}
             icon={<Activity className="h-5 w-5" />}
             action={
               canRun ? (
                 <NewAnalysisDialog>
-                  <Button size="sm" variant="outline" className="shadow-none">Start Analysis</Button>
+                  <Button size="sm" variant="outline" className="shadow-none">{t("startAnalysis")}</Button>
                 </NewAnalysisDialog>
               ) : undefined
             }
@@ -75,7 +80,7 @@ export function DashboardRecentAnalyses({
               return (
                 <div key={analysis.id} className="flex items-center justify-between gap-4 px-4 py-4">
                   <div className="min-w-0 space-y-2">
-                    <Link href={`/analyses/${analysis.id}`} className="block truncate text-sm font-semibold text-foreground hover:underline">
+                    <Link href={href(`/analyses/${analysis.id}`)} className="block truncate text-sm font-semibold text-foreground hover:underline">
                       {analysis.requirementRevisionTitle}
                     </Link>
                     <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
@@ -86,33 +91,33 @@ export function DashboardRecentAnalyses({
                     </div>
                     {isFailed ? (
                       <p className="text-sm text-danger">
-                        {analysis.error?.message ?? "Analysis failed. Open the detail page for the error code and rerun guidance."}
+                        {analysis.error?.message ?? t("analysisFailedDetail")}
                       </p>
                     ) : runningAnalyses.some((item) => item.id === analysis.id) ? (
                       <p className="text-sm text-muted-foreground">
-                        The backend is still processing evidence for this analysis.
+                        {t("backendProcessing")}
                       </p>
                     ) : null}
                   </div>
 
                   <div className="shrink-0">
                     {isReview ? (
-                      <Link href={`/analyses/${analysis.id}?tab=review-queue`}>
+                      <Link href={href(`/analyses/${analysis.id}?view=review`)}>
                         <Button size="sm" className="border border-warning/20 bg-warning/10 text-warning shadow-none hover:bg-warning/20">
-                          Review Queue
+                          {t("reviewQueue")}
                         </Button>
                       </Link>
                     ) : isCompleted ? (
-                      <Link href={`/reports?analysisId=${analysis.id}`}>
+                      <Link href={href(`/reports?analysisId=${analysis.id}`)}>
                         <Button size="sm" variant="outline" className="border-success/20 bg-success/10 text-success shadow-none hover:bg-success/20">
                           <FileText className="mr-1.5 h-4 w-4" />
-                          Report
+                          {t("report")}
                         </Button>
                       </Link>
                     ) : (
-                      <Link href={`/analyses/${analysis.id}`}>
+                      <Link href={href(`/analyses/${analysis.id}`)}>
                         <Button size="sm" variant="outline" className="shadow-none">
-                          Open
+                          {t("open")}
                         </Button>
                       </Link>
                     )}

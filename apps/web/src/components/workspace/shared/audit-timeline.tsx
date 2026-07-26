@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { Bot, CheckCircle2, CircleDashed, XCircle, User, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DenseCard } from "@/components/workspace/shared/dense-card";
 
 export interface AuditTimelineProps {
   title: string;
@@ -70,7 +71,7 @@ export function AuditTimeline({
   return (
     <div className={cn("flex flex-col gap-4", className)}>
       <h3 className="text-[13px] font-semibold text-foreground uppercase tracking-wider">{title}</h3>
-      <div className="flex flex-col border border-border/40 rounded-xl bg-surface/30 overflow-hidden">
+      <DenseCard>
         {events.map((event, index) => {
           const isFailed = event.eventType.includes('FAILED');
           const label = EVENT_LABELS[event.eventType] || event.eventType;
@@ -148,7 +149,7 @@ export function AuditTimeline({
             </div>
           );
         })}
-      </div>
+      </DenseCard>
     </div>
   );
 }

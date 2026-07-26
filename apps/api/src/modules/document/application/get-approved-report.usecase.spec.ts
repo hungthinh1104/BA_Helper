@@ -1,6 +1,6 @@
-import type { DocumentRepository } from '../infrastructure/document.repository';
 import { GetApprovedReportUseCase } from './get-approved-report.usecase';
 import type { ApprovedReportProjectionService } from './approved-report-projection.service';
+import { DocumentRepository } from "@ba-helper/backend-runtime";
 
 describe('GetApprovedReportUseCase', () => {
   let useCase: GetApprovedReportUseCase;

@@ -2,7 +2,8 @@ import type { TestingModule } from '@nestjs/testing';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import { AppModule } from '../../../src/app.module';
-import { AppExceptionFilter } from '../../../src/shared/app-exception.filter';
+import { configureApp } from '../../../src/bootstrap/configure-app';
+import { getRuntimeConfig } from '../../../src/bootstrap/runtime-config';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
@@ -21,7 +22,7 @@ export async function createTestApp(): Promise<INestApplication> {
 
   const app = moduleFixture.createNestApplication();
   app.useLogger(false);
-  app.useGlobalFilters(new AppExceptionFilter());
+  configureApp(app, getRuntimeConfig());
   await app.init();
   return app;
 }

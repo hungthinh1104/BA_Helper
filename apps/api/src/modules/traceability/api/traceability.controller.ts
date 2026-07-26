@@ -67,6 +67,25 @@ export class TraceabilityController {
     return { ok: true };
   }
 
+  @Post('/traceability-links/:linkId/review')
+  async review(
+    @Param('linkId') linkId: string,
+    @Body() body: unknown,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    await this.permissions.assertPermissionForTraceabilityLink(
+      actor,
+      linkId,
+      'review:write',
+    );
+    const input = traceabilityReviewRequestSchema.parse(body);
+    await this.reviewTraceability.execute({ 
+      linkId, 
+      reviewStatus: input.reviewStatus,
+    });
+    return { ok: true };
+  }
+
   @Put('/traceability-links/:linkId/review-decision')
   async updateReviewDecision(
     @Param('linkId') linkId: string,

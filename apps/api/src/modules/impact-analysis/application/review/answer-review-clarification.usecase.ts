@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { ReviewClarificationRepository } from '../../infrastructure/review-clarification.repository';
 import { AppError } from '@ba-helper/shared';
 import { RequestUser } from '@ba-helper/contracts';
+import { ReviewClarificationRepository } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class AnswerReviewClarificationUseCase {

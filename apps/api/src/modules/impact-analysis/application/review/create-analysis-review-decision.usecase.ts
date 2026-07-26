@@ -1,18 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
-import { ReviewDecisionRepository } from '../../infrastructure/review-decision.repository';
-import { GetImpactDiffUseCase } from '../queries/get-impact-diff.usecase';
-import { DocumentRepository } from '../../../document/infrastructure/document.repository';
-import { InsightRepository } from '../../../insight/infrastructure/insight.repository';
-import { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
-import { GraphRepository } from '../../../graph/infrastructure/graph.repository';
-import { ReviewNoteRepository } from '../../infrastructure/review-note.repository';
-import { ClarificationRepository } from '../../../clarification/infrastructure/clarification.repository';
 import { CreateReviewedReportSnapshotUseCase } from '../../../document/application/commands/create-reviewed-report-snapshot.usecase';
 import { EnqueueDocumentJobUseCase } from '../../../document/application/commands/enqueue-document-job.usecase';
 import { AppError } from '@ba-helper/shared';
 import { AnalysisReviewDecisionValue } from '@prisma/client';
 import { RequestUser } from '@ba-helper/contracts';
+import { ImpactAnalysisRepository, ReviewDecisionRepository, DocumentRepository, InsightRepository, TraceabilityRepository, GraphRepository, ReviewNoteRepository, GetImpactDiffUseCase, ClarificationRepository } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class CreateAnalysisReviewDecisionUseCase {

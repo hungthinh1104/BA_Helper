@@ -1,5 +1,5 @@
 import type { ProjectRole } from '@ba-helper/contracts';
-import type { PrismaService } from '../../prisma/prisma.service';
+import type { PrismaService } from "@ba-helper/backend-runtime";
 
 export class ProjectRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -91,6 +91,21 @@ export class ProjectRepository {
   async findUserByEmail(email: string) {
     return this.prisma.user.findUnique({
       where: { email },
+    });
+  }
+
+  async createUserWithPassword(input: {
+    email: string;
+    name?: string;
+    passwordHash: string;
+  }) {
+    return this.prisma.user.create({
+      data: {
+        email: input.email,
+        name: input.name ?? input.email.split('@')[0],
+        passwordHash: input.passwordHash,
+        role: 'REVIEWER',
+      },
     });
   }
 

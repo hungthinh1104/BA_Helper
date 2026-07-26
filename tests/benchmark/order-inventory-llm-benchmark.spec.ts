@@ -1,17 +1,9 @@
 import { resolve } from 'node:path';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { scanFixture, buildGraph, selectEvidenceCandidates } from '../../packages/analyzer/src';
-import { FakeLlmProvider } from '../../apps/api/src/modules/ai/infrastructure/fake-ai.provider';
-import { DeepseekLlmProvider } from '../../apps/api/src/modules/ai/infrastructure/deepseek.provider';
-import { OpenAiLlmProvider } from '../../apps/api/src/modules/ai/infrastructure/openai.provider';
-import { AnthropicLlmProvider } from '../../apps/api/src/modules/ai/infrastructure/anthropic.provider';
-import { GoogleLlmProvider } from '../../apps/api/src/modules/ai/infrastructure/google.provider';
-import { AiConfig } from '../../apps/api/src/modules/ai/domain/ai-config';
-import { LlmProvider } from '../../apps/api/src/modules/ai/domain/llm-provider.interface';
 import { evaluateLlmImpact } from './llm-impact-evaluator';
-import { renderPrompt } from '../../apps/api/src/modules/ai/domain/prompt-registry';
-import { EvidencePackFormatter } from '../../apps/api/src/modules/ai/application/evidence-pack.formatter';
 import { z } from 'zod';
+import { FakeLlmProvider, DeepseekLlmProvider, OpenAiLlmProvider, AnthropicLlmProvider, GoogleLlmProvider, AiConfig, LlmProvider, renderPrompt, EvidencePackFormatter } from "@ba-helper/backend-runtime";
 
 const ImpactAnalysisSchema = z.object({
   insights: z.array(z.any()).optional(),

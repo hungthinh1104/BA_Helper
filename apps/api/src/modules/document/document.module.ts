@@ -6,16 +6,13 @@ import { ApprovedReportProjectionService } from './application/approved-report-p
 import { MarkdownExportRenderer } from './application/markdown-export.renderer';
 import { PdfExportRenderer } from './application/pdf-export.renderer';
 import { EventLogModule } from '../event-log/event-log.module';
-import { EventLogService } from '../event-log/application/event-log.service';
 import { DocumentApplicationModule } from './document-application.module';
-import { DocumentRepository } from './infrastructure/document.repository';
-
-import { PrismaModule } from '../prisma/prisma.module';
 import { ProjectModule } from '../project/project.module';
 import { TraceabilityModule } from '../traceability/traceability.module';
 import { InsightModule } from '../insight/insight.module';
 import { GraphModule } from '../graph/graph.module';
 import { ClarificationModule } from '../clarification/clarification.module';
+import { PrismaModule, DocumentRepository, EventLogService } from "@ba-helper/backend-runtime";
 
 @Module({
   imports: [

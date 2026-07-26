@@ -3,12 +3,12 @@ import PDFDocument from 'pdfkit';
 import sanitizeHtml from 'sanitize-html';
 import { AppError } from '@ba-helper/shared';
 import { sanitizeReportFilename } from '../domain/sanitize-filename.util';
-import { ApprovedReportMetadata } from '../domain/approved-report-metadata';
 import { DocumentExportRenderer, RenderedExport } from './document-export.renderer';
 import { PDF_REPORT_THEME } from './pdf-report-theme';
 import { PageMargins } from './pdf-renderer.types';
 import { wrapLongTokens } from './pdf-renderer-sanitizer';
 import { PdfMarkdownRenderer } from './pdf-markdown.renderer';
+import { ApprovedReportMetadata } from "@ba-helper/backend-runtime";
 
 const MAX_MARKDOWN_CHARS = 120_000;
 const RENDER_TIMEOUT_MS = 8_000;

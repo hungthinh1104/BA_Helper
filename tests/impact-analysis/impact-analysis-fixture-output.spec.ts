@@ -6,8 +6,7 @@ import {
   ImpactDiagnosticPropagationStep,
   ImpactAiReasoningStep,
 } from '@ba-helper/application';
-import { FakeLlmProvider } from '../../apps/api/src/modules/ai/infrastructure/fake-ai.provider';
-import { DomainPackRegistry } from '../../apps/api/src/modules/domain-pack/application/domain-pack.registry';
+import { DomainPackRegistry, FakeLlmProvider } from '@ba-helper/backend-runtime';
 
 class StubImpactRepo {
   findById = async () => ({
@@ -114,22 +113,36 @@ class StubArtifactRepo {
 }
 
 class StubEvidenceRepo {
-  items: Array<{ id: string; artifactId: string | null; provenanceKey: string }> = [];
+  items: Array<{ id: string; artifactId: string | null; provenanceKey: string; excerpt: string }> = [];
 
-  upsertMany = async (items: Array<{ provenanceKey: string; artifactId: string | null }>) => {
-    this.items = items.map((item, index) => ({
+  listByArtifactIds = async (params: { artifactIds: string[] }) => {
+    this.items = params.artifactIds.map((artifactId, index) => ({
       id: `e-${index + 1}`,
-      artifactId: item.artifactId ?? null,
-      provenanceKey: item.provenanceKey,
+      artifactId,
+      provenanceKey: `snapshot:snap-1:artifact:${artifactId}`,
+      excerpt: artifactId,
     }));
     return this.items;
   };
 }
 
 class StubInsightRepo {
-  created: Array<{ id: string; insightKey: string; certainty: string; description: string }> = [];
+  created: Array<{
+    id: string;
+    insightKey: string;
+    insightType: string;
+    certainty: string;
+    description: string;
+    metadata?: Record<string, unknown>;
+  }> = [];
 
-  upsertMany = async (items: Array<{ insightKey: string; certainty: string; description: string }>) => {
+  upsertMany = async (items: Array<{
+    insightKey: string;
+    insightType: string;
+    certainty: string;
+    description: string;
+    metadata?: Record<string, unknown>;
+  }>) => {
     const mapped = items.map((item, index) => ({
       ...item,
       id: `ins-${index + 1}`,
@@ -203,6 +216,10 @@ describe('impact analysis fixture output', () => {
     const expectedImpact = JSON.parse(readFileSync(expectedImpactPath, 'utf-8')) as {
       insights: Array<{ insightKey: string; certainty: string; description: string }>;
       traceability: Array<{ artifactKey: string; linkType: string; linkBasis: string }>;
+      questions: Array<{ insightKey: string; certainty: string }>;
+      acceptanceCriteria: Array<{ insightKey: string; certainty: string }>;
+      qaScenarios: Array<{ insightKey: string; certainty: string }>;
+      risks: Array<{ insightKey: string; certainty: string; severity: string }>;
     };
     const expectedUnknowns = JSON.parse(readFileSync(expectedUnknownsPath, 'utf-8')) as {
       unknowns: Array<{ insightKey: string; description: string; reasoning: string }>;
@@ -234,7 +251,11 @@ describe('impact analysis fixture output', () => {
     await useCase.execute({ analysisId: 'analysis-1', domain: 'BOOKING' });
 
     const claims = insightRepo.created.filter((item) => item.certainty === 'EVIDENCED');
-    const unknowns = insightRepo.created.filter((item) => item.certainty === 'UNKNOWN');
+    const unknowns = insightRepo.created.filter((item) => item.insightType === 'UNKNOWN');
+    const questions = insightRepo.created.filter((item) => item.insightType === 'QUESTION');
+    const acceptanceCriteria = insightRepo.created.filter((item) => item.insightType === 'ACCEPTANCE_CRITERIA');
+    const qaScenarios = insightRepo.created.filter((item) => item.insightType === 'QA_SCENARIO');
+    const risks = insightRepo.created.filter((item) => item.metadata?.kind === 'risk');
 
     expect(claims.map((item) => ({
       insightKey: item.insightKey,
@@ -258,6 +279,33 @@ describe('impact analysis fixture output', () => {
       reasoning: expectedUnknowns.unknowns.find((unknown) => unknown.insightKey === item.insightKey)?.reasoning,
     }))).toEqual(expectedUnknowns.unknowns);
 
+    expect(questions.map((item) => ({
+      insightKey: item.insightKey,
+      certainty: item.certainty,
+    }))).toEqual(expectedImpact.questions);
+
+    expect(acceptanceCriteria.map((item) => ({
+      insightKey: item.insightKey,
+      certainty: item.certainty,
+    }))).toEqual(expectedImpact.acceptanceCriteria);
+
+    expect(qaScenarios.map((item) => ({
+      insightKey: item.insightKey,
+      certainty: item.certainty,
+    }))).toEqual(expectedImpact.qaScenarios);
+
+    for (const scenario of qaScenarios) {
+      expect(scenario.description).toEqual(expect.stringContaining('Given:'));
+      expect(scenario.description).toEqual(expect.stringContaining('When:'));
+      expect(scenario.description).toEqual(expect.stringContaining('Then:'));
+    }
+
+    expect(risks.map((item) => ({
+      insightKey: item.insightKey,
+      certainty: item.certainty,
+      severity: item.metadata?.severity,
+    }))).toEqual(expectedImpact.risks);
+
     // INVARIANT: no EVIDENCED insight without evidence link
     const evidencedInsights = insightRepo.created.filter(i => (i as any).certainty === 'EVIDENCED');
     for (const insight of evidencedInsights) {
@@ -270,5 +318,11 @@ describe('impact analysis fixture output', () => {
     expect((refundPercentageInsight as any)?.certainty).toBe('UNKNOWN');
     const refundLinks = insightRepo.evidenceLinks.find(l => l.insightId === (refundPercentageInsight as any)?.id);
     expect(refundLinks?.evidenceIds).toBeUndefined(); // or empty, but in fake provider it shouldn't be linked
+
+    const qaInsight = insightRepo.created.find(
+      (item) => item.insightKey === 'qa:cancel-paid-booking-refunds-payment',
+    );
+    const qaLinks = insightRepo.evidenceLinks.find((link) => link.insightId === qaInsight?.id);
+    expect(qaLinks?.evidenceIds.length).toBeGreaterThan(0);
   });
 });

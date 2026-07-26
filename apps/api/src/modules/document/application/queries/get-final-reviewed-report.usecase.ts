@@ -4,11 +4,8 @@ import { AppError } from '@ba-helper/shared';
 import { GetReviewCompletionUseCase } from '../../../traceability/application/get-review-completion.usecase';
 import { GetLatestReviewedReportSnapshotUseCase } from './get-latest-reviewed-report-snapshot.usecase';
 import { FinalReviewedReportResponse } from '@ba-helper/contracts';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { ReviewedSnapshotReportContextAdapter } from '../render/reviewed-snapshot-report-context.adapter';
-import { MarkdownImpactReportBuilder } from '../render/markdown-impact-report.builder';
-import { DEFAULT_REPORT_LOCALE, ReportLocale } from '../render/report-localization';
-import { buildReportReviewCoverageSummaryFromSnapshot } from '../report-review-coverage.summary';
+import { ApprovedReportContextReader } from './approved-report-context.reader';
+import { PrismaService, DEFAULT_REPORT_LOCALE, ReportLocale, buildReportReviewCoverageSummaryFromSnapshot } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class GetFinalReviewedReportUseCase {
@@ -16,8 +13,7 @@ export class GetFinalReviewedReportUseCase {
     private readonly getReviewCompletion: GetReviewCompletionUseCase,
     private readonly getLatestSnapshot: GetLatestReviewedReportSnapshotUseCase,
     private readonly prisma: PrismaService,
-    private readonly contextAdapter: ReviewedSnapshotReportContextAdapter,
-    private readonly reportBuilder: MarkdownImpactReportBuilder,
+    private readonly contextReader: ApprovedReportContextReader,
   ) {}
 
   async execute(
@@ -69,13 +65,45 @@ export class GetFinalReviewedReportUseCase {
     analysisId: string;
     approvedDocumentId: string | null;
     markdown: string | null;
+    reviewDecisionsSnapshot: any;
+    evidenceQualitySummarySnapshot: any;
   }, locale: ReportLocale) {
     const defaultMarkdown = await this.resolveDefaultSnapshotMarkdown(snapshot);
     if (locale === DEFAULT_REPORT_LOCALE) {
       return defaultMarkdown;
     }
 
-    return this.renderLocalizedSnapshotMarkdown(snapshot, locale);
+    if (!snapshot.approvedDocumentId) {
+      throw new AppError('LOCALIZED_REPORT_NOT_READY', 'The canonical report has not been approved yet.');
+    }
+
+    const localized = await this.prisma.localizedReportArtifact.findUnique({
+      where: {
+        sourceDocumentId_locale: {
+          sourceDocumentId: snapshot.approvedDocumentId,
+          locale,
+        }
+      }
+    });
+
+    if (!localized) {
+      throw new AppError('LOCALIZED_REPORT_NOT_READY', `Localized report for ${locale} is not ready yet.`);
+    }
+
+    if (localized.localizationStatus === 'FAILED') {
+      throw new AppError('LOCALIZED_REPORT_FAILED', `Localization failed for ${locale}. Please retry.`);
+    }
+
+    if (localized.localizationStatus !== 'COMPLETED' || !localized.contentMarkdown) {
+      throw new AppError('LOCALIZED_REPORT_NOT_READY', `Localization for ${locale} is still in progress.`);
+    }
+
+    const { sourceContentHash: currentHash } = await this.contextReader.readContext(snapshot.analysisId);
+    if (localized.sourceContentHash !== currentHash) {
+      throw new AppError('LOCALIZED_REPORT_OUT_OF_SYNC', `Localized report for ${locale} is out of sync. Please regenerate.`);
+    }
+
+    return localized.contentMarkdown;
   }
 
   private async resolveDefaultSnapshotMarkdown(snapshot: {
@@ -129,25 +157,4 @@ export class GetFinalReviewedReportUseCase {
     );
   }
 
-  private async renderLocalizedSnapshotMarkdown(snapshot: {
-    id: string;
-    analysisId: string;
-  }, locale: ReportLocale) {
-    const analysis = await this.prisma.impactAnalysis.findUnique({
-      where: { id: snapshot.analysisId },
-      include: {
-        snapshot: { include: { repository: true, profile: true } },
-        sourceTarget: true,
-        requirementRevision: { include: { requirement: true } },
-        insights: true,
-      },
-    });
-
-    if (!analysis) {
-      throw new AppError('IMPACT_ANALYSIS_NOT_FOUND', 'Impact analysis not found.');
-    }
-
-    const context = await this.contextAdapter.buildContext(snapshot, analysis, locale);
-    return this.reportBuilder.build(context);
-  }
 }

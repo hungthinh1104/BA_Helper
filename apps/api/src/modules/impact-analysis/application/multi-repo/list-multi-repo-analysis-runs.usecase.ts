@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { MultiRepoAnalysisRunRepository } from '../../infrastructure/multi-repo-analysis-run.repository';
+import { MultiRepoAnalysisRunRepository } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class ListMultiRepoAnalysisRunsUseCase {

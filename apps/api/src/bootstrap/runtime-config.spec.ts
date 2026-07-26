@@ -1,5 +1,6 @@
 import {
   getRuntimeConfig,
+  isWeakSecret,
   parseCorsAllowedOrigins,
   validateRuntimeConfig,
   resolveAuthMode,
@@ -104,6 +105,34 @@ describe('runtime-config', () => {
       const config = getRuntimeConfig(env);
       expect(() => validateRuntimeConfig(config, env)).not.toThrow();
       expect(config.enableDevLogin).toBe(true);
+    });
+  });
+
+  describe('isWeakSecret', () => {
+    it.each([
+      undefined,
+      '',
+      '   ',
+      'dev-only-local-jwt-secret',
+      'dev-only-local-nextauth-secret',
+      'redis://redis:6379',
+      // .env.production.example placeholders — a copy-paste deploy must fail fast.
+      'replace-with-db-password',
+      'replace-with-at-least-32-random-characters',
+      'replace-with-redis-password',
+      'replace-me',
+      'postgresql://ba_helper:replace-with-db-password@postgres:5432/ba_helper',
+      'redis://:replace-with-redis-password@redis:6379',
+    ])('treats %p as weak', (value) => {
+      expect(isWeakSecret(value as string | undefined)).toBe(true);
+    });
+
+    it.each([
+      'S0me-Str0ng-Random-Secret-9f3a1c8e7b2d',
+      'postgresql://ba_helper:9f3a1c8e7b2d@db.internal:5432/ba_helper',
+      'redis://:9f3a1c8e7b2d@redis.internal:6379',
+    ])('treats %p as strong', (value) => {
+      expect(isWeakSecret(value)).toBe(false);
     });
   });
 

@@ -1,13 +1,14 @@
 import { createHash } from 'crypto';
 import { Injectable } from '@nestjs/common';
 import { AppError } from '@ba-helper/shared';
-import { PrismaService } from '../../../prisma/prisma.service';
 import { CreateImpactAnalysisUseCase } from '../lifecycle/create-impact-analysis.usecase';
 import { RequirementRepository } from '../../../requirement/infrastructure/requirement.repository';
-import { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
-import { MultiRepoAnalysisRunRepository } from '../../infrastructure/multi-repo-analysis-run.repository';
-import { DomainPackRegistry } from '../../../domain-pack/application/domain-pack.registry';
+import { DomainPackRegistry, PrismaService, ImpactAnalysisRepository, MultiRepoAnalysisRunRepository } from '@ba-helper/backend-runtime';
 import type { ResolvedDomainPackSelection } from '@ba-helper/contracts';
+import {
+  readResolvedDomainPackSelection,
+  sameResolvedDomainPackSelection,
+} from '@ba-helper/application';
 
 type PlannedRepositoryAnalysis = {
   repositoryId: string;
@@ -209,95 +210,15 @@ function existingRunMatchesDomainPack(
     return true;
   }
 
-  const runSelection = readSelectedDomainPack(run);
+  const runSelection = readResolvedDomainPackSelection(run);
   if (runSelection) {
-    return sameResolvedDomainPack(runSelection, explicitDomainPack);
+    return sameResolvedDomainPackSelection(runSelection, explicitDomainPack);
   }
 
   return run.analyses.every((analysis) => {
-    const selected = readSelectedDomainPack(analysis);
-    return sameResolvedDomainPack(selected, explicitDomainPack);
+    const selected = readResolvedDomainPackSelection(analysis);
+    return sameResolvedDomainPackSelection(selected, explicitDomainPack);
   });
-}
-
-function sameResolvedDomainPack(
-  selected: ResolvedDomainPackSelection | null,
-  explicitDomainPack: ResolvedDomainPackSelection,
-) {
-    return (
-      selected?.resolvedDomainPackId === explicitDomainPack.resolvedDomainPackId &&
-      selected?.resolvedDomainPackVersion === explicitDomainPack.resolvedDomainPackVersion &&
-      selected?.resolvedDomainPackStatus === explicitDomainPack.resolvedDomainPackStatus &&
-      selected?.selectedBy === explicitDomainPack.selectedBy
-    );
-}
-
-function readSelectedDomainPack(record: {
-  requestedDomainPackId?: string | null;
-  resolvedDomainPackId?: string | null;
-  resolvedDomainPackVersion?: string | null;
-  resolvedDomainPackStatus?: string | null;
-  domainPackSelectedBy?: string | null;
-  domainPackResolvedAt?: Date | string | null;
-  metadata?: unknown;
-}): ResolvedDomainPackSelection | null {
-  if (
-    typeof record.resolvedDomainPackId === 'string' &&
-    typeof record.resolvedDomainPackVersion === 'string' &&
-    isDomainPackStatus(record.resolvedDomainPackStatus) &&
-    isDomainPackSelectedBy(record.domainPackSelectedBy)
-  ) {
-    return {
-      requestedDomainPackId: record.requestedDomainPackId ?? null,
-      resolvedDomainPackId: record.resolvedDomainPackId,
-      resolvedDomainPackVersion: record.resolvedDomainPackVersion,
-      resolvedDomainPackStatus: record.resolvedDomainPackStatus,
-      selectedBy: record.domainPackSelectedBy,
-      resolvedAt: normalizeResolvedAt(record.domainPackResolvedAt),
-    };
-  }
-
-  const { metadata } = record;
-  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
-    return null;
-  }
-
-  const selected = (metadata as Record<string, unknown>).selectedDomainPack;
-  if (!selected || typeof selected !== 'object' || Array.isArray(selected)) {
-    return null;
-  }
-
-  return selected as ResolvedDomainPackSelection;
-}
-
-function normalizeResolvedAt(value: Date | string | null | undefined): string {
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-  return typeof value === 'string' && value.trim().length > 0
-    ? value
-    : new Date(0).toISOString();
-}
-
-function isDomainPackStatus(
-  value: unknown,
-): value is ResolvedDomainPackSelection['resolvedDomainPackStatus'] {
-  return (
-    value === 'STABLE' ||
-    value === 'PARTIAL' ||
-    value === 'EXPERIMENTAL' ||
-    value === 'FALLBACK'
-  );
-}
-
-function isDomainPackSelectedBy(
-  value: unknown,
-): value is ResolvedDomainPackSelection['selectedBy'] {
-  return (
-    value === 'EXPLICIT' ||
-    value === 'REPOSITORY_PROFILE' ||
-    value === 'FALLBACK'
-  );
 }
 
 function deriveChildRequestKey(batchRequestKey: string, repositoryId: string): string {

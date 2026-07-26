@@ -5,7 +5,7 @@ import type {
   InsightListResponse,
   RepositoryDetailResponse,
   ScanJobResponse,
-  SystemHealthResponse,
+  SystemReadinessResponse,
 } from '@ba-helper/contracts';
 import { publicGitHubSmokeManifest } from './public-github-smoke.manifest';
 import {
@@ -28,7 +28,7 @@ describe('public GitHub smoke helpers', () => {
     projectId: '11111111-1111-4111-8111-111111111111',
   };
 
-  const health: SystemHealthResponse = {
+  const health: SystemReadinessResponse = {
     apiVersion: '0.1.0',
     dependencies: {
       database: 'up',
@@ -36,14 +36,8 @@ describe('public GitHub smoke helpers', () => {
       queue: 'up',
       redis: 'up',
     },
-    operations: {
-      scanJobs: { status: 'up', pending: 0, running: 0, failed: 0 },
-      analysisJobs: { status: 'up', pending: 0, running: 0, failed: 0 },
-      documentJobs: { status: 'up', pending: 0, running: 0, failed: 0 },
-    },
     serverTime: new Date().toISOString(),
     status: 'ok',
-    workspaceMode: 'dev-single-user',
   };
 
   const scanJob: ScanJobResponse = {

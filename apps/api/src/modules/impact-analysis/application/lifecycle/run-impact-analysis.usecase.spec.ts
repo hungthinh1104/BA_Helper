@@ -4,15 +4,9 @@ import {
   ImpactDiagnosticPropagationStep,
   ImpactAiReasoningStep,
 } from '@ba-helper/application';
-import type { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
-import type { ArtifactRepository } from '../../../artifact/infrastructure/artifact.repository';
-import type { EvidenceRepository } from '../../../evidence/infrastructure/evidence.repository';
-import type { InsightRepository } from '../../../insight/infrastructure/insight.repository';
-import type { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
-import type { LlmProvider } from '../../../ai/domain/llm-provider.interface';
-import type { HybridRetrievalService } from '../../../retrieval/application/hybrid-retrieval.service';
+import type { HybridRetrievalService, ImpactAnalysisRepository, ArtifactRepository, EvidenceRepository, InsightRepository, TraceabilityRepository, LlmProvider } from '@ba-helper/backend-runtime';
 import { AppError } from '@ba-helper/shared';
-import type { DomainPackRegistry } from '../../../domain-pack/application/domain-pack.registry';
+import type { DomainPackRegistry } from '@ba-helper/backend-runtime';
 
 describe('RunImpactAnalysisUseCase', () => {
   let useCase: RunImpactAnalysisUseCase;
@@ -37,7 +31,7 @@ describe('RunImpactAnalysisUseCase', () => {
     } as unknown as jest.Mocked<ArtifactRepository>;
 
     evidenceRepo = {
-      upsertMany: jest.fn(),
+      listByArtifactIds: jest.fn(),
     } as unknown as jest.Mocked<EvidenceRepository>;
 
     insightRepo = {
@@ -159,7 +153,7 @@ describe('RunImpactAnalysisUseCase', () => {
     retrievalService.retrieve.mockResolvedValue([
       { artifactKey: 'api:booking.controller', retrievalMethod: 'KEYWORD', score: 0.9, retrievalSignals: ['VECTOR'], suggestion: 'Check cancel' } as any
     ]);
-    evidenceRepo.upsertMany.mockResolvedValue([
+    evidenceRepo.listByArtifactIds.mockResolvedValue([
       { id: 'ev1', artifactId: 'art1', excerpt: 'code' } as any
     ]);
     traceabilityRepo.upsertMany.mockResolvedValue([
@@ -286,7 +280,7 @@ describe('RunImpactAnalysisUseCase', () => {
     impactRepo.findById.mockResolvedValue(analysis as any);
     artifactRepo.listBySnapshot.mockRejectedValue(new Error('stop after selection'));
 
-    await expect(useCase.execute({ analysisId: 'a1' })).rejects.toThrow(
+    await expect(useCase.execute({ analysisId: 'a1', domain: 'booking' })).rejects.toThrow(
       'stop after selection',
     );
 
@@ -301,7 +295,93 @@ describe('RunImpactAnalysisUseCase', () => {
     expect(domainPackRegistry.selectPack).not.toHaveBeenCalled();
   });
 
-  it('downgrades evidenced insights when no persisted evidence can be resolved', async () => {
+  it('uses canonical legacy domain pack metadata when persisted columns are absent', async () => {
+    const analysis = {
+      id: 'a1',
+      status: 'QUEUED',
+      stage: 'WAITING',
+      progress: 0,
+      metadata: {
+        selectedDomainPack: {
+          requestedDomainPackId: 'ECOMMERCE@0.1.0',
+          resolvedDomainPackId: 'ECOMMERCE@0.1.0',
+          resolvedDomainPackVersion: '0.1.0',
+          resolvedDomainPackStatus: 'partial',
+          selectedBy: 'manual_config',
+          resolvedAt: '2026-06-27T00:00:00.000Z',
+        },
+      },
+      snapshot: {
+        id: 's1',
+        repositoryId: 'r1',
+        analyzerVersion: '1.0',
+        diagnostics: [],
+        repository: { projectId: 'p1' },
+        profile: { domain: 'BOOKING' },
+      },
+      requirementRevision: {
+        rawText: 'cancel order',
+        requirement: { projectId: 'p1' },
+      },
+    };
+    impactRepo.findById.mockResolvedValue(analysis as any);
+    artifactRepo.listBySnapshot.mockRejectedValue(new Error('stop after selection'));
+
+    await expect(useCase.execute({ analysisId: 'a1' })).rejects.toThrow(
+      'stop after selection',
+    );
+
+    expect(domainPackRegistry.selectResolvedPack).toHaveBeenCalledWith({
+      requestedDomainPackId: 'ecommerce',
+      resolvedDomainPackId: 'ecommerce',
+      resolvedDomainPackVersion: '0.1.0',
+      resolvedDomainPackStatus: 'PARTIAL',
+      selectedBy: 'EXPLICIT',
+      resolvedAt: '2026-06-27T00:00:00.000Z',
+    });
+    expect(domainPackRegistry.selectPack).not.toHaveBeenCalled();
+  });
+
+  it('reselects domain pack when only unresolved default fallback columns exist', async () => {
+    const analysis = {
+      id: 'a1',
+      status: 'QUEUED',
+      stage: 'WAITING',
+      progress: 0,
+      requestedDomainPackId: null,
+      resolvedDomainPackId: 'general',
+      resolvedDomainPackVersion: '0.0.0',
+      resolvedDomainPackStatus: 'FALLBACK',
+      domainPackSelectedBy: 'FALLBACK',
+      metadata: null,
+      snapshot: {
+        id: 's1',
+        repositoryId: 'r1',
+        analyzerVersion: '1.0',
+        diagnostics: [],
+        repository: { projectId: 'p1' },
+        profile: { domain: 'BOOKING' },
+      },
+      requirementRevision: {
+        rawText: 'cancel booking',
+        requirement: { projectId: 'p1' },
+      },
+    };
+    impactRepo.findById.mockResolvedValue(analysis as any);
+    artifactRepo.listBySnapshot.mockRejectedValue(new Error('stop after selection'));
+
+    await expect(useCase.execute({ analysisId: 'a1' })).rejects.toThrow(
+      'stop after selection',
+    );
+
+    expect(domainPackRegistry.selectResolvedPack).not.toHaveBeenCalled();
+    expect(domainPackRegistry.selectPack).toHaveBeenCalledWith({
+      manualPackId: undefined,
+      repositoryProfileDomain: 'BOOKING',
+    });
+  });
+
+  it('downgrades evidenced insights to unknown when no persisted evidence can be resolved', async () => {
     const analysis = {
       id: 'a1',
       status: 'QUEUED',
@@ -315,7 +395,7 @@ describe('RunImpactAnalysisUseCase', () => {
     retrievalService.retrieve.mockResolvedValue([
       { artifactKey: 'file1', retrievalMethod: 'KEYWORD', score: 0.9 } as any,
     ]);
-    evidenceRepo.upsertMany.mockResolvedValue([
+    evidenceRepo.listByArtifactIds.mockResolvedValue([
       { id: 'ev1', artifactId: 'art1', excerpt: 'code' } as any,
     ]);
     traceabilityRepo.upsertMany.mockResolvedValue([{ id: 'tl1', artifactId: 'art1' } as any]);
@@ -340,7 +420,7 @@ describe('RunImpactAnalysisUseCase', () => {
     } as any);
 
     insightRepo.upsertMany.mockResolvedValue([
-      { id: 'in1', insightKey: 'i-no-evidence', certainty: 'INFERRED' } as any,
+      { id: 'in1', insightKey: 'i-no-evidence', certainty: 'UNKNOWN' } as any,
     ]);
     insightRepo.linkEvidence.mockResolvedValue([] as any);
 
@@ -350,7 +430,7 @@ describe('RunImpactAnalysisUseCase', () => {
       expect.arrayContaining([
         expect.objectContaining({
           insightKey: 'i-no-evidence',
-          certainty: 'INFERRED',
+          certainty: 'UNKNOWN',
           metadata: expect.objectContaining({
             evidenceIntegrity:
               'EVIDENCED_DOWNGRADED_NO_PERSISTED_EVIDENCE',

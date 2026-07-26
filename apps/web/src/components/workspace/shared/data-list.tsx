@@ -1,12 +1,13 @@
 import { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
+import { DenseCard } from "./dense-card"
 
 export function DataList({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("flex flex-col border border-border/60 rounded-xl bg-surface shadow-sm relative", className)}>
+    <DenseCard className={cn("relative shadow-sm", className)}>
       {children}
-    </div>
+    </DenseCard>
   )
 }
 
@@ -45,7 +46,7 @@ export function DataListRow({
       <Link 
         href={href}
         className={cn(
-          "grid items-center gap-4 px-6 py-3 transition-colors group relative border-b border-border last:border-0 hover:bg-surface-soft/80 cursor-pointer max-sm:flex max-sm:flex-col max-sm:items-start max-sm:gap-2 max-sm:px-4 max-sm:py-4",
+          "grid items-center gap-4 px-6 py-3 transition-colors group relative border-b border-border last:border-0 hover:bg-surface-soft cursor-pointer max-sm:flex max-sm:flex-col max-sm:items-start max-sm:gap-2 max-sm:px-4 max-sm:py-4",
           className
         )}
         style={{ gridTemplateColumns: gridCols }}
@@ -58,7 +59,7 @@ export function DataListRow({
   return (
     <div 
       className={cn(
-        "grid items-center gap-4 px-6 py-3 transition-colors group relative border-b border-border last:border-0 hover:bg-surface-soft/40 max-sm:flex max-sm:flex-col max-sm:items-start max-sm:gap-2 max-sm:px-4 max-sm:py-4",
+        "grid items-center gap-4 px-6 py-3 transition-colors group relative border-b border-border last:border-0 hover:bg-surface-soft max-sm:flex max-sm:flex-col max-sm:items-start max-sm:gap-2 max-sm:px-4 max-sm:py-4",
         className
       )}
       style={{ gridTemplateColumns: gridCols }}

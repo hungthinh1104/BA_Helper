@@ -1,4 +1,4 @@
-import type { TraceabilityRepository } from '../infrastructure/traceability.repository';
+import { TraceabilityRepository } from "@ba-helper/backend-runtime";
 
 export class ListTraceabilityUseCase {
   constructor(private readonly repository: TraceabilityRepository) {}

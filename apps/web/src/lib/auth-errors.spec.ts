@@ -11,6 +11,7 @@ describe("auth-errors", () => {
   it("returns explicit login messages", () => {
     expect(getAuthErrorMessage("DEV_LOGIN_DISABLED")).toContain("ENABLE_DEV_LOGIN=true")
     expect(getAuthErrorMessage("API_UNREACHABLE")).toContain("Cannot reach the API server")
+    expect(getAuthErrorMessage("UNAUTHORIZED")).toBe("Sign-in was rejected. Check the email and password.")
     expect(getAuthErrorMessage("UNKNOWN_AUTH_ERROR")).toContain("Sign-in failed")
   })
 })

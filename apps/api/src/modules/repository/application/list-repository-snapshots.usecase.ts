@@ -1,5 +1,5 @@
-import type { PrismaService } from '../../prisma/prisma.service';
 import type { RepositorySnapshotListResponse } from '@ba-helper/contracts';
+import { PrismaService } from "@ba-helper/backend-runtime";
 
 export class ListRepositorySnapshotsUseCase {
   constructor(private readonly prisma: PrismaService) {}

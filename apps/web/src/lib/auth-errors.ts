@@ -30,7 +30,7 @@ export function getAuthErrorMessage(code: AuthErrorCode): string {
     case "INVALID_API_URL":
       return "NEXT_PUBLIC_API_URL is invalid. Fix the frontend environment configuration."
     case "UNAUTHORIZED":
-      return "Sign-in was rejected. Check the email, selected role, and dev-login settings."
+      return "Sign-in was rejected. Check the email and password."
     default:
       return "Sign-in failed. Please try again."
   }

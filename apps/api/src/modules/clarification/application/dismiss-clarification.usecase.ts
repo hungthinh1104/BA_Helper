@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { ClarificationRepository } from '../infrastructure/clarification.repository';
-import { ImpactAnalysisRepository } from '../../impact-analysis/infrastructure/impact-analysis.repository';
 import { AppError } from '@ba-helper/shared';
+import { ImpactAnalysisRepository, ClarificationRepository } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class DismissClarificationUseCase {

@@ -70,8 +70,6 @@ import request from 'supertest';
 import * as crypto from 'crypto';
 import { createTestApp } from './helpers/test-app';
 import { resetDatabase } from './helpers/reset-db';
-import { PrismaService } from '../../src/modules/prisma/prisma.service';
-import { RunScanJobUseCase } from '../../src/modules/scanner/application/run-scan-job.usecase';
 import {
   projectCreateResponseSchema,
   repositoryCreateResponseSchema,
@@ -79,6 +77,8 @@ import {
   scanJobResponseSchema,
 } from '@ba-helper/contracts';
 import { grantProjectMembership } from './helpers/grant-project-membership';
+import { PrismaService } from "@ba-helper/backend-runtime";
+import { RunScanJobUseCase } from "@ba-helper/application";
 
 const analyzer = jest.requireMock('@ba-helper/analyzer') as {
   GitHubUrlValidator: { validate: jest.Mock };

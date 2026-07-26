@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useLocale, useTranslations } from "next-intl"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -25,6 +26,8 @@ export function MergedReportReviewPanel({
   isSubmitting,
   onSubmitReview,
 }: MergedReportReviewPanelProps) {
+  const t = useTranslations("multiRepo")
+  const locale = useLocale()
   const [decision, setDecision] = useState<"ACCEPTED" | "REJECTED" | "NEEDS_MORE_CLARIFICATION" | null>(null)
   const [note, setNote] = useState("")
 
@@ -44,22 +47,22 @@ export function MergedReportReviewPanel({
     <section className="mb-6 rounded-xl border border-border/50 bg-surface-muted/20 p-4">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">Merged Report Review</h2>
+          <h2 className="text-sm font-semibold text-foreground">{t("reviewPanelTitle")}</h2>
           <p className="text-[12px] text-muted-foreground">
-            Append-only decision history for the approved merged report snapshot.
+            {t("reviewPanelDescription")}
           </p>
         </div>
         {!isStale && latestReviewedDecision && (
           <div className="text-right text-[12px] text-muted-foreground">
-            <div>Latest decision by {latestReviewedDecision.reviewedBy}</div>
-            <div>{new Date(latestReviewedDecision.createdAt).toLocaleString("en-US")}</div>
+            <div>{t("latestDecisionBy", { reviewedBy: latestReviewedDecision.reviewedBy })}</div>
+            <div>{new Date(latestReviewedDecision.createdAt).toLocaleString(locale)}</div>
           </div>
         )}
       </div>
 
       {isStale && (
         <div className="mb-4 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-[12px] text-warning">
-          Review submission is blocked while the approved merged report is stale. Refresh and approve the snapshot again first.
+          {t("staleReviewBlocked")}
         </div>
       )}
 
@@ -67,7 +70,7 @@ export function MergedReportReviewPanel({
         {reviewDecisionsLoading && <Skeleton className="h-16 w-full" />}
         {!reviewDecisionsLoading && reviewDecisions.length === 0 && (
           <div className="rounded-lg border border-dashed border-border/60 px-3 py-4 text-[12px] text-muted-foreground">
-            No merged report review decisions yet.
+            {t("noReviewDecisions")}
           </div>
         )}
         {reviewDecisions.map((item) => (
@@ -84,8 +87,8 @@ export function MergedReportReviewPanel({
               >
                 {item.decision}
               </Badge>
-              <span className="text-muted-foreground">by {item.reviewedBy}</span>
-              <span className="text-muted-foreground">{new Date(item.createdAt).toLocaleString("en-US")}</span>
+              <span className="text-muted-foreground">{t("byReviewer", { reviewedBy: item.reviewedBy })}</span>
+              <span className="text-muted-foreground">{new Date(item.createdAt).toLocaleString(locale)}</span>
             </div>
             {item.note && (
               <p className="text-[13px] text-foreground whitespace-pre-wrap">{item.note}</p>
@@ -97,9 +100,9 @@ export function MergedReportReviewPanel({
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="flex flex-wrap gap-2">
           {[
-            { value: "ACCEPTED", label: "Accept", icon: ShieldCheck },
-            { value: "REJECTED", label: "Reject", icon: XCircle },
-            { value: "NEEDS_MORE_CLARIFICATION", label: "Needs Clarification", icon: MessageSquareWarning },
+            { value: "ACCEPTED", label: t("accept"), icon: ShieldCheck },
+            { value: "REJECTED", label: t("reject"), icon: XCircle },
+            { value: "NEEDS_MORE_CLARIFICATION", label: t("needsClarificationAction"), icon: MessageSquareWarning },
           ].map((option) => {
             const Icon = option.icon
             const selected = decision === option.value
@@ -122,7 +125,7 @@ export function MergedReportReviewPanel({
         <Textarea
           value={note}
           onChange={(event) => setNote(event.target.value)}
-          placeholder="Optional review note"
+          placeholder={t("optionalReviewNote")}
           maxLength={2000}
           disabled={!canReview || isSubmitting}
           className="min-h-24"
@@ -130,8 +133,8 @@ export function MergedReportReviewPanel({
         <div className="flex items-center justify-between gap-3">
           <span className="text-[12px] text-muted-foreground">
             {canReview
-              ? "Review decisions are append-only. Existing entries are preserved."
-              : "Review submission is unavailable for this merged report state or role."}
+              ? t("appendOnlyHint")
+              : t("reviewUnavailable")}
           </span>
           <Button
             type="submit"
@@ -140,13 +143,13 @@ export function MergedReportReviewPanel({
             disabled={!canReview || isSubmitting || !decision}
             title={
               isStale
-                ? "Refresh and approve the merged report again before submitting a new review decision."
+                ? t("refreshBeforeReview")
                 : !decision
-                  ? "Select a decision first."
+                  ? t("selectDecisionFirst")
                   : undefined
             }
           >
-            {isSubmitting ? "Submitting..." : "Submit review"}
+            {isSubmitting ? t("submitting") : t("submitReview")}
           </Button>
         </div>
       </form>

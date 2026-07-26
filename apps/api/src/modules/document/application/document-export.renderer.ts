@@ -1,4 +1,4 @@
-import type { ApprovedReportMetadata } from '../domain/approved-report-metadata';
+import { ApprovedReportMetadata } from "@ba-helper/backend-runtime";
 
 export type ExportFormat = 'markdown' | 'pdf';
 

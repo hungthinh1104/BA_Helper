@@ -13,8 +13,13 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useCurrentWorkspace } from "@/lib/project-context"
 import { canRunAnalysis } from "@/lib/permissions"
+import { useLocale, useTranslations } from "next-intl"
+import { useLocalizedHref } from "@/i18n/navigation"
 
 export default function RequirementDetailsPage({ params }: { params: Promise<{ requirementId: string }> }) {
+  const t = useTranslations("workspaceLists")
+  const locale = useLocale()
+  const localizedHref = useLocalizedHref()
   const { requirementId } = use(params)
   
   const { data: req, isLoading, error } = useRequirementDetail(undefined, requirementId)
@@ -45,7 +50,7 @@ export default function RequirementDetailsPage({ params }: { params: Promise<{ r
     return (
         <div className="flex flex-col items-center py-32 text-muted-foreground">
           <AlertCircle className="w-8 h-8 text-destructive mb-4" />
-          <p className="text-[14px] font-medium text-foreground">Failed to load requirement</p>
+          <p className="text-[14px] font-medium text-foreground">{t("failedToLoadRequirement")}</p>
           <p className="text-[12px]">{error.message}</p>
         </div>
       )
@@ -60,11 +65,11 @@ export default function RequirementDetailsPage({ params }: { params: Promise<{ r
   return (
       <div className="app-page-scroll">
         <div className="max-w-4xl mx-auto w-full flex flex-col gap-8 py-4 pb-20">
-        <BackButton href="/requirements" label="Back to Requirements" className="mb-0" />
+        <BackButton href={localizedHref("/requirements")} label={t("backToRequirements")} className="mb-0" />
 
         <WorkspacePageHeader
           title={latestRev.title}
-          description={`Requirement ID: ${req.id}`}
+          description={`${t("requirementIdLabel")}: ${req.id}`}
           className="mb-0"
         >
           <div className="flex items-center gap-2">
@@ -78,12 +83,12 @@ export default function RequirementDetailsPage({ params }: { params: Promise<{ r
                 <Tooltip>
                   <TooltipTrigger render={<span className="inline-block" />}>
                     <Button size="sm" className="h-8 shadow-none gap-1.5 pointer-events-auto" disabled={!isReady || !canRun}>
-                      <Play className="w-3.5 h-3.5" /> Run Analysis
+                      <Play className="w-3.5 h-3.5" /> {t("runAnalysis")}
                     </Button>
                   </TooltipTrigger>
                   {(!isReady || !canRun) && (
                     <TooltipContent>
-                      {!isReady ? "Requirement is not ready for analysis. Wait for processing to complete." : "Only analysts and admins can start analyses."}
+                      {!isReady ? t("requirementNotReadyTooltip") : t("analystsAdminsOnlyTooltip")}
                     </TooltipContent>
                   )}
                 </Tooltip>
@@ -99,7 +104,7 @@ export default function RequirementDetailsPage({ params }: { params: Promise<{ r
             <div className="flex flex-col gap-4 rounded-xl border border-border/60 bg-surface shadow-sm overflow-hidden">
               <div className="px-5 py-4 border-b border-border/60 flex items-center justify-between bg-surface-muted/30">
                 <div className="flex items-center gap-3">
-                  <h2 className="text-[14px] font-semibold text-foreground">Current Revision</h2>
+                  <h2 className="text-[14px] font-semibold text-foreground">{t("currentRevision")}</h2>
                   <span className="text-[10px] font-semibold bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-primary/20">
                     v{latestRev.versionNumber}
                   </span>
@@ -117,7 +122,7 @@ export default function RequirementDetailsPage({ params }: { params: Promise<{ r
                 <div className="px-5 py-4 bg-destructive/5 border-t border-destructive/10">
                   <div className="flex items-center gap-2 mb-2">
                     <AlertCircle className="w-4 h-4 text-destructive" />
-                    <h3 className="text-[12px] font-semibold text-destructive">Validation Issues</h3>
+                    <h3 className="text-[12px] font-semibold text-destructive">{t("validationIssues")}</h3>
                   </div>
                   <ul className="flex flex-col gap-1.5 pl-6">
                     {latestRev.validationIssues.map((issue: string, i: number) => (
@@ -130,9 +135,9 @@ export default function RequirementDetailsPage({ params }: { params: Promise<{ r
               <div className="px-5 py-3 border-t border-border/60 bg-surface-muted/20 flex items-center justify-between text-[11px] text-muted-foreground">
                 <div className="flex items-center gap-1.5">
                   <FileText className="w-3.5 h-3.5" />
-                  <span>Revision ID: {latestRev.id}</span>
+                  <span>{t("revisionId")}: {latestRev.id}</span>
                 </div>
-                <span>Created on {new Date(latestRev.createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                <span>{t("createdOn", { date: new Date(latestRev.createdAt).toLocaleDateString(locale, { month: "long", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" }) })}</span>
               </div>
             </div>
           </div>
@@ -141,7 +146,7 @@ export default function RequirementDetailsPage({ params }: { params: Promise<{ r
           <div className="md:col-span-1 flex flex-col gap-4">
             <h3 className="text-[13px] font-semibold text-foreground flex items-center gap-2">
               <Clock className="w-4 h-4 text-muted-foreground" />
-              Revision History
+              {t("revisionHistory")}
             </h3>
             
             <div className="flex flex-col">
@@ -170,11 +175,11 @@ export default function RequirementDetailsPage({ params }: { params: Promise<{ r
                       <div className="flex items-center gap-2">
                         <span className="text-[13px] font-semibold text-foreground">v{rev.versionNumber}</span>
                         {isCurrent && (
-                          <span className="text-[9px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded">Current</span>
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded">{t("currentLabel")}</span>
                         )}
                       </div>
                       <span className="text-[11px] text-muted-foreground">
-                        {new Date(rev.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        {new Date(rev.createdAt).toLocaleDateString(locale, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                       </span>
                       <div className="mt-1">
                         <ReadinessStatusBadge status={rev.readinessStatus} />

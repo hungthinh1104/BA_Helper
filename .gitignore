@@ -23,3 +23,6 @@ apps/web/.env.local
 tests/fixtures/huge-repo/
 tests/benchmark/reports/generated/
 docs/runbooks/diagnostics/
+artifacts/evaluation/
+artifacts/product-validation/
+artifacts/release/

@@ -5,7 +5,8 @@ export const queryKeys = {
     members: (projectId: string) => ["workspace", "project-members", projectId] as const,
   },
   system: {
-    health: ["system", "health"] as const,
+    readiness: ["system", "readiness"] as const,
+    operations: ["system", "operations"] as const,
   },
   domainPacks: {
     list: ["domain-packs", "list"] as const,

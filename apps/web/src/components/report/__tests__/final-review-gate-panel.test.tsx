@@ -6,6 +6,27 @@ import { FinalReviewGatePanel } from '../final-review-gate-panel';
 import { server } from '@/test/msw/server';
 import { rest } from 'msw';
 import { toast } from 'sonner';
+import mockMessages from '../../../../messages/en.json';
+
+jest.mock('next-intl', () => ({
+  useLocale: () => 'en',
+  useTranslations: (namespace?: string) => {
+    const messages = mockMessages;
+    const source = namespace
+      ? namespace.split('.').reduce((acc: Record<string, unknown> | undefined, part) => {
+          const next = acc?.[part];
+          return next && typeof next === 'object' ? next as Record<string, unknown> : undefined;
+        }, messages as Record<string, unknown>)
+      : (messages as Record<string, unknown>);
+
+    return (key: string, values?: Record<string, string | number>) => {
+      const raw = source?.[key];
+      const message = typeof raw === 'string' ? raw : key;
+      if (!values) return message;
+      return message.replace(/\{(\w+)\}/g, (_, valueKey: string) => String(values[valueKey] ?? `{${valueKey}}`));
+    };
+  },
+}));
 
 const createTestQueryClient = () => new QueryClient({
   defaultOptions: {
@@ -117,7 +138,7 @@ describe('FinalReviewGatePanel', () => {
   });
 
   it('downloads markdown when download button is clicked', async () => {
-    let finalReportCalled = false;
+    let exportCalled = false;
     
     server.use(
       rest.get('http://localhost:3000/api/v1/impact-analyses/:analysisId/review-completion', (req, res, ctx) => {
@@ -136,31 +157,12 @@ describe('FinalReviewGatePanel', () => {
           })
         );
       }),
-      rest.get('http://localhost:3000/api/v1/impact-analyses/:analysisId/final-reviewed-report', (req, res, ctx) => {
-        finalReportCalled = true;
+      rest.get('http://localhost:3000/api/v1/impact-analyses/:analysisId/approved-report/export.md', (req, res, ctx) => {
+        exportCalled = true;
         return res(
-          ctx.json({
-            analysisId: 'test-analysis-id',
-            snapshotId: 'test-snapshot-id',
-            markdown: '# My Exported Report',
-            createdAt: new Date().toISOString(),
-            reviewCompletion: {
-              analysisId: 'test-analysis-id',
-              isComplete: true,
-              totalLinks: 2,
-              accepted: 2,
-              rejected: 0,
-              needsReview: 0,
-              needsMoreEvidence: 0,
-              unreviewed: 0,
-              hasReviewedSnapshot: true,
-              blockingReasons: [],
-            },
-            reviewDecisionsSnapshot: [],
-            evidenceQualitySummarySnapshot: {},
-            evaluationContextSnapshot: null,
-            createdByUserId: null,
-          })
+          ctx.set('content-type', 'text/markdown;charset=utf-8'),
+          ctx.set('content-disposition', 'attachment; filename="approved-impact-report-test-analysis-id.md"'),
+          ctx.body('# My Exported Report'),
         );
       })
     );
@@ -189,17 +191,17 @@ describe('FinalReviewGatePanel', () => {
     jest.spyOn(document.body, 'removeChild').mockImplementation(() => mockAnchor);
 
     // Initial state: endpoint not called
-    expect(finalReportCalled).toBe(false);
+    expect(exportCalled).toBe(false);
 
     const downloadButton = screen.getByRole('button', { name: /download \.md/i });
     await user.click(downloadButton);
 
     await waitFor(() => {
-      expect(finalReportCalled).toBe(true);
+      expect(exportCalled).toBe(true);
     });
 
     expect(URL.createObjectURL).toHaveBeenCalled();
-    expect(mockAnchor.download).toBe('final-reviewed-report-test-analysis-id-test-snapshot-id.md');
+    expect(mockAnchor.download).toBe('approved-impact-report-test-analysis-id.md');
     expect(mockClick).toHaveBeenCalled();
     expect(URL.revokeObjectURL).toHaveBeenCalled();
     

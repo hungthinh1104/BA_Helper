@@ -1,26 +1,16 @@
 import { useState } from "react"
-import { useLatestReviewedReportSnapshot, useCreateReviewedReportSnapshot } from "@/hooks/api/use-documents"
+import { useLatestReviewedReportSnapshot } from "@/hooks/api/use-documents"
 import { Button } from "@/components/ui/button"
-import { Lock, Loader2, CheckCircle, FileText } from "lucide-react"
+import { Lock, Loader2, FileText } from "lucide-react"
 import { LockedSnapshotViewer } from "./locked-snapshot-viewer"
-import { toast } from "sonner"
+import { useLocale, useTranslations } from "next-intl"
 
 export function ReviewedSnapshotPanel({ analysisId }: { analysisId: string }) {
+  const t = useTranslations("reports")
+  const locale = useLocale()
   const { data: snapshot, isLoading: isLoadingSnapshot } = useLatestReviewedReportSnapshot(analysisId)
-  const createMutation = useCreateReviewedReportSnapshot(analysisId)
   
   const [viewerOpen, setViewerOpen] = useState(false)
-
-  const handleCreateSnapshot = async () => {
-    try {
-      await createMutation.mutateAsync()
-      toast.success("Reviewed snapshot created successfully.")
-    } catch (error) {
-      toast.error("Failed to create snapshot", {
-        description: error instanceof Error ? error.message : "Unknown error",
-      })
-    }
-  }
 
   if (isLoadingSnapshot) {
     return (
@@ -42,12 +32,12 @@ export function ReviewedSnapshotPanel({ analysisId }: { analysisId: string }) {
             </div>
             <div className="flex flex-col gap-1">
               <h3 className="font-semibold text-sm tracking-tight text-foreground">
-                {hasSnapshot ? "Reviewed Snapshot Locked" : "Reviewed Report Snapshot"}
+                {hasSnapshot ? t("reviewedSnapshotLocked") : t("reviewedReportSnapshot")}
               </h3>
               <p className="text-[13px] text-muted-foreground max-w-md">
                 {hasSnapshot 
-                  ? `An audited snapshot of this report and its review decisions was captured on ${new Date(snapshot.createdAt).toLocaleString()}.`
-                  : "Create an immutable snapshot of this report and all current review decisions for audit trails."}
+                  ? t("snapshotCapturedAt", { date: new Date(snapshot.createdAt).toLocaleString(locale) })
+                  : t("noReviewedSnapshot")}
               </p>
             </div>
           </div>
@@ -60,26 +50,9 @@ export function ReviewedSnapshotPanel({ analysisId }: { analysisId: string }) {
                 className="h-9 font-medium text-[13px]"
                 onClick={() => setViewerOpen(true)}
               >
-                View Locked Snapshot
+                {t("viewLockedSnapshot")}
               </Button>
             ) : null}
-            
-            <Button 
-              variant={hasSnapshot ? "outline" : "default"}
-              size="sm"
-              className={`h-9 font-medium text-[13px] ${!hasSnapshot ? 'bg-foreground text-background hover:bg-foreground/90' : ''}`}
-              onClick={handleCreateSnapshot}
-              disabled={createMutation.isPending}
-            >
-              {createMutation.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : hasSnapshot ? (
-                <CheckCircle className="w-4 h-4 mr-2 text-success" />
-              ) : (
-                <Lock className="w-4 h-4 mr-2" />
-              )}
-              {hasSnapshot ? "Update Snapshot" : "Create Reviewed Snapshot"}
-            </Button>
           </div>
         </div>
       </div>

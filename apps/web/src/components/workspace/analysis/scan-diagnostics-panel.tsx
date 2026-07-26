@@ -1,11 +1,14 @@
 import { useState } from "react"
+import { useTranslations } from "next-intl"
 import { AlertTriangle, ChevronDown, ChevronRight, Info, ShieldAlert, XCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { DiagnosticItem, scannerCapabilitySummaryPayloadSchema } from "@ba-helper/contracts"
 
 import { DiagnosticRiskBadge } from "@/components/workspace/shared/status-badges"
+import { DenseCard } from "@/components/workspace/shared/dense-card"
 
 export function ScanDiagnosticsPanel({ diagnostics }: { diagnostics: DiagnosticItem[] }) {
+  const t = useTranslations("workspace")
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
   if (!diagnostics || diagnostics.length === 0) return null
@@ -46,18 +49,18 @@ export function ScanDiagnosticsPanel({ diagnostics }: { diagnostics: DiagnosticI
       <div className="flex items-center justify-between">
         <h3 className="text-[16px] font-bold tracking-tight text-foreground flex items-center gap-2">
           <ShieldAlert className="w-4 h-4 text-muted-foreground" />
-          Scan Diagnostics
+          {t("scanDiagnostics")}
         </h3>
       </div>
       <p className="text-[13px] text-muted-foreground/90 -mt-1 mb-2">
-        Scanner diagnostics explain skipped coverage, unsupported patterns, and capability limits. They are not confirmed code impacts by themselves.
+        {t("scanDiagnosticsDescription")}
       </p>
 
       {capability?.success && (
         <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-primary">
-              Scanner capability
+              {t("scannerCapability")}
             </span>
             <span className="rounded border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
               {capability.data.status}
@@ -67,26 +70,29 @@ export function ScanDiagnosticsPanel({ diagnostics }: { diagnostics: DiagnosticI
               {capability.data.framework ? ` / ${capability.data.framework}` : ""}
             </span>
             <span className="text-[11px] text-muted-foreground">
-              {capability.data.confidence} confidence
+              {t("confidence", { confidence: capability.data.confidence })}
             </span>
           </div>
           <p className="mt-2 text-[12px] text-muted-foreground">
-            Supported patterns: {capability.data.supportedPatternCount}. Partial patterns:{" "}
-            {capability.data.partialPatternCount}. Unsupported patterns: {capability.data.unsupportedPatternCount}.
+            {t("patternCounts", {
+              supported: capability.data.supportedPatternCount,
+              partial: capability.data.partialPatternCount,
+              unsupported: capability.data.unsupportedPatternCount,
+            })}
           </p>
         </div>
       )}
 
       <div className="flex flex-wrap gap-2">
-        {summary.BLOCKER > 0 && <SummaryBadge label="Blockers" value={summary.BLOCKER} tone="danger" />}
-        {summary.ERROR > 0 && <SummaryBadge label="Errors" value={summary.ERROR} tone="danger-muted" />}
-        {summary.WARN > 0 && <SummaryBadge label="Warnings" value={summary.WARN} tone="warning" />}
-        {summary.INFO > 0 && <SummaryBadge label="Info" value={summary.INFO} tone="info" />}
+        {summary.BLOCKER > 0 && <SummaryBadge label={t("blockers")} value={summary.BLOCKER} tone="danger" />}
+        {summary.ERROR > 0 && <SummaryBadge label={t("errors")} value={summary.ERROR} tone="danger-muted" />}
+        {summary.WARN > 0 && <SummaryBadge label={t("warnings")} value={summary.WARN} tone="warning" />}
+        {summary.INFO > 0 && <SummaryBadge label={t("info")} value={summary.INFO} tone="info" />}
       </div>
 
       <div className="flex flex-col gap-2">
         {scannerDiagnostics.map((diag) => (
-          <div key={diag.code} className="flex flex-col border border-border rounded-lg overflow-hidden bg-surface-soft/30">
+          <DenseCard variant="soft" key={diag.code}>
             <button
               onClick={() => toggle(diag.code)}
               className={cn(
@@ -100,7 +106,7 @@ export function ScanDiagnosticsPanel({ diagnostics }: { diagnostics: DiagnosticI
                   <span className="text-[13px] font-medium text-foreground">{diag.code}</span>
                   {diag.count && diag.count > 1 && (
                     <span className="text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-surface-hover border border-border text-muted-foreground">
-                      {diag.count} occurrences
+                      {t("occurrences", { count: diag.count })}
                     </span>
                   )}
                   {diag.category && (
@@ -126,7 +132,7 @@ export function ScanDiagnosticsPanel({ diagnostics }: { diagnostics: DiagnosticI
                 
                 {diag.samplePaths && diag.samplePaths.length > 0 && (
                   <div className="flex flex-col gap-1.5 mt-1">
-                    <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Sample Paths</span>
+                    <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{t("samplePaths")}</span>
                     <ul className="flex flex-col gap-1">
                       {diag.samplePaths.map((path, idx) => (
                         <li key={idx} className="text-[12px] font-mono text-muted-foreground bg-surface-hover/50 px-2 py-1 rounded w-fit border border-border">
@@ -138,7 +144,7 @@ export function ScanDiagnosticsPanel({ diagnostics }: { diagnostics: DiagnosticI
                 )}
               </div>
             )}
-          </div>
+          </DenseCard>
         ))}
       </div>
     </div>

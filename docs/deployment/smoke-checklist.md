@@ -11,10 +11,10 @@ Use this checklist before a demo, handoff, or release candidate tag.
 
 ## Health and bootstrap
 
-- `GET /api/v1/system/health` returns `ok` or expected degraded details
+- `GET /api/v1/system/ready` returns dependency up/down status (and `GET /api/v1/system/live` returns `ok`)
 - `GET /api/v1/workspace/current` succeeds
 - `/login` loads
-- dev-login succeeds
+- password login succeeds for a provisioned user
 - protected app routes redirect correctly when signed out
 
 ## Runtime wiring

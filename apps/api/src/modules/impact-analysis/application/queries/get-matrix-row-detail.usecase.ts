@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../prisma/prisma.service';
 import { MatrixRowDetailResponse } from '@ba-helper/contracts';
+import { PrismaService } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class GetMatrixRowDetailUseCase {
@@ -82,7 +82,7 @@ export class GetMatrixRowDetailUseCase {
       if (processedInsightIds.has(insight.id)) continue;
 
       const isConflicting = insight.certainty === 'CONFLICTING';
-      const isRisk = insight.insightType === 'UNKNOWN' || isConflicting;
+      const isRisk = insight.insightType === 'UNKNOWN' || isConflicting || hasRiskMetadata(insight);
       const isQa = insight.insightType === 'QA_SCENARIO';
 
       if (isRisk || isQa) {
@@ -151,7 +151,7 @@ export class GetMatrixRowDetailUseCase {
           if (!insight) continue;
           
           const isConflicting = insight.certainty === 'CONFLICTING';
-          const isRisk = insight.insightType === 'UNKNOWN' || isConflicting;
+          const isRisk = insight.insightType === 'UNKNOWN' || isConflicting || hasRiskMetadata(insight);
           const isQa = insight.insightType === 'QA_SCENARIO';
 
           if (isRisk) artifactDetail.relatedRisks.add(insightId);
@@ -199,4 +199,14 @@ export class GetMatrixRowDetailUseCase {
       },
     };
   }
+}
+
+function hasRiskMetadata(insight: { metadata?: unknown }): boolean {
+  const { metadata } = insight;
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return false;
+  }
+
+  const kind = (metadata as Record<string, unknown>).kind;
+  return typeof kind === 'string' && kind.toLowerCase() === 'risk';
 }

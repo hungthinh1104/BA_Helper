@@ -1,10 +1,12 @@
 import { useState } from "react"
+import { useTranslations } from "next-intl"
 import { CheckCircle2, MessageSquare, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/hooks/use-auth"
 import { useCreateReviewDecision } from "@/hooks/api/use-analyses"
-import { ImpactAnalysisDetailResponse } from "@ba-helper/contracts"
+import { ImpactAnalysisDetailResponse, ProjectRole } from "@ba-helper/contracts"
+import { canReview as canReviewPermission } from "@/lib/permissions"
 
 interface ReviewDecisionFormProps {
   analysisId: string
@@ -12,13 +14,14 @@ interface ReviewDecisionFormProps {
 }
 
 export function ReviewDecisionForm({ analysisId, analysis }: ReviewDecisionFormProps) {
+  const t = useTranslations("workspace")
   const { user } = useAuth()
   const { mutate: submitDecision, isPending: submitting } = useCreateReviewDecision(analysisId)
 
   const [decision, setDecision] = useState<"ACCEPTED" | "REJECTED" | "NEEDS_MORE_CLARIFICATION">("ACCEPTED")
   const [note, setNote] = useState("")
 
-  const canReview = analysis.status === "COMPLETED" && user?.role !== "VIEWER"
+  const canReview = Boolean(analysis.capabilities.canReview) && canReviewPermission((user?.role as unknown) as ProjectRole ?? null)
 
   if (!canReview) return null
 
@@ -27,9 +30,9 @@ export function ReviewDecisionForm({ analysisId, analysis }: ReviewDecisionFormP
       <div>
         <h3 className="text-sm font-semibold flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-muted-foreground" />
-          <span>Submit Diff Review</span>
+          <span>{t("submitDiffReview")}</span>
         </h3>
-        <p className="text-xs text-muted-foreground mt-1">Submit your assessment of this change request&apos;s code impact.</p>
+        <p className="text-xs text-muted-foreground mt-1">{t("submitDiffReviewDescription")}</p>
       </div>
       <div className="flex flex-col gap-4 p-5 rounded-xl border border-border/40 bg-surface-muted/30">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -43,8 +46,8 @@ export function ReviewDecisionForm({ analysisId, analysis }: ReviewDecisionFormP
           >
             <CheckCircle2 className={`w-4 h-4 ${decision === "ACCEPTED" ? "text-success" : "text-muted-foreground"}`} />
             <div className="flex flex-col">
-              <span className={`text-[13px] font-medium ${decision === "ACCEPTED" ? "text-success" : "text-foreground"}`}>Accept</span>
-              <span className="text-[11px] text-muted-foreground">Changes look good</span>
+              <span className={`text-[13px] font-medium ${decision === "ACCEPTED" ? "text-success" : "text-foreground"}`}>{t("accept")}</span>
+              <span className="text-[11px] text-muted-foreground">{t("changesLookGood")}</span>
             </div>
           </button>
 
@@ -58,8 +61,8 @@ export function ReviewDecisionForm({ analysisId, analysis }: ReviewDecisionFormP
           >
             <MessageSquare className={`w-4 h-4 ${decision === "NEEDS_MORE_CLARIFICATION" ? "text-warning" : "text-muted-foreground"}`} />
             <div className="flex flex-col">
-              <span className={`text-[13px] font-medium ${decision === "NEEDS_MORE_CLARIFICATION" ? "text-warning" : "text-foreground"}`}>Request Info</span>
-              <span className="text-[11px] text-muted-foreground">Need clarification</span>
+              <span className={`text-[13px] font-medium ${decision === "NEEDS_MORE_CLARIFICATION" ? "text-warning" : "text-foreground"}`}>{t("requestInfo")}</span>
+              <span className="text-[11px] text-muted-foreground">{t("needClarification")}</span>
             </div>
           </button>
 
@@ -73,16 +76,16 @@ export function ReviewDecisionForm({ analysisId, analysis }: ReviewDecisionFormP
           >
             <AlertCircle className={`w-4 h-4 ${decision === "REJECTED" ? "text-danger" : "text-muted-foreground"}`} />
             <div className="flex flex-col">
-              <span className={`text-[13px] font-medium ${decision === "REJECTED" ? "text-danger" : "text-foreground"}`}>Reject</span>
-              <span className="text-[11px] text-muted-foreground">Changes are invalid</span>
+              <span className={`text-[13px] font-medium ${decision === "REJECTED" ? "text-danger" : "text-foreground"}`}>{t("reject")}</span>
+              <span className="text-[11px] text-muted-foreground">{t("changesInvalid")}</span>
             </div>
           </button>
         </div>
 
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Review Note (Optional)</label>
+          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t("reviewNoteOptional")}</label>
           <Textarea 
-            placeholder="Add comments or context for this review decision..."
+            placeholder={t("reviewDecisionCommentPlaceholder")}
             className="min-h-[100px] text-[13px] resize-none"
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -99,7 +102,7 @@ export function ReviewDecisionForm({ analysisId, analysis }: ReviewDecisionFormP
               "bg-danger hover:bg-danger/90 text-white"
             }`}
           >
-            {submitting ? "Submitting..." : "Submit Review"}
+            {submitting ? t("submitting") : t("submitReview")}
           </Button>
         </div>
       </div>

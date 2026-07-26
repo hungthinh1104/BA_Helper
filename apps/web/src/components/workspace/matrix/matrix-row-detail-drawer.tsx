@@ -1,4 +1,5 @@
 import React from "react"
+import { useTranslations } from "next-intl"
 import { AlertCircle, CheckCircle2, AlertTriangle, HelpCircle } from "lucide-react"
 import { useMatrixRowDetail } from "@/hooks/api/use-analyses"
 import {
@@ -36,6 +37,7 @@ export function MatrixRowDetailDrawer({
   open,
   onOpenChange,
 }: MatrixRowDetailDrawerProps) {
+  const t = useTranslations("workspace")
   const { data, isLoading, error } = useMatrixRowDetail(runId, analysisId)
 
   return (
@@ -60,15 +62,15 @@ export function MatrixRowDetailDrawer({
             <AlertCircle className="w-8 h-8 text-destructive mb-4" />
             {(error as { status?: number })?.status === 404 ? (
               <p className="text-[14px] font-medium text-foreground">
-                This analysis is not available for the selected run.
+                {t("analysisUnavailableForRun")}
               </p>
             ) : (error as { status?: number })?.status === 403 ? (
               <p className="text-[14px] font-medium text-foreground">
-                You do not have permission to view this analysis.
+                {t("noPermissionViewAnalysis")}
               </p>
             ) : (
               <p className="text-[14px] font-medium text-foreground">
-                Unable to load matrix row details.
+                {t("unableLoadMatrixRowDetails")}
               </p>
             )}
           </div>
@@ -95,19 +97,22 @@ export function MatrixRowDetailDrawer({
 
               <div className="flex items-center gap-4 mt-4 text-[12px]">
                 <div className="flex flex-col">
-                  <span className="text-muted-foreground uppercase tracking-wide text-[10px]">Coverage</span>
+                  <span className="text-muted-foreground uppercase tracking-wide text-[10px]">{t("coverage")}</span>
                   <span className="font-medium text-foreground">
-                    {data.evidenceSummary.coveredArtifacts} / {data.impactedArtifacts.length} artifacts
+                    {t("artifactsCoverage", {
+                      covered: data.evidenceSummary.coveredArtifacts,
+                      total: data.impactedArtifacts.length,
+                    })}
                   </span>
                 </div>
                 <Separator orientation="vertical" className="h-8" />
                 <div className="flex flex-col">
-                  <span className="text-muted-foreground uppercase tracking-wide text-[10px]">Total Evidence</span>
+                  <span className="text-muted-foreground uppercase tracking-wide text-[10px]">{t("totalEvidence")}</span>
                   <span className="font-medium text-foreground">{data.evidenceSummary.totalEvidenceItems}</span>
                 </div>
                 <Separator orientation="vertical" className="h-8" />
                 <div className="flex flex-col">
-                  <span className="text-muted-foreground uppercase tracking-wide text-[10px]">Uncovered</span>
+                  <span className="text-muted-foreground uppercase tracking-wide text-[10px]">{t("uncovered")}</span>
                   <span className={`font-medium ${data.evidenceSummary.uncoveredArtifacts > 0 ? 'text-destructive' : 'text-foreground'}`}>
                     {data.evidenceSummary.uncoveredArtifacts}
                   </span>
@@ -122,25 +127,25 @@ export function MatrixRowDetailDrawer({
                     value="artifacts"
                     className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none bg-transparent"
                   >
-                    Artifacts ({data.impactedArtifacts.length})
+                    {t("artifactsWithCount", { count: data.impactedArtifacts.length })}
                   </TabsTrigger>
                   <TabsTrigger
                     value="risks"
                     className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none bg-transparent"
                   >
-                    Risks ({data.risks.length})
+                    {t("risksWithCount", { count: data.risks.length })}
                   </TabsTrigger>
                   <TabsTrigger
                     value="qa"
                     className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none bg-transparent"
                   >
-                    QA Scenarios ({data.qaScenarios.length})
+                    {t("qaScenariosWithCount", { count: data.qaScenarios.length })}
                   </TabsTrigger>
                   <TabsTrigger
                     value="diagnostics"
                     className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none bg-transparent"
                   >
-                    Diagnostics
+                    {t("diagnostics")}
                   </TabsTrigger>
                 </TabsList>
               </div>
@@ -150,7 +155,7 @@ export function MatrixRowDetailDrawer({
                   <TabsContent value="artifacts" className="mt-0">
                     {data.impactedArtifacts.length === 0 ? (
                       <div className="text-center py-10 text-muted-foreground text-sm">
-                        No impacted artifacts were found for this matrix row.
+                        {t("noImpactedArtifactsForMatrixRow")}
                       </div>
                     ) : (
                       <div className="flex flex-col space-y-1">
@@ -170,7 +175,7 @@ export function MatrixRowDetailDrawer({
                     <MatrixInsightList 
                       insights={data.risks} 
                       type="risk" 
-                      emptyMessage="No risks found for this repository." 
+                      emptyMessage={t("noRisksForRepository")} 
                     />
                   </TabsContent>
 
@@ -178,7 +183,7 @@ export function MatrixRowDetailDrawer({
                     <MatrixInsightList 
                       insights={data.qaScenarios} 
                       type="qa" 
-                      emptyMessage="No QA scenarios found for this repository." 
+                      emptyMessage={t("noQaScenariosForRepository")} 
                     />
                   </TabsContent>
 

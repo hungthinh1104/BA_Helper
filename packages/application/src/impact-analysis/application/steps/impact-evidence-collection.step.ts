@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { AppError } from '@ba-helper/shared';
 import type { ArtifactRepositoryPort, PersistedArtifact } from '../../ports/artifact.repository.port';
 import type { EvidenceRepositoryPort } from '../../ports/evidence.repository.port';
@@ -8,11 +7,7 @@ import type { DomainPackSelectionResult } from '../../ports/domain-pack-selectio
 import type { ImpactEvidenceCollectionResult } from '../../domain/impact-analysis-step.types';
 import type { ImpactAnalysisRecord } from '../../ports/impact-analysis.repository.port';
 
-const toEvidenceSourceType = (artifactType: string) =>
-  artifactType === 'TEST' ? 'TEST' : 'CODE';
-
-const buildExcerpt = (artifact: PersistedArtifact) =>
-  `${artifact.filePath}:${artifact.startLine ?? 0}-${artifact.endLine ?? 0} (${artifact.name})`;
+const DIRECT_RETRIEVAL_METHODS = new Set(['LEXICAL', 'HYBRID']);
 
 export class ImpactEvidenceCollectionStep {
   constructor(
@@ -52,30 +47,18 @@ export class ImpactEvidenceCollectionStep {
       artifacts.map((artifact) => [artifact.artifactKey, artifact]),
     );
 
-    const evidenceInputs = retrievedArtifacts
-      .map((retrieved) => {
-        const persistedArtifact = artifactByKey.get(retrieved.artifactKey);
-        if (!persistedArtifact) return null;
+    const retrievedArtifactIds = Array.from(
+      new Set(
+        retrievedArtifacts
+          .map((retrieved) => artifactByKey.get(retrieved.artifactKey)?.id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
 
-        const excerpt = buildExcerpt(persistedArtifact);
-        const contentHash = createHash('sha256').update(excerpt).digest('hex');
-        return {
-          provenanceKey: `snapshot:${snapshotId}:artifact:${persistedArtifact.artifactKey}`,
-          sourceType: toEvidenceSourceType(persistedArtifact.artifactType),
-          snapshotId,
-          artifactId: persistedArtifact.id,
-          sourcePath: persistedArtifact.filePath,
-          startLine: persistedArtifact.startLine,
-          endLine: persistedArtifact.endLine,
-          excerpt,
-          contentHash,
-          isRedacted: false,
-          redactionMetadata: null,
-        };
-      })
-      .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
-
-    const evidence = await this.evidenceRepo.upsertMany(evidenceInputs);
+    const evidence = await this.evidenceRepo.listByArtifactIds({
+      snapshotId,
+      artifactIds: retrievedArtifactIds,
+    });
 
     const evidenceById = new Map(
       evidence
@@ -92,22 +75,25 @@ export class ImpactEvidenceCollectionStep {
     }
 
     const affectedLinks = retrievedArtifacts
-      .filter((retrieved) => retrieved.retrievalMethod !== 'GRAPH')
+      .filter((retrieved) => !isGraphExpansionOnly(retrieved))
       .map((retrieved) => {
         const artifact = artifactByKey.get(retrieved.artifactKey);
+        const evidenceRecord = artifact ? evidenceById.get(artifact.id) : null;
         if (!artifact) return null;
-        return { artifact, retrieved };
+        if (!evidenceRecord) return null;
+        const linkBasis = deriveImpactLinkBasis(retrieved);
+        return { artifact, retrieved, linkBasis, confidence: deriveImpactConfidence(retrieved, linkBasis) };
       })
       .filter((pair): pair is NonNullable<typeof pair> => Boolean(pair));
 
-    const traceabilityLinks = await this.traceabilityRepo.upsertMany(
-      affectedLinks.map(({ artifact, retrieved }) => ({
+    const persistedLinks = await this.traceabilityRepo.upsertMany(
+      affectedLinks.map(({ artifact, retrieved, linkBasis, confidence }) => ({
         impactAnalysisId: analysis.id,
         artifactId: artifact.id,
         linkType: 'AFFECTED',
-        linkBasis: 'EVIDENCED',
+        linkBasis,
         reviewStatus: 'NEEDS_REVIEW',
-        confidence: 1,
+        confidence,
         retrievalMetadata: {
           method: retrieved.retrievalMethod,
           signals: retrieved.retrievalSignals ?? [],
@@ -126,8 +112,21 @@ export class ImpactEvidenceCollectionStep {
       })),
     );
 
+    // Carry linkBasis + confidence from computed values (upsert only returns { id, artifactId })
+    const linkBasisMap = new Map(
+      affectedLinks.map(({ artifact, linkBasis, confidence }) => [
+        artifact.id,
+        { linkBasis, confidence },
+      ]),
+    );
+    const traceabilityLinks = persistedLinks.map((link) => ({
+      ...link,
+      linkBasis: linkBasisMap.get(link.artifactId)?.linkBasis ?? 'INFERRED' as const,
+      confidence: linkBasisMap.get(link.artifactId)?.confidence ?? 0.3,
+    }));
+
     await Promise.all(
-      traceabilityLinks.map((link) => {
+      persistedLinks.map((link) => {
         const evidenceRecord = evidenceById.get(link.artifactId);
         if (!evidenceRecord) return Promise.resolve([]);
         return this.traceabilityRepo.linkEvidence({
@@ -150,9 +149,46 @@ export class ImpactEvidenceCollectionStep {
       retrievalMetadata: {
         strategy: 'hybrid',
         maxArtifacts: 20,
-        artifactCount: evidenceInputs.length,
+        artifactCount: evidence.length,
         vectorSignalCount,
       },
     };
   }
+}
+
+function deriveImpactLinkBasis(
+  retrieved: RetrievedArtifact,
+): 'EVIDENCED' | 'INFERRED' {
+  const signals = new Set(retrieved.retrievalSignals ?? []);
+  if (
+    DIRECT_RETRIEVAL_METHODS.has(retrieved.retrievalMethod) ||
+    signals.has('LEXICAL')
+  ) {
+    return 'EVIDENCED';
+  }
+
+  return 'INFERRED';
+}
+
+function isGraphExpansionOnly(retrieved: RetrievedArtifact) {
+  return (
+    retrieved.retrievalMethod === 'GRAPH' ||
+    retrieved.retrievalMethod === 'GRAPH_EXPANSION'
+  );
+}
+
+function deriveImpactConfidence(
+  retrieved: RetrievedArtifact,
+  linkBasis: 'EVIDENCED' | 'INFERRED',
+) {
+  const rawScore = retrieved.score ?? retrieved.finalScore ?? 0;
+  const boundedScore = Number.isFinite(rawScore)
+    ? Math.max(0, Math.min(rawScore, 1))
+    : 0;
+
+  if (linkBasis === 'EVIDENCED') {
+    return Math.max(0.5, Math.min(boundedScore, 0.95));
+  }
+
+  return Math.max(0.3, Math.min(boundedScore, 0.75));
 }

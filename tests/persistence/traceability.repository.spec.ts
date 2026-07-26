@@ -1,4 +1,4 @@
-import { TraceabilityRepository } from '../../apps/api/src/modules/traceability/infrastructure/traceability.repository';
+import { TraceabilityRepository } from "@ba-helper/backend-runtime";
 
 describe('TraceabilityRepository', () => {
   it('uses createMany with skipDuplicates for upsertMany', async () => {

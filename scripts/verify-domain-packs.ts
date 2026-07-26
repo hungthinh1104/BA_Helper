@@ -1,7 +1,7 @@
 import 'tsconfig-paths/register';
 import { resolve } from 'node:path';
-import { BUILT_IN_DOMAIN_PACK_CATALOG } from '../apps/api/src/modules/domain-pack/application/domain-pack.catalog';
-import { validateDomainPackCatalog } from '../apps/api/src/modules/domain-pack/application/domain-pack.governance';
+import { BUILT_IN_DOMAIN_PACK_CATALOG } from '../packages/backend-runtime/src/domain-pack/application/domain-pack.catalog';
+import { validateDomainPackCatalog } from '../packages/backend-runtime/src/domain-pack/application/domain-pack.governance';
 
 const result = validateDomainPackCatalog(BUILT_IN_DOMAIN_PACK_CATALOG, {
   glossaryRoot: resolve(process.cwd(), 'packages/domain-packs'),

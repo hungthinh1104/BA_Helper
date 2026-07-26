@@ -14,10 +14,14 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Plus, RefreshCw, AlertCircle, GitBranch } from "lucide-react"
 import { toast } from "sonner"
 import { v4 as uuidv4 } from "uuid"
+import { useTranslations } from "next-intl"
+import { useLocalizedHref } from "@/i18n/navigation"
 
 const gridCols = "minmax(180px, 2fr) minmax(120px, 1.5fr) 80px minmax(180px, 2fr) 90px"
 
 export default function RepositoriesPage() {
+  const t = useTranslations("workspaceLists")
+  const href = useLocalizedHref()
   const { data, isLoading, error } = useRepositories()
   const { mutateAsync: createScanJob, isPending: isRescanning } = useCreateScanJob(undefined)
   const workspace = useCurrentWorkspace()
@@ -30,12 +34,12 @@ export default function RepositoriesPage() {
         repositoryId: repoId,
         requestKey: uuidv4(),
       })
-      toast.success("Scan queued", {
-        description: "The repository scan has been queued again.",
+      toast.success(t("scanQueued"), {
+        description: t("scanQueuedDescription"),
       })
     } catch (err) {
-      toast.error("Failed to queue scan", {
-        description: err instanceof Error ? err.message : "Please try again.",
+      toast.error(t("failedQueueScan"), {
+        description: err instanceof Error ? err.message : t("pleaseTryAgain"),
       })
     }
   }
@@ -44,23 +48,23 @@ export default function RepositoriesPage() {
     <div className="app-page-scroll">
         <div className="max-w-4xl mx-auto w-full py-4">
         <WorkspacePageHeader
-          title="Repositories"
-          description="Connect public GitHub repositories to scan their codebase for impact analysis."
+          title={t("repositoriesTitle")}
+          description={t("repositoriesDescription")}
         >
           <ConnectRepoDialog>
-            <Button size="sm" className="h-8 shadow-none gap-1.5" disabled={!canManageRepo} title={!canManageRepo ? "Maintainer role required to connect repositories." : undefined}>
-              <Plus className="w-3.5 h-3.5" /> Connect Repository
+            <Button size="sm" className="h-8 shadow-none gap-1.5" disabled={!canManageRepo} title={!canManageRepo ? t("maintainerRequiredConnect") : undefined}>
+              <Plus className="w-3.5 h-3.5" /> {t("connectRepository")}
             </Button>
           </ConnectRepoDialog>
         </WorkspacePageHeader>
 
         <DataList>
           <DataListHeader gridCols={gridCols}>
-            <DataListCell>Repository</DataListCell>
-            <DataListCell>URL</DataListCell>
-            <DataListCell>Ref</DataListCell>
-            <DataListCell>Scan Status</DataListCell>
-            <DataListCell className="text-right">Actions</DataListCell>
+            <DataListCell>{t("repository")}</DataListCell>
+            <DataListCell>{t("url")}</DataListCell>
+            <DataListCell>{t("ref")}</DataListCell>
+            <DataListCell>{t("scanStatus")}</DataListCell>
+            <DataListCell className="text-right">{t("actions")}</DataListCell>
           </DataListHeader>
 
           {isLoading && (
@@ -80,7 +84,7 @@ export default function RepositoriesPage() {
           {error && (
             <div className="flex flex-col items-center py-16 text-muted-foreground">
               <AlertCircle className="w-6 h-6 text-destructive mb-4" />
-              <p className="text-[13px] font-medium text-foreground">Failed to load repositories</p>
+              <p className="text-[13px] font-medium text-foreground">{t("failedToLoadRepositories")}</p>
               <p className="text-[12px]">{error.message}</p>
             </div>
           )}
@@ -90,11 +94,11 @@ export default function RepositoriesPage() {
               <div className="w-12 h-12 rounded-lg bg-surface border border-border/50 flex items-center justify-center mb-4">
                 <GitBranch className="w-5 h-5" />
               </div>
-              <p className="text-[13px] font-medium text-foreground mb-1">No repositories connected yet.</p>
-              <p className="text-[12px] mb-4">Connect a public GitHub repository to start scanning backend code.</p>
+              <p className="text-[13px] font-medium text-foreground mb-1">{t("noRepositoriesConnected")}</p>
+              <p className="text-[12px] mb-4">{t("connectRepositoryEmpty")}</p>
               <ConnectRepoDialog>
-                <Button size="sm" variant="outline" className="h-8 shadow-none gap-1.5" disabled={!canManageRepo} title={!canManageRepo ? "Maintainer role required to connect repositories." : undefined}>
-                  <Plus className="w-3.5 h-3.5" /> Connect Repository
+                <Button size="sm" variant="outline" className="h-8 shadow-none gap-1.5" disabled={!canManageRepo} title={!canManageRepo ? t("maintainerRequiredConnect") : undefined}>
+                  <Plus className="w-3.5 h-3.5" /> {t("connectRepository")}
                 </Button>
               </ConnectRepoDialog>
             </div>
@@ -106,12 +110,12 @@ export default function RepositoriesPage() {
             const canRescan = job?.canCancel === false
 
             return (
-              <DataListRow key={repo.id} gridCols={gridCols} href={`/repositories/${repo.id}`}>
+              <DataListRow key={repo.id} gridCols={gridCols} href={href(`/repositories/${repo.id}`)}>
                 {/* Repository name + framework */}
                 <DataListCell>
                   <div className="flex flex-col gap-0.5">
                     <span className="text-[13px] font-medium text-foreground font-mono">{repo.displayName}</span>
-                    <span className="text-[11px] text-muted-foreground">{repo.framework || "Unknown"}</span>
+                    <span className="text-[11px] text-muted-foreground">{repo.framework || t("unknown")}</span>
                   </div>
                 </DataListCell>
 
@@ -146,7 +150,7 @@ export default function RepositoriesPage() {
                       )}
                     </div>
                   ) : (
-                    <span className="text-[12px] text-muted-foreground">No jobs</span>
+                    <span className="text-[12px] text-muted-foreground">{t("noJobs")}</span>
                   )}
                 </DataListCell>
 
@@ -165,9 +169,9 @@ export default function RepositoriesPage() {
                         }
                       }}
                       disabled={isRescanning || !canScan}
-                      title={!canScan ? "Maintainer role required to run scans." : undefined}
+                      title={!canScan ? t("maintainerRequiredScan") : undefined}
                     >
-                      <RefreshCw className="w-3 h-3" /> {isRescanning ? "Queuing..." : "Re-scan"}
+                      <RefreshCw className="w-3 h-3" /> {isRescanning ? t("queuing") : t("rescan")}
                     </Button>
                   )}
                 </DataListCell>

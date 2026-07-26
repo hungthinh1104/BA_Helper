@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { AnalysisWorkspaceShell } from "@/components/workspace/analysis/analysis-workspace-shell"
 import { useAnalysisWorkspace } from "@/hooks/api/use-analyses"
 import { DEFAULT_ANALYSIS_WORKSPACE_LOCALE, type SupportedLocale } from "@/lib/i18n/status-labels"
+import { normalizeAppLocale } from "@/i18n/app-locale"
 
 export default function ImpactAnalysisDetailPage({
   params,
@@ -18,8 +19,7 @@ export default function ImpactAnalysisDetailPage({
   const { analysisId } = use(params)
   const query = use(searchParams)
   const candidateLocale = Array.isArray(query.locale) ? query.locale[0] : query.locale
-  const locale: SupportedLocale =
-    candidateLocale === "vi" ? "vi" : DEFAULT_ANALYSIS_WORKSPACE_LOCALE
+  const locale: SupportedLocale = normalizeAppLocale(candidateLocale ?? DEFAULT_ANALYSIS_WORKSPACE_LOCALE)
   const {
     data: workspace,
     isLoading,

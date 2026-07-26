@@ -1,5 +1,5 @@
 import type { ProjectRole } from '@prisma/client';
-import type { PrismaService } from '../../../src/modules/prisma/prisma.service';
+import { PrismaService } from "@ba-helper/backend-runtime";
 
 export async function grantProjectMembership(
   prisma: PrismaService,

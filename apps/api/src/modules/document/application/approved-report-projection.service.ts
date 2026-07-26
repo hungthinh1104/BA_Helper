@@ -1,11 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { ApprovedReportMetadata } from '../domain/approved-report-metadata';
-import { TraceabilityRepository } from '../../traceability/infrastructure/traceability.repository';
-import { InsightRepository } from '../../insight/infrastructure/insight.repository';
-import { EvaluationContextAdapter } from './evaluation-context.adapter';
 import { buildEvidenceQualityProjection } from './evidence-quality.projection';
-import { buildReportReviewCoverageSummary } from './report-review-coverage.summary';
+import { PrismaService, TraceabilityRepository, InsightRepository, EvaluationContextAdapter, ApprovedReportMetadata, buildReportReviewCoverageSummary } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class ApprovedReportProjectionService {

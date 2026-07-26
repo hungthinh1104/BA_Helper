@@ -3,14 +3,12 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import { ZodError } from "zod"
 import {
   loginResponseSchema,
-  userRoleSchema,
   type UserRole,
 } from "@ba-helper/contracts"
 import { ApiError } from "@/lib/api-error"
 import { normalizeAuthErrorCode } from "@/lib/auth-errors"
 import { getApiBaseUrl } from "@/lib/runtime-config"
 import { resolveNextAuthSecret } from "@/lib/auth-secret"
-import { resolveAuthMode } from "@ba-helper/shared"
 
 type AuthorizedUser = {
   id: string
@@ -42,49 +40,37 @@ export const authOptions: AuthOptions = {
       name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
-        role: { label: "Role", type: "text" },
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials): Promise<AuthorizedUser | null> {
-        if (!credentials?.email) {
+        if (!credentials?.email || !credentials?.password) {
           throw new Error("UNAUTHORIZED")
         }
 
         try {
-          const parsedRole = userRoleSchema.safeParse(credentials.role)
-          if (!parsedRole.success) {
-            throw new Error("UNAUTHORIZED")
-          }
-
-          const authMode = resolveAuthMode(process.env)
-          if (authMode === "unsupported") {
-            throw new Error("DEV_LOGIN_DISABLED")
-          }
-
           const apiBaseUrl = getApiBaseUrl({
             apiUrl: process.env.NEXT_PUBLIC_API_URL,
             internalApiUrl: process.env.INTERNAL_API_URL,
             nodeEnv: process.env.NODE_ENV,
           })
 
-          const res = await fetch(`${apiBaseUrl}/api/v1/auth/dev-login`, {
+          const res = await fetch(`${apiBaseUrl}/api/v1/auth/login`, {
             method: "POST",
-            body: JSON.stringify({ email: credentials.email, role: parsedRole.data }),
+            body: JSON.stringify({
+              email: credentials.email,
+              password: credentials.password,
+            }),
             headers: { "Content-Type": "application/json" },
           })
 
           if (!res.ok) {
             const contentType = res.headers.get("content-type") ?? ""
             const isJsonResponse = contentType.includes("application/json")
-            const data = isJsonResponse ? await res.json().catch(() => null) : null
             const text = isJsonResponse ? null : await res.text().catch(() => "")
             const isHtml =
               contentType.includes("text/html") ||
               text?.trim().toLowerCase().startsWith("<!doctype html") ||
               text?.trim().toLowerCase().startsWith("<html")
-
-            if (res.status === 403 && data?.message === "Dev login is disabled") {
-              throw new Error("DEV_LOGIN_DISABLED")
-            }
 
             if (isHtml) {
               throw new Error("API_WRONG_SERVER")

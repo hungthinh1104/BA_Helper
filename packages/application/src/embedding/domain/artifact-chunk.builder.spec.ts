@@ -23,7 +23,7 @@ describe('ArtifactChunkBuilder', () => {
   });
 
   it('CHUNK_BUILDER_VERSION matches expected constant value', () => {
-    expect(CHUNK_BUILDER_VERSION).toBe('artifact-chunker@0.1.0');
+    expect(CHUNK_BUILDER_VERSION).toBe('artifact-chunker@0.2.0');
   });
 
   it('stableChunkId includes snapshotId and artifactKey', () => {
@@ -43,9 +43,11 @@ describe('ArtifactChunkBuilder', () => {
     expect(chunk.content).toContain('cancel() { return refund; }');
   });
 
-  it('falls back to placeholder when no evidence provided', () => {
+  it('omits the placeholder and embeds only metadata when no evidence is provided', () => {
     const chunk = ArtifactChunkBuilder.build({ artifact: baseArtifact });
-    expect(chunk.content).toContain('No code snippet available');
+    expect(chunk.content).not.toContain('No code snippet available');
+    expect(chunk.content).toContain('BookingController.cancel');
+    expect(chunk.content).not.toContain('excerpt:');
   });
 
   it('returns all required fields in BuiltChunk', () => {

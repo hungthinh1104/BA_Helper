@@ -1,6 +1,6 @@
 import { ListImpactAnalysesUseCase } from './list-impact-analyses.usecase';
-import type { ImpactAnalysisRepository } from '../../infrastructure/impact-analysis.repository';
 import type { ProjectRepository } from '../../../project/infrastructure/project.repository';
+import { ImpactAnalysisRepository } from "@ba-helper/backend-runtime";
 
 describe('ListImpactAnalysesUseCase', () => {
   let useCase: ListImpactAnalysesUseCase;

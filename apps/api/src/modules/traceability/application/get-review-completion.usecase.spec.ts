@@ -1,7 +1,5 @@
 import { GetReviewCompletionUseCase } from './get-review-completion.usecase';
-import type { PrismaService } from '../../prisma/prisma.service';
-import type { TraceabilityRepository } from '../infrastructure/traceability.repository';
-import type { InsightRepository } from '../../insight/infrastructure/insight.repository';
+import { PrismaService, TraceabilityRepository, InsightRepository } from "@ba-helper/backend-runtime";
 
 describe('GetReviewCompletionUseCase', () => {
   it('includes critical approval gate blockers in backend-authored completion state', async () => {
@@ -15,7 +13,16 @@ describe('GetReviewCompletionUseCase', () => {
     } as unknown as jest.Mocked<PrismaService>;
 
     const traceabilityRepo = {
-      listByAnalysis: jest.fn().mockResolvedValue([]),
+      listByAnalysis: jest.fn().mockResolvedValue([
+        {
+          id: 'link-1',
+          linkType: 'AFFECTED',
+          linkBasis: 'INFERRED',
+          reviewStatus: 'NEEDS_REVIEW',
+          reviewDecision: null,
+          evidenceLinks: [],
+        },
+      ]),
     } as unknown as jest.Mocked<TraceabilityRepository>;
 
     const insightRepo = {

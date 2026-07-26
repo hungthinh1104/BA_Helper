@@ -1,13 +1,10 @@
 import { Module } from '@nestjs/common';
 import { GetSystemHealthUseCase } from './application/get-system-health.usecase';
 import { SystemController } from './api/system.controller';
-import { PrismaModule } from '../prisma/prisma.module';
-import { PrismaService } from '../prisma/prisma.service';
-import { QueueModule } from '../queue/queue.module';
-import { QueueService } from '../queue/queue.service';
+import { EventLogModule, PrismaModule, PrismaService, QueueModule, QueueService } from "@ba-helper/backend-runtime";
 
 @Module({
-  imports: [PrismaModule, QueueModule],
+  imports: [PrismaModule, QueueModule, EventLogModule],
   controllers: [SystemController],
   providers: [
     {

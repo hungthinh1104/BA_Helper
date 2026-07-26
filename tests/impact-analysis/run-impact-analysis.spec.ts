@@ -5,8 +5,7 @@ import {
   ImpactAiReasoningStep,
 } from '@ba-helper/application';
 import { AppError } from '@ba-helper/shared';
-import { FakeLlmProvider } from '../../apps/api/src/modules/ai/infrastructure/fake-ai.provider';
-import { DomainPackRegistry } from '../../apps/api/src/modules/domain-pack/application/domain-pack.registry';
+import { DomainPackRegistry, FakeLlmProvider } from '@ba-helper/backend-runtime';
 
 type StubArtifact = {
   id: string;
@@ -61,14 +60,15 @@ class StubArtifactRepo {
 }
 
 class StubEvidenceRepo {
-  items: Array<{ provenanceKey: string; sourceType: string; artifactId: string }> = [];
+  requestedArtifactIds: string[] = [];
 
-  upsertMany = async (items: Array<{ provenanceKey: string; sourceType: string; artifactId: string }>) => {
-    this.items = items;
-    return items.map((item, index) => ({
-      id: `e-${index + 1}`,
-      artifactId: item.artifactId,
-    }));
+  constructor(
+    private readonly records: Array<{ id: string; artifactId: string; excerpt: string }> = [],
+  ) {}
+
+  listByArtifactIds = async (params: { artifactIds: string[] }) => {
+    this.requestedArtifactIds = params.artifactIds;
+    return this.records.filter((record) => params.artifactIds.includes(record.artifactId));
   };
 }
 
@@ -92,10 +92,10 @@ class StubInsightRepo {
 }
 
 class StubTraceabilityRepo {
-  links: Array<{ artifactId: string }> = [];
+  links: Array<{ artifactId: string; linkBasis?: string; confidence?: number }> = [];
   evidenceLinks: Array<{ linkId: string; evidenceIds: string[] }> = [];
 
-  upsertMany = async (items: Array<{ artifactId: string }>) => {
+  upsertMany = async (items: Array<{ artifactId: string; linkBasis?: string; confidence?: number }>) => {
     this.links = items;
     return items.map((item, index) => ({
       id: `link-${index + 1}`,
@@ -219,7 +219,15 @@ describe('RunImpactAnalysisUseCase', () => {
       },
     ];
 
-    const evidenceRepo = new StubEvidenceRepo();
+    const evidenceRepo = new StubEvidenceRepo(
+      artifacts
+        .filter((artifact) => artifact.id !== 'noise-1')
+        .map((artifact) => ({
+          id: `ev-${artifact.id}`,
+          artifactId: artifact.id,
+          excerpt: `${artifact.artifactKey}\n${artifact.name}`,
+        })),
+    );
     const insightRepo = new StubInsightRepo();
     const traceabilityRepo = new StubTraceabilityRepo();
     const llmProvider = new FakeLlmProvider();
@@ -245,7 +253,10 @@ describe('RunImpactAnalysisUseCase', () => {
 
     await useCase.execute({ analysisId: 'analysis-1', domain: 'BOOKING' });
 
-    const evidenceKeys = evidenceRepo.items.map((item) => item.provenanceKey);
+    const evidenceKeys = evidenceRepo.requestedArtifactIds
+      .map((artifactId) => artifacts.find((artifact) => artifact.id === artifactId)?.artifactKey)
+      .filter((artifactKey): artifactKey is string => Boolean(artifactKey))
+      .map((artifactKey) => `snapshot:snap-1:artifact:${artifactKey}`);
 
     const expectedEvidenceKeys = [
       'snapshot:snap-1:artifact:api:booking.controller.cancel',
@@ -260,23 +271,28 @@ describe('RunImpactAnalysisUseCase', () => {
 
     expect(evidenceKeys.sort()).toEqual(expectedEvidenceKeys.sort());
 
-    const testEvidence = evidenceRepo.items.find(
-      (item) => item.provenanceKey === 'snapshot:snap-1:artifact:test:booking.cancel.spec',
+    const testEvidenceRequested = evidenceRepo.requestedArtifactIds.some(
+      (artifactId) => artifactId === 'a8',
     );
-    expect(testEvidence?.sourceType).toBe('TEST');
+    expect(testEvidenceRequested).toBe(true);
 
     const insightKeys = insightRepo.created.map((item) => item.insightKey);
-    expect(insightKeys).toMatchObject([
+    expect(insightKeys).toEqual(expect.arrayContaining([
       'claim:cancel-route',
       'claim:cancel-refund',
       'claim:release-slot',
       'claim:notify-owner',
+      'risk:refund-policy-gap',
+      'question:who-may-cancel',
+      'ac:cancel-paid-booking-refund',
+      'qa:cancel-paid-booking-refunds-payment',
+      'qa:duplicate-cancel-does-not-double-refund',
       'unknown:refund-percentage',
       'unknown:refund-deadline',
       'unknown:who-may-cancel',
       'unknown:owner-approval',
       'unknown:slot-reopen',
-    ]);
+    ]));
 
     expect(traceabilityRepo.links.map((link) => link.artifactId)).toEqual([
       'a1',
@@ -312,7 +328,13 @@ describe('RunImpactAnalysisUseCase', () => {
 
     const evidenceStep = new ImpactEvidenceCollectionStep(
       new StubArtifactRepo(artifacts) as any,
-      new StubEvidenceRepo() as any,
+      new StubEvidenceRepo(
+        artifacts.map((artifact) => ({
+          id: `ev-${artifact.id}`,
+          artifactId: artifact.id,
+          excerpt: `${artifact.artifactKey}\n${artifact.name}`,
+        })),
+      ) as any,
       new StubTraceabilityRepo() as any,
       new StubRetrievalService(artifacts) as any
     );
@@ -394,6 +416,136 @@ describe('RunImpactAnalysisUseCase', () => {
     expect(diagnostic.payload.templateBodies).toBeUndefined();
     expect(diagnostic.payload.rawPrompts).toBeUndefined();
     expect(diagnostic.payload.sourceCode).toBeUndefined();
+  });
+
+  it('does not fabricate evidence, affected links, or evidenced claims for retrieval hits without persisted evidence', async () => {
+    const artifacts: StubArtifact[] = [
+      {
+        id: 'a1',
+        artifactKey: 'service-method:payment.service.refund',
+        artifactType: 'SERVICE_METHOD',
+        name: 'PaymentService.refund',
+        filePath: 'src/payment/payment.service.ts',
+        startLine: 6,
+        endLine: 10,
+      },
+    ];
+
+    class NoiseRetrievalService {
+      retrieve = async () => [
+        {
+          artifactId: 'a1',
+          artifactKey: 'service-method:payment.service.refund',
+          filePath: 'src/payment/payment.service.ts',
+          symbolName: 'PaymentService.refund',
+          artifactType: 'SERVICE_METHOD',
+          score: 0.9,
+          retrievalMethod: 'LEXICAL',
+          retrievalSignals: ['LEXICAL'],
+          retrievalReason: 'keyword match only',
+        },
+      ];
+    }
+
+    const evidenceRepo = new StubEvidenceRepo([]);
+    const traceabilityRepo = new StubTraceabilityRepo();
+    const insightRepo = new StubInsightRepo();
+
+    const evidenceStep = new ImpactEvidenceCollectionStep(
+      new StubArtifactRepo(artifacts) as any,
+      evidenceRepo as any,
+      traceabilityRepo as any,
+      new NoiseRetrievalService() as any,
+    );
+
+    const useCase = new RunImpactAnalysisUseCase(
+      new StubImpactRepo() as any,
+      insightRepo as any,
+      new DomainPackRegistry(),
+      evidenceStep as any,
+      new ImpactDiagnosticPropagationStep() as any,
+      new ImpactAiReasoningStep(new FakeLlmProvider() as any) as any,
+      { recordEvent: jest.fn() } as any,
+    );
+
+    await useCase.execute({ analysisId: 'analysis-1', domain: 'BOOKING' });
+
+    expect(evidenceRepo.requestedArtifactIds).toEqual(['a1']);
+    expect(traceabilityRepo.links).toEqual([]);
+    expect(insightRepo.created).toEqual([
+      expect.objectContaining({
+        insightKey: 'unknown:generic-behavior',
+        certainty: 'UNKNOWN',
+      }),
+    ]);
+  });
+
+  it('marks vector-only affected links as inferred even when persisted evidence exists', async () => {
+    const artifacts: StubArtifact[] = [
+      {
+        id: 'a1',
+        artifactKey: 'service-method:payment.service.refund',
+        artifactType: 'SERVICE_METHOD',
+        name: 'PaymentService.refund',
+        filePath: 'src/payment/payment.service.ts',
+        startLine: 6,
+        endLine: 10,
+      },
+    ];
+
+    class VectorRetrievalService {
+      retrieve = async () => [
+        {
+          artifactId: 'a1',
+          artifactKey: 'service-method:payment.service.refund',
+          filePath: 'src/payment/payment.service.ts',
+          symbolName: 'PaymentService.refund',
+          artifactType: 'SERVICE_METHOD',
+          score: 0.88,
+          retrievalMethod: 'VECTOR',
+          retrievalSignals: ['VECTOR'],
+          retrievalReason: 'semantic match only',
+        },
+      ];
+    }
+
+    const traceabilityRepo = new StubTraceabilityRepo();
+
+    const evidenceStep = new ImpactEvidenceCollectionStep(
+      new StubArtifactRepo(artifacts) as any,
+      new StubEvidenceRepo([
+        {
+          id: 'ev-a1',
+          artifactId: 'a1',
+          excerpt: 'service-method:payment.service.refund\nPaymentService.refund',
+        },
+      ]) as any,
+      traceabilityRepo as any,
+      new VectorRetrievalService() as any,
+    );
+
+    const useCase = new RunImpactAnalysisUseCase(
+      new StubImpactRepo() as any,
+      new StubInsightRepo() as any,
+      new DomainPackRegistry(),
+      evidenceStep as any,
+      new ImpactDiagnosticPropagationStep() as any,
+      new ImpactAiReasoningStep(new FakeLlmProvider() as any) as any,
+      { recordEvent: jest.fn() } as any,
+    );
+
+    await useCase.execute({ analysisId: 'analysis-1', domain: 'BOOKING' });
+
+    expect(traceabilityRepo.links).toEqual([
+      expect.objectContaining({
+        artifactId: 'a1',
+        linkBasis: 'INFERRED',
+        confidence: 0.75,
+      }),
+    ]);
+    expect(traceabilityRepo.evidenceLinks).toEqual([
+      { linkId: 'link-1', evidenceIds: ['ev-a1'] },
+    ]);
   });
 
   it('unknown profile emits general@0.0.0', async () => {

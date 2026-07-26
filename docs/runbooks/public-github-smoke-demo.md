@@ -121,7 +121,7 @@ docs/runbooks/diagnostics/
 Minimum acceptable behavior:
 
 ```text
-GET /api/v1/system/health succeeds with:
+GET /api/v1/system/ready succeeds with:
   database=up
   redis=up
   queue=up
@@ -158,7 +158,7 @@ temp workspace cleanup leak detected
 
 If the smoke run fails:
 
-1. Check `GET /api/v1/system/health`.
+1. Check `GET /api/v1/system/ready`.
    A status of `degraded` means the API process is alive but one or more
    dependencies are unavailable.
 2. Check `GET /api/v1/workspace/current`.

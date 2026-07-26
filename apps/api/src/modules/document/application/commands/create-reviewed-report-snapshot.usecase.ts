@@ -1,11 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { EventLogService } from '../../../event-log/application/event-log.service';
-import { TraceabilityRepository } from '../../../traceability/infrastructure/traceability.repository';
-import { InsightRepository } from '../../../insight/infrastructure/insight.repository';
+import { AppError } from '@ba-helper/shared';
 import { buildEvidenceQualityProjection } from '../evidence-quality.projection';
-import { EvaluationContextAdapter } from '../evaluation-context.adapter';
+import { PrismaService, TraceabilityRepository, InsightRepository, EvaluationContextAdapter, EventLogService } from "@ba-helper/backend-runtime";
 
 type ReviewedReportSnapshotCreateData = {
   analysisId: string;
@@ -28,10 +25,44 @@ export class CreateReviewedReportSnapshotUseCase {
   ) {}
 
   async execute(params: { analysisId: string; createdByUserId?: string }) {
+    await this.assertSnapshotAllowed(params.analysisId);
     const data = await this.buildSnapshotCreateData(params);
     const snapshot = await this.prisma.reviewedReportSnapshot.create({ data });
     await this.recordCreatedEvent(snapshot);
     return snapshot;
+  }
+
+  private async assertSnapshotAllowed(analysisId: string) {
+    const analysis = await this.prisma.impactAnalysis.findUnique({
+      where: { id: analysisId },
+      include: {
+        snapshot: true,
+        sourceTarget: true,
+      },
+    });
+
+    if (!analysis) {
+      throw new AppError('IMPACT_ANALYSIS_NOT_FOUND', 'Impact analysis not found.');
+    }
+
+    if (analysis.status !== 'COMPLETED') {
+      throw new AppError(
+        'INVALID_STATE_TRANSITION',
+        'Reviewed report snapshots can only be created for finalized analyses.',
+      );
+    }
+
+    const isPinnedCommit = analysis.sourceTarget.resolvedRefType === 'COMMIT';
+    const isStale =
+      !isPinnedCommit &&
+      analysis.sourceTarget.latestObservedCommitSha !== analysis.snapshot.commitSha;
+
+    if (isStale) {
+      throw new AppError(
+        'ANALYSIS_STALE',
+        'Cannot create reviewed report snapshot for a stale analysis.',
+      );
+    }
   }
 
   async buildSnapshotCreateData(params: {

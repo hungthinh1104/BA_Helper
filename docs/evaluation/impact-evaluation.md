@@ -18,6 +18,49 @@ Specifically, it scores:
 - **Production Latency:** Real LLM API response times are not evaluated.
 - **Incremental Cache Hit Rates:** Not measured here.
 
+## Blocking Stable Quality Gate
+
+`pnpm verify:analyzer-quality` is the release-blocking deterministic gate. It
+uses only the five fixture-backed `bookingStableEvaluationCases`; exploratory
+or hypothetical cases remain telemetry and cannot be used to claim stable
+quality.
+
+The versioned baseline is
+`tests/evaluation/quality-baseline.json`. The generated scorecard is written to
+`artifacts/evaluation/analyzer-scorecard.json` and uploaded by CI even when the
+gate fails.
+
+The gate requires:
+
+- critical artifact recall = 100%
+- evidenced artifact coverage = 100%
+- negative-control pass rate = 100%
+- orphan evidenced artifacts = 0
+- average artifact precision >= 40%
+- no metric regression beyond the configured 1 percentage-point tolerance
+
+The score is an internal fixture regression signal, not a claim about arbitrary
+repositories or model quality.
+
+## Public NestJS Repository Review Set
+
+`tests/evaluation/public-nestjs-repositories.json` pins three public GitHub
+repositories to immutable commits. The 2026-07-25 manual extraction smoke
+review covers the canonical NestJS starter, an application-sized boilerplate,
+and the Nest framework monorepo. These cases prove framework detection and
+bounded extraction against real source layouts; they do not replace the
+fixture-backed impact ground truth or imply semantic impact accuracy.
+
+The large `nestjs/nest` case retains an explicit limitation because one of
+1,016 extracted artifacts lacked an evidence excerpt. It is therefore excluded
+from the blocking evidence gate.
+
+## Confidence Presentation
+
+Numeric confidence remains an internal ranking input. The impact map no longer
+renders it as a probability percentage or user-facing confidence claim.
+Evidence basis, certainty, and review status remain authoritative.
+
 ## Lexical Retrieval Evaluation Mode
 In Phase 32B, we introduced the `LexicalRetrievalEvaluationAdapter`. This adapter evaluates whether the expected impacted artifacts are discoverable *before* they are sent to the LLM. 
 

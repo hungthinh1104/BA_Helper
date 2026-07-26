@@ -101,12 +101,12 @@ We designed this project to be highly reproducible locally. No real LLM or embed
 ### Reproducibility Checklist
 ```text
 Fresh clone validation:
-[ ] pnpm install works
-[ ] local DB starts
-[ ] migrations apply
-[ ] typecheck passes
-[ ] golden path demo passes
-[ ] no external AI keys required
+[x] pnpm install works
+[x] local DB starts
+[x] migrations apply
+[x] typecheck passes
+[x] golden path demo passes
+[x] no external AI keys required
 ```
 
 ### 1. Prerequisites
@@ -116,8 +116,8 @@ Fresh clone validation:
 
 ### 2. Install
 ```bash
-git clone https://github.com/hungthinh1104/BA_Helper.git
-cd ba-helper
+git clone https://github.com/hungthinh1104/BA_helper_test.git
+cd BA_helper_test
 pnpm install
 ```
 
@@ -259,13 +259,23 @@ Built as a TypeScript modular monolith to balance speed of development with even
 - Automated CI golden path uses fake providers; manual UI demo runs with Gemini real LLM when configured.
 - Production SaaS concerns such as GitHub App auth, billing, and hosted multi-tenant deployment are not complete.
 
-## Roadmap
-1. Harden scan pipeline atomicity and snapshot publication safety.
-2. Add evidence quality scoring for weak/missing/conflicting support.
-3. Improve impact precision evaluation packs and scorecards.
-4. Tighten review coverage gates and report trust UX.
-5. Continue drift/freshness hardening and controlled beta readiness.
-6. Expand domains/languages only behind explicit capability status and evaluation coverage.
+## Roadmap Status
+
+- Refactor boundary and analyzer quality gate are complete; controlled-beta
+  hardening is engineering-complete with **executable** release evidence
+  available (an executable release drill + a migration-upgrade/data-survival
+  gate), pending field validation.
+- Product-validation tooling is complete and waiting for real BA/QC field
+  observations.
+- SaaS work is locked until a provenance-backed comparison demonstrates a
+  positive product signal.
+
+See the [roadmap closure status](docs/release/roadmap-status.md). Before a beta
+release, run the executable drill and the readiness gate:
+
+```bash
+pnpm verify:release-drill && pnpm verify:controlled-beta-readiness
+```
 
 ## Documentation & Assets
 - **[Golden Path Demo Guide](docs/demo/golden-path.md)**
@@ -274,7 +284,9 @@ Built as a TypeScript modular monolith to balance speed of development with even
 - **[Portfolio Proof Pack](docs/demo/portfolio-proof-pack.md)**
 - **[Public Demo Checklist](docs/demo/public-demo-checklist.md)**
 - **[Impact Evaluation Docs](docs/evaluation/impact-evaluation.md)**
-- **[Domain Pack Architecture](docs/agent/domain-pack-architecture.md)**
+- **[Product Validation Protocol](docs/evaluation/product-validation.md)**
+- **[Roadmap Closure Status](docs/release/roadmap-status.md)**
+- **[Domain Pack Governance](docs/agent/domain-packs.md)**
 - **[Security Policy](SECURITY.md)**
 - **[Contributing Guide](CONTRIBUTING.md)**
 

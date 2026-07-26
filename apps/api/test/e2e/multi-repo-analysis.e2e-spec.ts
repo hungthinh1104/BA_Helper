@@ -2,7 +2,6 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '../../src/modules/prisma/prisma.service';
 import { PdfExportRenderer } from '../../src/modules/document/application/pdf-export.renderer';
 import { AppError } from '@ba-helper/shared';
 import { createTestApp } from './helpers/test-app';
@@ -19,6 +18,7 @@ import {
   multiRepoImpactMatrixResponseSchema,
   multiRepoImpactAnalysisCreateResponseSchema,
 } from '@ba-helper/contracts';
+import { PrismaService } from "@ba-helper/backend-runtime";
 
 describe('Multi-repo analysis fan-out (e2e)', () => {
   let app: INestApplication;

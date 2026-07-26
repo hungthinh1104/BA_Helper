@@ -16,6 +16,8 @@ import {
 	buildWorkspaceDomainPack,
 	buildDriftStatus,
 	buildReportStatus,
+	buildReviewApprovalGate,
+	buildReviewSummary,
 	deriveReviewStatus,
 	deriveRiskSeverity,
 	detectRequirementLanguage,
@@ -29,6 +31,7 @@ import {
 	readMetadata,
 	reviewItemTypeForInsight,
 	toEvidenceBasis,
+	toReviewActions,
 	toReviewDecision,
 	uniqueCount,
 } from './analysis-workspace.mapper.helpers';
@@ -39,12 +42,13 @@ export function mapAnalysisWorkspace(
 	const evidenceCards = buildEvidenceCards(analysis);
 	const risks = analysis.insights.filter(isRiskInsight).map(mapRisk);
 	const unknowns = analysis.insights
-		.filter((insight) => insight.insightType === 'UNKNOWN')
+		.filter((insight) => insight.insightType === 'UNKNOWN' && !isRiskInsight(insight))
 		.map(mapUnknown);
 	const qaScenarios = analysis.insights
 		.filter((insight) => insight.insightType === 'QA_SCENARIO')
 		.map(mapQaScenario);
 	const reviewQueue = buildReviewQueue(analysis);
+	const reviewSummary = buildReviewSummary(reviewQueue);
 	const reportStatus = buildReportStatus(analysis);
 	const driftStatus = buildDriftStatus(analysis);
 
@@ -68,6 +72,7 @@ export function mapAnalysisWorkspace(
 				commitSha: analysis.snapshot.commitSha,
 				analyzerVersion: analysis.snapshot.analyzerVersion,
 				profileVersion: analysis.snapshot.profile?.profileVersion,
+				repositoryUrl: analysis.snapshot.repository?.canonicalUrl ?? null,
 			},
 			status: {
 				analysisStatus: analysis.status as AnalysisWorkspaceResponse['overview']['status']['analysisStatus'],
@@ -84,7 +89,7 @@ export function mapAnalysisWorkspace(
 				risks: risks.length,
 				unknowns: unknowns.length,
 				qaScenarios: qaScenarios.length,
-				pendingReviewItems: reviewQueue.length,
+				pendingReviewItems: reviewSummary.pending,
 			},
 		},
 		impactGroups: buildImpactGroups(analysis.traceabilityLinks),
@@ -93,6 +98,7 @@ export function mapAnalysisWorkspace(
 		unknowns,
 		qaScenarios,
 		reviewQueue,
+		reviewSummary,
 		reportStatus,
 		driftStatus,
 	};
@@ -119,6 +125,7 @@ function buildImpactGroups(
 			universalKind: normalizeUniversalKind(link.artifact.universalKind),
 			impactBasis: toEvidenceBasis(link.linkBasis),
 			impactReason: `Traceability link ${link.id} is ${link.linkBasis.toLowerCase()}.`,
+			confidence: link.confidence ?? undefined,
 			traceabilityLinkIds: [link.id],
 			evidenceIds: link.evidenceLinks.map((item) => item.evidenceId),
 			reviewDecision: toReviewDecision(
@@ -226,34 +233,63 @@ function mapQaScenario(
 	};
 }
 
+/**
+ * Projects the full decision lifecycle for every reviewable item — insights and
+ * traceability links alike, regardless of their current decision. Reviewed and
+ * needs-more-evidence items stay in the queue so the review UI can show progress,
+ * keep resolved decisions visible, and never lose a needs-more-evidence item.
+ * `blockingFinalize` and `isConflicting` are projected from the single backend
+ * evidence-quality/approval-gate evaluation rather than hardcoded.
+ */
 function buildReviewQueue(
 	analysis: WorkspaceAnalysis,
 ): AnalysisWorkspaceResponse['reviewQueue'] {
-	const insightItems = analysis.insights
-		.filter((insight) => insight.reviewStatus === 'NEEDS_REVIEW')
-		.map((insight) => ({
+	const gate = buildReviewApprovalGate(analysis);
+	const artifactBasisByKey = new Map(
+		analysis.traceabilityLinks.map(
+			(link) => [link.artifact.artifactKey, toEvidenceBasis(link.linkBasis)] as const,
+		),
+	);
+	const firstArtifactBasis = (keys: string[]) =>
+		keys.map((key) => artifactBasisByKey.get(key)).find((basis) => basis !== undefined) ?? null;
+
+	const insightItems = analysis.insights.map((insight) => {
+		const itemType = reviewItemTypeForInsight(insight);
+		const linkedArtifactKeys = evidenceArtifactKeys(insight);
+		return {
 			itemId: insight.id,
-			itemType: reviewItemTypeForInsight(insight),
+			itemType,
 			title: insight.title,
 			currentDecision: toReviewDecision(insight.reviewStatus),
 			evidenceCount: insight.evidenceLinks.length,
-			linkedArtifactKeys: evidenceArtifactKeys(insight),
+			linkedArtifactKeys,
 			linkedEvidenceIds: insight.evidenceLinks.map((link) => link.evidenceId),
-			blockingFinalize: true,
-		}));
+			blockingFinalize: gate.blockingItemIds.has(insight.id),
+			impactBasis: firstArtifactBasis(linkedArtifactKeys),
+			isConflicting: gate.qualityByItemId.get(insight.id) === 'CONFLICTING_EVIDENCE',
+			allowedActions: toReviewActions(itemType),
+			reviewNote: insight.reviewNote?.body ?? null,
+			reviewedAt: insight.reviewNote?.updatedAt?.toISOString() ?? null,
+			reviewedByUserId: null,
+		};
+	});
 
-	const linkItems = analysis.traceabilityLinks
-		.filter((link) => link.reviewStatus === 'NEEDS_REVIEW')
-		.map((link) => ({
-			itemId: link.id,
-			itemType: 'impact' as const,
-			title: `Review impact link: ${link.artifact.name}`,
-			currentDecision: toReviewDecision(link.reviewStatus),
-			evidenceCount: link.evidenceLinks.length,
-			linkedArtifactKeys: [link.artifact.artifactKey],
-			linkedEvidenceIds: link.evidenceLinks.map((item) => item.evidenceId),
-			blockingFinalize: true,
-		}));
+	const linkItems = analysis.traceabilityLinks.map((link) => ({
+		itemId: link.id,
+		itemType: 'impact' as const,
+		title: `Review impact link: ${link.artifact.name}`,
+		currentDecision: toReviewDecision(link.reviewDecision?.decision ?? link.reviewStatus),
+		evidenceCount: link.evidenceLinks.length,
+		linkedArtifactKeys: [link.artifact.artifactKey],
+		linkedEvidenceIds: link.evidenceLinks.map((item) => item.evidenceId),
+		blockingFinalize: gate.blockingItemIds.has(link.id),
+		impactBasis: toEvidenceBasis(link.linkBasis),
+		isConflicting: gate.qualityByItemId.get(link.id) === 'CONFLICTING_EVIDENCE',
+		allowedActions: toReviewActions('impact'),
+		reviewNote: link.reviewDecision?.note ?? null,
+		reviewedAt: link.reviewDecision?.reviewedAt?.toISOString() ?? null,
+		reviewedByUserId: link.reviewDecision?.reviewedByUserId ?? null,
+	}));
 
 	return [...insightItems, ...linkItems];
 }

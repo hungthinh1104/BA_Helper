@@ -15,6 +15,7 @@ import { useUpdateTraceabilityReviewDecision, useDeleteTraceabilityReviewDecisio
 import { traceabilityReviewDecisionValueSchema } from "@ba-helper/contracts"
 import { z } from "zod"
 import { Loader2 } from "lucide-react"
+import { useTranslations } from "next-intl"
 
 type DecisionValue = z.infer<typeof traceabilityReviewDecisionValueSchema>
 
@@ -28,6 +29,7 @@ interface ReviewDecisionControlsProps {
 }
 
 export function ReviewDecisionControls({ analysisId, linkId, currentDecision }: ReviewDecisionControlsProps) {
+  const t = useTranslations("reports")
   const [open, setOpen] = useState(false)
   const [selectedDecision, setSelectedDecision] = useState<DecisionValue | null>(currentDecision?.decision || null)
   const [note, setNote] = useState(currentDecision?.note || "")
@@ -64,8 +66,17 @@ export function ReviewDecisionControls({ analysisId, linkId, currentDecision }: 
   }
 
   const formatDecisionLabel = (decision: DecisionValue | null) => {
-    if (!decision) return "No Decision"
-    return decision.replace(/_/g, " ")
+    if (!decision) return t("noDecision")
+    switch (decision) {
+      case "ACCEPTED":
+        return t("acceptedDecision")
+      case "REJECTED":
+        return t("rejectedDecision")
+      case "NEEDS_REVIEW":
+        return t("needsReviewDecision")
+      case "NEEDS_MORE_EVIDENCE":
+        return t("needsMoreEvidenceDecision")
+    }
   }
 
   const isLoading = updateMutation.isPending || deleteMutation.isPending
@@ -91,12 +102,12 @@ export function ReviewDecisionControls({ analysisId, linkId, currentDecision }: 
       
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Review Traceability Link</DialogTitle>
+          <DialogTitle>{t("reviewTraceabilityLink")}</DialogTitle>
         </DialogHeader>
         
         <div className="grid gap-4 py-4">
           <div className="flex flex-col gap-2">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Decision</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("decision")}</span>
             <div className="grid grid-cols-2 gap-2">
               {(["ACCEPTED", "REJECTED", "NEEDS_REVIEW", "NEEDS_MORE_EVIDENCE"] as DecisionValue[]).map((d) => (
                 <Button
@@ -120,11 +131,11 @@ export function ReviewDecisionControls({ analysisId, linkId, currentDecision }: 
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Note (Optional)</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("noteOptional")}</span>
             <Textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="Add rationale for this decision..."
+              placeholder={t("decisionRationalePlaceholder")}
               className="resize-none h-20 text-[13px]"
             />
           </div>
@@ -138,13 +149,13 @@ export function ReviewDecisionControls({ analysisId, linkId, currentDecision }: 
             disabled={!currentDecision || isLoading}
             className="text-destructive hover:bg-destructive/10 hover:text-destructive text-[13px] h-8"
           >
-            Clear Decision
+            {t("clearDecision")}
           </Button>
           <div className="flex gap-2">
             <DialogClose
               render={
                 <Button type="button" variant="outline" className="text-[13px] h-8">
-                  Cancel
+                  {t("cancel")}
                 </Button>
               }
             />
@@ -155,7 +166,7 @@ export function ReviewDecisionControls({ analysisId, linkId, currentDecision }: 
               className="text-[13px] h-8"
             >
               {isLoading && <Loader2 className="w-3 h-3 animate-spin mr-2" />}
-              Save Decision
+              {t("saveDecision")}
             </Button>
           </div>
         </DialogFooter>

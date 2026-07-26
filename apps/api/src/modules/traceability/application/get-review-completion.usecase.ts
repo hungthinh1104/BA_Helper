@@ -1,15 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { TraceabilityRepository } from '../infrastructure/traceability.repository';
 import { ReviewCompletionResponse } from '@ba-helper/contracts';
 import { AppError } from '@ba-helper/shared';
-import { InsightRepository } from '../../insight/infrastructure/insight.repository';
 import { buildEvidenceQualityProjection } from '../../document/application/evidence-quality.projection';
 import {
   buildReportApprovalGateItems,
   ReportApprovalGatePolicy,
   type ReportApprovalBlockerCode,
 } from '../../document/application/report-approval-gate.policy';
+import { PrismaService, TraceabilityRepository, InsightRepository } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class GetReviewCompletionUseCase {
@@ -39,8 +37,8 @@ export class GetReviewCompletionUseCase {
     let unreviewed = 0;
 
     for (const link of links) {
-      const decision = link.reviewDecision?.decision;
-      if (decision === 'ACCEPTED') accepted++;
+      const decision = link.reviewDecision?.decision ?? link.reviewStatus;
+      if (decision === 'ACCEPTED' || decision === 'CONFIRMED') accepted++;
       else if (decision === 'REJECTED') rejected++;
       else if (decision === 'NEEDS_REVIEW') needsReview++;
       else if (decision === 'NEEDS_MORE_EVIDENCE') needsMoreEvidence++;
@@ -62,12 +60,7 @@ export class GetReviewCompletionUseCase {
       ReportApprovalBlockerCode
     > = [];
 
-    if (totalLinks === 0) {
-      // Technically no unreviewed links, but it makes sense to not be complete if there are no links.
-      // However, to keep it simple as per spec: isComplete = false, UNREVIEWED_TRACEABILITY_LINKS
-      isComplete = false;
-      blockingReasons.push('UNREVIEWED_TRACEABILITY_LINKS');
-    } else if (unreviewed > 0) {
+    if (needsReview > 0 || unreviewed > 0) {
       isComplete = false;
       blockingReasons.push('UNREVIEWED_TRACEABILITY_LINKS');
     }

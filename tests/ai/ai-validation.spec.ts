@@ -1,4 +1,4 @@
-import { AiService } from '../../apps/api/src/modules/ai/application/ai.service';
+import { AiService } from "@ba-helper/backend-runtime";
 
 describe('AiService validation', () => {
   it('rejects responses that reference evidence outside bundle', () => {

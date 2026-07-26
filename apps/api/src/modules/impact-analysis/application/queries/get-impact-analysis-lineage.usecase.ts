@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../../prisma/prisma.service';
 import { AppError } from '@ba-helper/shared';
 import { LineageTimelineEvent, LineageTimelineResponse } from '@ba-helper/contracts';
+import { PrismaService } from "@ba-helper/backend-runtime";
 
 const EVENT_ORDER: Record<LineageTimelineEvent['type'], number> = {
   REQUIREMENT_CREATED: 1,

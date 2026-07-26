@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AppError } from '@ba-helper/shared';
-import { PrismaService } from '../../../prisma/prisma.service';
 import { mapAnalysisWorkspace } from '../mappers/analysis-workspace.mapper';
+import { PrismaService } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class GetAnalysisWorkspaceUseCase {
@@ -15,6 +15,7 @@ export class GetAnalysisWorkspaceUseCase {
 				snapshot: {
 					include: {
 						profile: true,
+						repository: { select: { canonicalUrl: true } },
 					},
 				},
 				sourceTarget: true,
@@ -29,6 +30,7 @@ export class GetAnalysisWorkspaceUseCase {
 								},
 							},
 						},
+						reviewNote: true,
 					},
 					orderBy: { createdAt: 'asc' },
 				},

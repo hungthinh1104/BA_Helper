@@ -9,6 +9,10 @@ import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import type { AnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
 import { ApiError } from "@/lib/api-error"
+import type { AnalysisWorkspaceResponse } from "@ba-helper/contracts"
+import { useLocale } from "next-intl"
+import { DEFAULT_APP_LOCALE, normalizeAppLocale } from "@/i18n/app-locale"
+import { DenseCard, DenseAlert } from "@/components/workspace/shared/dense-card"
 
 interface FinalizeAnalysisDialogProps {
   children: React.ReactNode
@@ -23,6 +27,7 @@ interface FinalizeAnalysisDialogProps {
     needsReview: number
   }
   isStale?: boolean
+  reportStatus: AnalysisWorkspaceResponse["reportStatus"]
   labels: AnalysisWorkspaceLabels["reviewReport"]["finalizeDialog"]
 }
 
@@ -32,22 +37,29 @@ export function FinalizeAnalysisDialog({
   commitSha,
   stats,
   isStale,
+  reportStatus,
   labels,
 }: FinalizeAnalysisDialogProps) {
   const [open, setOpen] = useState(false)
   const [acknowledgeUnreviewed, setAcknowledgeUnreviewed] = useState(false)
   const { mutateAsync: finalizeAnalysis, isPending } = useFinalizeAnalysis(undefined, analysisId)
   const router = useRouter()
+  const locale = normalizeAppLocale(useLocale())
+  const safeReportStatus = normalizeReportStatus(reportStatus)
 
-  const hasUnreviewedItems = stats.needsReview > 0
+  const requiresAcknowledgement = safeReportStatus.requiresUnreviewedAcknowledgement
+  const actualBlockingReasons = safeReportStatus.finalizeBlockingReasons
+  const isHardBlocked = actualBlockingReasons.length > 0
 
   const handleFinalize = async () => {
     try {
       await finalizeAnalysis({ acknowledgeUnreviewed })
       toast.success(labels.success)
       setOpen(false)
-      // Redirect directly to the generated report
-      router.push(`/reports?analysisId=${analysisId}`)
+      const reportUrl = locale === DEFAULT_APP_LOCALE
+        ? `/reports?analysisId=${analysisId}`
+        : `/reports?analysisId=${analysisId}&locale=${locale}`
+      router.push(reportUrl)
     } catch (err: unknown) {
       if (err instanceof ApiError && err.code === "REVIEW_APPROVAL_BLOCKED") {
         toast.error("Critical review coverage is incomplete.", {
@@ -101,37 +113,50 @@ export function FinalizeAnalysisDialog({
             {labels.description}
           </p>
 
-          <div className="flex flex-col divide-y divide-border/60 border border-border/60 rounded-lg overflow-hidden bg-surface-muted/30">
+          <DenseCard variant="muted" className="divide-y divide-border/60">
             <SummaryRow label={labels.totalInsights} value={String(stats.total)} />
             <SummaryRow label={labels.confirmed} value={String(stats.confirmed)} valueColor="text-success" />
             <SummaryRow label={labels.rejected} value={String(stats.rejected)} valueColor="text-destructive" />
             <SummaryRow label={labels.unknownConflicts} value={String(stats.unknowns + stats.conflicts)} valueColor="text-warning" />
             <SummaryRow label={labels.snapshotCommit} value={commitSha.substring(0, 7)} mono />
-          </div>
+          </DenseCard>
 
-          <div className="flex items-start gap-3 p-3 bg-primary/10 border border-primary/20 rounded-lg text-primary">
+          <DenseAlert variant="primary" className="p-3">
             <FileText className="w-4 h-4 mt-0.5 shrink-0" />
             <p className="text-[12px] font-medium leading-relaxed">
               {labels.reportNotice}
             </p>
-          </div>
+          </DenseAlert>
 
-          <div className="flex flex-col gap-2 p-3 bg-surface border border-border/60 rounded-lg">
+          <DenseCard className="gap-2 p-3 border-border/60">
             <h4 className="text-[12px] font-semibold text-foreground mb-1">{labels.preflightChecklist}</h4>
             
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center gap-2">
-                {!hasUnreviewedItems ? (
+                {!requiresAcknowledgement ? (
                   <CheckCircle2 className="w-4 h-4 text-success" />
                 ) : (
-                  <AlertTriangle className="w-4 h-4 text-warning" />
+                  <AlertTriangle className={`w-4 h-4 ${isHardBlocked ? "text-destructive" : "text-warning"}`} />
                 )}
-                <span className={`text-[12px] ${!hasUnreviewedItems ? "text-foreground" : "text-warning font-medium"}`}>
-                  {!hasUnreviewedItems ? labels.reviewed : `${stats.needsReview} ${labels.unreviewed}`}
+                <span className={`text-[12px] ${!requiresAcknowledgement ? "text-foreground" : isHardBlocked ? "text-destructive font-medium" : "text-warning font-medium"}`}>
+                  {!requiresAcknowledgement ? labels.reviewed : `${stats.needsReview} ${labels.unreviewed}`}
                 </span>
               </div>
               
-              {hasUnreviewedItems && (
+              {isHardBlocked && (
+                <div className="flex flex-col gap-1 mt-1 ml-6 p-2 rounded border border-destructive/20 bg-destructive/10">
+                  <span className="text-[11px] font-semibold text-destructive">
+                    Backend policy blocks finalization until these reasons are resolved:
+                  </span>
+                  <ul className="list-disc pl-4 text-[11px] text-destructive">
+                    {actualBlockingReasons.map((reason) => (
+                      <li key={reason}>{formatReviewApprovalBlocker(reason)}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {requiresAcknowledgement && !isHardBlocked && (
                 <div className="flex items-center gap-2 mt-1 ml-6 bg-warning/10 p-2 rounded border border-warning/20">
                   <input
                     type="checkbox"
@@ -164,7 +189,7 @@ export function FinalizeAnalysisDialog({
                 {labels.coverageMapGenerated}
               </span>
             </div>
-          </div>
+          </DenseCard>
         </div>
 
         <div className="px-6 py-4 border-t border-border/60 bg-surface-muted/30 flex justify-end gap-2">
@@ -172,7 +197,7 @@ export function FinalizeAnalysisDialog({
           <Button 
             size="sm" 
             className="h-8 shadow-none bg-success hover:bg-success/90 text-white disabled:opacity-50" 
-            disabled={isPending || (hasUnreviewedItems && !acknowledgeUnreviewed) || isStale} 
+            disabled={isPending || !safeReportStatus.canFinalize || (requiresAcknowledgement && !acknowledgeUnreviewed) || isStale} 
             onClick={handleFinalize}
           >
             {isPending ? labels.finalizing : labels.confirmFinalize}
@@ -181,6 +206,28 @@ export function FinalizeAnalysisDialog({
       </DialogContent>
     </Dialog>
   )
+}
+
+function normalizeReportStatus(
+  value: AnalysisWorkspaceResponse["reportStatus"],
+): AnalysisWorkspaceResponse["reportStatus"] {
+  const finalizeBlockingReasons = Array.isArray(value.finalizeBlockingReasons)
+    ? value.finalizeBlockingReasons
+    : ["LEGACY_REPORT_STATUS_CONTRACT"]
+  const exportBlockingReasons = Array.isArray(value.exportBlockingReasons)
+    ? value.exportBlockingReasons
+    : ["LEGACY_REPORT_STATUS_CONTRACT"]
+
+  return {
+    ...value,
+    canFinalize: value.canFinalize === true && finalizeBlockingReasons.length === 0,
+    requiresUnreviewedAcknowledgement: value.requiresUnreviewedAcknowledgement === true,
+    canViewReport: value.canViewReport === true,
+    canExport: value.canExport === true && exportBlockingReasons.length === 0,
+    canRetryReportGeneration: value.canRetryReportGeneration === true,
+    finalizeBlockingReasons,
+    exportBlockingReasons,
+  }
 }
 
 function formatReviewApprovalBlockers(details: unknown): string {
@@ -196,7 +243,7 @@ function formatReviewApprovalBlockers(details: unknown): string {
   return reasons.map((reason) => formatReviewApprovalBlocker(String(reason))).join(" · ")
 }
 
-function formatReviewApprovalBlocker(reason: string): string {
+export function formatReviewApprovalBlocker(reason: string): string {
   switch (reason) {
     case "CONFLICTING_EVIDENCE_UNREVIEWED":
       return "conflicting evidence needs review"
@@ -206,6 +253,12 @@ function formatReviewApprovalBlocker(reason: string): string {
       return "review-required items remain"
     case "HIGH_RISK_INSIGHT_UNREVIEWED":
       return "high-risk insight is unreviewed"
+    case "ANALYSIS_NOT_WAITING_FOR_REVIEW":
+      return "analysis is not waiting for review"
+    case "ANALYSIS_STALE":
+      return "analysis is stale"
+    case "LEGACY_REPORT_STATUS_CONTRACT":
+      return "backend report status contract is missing capability fields"
     default:
       return reason
   }

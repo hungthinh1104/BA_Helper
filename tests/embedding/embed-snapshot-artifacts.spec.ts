@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { EmbedSnapshotArtifactsUseCase } from '@ba-helper/application';
-import { FakeEmbeddingProvider } from '../../apps/api/src/modules/embedding/infrastructure/fake-embedding.provider';
+import { FakeEmbeddingProvider } from '@ba-helper/backend-runtime';
 import { ArtifactChunkBuilder, CHUNK_BUILDER_VERSION } from '@ba-helper/application';
 import { createHash } from 'node:crypto';
 

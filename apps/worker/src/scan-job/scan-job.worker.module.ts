@@ -1,11 +1,9 @@
 import { Module } from '@nestjs/common';
-import { ScannerModule } from '../../../api/src/modules/scanner/scanner.module';
+import { ScannerRuntimeModule } from '@ba-helper/backend-runtime/scanner';
 import { ScanJobProcessor } from './scan-job.processor';
 
 @Module({
-  imports: [ScannerModule],
-  providers: [
-    ScanJobProcessor,
-  ],
+  imports: [ScannerRuntimeModule],
+  providers: [ScanJobProcessor],
 })
 export class ScanJobWorkerModule {}

@@ -1,10 +1,13 @@
 import React from "react"
 import Link from "next/link"
 import { AlertCircle } from "lucide-react"
+import { useLocale, useTranslations } from "next-intl"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { useMultiRepoImpactMatrix } from "@/hooks/api/use-analyses"
-import { MULTI_REPO_CHILD_BLOCKING_REASON_LABEL } from "@/lib/multi-repo-report-labels"
+import { getMultiRepoChildBlockingReasonLabel } from "@/lib/multi-repo-report-labels"
+import { getLocalizedLabel, reviewDecisionLabels } from "@/lib/i18n/status-labels"
+import { useLocalizedHref } from "@/i18n/navigation"
 
 interface ImpactMatrixTableProps {
   runId: string
@@ -12,17 +15,20 @@ interface ImpactMatrixTableProps {
 }
 
 export function ImpactMatrixTable({ runId, onViewDetails }: ImpactMatrixTableProps) {
+  const t = useTranslations("multiRepo")
+  const locale = useLocale()
+  const href = useLocalizedHref()
   const { data, isLoading, error } = useMultiRepoImpactMatrix(runId)
 
   if (isLoading) {
-    return <div className="py-8 text-center text-sm text-muted-foreground">Loading matrix...</div>
+    return <div className="py-8 text-center text-sm text-muted-foreground">{t("loadingMatrix")}</div>
   }
 
   if (error || !data) {
     return (
       <div className="flex flex-col items-center py-8 text-muted-foreground">
         <AlertCircle className="w-5 h-5 text-destructive mb-2" />
-        <p className="text-[13px] font-medium text-foreground">Failed to load impact matrix</p>
+        <p className="text-[13px] font-medium text-foreground">{t("failedToLoadMatrix")}</p>
       </div>
     )
   }
@@ -32,16 +38,16 @@ export function ImpactMatrixTable({ runId, onViewDetails }: ImpactMatrixTablePro
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Domain</TableHead>
-            <TableHead>Repository</TableHead>
-            <TableHead className="text-right">API</TableHead>
-            <TableHead className="text-right">Service</TableHead>
-            <TableHead className="text-right">Data</TableHead>
-            <TableHead className="text-right">Test</TableHead>
-            <TableHead className="text-right">Risks</TableHead>
-            <TableHead className="text-right">QA</TableHead>
-            <TableHead>Review</TableHead>
-            <TableHead>Status</TableHead>
+            <TableHead>{t("domain")}</TableHead>
+            <TableHead>{t("repository")}</TableHead>
+            <TableHead className="text-right">{t("api")}</TableHead>
+            <TableHead className="text-right">{t("service")}</TableHead>
+            <TableHead className="text-right">{t("data")}</TableHead>
+            <TableHead className="text-right">{t("test")}</TableHead>
+            <TableHead className="text-right">{t("risks")}</TableHead>
+            <TableHead className="text-right">{t("qa")}</TableHead>
+            <TableHead>{t("review")}</TableHead>
+            <TableHead>{t("status")}</TableHead>
             <TableHead></TableHead>
           </TableRow>
         </TableHeader>
@@ -50,7 +56,7 @@ export function ImpactMatrixTable({ runId, onViewDetails }: ImpactMatrixTablePro
             <TableRow key={row.analysisId}>
               <TableCell className="font-medium">{row.domain}</TableCell>
               <TableCell>
-                <Link href={`/analyses/${row.analysisId}`} className="hover:underline text-primary">
+                <Link href={href(`/analyses/${row.analysisId}`)} className="hover:underline text-primary">
                   {row.repositoryDisplayName}
                 </Link>
               </TableCell>
@@ -68,18 +74,18 @@ export function ImpactMatrixTable({ runId, onViewDetails }: ImpactMatrixTablePro
               <TableCell className="text-right">{row.qaScenarioCount || "-"}</TableCell>
               <TableCell>
                 {row.latestReviewDecision === "ACCEPTED" ? (
-                  <span className="text-success font-medium">Accepted</span>
+                  <span className="text-success font-medium">{getLocalizedLabel(reviewDecisionLabels, row.latestReviewDecision, locale)}</span>
                 ) : row.latestReviewDecision === "REJECTED" ? (
-                  <span className="text-destructive font-medium">Rejected</span>
+                  <span className="text-destructive font-medium">{getLocalizedLabel(reviewDecisionLabels, row.latestReviewDecision, locale)}</span>
                 ) : row.latestReviewDecision === "NEEDS_MORE_CLARIFICATION" ? (
-                  <span className="text-warning font-medium">Clarification</span>
+                  <span className="text-warning font-medium">{t("clarification")}</span>
                 ) : (
-                  <span className="text-muted-foreground">Pending</span>
+                  <span className="text-muted-foreground">{t("pending")}</span>
                 )}
               </TableCell>
               <TableCell>
                 <span className={`text-[12px] ${row.blockingReason === "NONE" ? "text-success" : "text-warning"}`}>
-                  {MULTI_REPO_CHILD_BLOCKING_REASON_LABEL[row.blockingReason || "NONE"]}
+                  {getMultiRepoChildBlockingReasonLabel(row.blockingReason || "NONE", locale)}
                 </span>
               </TableCell>
               <TableCell className="text-right">
@@ -88,7 +94,7 @@ export function ImpactMatrixTable({ runId, onViewDetails }: ImpactMatrixTablePro
                   size="sm" 
                   onClick={() => onViewDetails(row.analysisId)}
                 >
-                  View details
+                  {t("viewDetails")}
                 </Button>
               </TableCell>
             </TableRow>
@@ -96,7 +102,7 @@ export function ImpactMatrixTable({ runId, onViewDetails }: ImpactMatrixTablePro
           {data.rows.length === 0 && (
             <TableRow>
               <TableCell colSpan={11} className="text-center text-muted-foreground h-24">
-                No repositories found in this run.
+                {t("noRepositoriesInRun")}
               </TableCell>
             </TableRow>
           )}

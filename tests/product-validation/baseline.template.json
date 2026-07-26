@@ -1,0 +1,97 @@
+{
+  "datasetVersion": 1,
+  "collectedAt": "2026-07-20",
+  "tool": {
+    "commitSha": "abcdef0123456789abcdef0123456789abcdef01",
+    "appVersion": "0.1.0"
+  },
+  "cases": [
+    {
+      "caseId": "replace-with-real-case-id-1",
+      "analysisId": "77777777-7777-4777-8777-777777777777",
+      "reviewedReportSnapshotId": "88888888-8888-4888-8888-888888888888",
+      "reviewedAt": "2026-07-20T08:00:00.000Z",
+      "repository": {
+        "url": "https://github.com/owner/public-nestjs-repository",
+        "commitSha": "0123456789abcdef0123456789abcdef01234567"
+      },
+      "requirement": "Replace with the exact requirement used in the review.",
+      "reviewerRole": "TECHNICAL_BA",
+      "measurements": {
+        "manualAnalysisMinutes": 0,
+        "assistedAnalysisMinutes": 0,
+        "criticalArtifactsExpected": 0,
+        "criticalArtifactsFound": 0,
+        "artifactsReviewed": 0,
+        "falsePositiveArtifacts": 0,
+        "unknownsReviewed": 0,
+        "usefulUnknowns": 0,
+        "qaScenariosReviewed": 0,
+        "acceptedQaScenarios": 0,
+        "evidenceItemsReviewed": 0,
+        "reviewerConfirmedEvidenceItems": 0,
+        "rerunOrDriftReviewed": false,
+        "rerunOrDriftUseful": null
+      },
+      "notes": "Baseline = the SAME case scope reviewed with the prior tool commit. caseId, repository, requirement, reviewerRole, manualAnalysisMinutes, and criticalArtifactsExpected must match the candidate; only tool.commitSha, collectedAt, the review-session ids, and the measured outcomes differ."
+    },
+    {
+      "caseId": "replace-with-real-case-id-2",
+      "analysisId": "99999999-9999-4999-8999-999999999999",
+      "reviewedReportSnapshotId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "reviewedAt": "2026-07-20T09:00:00.000Z",
+      "repository": {
+        "url": "https://github.com/owner/public-nestjs-repository",
+        "commitSha": "89abcdef0123456789abcdef0123456789abcdef"
+      },
+      "requirement": "Replace with the exact requirement used in the review.",
+      "reviewerRole": "QC",
+      "measurements": {
+        "manualAnalysisMinutes": 0,
+        "assistedAnalysisMinutes": 0,
+        "criticalArtifactsExpected": 0,
+        "criticalArtifactsFound": 0,
+        "artifactsReviewed": 0,
+        "falsePositiveArtifacts": 0,
+        "unknownsReviewed": 0,
+        "usefulUnknowns": 0,
+        "qaScenariosReviewed": 0,
+        "acceptedQaScenarios": 0,
+        "evidenceItemsReviewed": 0,
+        "reviewerConfirmedEvidenceItems": 0,
+        "rerunOrDriftReviewed": false,
+        "rerunOrDriftUseful": null
+      },
+      "notes": "Same scope as candidate case 2."
+    },
+    {
+      "caseId": "replace-with-real-case-id-3",
+      "analysisId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "reviewedReportSnapshotId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "reviewedAt": "2026-07-20T10:00:00.000Z",
+      "repository": {
+        "url": "https://github.com/owner/public-nestjs-repository",
+        "commitSha": "fedcba9876543210fedcba9876543210fedcba98"
+      },
+      "requirement": "Replace with the exact requirement used in the review.",
+      "reviewerRole": "TECHNICAL_BA",
+      "measurements": {
+        "manualAnalysisMinutes": 0,
+        "assistedAnalysisMinutes": 0,
+        "criticalArtifactsExpected": 0,
+        "criticalArtifactsFound": 0,
+        "artifactsReviewed": 0,
+        "falsePositiveArtifacts": 0,
+        "unknownsReviewed": 0,
+        "usefulUnknowns": 0,
+        "qaScenariosReviewed": 0,
+        "acceptedQaScenarios": 0,
+        "evidenceItemsReviewed": 0,
+        "reviewerConfirmedEvidenceItems": 0,
+        "rerunOrDriftReviewed": false,
+        "rerunOrDriftUseful": null
+      },
+      "notes": "Same scope as candidate case 3. The candidate must be collected on or after the baseline date and identify a different tool.commitSha."
+    }
+  ]
+}

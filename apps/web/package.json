@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "dotenv -e ../../.env -- next dev",
+    "dev": "dotenv -e ../../.env -- next dev --webpack -p 3000",
     "build": "env NODE_ENV=production dotenv -e ../../.env -- next build",
-    "start": "dotenv -e ../../.env -- next start",
+    "start": "dotenv -e ../../.env -- next start -p 3000",
     "lint": "eslint"
   },
   "dependencies": {
@@ -24,6 +24,7 @@
     "mermaid": "^11.15.0",
     "next": "16.2.6",
     "next-auth": "4.24.5",
+    "next-intl": "^4.13.1",
     "next-themes": "^0.4.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",

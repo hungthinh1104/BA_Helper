@@ -1,9 +1,11 @@
 "use client"
 
+import { useTranslations } from "next-intl"
 import { CodeEvidenceBlock } from "@/components/workspace/analysis/retrieval/code-evidence-block"
 import { ImpactGraphInspector } from "@/components/graph/impact-graph-inspector"
 import { AlertCircle, FileCode2 } from "lucide-react"
 import { ClarificationWidget } from "@/components/workspace/analysis/clarification/clarification-widget"
+import { DenseAlert, DenseCard } from "@/components/workspace/shared/dense-card"
 import type {
   InsightListResponse,
   TraceabilityLinkListResponse,
@@ -22,6 +24,7 @@ interface LinkedInsightButtonProps {
 }
 
 function LinkedInsightButton({ insight, onClick }: LinkedInsightButtonProps) {
+  const t = useTranslations("workspace")
   return (
     <button
       onClick={() => onClick(insight)}
@@ -47,7 +50,7 @@ function LinkedInsightButton({ insight, onClick }: LinkedInsightButtonProps) {
         </span>
         {insight.reviewStatus === "NEEDS_REVIEW" && (
           <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-warning/10 text-warning border border-warning/30">
-            NEEDS REVIEW
+            {t("needsReview")}
           </span>
         )}
       </div>
@@ -79,6 +82,7 @@ export function AnalysisEvidenceInspector({
   onSelectInsight,
   onCloseGraphNode,
 }: AnalysisEvidenceInspectorProps) {
+  const t = useTranslations("workspace")
   // Graph node inspector
   if (selectedGraphNode) {
     const isKnownType =
@@ -93,12 +97,12 @@ export function AnalysisEvidenceInspector({
     return (
       <div className="h-full flex flex-col">
         {!isKnownType && (
-          <div className="mb-4 flex items-start gap-2.5 p-3 bg-warning/10 border border-warning/20 rounded-lg text-sm text-warning">
+          <DenseAlert variant="warning" className="mb-4 gap-2.5 p-3 text-sm">
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
             <p className="leading-snug">
-              This graph node type is not fully supported. It may represent an inferred or scanner-diagnostic entity.
+              {t("graphNodeUnsupportedDescription")}
             </p>
-          </div>
+          </DenseAlert>
         )}
         <ImpactGraphInspector
           node={selectedGraphNode}
@@ -124,15 +128,15 @@ export function AnalysisEvidenceInspector({
 
       <div>
         {activeEvidence.length === 0 ? (
-          <div className="flex flex-col items-center text-center py-16 px-4">
+          <DenseCard variant="muted" className="items-center px-4 py-16 text-center">
             <div className="w-14 h-14 rounded-full bg-surface-muted/50 border border-border/40 flex items-center justify-center mb-4 text-muted-foreground shadow-sm">
               <FileCode2 className="w-6 h-6 opacity-60" />
             </div>
-            <h4 className="text-[14px] font-semibold text-foreground mb-1">No Code Evidence Linked</h4>
+            <h4 className="text-[14px] font-semibold text-foreground mb-1">{t("noCodeEvidenceLinked")}</h4>
             <p className="text-[12px] text-muted-foreground max-w-[240px] leading-relaxed">
-              This item is not a confirmed code impact. Treat it as a diagnostic, risk, or clarification prompt until review links it to evidence.
+              {t("noCodeEvidenceLinkedDescription")}
             </p>
-          </div>
+          </DenseCard>
         ) : (
           activeEvidence.map((ev, i) => (
             <CodeEvidenceBlock key={ev.id} evidence={ev} index={i} total={activeEvidence.length} />
@@ -143,7 +147,7 @@ export function AnalysisEvidenceInspector({
       {selectedLink && linkedInsights.length > 0 && (
         <div className="flex flex-col gap-3 px-1 border-t border-border/40 pt-6">
           <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-            Linked Insights
+            {t("linkedInsights")}
           </h4>
           <div className="flex flex-col gap-2">
             {linkedInsights.map((insight) => (

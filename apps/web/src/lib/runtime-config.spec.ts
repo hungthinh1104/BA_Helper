@@ -31,4 +31,30 @@ describe("runtime-config", () => {
       getApiBaseUrl({ apiUrl: "not-a-url", nodeEnv: "development" }),
     ).toThrow("NEXT_PUBLIC_API_URL is invalid")
   })
+
+  it("uses a same-origin base in the browser and never bakes in an absolute API origin", () => {
+    // Even when an absolute NEXT_PUBLIC_API_URL is present, the browser stays
+    // same-origin; requests to /api/v1/* are proxied by Next rewrites.
+    expect(
+      getApiBaseUrl({
+        apiUrl: "http://localhost:3001",
+        nodeEnv: "production",
+        isBrowser: true,
+      }),
+    ).toBe("")
+
+    // Same-origin even with no configured API url — no throw in the browser.
+    expect(getApiBaseUrl({ nodeEnv: "production", isBrowser: true })).toBe("")
+  })
+
+  it("still calls the API directly on the server via the internal URL", () => {
+    expect(
+      getApiBaseUrl({
+        apiUrl: "http://localhost:3001",
+        internalApiUrl: "http://api:3001",
+        nodeEnv: "production",
+        isBrowser: false,
+      }),
+    ).toBe("http://api:3001")
+  })
 })

@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { useTranslations } from "next-intl"
 import { ReviewQueueItem, ReviewQueueResponse } from "@ba-helper/contracts"
 import { AlertCircle, CheckCircle } from "lucide-react"
 import { useReviewInsight, useReviewTraceabilityLink } from "@/hooks/api/use-analyses"
@@ -24,6 +25,7 @@ export function ReviewQueuePanel({
   canReview,
   canViewReviewQueue,
 }: ReviewQueuePanelProps) {
+  const t = useTranslations("workspace")
   const { summary, items } = queueData
 
   const [skippedLocal, setSkippedLocal] = useState<Set<string>>(new Set())
@@ -100,9 +102,9 @@ export function ReviewQueuePanel({
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-8 w-full">
         <AlertCircle className="w-8 h-8 text-muted-foreground mb-3" />
-        <p className="text-[13px] font-medium text-foreground mb-1">Review queue unavailable</p>
+        <p className="text-[13px] font-medium text-foreground mb-1">{t("reviewQueueUnavailable")}</p>
         <p className="text-[12px] text-muted-foreground">
-          Your current project role does not include review queue access.
+          {t("reviewQueueNoAccess")}
         </p>
       </div>
     )
@@ -114,8 +116,8 @@ export function ReviewQueuePanel({
         <div className="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center mb-3">
           <CheckCircle className="w-6 h-6 text-success" />
         </div>
-        <p className="text-[13px] font-medium text-foreground mb-1">Queue is clear</p>
-        <p className="text-[12px] text-muted-foreground">No items require your review. You can finalize the analysis.</p>
+        <p className="text-[13px] font-medium text-foreground mb-1">{t("queueClear")}</p>
+        <p className="text-[12px] text-muted-foreground">{t("noReviewItemsFinalize")}</p>
       </div>
     )
   }

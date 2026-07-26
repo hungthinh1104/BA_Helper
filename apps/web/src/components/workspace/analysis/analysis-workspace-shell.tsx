@@ -1,9 +1,9 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
+import { useSearchParams } from "next/navigation"
 import type { AnalysisWorkspaceResponse } from "@ba-helper/contracts"
-import { AlertTriangle } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { AlertCircle, AlertTriangle, Loader2 } from "lucide-react"
 import {
   DEFAULT_ANALYSIS_WORKSPACE_LOCALE,
   analysisStatusLabels,
@@ -12,16 +12,18 @@ import {
   reviewStatusLabels,
   type SupportedLocale,
 } from "@/lib/i18n/status-labels"
-import { getAnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
+import { getAnalysisWorkspaceLabels, type AnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
 import { DomainStatusBadge } from "./../shared/status-badges"
+import { AnalysisPrimaryCta } from "./analysis-primary-cta"
+import { resolveAnalysisExperienceState } from "./analysis-experience-state"
+import { AnalysisTrustMetricsPanel } from "./analysis-trust-metrics-panel"
 import { OverviewTab } from "./overview-tab"
-import { ImpactMapTab } from "./impact-map-tab"
-import { EvidenceTab } from "./evidence-tab"
 import { RisksQaTab } from "./risks-qa-tab"
-import { ReviewReportTab } from "./review-report-tab"
 import { LineageDiffTab } from "./lineage-diff-tab"
-
-type WorkspaceTab = "overview" | "impact" | "evidence" | "risks-qa" | "review-report" | "lineage-diff"
+import { AnalysisWorkspaceNavigation } from "./workbench/analysis-workspace-navigation"
+import { readAnalysisWorkbenchUrlState } from "./workbench/analysis-workbench-url-state"
+import { createAnalysisWorkbenchViewModel } from "./workbench/analysis-workbench-view-model"
+import { AnalysisReviewWorkbench } from "./workbench/analysis-review-workbench"
 
 export function AnalysisWorkspaceShell({
   workspace,
@@ -30,36 +32,18 @@ export function AnalysisWorkspaceShell({
   workspace: AnalysisWorkspaceResponse
   locale?: SupportedLocale
 }) {
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>("overview")
+  const searchParams = useSearchParams()
   const labels = getAnalysisWorkspaceLabels(locale)
-  const tabs: Array<{ id: WorkspaceTab; label: string }> = [
-    { id: "overview", label: labels.tabs.overview },
-    { id: "impact", label: labels.tabs.impact },
-    { id: "evidence", label: labels.tabs.evidence },
-    { id: "risks-qa", label: labels.tabs.risksQa },
-    { id: "review-report", label: labels.tabs.reviewReport },
-    { id: "lineage-diff", label: labels.tabs.lineageDiff },
-  ]
-  const stats = useMemo(() => {
-    const reviewed = workspace.reviewQueue.filter(
-      (item) => item.currentDecision !== "needs_review",
-    ).length
-    return {
-      total:
-        workspace.overview.counts.risks +
-        workspace.overview.counts.unknowns +
-        workspace.overview.counts.qaScenarios,
-      confirmed: reviewed,
-      rejected: 0,
-      unknowns: workspace.overview.counts.unknowns,
-      conflicts: workspace.risks.filter((risk) => risk.severity === "high").length,
-      needsReview: workspace.overview.counts.pendingReviewItems,
-    }
-  }, [workspace])
-
+  const urlState = readAnalysisWorkbenchUrlState(searchParams ?? new URLSearchParams())
+  const workbench = useMemo(
+    () => createAnalysisWorkbenchViewModel(workspace, urlState.item),
+    [workspace, urlState.item],
+  )
+  const activeMode = urlState.view ?? workbench.defaultMode
+  const experience = resolveAnalysisExperienceState(workspace)
   return (
-    <div className="app-page-scroll flex min-h-0 flex-col gap-4 p-4 md:p-6">
-      <header className="flex flex-col gap-3 border-b border-border/50 pb-4">
+    <div className="app-page-scroll flex min-h-0 flex-col gap-4 p-4 md:p-6 lg:p-8">
+      <header className="flex flex-col gap-4">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-3 mb-1">
@@ -74,23 +58,39 @@ export function AnalysisWorkspaceShell({
             <h1 className="mt-1 truncate text-xl font-semibold text-foreground">
               {workspace.overview.requirement.title}
             </h1>
-            <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+            <p className="mt-1 max-w-3xl text-sm text-muted-foreground line-clamp-2" title={workspace.overview.requirement.summary}>
               {workspace.overview.requirement.summary}
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
+          <div className="mt-3 flex flex-col gap-3 lg:items-end">
+            <AnalysisPrimaryCta workspace={workspace} labels={labels} />
+            <div className="flex flex-wrap items-center gap-4 lg:justify-end">
+            <StatusPill
+              label={labels.status.commit}
+              value={workspace.overview.snapshot.commitSha.substring(0, 7)}
+              mono
+            />
+            <div className="w-[1px] h-3 bg-border/60" />
+            <StatusPill
+              label={labels.status.analyzer}
+              value={workspace.overview.snapshot.analyzerVersion}
+            />
+            <div className="w-[1px] h-3 bg-border/60" />
             <StatusPill
               label={labels.status.analysis}
               value={getLocalizedLabel(analysisStatusLabels, workspace.overview.status.analysisStatus, locale)}
             />
+            <div className="w-[1px] h-3 bg-border/60" />
             <StatusPill
               label={labels.status.review}
               value={getLocalizedLabel(reviewStatusLabels, workspace.overview.status.reviewStatus, locale)}
             />
+            <div className="w-[1px] h-3 bg-border/60" />
             <StatusPill
               label={labels.status.drift}
               value={getLocalizedLabel(driftStatusLabels, workspace.overview.status.driftStatus, locale)}
             />
+            </div>
           </div>
         </div>
 
@@ -98,75 +98,100 @@ export function AnalysisWorkspaceShell({
           <div className="flex items-start gap-2 rounded-lg border border-warning/25 bg-warning/8 p-3 text-[12px] text-foreground/80">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
             <div className="leading-relaxed">
-              <p>Domain hints are limited and require source evidence.</p>
-              <p>This pack supports administrative workflow impact analysis only.</p>
-              <p>It does not provide medical advice, clinical decision support, or compliance validation.</p>
+              <p>{labels.domainPack.partialWarning1}</p>
+              <p>{labels.domainPack.partialWarning2}</p>
+              <p>{labels.domainPack.partialWarning3}</p>
             </div>
           </div>
         )}
 
-        <nav
-          aria-label={labels.navLabel}
-          className="flex gap-1 overflow-x-auto"
-        >
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              className={cn(
-                "h-9 shrink-0 rounded-md px-3 text-sm font-medium transition-colors",
-                activeTab === tab.id
-                  ? "bg-surface-muted text-foreground"
-                  : "text-muted-foreground hover:bg-surface hover:text-foreground",
-              )}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </nav>
+        {experience.isReviewable ? (
+          <AnalysisWorkspaceNavigation defaultMode={workbench.defaultMode} labels={labels.tabs} />
+        ) : null}
       </header>
 
-      {activeTab === "overview" && <OverviewTab workspace={workspace} locale={locale} labels={labels.overview} />}
-      {activeTab === "impact" && <ImpactMapTab groups={workspace.impactGroups} locale={locale} labels={labels.impactMap} />}
-      {activeTab === "evidence" && <EvidenceTab evidenceCards={workspace.evidenceCards} labels={labels.evidence} />}
-      {activeTab === "risks-qa" && (
-        <RisksQaTab
-          risks={workspace.risks}
-          unknowns={workspace.unknowns}
-          qaScenarios={workspace.qaScenarios}
-          locale={locale}
-          labels={labels.risksQa}
-        />
-      )}
-      {activeTab === "review-report" && (
-        <ReviewReportTab
-          workspace={workspace}
-          finalizeStats={stats}
-          locale={locale}
-          labels={labels.reviewReport}
-        />
-      )}
-      {activeTab === "lineage-diff" && (
-        <LineageDiffTab
-          workspace={workspace}
-          locale={locale}
-          labels={labels.lineageDiff}
+      {experience.isReviewable ? (
+        <>
+          <AnalysisTrustMetricsPanel
+            workspace={workspace}
+            labels={labels.metrics}
+          />
+
+          {activeMode === "summary" && <OverviewTab workspace={workspace} locale={locale} labels={labels.overview} />}
+          {activeMode === "review" && (
+            <AnalysisReviewWorkbench
+              workspace={workspace}
+              viewModel={workbench}
+              locale={locale}
+              labels={labels.reviewWorkbench}
+              queueLabels={labels.reviewQueue}
+              graphLabels={labels.graph}
+            />
+          )}
+          {activeMode === "risks-qa" && (
+            <RisksQaTab
+              risks={workspace.risks}
+              unknowns={workspace.unknowns}
+              qaScenarios={workspace.qaScenarios}
+              labels={labels.risksQa}
+              locale={locale}
+            />
+          )}
+          {activeMode === "history" && (
+            <LineageDiffTab
+              workspace={workspace}
+              locale={locale}
+              labels={labels.lineageDiff}
+            />
+          )}
+        </>
+      ) : (
+        <AnalysisLifecycleNotice
+          phase={experience.primaryAction === "failed" ? "failed" : "processing"}
+          labels={labels.lifecycle}
         />
       )}
     </div>
   )
 }
 
-function StatusPill({ label, value }: { label: string; value: string }) {
+function AnalysisLifecycleNotice({
+  phase,
+  labels,
+}: {
+  phase: "processing" | "failed"
+  labels: AnalysisWorkspaceLabels["lifecycle"]
+}) {
+  const failed = phase === "failed"
   return (
-    <div className="rounded-md border border-border/60 bg-surface px-3 py-2">
-      <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+    <div
+      data-lifecycle-notice={phase}
+      className="flex min-h-[280px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border/60 p-8 text-center"
+    >
+      {failed ? (
+        <AlertCircle className="h-8 w-8 text-destructive" aria-hidden="true" />
+      ) : (
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden="true" />
+      )}
+      <h2 className="text-base font-semibold text-foreground">
+        {failed ? labels.failedTitle : labels.processingTitle}
+      </h2>
+      <p className="max-w-md text-sm text-muted-foreground">
+        {failed ? labels.failedBody : labels.processingBody}
+      </p>
+    </div>
+  )
+}
+
+function StatusPill({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
         {label}
-      </div>
-      <div className="mt-1 truncate text-xs font-medium text-foreground">
+      </span>
+      <span className={`text-[12px] font-medium text-foreground ${mono ? "font-mono" : ""}`}>
         {value}
-      </div>
+      </span>
     </div>
   )
 }

@@ -1,10 +1,8 @@
 import { Module } from '@nestjs/common';
 import { EvidenceController } from './api/evidence.controller';
 import { ListEvidenceUseCase } from './application/list-evidence.usecase';
-import { EvidenceRepository } from './infrastructure/evidence.repository';
-import { PrismaModule } from '../prisma/prisma.module';
-import { PrismaService } from '../prisma/prisma.service';
 import { ProjectModule } from '../project/project.module';
+import { PrismaModule, PrismaService, EvidenceRepository } from "@ba-helper/backend-runtime";
 
 @Module({
   imports: [PrismaModule, ProjectModule],

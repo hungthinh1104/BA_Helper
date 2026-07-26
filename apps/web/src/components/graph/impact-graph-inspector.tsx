@@ -6,6 +6,7 @@ import { RetrievalSuggestion } from "@/components/workspace/analysis/retrieval/r
 
 import { QaCoverageItem } from "@ba-helper/contracts"
 import { QaCoverageBadge } from "@/components/workspace/analysis/qa/qa-coverage-badge"
+import { DenseCard } from "@/components/workspace/shared/dense-card"
 
 interface Props {
   node: ImpactGraphNode
@@ -60,14 +61,14 @@ export function ImpactGraphInspector({ node, onClose, coverage }: Props) {
       
       {/* Question / Reasoning for Unknowns and QA Scenarios */}
       {node.reasoning && (
-        <div className="flex flex-col gap-1.5 p-2.5 bg-surface-muted/30 border border-border/40 rounded-lg">
+        <DenseCard variant="muted" className="gap-1.5 p-2.5">
           <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
             Details & Reasoning
           </span>
           <p className="text-[12px] text-foreground/80 leading-relaxed">
             {node.reasoning}
           </p>
-        </div>
+        </DenseCard>
       )}
 
       {/* File path & Line Range */}
@@ -131,7 +132,7 @@ export function ImpactGraphInspector({ node, onClose, coverage }: Props) {
       {node.retrieval && Object.keys(node.retrieval).length > 0 && (
         <div className="flex flex-col gap-1.5">
           <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Retrieval Provenance</span>
-          <div className="flex flex-col gap-2 text-[11px] text-foreground/70 bg-surface border border-border/40 rounded px-2 py-2">
+          <DenseCard className="gap-2 px-2 py-2 text-[11px] text-foreground/70">
             <div className="flex justify-between gap-2">
               <span className="text-muted-foreground font-semibold">Method</span>
               <span className="font-mono">{node.retrieval.method as string}</span>
@@ -176,7 +177,7 @@ export function ImpactGraphInspector({ node, onClose, coverage }: Props) {
             {coverage && (
               <QaCoverageBadge coverage={coverage} />
             )}
-          </div>
+          </DenseCard>
         </div>
       )}
 
@@ -184,9 +185,9 @@ export function ImpactGraphInspector({ node, onClose, coverage }: Props) {
       {node.evidenceSummary && (
         <div className="flex flex-col gap-1.5">
           <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Evidence Excerpt</span>
-          <p className="text-[11px] text-foreground/70 bg-surface border border-border/40 rounded px-2 py-2 italic break-words leading-relaxed whitespace-pre-wrap">
+          <DenseCard className="px-2 py-2 text-[11px] text-foreground/70 italic break-words leading-relaxed whitespace-pre-wrap">
             {node.evidenceSummary}
-          </p>
+          </DenseCard>
         </div>
       )}
     </div>

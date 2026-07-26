@@ -4,7 +4,6 @@ import request from 'supertest';
 import * as crypto from 'crypto';
 import { createTestApp } from './helpers/test-app';
 import { resetDatabase } from './helpers/reset-db';
-import { PrismaService } from '../../src/modules/prisma/prisma.service';
 import {
   seedImpactAnalysisCompletion,
   seedScanJobCompletion,
@@ -19,6 +18,7 @@ import {
   requirementRevisionCreateResponseSchema,
   scanJobResponseSchema,
 } from '@ba-helper/contracts';
+import { PrismaService } from "@ba-helper/backend-runtime";
 
 describe('Analysis List (E2E)', () => {
   let app: INestApplication;
