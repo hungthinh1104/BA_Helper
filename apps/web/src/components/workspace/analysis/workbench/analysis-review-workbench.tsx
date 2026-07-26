@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { ChevronLeft } from "lucide-react"
 import type { AnalysisWorkspaceResponse } from "@ba-helper/contracts"
 import type { SupportedLocale } from "@/lib/i18n/status-labels"
 import type { AnalysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useImpactGraph } from "@/hooks/api/use-analyses"
 import {
@@ -17,7 +19,7 @@ import { readAnalysisWorkbenchUrlState, writeAnalysisWorkbenchUrlState } from ".
 import { filterReviewItems } from "./analysis-workbench-view-model"
 import type { AnalysisWorkbenchViewModel, ReviewDisplay } from "./analysis-workbench-types"
 import { DecisionPanel } from "./decision-panel"
-import { MobileEvidenceSheet } from "./mobile-evidence-sheet"
+import { MobileDecisionBar } from "./mobile-decision-bar"
 import { ReviewItemDetail } from "./review-item-detail"
 import { ReviewQueue } from "./review-queue"
 
@@ -56,6 +58,10 @@ export function AnalysisReviewWorkbench({
   // steered to re-run instead).
   const isStale = workspace.driftStatus.isStale
   const reviewComplete = viewModel.counts.total > 0 && viewModel.counts.pending === 0
+
+  // Mobile is a single-pane flow: the queue and the item detail are two screens,
+  // not a stacked layout. Desktop (lg+) always shows both.
+  const [mobilePane, setMobilePane] = useState<"queue" | "detail">("queue")
 
   const { data: graph, isLoading: graphLoading } = useImpactGraph(workspace.overview.analysisId, {
     enabled: urlState.display === "dependency-path",
@@ -149,9 +155,27 @@ export function AnalysisReviewWorkbench({
           <p className="text-xs text-muted-foreground">{labels.reviewCompleteHint}</p>
         </div>
       ) : null}
-      <section className="grid min-h-0 gap-4 xl:grid-cols-[300px_minmax(0,1fr)_280px]">
-        <ReviewQueue viewModel={viewModel} locale={locale} labels={queueLabels} />
-        <div className="min-w-0 rounded-lg border border-border/50 bg-surface p-4">
+      <section className="grid min-h-0 gap-4 lg:grid-cols-[300px_minmax(0,1fr)_280px]">
+        {/* Queue pane — the reviewer's list; hidden on mobile once they drill in. */}
+        <div className={cn(mobilePane === "detail" && "hidden lg:block")}>
+          <ReviewQueue
+            viewModel={viewModel}
+            locale={locale}
+            labels={queueLabels}
+            onSelectItem={() => setMobilePane("detail")}
+          />
+        </div>
+        {/* Detail pane — evidence + context; hidden on mobile while browsing. */}
+        <div className={cn("min-w-0 rounded-lg border border-border/50 bg-surface p-4", mobilePane === "queue" && "hidden lg:block")}>
+          <button
+            type="button"
+            className="mb-3 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground lg:hidden"
+            onClick={() => setMobilePane("queue")}
+            data-back-to-queue
+          >
+            <ChevronLeft aria-hidden="true" className="h-3.5 w-3.5" />
+            {labels.backToQueue}
+          </button>
           <div className="mb-4 hidden gap-2 lg:flex" role="group" aria-label={labels.reviewDetail}>
             <Button type="button" size="sm" variant={urlState.display === "evidence" ? "secondary" : "outline"} aria-pressed={urlState.display === "evidence"} onClick={() => pushUrl({ display: "evidence" })}>
               {labels.evidence}
@@ -160,42 +184,38 @@ export function AnalysisReviewWorkbench({
               {labels.dependencyPath}
             </Button>
           </div>
-          {/* Mobile shows the detail only inside the sheet — never duplicated inline. */}
-          <div className="lg:hidden"><MobileEvidenceSheet labels={labels}>{detail}</MobileEvidenceSheet></div>
-          <div className="hidden lg:block">
-            {urlState.display === "dependency-path" ? <GraphTab graph={graph} isLoading={graphLoading} labels={graphLabels} /> : detail}
-          </div>
+          {urlState.display === "dependency-path" ? <GraphTab graph={graph} isLoading={graphLoading} labels={graphLabels} /> : detail}
         </div>
-        <DecisionPanel
+        {/* Decision panel — desktop only; mobile uses the sticky action bar. */}
+        <div className="hidden lg:block">
+          <DecisionPanel
+            item={selectedItem}
+            locale={locale}
+            labels={labels.decision}
+            rationale={rationale}
+            onRationaleChange={setRationale}
+            onDecide={handleDecide}
+            onNavigate={navigate}
+            onRetry={() => lastAction && handleDecide(lastAction)}
+            isPending={decision.isPending}
+            isStale={isStale}
+            hasError={Boolean(decision.error)}
+            canPrevious={selectedIndex > 0}
+            canNext={selectedIndex >= 0 && selectedIndex < visibleItems.length - 1}
+          />
+        </div>
+      </section>
+
+      {selectedItem && mobilePane === "detail" ? (
+        <MobileDecisionBar
           item={selectedItem}
-          locale={locale}
-          labels={labels.decision}
           rationale={rationale}
           onRationaleChange={setRationale}
           onDecide={handleDecide}
-          onNavigate={navigate}
-          onRetry={() => lastAction && handleDecide(lastAction)}
           isPending={decision.isPending}
           isStale={isStale}
-          hasError={Boolean(decision.error)}
-          canPrevious={selectedIndex > 0}
-          canNext={selectedIndex >= 0 && selectedIndex < visibleItems.length - 1}
+          labels={labels.decision}
         />
-      </section>
-
-      {/* Sticky decision action bar for the mobile single-pane flow. */}
-      {selectedItem ? (
-        <div
-          className="sticky bottom-2 z-10 mt-3 flex gap-2 rounded-lg border border-border/50 bg-surface/95 p-2 shadow-lg backdrop-blur lg:hidden"
-          data-mobile-action-bar
-        >
-          <Button type="button" size="sm" variant="secondary" className="flex-1" disabled={decision.isPending || isStale} onClick={() => handleDecide("accept")}>
-            {labels.decision.accept}
-          </Button>
-          <Button type="button" size="sm" variant="destructive" className="flex-1" disabled={decision.isPending || isStale || rationale.trim().length === 0} onClick={() => handleDecide("reject")}>
-            {labels.decision.reject}
-          </Button>
-        </div>
       ) : null}
     </div>
   )

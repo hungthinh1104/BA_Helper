@@ -171,4 +171,44 @@ describe("AnalysisReviewWorkbench decision loop", () => {
     expect(document.querySelector("[data-review-complete]")).not.toBeNull()
     expect(screen.getByText(labels.reviewWorkbench.reviewComplete)).toBeInTheDocument()
   })
+
+  it("drives the mobile single-pane flow: queue -> detail -> back with the full action set", () => {
+    renderWorkbench()
+    // The queue is the default mobile pane; the detail action bar (state-gated,
+    // unlike the CSS-hidden back button) is not rendered yet.
+    expect(document.querySelector("[data-mobile-action-bar]")).toBeNull()
+
+    // Drilling into an item reveals the sticky bar with the full decision set.
+    fireEvent.click(screen.getByRole("button", { name: /item first/i }))
+    const bar = document.querySelector("[data-mobile-action-bar]") as HTMLElement
+    expect(bar).not.toBeNull()
+    const barScope = within(bar)
+    expect(barScope.getByRole("button", { name: "Accept" })).toBeInTheDocument()
+    expect(barScope.getByRole("button", { name: "Reject" })).toBeInTheDocument()
+    expect(barScope.getByRole("button", { name: "More evidence" })).toBeInTheDocument()
+    expect(barScope.getByRole("button", { name: "Undo" })).toBeInTheDocument()
+
+    // Back returns to the queue pane.
+    fireEvent.click(document.querySelector("[data-back-to-queue]") as HTMLElement)
+    expect(document.querySelector("[data-mobile-action-bar]")).toBeNull()
+  })
+
+  it("opens a rationale sheet for reject on mobile and submits with the rationale", () => {
+    renderWorkbench()
+    fireEvent.click(screen.getByRole("button", { name: /item first/i }))
+    const bar = within(document.querySelector("[data-mobile-action-bar]") as HTMLElement)
+
+    // Reject with no rationale opens the sheet instead of silently doing nothing.
+    fireEvent.click(bar.getByRole("button", { name: "Reject" }))
+    expect(decide).not.toHaveBeenCalled()
+
+    const sheet = within(document.querySelector("[data-rationale-sheet]") as HTMLElement)
+    fireEvent.change(sheet.getByRole("textbox"), { target: { value: "duplicate link" } })
+    fireEvent.click(sheet.getByRole("button", { name: "Reject" }))
+    expect(decide).toHaveBeenCalledTimes(1)
+    expect(decide.mock.calls[0][0] as { action: string; rationale: string }).toMatchObject({
+      action: "reject",
+      rationale: "duplicate link",
+    })
+  })
 })

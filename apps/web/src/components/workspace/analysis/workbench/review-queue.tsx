@@ -16,10 +16,13 @@ export function ReviewQueue({
   viewModel,
   locale,
   labels,
+  onSelectItem,
 }: {
   viewModel: AnalysisWorkbenchViewModel
   locale: SupportedLocale
   labels: AnalysisWorkspaceLabels["reviewQueue"]
+  /** Fires when the reviewer picks an item (used to drill into the mobile detail pane). */
+  onSelectItem?: (itemId: string) => void
 }) {
   const pathname = usePathname()
   const router = useRouter()
@@ -98,7 +101,10 @@ export function ReviewQueue({
               isSelected={item.itemId === selectedItemId}
               locale={locale}
               labels={labels}
-              onSelect={() => updateUrl({ item: item.itemId })}
+              onSelect={() => {
+                updateUrl({ item: item.itemId })
+                onSelectItem?.(item.itemId)
+              }}
             />
           ))}
         </div>
