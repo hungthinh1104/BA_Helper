@@ -6,10 +6,57 @@ import { cn } from "@/lib/utils"
 
 type Labels = AnalysisWorkspaceLabels["metrics"]
 
+export interface TrustMetrics {
+  /** Impacted artifacts with at least one linked evidence card. */
+  evidenceSupport: number
+  /** Resolved review ratio (accepted + rejected over all reviewable items). */
+  reviewProgress: number
+  /** Backend policy-driven count of items still blocking finalization. */
+  blockers: number
+  /** Risks that have at least one QA scenario referencing them. */
+  qaRiskCoverage: number
+  /** Evidence cards anchored to a code artifact. */
+  linkedEvidence: number
+  /** A high-severity risk with no linked QA scenario. */
+  highRiskUncovered: boolean
+}
+
+/**
+ * Projects the trust metrics from backend-authored signals: the review ratio
+ * and blocker count come straight from the backend reviewSummary (no client
+ * re-derivation, no double counting), and QA/risk coverage is measured from the
+ * actual QA -> risk linkage rather than a bare scenario/risk count.
+ */
+export function resolveTrustMetrics(workspace: AnalysisWorkspaceResponse): TrustMetrics {
+  const { impactGroups, evidenceCards, risks, qaScenarios, reviewSummary, overview } = workspace
+
+  const artifactsWithEvidence = impactGroups
+    .flatMap((group) => group.artifacts)
+    .filter((artifact) => artifact.evidenceIds.length > 0).length
+
+  const riskIsCovered = (riskId: string) =>
+    qaScenarios.some((scenario) => scenario.relatedRiskIds.includes(riskId))
+  const coveredRisks = risks.filter((risk) => riskIsCovered(risk.riskId)).length
+
+  return {
+    evidenceSupport: ratio(artifactsWithEvidence, overview.counts.impactedArtifacts),
+    reviewProgress: ratio(reviewSummary.reviewed, reviewSummary.total),
+    blockers: reviewSummary.blocking,
+    qaRiskCoverage: risks.length === 0 ? 1 : ratio(coveredRisks, risks.length),
+    linkedEvidence: ratio(
+      evidenceCards.filter((card) => card.artifactId).length,
+      overview.counts.evidenceItems,
+    ),
+    highRiskUncovered: risks.some(
+      (risk) => risk.severity === "high" && !riskIsCovered(risk.riskId),
+    ),
+  }
+}
+
 /**
  * Compact trust strip. A single horizontal band of the analysis's trust signals
- * (evidence support, review progress, QA/risk coverage, linked evidence). Graph
- * shape now lives in the Dependency Path view, not here.
+ * (evidence support, review progress, QA/risk coverage, linked evidence),
+ * projected from the backend read model.
  */
 export function AnalysisTrustMetricsPanel({
   workspace,
@@ -18,24 +65,7 @@ export function AnalysisTrustMetricsPanel({
   workspace: AnalysisWorkspaceResponse
   labels: Labels
 }) {
-  const impactedArtifacts = workspace.overview.counts.impactedArtifacts
-  const evidenceItems = workspace.overview.counts.evidenceItems
-  const artifactsWithEvidence = workspace.impactGroups
-    .flatMap((group) => group.artifacts)
-    .filter((artifact) => artifact.evidenceIds.length > 0).length
-  const evidenceSupportRatio = ratio(artifactsWithEvidence, impactedArtifacts)
-
-  const reviewItems = workspace.reviewQueue.length
-  const reviewedItems = workspace.reviewQueue.filter((item) => item.currentDecision !== "needs_review").length
-  const reviewProgressRatio = ratio(reviewedItems, reviewItems)
-  const finalizeBlockers =
-    workspace.reviewQueue.filter((item) => item.blockingFinalize && item.currentDecision === "needs_review").length +
-    (workspace.reportStatus.finalizeBlockingReasons?.length ?? 0)
-
-  const qaRiskRatio = ratio(workspace.qaScenarios.length, Math.max(workspace.risks.length, 1))
-  const highRiskCount = workspace.risks.filter((risk) => risk.severity === "high").length
-  const linkedEvidenceCount = workspace.evidenceCards.filter((card) => card.artifactId).length
-  const linkedEvidenceRatio = ratio(linkedEvidenceCount, evidenceItems)
+  const metrics = resolveTrustMetrics(workspace)
 
   return (
     <section
@@ -44,24 +74,24 @@ export function AnalysisTrustMetricsPanel({
     >
       <TrustStat
         label={labels.evidenceSupport}
-        value={formatPercent(evidenceSupportRatio)}
-        tone={evidenceSupportRatio >= 0.8 ? "success" : evidenceSupportRatio >= 0.5 ? "warning" : "danger"}
+        value={formatPercent(metrics.evidenceSupport)}
+        tone={metrics.evidenceSupport >= 0.8 ? "success" : metrics.evidenceSupport >= 0.5 ? "warning" : "danger"}
       />
       <TrustStat
         label={labels.reviewProgress}
-        value={formatPercent(reviewProgressRatio)}
-        hint={finalizeBlockers > 0 ? labels.reviewProgressBlocked.replace("{count}", String(finalizeBlockers)) : undefined}
-        tone={finalizeBlockers > 0 ? "warning" : "success"}
+        value={formatPercent(metrics.reviewProgress)}
+        hint={metrics.blockers > 0 ? labels.reviewProgressBlocked.replace("{count}", String(metrics.blockers)) : undefined}
+        tone={metrics.blockers > 0 ? "warning" : "success"}
       />
       <TrustStat
         label={labels.qaRiskCoverage}
-        value={formatPercent(qaRiskRatio)}
-        tone={highRiskCount > 0 && workspace.qaScenarios.length === 0 ? "danger" : "neutral"}
+        value={formatPercent(metrics.qaRiskCoverage)}
+        tone={metrics.highRiskUncovered ? "danger" : "neutral"}
       />
       <TrustStat
         label={labels.linkedEvidence}
-        value={formatPercent(linkedEvidenceRatio)}
-        tone={linkedEvidenceRatio >= 0.8 ? "success" : "warning"}
+        value={formatPercent(metrics.linkedEvidence)}
+        tone={metrics.linkedEvidence >= 0.8 ? "success" : "warning"}
       />
     </section>
   )
