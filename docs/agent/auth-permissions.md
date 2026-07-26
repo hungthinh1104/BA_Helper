@@ -36,7 +36,7 @@ deployment/runtime boundary only, not a fake auth system:
 
 ```text
 - backend owns workspace/current resolution
-- frontend consumes workspace/current + system/health
+- frontend consumes workspace/current + system/ready
 - separate web/API deploy uses explicit NEXT_PUBLIC_API_URL + CORS allowlist
 ```
 
@@ -155,7 +155,7 @@ resource in actor project but insufficient role -> 403
 Public endpoints must be explicit:
 
 ```text
-- GET /api/v1/system/health
+- GET /api/v1/system/ready
 - GET /api/v1/workspace/current
 - POST /api/v1/auth/login
 - POST /api/v1/auth/dev-login only when ENABLE_DEV_LOGIN=true

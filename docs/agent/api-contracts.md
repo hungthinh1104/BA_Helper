@@ -29,7 +29,9 @@ PATCH /api/v1/projects/:projectId/members/:userId
 DELETE /api/v1/projects/:projectId/members/:userId
 GET  /api/v1/workspace/current
 POST /api/v1/workspace/select-project
-GET  /api/v1/system/health
+GET  /api/v1/system/live
+GET  /api/v1/system/ready
+GET  /api/v1/system/operations   (ADMIN)
 GET  /api/v1/domain-packs
 
 GET  /api/v1/projects/:projectId/repositories
@@ -548,7 +550,7 @@ When separate web/API deployment fails, diagnose in this order:
 ```text
 1. Wrong NEXT_PUBLIC_API_URL            -> frontend bootstrap shows API URL / unreachable error
 2. Missing or invalid CORS allowlist    -> browser network error, API reachable outside browser
-3. Backend unavailable                   -> /api/v1/system/health fails
+3. Backend unavailable                   -> /api/v1/system/ready fails
 4. Unsupported WORKSPACE_MODE           -> typed WORKSPACE_MODE_UNSUPPORTED from /workspace/current
 5. Contract mismatch                    -> frontend shows bootstrap contract mismatch error
 ```

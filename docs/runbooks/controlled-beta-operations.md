@@ -22,7 +22,7 @@ multi-tenancy, billing, and non-NestJS scanners are not supported beta paths.
    ```
 
 4. Confirm the migrate service exits successfully.
-5. Confirm `/api/v1/system/health` reports database, pgvector, Redis, and queues
+5. Confirm `/api/v1/system/ready` reports database, pgvector, Redis, and queues
    as `up`.
 6. Provision the first local-password account through the authenticated
    operator bootstrap process. Never enable dev-login in production.

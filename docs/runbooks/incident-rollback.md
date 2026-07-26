@@ -5,7 +5,7 @@
 1. Capture deployment commit, request/job IDs, snapshot ID, analysis ID, and
    report ID. Never copy credentials, requirement bodies, prompts, or evidence
    excerpts into incident chat.
-2. Check `/api/v1/system/health`, API logs, worker logs, PostgreSQL, and Redis.
+2. Check `/api/v1/system/ready`, API logs, worker logs, PostgreSQL, and Redis.
 3. Stop new scan/analysis intake if persisted truth may be at risk.
 
 ## Recovery
