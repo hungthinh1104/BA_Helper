@@ -23,6 +23,7 @@ const workspace = {
       title: "Cancel paid booking",
       summary: "Allow refunds for paid booking cancellation.",
       language: "en",
+      domainPack: null,
       domainProfileId: "booking@1",
     },
     snapshot: {

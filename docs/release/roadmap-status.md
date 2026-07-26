@@ -5,37 +5,107 @@ cycle.
 
 ## Phase 1 — Close the refactor
 
-Status: **DONE**
+Status: **ENGINEERING_IMPLEMENTED**
 
 - Application and backend-runtime ownership is defined by ADR-0010.
 - Package dependency boundaries and subpath exports are enforced in CI.
 - Scan/document orchestration lives in application; runtime owns adapters and
   composition.
 - API and worker build independently without cross-app source imports.
+- `verify:architecture-boundaries` now enforces the ADR generally: any
+  `*.usecase.ts` or domain `*.policy.ts` under `backend-runtime` fails the check
+  (previously only two retired filenames were denylisted), app-to-app imports are
+  blocked in both directions, and workspace package cycles are detected.
+
+Tracked ADR-0010 debt (allowlisted in the checker, not yet migrated):
+
+- `backend-runtime/.../get-impact-diff.usecase.ts` is Prisma-coupled and needs a
+  repository-port extraction before it can move to `application`.
+- `event-log`, `queue`, and `scanner` domain `*.policy.ts` files remain in
+  `backend-runtime` pending relocation.
+- Apps still import many symbols from the broad `@ba-helper/backend-runtime`
+  root barrel rather than the narrow capability subpaths; this is import hygiene
+  (deep `/src` imports are already blocked) and is planned, not a correctness gap.
 
 ## Phase 2 — Make analyzer quality enforceable
 
-Status: **DONE**
+Status: **ENGINEERING_IMPLEMENTED**
 
-- The stable fixture suite has explicit recall, precision, evidence, negative
-  control, and orphan-claim thresholds.
-- Regression beyond tolerance fails CI and emits a scorecard artifact.
-- Three pinned public NestJS repositories have extraction review evidence.
+- The quality gate now drives the **production path** — the same
+  `RunScanJobUseCase` → `RunImpactAnalysisUseCase` orchestration the API/worker
+  use, wired to the deterministic fake AI/embedding providers through the real
+  DI graph (`tests/evaluation/adapters/production-path.adapter.ts`). It does not
+  reimplement analyzer logic; it reads persisted `TraceabilityLink`, `BaInsight`,
+  and `InsightEvidence` rows back from the database.
+- Six metrics are computed and separated: `criticalArtifactRecall`,
+  `overallArtifactRecall`, `artifactPrecision`, `evidenceCoverage`,
+  `negativeControlPassRate`, `orphanEvidencedClaims`. Grading is two-layer:
+  recall/critical-recall/evidence on the retrieval net, and
+  precision/negative-control/orphan on the AI-adjudicated EVIDENCED-claim set.
+- Per-case failure floors are enforced in addition to aggregate thresholds, so a
+  single broken case cannot be hidden by an average. Blocking thresholds:
+  criticalArtifactRecall 1.0, overallArtifactRecall 0.85, artifactPrecision 0.7,
+  evidenceCoverage 1.0, negativeControlPassRate 1.0, orphanEvidencedClaims 0.
+- `requiredEvidenceAnchors` assert that a found artifact's evidence excerpt
+  contains an expected substring.
+- Regression beyond tolerance fails CI and emits `analyzer-scorecard.json`
+  (uploaded even on gate failure).
+
+Known scope bounds (honest, not fabricated):
+
+- The suite currently has **9** genuinely-passing production-path cases across
+  two pinned fixtures (`nestjs-booking-with-payment`, `nestjs-order-inventory`).
+  Reaching the 20-case target with the full orchestration is bounded by the
+  deterministic fake AI provider's scenario coverage (booking-refund and
+  order-inventory) — growing it requires additional fixtures plus matching
+  deterministic AI branches, which must be authored, not faked.
+- A measured retrieval recall gap exists on `nestjs-order-inventory`
+  (`inventory.service.releaseReservation` is not surfaced for the order-cancel
+  requirement); order cases are scoped to the reliably-retrieved cancel flow and
+  the gap is tracked rather than papered over.
 - Numeric confidence is not presented as a probability claim.
 
 ## Phase 3 — Controlled beta hardening
 
-Status: **DONE**
+Status: **ENGINEERING_IMPLEMENTED / EXECUTABLE_RELEASE_EVIDENCE_PENDING**
+
+Implemented and unit/e2e-tested:
 
 - Production uses local email/password auth; dev-login is forbidden.
-- Login throttling is Redis-backed and account lifecycle actions are audited.
-- Production Docker images have passed startup verification.
-- Queue retry/recovery, request correlation, operator, backup/restore,
-  incident, and rollback paths are documented and tested.
+- **Emails are normalized** (`trim().toLowerCase()`) at the contract boundary; a
+  migration backfills legacy rows (aborting on case-variant collisions) and adds
+  a case-insensitive unique index.
+- **Login throttling is Redis-backed and split per-IP AND per-normalized-email**,
+  and fails **closed** (typed 503) when Redis is unavailable.
+- **Account lifecycle is complete**: provision, list, get, enable, disable,
+  reset-password, update-role, self change-password — each audited, with an
+  ADMIN audit-read endpoint and session revocation via `credentialsVersion`.
+- **Health endpoints are split**: public `/system/live` (process only) and
+  `/system/ready` (dependency up/down, no config/queue leak); ADMIN-only
+  `/system/operations`. The public surface no longer leaks workspace mode or
+  queue counts.
+- **Production compose is hardened**: Postgres/Redis are not published on the
+  host, Redis requires authentication, and the boot guard rejects the example
+  placeholder secrets.
+- **The browser reaches the API same-origin** via a Next `/api/v1/*` proxy; no
+  absolute API origin is baked into the client bundle.
+- **Queue recovery**: retryable/terminal error classification on all four
+  processors; admin retry is audited, guarded against concurrent duplicates, and
+  keyed on the product entity id; a worker-bootstrap reconcile fails stale
+  `RUNNING` rows; failed-job retention is bounded; duration/retry metrics are
+  emitted.
 - English and Vietnamese final reports have E2E coverage.
 - Public GitHub TypeScript/NestJS is the only `STABLE` beta path.
 
-Run the release evidence gate:
+Pending executable release evidence (see Phase 4 of the working plan):
+
+- The controlled-beta readiness gate still derives PASS from documentation
+  substrings, not an executed drill. An executable release drill (build images →
+  boot clean prod stack → migrate → golden path → EN/VI export → restart → retry
+  a failed job → DB backup/restore → machine-readable JSON evidence) and a
+  migration-upgrade/data-survival test are **not yet built**. Until they run and
+  pass on the branch head, production startup/backup/restore are documented and
+  code-level tested but **not** executably verified.
 
 ```bash
 pnpm verify:controlled-beta-readiness

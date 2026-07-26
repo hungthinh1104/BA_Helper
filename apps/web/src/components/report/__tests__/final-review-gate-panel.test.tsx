@@ -17,7 +17,7 @@ jest.mock('next-intl', () => ({
           const next = acc?.[part];
           return next && typeof next === 'object' ? next as Record<string, unknown> : undefined;
         }, messages as Record<string, unknown>)
-      : messages;
+      : (messages as Record<string, unknown>);
 
     return (key: string, values?: Record<string, string | number>) => {
       const raw = source?.[key];

@@ -37,10 +37,17 @@ for (const file of sourceFiles('packages/application/src')) {
   }
 }
 
+// App-to-app imports are forbidden in BOTH directions.
 for (const file of sourceFiles('apps/worker/src')) {
   const content = read(file);
   if (content.includes('apps/api/') || content.includes('@ba-helper/api')) {
     violations.push(`${relative(file)} imports apps/api`);
+  }
+}
+for (const file of sourceFiles('apps/api/src')) {
+  const content = read(file);
+  if (content.includes('apps/worker/') || content.includes('@ba-helper/worker')) {
+    violations.push(`${relative(file)} imports apps/worker`);
   }
 }
 
@@ -56,14 +63,33 @@ for (const scope of ['apps/api', 'apps/worker', 'packages']) {
   }
 }
 
-const retiredRuntimeUseCases = [
-  'packages/backend-runtime/src/scanner/application/run-scan-job.usecase.ts',
-  'packages/backend-runtime/src/document/application/run-document-job.usecase.ts',
-];
-for (const retired of retiredRuntimeUseCases) {
-  if (fs.existsSync(path.join(root, retired))) {
-    violations.push(`${retired} must live in packages/application`);
+// ADR-0010: backend-runtime owns adapters + composition only. It must NOT own
+// business use cases (`*.usecase.ts`) or domain policies (`domain/*.policy.ts`).
+// This is a GENERAL rule (any new offender is caught), with an explicit allowlist
+// for known legacy files that are tracked as ADR-0010 migration debt.
+const runtimeUseCasePolicyDebt = new Set([
+  // Prisma-coupled query; needs a repository-port extraction before it can move.
+  'packages/backend-runtime/src/impact-analysis/application/queries/get-impact-diff.usecase.ts',
+  // Domain policies pending relocation to packages/application.
+  'packages/backend-runtime/src/event-log/domain/event-log.policy.ts',
+  'packages/backend-runtime/src/queue/domain/queue.policy.ts',
+  'packages/backend-runtime/src/scanner/domain/scan-job.policy.ts',
+]);
+for (const file of sourceFiles('packages/backend-runtime/src')) {
+  const rel = relative(file);
+  const isUseCase = /\.usecase\.ts$/.test(file);
+  const isDomainPolicy = /\/domain\/[^/]+\.policy\.ts$/.test(file);
+  if ((isUseCase || isDomainPolicy) && !runtimeUseCasePolicyDebt.has(rel)) {
+    violations.push(
+      `${rel} is a business use case or domain policy and must live in packages/application (ADR-0010)`,
+    );
   }
+}
+
+// Circular dependency detection over the internal workspace package graph.
+const cycleViolation = detectWorkspaceDependencyCycle();
+if (cycleViolation) {
+  violations.push(cycleViolation);
 }
 
 const allowedWorkspaceDependencies: Record<string, Set<string>> = {
@@ -92,6 +118,57 @@ for (const packageDir of ['packages/application', 'packages/backend-runtime']) {
       violations.push(`${manifest.name} has forbidden dependency ${dependency}`);
     }
   }
+}
+
+function detectWorkspaceDependencyCycle(): string | null {
+  const packageDirs = glob.sync('packages/*/package.json', {
+    cwd: root,
+    absolute: true,
+  });
+  const graph = new Map<string, string[]>();
+  for (const manifestPath of packageDirs) {
+    const manifest = JSON.parse(read(manifestPath)) as {
+      name?: string;
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    if (!manifest.name?.startsWith('@ba-helper/')) continue;
+    const deps = Object.keys({
+      ...(manifest.dependencies ?? {}),
+      ...(manifest.devDependencies ?? {}),
+    }).filter((dep) => dep.startsWith('@ba-helper/'));
+    graph.set(manifest.name, deps);
+  }
+
+  const state = new Map<string, 'visiting' | 'done'>();
+  const stack: string[] = [];
+  const walk = (node: string): string[] | null => {
+    state.set(node, 'visiting');
+    stack.push(node);
+    for (const next of graph.get(node) ?? []) {
+      if (!graph.has(next)) continue;
+      if (state.get(next) === 'visiting') {
+        return [...stack.slice(stack.indexOf(next)), next];
+      }
+      if (state.get(next) !== 'done') {
+        const cycle = walk(next);
+        if (cycle) return cycle;
+      }
+    }
+    stack.pop();
+    state.set(node, 'done');
+    return null;
+  };
+
+  for (const node of graph.keys()) {
+    if (state.get(node) !== 'done') {
+      const cycle = walk(node);
+      if (cycle) {
+        return `circular workspace dependency: ${cycle.join(' -> ')}`;
+      }
+    }
+  }
+  return null;
 }
 
 if (violations.length > 0) {
