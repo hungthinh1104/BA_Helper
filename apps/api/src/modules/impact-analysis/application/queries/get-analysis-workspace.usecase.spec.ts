@@ -480,6 +480,22 @@ describe('GetAnalysisWorkspaceUseCase', () => {
 		expect(result.driftStatus.snapshotCommitSha).toBe('abc123');
 		expect(result.driftStatus.latestObservedCommitSha).toBe('newer-commit');
 	});
+
+	it('projects the repository url for source permalinks, or null when absent', async () => {
+		const withoutRepo = await executeWith(createAnalysis());
+		expect(withoutRepo.overview.snapshot.repositoryUrl).toBeNull();
+
+		const base = createAnalysis();
+		const withRepo = await executeWith(
+			createAnalysis({
+				snapshot: {
+					...base.snapshot,
+					repository: { canonicalUrl: 'https://github.com/acme/booking' },
+				},
+			}),
+		);
+		expect(withRepo.overview.snapshot.repositoryUrl).toBe('https://github.com/acme/booking');
+	});
 });
 
 async function executeWith(analysis: any) {

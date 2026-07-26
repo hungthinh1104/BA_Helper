@@ -72,6 +72,7 @@ export function mapAnalysisWorkspace(
 				commitSha: analysis.snapshot.commitSha,
 				analyzerVersion: analysis.snapshot.analyzerVersion,
 				profileVersion: analysis.snapshot.profile?.profileVersion,
+				repositoryUrl: analysis.snapshot.repository?.canonicalUrl ?? null,
 			},
 			status: {
 				analysisStatus: analysis.status as AnalysisWorkspaceResponse['overview']['status']['analysisStatus'],

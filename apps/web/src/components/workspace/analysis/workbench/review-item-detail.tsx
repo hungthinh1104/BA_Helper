@@ -27,7 +27,7 @@ export function ReviewItemDetail({
   return (
     <article className="grid gap-5">
       {item.itemType === "impact" ? <ImpactClaimPanel item={item} artifact={detail.artifact} locale={locale} labels={labels} /> : <InsightHeader item={item} detail={detail} labels={labels} />}
-      <EvidenceStack evidence={detail.evidence} labels={labels} commitSha={workspace.overview.snapshot.commitSha} />
+      <EvidenceStack evidence={detail.evidence} labels={labels} commitSha={workspace.overview.snapshot.commitSha} repositoryUrl={workspace.overview.snapshot.repositoryUrl ?? null} />
       <RelatedContextPanel risks={detail.risks} unknowns={detail.unknowns} qaScenarios={detail.qaScenarios} labels={labels} />
       {detail.traceabilityIds.length > 0 ? <details className="rounded-lg border border-border/50 p-3"><summary className="cursor-pointer text-xs font-medium text-foreground">{labels.traceabilityMetadata}</summary><p className="mt-2 break-all font-mono text-xs text-muted-foreground">{labels.traceabilityIds}: {detail.traceabilityIds.join(", ")}</p></details> : null}
     </article>

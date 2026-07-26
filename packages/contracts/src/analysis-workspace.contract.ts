@@ -84,6 +84,8 @@ export const analysisOverviewSchema = z.object({
 		commitSha: z.string(),
 		analyzerVersion: z.string(),
 		profileVersion: z.string().optional(),
+		/** Canonical repository URL, used to build a pinned source permalink. */
+		repositoryUrl: z.string().nullish(),
 	}),
 	status: z.object({
 		analysisStatus: impactAnalysisStatusSchema,

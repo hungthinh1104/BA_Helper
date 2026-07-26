@@ -15,6 +15,7 @@ export class GetAnalysisWorkspaceUseCase {
 				snapshot: {
 					include: {
 						profile: true,
+						repository: { select: { canonicalUrl: true } },
 					},
 				},
 				sourceTarget: true,

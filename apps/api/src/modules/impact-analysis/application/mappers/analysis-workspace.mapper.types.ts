@@ -25,6 +25,9 @@ export type WorkspaceAnalysis = {
 			domain: string;
 			profileVersion: string;
 		} | null;
+		repository?: {
+			canonicalUrl: string;
+		} | null;
 	};
 	sourceTarget: {
 		id: string;

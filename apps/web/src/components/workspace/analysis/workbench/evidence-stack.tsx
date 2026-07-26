@@ -8,10 +8,12 @@ export function EvidenceStack({
   evidence,
   labels,
   commitSha,
+  repositoryUrl,
 }: {
   evidence: Evidence[]
   labels: AnalysisWorkspaceLabels["reviewWorkbench"]
   commitSha?: string
+  repositoryUrl?: string | null
 }) {
   return (
     <section>
@@ -27,7 +29,7 @@ export function EvidenceStack({
       ) : (
         <div className="mt-2 grid gap-3">
           {evidence.map((item) => (
-            <EvidenceCard key={item.evidenceId} evidence={item} labels={labels} commitSha={commitSha} />
+            <EvidenceCard key={item.evidenceId} evidence={item} labels={labels} commitSha={commitSha} repositoryUrl={repositoryUrl} />
           ))}
         </div>
       )}
