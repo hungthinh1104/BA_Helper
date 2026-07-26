@@ -142,7 +142,7 @@ describe('Unified review-item decision endpoint (e2e)', () => {
     return { projectId, analysisId, linkId, insightId };
   }
 
-  function decide(analysisId: string, itemId: string, token: string, body: unknown) {
+  function decide(analysisId: string, itemId: string, token: string, body: object) {
     return request(app.getHttpServer())
       .put(`/api/v1/impact-analyses/${analysisId}/review-items/${itemId}/decision`)
       .set('Authorization', `Bearer ${token}`)
