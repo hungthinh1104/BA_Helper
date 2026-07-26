@@ -46,6 +46,12 @@ const queueItem = (id: string): AnalysisWorkspaceResponse["reviewQueue"][number]
   linkedArtifactKeys: [],
   linkedEvidenceIds: [],
   blockingFinalize: true,
+  impactBasis: "evidenced",
+  isConflicting: false,
+  allowedActions: ["accept", "reject", "needs_more_evidence", "undo"],
+  reviewNote: null,
+  reviewedAt: null,
+  reviewedByUserId: null,
 })
 
 const workspace: AnalysisWorkspaceResponse = {
@@ -62,6 +68,7 @@ const workspace: AnalysisWorkspaceResponse = {
   unknowns: [],
   qaScenarios: [],
   reviewQueue: [queueItem("first"), queueItem("second")],
+  reviewSummary: { total: 2, pending: 2, blocking: 2, conflicting: 0, needsMoreEvidence: 0, reviewed: 0, accepted: 0, rejected: 0 },
   reportStatus: { status: "missing", generatedDocumentId: null, documentJobId: null, reviewedReportSnapshotId: null, canFinalize: false, requiresUnreviewedAcknowledgement: false, canViewReport: false, canExport: false, canRetryReportGeneration: false, finalizeBlockingReasons: [], exportBlockingReasons: [], lastGeneratedAt: null, failureMessage: null },
   driftStatus: { status: "fresh", isStale: false, basis: "pinned_commit", sourceTargetId: null, latestObservedCommitSha: null, snapshotCommitSha: "c", reason: null },
 }

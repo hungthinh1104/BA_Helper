@@ -18,13 +18,14 @@ const workspace = (overrides: Partial<AnalysisWorkspaceResponse> = {}): Analysis
   impactGroups: [{ group: "primary", title: "Impacts", description: "", artifacts: [{ artifactId: "55555555-5555-4555-8555-555555555555", artifactKey: "BookingService.cancel", name: "cancel", filePath: "src/booking.ts", universalKind: "DOMAIN_SERVICE", impactBasis: "conflicting", impactReason: "", traceabilityLinkIds: [], evidenceIds: [], reviewDecision: "needs_review" }] }],
   evidenceCards: [], risks: [], unknowns: [], qaScenarios: [],
   reviewQueue: [
-    { itemId: "reviewed", itemType: "risk", title: "Reviewed", currentDecision: "accepted", evidenceCount: 1, linkedArtifactKeys: [], linkedEvidenceIds: [], blockingFinalize: false },
-    { itemId: "pending", itemType: "unknown", title: "Pending", currentDecision: "needs_review", evidenceCount: 1, linkedArtifactKeys: [], linkedEvidenceIds: [], blockingFinalize: false },
-    { itemId: "empty", itemType: "impact", title: "Empty", currentDecision: "needs_review", evidenceCount: 0, linkedArtifactKeys: [], linkedEvidenceIds: [], blockingFinalize: false },
-    { itemId: "more", itemType: "impact", title: "More", currentDecision: "needs_more_evidence", evidenceCount: 1, linkedArtifactKeys: [], linkedEvidenceIds: [], blockingFinalize: false },
-    { itemId: "conflict", itemType: "impact", title: "Conflict", currentDecision: "needs_review", evidenceCount: 1, linkedArtifactKeys: ["BookingService.cancel"], linkedEvidenceIds: [], blockingFinalize: false },
-    { itemId: "blocker", itemType: "impact", title: "Blocker", currentDecision: "needs_review", evidenceCount: 1, linkedArtifactKeys: [], linkedEvidenceIds: [], blockingFinalize: true },
+    { itemId: "reviewed", itemType: "risk", title: "Reviewed", currentDecision: "accepted", evidenceCount: 1, linkedArtifactKeys: [], linkedEvidenceIds: [], blockingFinalize: false, impactBasis: null, isConflicting: false, allowedActions: ["accept", "reject"], reviewNote: null, reviewedAt: null, reviewedByUserId: null },
+    { itemId: "pending", itemType: "unknown", title: "Pending", currentDecision: "needs_review", evidenceCount: 1, linkedArtifactKeys: [], linkedEvidenceIds: [], blockingFinalize: false, impactBasis: null, isConflicting: false, allowedActions: ["accept", "reject"], reviewNote: null, reviewedAt: null, reviewedByUserId: null },
+    { itemId: "empty", itemType: "impact", title: "Empty", currentDecision: "needs_review", evidenceCount: 0, linkedArtifactKeys: [], linkedEvidenceIds: [], blockingFinalize: false, impactBasis: null, isConflicting: false, allowedActions: ["accept", "reject", "needs_more_evidence", "undo"], reviewNote: null, reviewedAt: null, reviewedByUserId: null },
+    { itemId: "more", itemType: "impact", title: "More", currentDecision: "needs_more_evidence", evidenceCount: 1, linkedArtifactKeys: [], linkedEvidenceIds: [], blockingFinalize: false, impactBasis: null, isConflicting: false, allowedActions: ["accept", "reject", "needs_more_evidence", "undo"], reviewNote: null, reviewedAt: null, reviewedByUserId: null },
+    { itemId: "conflict", itemType: "impact", title: "Conflict", currentDecision: "needs_review", evidenceCount: 1, linkedArtifactKeys: ["BookingService.cancel"], linkedEvidenceIds: [], blockingFinalize: false, impactBasis: "conflicting", isConflicting: true, allowedActions: ["accept", "reject", "needs_more_evidence", "undo"], reviewNote: null, reviewedAt: null, reviewedByUserId: null },
+    { itemId: "blocker", itemType: "impact", title: "Blocker", currentDecision: "needs_review", evidenceCount: 1, linkedArtifactKeys: [], linkedEvidenceIds: [], blockingFinalize: true, impactBasis: null, isConflicting: false, allowedActions: ["accept", "reject", "needs_more_evidence", "undo"], reviewNote: null, reviewedAt: null, reviewedByUserId: null },
   ],
+  reviewSummary: { total: 6, pending: 4, blocking: 1, conflicting: 1, needsMoreEvidence: 1, reviewed: 1, accepted: 1, rejected: 0 },
   reportStatus: { status: "missing", generatedDocumentId: null, documentJobId: null, reviewedReportSnapshotId: null, canFinalize: false, requiresUnreviewedAcknowledgement: false, canViewReport: false, canExport: false, canRetryReportGeneration: false, finalizeBlockingReasons: [], exportBlockingReasons: [], lastGeneratedAt: null, failureMessage: null },
   driftStatus: { status: "fresh", isStale: false, basis: "pinned_commit", sourceTargetId: null, latestObservedCommitSha: null, snapshotCommitSha: "abcdef", reason: null },
   ...overrides,
@@ -60,7 +61,7 @@ describe("analysis workbench view model", () => {
     const evidenceId = "66666666-6666-4666-8666-666666666666"
     const input = workspace({
       evidenceCards: [{ evidenceId, sourceType: "code", filePath: "src/booking.ts", lineRange: { startLine: 21, endLine: 24 }, excerpt: "refund()", relevanceReason: "Cancellation calls refund.", artifactId: null, artifactKey: "BookingService.cancel", linkedInsightIds: [], linkedTraceabilityLinkIds: [] }],
-      reviewQueue: [{ itemId: evidenceId, itemType: "evidence", title: "Refund call", currentDecision: "needs_review", evidenceCount: 1, linkedArtifactKeys: [], linkedEvidenceIds: [], blockingFinalize: false }],
+      reviewQueue: [{ itemId: evidenceId, itemType: "evidence", title: "Refund call", currentDecision: "needs_review", evidenceCount: 1, linkedArtifactKeys: [], linkedEvidenceIds: [], blockingFinalize: false, impactBasis: null, isConflicting: false, allowedActions: ["accept", "reject"], reviewNote: null, reviewedAt: null, reviewedByUserId: null }],
     })
     const viewModel = createAnalysisWorkbenchViewModel(input, evidenceId)
     const detail = resolveReviewItemDetail(input, viewModel, viewModel.orderedReviewItems[0]!)

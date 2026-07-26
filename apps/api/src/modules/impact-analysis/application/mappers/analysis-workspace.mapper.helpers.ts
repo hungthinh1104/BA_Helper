@@ -108,19 +108,14 @@ function hasUnreviewedItems(analysis: WorkspaceAnalysis): boolean {
 	);
 }
 
-function buildFinalizeBlockingReasons(
-	analysis: WorkspaceAnalysis,
-	stale: boolean,
-): string[] {
-	const reasons: string[] = [];
-
-	if (analysis.status !== 'WAITING_FOR_REVIEW') {
-		reasons.push('ANALYSIS_NOT_WAITING_FOR_REVIEW');
-	}
-	if (stale) {
-		reasons.push('ANALYSIS_STALE');
-	}
-
+/**
+ * Evaluates the report-approval gate once and exposes the pieces the read model
+ * needs: the gate result (finalize reasons), the per-item evidence-quality label,
+ * and the set of item ids the gate considers blocking. Both the finalize card and
+ * the per-item `blockingFinalize` flag derive from this single evaluation so they
+ * can never disagree.
+ */
+export function buildReviewApprovalGate(analysis: WorkspaceAnalysis) {
 	const qualityProjection = buildEvidenceQualityProjection({
 		traceabilityLinks: analysis.traceabilityLinks as any[],
 		insights: analysis.insights as any[],
@@ -134,11 +129,64 @@ function buildFinalizeBlockingReasons(
 			linkBasis: link.linkBasis,
 		})),
 	}));
+	const qualityByItemId = new Map(
+		qualityProjection.items.map((item) => [item.itemId, item.quality]),
+	);
+	const blockingItemIds = new Set(gate.blockingItems.map((item) => item.itemId));
+	return { gate, qualityByItemId, blockingItemIds };
+}
+
+function buildFinalizeBlockingReasons(
+	analysis: WorkspaceAnalysis,
+	stale: boolean,
+): string[] {
+	const reasons: string[] = [];
+
+	if (analysis.status !== 'WAITING_FOR_REVIEW') {
+		reasons.push('ANALYSIS_NOT_WAITING_FOR_REVIEW');
+	}
+	if (stale) {
+		reasons.push('ANALYSIS_STALE');
+	}
+
+	const { gate } = buildReviewApprovalGate(analysis);
 	if (!gate.canApprove) {
 		reasons.push(...gate.blockingReasons);
 	}
 
 	return Array.from(new Set(reasons));
+}
+
+export function toReviewActions(
+	itemType: AnalysisWorkspaceResponse['reviewQueue'][number]['itemType'],
+): AnalysisWorkspaceResponse['reviewQueue'][number]['allowedActions'] {
+	if (itemType === 'impact') {
+		return ['accept', 'reject', 'needs_more_evidence', 'undo'];
+	}
+	if (itemType === 'report') {
+		return [];
+	}
+	// Insight-backed items (risk / unknown / qa_scenario / evidence) only carry a
+	// binary accept/reject status in the schema; needs_more_evidence and undo are
+	// not persistable for them yet.
+	return ['accept', 'reject'];
+}
+
+export function buildReviewSummary(
+	items: AnalysisWorkspaceResponse['reviewQueue'],
+): AnalysisWorkspaceResponse['reviewSummary'] {
+	return {
+		total: items.length,
+		pending: items.filter((item) => item.currentDecision === 'needs_review').length,
+		blocking: items.filter((item) => item.blockingFinalize).length,
+		conflicting: items.filter((item) => item.isConflicting).length,
+		needsMoreEvidence: items.filter((item) => item.currentDecision === 'needs_more_evidence').length,
+		reviewed: items.filter(
+			(item) => item.currentDecision === 'accepted' || item.currentDecision === 'rejected',
+		).length,
+		accepted: items.filter((item) => item.currentDecision === 'accepted').length,
+		rejected: items.filter((item) => item.currentDecision === 'rejected').length,
+	};
 }
 
 function buildExportBlockingReasons(

@@ -28,6 +28,12 @@ const queueItem = (decision: AnalysisWorkspaceResponse["reviewQueue"][number]["c
   linkedArtifactKeys: [],
   linkedEvidenceIds: [],
   blockingFinalize: blocking,
+  impactBasis: null,
+  isConflicting: false,
+  allowedActions: ["accept", "reject", "needs_more_evidence", "undo"],
+  reviewNote: null,
+  reviewedAt: null,
+  reviewedByUserId: null,
 })
 
 const workspace = (over: {

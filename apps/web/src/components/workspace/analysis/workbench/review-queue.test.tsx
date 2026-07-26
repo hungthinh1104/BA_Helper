@@ -51,8 +51,8 @@ const viewModel: AnalysisWorkbenchViewModel = {
     artifactByKey: new Map(),
   },
   orderedReviewItems: [
-    { itemId: "blocker", itemType: "impact", title: "Cancel booking", currentDecision: "needs_review", evidenceCount: 1, linkedArtifactKeys: ["BookingService.cancel"], linkedEvidenceIds: [], blockingFinalize: true, impactBasis: "evidenced", isConflictingImpactBasis: false },
-    { itemId: "next", itemType: "risk", title: "Refund timing", currentDecision: "needs_review", evidenceCount: 0, linkedArtifactKeys: [], linkedEvidenceIds: [], blockingFinalize: false, impactBasis: null, isConflictingImpactBasis: false },
+    { itemId: "blocker", itemType: "impact", title: "Cancel booking", currentDecision: "needs_review", evidenceCount: 1, linkedArtifactKeys: ["BookingService.cancel"], linkedEvidenceIds: [], blockingFinalize: true, impactBasis: "evidenced", isConflicting: false, allowedActions: ["accept", "reject", "needs_more_evidence", "undo"], reviewNote: null, reviewedAt: null, reviewedByUserId: null, isConflictingImpactBasis: false },
+    { itemId: "next", itemType: "risk", title: "Refund timing", currentDecision: "needs_review", evidenceCount: 0, linkedArtifactKeys: [], linkedEvidenceIds: [], blockingFinalize: false, impactBasis: null, isConflicting: false, allowedActions: ["accept", "reject"], reviewNote: null, reviewedAt: null, reviewedByUserId: null, isConflictingImpactBasis: false },
   ],
 }
 

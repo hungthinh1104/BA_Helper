@@ -17,6 +17,11 @@ const item = (overrides: Partial<ReviewWorkbenchItem> = {}): ReviewWorkbenchItem
   linkedEvidenceIds: [],
   blockingFinalize: true,
   impactBasis: "evidenced",
+  isConflicting: false,
+  allowedActions: ["accept", "reject", "needs_more_evidence", "undo"],
+  reviewNote: null,
+  reviewedAt: null,
+  reviewedByUserId: null,
   isConflictingImpactBasis: false,
   ...overrides,
 })

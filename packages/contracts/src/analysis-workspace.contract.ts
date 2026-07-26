@@ -48,6 +48,13 @@ export const analysisWorkspaceEvidenceBasisSchema = z.enum([
 	'conflicting',
 ]);
 
+export const analysisWorkspaceReviewActionSchema = z.enum([
+	'accept',
+	'reject',
+	'needs_more_evidence',
+	'undo',
+]);
+
 export const analysisWorkspaceDomainPackSelectedBySchema = z.enum([
 	'EXPLICIT',
 	'REPOSITORY_PROFILE',
@@ -204,6 +211,29 @@ export const analysisWorkspaceReviewQueueItemSchema = z.object({
 	linkedArtifactKeys: z.array(z.string()),
 	linkedEvidenceIds: z.array(z.string().uuid()),
 	blockingFinalize: z.boolean(),
+	/** Evidence basis of the impacted artifact this item is anchored to, if any. */
+	impactBasis: analysisWorkspaceEvidenceBasisSchema.nullable(),
+	/** True when the backend evidence-quality gate flags this item as conflicting. */
+	isConflicting: z.boolean(),
+	/** Decision actions the backend actually supports for this item type. */
+	allowedActions: z.array(analysisWorkspaceReviewActionSchema),
+	/** Persisted reviewer rationale for the current decision, if recorded. */
+	reviewNote: z.string().nullable(),
+	/** ISO timestamp the current decision was recorded, if reviewed. */
+	reviewedAt: z.string().nullable(),
+	/** Actor who recorded the current decision, if attributed. */
+	reviewedByUserId: z.string().nullable(),
+});
+
+export const analysisWorkspaceReviewSummarySchema = z.object({
+	total: z.number().int().nonnegative(),
+	pending: z.number().int().nonnegative(),
+	blocking: z.number().int().nonnegative(),
+	conflicting: z.number().int().nonnegative(),
+	needsMoreEvidence: z.number().int().nonnegative(),
+	reviewed: z.number().int().nonnegative(),
+	accepted: z.number().int().nonnegative(),
+	rejected: z.number().int().nonnegative(),
 });
 
 export const reportStatusCardSchema = z.object({
@@ -240,6 +270,7 @@ export const analysisWorkspaceResponseSchema = z.object({
 	unknowns: z.array(unknownItemSchema),
 	qaScenarios: z.array(qaScenarioCardSchema),
 	reviewQueue: z.array(analysisWorkspaceReviewQueueItemSchema),
+	reviewSummary: analysisWorkspaceReviewSummarySchema,
 	reportStatus: reportStatusCardSchema,
 	driftStatus: driftStatusCardSchema,
 });
@@ -271,6 +302,12 @@ export type UnknownItem = z.infer<typeof unknownItemSchema>;
 export type QaScenarioCard = z.infer<typeof qaScenarioCardSchema>;
 export type AnalysisWorkspaceReviewQueueItem = z.infer<
 	typeof analysisWorkspaceReviewQueueItemSchema
+>;
+export type AnalysisWorkspaceReviewAction = z.infer<
+	typeof analysisWorkspaceReviewActionSchema
+>;
+export type AnalysisWorkspaceReviewSummary = z.infer<
+	typeof analysisWorkspaceReviewSummarySchema
 >;
 export type ReportStatusCard = z.infer<typeof reportStatusCardSchema>;
 export type DriftStatusCard = z.infer<typeof driftStatusCardSchema>;

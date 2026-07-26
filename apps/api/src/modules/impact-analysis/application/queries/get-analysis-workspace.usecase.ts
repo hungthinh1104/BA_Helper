@@ -29,6 +29,7 @@ export class GetAnalysisWorkspaceUseCase {
 								},
 							},
 						},
+						reviewNote: true,
 					},
 					orderBy: { createdAt: 'asc' },
 				},

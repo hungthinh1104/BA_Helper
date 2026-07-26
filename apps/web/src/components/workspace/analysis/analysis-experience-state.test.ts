@@ -13,6 +13,12 @@ const item = (overrides: Partial<QueueItem>): QueueItem => ({
   linkedArtifactKeys: [],
   linkedEvidenceIds: [],
   blockingFinalize: overrides.blockingFinalize ?? false,
+  impactBasis: overrides.impactBasis ?? null,
+  isConflicting: overrides.isConflicting ?? false,
+  allowedActions: overrides.allowedActions ?? [],
+  reviewNote: overrides.reviewNote ?? null,
+  reviewedAt: overrides.reviewedAt ?? null,
+  reviewedByUserId: overrides.reviewedByUserId ?? null,
 })
 
 const workspace = (overrides: {

@@ -51,6 +51,10 @@ export type WorkspaceInsight = {
 		evidenceId: string;
 		evidence: WorkspaceEvidence;
 	}>;
+	reviewNote?: {
+		body: string;
+		updatedAt: Date;
+	} | null;
 };
 
 export type WorkspaceTraceabilityLink = {
@@ -71,6 +75,9 @@ export type WorkspaceTraceabilityLink = {
 	}>;
 	reviewDecision?: {
 		decision: string;
+		note?: string | null;
+		reviewedByUserId?: string | null;
+		reviewedAt?: Date | null;
 	} | null;
 };
 

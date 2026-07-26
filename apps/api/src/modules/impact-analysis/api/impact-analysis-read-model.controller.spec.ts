@@ -109,6 +109,16 @@ describe('ImpactAnalysisReadModelController - driftFreshness', () => {
       unknowns: [],
       qaScenarios: [],
       reviewQueue: [],
+      reviewSummary: {
+        total: 0,
+        pending: 0,
+        blocking: 0,
+        conflicting: 0,
+        needsMoreEvidence: 0,
+        reviewed: 0,
+        accepted: 0,
+        rejected: 0,
+      },
       reportStatus: {
         status: 'missing',
         generatedDocumentId: null,

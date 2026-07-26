@@ -275,8 +275,106 @@ describe('GetAnalysisWorkspaceUseCase', () => {
 	it('counts pending review items from insight and traceability state', async () => {
 		const result = await executeWith(createAnalysis());
 
-		expect(result.reviewQueue).toHaveLength(3);
+		// The queue now carries every reviewable item (including the CONFIRMED qa
+		// scenario), while the pending count reflects only items still needing a
+		// decision.
+		expect(result.reviewQueue).toHaveLength(4);
 		expect(result.overview.counts.pendingReviewItems).toBe(3);
+		expect(result.reviewSummary).toEqual({
+			total: 4,
+			pending: 3,
+			blocking: 2,
+			conflicting: 1,
+			needsMoreEvidence: 0,
+			reviewed: 1,
+			accepted: 1,
+			rejected: 0,
+		});
+	});
+
+	it('keeps reviewed items in the queue with their persisted decision', async () => {
+		const result = await executeWith(createAnalysis());
+
+		const qa = result.reviewQueue.find((item) => item.itemId === ids.qaInsight);
+		expect(qa).toBeDefined();
+		expect(qa!.currentDecision).toBe('accepted');
+		expect(qa!.blockingFinalize).toBe(false);
+		expect(qa!.allowedActions).toEqual(['accept', 'reject']);
+	});
+
+	it('derives per-item blockingFinalize from the approval gate, not a hardcode', async () => {
+		const result = await executeWith(createAnalysis());
+
+		const risk = result.reviewQueue.find((item) => item.itemId === ids.riskInsight);
+		const unknown = result.reviewQueue.find(
+			(item) => item.itemId === '00000000-0000-4000-8000-000000000014',
+		);
+		const link = result.reviewQueue.find((item) => item.itemId === ids.link);
+
+		// The critical conflicting insight and the EVIDENCED link block finalize; the
+		// non-critical unknown does not — the old hardcode marked all of them blocking.
+		expect(risk!.blockingFinalize).toBe(true);
+		expect(risk!.isConflicting).toBe(true);
+		expect(link!.blockingFinalize).toBe(true);
+		expect(link!.allowedActions).toEqual(['accept', 'reject', 'needs_more_evidence', 'undo']);
+		expect(unknown!.blockingFinalize).toBe(false);
+	});
+
+	it('exposes the persisted note and reviewer attribution for a decided link', async () => {
+		const result = await executeWith(
+			createAnalysis({
+				traceabilityLinks: [
+					traceabilityLink({
+						reviewStatus: 'CONFIRMED',
+						reviewDecision: {
+							id: '00000000-0000-4000-8000-000000000017',
+							analysisId: ids.analysis,
+							traceabilityLinkId: ids.link,
+							decision: 'ACCEPTED',
+							note: 'Confirmed via integration test.',
+							reviewedByUserId: '00000000-0000-4000-8000-0000000000aa',
+							reviewedAt: new Date('2026-06-24T00:00:00.000Z'),
+						},
+					}),
+				],
+			}),
+		);
+
+		const link = result.reviewQueue.find((item) => item.itemId === ids.link);
+		expect(link!.currentDecision).toBe('accepted');
+		expect(link!.reviewNote).toBe('Confirmed via integration test.');
+		expect(link!.reviewedByUserId).toBe('00000000-0000-4000-8000-0000000000aa');
+		expect(link!.reviewedAt).toBe('2026-06-24T00:00:00.000Z');
+	});
+
+	it('keeps a needs-more-evidence link in the queue and still blocking', async () => {
+		const result = await executeWith(
+			createAnalysis({
+				traceabilityLinks: [
+					traceabilityLink({
+						linkBasis: 'INFERRED',
+						reviewStatus: 'NEEDS_REVIEW',
+						reviewDecision: {
+							id: '00000000-0000-4000-8000-000000000018',
+							analysisId: ids.analysis,
+							traceabilityLinkId: ids.link,
+							decision: 'NEEDS_MORE_EVIDENCE',
+							note: 'Need to see the caller.',
+							reviewedByUserId: null,
+							reviewedAt: new Date('2026-06-24T00:00:00.000Z'),
+						},
+					}),
+				],
+			}),
+		);
+
+		const link = result.reviewQueue.find((item) => item.itemId === ids.link);
+		expect(link).toBeDefined();
+		expect(link!.currentDecision).toBe('needs_more_evidence');
+		// An INFERRED link parked on needs-more-evidence has not been decided, so it
+		// still blocks finalize and stays visible in the queue.
+		expect(link!.blockingFinalize).toBe(true);
+		expect(result.reviewSummary.needsMoreEvidence).toBe(1);
 	});
 
 	it('does not derive domain pack capability when backend metadata is missing', async () => {
