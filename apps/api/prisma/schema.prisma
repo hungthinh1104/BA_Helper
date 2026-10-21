@@ -396,6 +396,7 @@ model CodeArtifact {
   endLine           Int?
   language          String?
   contentHash       String?
+  metadata          Json?
   snapshot          RepositorySnapshot @relation(fields: [snapshotId], references: [id])
   outgoingEdges     DependencyEdge[]   @relation("FromArtifact")
   incomingEdges     DependencyEdge[]   @relation("ToArtifact")
@@ -414,6 +415,8 @@ model DependencyEdge {
   fromArtifactId String
   toArtifactId   String
   type           DependencyEdgeType
+  confidence     Float?
+  metadata       Json?
   snapshot       RepositorySnapshot @relation(fields: [snapshotId], references: [id])
   fromArtifact   CodeArtifact       @relation("FromArtifact", fields: [fromArtifactId], references: [id])
   toArtifact     CodeArtifact       @relation("ToArtifact", fields: [toArtifactId], references: [id])
@@ -762,6 +765,7 @@ model ReviewedReportSnapshot {
   reviewDecisionsSnapshot        Json     @map("review_decisions_snapshot")
   evidenceQualitySummarySnapshot Json     @map("evidence_quality_summary_snapshot")
   evaluationContextSnapshot      Json?    @map("evaluation_context_snapshot")
+  testTraceSnapshot              Json?    @map("test_trace_snapshot")
   createdByUserId                String?  @map("created_by_user_id") @db.Uuid
   createdAt                      DateTime @default(now()) @map("created_at")
 

@@ -1,7 +1,19 @@
 import { GetFinalReviewedReportUseCase } from './get-final-reviewed-report.usecase';
 import { AppError } from '@ba-helper/shared';
+import { staticTestTraceFixture, traceIds } from '../../../../../../../tests/fixtures/static-test-trace.fixture';
 
 describe('GetFinalReviewedReportUseCase', () => {
+  it('returns saved traces without rebuilding the current QA projection', async () => {
+    const saved = { version: 1, coverage: staticTestTraceFixture() };
+    getReviewCompletionMock.execute.mockResolvedValue({ isComplete: true, blockingReasons: [] });
+    getLatestSnapshotMock.execute.mockResolvedValue({ id: 'reviewed-id', analysisId: traceIds.analysis,
+      approvedDocumentId: 'doc', createdAt: new Date(), reviewDecisionsSnapshot: [], evidenceQualitySummarySnapshot: {},
+      testTraceSnapshot: saved });
+    prismaMock.generatedDocument.findUnique.mockResolvedValue({ content: '# Frozen report' });
+    const result = await useCase.execute(traceIds.analysis);
+    expect(result.testTraceSnapshot).toEqual(saved);
+    expect(prismaMock.impactAnalysis.findUnique).not.toHaveBeenCalled();
+  });
   let useCase: GetFinalReviewedReportUseCase;
   let getReviewCompletionMock: any;
   let getLatestSnapshotMock: any;

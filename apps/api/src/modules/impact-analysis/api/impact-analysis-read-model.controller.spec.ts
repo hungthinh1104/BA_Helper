@@ -3,6 +3,9 @@ import { ImpactAnalysisReadModelController } from './impact-analysis-read-model.
 import type { ProjectPermissionService } from '../../project/application/project-permission.service';
 import type { GetAnalysisDriftFreshnessUseCase } from '../application/queries/get-analysis-drift-freshness.usecase';
 import type { GetAnalysisWorkspaceUseCase } from '../application/queries/get-analysis-workspace.usecase';
+import type { GetQaCoverageUseCase } from '../application/qa/get-qa-coverage.usecase';
+import { QaCoverageDeriver } from '../application/qa/qa-coverage.deriver';
+import { artifact, input } from '../application/qa/qa-trace.test-fixtures';
 import { UnauthorizedException, NotFoundException } from '@nestjs/common';
 import type { RequestUser } from '@ba-helper/contracts';
 
@@ -11,6 +14,7 @@ describe('ImpactAnalysisReadModelController - driftFreshness', () => {
   let permissions: jest.Mocked<ProjectPermissionService>;
   let getAnalysisDriftFreshness: jest.Mocked<GetAnalysisDriftFreshnessUseCase>;
   let getAnalysisWorkspace: jest.Mocked<GetAnalysisWorkspaceUseCase>;
+  let getQaCoverage: jest.Mocked<GetQaCoverageUseCase>;
 
   const mockActor: RequestUser = { id: 'user-1', email: 'test@example.com', name: 'Test', role: 'VIEWER' };
 
@@ -25,11 +29,12 @@ describe('ImpactAnalysisReadModelController - driftFreshness', () => {
     getAnalysisWorkspace = {
       execute: jest.fn(),
     } as any;
+    getQaCoverage = { execute: jest.fn() } as unknown as jest.Mocked<GetQaCoverageUseCase>;
 
     controller = new ImpactAnalysisReadModelController(
       null as any, // getMatrixRowDetail
       null as any, // getImpactGraph
-      null as any, // getQaCoverage
+      getQaCoverage,
       null as any, // getReviewQueue
       null as any, // getImpactDiff
       null as any, // getLineage
@@ -42,6 +47,20 @@ describe('ImpactAnalysisReadModelController - driftFreshness', () => {
   it('throws 401 if unauthorized', async () => {
     permissions.assertCanReadAnalysis.mockRejectedValueOnce(new UnauthorizedException());
     await expect(controller.driftFreshness('proj-1', 'analysis-1', mockActor)).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('guards test trace reads before querying analysis data', async () => {
+    permissions.assertCanReadAnalysis.mockRejectedValueOnce(new NotFoundException());
+    await expect(controller.qaCoverage('foreign-analysis', mockActor)).rejects.toThrow(NotFoundException);
+    expect(getQaCoverage.execute).not.toHaveBeenCalled();
+  });
+
+  it('preserves the static trace context through the response contract', async () => {
+    const projection = new QaCoverageDeriver().derive(input([artifact('refund')]));
+    getQaCoverage.execute.mockResolvedValue(projection);
+    const result = await controller.qaCoverage('analysis', mockActor);
+    expect(permissions.assertCanReadAnalysis).toHaveBeenCalledWith(mockActor, 'analysis');
+    expect(result.traceContext).toEqual(projection.traceContext);
   });
 
   it('throws 404 if forbidden/cross-project', async () => {

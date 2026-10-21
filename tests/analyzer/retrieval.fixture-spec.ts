@@ -27,6 +27,7 @@ describe('retrieval fixture expectations', () => {
       'service-method:booking.service.cancelBooking',
       'service-method:payment.service.refund',
       'service-method:refund-report.service.generateReport',
+      'test-case:src/booking/booking-cancel.spec.ts::54a2d6ee0beb50fddd4cbe0ae68eb7aa8ba4d8c9c2b1051f71a97b43b606fbe0',
       'test:src.booking.booking-cancel.spec.ts'
     ].sort());
   });
@@ -49,6 +50,7 @@ describe('retrieval fixture expectations', () => {
       'service-method:payment.service.refund',
       'service-method:refund-report.service.generateReport',
       'service-method:slot.service.releaseSlot',
+      'test-case:src/booking/booking-cancel.spec.ts::54a2d6ee0beb50fddd4cbe0ae68eb7aa8ba4d8c9c2b1051f71a97b43b606fbe0',
       'test:src.booking.booking-cancel.spec.ts'
     ].sort());
   });

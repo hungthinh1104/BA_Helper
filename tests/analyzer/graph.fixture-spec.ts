@@ -19,7 +19,7 @@ describe('graph fixture expectations', () => {
     const expectedEdges = JSON.parse(
       readFileSync(expectedEdgesPath, 'utf-8'),
     ) as { edges: ReturnType<typeof buildGraph>['edges'] };
-    const edges = buildGraph(scan).edges;
+    const edges = buildGraph(scan).edges.map(({ provenance, ...edge }) => edge);
 
     expect(
       edges.sort((a, b) => a.stableId.localeCompare(b.stableId)),

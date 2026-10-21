@@ -1,0 +1,58 @@
+const en = {
+  title: 'Code → test references', savedTitle: 'Saved test references', loading: 'Loading test references…',
+  error: 'Test references could not be loaded.', retry: 'Retry', mismatch: 'Test trace belongs to another snapshot. Reload the analysis.',
+  unavailable: 'Saved test trace metadata is unavailable. A new scan and review may be needed.',
+  notInspected: 'This artifact was not included in the inspected results. Check the search limits.',
+  notice: 'Static source references. Test execution and assertion coverage have not been measured. Dependencies may be mocked.',
+  direct: 'Direct reference', indirect: 'Static call path', missing: 'No reference found in inspected paths',
+  inspect: 'Inspect source reference', evidence: 'Source evidence', noEvidence: 'Source evidence is unavailable.',
+  more: 'Show more artifacts', omitted: 'Additional case paths were omitted.', limits: 'Search limits',
+  omittedLocations: 'Additional source locations omitted: {count}',
+  calls: 'calls', testReference: 'test reference', cases: 'cases per artifact', artifacts: 'impacted artifacts', edges: 'edges',
+  limitations: {
+    SNAPSHOT_PARTIAL: 'Repository extraction is partial.', LEGACY_TEST_IDENTITIES: 'This scan has legacy test file identities.',
+    SCANNER_LIMITATIONS: 'Some declarations or source relationships could not be resolved.',
+    IMPACTED_ARTIFACT_LIMIT: 'The impacted artifact limit was reached.', EDGE_LIMIT: 'The relationship search limit was reached.',
+    CALL_DEPTH_LIMIT: 'Deeper callers were outside the search depth.', TRACE_SAMPLE_LIMIT: 'Only a bounded sample of test cases is shown.',
+    UNSUPPORTED_SOURCE_RELATIONSHIP: 'Relationships without valid source evidence were excluded.',
+  },
+};
+const vi: typeof en = {
+  title: 'Tham chiếu code → test', savedTitle: 'Tham chiếu test đã lưu', loading: 'Đang tải tham chiếu test…',
+  error: 'Không tải được tham chiếu test.', retry: 'Thử lại', mismatch: 'Trace thuộc snapshot khác. Hãy tải lại phân tích.',
+  unavailable: 'Chưa có metadata trace đã lưu. Có thể cần quét và review lại.',
+  notInspected: 'Artifact này chưa có trong kết quả đã xét. Hãy kiểm tra giới hạn tìm kiếm.',
+  notice: 'Tham chiếu mã nguồn tĩnh. Chưa đo thực thi test hoặc độ bao phủ assertion. Dependency có thể được mock.',
+  direct: 'Tham chiếu trực tiếp', indirect: 'Đường gọi tĩnh', missing: 'Chưa tìm thấy trong phạm vi đã xét',
+  inspect: 'Xem bằng chứng tham chiếu', evidence: 'Bằng chứng mã nguồn', noEvidence: 'Chưa có bằng chứng mã nguồn.',
+  more: 'Xem thêm artifact', omitted: 'Các đường test bổ sung đã được lược bớt.', limits: 'Giới hạn tìm kiếm',
+  omittedLocations: 'Số vị trí nguồn bổ sung đã lược bớt: {count}',
+  calls: 'lời gọi', testReference: 'tham chiếu test', cases: 'case mỗi artifact', artifacts: 'artifact tác động', edges: 'quan hệ',
+  limitations: {
+    SNAPSHOT_PARTIAL: 'Việc trích xuất repository chưa đầy đủ.', LEGACY_TEST_IDENTITIES: 'Bản quét này chỉ có định danh test file cũ.',
+    SCANNER_LIMITATIONS: 'Một số khai báo hoặc quan hệ mã nguồn chưa được phân giải.',
+    IMPACTED_ARTIFACT_LIMIT: 'Đã chạm giới hạn artifact tác động.', EDGE_LIMIT: 'Đã chạm giới hạn tìm quan hệ.',
+    CALL_DEPTH_LIMIT: 'Các lời gọi sâu hơn nằm ngoài độ sâu tìm kiếm.', TRACE_SAMPLE_LIMIT: 'Chỉ hiển thị một mẫu test case có giới hạn.',
+    UNSUPPORTED_SOURCE_RELATIONSHIP: 'Đã loại quan hệ thiếu bằng chứng nguồn hợp lệ.',
+  },
+};
+const ja: typeof en = {
+  title: 'コード → テスト参照', savedTitle: '保存済みテスト参照', loading: 'テスト参照を読み込み中…',
+  error: 'テスト参照を読み込めませんでした。', retry: '再試行', mismatch: '別のスナップショットの参照です。分析を再読み込みしてください。',
+  unavailable: '保存済みの参照情報がありません。再スキャンとレビューが必要な場合があります。',
+  notInspected: 'このコードは調査結果に含まれていません。検索範囲を確認してください。',
+  notice: '静的なソース参照です。テスト実行やアサーションのカバレッジは測定していません。依存先がモックの場合があります。',
+  direct: '直接参照', indirect: '静的な呼び出し経路', missing: '調査範囲内に参照が見つかりません',
+  inspect: '参照元の証拠を表示', evidence: 'ソースの証拠', noEvidence: 'ソースの証拠を取得できません。',
+  more: 'コードをさらに表示', omitted: '追加のテスト経路は省略されています。', limits: '検索範囲',
+  omittedLocations: '省略された追加のソース位置: {count}',
+  calls: '呼び出し', testReference: 'テスト参照', cases: 'コードごとのテスト数', artifacts: '影響を受けるコード', edges: '関係',
+  limitations: {
+    SNAPSHOT_PARTIAL: 'リポジトリの抽出は部分的です。', LEGACY_TEST_IDENTITIES: '古いテストファイル単位の識別情報です。',
+    SCANNER_LIMITATIONS: '一部の宣言やソースの関係を解決できませんでした。',
+    IMPACTED_ARTIFACT_LIMIT: '影響コードの上限に達しました。', EDGE_LIMIT: '関係検索の上限に達しました。',
+    CALL_DEPTH_LIMIT: 'より深い呼び出しは検索範囲外です。', TRACE_SAMPLE_LIMIT: 'テストの一部のみを表示しています。',
+    UNSUPPORTED_SOURCE_RELATIONSHIP: '有効な証拠のない関係を除外しました。',
+  },
+};
+export const testTraceLabels = { en, 'vi-VN': vi, 'ja-JP': ja };

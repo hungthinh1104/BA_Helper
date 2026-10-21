@@ -20,7 +20,7 @@ export class JavaSpringAdapter implements ScannerAdapter {
     framework: 'spring_boot',
     status: 'PARTIAL',
     confidence: 'MEDIUM',
-    supportedArtifactKinds: ['API_ENDPOINT', 'DOMAIN_SERVICE', 'DATA_MODEL', 'TEST_CASE'],
+    supportedArtifactKinds: ['API_ENDPOINT', 'DOMAIN_SERVICE', 'DATA_MODEL', 'TEST_FILE'],
     supportedPatterns: [
       'Spring controllers',
       'basic HTTP method annotations',

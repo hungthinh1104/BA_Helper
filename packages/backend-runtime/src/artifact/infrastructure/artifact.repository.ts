@@ -30,6 +30,7 @@ export class ArtifactRepository {
     startLine?: number;
     endLine?: number;
     contentHash?: string | null;
+    metadata?: Prisma.InputJsonValue;
   }>, client: ArtifactPrismaClient = this.prisma) {
     return client.codeArtifact.createMany({
       data,

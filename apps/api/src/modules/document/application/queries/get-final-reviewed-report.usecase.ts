@@ -5,7 +5,7 @@ import { GetReviewCompletionUseCase } from '../../../traceability/application/ge
 import { GetLatestReviewedReportSnapshotUseCase } from './get-latest-reviewed-report-snapshot.usecase';
 import { FinalReviewedReportResponse } from '@ba-helper/contracts';
 import { ApprovedReportContextReader } from './approved-report-context.reader';
-import { PrismaService, DEFAULT_REPORT_LOCALE, ReportLocale, buildReportReviewCoverageSummaryFromSnapshot } from "@ba-helper/backend-runtime";
+import { PrismaService, DEFAULT_REPORT_LOCALE, ReportLocale, buildReportReviewCoverageSummaryFromSnapshot, readReportTestTrace } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class GetFinalReviewedReportUseCase {
@@ -48,6 +48,7 @@ export class GetFinalReviewedReportUseCase {
     return {
       analysisId,
       snapshotId: snapshot.id,
+      testTraceSnapshot: readReportTestTrace(snapshot.testTraceSnapshot, { analysisId }),
       locale,
       markdown,
       createdAt: snapshot.createdAt.toISOString(),

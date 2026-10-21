@@ -89,6 +89,26 @@
       "endLine": 7,
       "excerpt": "async releaseSlot(slotId: string): Promise<void> {\n    return;\n  }",
       "contentHash": "sha256:04db001483b579a2c5fd36bbe118c97d81223e50c80b15e720f54a8826ab1508"
+    },
+    {
+      "stableId": "test-case:src/booking/booking-cancel.spec.ts::54a2d6ee0beb50fddd4cbe0ae68eb7aa8ba4d8c9c2b1051f71a97b43b606fbe0",
+      "type": "JEST_TEST_CASE",
+      "filePath": "src/booking/booking-cancel.spec.ts",
+      "symbolName": "BookingService.cancelBooking > sets status to CANCELLED",
+      "startLine": 5,
+      "endLine": 14,
+      "excerpt": "it('sets status to CANCELLED', async () => {\n    const service = new BookingService(\n      { refund: async () => undefined } as any,\n      { releaseSlot: async () => undefined } as any,\n      { notifyOwner: async () => undefined } as any,\n    );\n\n    const booking = await service.cancelBooking('b1');\n    expect(booking.status).toBe(BookingStatus.CANCELLED);\n  })",
+      "contentHash": "sha256:b00c67212ab0b0fec49a80d849a4cac3fb065541a86d72ffcffd19e51ee466e5",
+      "testCase": {
+        "framework": "jest",
+        "suitePath": [
+          "BookingService.cancelBooking"
+        ],
+        "title": "sets status to CANCELLED",
+        "modifier": "NORMAL",
+        "declaredModifier": "NORMAL",
+        "parentFileArtifactKey": "test:src.booking.booking-cancel.spec.ts"
+      }
     }
   ]
 }

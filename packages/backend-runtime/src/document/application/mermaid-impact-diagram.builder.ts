@@ -35,7 +35,7 @@ export class MermaidImpactDiagramBuilder {
     if (artifact.universalKind === 'API_ENDPOINT') return 'API';
     if (artifact.universalKind === 'DOMAIN_SERVICE') return 'Service';
     if (artifact.universalKind === 'DATA_MODEL') return 'Entity';
-    if (artifact.universalKind === 'TEST_CASE') return 'Test';
+    if (artifact.universalKind === 'TEST_CASE' || artifact.universalKind === 'TEST_FILE') return 'Test';
 
     if (type.includes('CONTROLLER') || type.includes('ROUTE')) return 'API';
     if (type.includes('SERVICE')) return 'Service';

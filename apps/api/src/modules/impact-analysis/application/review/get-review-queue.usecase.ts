@@ -1,8 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { AppError } from '@ba-helper/shared';
 import { ReviewQueueResponse, ReviewQueueItem, QaCoverageSeverity } from '@ba-helper/contracts';
-import { ImpactGraphReadModelBuilder } from '../queries/impact-graph-read-model.builder';
-import { QaCoverageDeriver } from '../qa/qa-coverage.deriver';
+import { GetQaCoverageUseCase } from '../qa/get-qa-coverage.usecase';
 import { InsightRepository, TraceabilityRepository } from "@ba-helper/backend-runtime";
 
 @Injectable()
@@ -10,19 +8,13 @@ export class GetReviewQueueUseCase {
   private readonly logger = new Logger(GetReviewQueueUseCase.name);
 
   constructor(
-    private readonly graphBuilder: ImpactGraphReadModelBuilder,
-    private readonly qaCoverageDeriver: QaCoverageDeriver,
+    private readonly getQaCoverage: GetQaCoverageUseCase,
     private readonly insightRepo: InsightRepository,
     private readonly traceabilityRepo: TraceabilityRepository,
   ) {}
 
   async execute(analysisId: string): Promise<ReviewQueueResponse> {
-    const graphData = await this.graphBuilder.buildGraph(analysisId);
-    if (!graphData) {
-      throw new AppError('IMPACT_ANALYSIS_NOT_FOUND', 'Could not build graph for analysis');
-    }
-
-    const qaCoverage = this.qaCoverageDeriver.derive(analysisId, graphData);
+    const qaCoverage = await this.getQaCoverage.execute(analysisId);
     const insights = await this.insightRepo.listByAnalysis(analysisId);
     const traceabilityLinks = await this.traceabilityRepo.listByAnalysis(analysisId);
 
@@ -156,7 +148,7 @@ export class GetReviewQueueUseCase {
       if (gap.severity === 'HIGH') {
         rank = 100;
         priority = 'HIGH';
-        priorityReason = 'High severity QA coverage gap';
+        priorityReason = 'High priority test reference review';
       } else if (gap.severity === 'MEDIUM') {
         rank = 60;
         priority = 'MEDIUM';
@@ -173,8 +165,8 @@ export class GetReviewQueueUseCase {
         type,
         source: 'QA_COVERAGE',
         priority,
-        title: `Coverage gap on ${gap.artifactLabel}`,
-        reason: gap.reason,
+        title: `Test reference review: ${gap.artifactLabel}`,
+        reason: [gap.reason, gap.confidenceNote].filter(Boolean).join(' '),
         rank,
         priorityReason,
         linkedArtifactId: gap.artifactId,

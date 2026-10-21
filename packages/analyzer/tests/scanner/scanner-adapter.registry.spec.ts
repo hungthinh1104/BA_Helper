@@ -19,11 +19,14 @@ describe('ScannerAdapterRegistry', () => {
       expect(tsCap?.status).toBe('STABLE');
       expect(tsCap?.confidence).toBe('HIGH');
       expect(tsCap?.supportedPatterns.length).toBeGreaterThan(0);
+      expect(tsCap?.supportedArtifactKinds).toEqual(expect.arrayContaining(['TEST_FILE', 'TEST_CASE']));
 
       const javaCap = capabilities.find(c => c.language === 'java');
       expect(javaCap).toBeDefined();
       expect(javaCap?.status).toBe('PARTIAL');
       expect(javaCap?.confidence).toBe('MEDIUM');
+      expect(javaCap?.supportedArtifactKinds).toContain('TEST_FILE');
+      expect(javaCap?.supportedArtifactKinds).not.toContain('TEST_CASE');
       expect(javaCap?.partialPatterns.length).toBeGreaterThan(0);
       expect(javaCap?.unsupportedPatterns.length).toBeGreaterThan(0);
 

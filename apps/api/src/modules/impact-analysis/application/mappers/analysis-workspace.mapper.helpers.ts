@@ -259,7 +259,7 @@ export function normalizeUniversalKind(
 		kind === 'API_ENDPOINT' ||
 		kind === 'DOMAIN_SERVICE' ||
 		kind === 'DATA_MODEL' ||
-		kind === 'TEST_CASE'
+		kind === 'TEST_CASE' || kind === 'TEST_FILE'
 	) {
 		return kind;
 	}

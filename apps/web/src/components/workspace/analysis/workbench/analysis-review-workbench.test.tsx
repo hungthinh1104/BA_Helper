@@ -94,6 +94,14 @@ function renderWorkbench(ws: AnalysisWorkspaceResponse = workspace) {
 const panel = () => within(document.querySelector("[data-decision-panel]") as HTMLElement)
 
 describe("AnalysisReviewWorkbench decision loop", () => {
+  it('does not apply decision shortcuts inside a source evidence dialog', () => {
+    renderWorkbench();
+    const dialog = document.createElement('div'); dialog.setAttribute('role', 'dialog');
+    const control = document.createElement('button'); dialog.append(control); document.body.append(dialog);
+    fireEvent.keyDown(control, { key: 'a' });
+    expect(decide).not.toHaveBeenCalled();
+    dialog.remove();
+  });
   beforeEach(() => {
     push.mockClear()
     decide.mockClear()

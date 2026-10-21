@@ -13,8 +13,10 @@ describe('normalizeArtifactKind', () => {
     expect(normalizeArtifactKind('ENTITY')).toBe('DATA_MODEL');
   });
 
-  it('maps TEST to TEST_CASE', () => {
-    expect(normalizeArtifactKind('TEST')).toBe('TEST_CASE');
+  it('distinguishes test containers from real Jest cases', () => {
+    expect(normalizeArtifactKind('TEST')).toBe('TEST_FILE');
+    expect(normalizeArtifactKind('SPRING_TEST')).toBe('TEST_FILE');
+    expect(normalizeArtifactKind('JEST_TEST_CASE')).toBe('TEST_CASE');
   });
 
   it('maps unknown types to UNKNOWN', () => {

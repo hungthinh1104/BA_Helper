@@ -1,21 +1,16 @@
 import { GetReviewQueueUseCase } from './get-review-queue.usecase';
-import type { ImpactGraphReadModelBuilder } from '../queries/impact-graph-read-model.builder';
-import type { QaCoverageDeriver } from '../qa/qa-coverage.deriver';
+import type { GetQaCoverageUseCase } from '../qa/get-qa-coverage.usecase';
 import { PrismaService, InsightRepository, TraceabilityRepository } from "@ba-helper/backend-runtime";
 
 describe('GetReviewQueueUseCase', () => {
   let useCase: GetReviewQueueUseCase;
-  let graphBuilder: jest.Mocked<ImpactGraphReadModelBuilder>;
-  let qaDeriver: jest.Mocked<QaCoverageDeriver>;
+  let qaCoverage: jest.Mocked<GetQaCoverageUseCase>;
   let insightRepo: jest.Mocked<InsightRepository>;
   let traceabilityRepo: jest.Mocked<TraceabilityRepository>;
 
   beforeEach(() => {
-    graphBuilder = {
-      buildGraph: jest.fn(),
-    } as any;
-    qaDeriver = {
-      derive: jest.fn(),
+    qaCoverage = {
+      execute: jest.fn(),
     } as any;
     insightRepo = {
       listByAnalysis: jest.fn(),
@@ -25,17 +20,14 @@ describe('GetReviewQueueUseCase', () => {
     } as any;
 
     useCase = new GetReviewQueueUseCase(
-      graphBuilder,
-      qaDeriver,
+      qaCoverage,
       insightRepo,
       traceabilityRepo
     );
   });
 
   it('should rank items correctly and determine blocking properties', async () => {
-    graphBuilder.buildGraph.mockResolvedValue({ nodes: [], edges: [], snapshotId: 'snap1' } as any);
-
-    qaDeriver.derive.mockReturnValue({
+    qaCoverage.execute.mockResolvedValue({
       analysisId: 'analysis1',
       snapshotId: 'snap1',
       summary: { covered: 0, indirectOnly: 0, noTestFound: 1, highSeverityGaps: 1 },
@@ -108,6 +100,7 @@ describe('GetReviewQueueUseCase', () => {
     traceabilityRepo.listByAnalysis.mockResolvedValue([]);
 
     const result = await useCase.execute('analysis1');
+    expect(qaCoverage.execute).toHaveBeenCalledWith('analysis1');
 
     expect(result.summary.total).toBe(6);
     expect(result.summary.totalActiveItems).toBe(6);
@@ -150,8 +143,7 @@ describe('GetReviewQueueUseCase', () => {
   });
 
   it('should ignore CONFIRMED and REJECTED items', async () => {
-    graphBuilder.buildGraph.mockResolvedValue({ nodes: [], edges: [], snapshotId: 'snap1' } as any);
-    qaDeriver.derive.mockReturnValue({
+    qaCoverage.execute.mockResolvedValue({
       analysisId: 'a', snapshotId: 's', summary: {} as any, items: []
     });
 
@@ -170,8 +162,7 @@ describe('GetReviewQueueUseCase', () => {
   });
 
   it('does not set fake linkedInsightId for traceability items and uses artifact labels', async () => {
-    graphBuilder.buildGraph.mockResolvedValue({ nodes: [], edges: [], snapshotId: 'snap1' } as any);
-    qaDeriver.derive.mockReturnValue({
+    qaCoverage.execute.mockResolvedValue({
       analysisId: 'a', snapshotId: 's', summary: {} as any, items: []
     });
     insightRepo.listByAnalysis.mockResolvedValue([]);
@@ -210,5 +201,12 @@ describe('GetReviewQueueUseCase', () => {
       ]),
     );
     expect(result.items[0]).not.toHaveProperty('linkedInsightId');
+  });
+
+  it('propagates missing analysis before querying live review items', async () => {
+    qaCoverage.execute.mockRejectedValue({ code: 'IMPACT_ANALYSIS_NOT_FOUND' });
+    await expect(useCase.execute('missing')).rejects.toMatchObject({ code: 'IMPACT_ANALYSIS_NOT_FOUND' });
+    expect(insightRepo.listByAnalysis).not.toHaveBeenCalled();
+    expect(traceabilityRepo.listByAnalysis).not.toHaveBeenCalled();
   });
 });

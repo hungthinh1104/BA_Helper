@@ -4,6 +4,15 @@ import type { PrismaService } from '../../prisma/prisma.service';
 
 type GraphPrismaClient = PrismaService | Prisma.TransactionClient;
 
+export type PersistedDependencyEdgeInput = {
+  snapshotId: string;
+  fromArtifactId: string;
+  toArtifactId: string;
+  type: DependencyEdgeType;
+  confidence?: number;
+  metadata?: Prisma.InputJsonValue;
+};
+
 export class GraphRepository {
   constructor(private readonly prisma: PrismaService) {}
 
@@ -37,12 +46,7 @@ export class GraphRepository {
     return Array.from(expandedIds);
   }
 
-  async createDependencyEdges(edges: {
-    snapshotId: string;
-    fromArtifactId: string;
-    toArtifactId: string;
-    type: DependencyEdgeType;
-  }[], client: GraphPrismaClient = this.prisma): Promise<void> {
+  async createDependencyEdges(edges: PersistedDependencyEdgeInput[], client: GraphPrismaClient = this.prisma): Promise<void> {
     if (!edges || edges.length === 0) {
       return;
     }

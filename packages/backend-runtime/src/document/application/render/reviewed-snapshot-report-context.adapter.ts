@@ -11,6 +11,7 @@ import { GetImpactDiffUseCase } from '../../../impact-analysis/infrastructure/ge
 import { DEFAULT_REPORT_LOCALE, ReportLocale } from './report-localization';
 import type { ApprovedReportMetadata } from '../../domain/approved-report-metadata';
 import { buildReportReviewCoverageSummaryFromSnapshot } from '../report-review-coverage.summary';
+import { readReportTestTrace } from '../../domain/report-test-trace.snapshot';
 
 @Injectable()
 export class ReviewedSnapshotReportContextAdapter {
@@ -99,6 +100,8 @@ export class ReviewedSnapshotReportContextAdapter {
       reviewDecisionsSnapshot,
       evidenceQualitySummarySnapshot,
       reviewCoverageSummarySnapshot,
+      testTraceSnapshot: readReportTestTrace(snapshot.testTraceSnapshot, { analysisId,
+        snapshotId: analysis.snapshot.id, commitSha: analysis.snapshot.commitSha, analyzerVersion: analysis.snapshot.analyzerVersion }),
       diff,
       metadata: {
         analysisId: analysis.id,

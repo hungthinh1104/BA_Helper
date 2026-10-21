@@ -69,6 +69,7 @@ export class BuildMultiRepoImpactMatrixReadModel {
         DOMAIN_SERVICE: 0,
         DATA_MODEL: 0,
         TEST_CASE: 0,
+        TEST_FILE: 0,
         UNKNOWN: 0,
       };
 

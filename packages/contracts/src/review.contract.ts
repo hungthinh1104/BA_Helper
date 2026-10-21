@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { reportTestTraceSnapshotSchema } from './report-test-trace.contract';
 import { reportReviewCoverageSummarySchema } from './document.contract';
 import { supportedAppLocales } from './locale.contract';
 
@@ -35,6 +36,7 @@ export type ReportLocale = z.infer<typeof reportLocaleSchema>;
 export type LocaleAwareReportQuery = z.infer<typeof localeAwareReportQuerySchema>;
 
 export const finalReviewedReportResponseSchema = z.object({
+  testTraceSnapshot: reportTestTraceSnapshotSchema.nullable().optional(),
   analysisId: z.string().min(1),
   snapshotId: z.string().min(1),
   locale: reportLocaleSchema.default('en'),

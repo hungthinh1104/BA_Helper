@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { reportTestTraceSnapshotSchema } from './report-test-trace.contract';
 import { traceabilityReviewDecisionSchema } from './traceability.contract';
 import { domainPackSelectedBySchema, domainProfileCapabilityStatusSchema } from './domain-pack.contract';
 
@@ -183,6 +184,7 @@ export const approvedImpactReportResponseSchema = z.object({
 });
 
 export const reviewedReportSnapshotSchema = z.object({
+	testTraceSnapshot: reportTestTraceSnapshotSchema.nullable().optional(),
 	id: z.string().uuid(),
 	analysisId: z.string().uuid(),
 	approvedDocumentId: z.string().uuid().nullable().optional(),

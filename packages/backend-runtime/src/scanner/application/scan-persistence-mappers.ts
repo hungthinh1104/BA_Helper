@@ -8,6 +8,8 @@ import type {
 import { SecretRedactor } from '@ba-helper/analyzer';
 import { AppError } from '@ba-helper/shared';
 import type { DiagnosticItem } from '@ba-helper/contracts';
+import { dependencyConfidenceSchema, dependencyEdgeProvenanceSchema } from '@ba-helper/contracts';
+import type { PersistedDependencyEdgeInput } from '../../graph/infrastructure/graph.repository';
 import type { EvidenceRepository } from '../../evidence/infrastructure/evidence.repository';
 import { IncrementalScanClassifier } from './incremental-scan-classifier';
 
@@ -118,7 +120,7 @@ export function buildEvidenceInputs(params: {
 
       return {
         provenanceKey: `snapshot:${params.snapshotId}:artifact:${artifact.stableId}`,
-        sourceType: artifact.type === 'TEST' ? 'TEST' : 'CODE',
+        sourceType: ['TEST', 'SPRING_TEST', 'JEST_TEST_CASE'].includes(artifact.type) ? 'TEST' : 'CODE',
         snapshotId: params.snapshotId,
         artifactId: persistedId,
         sourcePath: artifact.filePath,
@@ -138,20 +140,10 @@ export function buildDependencyEdges(
   dependencyEdges: NonNullable<ScanResult['dependencyEdges']>,
   artifactIdByStableId: Map<string, string>,
 ): {
-  edgesToPersist: {
-    snapshotId: string;
-    fromArtifactId: string;
-    toArtifactId: string;
-    type: DependencyEdgeType;
-  }[];
+  edgesToPersist: PersistedDependencyEdgeInput[];
   droppedEdgeCount: number;
 } {
-  const edgesToPersist: {
-    snapshotId: string;
-    fromArtifactId: string;
-    toArtifactId: string;
-    type: DependencyEdgeType;
-  }[] = [];
+  const edgesToPersist: PersistedDependencyEdgeInput[] = [];
   let droppedEdgeCount = 0;
 
   for (const edge of dependencyEdges) {
@@ -173,6 +165,14 @@ export function buildDependencyEdges(
       fromArtifactId: fromId,
       toArtifactId: toId,
       type: mappedType,
+      ...(edge.confidence === undefined ? {} : { confidence: dependencyConfidenceSchema.parse(edge.confidence) }),
+      ...(edge.provenance ? {
+        metadata: dependencyEdgeProvenanceSchema.parse({
+          ...edge.provenance,
+          kind: 'STATIC_SOURCE_REFERENCE',
+          evidenceProvenanceKey: `snapshot:${snapshotId}:artifact:${edge.fromArtifactId}`,
+        }),
+      } : {}),
     });
   }
 

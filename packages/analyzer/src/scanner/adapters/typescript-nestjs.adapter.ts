@@ -1,4 +1,5 @@
 import { scanProject } from '../scanner';
+import { buildGraph } from '../../graph/graph';
 import type {
   ScannerAdapter, 
   ScanAdapterInput, 
@@ -20,7 +21,7 @@ export class TypeScriptNestJsAdapter implements ScannerAdapter {
     framework: 'nestjs',
     status: 'STABLE',
     confidence: 'HIGH',
-    supportedArtifactKinds: ['API_ENDPOINT', 'DOMAIN_SERVICE', 'DATA_MODEL', 'TEST_CASE'],
+    supportedArtifactKinds: ['API_ENDPOINT', 'DOMAIN_SERVICE', 'DATA_MODEL', 'TEST_FILE', 'TEST_CASE'],
     supportedPatterns: [
       'controllers',
       'services',
@@ -30,8 +31,8 @@ export class TypeScriptNestJsAdapter implements ScannerAdapter {
       'Prisma models',
       'method/class artifacts'
     ],
-    partialPatterns: [],
-    unsupportedPatterns: [],
+    partialPatterns: ['Jest literal describe/it/test declarations and modifiers'],
+    unsupportedPatterns: ['dynamic receivers', 'barrel/path-alias graph resolution', 'runtime test coverage'],
   };
 
   canScan(input: ScanAdapterInput): boolean {
@@ -50,8 +51,16 @@ export class TypeScriptNestJsAdapter implements ScannerAdapter {
     };
 
     const legacyResult = scanProject(legacyInput);
+    const graph = buildGraph(legacyResult);
 
-    const diagnostics: DiagnosticItem[] = [];
+    const diagnostics: DiagnosticItem[] = [...(legacyResult.diagnostics ?? []), ...(graph.diagnostics ?? []).map(d => ({
+      code: d.code,
+      severity: 'WARN',
+      category: 'SCANNER',
+      message: d.message,
+      payload: { relativePath: d.filePath, unsupportedPattern: d.code },
+      samplePaths: d.filePath ? [d.filePath] : undefined,
+    } as DiagnosticItem))];
 
     // Inject SCANNER_CAPABILITY_SUMMARY
     diagnostics.push({
@@ -75,7 +84,13 @@ export class TypeScriptNestJsAdapter implements ScannerAdapter {
 
     return {
       artifacts: legacyResult.artifacts,
-      dependencyEdges: [], // Legacy scan does not extract edges directly
+      dependencyEdges: graph.edges.map(edge => ({
+        fromArtifactId: edge.from,
+        toArtifactId: edge.to,
+        type: edge.type,
+        confidence: edge.confidence,
+        provenance: edge.provenance,
+      })),
       diagnostics,
       capability: this.capability,
     };

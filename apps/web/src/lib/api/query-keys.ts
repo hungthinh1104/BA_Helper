@@ -42,6 +42,7 @@ export const queryKeys = {
     report: (analysisId: string) => ["impact-analyses", "approved-report", analysisId] as const,
     graph: (analysisId: string) => ["impact-analyses", "graph", analysisId] as const,
     qaCoverage: (analysisId: string) => ["impact-analyses", "qa-coverage", analysisId] as const,
+    testTraceEvidence: (analysisId: string, evidenceId: string) => ["impact-analyses", "test-trace-evidence", analysisId, evidenceId] as const,
     reviewQueue: (analysisId: string) => ["impact-analyses", "review-queue", analysisId] as const,
     diff: (analysisId: string) => ["impact-analyses", "diff", analysisId] as const,
     driftFreshness: (analysisId: string) => ["impact-analyses", "drift-freshness", analysisId] as const,

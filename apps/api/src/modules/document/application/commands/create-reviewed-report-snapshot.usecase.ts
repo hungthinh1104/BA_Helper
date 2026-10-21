@@ -1,27 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { AppError } from '@ba-helper/shared';
-import { buildEvidenceQualityProjection } from '../evidence-quality.projection';
-import { PrismaService, TraceabilityRepository, InsightRepository, EvaluationContextAdapter, EventLogService } from "@ba-helper/backend-runtime";
-
-type ReviewedReportSnapshotCreateData = {
-  analysisId: string;
-  approvedDocumentId: null;
-  markdown: null;
-  reviewDecisionsSnapshot: Prisma.InputJsonValue;
-  evidenceQualitySummarySnapshot: Prisma.InputJsonValue;
-  evaluationContextSnapshot: Prisma.InputJsonValue | typeof Prisma.DbNull;
-  createdByUserId: string | null;
-};
+import { PrismaService, EventLogService } from '@ba-helper/backend-runtime';
+import { ReviewedReportContentBuilder } from './reviewed-report-content.builder';
 
 @Injectable()
 export class CreateReviewedReportSnapshotUseCase {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventLog: EventLogService,
-    private readonly traceabilityRepo: TraceabilityRepository,
-    private readonly insightRepo: InsightRepository,
-    private readonly evalContextAdapter: EvaluationContextAdapter,
+    private readonly contentBuilder: ReviewedReportContentBuilder,
   ) {}
 
   async execute(params: { analysisId: string; createdByUserId?: string }) {
@@ -68,26 +55,8 @@ export class CreateReviewedReportSnapshotUseCase {
   async buildSnapshotCreateData(params: {
     analysisId: string;
     createdByUserId?: string;
-  }): Promise<ReviewedReportSnapshotCreateData> {
-    const evaluationContextSnapshot = this.evalContextAdapter.getEvaluationContext();
-    const traceabilityLinks = await this.traceabilityRepo.listByAnalysis(params.analysisId);
-    const insights = await this.insightRepo.listByAnalysis(params.analysisId);
-    const qualityProjection = buildEvidenceQualityProjection({
-      traceabilityLinks,
-      insights: insights as any[],
-    });
-
-    return {
-      analysisId: params.analysisId,
-      approvedDocumentId: null,
-      markdown: null,
-      reviewDecisionsSnapshot: qualityProjection.items as Prisma.InputJsonValue,
-      evidenceQualitySummarySnapshot: qualityProjection.summary as Prisma.InputJsonValue,
-      evaluationContextSnapshot: evaluationContextSnapshot
-        ? (evaluationContextSnapshot as Prisma.InputJsonValue)
-        : Prisma.DbNull,
-      createdByUserId: params.createdByUserId || null,
-    };
+  }) {
+    return this.contentBuilder.build(params);
   }
 
   async recordCreatedEvent(snapshot: {

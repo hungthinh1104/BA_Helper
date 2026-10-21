@@ -70,6 +70,38 @@ function makePrisma(analysis: ReturnType<typeof makeAnalysis> | null, deps: unkn
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('GetImpactGraphUseCase', () => {
+  it('preserves persisted static provenance without reversing the evidence origin for TESTS', async () => {
+    const service = makeArtifact('svc');
+    const testCase = { framework: 'jest', suitePath: ['Booking'], title: 'cancels',
+      modifier: 'NORMAL', declaredModifier: 'NORMAL', parentFileArtifactKey: 'test:src.booking.spec.ts' };
+    const test = makeArtifact('test', { artifactType: 'JEST_TEST_CASE', universalKind: 'TEST_CASE',
+      metadata: { testCase } });
+    const analysis = makeAnalysis({ traceabilityLinks: [makeTraceabilityLink('link', service)] });
+    const provenance = { kind: 'STATIC_SOURCE_REFERENCE', resolver: 'TS_AST_DIRECT_CALL',
+      evidenceProvenanceKey: 'snapshot:snapshot-1:artifact:test-key',
+      locations: [{ sourcePath: 'src/booking.spec.ts', startLine: 12, endLine: 12 }] };
+    const deps = [{ id: 'dep', fromArtifactId: 'test', toArtifactId: 'svc',
+      fromArtifact: test, toArtifact: service, type: 'TESTS', confidence: 0, metadata: provenance }];
+    const result = await new GetImpactGraphUseCase(new ImpactGraphReadModelBuilder(makePrisma(analysis, deps))).execute('analysis-1');
+    expect(result.edges.find(e => e.id === 'edge-dep-dep')).toMatchObject({
+      source: 'artifact-svc', target: 'artifact-test', displayDirectionReversed: true,
+      confidence: 0, provenance,
+    });
+    expect(result.nodes.find(n => n.id === 'artifact-test')).toMatchObject({ type: 'TEST', testCase });
+  });
+
+  it('preserves case metadata on traceability nodes and renders file containers as tests', async () => {
+    const testCase = { framework: 'jest', suitePath: [], title: 'later', modifier: 'TODO',
+      declaredModifier: 'TODO', parentFileArtifactKey: 'test:src.booking.spec.ts' };
+    const test = makeArtifact('case', { artifactType: 'JEST_TEST_CASE', metadata: { testCase } });
+    const file = makeArtifact('file', { artifactType: 'SPRING_TEST', universalKind: 'TEST_FILE' });
+    const analysis = makeAnalysis({ traceabilityLinks: [makeTraceabilityLink('l1', test), makeTraceabilityLink('l2', file)] });
+    const result = await new GetImpactGraphUseCase(new ImpactGraphReadModelBuilder(makePrisma(analysis))).execute('analysis-1');
+    expect(result.nodes.find(n => n.id === 'artifact-case')).toMatchObject({ type: 'TEST', testCase });
+    expect(result.nodes.find(n => n.id === 'artifact-file')).toMatchObject({ type: 'TEST' });
+    expect(result.nodes.find(n => n.id === 'artifact-file')?.testCase).toBeUndefined();
+  });
+
   it('UC-GRAPH-01: throws IMPACT_ANALYSIS_NOT_FOUND when analysis is missing', async () => {
     const useCase = new GetImpactGraphUseCase(new ImpactGraphReadModelBuilder(makePrisma(null) as any));
     await expect(useCase.execute('nonexistent')).rejects.toMatchObject({

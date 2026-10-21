@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { graphNodeTypeSchema } from './impact-graph.contract';
+import { testCaseMetadataSchema } from './test-case.contract';
+import { qaTestTraceSchema, qaTraceContextSchema } from './qa-test-trace.contract';
 
 export const qaCoverageStatusSchema = z.enum(["COVERED", "INDIRECT_ONLY", "NO_TEST_FOUND"]);
 export const qaCoverageSeveritySchema = z.enum(["HIGH", "MEDIUM", "LOW"]);
@@ -18,7 +20,11 @@ export const qaCoverageItemSchema = z.object({
     id: z.string(),
     label: z.string(),
     filePath: z.string().optional(),
+    artifactKey: z.string().optional(),
+    testCase: testCaseMetadataSchema.optional(),
+    trace: qaTestTraceSchema.optional(),
   })),
+  tracesTruncated: z.boolean().optional(),
 
   reason: z.string(),
   suggestedAction: z.string(),
@@ -28,6 +34,7 @@ export const qaCoverageItemSchema = z.object({
 export const qaCoverageResponseSchema = z.object({
   analysisId: z.string(),
   snapshotId: z.string(),
+  traceContext: qaTraceContextSchema.optional(),
   summary: z.object({
     covered: z.number(),
     indirectOnly: z.number(),

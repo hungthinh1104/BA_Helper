@@ -1,5 +1,5 @@
 import type { ApprovedImpactReportResponse } from '@ba-helper/contracts';
-import { ApprovedReportMetadata, buildReportReviewCoverageSummaryFromSnapshot } from "@ba-helper/backend-runtime";
+import { ApprovedReportMetadata, buildReportReviewCoverageSummaryFromSnapshot, readReportTestTrace } from "@ba-helper/backend-runtime";
 
 export class DocumentMapper {
   static toApprovedReportResponse(
@@ -68,6 +68,7 @@ export class DocumentMapper {
       approvedDocumentId: snapshot.approvedDocumentId || null,
       markdown: snapshot.markdown,
       reviewDecisionsSnapshot: snapshot.reviewDecisionsSnapshot,
+      testTraceSnapshot: readReportTestTrace(snapshot.testTraceSnapshot, { analysisId: snapshot.analysisId }),
       evidenceQualitySummarySnapshot: snapshot.evidenceQualitySummarySnapshot,
       reviewCoverageSummary: buildReportReviewCoverageSummaryFromSnapshot({
         reviewDecisionsSnapshot: snapshot.reviewDecisionsSnapshot,

@@ -11,6 +11,9 @@ import { AlertCircle, Loader2 } from "lucide-react"
 import { ReportMarkdown } from "./report-markdown"
 import { parseReviewSnapshotItems } from "./review-snapshot"
 import { useLocale, useTranslations } from "next-intl"
+import { TestTraceView } from '@/components/workspace/analysis/qa/test-trace-view'
+import { testTraceLabels } from '@/lib/i18n/test-trace-labels'
+import { normalizeAppLocale } from '@ba-helper/contracts'
 
 interface FinalReviewedReportViewerProps {
   analysisId: string
@@ -50,6 +53,8 @@ export function FinalReviewedReportViewer({ analysisId, open, onOpenChange }: Fi
     return (
       <div className="flex-1 overflow-y-auto bg-background p-6 md:p-8 space-y-12">
         <ReportMarkdown markdown={finalReport.markdown || ""} className="opacity-95" />
+        {finalReport.testTraceSnapshot ? <TestTraceView coverage={finalReport.testTraceSnapshot.coverage}
+          locale={normalizeAppLocale(locale)} saved /> : <p className="text-xs text-muted-foreground">{testTraceLabels[normalizeAppLocale(locale)].unavailable}</p>}
 
         {/* Decisions Table */}
         {decisions.length > 0 && (

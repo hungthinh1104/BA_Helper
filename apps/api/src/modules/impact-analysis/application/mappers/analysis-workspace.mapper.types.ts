@@ -130,5 +130,6 @@ export const KIND_GROUPS: Record<
 	DOMAIN_SERVICE: 'secondary',
 	DATA_MODEL: 'config',
 	TEST_CASE: 'test',
+	TEST_FILE: 'test',
 	UNKNOWN: 'unknown',
 };

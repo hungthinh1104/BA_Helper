@@ -50,6 +50,30 @@ DocumentJob       owns asynchronous process state for building final documents
 DomainEvent       owns audit/debug history
 ```
 
+`DependencyEdge.confidence` and `metadata` are nullable for historical rows.
+New TypeScript graph metadata follows the shared dependency provenance schema:
+static source-reference kind, resolver, repository-relative line locations
+(maximum 20 plus omitted count), and the source artifact's same-snapshot
+`Evidence.provenanceKey`. Metadata contains no raw source excerpts. The existing
+unique(snapshotId, fromArtifactId, toArtifactId, type) constraint deduplicates
+relationships; repeated call sites are aggregated into their provenance.
+
+`ReviewedReportSnapshot.testTraceSnapshot` is nullable JSON with the versioned
+`reportTestTraceSnapshotSchema` payload: `{ version: 1, coverage }`. It freezes
+the static QA projection, immutable repository snapshot/commit/analyzer
+identity, case metadata, semantic paths, evidence IDs, search limits and
+limitations at snapshot creation. Rejected impact rows are excluded; remaining
+rows retain their static-reference classifications. Source excerpts are not
+duplicated in this payload. The existing finalization transaction persists it
+with the review snapshot and document job. Document retries only read this
+field and never recompute test traces from live analysis relations.
+
+Existing report snapshots retain null. No backfill is performed. Their stored
+Markdown stays readable without invented case paths. Capturing a new snapshot
+is an explicit existing review/finalization action and uses its existing audit
+event. The worker validates saved analysis/snapshot/commit/analyzer identity
+before rendering a test trace section.
+
 ## Required Relations
 
 ```text
@@ -237,9 +261,20 @@ Current normalized kinds:
 API_ENDPOINT
 DOMAIN_SERVICE
 DATA_MODEL
+TEST_FILE
 TEST_CASE
 UNKNOWN
 ```
+
+`CodeArtifact.metadata` is nullable JSON. For `JEST_TEST_CASE`, it contains
+validated `{ testCase: { framework: 'jest', suitePath, title, modifier,
+declaredModifier, parentFileArtifactKey } }`. Labels are secret-redacted before
+persistence; parent identity must match the case's source file. AST offsets
+are transient. File containers (`TEST`, `SPRING_TEST`) normalize to `TEST_FILE`;
+only extracted Jest cases normalize to `TEST_CASE` on new scans. Existing rows
+keep their historical kind and absent metadata; rescan with `analyzer@0.5.0`
+to obtain case identities. The existing snapshot/artifactKey constraint keeps
+case persistence idempotent.
 
 ## Requirement Revision Semantics
 

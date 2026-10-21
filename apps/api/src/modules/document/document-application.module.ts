@@ -10,6 +10,10 @@ import { GetFinalReviewedReportUseCase } from './application/queries/get-final-r
 import { GetLatestReviewedReportSnapshotUseCase } from './application/queries/get-latest-reviewed-report-snapshot.usecase';
 import { ListDocumentsUseCase } from './application/queries/list-documents.usecase';
 import { ApprovedReportContextReader } from './application/queries/approved-report-context.reader';
+import { ReviewedReportContentBuilder } from './application/commands/reviewed-report-content.builder';
+import { GetQaCoverageUseCase } from '../impact-analysis/application/qa/get-qa-coverage.usecase';
+import { QaCoverageDeriver } from '../impact-analysis/application/qa/qa-coverage.deriver';
+import { QaTraceRepository } from '../impact-analysis/infrastructure/qa-trace.repository';
 
 import { PrismaModule, QueueModule, DocumentRuntimeModule, DocumentRepository } from "@ba-helper/backend-runtime";
 
@@ -25,6 +29,7 @@ import { PrismaModule, QueueModule, DocumentRuntimeModule, DocumentRepository } 
     DocumentRuntimeModule,
   ],
   providers: [
+    ReviewedReportContentBuilder, GetQaCoverageUseCase, QaCoverageDeriver, QaTraceRepository,
     CreateReviewedReportSnapshotUseCase,
     EnqueueDocumentJobUseCase,
     GetFinalReviewedReportUseCase,

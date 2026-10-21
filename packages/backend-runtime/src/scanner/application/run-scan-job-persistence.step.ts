@@ -7,7 +7,7 @@ import type {
 } from '@ba-helper/analyzer';
 import type { DiagnosticItem } from '@ba-helper/contracts';
 import { ArtifactRepository } from '../../artifact/infrastructure/artifact.repository';
-import { normalizeArtifactKind } from '../../artifact/domain/universal-artifact-kind';
+import { buildArtifactInputs } from './scan-artifact.mapper';
 import { EvidenceRepository } from '../../evidence/infrastructure/evidence.repository';
 import { GraphRepository } from '../../graph/infrastructure/graph.repository';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -144,6 +144,7 @@ export class RunScanJobPersistenceStep {
     const persistedArtifacts = await this.persistArtifacts(
       snapshot.id,
       params.scanResult.artifacts,
+      params.collector,
       tx,
     );
     const artifactIdByStableId = new Map(
@@ -276,6 +277,7 @@ export class RunScanJobPersistenceStep {
   private async persistArtifacts(
     snapshotId: string,
     artifacts: ScanArtifact[],
+    collector: DiagnosticCollectorLike,
     tx: Prisma.TransactionClient,
   ): Promise<PersistedArtifactRef[]> {
     if (artifacts.length === 0) {
@@ -283,17 +285,7 @@ export class RunScanJobPersistenceStep {
     }
 
     await this.artifactRepository.createMany(
-      artifacts.map((artifact) => ({
-        snapshotId,
-        artifactKey: artifact.stableId,
-        artifactType: artifact.type,
-        universalKind: normalizeArtifactKind(artifact.type),
-        name: artifact.symbolName,
-        filePath: artifact.filePath,
-        startLine: artifact.startLine,
-        endLine: artifact.endLine,
-        contentHash: artifact.contentHash,
-      })),
+      buildArtifactInputs(snapshotId, artifacts, collector),
       tx,
     );
 

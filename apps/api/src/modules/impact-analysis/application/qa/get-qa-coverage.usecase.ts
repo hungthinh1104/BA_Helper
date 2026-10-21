@@ -1,24 +1,22 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { AppError } from '@ba-helper/shared';
-import { QaCoverageResponse } from '@ba-helper/contracts';
-import { ImpactGraphReadModelBuilder } from '../queries/impact-graph-read-model.builder';
+import { qaCoverageResponseSchema, type QaCoverageResponse } from '@ba-helper/contracts';
+import { QaTraceRepository } from '../../infrastructure/qa-trace.repository';
 import { QaCoverageDeriver } from './qa-coverage.deriver';
 
 @Injectable()
 export class GetQaCoverageUseCase {
-  private readonly logger = new Logger(GetQaCoverageUseCase.name);
-
   constructor(
-    private readonly graphBuilder: ImpactGraphReadModelBuilder,
+    private readonly repository: QaTraceRepository,
     private readonly deriver: QaCoverageDeriver
   ) {}
 
   async execute(analysisId: string): Promise<QaCoverageResponse> {
-    const graphData = await this.graphBuilder.buildGraph(analysisId);
-    if (!graphData) {
-      throw new AppError('IMPACT_ANALYSIS_NOT_FOUND', 'Could not build graph for analysis');
+    const input = await this.repository.read(analysisId);
+    if (!input) {
+      throw new AppError('IMPACT_ANALYSIS_NOT_FOUND', 'Impact analysis not found.');
     }
 
-    return this.deriver.derive(analysisId, graphData);
+    return qaCoverageResponseSchema.parse(this.deriver.derive(input));
   }
 }

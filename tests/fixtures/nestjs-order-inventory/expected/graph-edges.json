@@ -16,11 +16,6 @@
       "type": "CALLS"
     },
     {
-      "from": "test:src.order.order-cancel.spec.ts",
-      "to": "service-method:order.service.cancelOrder",
-      "type": "TESTS"
-    },
-    {
       "from": "service-method:inventory.service.releaseReservation",
       "to": "entity:stockreservation",
       "type": "USES"

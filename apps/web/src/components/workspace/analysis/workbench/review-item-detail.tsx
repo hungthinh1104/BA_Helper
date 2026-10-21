@@ -7,6 +7,7 @@ import { resolveReviewItemDetail } from "./analysis-workbench-view-model"
 import { EvidenceStack } from "./evidence-stack"
 import { ImpactClaimPanel } from "./impact-claim-panel"
 import { RelatedContextPanel } from "./related-context-panel"
+import { StaticTestTracePanel } from '../qa/static-test-trace-panel'
 
 export function ReviewItemDetail({
   workspace,
@@ -28,6 +29,10 @@ export function ReviewItemDetail({
     <article className="grid gap-5">
       {item.itemType === "impact" ? <ImpactClaimPanel item={item} artifact={detail.artifact} locale={locale} labels={labels} /> : <InsightHeader item={item} detail={detail} labels={labels} />}
       <EvidenceStack evidence={detail.evidence} labels={labels} commitSha={workspace.overview.snapshot.commitSha} repositoryUrl={workspace.overview.snapshot.repositoryUrl ?? null} />
+      {(detail.artifact || item.linkedArtifactKeys.length > 0) ? <StaticTestTracePanel key={item.itemId}
+        analysisId={workspace.overview.analysisId} snapshotId={workspace.overview.snapshot.snapshotId}
+        commitSha={workspace.overview.snapshot.commitSha} analyzerVersion={workspace.overview.snapshot.analyzerVersion}
+        artifactKeys={detail.artifact ? [detail.artifact.artifactKey] : item.linkedArtifactKeys} locale={locale} /> : null}
       <RelatedContextPanel risks={detail.risks} unknowns={detail.unknowns} qaScenarios={detail.qaScenarios} labels={labels} />
       {detail.traceabilityIds.length > 0 ? <details className="rounded-lg border border-border/50 p-3"><summary className="cursor-pointer text-xs font-medium text-foreground">{labels.traceabilityMetadata}</summary><p className="mt-2 break-all font-mono text-xs text-muted-foreground">{labels.traceabilityIds}: {detail.traceabilityIds.join(", ")}</p></details> : null}
     </article>

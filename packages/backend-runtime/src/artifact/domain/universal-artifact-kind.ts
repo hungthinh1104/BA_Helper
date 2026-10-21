@@ -13,6 +13,8 @@ export const normalizeArtifactKind = (
       return 'DATA_MODEL';
     case 'TEST':
     case 'SPRING_TEST':
+      return 'TEST_FILE';
+    case 'JEST_TEST_CASE':
       return 'TEST_CASE';
     case 'SPRING_CONTROLLER_METHOD':
       return 'API_ENDPOINT';

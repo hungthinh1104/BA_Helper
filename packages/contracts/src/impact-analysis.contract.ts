@@ -250,6 +250,7 @@ export const multiRepoImpactMatrixRowSchema = z.object({
 		DOMAIN_SERVICE: z.number().int().nonnegative(),
 		DATA_MODEL: z.number().int().nonnegative(),
 		TEST_CASE: z.number().int().nonnegative(),
+		TEST_FILE: z.number().int().nonnegative().optional(),
 		UNKNOWN: z.number().int().nonnegative(),
 	}),
 	riskCount: z.number().int().nonnegative(),

@@ -1,246 +1,127 @@
-import { Project, SyntaxKind, ClassDeclaration, MethodDeclaration, SourceFile } from 'ts-morph';
-import { join } from 'node:path';
-import type { GraphResult, GraphEdge, GraphDiagnostic } from './graph.types';
-import type { ScanResult, ScanArtifact } from '../scanner/scanner.types';
+import { relative, resolve } from 'node:path';
+import { Node, SyntaxKind } from 'ts-morph';
+import type { ClassDeclaration, MethodDeclaration, SourceFile } from 'ts-morph';
+import type { ScanArtifact, ScanResult } from '../scanner/scanner.types';
+import type { GraphDiagnostic, GraphEdge, GraphProvenance, GraphResult } from './graph.types';
+import { GraphSourceResolver } from './graph-source-resolver';
 
 export const buildGraph = (scan: ScanResult): GraphResult => {
-  if (!scan.sourceRoot) {
-    return { edges: [] };
-  }
-
-  const project = new Project({
-    useInMemoryFileSystem: false,
-    skipFileDependencyResolution: true,
-  });
-
-  // Load all TS files
-  project.addSourceFilesAtPaths(join(scan.sourceRoot, 'src/**/*.ts'));
-  project.addSourceFilesAtPaths(join(scan.sourceRoot, 'test/**/*.ts'));
-
-  const edges: GraphEdge[] = [];
-  const diagnostics: GraphDiagnostic[] = [];
-
-  // 1. Build lookup tables for artifacts
-  const artifactByStableId = new Map<string, ScanArtifact>();
-  const artifactByClassMethod = new Map<string, ScanArtifact>();
-  const artifactByClassName = new Map<string, ScanArtifact>();
-  const entityByClassName = new Map<string, ScanArtifact>();
-  const testArtifacts = new Map<string, ScanArtifact>();
-
-  for (const artifact of scan.artifacts) {
-    artifactByStableId.set(artifact.stableId, artifact);
-    
-    if (artifact.type === 'ENTITY') {
-      entityByClassName.set(artifact.symbolName.toLowerCase(), artifact);
-      entityByClassName.set(artifact.symbolName, artifact);
-    } else if (artifact.type === 'TEST') {
-      // symbolName for test might be order-cancel.spec.ts
-      testArtifacts.set(artifact.filePath, artifact);
-    } else if (artifact.type === 'API_ROUTE' || artifact.type === 'SERVICE_METHOD') {
-      artifactByClassMethod.set(artifact.symbolName, artifact);
-      const className = artifact.symbolName.split('.')[0];
-      if (className) {
-        if (!artifactByClassName.has(className)) {
-          // Find the class artifact (or mock one if we only have methods)
-          // Wait, the scanner does NOT currently output class artifacts for controllers/services, only methods!
-          // Ah! Let's check scanner.ts to confirm.
-        }
-      }
-    }
-  }
-
-  // To properly resolve, we need to know what classes exist, even if scanner didn't emit them.
-  // Actually, we can just use the symbol prefix.
-
-  // Helper to add edge avoiding duplicates
-  const addedEdges = new Set<string>();
-  const addEdge = (from: string, to: string, type: string, confidence: number = 1.0) => {
-    const key = `${from}->${type}->${to}`;
-    if (!addedEdges.has(key)) {
-      addedEdges.add(key);
-      edges.push({ stableId: `edge:${from}->${to}`, from, to, type, confidence });
-    }
-  };
-
-  for (const sourceFile of project.getSourceFiles()) {
-    const isTestFile = sourceFile.getFilePath().includes('.spec.ts') || sourceFile.getFilePath().includes('.test.ts');
-    
-    if (isTestFile) {
-      // --- TEST EDGE EXTRACTION ---
-      // We look for test artifact matching this file
-      const relativePath = sourceFile.getFilePath().replace(project.getFileSystem().getCurrentDirectory() + '/', '');
-      // Try to find the matching test artifact
-      let testArtifact = scan.artifacts.find(a => a.type === 'TEST' && sourceFile.getFilePath().endsWith(a.filePath));
-      if (!testArtifact) continue;
-
-      // Extract imports to find which class is tested
-      const imports = sourceFile.getImportDeclarations();
-      const importedClasses = new Set<string>();
-      for (const imp of imports) {
-        for (const named of imp.getNamedImports()) {
-          importedClasses.add(named.getName());
-        }
-      }
-
-      // Extract method calls in the test
-      const calls = sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression);
-      const methodCalls = new Set<string>();
-      for (const call of calls) {
-        const expr = call.getExpression();
-        if (expr.getKind() === SyntaxKind.PropertyAccessExpression) {
-          const name = expr.getLastChildByKind(SyntaxKind.Identifier)?.getText();
-          if (name) methodCalls.add(name);
-        }
-      }
-
-      for (const imported of importedClasses) {
-        // Find if this imported class has methods in artifacts
-        const classMethods = scan.artifacts.filter(a => a.symbolName.startsWith(`${imported}.`));
-        if (classMethods.length > 0) {
-          // Class level test edge
-          let methodEdgeCreated = false;
-          for (const method of classMethods) {
-            const methodName = method.symbolName.split('.')[1];
-            if (methodName && methodCalls.has(methodName)) {
-              addEdge(testArtifact.stableId, method.stableId, 'TESTS');
-              methodEdgeCreated = true;
-            }
-          }
-          if (!methodEdgeCreated) {
-            // fallback to any method of that class as a "class level" edge, or we can just link to the first one
-            // Since we don't have a class artifact, we can link to the first method or mock a class edge
-            // Or link to all methods? For MVP, we'll link to the first method found for the class.
-            addEdge(testArtifact.stableId, classMethods[0].stableId, 'TESTS', 0.8);
-          }
-        }
-      }
-      continue;
-    }
-
-    // --- CLASS EDGE EXTRACTION ---
-    for (const cls of sourceFile.getClasses()) {
-      const className = cls.getName();
-      if (!className) continue;
-
-      // 1. Build injection map
-      const injectionMap = new Map<string, string>(); // propertyName -> ClassName
-      const constructors = cls.getConstructors();
-      for (const ctor of constructors) {
-        for (const param of ctor.getParameters()) {
-          const typeNode = param.getTypeNode();
-          if (typeNode) {
-            let typeName = typeNode.getText();
-            if (typeName.includes('<')) {
-              // handle Repository<StockReservation>
-              const match = typeName.match(/Repository<([^>]+)>/);
-              if (match) typeName = match[1];
-            }
-            injectionMap.set(param.getName(), typeName);
-          }
-        }
-      }
-
-      // 2. Class-level entity usage (Imports)
-      // We see if the class imports any known entities
-      const sourceImports = sourceFile.getImportDeclarations();
-      for (const imp of sourceImports) {
-        for (const named of imp.getNamedImports()) {
-          const importedName = named.getName();
-          const entityArtifact = entityByClassName.get(importedName);
-          if (entityArtifact) {
-            // We know this class imports an entity. 
-            // We can attach a USES edge from all its methods (with lower confidence) or wait for method-level usage.
-          }
-        }
-      }
-
-      // 3. Process Methods
-      for (const method of cls.getMethods()) {
-        const methodName = method.getName();
-        const sourceArtifact = artifactByClassMethod.get(`${className}.${methodName}`);
-        if (!sourceArtifact) continue;
-
-        // Find method calls inside this method
-        const calls = method.getDescendantsOfKind(SyntaxKind.CallExpression);
-        for (const call of calls) {
-          const expr = call.getExpression();
-          if (expr.getKind() === SyntaxKind.PropertyAccessExpression) {
-            const propAccess = expr.asKind(SyntaxKind.PropertyAccessExpression);
-            if (!propAccess) continue;
-
-            const caller = propAccess.getExpression().getText(); // e.g. `this.orderService`
-            const targetMethod = propAccess.getName(); // e.g. `cancelOrder`
-
-            if (caller.startsWith('this.')) {
-              const propName = caller.substring(5);
-              const targetClass = injectionMap.get(propName);
-              if (targetClass) {
-                // We know it's calling targetClass.targetMethod
-                const targetArtifact = artifactByClassMethod.get(`${targetClass}.${targetMethod}`);
-                if (targetArtifact) {
-                  addEdge(sourceArtifact.stableId, targetArtifact.stableId, 'CALLS');
-                } else {
-                  // Fallback: we know the class but not the method
-                  // Find any method of targetClass to use as fallback class edge
-                  const anyTargetMethod = scan.artifacts.find(a => a.symbolName.startsWith(`${targetClass}.`));
-                  if (anyTargetMethod) {
-                    addEdge(sourceArtifact.stableId, anyTargetMethod.stableId, 'CALLS', 0.5);
-                    diagnostics.push({
-                      code: 'UNRESOLVED_METHOD_TARGET',
-                      message: `Resolved class ${targetClass} but could not find method ${targetMethod}`,
-                      filePath: sourceFile.getFilePath(),
-                      sourceSymbol: sourceArtifact.symbolName,
-                      targetExpression: `${targetClass}.${targetMethod}`,
-                    });
-                  } else {
-                    // Check if targetClass is an entity (e.g. Repository calls)
-                    const entityArtifact = entityByClassName.get(targetClass);
-                    if (entityArtifact) {
-                      addEdge(sourceArtifact.stableId, entityArtifact.stableId, 'USES');
-                    } else {
-                      diagnostics.push({
-                        code: 'UNRESOLVED_INJECTION_TOKEN',
-                        message: `Could not resolve artifact for injected ${targetClass}`,
-                        filePath: sourceFile.getFilePath(),
-                        sourceSymbol: sourceArtifact.symbolName,
-                      });
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-
-        // Find Entity usages inside method (identifiers, types)
-        // A simple heuristic: check all identifiers in the method body
-        const identifiers = method.getDescendantsOfKind(SyntaxKind.Identifier);
-        const usedIdentifiers = new Set(identifiers.map(i => i.getText()));
-        
-        for (const [entityName, entityArtifact] of entityByClassName.entries()) {
-          // If the entity name is used in the method body, create a USES edge
-          // E.g., `OrderStatus.CANCELLED` -> uses OrderStatus entity
-          // E.g., `new StockReservation()` -> uses StockReservation entity
-          // Also check if Repository<EntityName> is injected and used
-          let usesEntity = usedIdentifiers.has(entityArtifact.symbolName);
-          
-          if (!usesEntity) {
-            // Check if there is an injection for this entity's repository
-            for (const [propName, typeName] of injectionMap.entries()) {
-              if (typeName === entityArtifact.symbolName && usedIdentifiers.has(propName)) {
-                usesEntity = true;
-                break;
-              }
-            }
-          }
-
-          if (usesEntity) {
-            addEdge(sourceArtifact.stableId, entityArtifact.stableId, 'USES');
-          }
-        }
-      }
-    }
-  }
-
-  return { edges, diagnostics };
+  if (!scan.sourceRoot) return { edges: [] };
+  return new SourceGraphBuilder(scan).build();
 };
+
+class SourceGraphBuilder {
+  private readonly resolver: GraphSourceResolver;
+  private readonly edges = new Map<string, GraphEdge>();
+  private readonly sourceLocations = new Map<string, Set<string>>();
+  private readonly diagnostics = new Map<string, GraphDiagnostic>();
+
+  constructor(private readonly scan: ScanResult) { this.resolver = new GraphSourceResolver(scan); }
+
+  build(): GraphResult {
+    for (const artifact of this.resolver.ambiguousArtifacts) {
+      const file = this.resolver.project.getSourceFile(resolve(this.scan.sourceRoot!, artifact.filePath));
+      if (file) this.diagnose('AMBIGUOUS_ARTIFACT_IDENTITY', file, artifact);
+    }
+    for (const file of this.resolver.project.getSourceFiles()) {
+      const test = this.resolver.testArtifact(file);
+      if (test) this.testEdges(file, test);
+      else if (/\.(?:spec|test)\.ts$/.test(file.getFilePath())) continue;
+      else for (const cls of file.getClasses()) this.classEdges(cls);
+    }
+    return { edges: [...this.edges.values()], diagnostics: [...this.diagnostics.values()] };
+  }
+
+  private testEdges(file: SourceFile, test: ScanArtifact): void {
+    const cases = this.resolver.testCases(file);
+    const calls = file.getDescendantsOfKind(SyntaxKind.CallExpression);
+    for (const item of cases) {
+      const span = item.testBodySpan;
+      if (!span || item.testCase?.modifier === 'SKIP' || item.testCase?.modifier === 'TODO') continue;
+      let resolved = false;
+      for (const call of calls) {
+        if (call.getStart() < span.start || call.getEnd() > span.end) continue;
+        const access = call.getExpression();
+        if (!Node.isPropertyAccessExpression(access)) continue;
+        const cls = this.resolver.receiverClass(access.getExpression());
+        const target = cls && this.resolver.artifactFor(cls, access.getName());
+        if (!target) continue;
+        this.addEdge(item, target, 'TESTS', call, 'TS_AST_DIRECT_CALL');
+        resolved = true;
+      }
+      if (!resolved) this.diagnose('TEST_TARGET_UNRESOLVED', file, item);
+    }
+    if (!cases.length && file.getImportDeclarations().some(i => i.getModuleSpecifierValue().startsWith('.'))) {
+      this.diagnose('TEST_TARGET_UNRESOLVED', file, test);
+    }
+  }
+
+  private classEdges(cls: ClassDeclaration): void {
+    for (const method of cls.getMethods()) {
+      const source = this.resolver.artifactFor(cls, method.getName());
+      if (!source) continue;
+      this.methodCalls(cls, method, source);
+      for (const identifier of method.getDescendantsOfKind(SyntaxKind.Identifier)) {
+        const entityClass = this.resolver.resolveClass(identifier);
+        const entity = entityClass && this.resolver.artifactFor(entityClass);
+        if (entity?.type === 'ENTITY') this.addEdge(source, entity, 'USES', identifier, 'TS_AST_ENTITY_REFERENCE');
+      }
+    }
+  }
+
+  private methodCalls(cls: ClassDeclaration, method: MethodDeclaration, source: ScanArtifact): void {
+    for (const call of method.getDescendantsOfKind(SyntaxKind.CallExpression)) {
+      const access = call.getExpression();
+      if (!Node.isPropertyAccessExpression(access)) continue;
+      if (call.getFirstAncestorByKind(SyntaxKind.ClassDeclaration) !== cls ||
+        call.getAncestors().some(node => Node.isFunctionDeclaration(node) || Node.isFunctionExpression(node))) {
+        this.diagnose('UNRESOLVED_RECEIVER_SCOPE', call.getSourceFile(), source);
+        continue;
+      }
+      const receiver = access.getExpression();
+      const targetClass = this.resolver.receiverClass(receiver, cls);
+      const target = targetClass && this.resolver.artifactFor(targetClass, access.getName());
+      if (target) this.addEdge(source, target, 'CALLS', call, 'TS_AST_DIRECT_CALL');
+      else if (targetClass) this.diagnose('UNRESOLVED_METHOD_TARGET', call.getSourceFile(), source);
+      else {
+        const entityClass = this.resolver.repositoryEntity(receiver, cls);
+        const entity = entityClass && this.resolver.artifactFor(entityClass);
+        if (entity?.type === 'ENTITY') this.addEdge(source, entity, 'USES', call, 'TS_AST_ENTITY_REFERENCE');
+        else if (receiver.getText().startsWith('this.')) {
+          this.diagnose('UNRESOLVED_INJECTION_TOKEN', call.getSourceFile(), source);
+        }
+      }
+    }
+  }
+
+  private addEdge(from: ScanArtifact, to: ScanArtifact, type: string, node: Node,
+    resolver: GraphProvenance['resolver']): void {
+    const key = `${from.stableId}->${type}->${to.stableId}`;
+    const location = {
+      sourcePath: relative(this.scan.sourceRoot!, node.getSourceFile().getFilePath()).replace(/\\/g, '/'),
+      startLine: node.getStartLineNumber(),
+      endLine: node.getEndLineNumber(),
+    };
+    const existing = this.edges.get(key);
+    const locationKey = `${location.sourcePath}:${location.startLine}:${location.endLine}`;
+    const seen = this.sourceLocations.get(key) ?? new Set<string>();
+    if (seen.has(locationKey)) return;
+    seen.add(locationKey);
+    this.sourceLocations.set(key, seen);
+    if (existing?.provenance) {
+      if (existing.provenance.locations.length < 20) existing.provenance.locations.push(location);
+      else existing.provenance.omittedLocationCount = (existing.provenance.omittedLocationCount ?? 0) + 1;
+      return;
+    }
+    this.edges.set(key, { stableId: `edge:${from.stableId}->${to.stableId}`, from: from.stableId,
+      to: to.stableId, type, confidence: 1, provenance: { resolver, locations: [location] } });
+  }
+
+  private diagnose(code: string, file: SourceFile, source: ScanArtifact): void {
+    const filePath = relative(this.scan.sourceRoot!, file.getFilePath()).replace(/\\/g, '/');
+    this.diagnostics.set(`${code}:${filePath}:${source.stableId}`, {
+      code, filePath, sourceSymbol: source.symbolName,
+      message: 'No supported source relationship could be resolved; no dependency edge was inferred.',
+    });
+  }
+}

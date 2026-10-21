@@ -1,8 +1,8 @@
 {
   "edges": [
     {
-      "stableId": "edge:test:src.booking.booking-cancel.spec.ts->service-method:booking.service.cancelBooking",
-      "from": "test:src.booking.booking-cancel.spec.ts",
+      "stableId": "edge:test-case:src/booking/booking-cancel.spec.ts::54a2d6ee0beb50fddd4cbe0ae68eb7aa8ba4d8c9c2b1051f71a97b43b606fbe0->service-method:booking.service.cancelBooking",
+      "from": "test-case:src/booking/booking-cancel.spec.ts::54a2d6ee0beb50fddd4cbe0ae68eb7aa8ba4d8c9c2b1051f71a97b43b606fbe0",
       "to": "service-method:booking.service.cancelBooking",
       "type": "TESTS",
       "confidence": 1

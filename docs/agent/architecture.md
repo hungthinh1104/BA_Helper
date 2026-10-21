@@ -139,6 +139,23 @@ Do not build the workspace UI as a substitute for engine correctness.
 Backend proof comes from fixture-driven tests and JSON/Markdown output.
 The frontend is added once persisted behavior and DTO contracts are stable.
 
+Static code-to-test review is a persisted read projection within impact-analysis:
+`GetQaCoverageUseCase -> QaTraceRepository -> QaCoverageDeriver`. The repository
+loads a bounded, snapshot-scoped upstream neighborhood in a consistent read;
+domain policies validate source relationships and choose shortest paths. This
+flow is independent of `ImpactGraphReadModelBuilder` display limits/layout.
+`GetReviewQueueUseCase` consumes the same QA use case. No new persistence owner,
+worker behavior or report finalization gate is introduced.
+
+The review workbench consumes the static QA API through query hooks and opens
+only path-authorized source evidence. `ReviewedReportContentBuilder` captures
+the projection into a versioned reviewed snapshot payload. Document application
+wiring provides the stateless QA reader/deriver directly, avoiding a circular
+module import. Workers consume the frozen contract through backend-runtime;
+they do not import API QA classes. Markdown/PDF and the final report viewer
+render the captured paths. Legacy snapshots are not reconstructed from live
+data.
+
 Repository profiling is backend/analyzer-only in Phase 20A. It is persisted on
 published snapshots to make later universal artifact normalization and
 profile-aware retrieval explicit, but it does not change supported extraction

@@ -12,6 +12,9 @@ import {
 import { GetImpactGraphUseCase } from './application/queries/get-impact-graph.usecase';
 import { GetQaCoverageUseCase } from './application/qa/get-qa-coverage.usecase';
 import { QaCoverageDeriver } from './application/qa/qa-coverage.deriver';
+import { QaTraceRepository } from './infrastructure/qa-trace.repository';
+import { GetTestTraceEvidenceUseCase } from './application/qa/get-test-trace-evidence.usecase';
+import { TestTraceEvidenceController } from './api/test-trace-evidence.controller';
 import { GetReviewQueueUseCase } from './application/review/get-review-queue.usecase';
 import { SaveReviewNoteUseCase } from './application/review/save-review-note.usecase';
 import { GetReviewNotesUseCase } from './application/review/get-review-notes.usecase';
@@ -63,6 +66,7 @@ import { DomainPackRegistry } from '@ba-helper/backend-runtime';
 @Module({
   imports: [PrismaModule, EventLogModule, DocumentModule, QueueModule, AiModule, RetrievalModule, GraphModule, ClarificationModule, ProjectModule, RepositoryModule, DomainPackModule],
   controllers: [
+      TestTraceEvidenceController,
     ImpactAnalysisLifecycleController,
     ImpactAnalysisReadModelController,
     ImpactAnalysisReviewController,
@@ -145,6 +149,8 @@ import { DomainPackRegistry } from '@ba-helper/backend-runtime';
     ImpactGraphReadModelBuilder,
     GetImpactGraphUseCase,
     QaCoverageDeriver,
+    QaTraceRepository,
+    GetTestTraceEvidenceUseCase,
     GetQaCoverageUseCase,
     GetReviewQueueUseCase,
     ReviewNoteRepository,

@@ -1,5 +1,84 @@
 # API Contracts
 
+Impact graph dependency edges may expose `confidence` in [0, 1] and `provenance`
+validated by `dependencyEdgeProvenanceSchema`. Provenance describes a static
+source relationship and identifies its resolver, source line locations and
+same-snapshot evidence provenance key. It is absent for legacy edges without
+provenance. Reversing `TESTS` for layout never reverses the evidence origin.
+No execution, assertion coverage or test-result claim follows from this field.
+
+Artifact list items and impact graph artifact nodes optionally expose validated
+`testCase` metadata for `JEST_TEST_CASE`: `framework`, `suitePath`, `title`,
+effective `modifier`, `declaredModifier`, and `parentFileArtifactKey`. The modifier
+enum is `NORMAL | SKIP | TODO | ONLY`; it is not execution status. Invalid or
+legacy metadata is absent. Raw database metadata is never returned.
+`TEST_FILE` distinguishes file containers from real `TEST_CASE` artifacts on
+new scans. Multi-repo artifact counts may include `TEST_FILE` separately;
+existing case count fields retain historical snapshot semantics.
+
+## Static Code-To-Test Projection
+
+`GET /api/v1/impact-analyses/:analysisId/qa-coverage` reads persisted data for the
+analysis snapshot, independently of display graph nodes, layout directions and
+50-node/80-edge display limits. The existing analysis permission guard applies.
+Only impacted code artifacts become rows; other snapshot artifacts may appear
+as intermediate source-path steps. Rejected links remain visible as review
+context, matching the analysis graph's existing selection semantics.
+
+The existing wire statuses are retained for compatibility:
+
+| Wire status | Meaning |
+| --- | --- |
+| `COVERED` | A supported active Jest case directly references the artifact |
+| `INDIRECT_ONLY` | Such a case reaches the artifact through static `CALLS` edges |
+| `NO_TEST_FOUND` | No supported reference was found in the inspected paths |
+
+These are static-reference classifications. They do not certify assertions,
+execution, pass/fail or runtime coverage. Dependencies along a call path may be
+mocked. `summary.covered` counts direct references; severity is a review priority
+heuristic, not a measured defect probability. Every row includes a
+`confidenceNote` describing this limit. Review queue diagnostics consume this
+same projection and remain non-blocking for finalization.
+
+Optional additive fields preserve older clients and test adapters:
+
+- `traceContext`: static basis, immutable commit/analyzer identity, snapshot
+  coverage, effective search limits and explicit limitation codes.
+- `testArtifacts[].testCase`: validated Jest metadata.
+- `testArtifacts[].trace`: one shortest semantic path per case, with ordered
+  artifacts and `TESTS` then `CALLS` steps. Each step contains its persisted edge
+  ID, source evidence ID and validated provenance; no source excerpt is returned.
+- `tracesTruncated`: indicates that additional distinct cases were omitted.
+
+Read limits are 1000 impacted artifacts, 5000 candidate edges, four `CALLS`
+hops and three case paths per artifact. The reader probes for overflow and uses
+a repeatable-read transaction. Summary counts apply to returned impacted rows.
+`IMPACTED_ARTIFACT_LIMIT`, `EDGE_LIMIT`, `CALL_DEPTH_LIMIT`, `TRACE_SAMPLE_LIMIT`,
+`SNAPSHOT_PARTIAL`, `LEGACY_TEST_IDENTITIES`, `SCANNER_LIMITATIONS` and
+`UNSUPPORTED_SOURCE_RELATIONSHIP` expose incomplete inspection. In particular,
+`NO_TEST_FOUND` never means that no tests exist in the repository.
+
+### Trace Evidence And Saved Report Traces
+
+`GET /api/v1/impact-analyses/:analysisId/qa-coverage/evidence/:evidenceId` requires
+the existing analysis read permission. It returns `TestTraceEvidenceResponse`:
+analysis ID, repository snapshot ID, commit SHA and the standard evidence DTO.
+The evidence must belong to a returned static case path and match that step's
+snapshot, source artifact, provenance key, source type/file and line range.
+An arbitrary same-snapshot evidence ID is insufficient. Missing or unsupported
+proof returns 404. This endpoint is a live review read; report views do not use
+it to reconstruct saved output.
+
+Reviewed snapshot and final reviewed report DTOs optionally expose nullable
+`testTraceSnapshot`: `{ version: 1, coverage }`, validated by
+`reportTestTraceSnapshotSchema`. A new payload requires commit/analyzer context,
+case metadata and connected semantic paths with same-snapshot source evidence.
+It is captured before the existing finalization commit and persisted with the
+reviewed snapshot. Final report reads and the Markdown/PDF generation path use
+that captured projection. They do not invoke the live QA projection. Historical
+null values mean no saved test trace is available; no execution results or
+retrospective paths may be inferred for them.
+
 ## Contract Boundary
 
 Use REST resources and shared Zod contracts:

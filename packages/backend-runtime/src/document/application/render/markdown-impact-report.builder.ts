@@ -11,6 +11,7 @@ import {
 } from './markdown-renderers/traceability-section.renderer';
 import { renderImpactsAndAc, renderQuestionsAndClarifications } from './markdown-renderers/insight-section.renderer';
 import { renderQaSection } from './markdown-renderers/qa-section.renderer';
+import { renderTestTraceSection } from './markdown-renderers/test-trace-section.renderer';
 import { renderEvidenceAppendix } from './markdown-renderers/evidence-appendix.renderer';
 import { renderReviewHistory } from './markdown-renderers/review-history.renderer';
 import { renderEvaluationContext } from './markdown-renderers/evaluation-context.renderer';
@@ -49,6 +50,7 @@ export class MarkdownImpactReportBuilder {
       ...renderImpactedAreas(context),
       ...renderImpactsAndAc(context),
       ...renderQaSection(context),
+      ...renderTestTraceSection(context.testTraceSnapshot, context.locale),
       ...renderQuestionsAndClarifications(context),
       ...renderEvidenceAppendix(context),
       ...renderReviewHistory(context),

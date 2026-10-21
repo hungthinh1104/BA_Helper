@@ -228,6 +228,20 @@ insights/questions describing the unsupported impact.
 
 ### UC-06 Review Insights
 
+QA review includes a snapshot-scoped static code-to-test projection. It shows
+direct Jest references, structural call paths and where no supported reference
+was found within declared scan/search limits. Each path links to persisted
+source evidence. It does not claim tests were executed or the changed behavior
+was asserted. QA diagnostics remain advisory in the review queue; existing
+human review and finalization policies stay authoritative.
+
+For an artifact linked to the selected review item, reviewers can inspect an
+ordered case-to-code path and open evidence for each source relationship.
+Partial/unsupported inspection and search limits remain visible. The report
+snapshot captures this static context along with the existing review payload;
+read-only report views and exports retain that captured context. Historic
+reports without trace data stay historic and do not gain inferred paths.
+
 A user can confirm or reject generated insights and traceability links.
 Review decisions do not rewrite machine certainty:
 

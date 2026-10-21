@@ -35,6 +35,7 @@ export * from './impact-analysis/infrastructure/multi-repo-merged-report.reposit
 export * from './impact-analysis/infrastructure/merged-multi-repo-report-review-decision.repository';
 export * from './impact-analysis/infrastructure/get-impact-diff.provider';
 export * from './artifact/infrastructure/artifact.repository';
+export * from './document/domain/report-test-trace.snapshot';
 export * from './evidence/infrastructure/evidence.repository';
 export * from './clarification/infrastructure/clarification.repository';
 export * from './graph/infrastructure/graph.repository';

@@ -3,6 +3,8 @@ import { join, relative } from 'node:path';
 import { ANALYZER_VERSION } from './scanner.types';
 import type { ScanInput, ScanResult, ScanArtifact, ScanCoverage } from './scanner.types';
 import { computeArtifactContentHash } from './core/content-hasher';
+import { extractJestTestArtifacts } from './jest/jest-test-extractor';
+import type { DiagnosticItem } from './core/diagnostic-collector';
 
 export const scanFixture = (input: ScanInput): ScanResult => {
   if (input.fixturePath.includes('express-unsupported')) {
@@ -12,6 +14,7 @@ export const scanFixture = (input: ScanInput): ScanResult => {
   const project = new Project({
     useInMemoryFileSystem: false,
     skipFileDependencyResolution: true,
+    compilerOptions: { noResolve: true, noLib: true },
   });
 
   // Add all TypeScript files in the fixture path, except node_modules
@@ -19,23 +22,16 @@ export const scanFixture = (input: ScanInput): ScanResult => {
   project.addSourceFilesAtPaths(join(input.fixturePath, 'test/**/*.ts'));
 
   const artifacts: ScanArtifact[] = [];
+  const diagnostics: DiagnosticItem[] = [];
 
   for (const sourceFile of project.getSourceFiles()) {
-    const filePath = relative(input.fixturePath, sourceFile.getFilePath());
+    const filePath = relative(input.fixturePath, sourceFile.getFilePath()).replace(/\\/g, '/');
 
     // 1. Detect tests
     if (filePath.includes('.spec.ts') || filePath.includes('.test.ts')) {
-      const excerpt = sourceFile.getText();
-      artifacts.push({
-        stableId: `test:${filePath.replace(/[\/\\]/g, '.')}`,
-        type: 'TEST',
-        filePath,
-        symbolName: sourceFile.getBaseName(),
-        startLine: 1,
-        endLine: sourceFile.getEndLineNumber(),
-        excerpt,
-        contentHash: computeArtifactContentHash(excerpt),
-      });
+      const tests = extractJestTestArtifacts(sourceFile, filePath);
+      artifacts.push(...tests.artifacts);
+      diagnostics.push(...tests.diagnostics);
       continue;
     }
 
@@ -89,6 +85,7 @@ export const scanFixture = (input: ScanInput): ScanResult => {
   return {
     analyzerVersion: input.analyzerVersion || '0.1.0',
     artifacts,
+    diagnostics,
     coverage: { 
       status: 'FULL', 
       skippedFiles: [], 
@@ -111,6 +108,7 @@ export const scanFixture = (input: ScanInput): ScanResult => {
       limitHits: { fileLimitHit: false, repoSizeLimitHit: false }
     },
     sourceRoot: input.fixturePath,
+    sourceFiles: project.getSourceFiles().map(file => file.getFilePath()),
   };
 };
 
@@ -118,6 +116,7 @@ export const scanProject = (input: ScanInput & { tsFiles: string[], coverage?: S
   const project = new Project({
     useInMemoryFileSystem: false,
     skipFileDependencyResolution: true,
+    compilerOptions: { noResolve: true, noLib: true },
   });
 
   for (const file of input.tsFiles) {
@@ -125,23 +124,16 @@ export const scanProject = (input: ScanInput & { tsFiles: string[], coverage?: S
   }
 
   const artifacts: ScanArtifact[] = [];
+  const diagnostics: DiagnosticItem[] = [];
 
   for (const sourceFile of project.getSourceFiles()) {
-    const filePath = relative(input.fixturePath, sourceFile.getFilePath());
+    const filePath = relative(input.fixturePath, sourceFile.getFilePath()).replace(/\\/g, '/');
 
     // 1. Detect tests
     if (filePath.includes('.spec.ts') || filePath.includes('.test.ts')) {
-      const excerpt = sourceFile.getText();
-      artifacts.push({
-        stableId: `test:${filePath.replace(/[\/\\]/g, '.')}`,
-        type: 'TEST',
-        filePath,
-        symbolName: sourceFile.getBaseName(),
-        startLine: 1,
-        endLine: sourceFile.getEndLineNumber(),
-        excerpt,
-        contentHash: computeArtifactContentHash(excerpt),
-      });
+      const tests = extractJestTestArtifacts(sourceFile, filePath);
+      artifacts.push(...tests.artifacts);
+      diagnostics.push(...tests.diagnostics);
       continue;
     }
 
@@ -217,7 +209,9 @@ export const scanProject = (input: ScanInput & { tsFiles: string[], coverage?: S
   return {
     analyzerVersion: input.analyzerVersion || ANALYZER_VERSION,
     artifacts,
+    diagnostics,
     coverage: input.coverage || defaultCoverage,
     sourceRoot: input.fixturePath,
+    sourceFiles: [...input.tsFiles],
   };
 };

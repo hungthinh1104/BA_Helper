@@ -1,0 +1,15 @@
+{
+  "caseKey": "test-case:src/booking/booking-cancel.spec.ts::54a2d6ee0beb50fddd4cbe0ae68eb7aa8ba4d8c9c2b1051f71a97b43b606fbe0",
+  "items": [
+    { "artifactKey": "api:booking.controller.cancel", "status": "NO_TEST_FOUND", "callPath": [] },
+    { "artifactKey": "entity:booking", "status": "NO_TEST_FOUND", "callPath": [] },
+    { "artifactKey": "service-method:booking.service.cancelBooking", "status": "COVERED",
+      "callPath": ["service-method:booking.service.cancelBooking"] },
+    { "artifactKey": "service-method:payment.service.refund", "status": "INDIRECT_ONLY",
+      "callPath": ["service-method:booking.service.cancelBooking", "service-method:payment.service.refund"] },
+    { "artifactKey": "service-method:slot.service.releaseSlot", "status": "INDIRECT_ONLY",
+      "callPath": ["service-method:booking.service.cancelBooking", "service-method:slot.service.releaseSlot"] },
+    { "artifactKey": "service-method:notification.service.notifyOwner", "status": "INDIRECT_ONLY",
+      "callPath": ["service-method:booking.service.cancelBooking", "service-method:notification.service.notifyOwner"] }
+  ]
+}

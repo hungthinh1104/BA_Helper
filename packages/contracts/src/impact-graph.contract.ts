@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { retrievalMetadataSchema } from './retrieval.contract';
+import { testCaseMetadataSchema } from './test-case.contract';
+import { dependencyConfidenceSchema, dependencyEdgeProvenanceSchema } from './dependency-provenance.contract';
 
 export const graphNodeTypeSchema = z.enum([
   'REQUIREMENT',
@@ -48,6 +50,7 @@ export const impactGraphNodeSchema = z.object({
   subtitle: z.string().optional(),
   filePath: z.string().optional(),
   artifactKey: z.string().optional(),
+  testCase: testCaseMetadataSchema.optional(),
   status: z.string().optional(),
   certainty: z.enum(['EVIDENCED', 'INFERRED', 'UNKNOWN']).optional(),
   reviewStatus: z.enum(['NEEDS_REVIEW', 'CONFIRMED', 'REJECTED']).optional(),
@@ -70,7 +73,8 @@ export const impactGraphEdgeSchema = z.object({
   target: z.string(),
   type: graphEdgeTypeSchema,
   label: z.string().optional(),
-  confidence: z.number().optional(),
+  confidence: dependencyConfidenceSchema.optional(),
+  provenance: dependencyEdgeProvenanceSchema.optional(),
   sourceKind: graphEdgeSourceKindSchema.optional(),
   /** When true, source/target have been swapped from semantic direction for layout readability. */
   displayDirectionReversed: z.boolean().optional(),

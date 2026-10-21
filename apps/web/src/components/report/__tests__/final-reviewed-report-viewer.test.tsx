@@ -4,6 +4,17 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { FinalReviewedReportViewer } from '../final-reviewed-report-viewer';
 import { server } from '@/test/msw/server';
 import { rest } from 'msw';
+import messages from '../../../../messages/en.json';
+import { staticTestTraceFixture } from '../../../../../../tests/fixtures/static-test-trace.fixture';
+
+jest.mock('next-intl', () => ({
+  useLocale: () => 'en',
+  useTranslations: (namespace: keyof typeof messages) => (key: string, values?: Record<string, string>) => {
+    let text = (messages[namespace] as Record<string, string>)[key] ?? key;
+    for (const [name, value] of Object.entries(values ?? {})) text = text.replace(`{${name}}`, value);
+    return text;
+  },
+}));
 
 // Note: To render Dialog content in tests without issues, we don't necessarily need special setup if the open prop is true, but we should wrap it.
 const createTestQueryClient = () => new QueryClient({
@@ -61,6 +72,7 @@ describe('FinalReviewedReportViewer', () => {
             analysisId: 'test-id',
             snapshotId: '12345678-abcd',
             markdown: '# My Frozen Markdown\n\nThis is a test.',
+            testTraceSnapshot: { version: 1, coverage: { ...staticTestTraceFixture(), analysisId: 'test-id' } },
             createdAt: new Date('2026-06-21T00:00:00Z').toISOString(),
             reviewCompletion: {
               analysisId: 'test-id',
@@ -115,5 +127,8 @@ describe('FinalReviewedReportViewer', () => {
     
     // Check snapshot badge
     expect(screen.getByText('12345678')).toBeInTheDocument();
+    expect(screen.getByText('Saved test references')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'refunds once' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Inspect source reference' })).not.toBeInTheDocument();
   });
 });

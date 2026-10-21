@@ -4,31 +4,18 @@ import {
   ImpactGraphResponse,
   ImpactGraphNode,
   ImpactGraphEdge,
-  GraphNodeType,
   GraphEdgeType,
 } from '@ba-helper/contracts';
 import { PrismaService } from "@ba-helper/backend-runtime";
+import { mapDependencyGraphEdge } from './impact-dependency-graph.mapper';
+import { mapArtifactGraphNodeType } from './impact-artifact-graph.mapper';
+import { readTestCaseMetadata } from '../../../artifact/application/artifact-response.mapper';
 
 @Injectable()
 export class ImpactGraphReadModelBuilder {
   private readonly logger = new Logger(ImpactGraphReadModelBuilder.name);
 
   constructor(private readonly prisma: PrismaService) {}
-
-  private mapGraphNodeType(artifact: { artifactType: string; universalKind?: string | null }): GraphNodeType {
-    if (artifact.artifactType === 'CONTROLLER') return 'CONTROLLER';
-    if (artifact.artifactType === 'API_ROUTE') return 'API_ROUTE';
-    if (artifact.artifactType === 'SERVICE_METHOD') return 'SERVICE_METHOD';
-    if (artifact.artifactType === 'ENTITY') return 'ENTITY';
-    if (artifact.artifactType === 'TEST') return 'TEST';
-
-    if (artifact.universalKind === 'API_ENDPOINT') return 'API_ROUTE';
-    if (artifact.universalKind === 'DOMAIN_SERVICE') return 'SERVICE_METHOD';
-    if (artifact.universalKind === 'DATA_MODEL') return 'ENTITY';
-    if (artifact.universalKind === 'TEST_CASE') return 'TEST';
-
-    return 'SERVICE';
-  }
 
   async buildGraph(analysisId: string): Promise<ImpactGraphResponse> {
     const analysis = await this.prisma.impactAnalysis.findUnique({
@@ -106,7 +93,7 @@ export class ImpactGraphReadModelBuilder {
       const nodeId = `artifact-${artifact.id}`;
       affectedArtifactIds.add(artifact.id);
 
-      const type = this.mapGraphNodeType(artifact);
+      const type = mapArtifactGraphNodeType(artifact);
 
       nodes.push({
         id: nodeId,
@@ -114,6 +101,7 @@ export class ImpactGraphReadModelBuilder {
         label: artifact.name,
         filePath: artifact.filePath,
         artifactKey: artifact.artifactKey,
+        testCase: readTestCaseMetadata(artifact),
         reviewStatus: link.reviewStatus as any,
         retrieval: link.retrievalMetadata as any,
         commitSha: analysis.snapshot.commitSha,
@@ -157,10 +145,11 @@ export class ImpactGraphReadModelBuilder {
           affectedArtifactIds.add(dep.fromArtifactId);
           nodes.push({
             id: `artifact-${dep.fromArtifactId}`,
-            type: this.mapGraphNodeType(dep.fromArtifact),
+            type: mapArtifactGraphNodeType(dep.fromArtifact),
             label: dep.fromArtifact.name,
             filePath: dep.fromArtifact.filePath,
             artifactKey: dep.fromArtifact.artifactKey,
+            testCase: readTestCaseMetadata(dep.fromArtifact),
             commitSha: analysis.snapshot.commitSha,
             source: 'DEPENDENCY',
             rank: 4,
@@ -170,42 +159,19 @@ export class ImpactGraphReadModelBuilder {
           affectedArtifactIds.add(dep.toArtifactId);
           nodes.push({
             id: `artifact-${dep.toArtifactId}`,
-            type: this.mapGraphNodeType(dep.toArtifact),
+            type: mapArtifactGraphNodeType(dep.toArtifact),
             label: dep.toArtifact.name,
             filePath: dep.toArtifact.filePath,
             artifactKey: dep.toArtifact.artifactKey,
+            testCase: readTestCaseMetadata(dep.toArtifact),
             commitSha: analysis.snapshot.commitSha,
             source: 'DEPENDENCY',
             rank: 4,
           });
         }
 
-        let edgeType: GraphEdgeType = 'CALLS';
-        if (dep.type === 'CALLS') edgeType = 'CALLS';
-        else if (dep.type === 'REFERENCES') edgeType = 'REFERENCES' as any;
-        else if (dep.type === 'TESTS') edgeType = 'TESTS';
-        else if (dep.type === 'IMPORTS') edgeType = 'IMPORTS' as any;
-
-        // Swap TESTS edge direction for top-down layout readability.
-        // Semantic meaning: Test → Service; Visual layout: Service → Test.
-        // displayDirectionReversed=true signals this to API consumers.
-        let sourceNode = `artifact-${dep.fromArtifactId}`;
-        let targetNode = `artifact-${dep.toArtifactId}`;
-        let displayDirectionReversed = false;
-        if (edgeType === 'TESTS') {
-          sourceNode = `artifact-${dep.toArtifactId}`;
-          targetNode = `artifact-${dep.fromArtifactId}`;
-          displayDirectionReversed = true;
-        }
-
-        edges.push({
-          id: `edge-dep-${dep.id}`,
-          source: sourceNode,
-          target: targetNode,
-          type: edgeType,
-          sourceKind: 'DEPENDENCY',
-          displayDirectionReversed: displayDirectionReversed || undefined,
-        });
+        const edge = mapDependencyGraphEdge(dep);
+        if (edge) edges.push(edge);
       }
     }
 
@@ -220,7 +186,7 @@ export class ImpactGraphReadModelBuilder {
     for (const insight of sortedInsights) {
       if (nodes.length >= maxNodes) break;
 
-      let type: GraphNodeType = 'INSIGHT';
+      let type: ImpactGraphNode['type'] = 'INSIGHT';
       let edgeType: GraphEdgeType = 'EVIDENCES';
       
       if (insight.insightType === 'UNKNOWN') {

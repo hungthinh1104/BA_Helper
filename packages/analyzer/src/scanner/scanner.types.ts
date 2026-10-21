@@ -1,5 +1,13 @@
+import type { GraphProvenance } from '../graph/graph.types';
+
 export const SCANNER_VERSION = 'scanner@0.3.0';
-export const ANALYZER_VERSION = 'analyzer@0.3.0';
+export const ANALYZER_VERSION = 'analyzer@0.5.0';
+
+export type TestModifier = 'NORMAL' | 'SKIP' | 'TODO' | 'ONLY';
+export type ScanTestCase = {
+  framework: 'jest'; suitePath: string[]; title: string;
+  modifier: TestModifier; declaredModifier: TestModifier; parentFileArtifactKey: string;
+};
 
 export type ScanInput = {
   fixturePath: string;
@@ -15,6 +23,9 @@ export type ScanArtifact = {
   endLine: number;
   excerpt: string;
   contentHash?: string | null;
+  testCase?: ScanTestCase;
+  /** Transient parser offsets for the callback body, never used as identity. */
+  testBodySpan?: { start: number; end: number };
 };
 
 export type ScanSkipReason =
@@ -128,6 +139,8 @@ export type ScanResult = {
   dependencyEdges?: DependencyEdge[];
   coverage: ScanCoverage;
   sourceRoot?: string;
+  /** Exact bounded selection used for extraction; graph must not re-enumerate. */
+  sourceFiles?: string[];
   diagnostics?: DiagnosticItem[];
 };
 
@@ -145,6 +158,7 @@ export type UniversalArtifactKind =
   | 'API_ENDPOINT'
   | 'DOMAIN_SERVICE'
   | 'DATA_MODEL'
+  | 'TEST_FILE'
   | 'TEST_CASE'
   | 'UNKNOWN';
 
@@ -181,6 +195,8 @@ export type DependencyEdge = {
   fromArtifactId: string;
   toArtifactId: string;
   type: string;
+  confidence?: number;
+  provenance?: GraphProvenance;
 };
 
 export type ScanAdapterResult = {

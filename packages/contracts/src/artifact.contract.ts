@@ -1,9 +1,11 @@
 import { z, type TypeOf as ZodTypeOf } from 'zod';
+import { testCaseMetadataSchema } from './test-case.contract';
 
 export const universalArtifactKindSchema = z.enum([
 	'API_ENDPOINT',
 	'DOMAIN_SERVICE',
 	'DATA_MODEL',
+	'TEST_FILE',
 	'TEST_CASE',
 	'UNKNOWN',
 ]);
@@ -18,6 +20,7 @@ export const artifactSchema = z.object({
 	startLine: z.number().nullable(),
 	endLine: z.number().nullable(),
 	language: z.string().nullable(),
+	testCase: testCaseMetadataSchema.optional(),
 });
 
 export const artifactListResponseSchema = z.object({

@@ -31,7 +31,8 @@ describe('scanner fixture expectations', () => {
 
     expect(result.analyzerVersion).toBe('ts-nestjs-analyzer@0.1.0');
     expect(
-      result.artifacts.sort((a, b) => a.stableId.localeCompare(b.stableId)),
+      result.artifacts.map(({ testBodySpan: _span, ...a }) => ({ ...a, excerpt: a.excerpt.replace(/\r\n/g, '\n') }))
+        .sort((a, b) => a.stableId.localeCompare(b.stableId)),
     ).toEqual(
       expectedArtifacts.artifacts.sort((a, b) =>
         a.stableId.localeCompare(b.stableId),

@@ -122,7 +122,7 @@ export function AnalysisReviewWorkbench({
       const target = event.target as HTMLElement | null
       if (
         target &&
-        (target.tagName === "TEXTAREA" || target.tagName === "INPUT" || target.isContentEditable)
+        (target.tagName === "TEXTAREA" || target.tagName === "INPUT" || target.isContentEditable || target.closest('[role="dialog"]'))
       ) {
         return
       }

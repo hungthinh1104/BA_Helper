@@ -147,6 +147,83 @@ failure may expose only target observation and no usable snapshot.
 
 ### Graph tests
 
+The production graph gate must exercise the real NestJS adapter and file
+enumeration, not a mock returning pre-authored dependency edges. Negative cases
+cover import-only tests, unrelated receivers with the same method name,
+unresolved methods, scoped/aliased instances, and excluded source files.
+Repeated relationships preserve bounded source-location samples.
+
+Jest extraction tests must distinguish file containers and real cases, nested
+suites, aliases and effective/declared modifiers. Verify identity stability
+after line shifts and body changes, changed hashes after modifier changes,
+duplicate/dynamic/malformed declaration diagnostics, secret redaction, and
+case-local call ownership even when two cases occupy one line. Setup, skipped
+and todo references must not create TESTS edges. The booking expected artifacts
+and edge source explicitly identify its cancellation case. Persistence and
+API mapper tests validate metadata without exposing transient AST offsets or
+internal JSON. The DB pipeline test also checks parent identity and graph
+metadata projection.
+
+### Static Test Trace Projection Tests
+
+Keep a separate gate for the persisted code-to-test projection. It must cover:
+
+- More than 50 impacted artifacts and paths through non-impacted intermediates.
+- Direct references, multi-step call paths, shortest-path preference,
+  deterministic ordering, cycles and the four-call depth limit.
+- Active vs skipped/todo cases and legacy file-level test identities.
+- Missing/malformed evidence, cross-snapshot endpoints/edges/evidence,
+  mismatched source types, paths and line ranges; validate support for every
+  CALLS step, not just the initial TESTS edge.
+- Impact/edge overflow and bounded case samples with explicit limitations.
+- Partial snapshots and scanner/legacy limitations without claiming runtime
+  execution or assertion coverage.
+- API permission checks, additive wire compatibility and connected semantic
+  trace validation; review queue uses the same projection.
+
+`tests/analyzer/qa-test-trace.fixture-spec.ts` exercises the real NestJS adapter
+and persistence mappers against the separately authored booking expectation
+`expected/qa-test-traces.json`. The cancellation case directly references
+`cancelBooking`; `refund`, slot release and notification have static call
+paths. The controller and entity do not inherit test relationships. Mocked
+dependencies in this fixture make the non-runtime limitation deliberate.
+
+The production DB pipeline test also reads this projection using real Prisma
+repositories and checks commit identity, direct/indirect paths and evidence.
+An in-memory mapper fixture does not substitute for that DB gate.
+
+### Visual Trace And Report Freeze Tests
+
+Component tests cover selected-artifact rendering independent of the display
+graph, case identity, opening source evidence, loading/error/retry states,
+snapshot mismatches, uninspected artifacts, limitation messages and saved
+read-only report paths. A source dialog must suppress review decision
+shortcuts. Use the existing web Jest setup from `apps/web`:
+
+```bash
+pnpm exec jest --config jest.config.ts --runInBand --testPathPatterns 'static-test-trace-panel|analysis-review-workbench|final-reviewed-report-viewer'
+```
+
+Backend tests cover analysis permission enforcement before source reads,
+evidence membership in a returned path, immutable source locator checks,
+versioned snapshot serialization, rejection filtering and detached capture.
+The worker context and report renderer must preserve saved paths even when
+live relation readers are empty, reject foreign snapshot identity, leave
+historical null snapshots unchanged and escape source-authored Markdown text.
+The DB pipeline gate also persists and reads the new JSON field and reads path
+evidence through the real repository. Its lifecycle is seeded finalized for
+that capture check; finalization policy remains covered separately.
+
+`tests/analyzer/production-graph.e2e-spec.ts` drives `RunScanJobUseCase` through
+the runtime adapter and real repositories with only source acquisition and
+embedding enqueue replaced. It asserts persisted CALLS/TESTS, source evidence
+provenance, the API graph read model, retry deduplication, and historical
+snapshot preservation. Run it against the isolated test PostgreSQL database:
+
+```bash
+pnpm exec jest --config jest.e2e.config.ts --runInBand tests/analyzer/production-graph.e2e-spec.ts
+```
+
 Verify at minimum:
 
 ```text
