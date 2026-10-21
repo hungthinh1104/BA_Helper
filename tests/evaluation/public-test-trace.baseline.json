@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "measuredAt": "2026-10-20",
+  "analyzerVersion": "analyzer@0.5.1",
+  "scope": "Exhaustive direct CALLS and active Jest case TESTS within the explicitly listed source slices. Static references only, including calls to mocked providers; never execution or assertion coverage.",
+  "groundTruthMethod": "SOURCE_READ_BEFORE_ANALYZER_RUN",
+  "independentHumanReview": false,
+  "totals": {
+    "cases": {
+      "expected": 22,
+      "predicted": 22,
+      "truePositive": 22,
+      "falsePositive": 0,
+      "falseNegative": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    "calls": {
+      "expected": 10,
+      "predicted": 10,
+      "truePositive": 10,
+      "falsePositive": 0,
+      "falseNegative": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    "tests": {
+      "expected": 24,
+      "predicted": 0,
+      "truePositive": 0,
+      "falsePositive": 0,
+      "falseNegative": 24,
+      "precision": null,
+      "recall": 0
+    }
+  },
+  "repositories": [
+    {
+      "id": "typescript-starter",
+      "commitSha": "c4d9330f5513eda0fb5df594f6b34a11fde1a934",
+      "cases": {
+        "expected": 1,
+        "predicted": 1,
+        "truePositive": 1,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1
+      },
+      "calls": {
+        "expected": 1,
+        "predicted": 1,
+        "truePositive": 1,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1
+      },
+      "tests": {
+        "expected": 1,
+        "predicted": 0,
+        "truePositive": 0,
+        "falsePositive": 0,
+        "falseNegative": 1,
+        "precision": null,
+        "recall": 0
+      }
+    },
+    {
+      "id": "testing-nestjs",
+      "commitSha": "47ab935278c662b5165e07f6783d395db047db2d",
+      "cases": {
+        "expected": 16,
+        "predicted": 16,
+        "truePositive": 16,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1
+      },
+      "calls": {
+        "expected": 5,
+        "predicted": 5,
+        "truePositive": 5,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1
+      },
+      "tests": {
+        "expected": 19,
+        "predicted": 0,
+        "truePositive": 0,
+        "falsePositive": 0,
+        "falseNegative": 19,
+        "precision": null,
+        "recall": 0
+      }
+    },
+    {
+      "id": "nest-sql-typeorm",
+      "commitSha": "d8ee0143bdd76b2e81b460a196c15a9387b73ee2",
+      "cases": {
+        "expected": 5,
+        "predicted": 5,
+        "truePositive": 5,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1
+      },
+      "calls": {
+        "expected": 4,
+        "predicted": 4,
+        "truePositive": 4,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1
+      },
+      "tests": {
+        "expected": 4,
+        "predicted": 0,
+        "truePositive": 0,
+        "falsePositive": 0,
+        "falseNegative": 4,
+        "precision": null,
+        "recall": 0
+      }
+    }
+  ]
+}

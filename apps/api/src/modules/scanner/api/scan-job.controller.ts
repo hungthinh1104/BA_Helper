@@ -1,3 +1,4 @@
+import { parseApiInput } from '../../../shared/parse-api-input';
 import { Body, Controller, Get, Param, Post, Inject } from '@nestjs/common';
 import {
   scanJobCreateRequestSchema,
@@ -88,7 +89,7 @@ export class ScanJobController {
       repositoryId,
       'scan:run',
     );
-    const input = scanJobCreateRequestSchema.parse(body);
+    const input = parseApiInput(scanJobCreateRequestSchema, body);
     const job = await this.createScanJob.execute({
       repositoryId,
       requestKey: input.requestKey,

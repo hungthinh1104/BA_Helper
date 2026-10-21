@@ -98,7 +98,8 @@ export function AnalysisReviewWorkbench({
     if (decisionRequiresRationale(action) && rationale.trim().length === 0) return
     setLastAction(action)
     const from = selectedIndex >= 0 ? selectedIndex : 0
-    const nextId = visibleItems[from + 1]?.itemId ?? visibleItems[from - 1]?.itemId ?? null
+    const nextId = [...visibleItems.slice(from + 1), ...visibleItems.slice(0, from)]
+      .find((item) => item.currentDecision === "needs_review")?.itemId ?? null
     decision.decide(
       { item: { itemId: selectedItem.itemId, itemType: selectedItem.itemType }, action, rationale },
       {

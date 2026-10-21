@@ -15,7 +15,7 @@ describe('EvaluationContextAdapter', () => {
   it('returns mapped context when artifacts valid', () => {
     (fs.existsSync as jest.Mock).mockReturnValue(true);
     (fs.readFileSync as jest.Mock).mockImplementation((filePath: string) => {
-      if (filePath.endsWith(RESEARCH_FINDINGS_PATH)) {
+      if (filePath === path.resolve(RESEARCH_FINDINGS_PATH)) {
         return JSON.stringify({
           datasetVersion: 'v0',
           subsetId: 'clean-vector-ready-v0',
@@ -24,7 +24,7 @@ describe('EvaluationContextAdapter', () => {
           datasetExpansionRecommendation: ['Add more cases']
         });
       }
-      if (filePath.endsWith(SAME_SUBSET_COMPARISON_PATH)) {
+      if (filePath === path.resolve(SAME_SUBSET_COMPARISON_PATH)) {
         return JSON.stringify({
           caseCount: 1,
           comparisonPolicy: {
@@ -42,11 +42,13 @@ describe('EvaluationContextAdapter', () => {
     expect(context?.subsetSize).toBe('1/6');
     expect(context?.interpretation).toBe('ILLUSTRATIVE_ONLY');
     expect(context?.datasetExpansionRecommendations).toContain('Add more cases');
+    expect(fs.readFileSync).toHaveBeenCalledWith(path.resolve(RESEARCH_FINDINGS_PATH), 'utf8');
+    expect(fs.readFileSync).toHaveBeenCalledWith(path.resolve(SAME_SUBSET_COMPARISON_PATH), 'utf8');
   });
 
   it('returns null when research findings missing', () => {
     (fs.existsSync as jest.Mock).mockImplementation((filePath: string) => {
-      return !filePath.endsWith(RESEARCH_FINDINGS_PATH);
+      return filePath !== path.resolve(RESEARCH_FINDINGS_PATH);
     });
 
     const context = adapter.getEvaluationContext();
@@ -55,7 +57,7 @@ describe('EvaluationContextAdapter', () => {
 
   it('returns null when comparison missing', () => {
     (fs.existsSync as jest.Mock).mockImplementation((filePath: string) => {
-      return !filePath.endsWith(SAME_SUBSET_COMPARISON_PATH);
+      return filePath !== path.resolve(SAME_SUBSET_COMPARISON_PATH);
     });
 
     const context = adapter.getEvaluationContext();
@@ -65,7 +67,7 @@ describe('EvaluationContextAdapter', () => {
   it('returns null when forbidden claim exists deeply', () => {
     (fs.existsSync as jest.Mock).mockReturnValue(true);
     (fs.readFileSync as jest.Mock).mockImplementation((filePath: string) => {
-      if (filePath.endsWith(RESEARCH_FINDINGS_PATH)) {
+      if (filePath === path.resolve(RESEARCH_FINDINGS_PATH)) {
         return JSON.stringify({
           datasetVersion: 'v0',
           deepNested: {
@@ -85,10 +87,10 @@ describe('EvaluationContextAdapter', () => {
   it('returns null when comparisonPolicy.winnerAllowed is true', () => {
     (fs.existsSync as jest.Mock).mockReturnValue(true);
     (fs.readFileSync as jest.Mock).mockImplementation((filePath: string) => {
-      if (filePath.endsWith(RESEARCH_FINDINGS_PATH)) {
+      if (filePath === path.resolve(RESEARCH_FINDINGS_PATH)) {
         return JSON.stringify({});
       }
-      if (filePath.endsWith(SAME_SUBSET_COMPARISON_PATH)) {
+      if (filePath === path.resolve(SAME_SUBSET_COMPARISON_PATH)) {
         return JSON.stringify({
           comparisonPolicy: { winnerAllowed: true }
         });

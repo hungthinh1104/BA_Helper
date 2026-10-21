@@ -7,6 +7,13 @@ node_modules
 **/.cache
 **/coverage
 .git
+**/tmp
+**/temp
+artifacts
+e2e/.artifacts
+tests/benchmark/reports/generated
+**/*.log
+**/*.tsbuildinfo
 .DS_Store
 .env
 .env.*

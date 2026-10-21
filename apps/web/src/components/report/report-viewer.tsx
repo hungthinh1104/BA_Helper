@@ -19,6 +19,8 @@ import { ReviewedSnapshotPanel } from "./reviewed-snapshot-panel"
 import { FinalReviewGatePanel } from "./final-review-gate-panel"
 import { ReportMarkdown } from "./report-markdown"
 import { normalizeAppLocale, type AppLocale } from "@/i18n/app-locale"
+import { TestTraceView } from '@/components/workspace/analysis/qa/test-trace-view'
+import { testTraceLabels } from '@/lib/i18n/test-trace-labels'
 
 interface ReportViewerProps {
   analysisId: string
@@ -236,6 +238,10 @@ export function ReportViewer({ analysisId, printMode = false, locale = "en" }: R
 
       {/* Markdown Content */}
       <ReportMarkdown markdown={markdown || ""} />
+      {localizedLoading ? <p role="status" className="mt-4 text-xs text-muted-foreground">{testTraceLabels[reportLocale].loading}</p>
+        : localizedError ? <p role="alert" className="mt-4 text-xs text-warning">{testTraceLabels[reportLocale].error}</p>
+        : localizedReport?.testTraceSnapshot ? <TestTraceView coverage={localizedReport.testTraceSnapshot.coverage}
+        locale={reportLocale} saved /> : <p className="mt-4 text-xs text-muted-foreground">{testTraceLabels[reportLocale].unavailable}</p>}
 
       {/* Structured Evidence Quality and Evaluation Context (Hidden for non-en locales if missing) */}
       {!printMode && (

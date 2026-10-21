@@ -1,3 +1,4 @@
+import { parseApiInput } from '../../../shared/parse-api-input';
 import {
   Controller,
   Post,
@@ -43,7 +44,7 @@ export class ReviewClarificationController {
       analysisId,
       'clarification:write',
     );
-    const input = reviewClarificationCreateRequestSchema.parse(body);
+    const input = parseApiInput(reviewClarificationCreateRequestSchema, body);
 
     const result = await this.createClarification.execute(analysisId, input, actor);
 
@@ -73,7 +74,7 @@ export class ReviewClarificationController {
       clarificationId,
       'clarification:write',
     );
-    const input = reviewClarificationAnswerRequestSchema.parse(body);
+    const input = parseApiInput(reviewClarificationAnswerRequestSchema, body);
 
     const result = await this.answerClarification.execute(clarificationId, input.answer, actor);
 

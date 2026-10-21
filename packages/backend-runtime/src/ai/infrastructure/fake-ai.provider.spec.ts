@@ -64,4 +64,25 @@ describe('FakeLlmProvider', () => {
     expect(rawOutput).toContain('order');
     expect(rawOutput).toContain('cancel');
   });
+
+  it.each([
+    ['Release an occupied slot', ['service-method:slot.service.releaseSlot']],
+    ['Prevent a duplicate payment refund', ['service-method:payment.service.refund']],
+    ['Expose an API endpoint to cancel a booking', ['api:booking.controller.cancel']],
+  ])('scopes fake claims to the change request: %s', async (change, expected) => {
+    const evidenceKeys = ['api:booking.controller.cancel', 'service-method:payment.service.refund',
+      'service-method:slot.service.releaseSlot', 'service-method:notification.service.notifyOwner'];
+    const result = await provider.generateStructured({ systemPrompt: '',
+      userPrompt: `## Change Request\n${change}\n\n## Domain Context\nBooking\n\n## Evidence Excerpts\n${evidenceKeys.join('\n')}` }, schema);
+    const claims = result.data.insights.filter(item => item.certainty === 'EVIDENCED');
+    expect(claims.flatMap(item => item.evidenceKeys).sort()).toEqual([...expected].sort());
+  });
+
+  it('does not confuse a compound method identifier with a shorter route method', async () => {
+    const result = await provider.generateStructured({ systemPrompt: '', userPrompt:
+      '## Change Request\nregisterUser must use findByEmail\n\n## Domain Context\nGeneral\n\n## Evidence Excerpts\n' +
+      'api:user.controller.register service-method:user.service.registerUser service-method:user.repository.findByEmail' }, schema);
+    expect(result.data.insights.filter(item => item.certainty === 'EVIDENCED').flatMap(item => item.evidenceKeys).sort())
+      .toEqual(['service-method:user.repository.findByEmail', 'service-method:user.service.registerUser']);
+  });
 });

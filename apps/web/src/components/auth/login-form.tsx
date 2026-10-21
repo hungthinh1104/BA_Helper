@@ -14,7 +14,7 @@ import { useAuth } from "@/hooks/use-auth"
 
 export function LoginForm() {
   const searchParams = useSearchParams()
-  const { login } = useAuth()
+  const { login, isLoading } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [errorCode, setErrorCode] = useState<string | null>(null)
@@ -79,7 +79,7 @@ export function LoginForm() {
                   placeholder="analyst@ba-helper.dev"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isLoading}
                 />
               </div>
 
@@ -93,7 +93,7 @@ export function LoginForm() {
                   autoComplete="current-password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isLoading}
                 />
               </div>
 
@@ -107,7 +107,7 @@ export function LoginForm() {
                 Redirect after sign-in: <span className="font-mono">{safeNext}</span>
               </div>
 
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting || isLoading}>
                 {isSubmitting ? "Signing in..." : "Sign In"}
               </Button>
             </form>

@@ -2,8 +2,14 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { RequestUser } from '@ba-helper/contracts';
+import { z } from 'zod';
 import { resolveJwtSecret } from './jwt-config';
 import { PrismaService } from "@ba-helper/backend-runtime";
+
+const jwtSessionClaimsSchema = z.object({
+  sub: z.string().uuid(),
+  credentialsVersion: z.number().int().min(1).max(2_147_483_647).optional(),
+});
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -15,21 +21,26 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: {
-    sub: string;
-    email: string;
-    role: string;
-    name?: string;
-    credentialsVersion?: number;
-  }): Promise<RequestUser> {
+  async validate(payload: unknown): Promise<RequestUser> {
+    const parsed = jwtSessionClaimsSchema.safeParse(payload);
+    if (!parsed.success) throw new UnauthorizedException('Invalid access token.');
+
     const user = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
+      where: { id: parsed.data.sub },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        disabledAt: true,
+        credentialsVersion: true,
+      },
     });
 
     if (
       !user ||
       user.disabledAt ||
-      (payload.credentialsVersion ?? 1) !== user.credentialsVersion
+      (parsed.data.credentialsVersion ?? 1) !== user.credentialsVersion
     ) {
       throw new UnauthorizedException('Session is no longer valid');
     }
@@ -38,7 +49,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       id: user.id,
       email: user.email,
       name: user.name || undefined,
-      role: user.role as any,
+      role: user.role as RequestUser['role'],
     };
   }
 }

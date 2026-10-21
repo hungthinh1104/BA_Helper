@@ -2,6 +2,7 @@ import { Logger, type INestApplication } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { AppExceptionFilter } from '../shared/app-exception.filter';
 import type { RuntimeConfig } from './runtime-config';
+import { configureApiDocumentation } from './configure-api-documentation';
 
 type RequestLike = {
   header(name: string): string | undefined;
@@ -67,4 +68,5 @@ export function configureApp(
       callback(new Error(`Origin not allowed by CORS: ${origin}`), false);
     },
   });
+  configureApiDocumentation(app, config.apiVersion);
 }

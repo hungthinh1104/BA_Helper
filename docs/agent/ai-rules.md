@@ -8,7 +8,7 @@ MVP target:
 
 ```text
 TypeScript NestJS repositories only
-simple-git shallow clone
+git subprocess shallow clone (argument arrays, no shell)
 ts-morph AST extraction
 ```
 
@@ -121,6 +121,13 @@ interface LlmProvider {
 
 Use a deterministic fake provider for tests. Store model/prompt versions with
 real analysis output so changes can be traced and evaluated.
+
+Fake-provider claims are curated dev/test data. In a structured impact prompt,
+filter those claims by method identifiers or literal method terms in the change
+request; the presence of an artifact in the evidence context alone must not
+select every canned claim. This small deterministic filter is not a production
+relevance classifier. Fake-provider scorecards verify fixture/pipeline behavior,
+not real-provider accuracy or independent repository generalization.
 
 An individual `confidence` value is only a ranking/reasoning signal for review.
 It is not certainty and cannot override evidence or human review. Do not add

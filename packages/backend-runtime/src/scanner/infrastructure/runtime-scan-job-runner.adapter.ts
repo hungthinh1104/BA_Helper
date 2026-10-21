@@ -111,7 +111,7 @@ export class RuntimeScanJobRunnerAdapter extends ScanJobRunnerPort {
       
       const sourceRoot = job.repository.canonicalUrl;
       const isLocalFixtureSource =
-        process.env.NODE_ENV === 'test' && (sourceRoot.startsWith('/') || sourceRoot.startsWith('file://'));
+        process.env.NODE_ENV === 'test' && (path.isAbsolute(sourceRoot) || sourceRoot.startsWith('file://'));
       const urlValidation = isLocalFixtureSource
         ? { isValid: true }
         : GitHubUrlValidator.validate(sourceRoot);
@@ -124,7 +124,7 @@ export class RuntimeScanJobRunnerAdapter extends ScanJobRunnerPort {
           stage: currentStage,
           progress: 15,
         });
-        const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ba-scan-'));
+        const tempDir = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'ba-scan-')));
         cleanupDir = tempDir;
 
         try {

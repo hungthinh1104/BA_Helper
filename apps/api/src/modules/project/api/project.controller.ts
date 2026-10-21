@@ -1,3 +1,4 @@
+import { parseApiInput } from '../../../shared/parse-api-input';
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import {
   projectListResponseSchema,
@@ -34,7 +35,7 @@ export class ProjectController {
   @Post()
   @Roles('ADMIN')
   async create(@Body() body: unknown, @CurrentUser() actor: RequestUser) {
-    const input = projectCreateRequestSchema.parse(body);
+    const input = parseApiInput(projectCreateRequestSchema, body);
     const project = await this.createProject.execute({
       name: input.name,
       actor,

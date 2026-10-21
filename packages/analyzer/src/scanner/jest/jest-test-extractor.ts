@@ -80,6 +80,7 @@ class JestTestExtractor {
     }
     this.cases.push(createJestTestArtifact({ call, parent: this.parent, title, suitePath,
       modifier, declaredModifier: declaration.modifier,
+      ...(declaration.parameterized ? { parameterized: true } : {}),
       bodySpan: body ? { start: body.getStart(), end: body.getEnd() } : undefined }));
   }
 

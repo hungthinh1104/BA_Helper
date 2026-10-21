@@ -30,8 +30,8 @@ export function mapQaCoverageItem(artifact: QaTraceArtifact, paths: ValidatedQaT
   const severity: QaCoverageSeverity = ['API_ROUTE', 'SERVICE_METHOD'].includes(type) ? 'HIGH'
     : type === 'SERVICE' ? 'MEDIUM' : 'LOW';
   const reasons: Record<QaCoverageStatus, string> = {
-    COVERED: 'A supported Jest case directly references this code in the inspected snapshot.',
-    INDIRECT_ONLY: 'A supported Jest case reaches this code through an inspected static call path.',
+    COVERED: 'A supported test source declaration directly references this code in the inspected snapshot.',
+    INDIRECT_ONLY: 'A supported test source declaration reaches this code through an inspected static call path.',
     NO_TEST_FOUND: 'No supported static test reference was found in the inspected snapshot paths.',
   };
   const actions: Record<QaCoverageStatus, string> = {

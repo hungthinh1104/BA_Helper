@@ -1,23 +1,11 @@
 import type { Config } from 'jest';
+import { backendTransform, backendTransformIgnorePatterns } from './jest.transforms.cjs';
 
 const config: Config = {
   testMatch: ['**/*.spec.ts'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'json'],
-  transform: {
-    '^.+\\.tsx?$': ['@swc/jest', {
-      jsc: {
-        parser: {
-          syntax: 'typescript',
-          tsx: true,
-          decorators: true,
-        },
-        transform: {
-          legacyDecorator: true,
-          decoratorMetadata: true,
-        },
-      },
-    }],
-  },
+  transform: backendTransform,
+  transformIgnorePatterns: backendTransformIgnorePatterns,
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/apps/web/src/$1',
     '^@ba-helper/contracts$': '<rootDir>/packages/contracts/src/index.ts',

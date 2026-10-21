@@ -8,6 +8,8 @@ export const testCaseMetadataSchema = z.object({
   modifier: testModifierSchema,
   declaredModifier: testModifierSchema,
   parentFileArtifactKey: z.string().min(1),
+  /** A single source callback, with no data-row expansion or execution claim. */
+  parameterized: z.boolean().optional(),
 });
 
 export const codeArtifactMetadataSchema = z.object({ testCase: testCaseMetadataSchema });

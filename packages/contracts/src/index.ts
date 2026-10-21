@@ -20,6 +20,7 @@ export * from './lineage.contract';
 export * from './traceability.contract';
 export * from './document.contract';
 export * from './error.contract';
+export * from './operation-response.contract';
 export * from './diagnostic.contract';
 export * from './impact-graph.contract';
 export * from './qa-coverage.contract';

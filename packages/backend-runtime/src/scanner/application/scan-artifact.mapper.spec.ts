@@ -36,4 +36,10 @@ describe('test artifact persistence', () => {
     expect(() => buildArtifactInputs('snapshot', [{ ...test,
       testCase: { ...test.testCase!, parentFileArtifactKey: 'test:other.spec.ts' } }], collector)).toThrow();
   });
+
+  it('preserves the parameterized declaration flag in persisted JSON', () => {
+    const parameterized = { ...test, testCase: { ...test.testCase!, parameterized: true } };
+    const inputs = buildArtifactInputs('snapshot', [parameterized], collector);
+    expect(inputs[0].metadata).toEqual({ testCase: parameterized.testCase });
+  });
 });

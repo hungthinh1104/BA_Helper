@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { seedDemo, type DemoSeed } from './fixtures/seed'
 import { login } from './fixtures/auth'
+import { removeLiveTestTrace, seedTestTrace, traceCaseTitle } from './fixtures/test-trace'
 
 /**
  * The headline journey: an open review queue → decide every item → the primary
@@ -15,20 +16,37 @@ test.describe('decision-to-report journey', () => {
   })
 
   test('accept all review items, finalize, and reach the approved report', async ({ page }) => {
+    test.setTimeout(180_000)
+    const trace = await seedTestTrace(seed.analysisId, { parameterized: true })
     await page.goto(`/analyses/${seed.analysisId}?view=review&locale=en-US`)
 
     const workbench = page.locator('[data-review-workbench]')
     await expect(workbench).toBeVisible()
     await expect(page.locator('[data-stale-notice]')).toHaveCount(0)
 
+    await page.locator('[data-review-queue]').getByRole('button')
+      .filter({ hasText: 'BookingService.cancelBooking' }).first().click()
+    await expect(page.getByRole('heading', { name: 'Review impact link: BookingService.cancelBooking', exact: true })).toBeVisible()
+    await expect(page.getByRole('heading', { name: traceCaseTitle, exact: true })).toBeVisible()
+    await expect(page.getByText('Parameterized source declaration; data rows are not expanded.', { exact: true })).toBeVisible()
+    await expect(page.getByText('Static source references. Test execution and assertion coverage have not been measured. Dependencies may be mocked.', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Inspect source reference', exact: true }).click()
+    const evidence = page.getByRole('dialog')
+    await expect(evidence.locator('[data-reference-line="3"]')).toContainText('await service.cancelBooking();')
+    await page.keyboard.press('Escape')
+    await expect(evidence).toBeHidden()
+
     // Decide every review item via the desktop decision panel. Each accept
     // persists optimistically and auto-advances to the next NEEDS_REVIEW item.
     const panel = page.locator('[data-decision-panel]')
     const complete = page.locator('[data-review-complete]')
-    for (let i = 0; i < 12; i += 1) {
-      if (await complete.isVisible().catch(() => false)) break
+    const reviewedCount = await page.getByRole('button', { name: /^All \d+$/, exact: true }).innerText()
+    const total = Number(reviewedCount.match(/\d+/)?.[0])
+    expect(total).toBeGreaterThan(0)
+    for (let i = 0; i < total; i += 1) {
+      await expect(panel.getByText('Needs review', { exact: true })).toBeVisible()
       await panel.getByRole('button', { name: 'Accept', exact: true }).click()
-      await page.waitForTimeout(400)
+      await expect(page.getByRole('button', { name: `Reviewed ${i + 1}`, exact: true })).toBeVisible()
     }
     await expect(complete).toBeVisible()
 
@@ -36,9 +54,23 @@ test.describe('decision-to-report journey', () => {
     await page.getByRole('button', { name: 'Finalize', exact: true }).first().click()
     const dialog = page.getByRole('dialog')
     await expect(dialog.getByText('Finalize Impact Analysis')).toBeVisible()
+    const finalized = page.waitForResponse(response => response.request().method() === 'POST' &&
+      response.url().endsWith(`/api/v1/impact-analyses/${seed.analysisId}/finalize`))
     await dialog.getByRole('button', { name: 'Confirm Finalize' }).click()
+    expect((await finalized).ok()).toBe(true)
 
     // The approved report opens for this analysis.
-    await page.waitForURL(/\/reports\?analysisId=/, { timeout: 30_000 })
+    await page.waitForURL(url => url.pathname === '/reports' && url.searchParams.get('analysisId') === seed.analysisId)
+    await expect(page.getByRole('heading', { name: traceCaseTitle, exact: true })).toBeVisible()
+    await removeLiveTestTrace(trace)
+    await page.reload()
+    await expect(page.getByRole('heading', { name: traceCaseTitle, exact: true })).toBeVisible()
+    await expect(page.getByLabel('Saved test references', { exact: true })
+      .getByText('Parameterized source declaration; data rows are not expanded.', { exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Inspect source reference', exact: true })).toHaveCount(0)
+    const diagram = page.locator('.report-mermaid-preview').first()
+    await expect(diagram.locator('svg')).toBeVisible({ timeout: 60_000 })
+    await expect(diagram.locator('svg text').first()).toContainText(/\S/)
+    await expect(diagram.locator('foreignObject, script, [onload], [href^="javascript:"]')).toHaveCount(0)
   })
 })

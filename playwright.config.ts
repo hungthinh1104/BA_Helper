@@ -1,4 +1,9 @@
 import { defineConfig, devices } from '@playwright/test'
+import { config } from 'dotenv'
+
+config({ path: '.env.test', quiet: true })
+if (process.env.DATABASE_URL_TEST) process.env.DATABASE_URL = process.env.DATABASE_URL_TEST
+if (process.env.REDIS_URL_TEST) process.env.REDIS_URL = process.env.REDIS_URL_TEST
 
 /**
  * Browser E2E for the decision-first analysis workspace.
@@ -7,7 +12,7 @@ import { defineConfig, devices } from '@playwright/test'
  * `**​/*.spec.ts` match never sweeps them (and Playwright never runs the ~200
  * Jest specs). Boots live source (next dev / api dev) against the already-running
  * postgres+redis; the seeded review→finalize journey makes no AI calls, and
- * finalize is synchronous so no worker is needed.
+ * finalization enqueues deterministic report rendering in the real worker.
  *
  * Ports default to 3000 (web) / 3001 (api); override with PW_WEB_PORT / PW_API_PORT
  * when those are occupied (then boot the two dev servers on the same ports —
@@ -16,6 +21,10 @@ import { defineConfig, devices } from '@playwright/test'
 const WEB_PORT = process.env.PW_WEB_PORT ?? '3000'
 const API_PORT = process.env.PW_API_PORT ?? '3001'
 const BASE_URL = `http://localhost:${WEB_PORT}`
+process.env.NEXTAUTH_URL = BASE_URL
+const browserRedisUrl = new URL(process.env.PW_REDIS_URL ?? process.env.REDIS_URL ?? 'redis://localhost:6379')
+if (!process.env.PW_REDIS_URL) browserRedisUrl.pathname = '/1'
+process.env.REDIS_URL = browserRedisUrl.toString()
 
 export default defineConfig({
   testDir: './e2e',
@@ -32,7 +41,8 @@ export default defineConfig({
     baseURL: BASE_URL,
     browserName: 'chromium',
     locale: 'en-US',
-    trace: 'on-first-retry',
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
     navigationTimeout: 90_000,
     actionTimeout: 15_000,
   },
@@ -40,7 +50,7 @@ export default defineConfig({
     {
       name: 'desktop',
       use: { viewport: { width: 1440, height: 900 } },
-      testMatch: /(decision-to-report|decision-keyboard)\.pw\.ts/,
+      testMatch: /(decision-to-report|decision-keyboard|auth-headers|api-documentation)\.pw\.ts/,
     },
     {
       name: 'mobile',
@@ -50,16 +60,21 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: `PORT=${API_PORT} pnpm dev:api`,
+      command: `pnpm exec dotenv -v PORT=${API_PORT} -v TS_NODE_TRANSPILE_ONLY=true -- pnpm dev:api`,
       url: `http://localhost:${API_PORT}/api/v1/system/live`,
       timeout: 120_000,
-      reuseExistingServer: true,
+      reuseExistingServer: !process.env.CI,
     },
     {
-      command: `INTERNAL_API_URL=http://localhost:${API_PORT} pnpm exec dotenv -e .env -- pnpm --dir apps/web exec next dev --webpack -p ${WEB_PORT}`,
+      command: 'pnpm exec dotenv -v TS_NODE_TRANSPILE_ONLY=true -- pnpm dev:worker',
+      wait: { stdout: /"event":"WORKER_READY"/ },
+      timeout: 120_000,
+    },
+    {
+      command: `pnpm exec dotenv -e .env -v INTERNAL_API_URL=http://localhost:${API_PORT} -- pnpm --dir apps/web exec next dev --webpack -p ${WEB_PORT}`,
       url: `${BASE_URL}/login`,
       timeout: 180_000,
-      reuseExistingServer: true,
+      reuseExistingServer: !process.env.CI,
     },
   ],
 })

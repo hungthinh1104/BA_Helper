@@ -1,3 +1,4 @@
+import { parseApiInput } from '../../../shared/parse-api-input';
 import { Controller, Get, Param, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import {
   createReviewNoteRequestSchema,
@@ -37,7 +38,7 @@ export class ReviewNoteController {
       analysisId,
       'review:write',
     );
-    const input = createReviewNoteRequestSchema.parse(body);
+    const input = parseApiInput(createReviewNoteRequestSchema, body);
     const note = await this.saveNoteUseCase.execute(analysisId, input);
     return {
       id: note.id,

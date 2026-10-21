@@ -46,20 +46,24 @@ jobs:
       WORKSPACE_MODE: dev-single-user
       ENABLE_DEV_LOGIN: "true"
       JWT_SECRET: ci-jwt-secret-not-for-production
+      NEXTAUTH_SECRET: ci-nextauth-secret-not-for-production
       AI_PROVIDER: fake
       EMBEDDING_PROVIDER: fake
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6.1.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version: 22
           cache: "pnpm"
 
       - name: Install deps
         run: pnpm install --frozen-lockfile
+
+      - name: Production dependency advisories (high and critical)
+        run: pnpm verify:dependencies
 
       - name: Generate Prisma client
         run: pnpm --dir apps/api exec prisma generate
@@ -73,12 +77,21 @@ jobs:
       - name: Analyzer quality gate
         run: pnpm verify:analyzer-quality
 
+      - name: Public NestJS static trace corpus
+        run: pnpm verify:public-test-trace
+
+      - name: Application static trace accuracy and regression
+        run: pnpm verify:application-test-trace
+
       - name: Upload analyzer scorecard
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: analyzer-quality-scorecard
-          path: artifacts/evaluation/analyzer-scorecard.json
+          path: |
+            artifacts/evaluation/analyzer-scorecard.json
+            artifacts/evaluation/public-test-trace-scorecard.json
+            artifacts/evaluation/application-test-trace-scorecard.json
 
       - name: Worker boundary check (no api imports)
         run: |
@@ -127,6 +140,9 @@ jobs:
       - name: App tests
         run: pnpm test:ci
 
+      - name: Web unit tests
+        run: pnpm test:web
+
       - name: E2E tests
         run: pnpm test:e2e
 
@@ -135,3 +151,20 @@ jobs:
 
       - name: Multi-repo golden path demo
         run: pnpm demo:multi-repo-golden-path
+
+      - name: Install browser dependencies
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Browser review and report journeys
+        run: pnpm test:pw
+        env:
+          REDIS_URL_TEST: redis://localhost:6379/1
+
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: browser-review-results
+          path: e2e/.artifacts
+          include-hidden-files: true
+          if-no-files-found: ignore

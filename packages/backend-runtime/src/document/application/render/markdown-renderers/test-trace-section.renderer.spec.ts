@@ -3,6 +3,16 @@ import { freezeReportTestTrace, readReportTestTrace } from '../../../domain/repo
 import { staticTestTraceFixture, traceIds } from '../../../../../../../tests/fixtures/static-test-trace.fixture';
 
 describe('saved test trace report section', () => {
+  it('freezes and renders the parameterized declaration caveat independently of live metadata', () => {
+    const coverage = staticTestTraceFixture();
+    coverage.items[0].testArtifacts[0].testCase!.parameterized = true;
+    const saved = freezeReportTestTrace(coverage, new Set([traceIds.code]));
+    coverage.items[0].testArtifacts[0].testCase!.parameterized = false;
+    expect(saved.coverage.items[0].testArtifacts[0].testCase?.parameterized).toBe(true);
+    expect(renderTestTraceSection(saved, 'en').join('\n')).toContain('Parameterized source declaration; data rows are not expanded.');
+    expect(renderTestTraceSection(saved, 'vi-VN').join('\n')).toContain('Khai báo test theo bảng; chưa bung các dòng dữ liệu.');
+  });
+
   it('renders frozen provenance, source paths and limitations', () => {
     const coverage = staticTestTraceFixture(); coverage.traceContext!.limitations = ['TRACE_SAMPLE_LIMIT'];
     coverage.items[0].testArtifacts[0].trace!.edges[0].provenance.omittedLocationCount = 2;

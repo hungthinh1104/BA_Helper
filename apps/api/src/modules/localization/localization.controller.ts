@@ -1,3 +1,4 @@
+import { parseApiInput } from '../../shared/parse-api-input';
 import { Controller, Post, Get, Param, Body, UseGuards, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { ReportLocalizationService, PrismaService } from '@ba-helper/backend-runtime';
 import { GenerateLocalizedReportRequest, generateLocalizedReportRequestSchema, LocalizedReportArtifact, SupportedReportLocale, LocalizationStatusResponse } from '@ba-helper/contracts';
@@ -24,7 +25,7 @@ export class LocalizationController {
     @Body() body: unknown,
     @CurrentUser() actor: RequestUser
   ): Promise<LocalizedReportArtifact> {
-    const input = generateLocalizedReportRequestSchema.parse(body);
+    const input = parseApiInput(generateLocalizedReportRequestSchema, body);
 
     // TODO: add stricter report-localization permission, using read analysis for now
     await this.permissions.assertCanReadAnalysis(actor, analysisId);

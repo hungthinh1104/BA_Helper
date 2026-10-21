@@ -1,3 +1,4 @@
+import { parseApiInput } from '../../../shared/parse-api-input';
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import {
   insightListResponseSchema,
@@ -67,7 +68,7 @@ export class InsightController {
       insightId,
       'review:write',
     );
-    const input = insightReviewRequestSchema.parse(body);
+    const input = parseApiInput(insightReviewRequestSchema, body);
     await this.reviewInsight.execute({
       insightId,
       reviewStatus: input.reviewStatus,

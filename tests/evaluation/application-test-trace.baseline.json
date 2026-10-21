@@ -1,0 +1,328 @@
+{
+  "generatedAt": "2026-10-20T17:14:32.219Z",
+  "schemaVersion": 1,
+  "analyzerVersion": "analyzer@0.6.0",
+  "groundTruthMethod": "SOURCE_READ_BEFORE_ANALYZER_RUN",
+  "groundTruthSha256": "d87059c07d9f36a4ae61e58515230aaf9bdcea96d65ac8a1bddd0fdd206c013f",
+  "independentHumanReview": false,
+  "scope": "Exhaustive selected-source direct CALLS and active literal test declaration TESTS, including it.each source callbacks counted once using the literal title. Tests from unbound Mocha-compatible describe/it syntax are included under the existing parser syntax assumption. Calls through a single-return local new-Class factory count as desired source references. Only endpoints declared in the listed production files are graded; external package calls are out of scope. No source execution, runtime coverage, impact reasoning, or assertion coverage is measured.",
+  "status": "FAIL",
+  "totals": {
+    "cases": {
+      "expected": 27,
+      "predicted": 23,
+      "truePositive": 23,
+      "falsePositive": 0,
+      "falseNegative": 4,
+      "precision": 1,
+      "recall": 0.8518518518518519,
+      "missing": [
+        "[\"amplication-billing\",[\"packages/amplication-server/src/core/billing/billing.service.spec.ts\",[\"BillingService\",\"getSubscription, as amplication always have only one subscription\"],\"should return %s subscription when subscription status is %s\"]]",
+        "[\"amplication-billing\",[\"packages/amplication-server/src/core/billing/billing.service.spec.ts\",[\"BillingService\",\"getSubscription, as amplication always have only one subscription\"],\"should return null as subscription when subscription status is %s\"]]",
+        "[\"amplication-billing\",[\"packages/amplication-server/src/core/billing/billing.service.spec.ts\",[\"BillingService\",\"validateSubscriptionPlanLimitationsForWorkspace\"],\"should not throw exception when using %s git provider as it is the default provider and never checked for entitlements\"]]",
+        "[\"amplication-billing\",[\"packages/amplication-server/src/core/billing/billing.service.spec.ts\",[\"BillingService\",\"validateSubscriptionPlanLimitationsForWorkspace\"],\"should throw exception when using %s git provider if the workspace has no entitlement or bypass code generation limitation\"]]"
+      ],
+      "unexpected": []
+    },
+    "calls": {
+      "expected": 22,
+      "predicted": 20,
+      "truePositive": 20,
+      "falsePositive": 0,
+      "falseNegative": 2,
+      "precision": 1,
+      "recall": 0.9090909090909091,
+      "missing": [
+        "[\"novu-subscribers\",[\"GetSubscriber.execute\",\"GetSubscriber.fetchSubscriber\"]]",
+        "[\"novu-subscribers\",[\"GetSubscriber.execute\",\"GetSubscriber.fetchSubscriberTopics\"]]"
+      ],
+      "unexpected": []
+    },
+    "tests": {
+      "expected": 28,
+      "predicted": 21,
+      "truePositive": 21,
+      "falsePositive": 0,
+      "falseNegative": 7,
+      "precision": 1,
+      "recall": 0.75,
+      "missing": [
+        "[\"amplication-billing\",[[\"packages/amplication-server/src/core/billing/billing.service.spec.ts\",[\"BillingService\",\"getSubscription, as amplication always have only one subscription\"],\"should return %s subscription when subscription status is %s\"],\"BillingService.getSubscription\"]]",
+        "[\"amplication-billing\",[[\"packages/amplication-server/src/core/billing/billing.service.spec.ts\",[\"BillingService\",\"getSubscription, as amplication always have only one subscription\"],\"should return null as subscription when subscription status is %s\"],\"BillingService.getSubscription\"]]",
+        "[\"amplication-billing\",[[\"packages/amplication-server/src/core/billing/billing.service.spec.ts\",[\"BillingService\",\"validateSubscriptionPlanLimitationsForWorkspace\"],\"should not throw exception when using %s git provider as it is the default provider and never checked for entitlements\"],\"BillingService.validateSubscriptionPlanLimitationsForWorkspace\"]]",
+        "[\"amplication-billing\",[[\"packages/amplication-server/src/core/billing/billing.service.spec.ts\",[\"BillingService\",\"validateSubscriptionPlanLimitationsForWorkspace\"],\"should throw exception when using %s git provider if the workspace has no entitlement or bypass code generation limitation\"],\"BillingService.validateSubscriptionPlanLimitationsForWorkspace\"]]",
+        "[\"novu-subscribers\",[[\"apps/api/src/app/agents/channels/photon-imessage/remove-photon-webhooks/remove-photon-webhooks.usecase.spec.ts\",[\"RemovePhotonWebhooks usecase\"],\"refuses to remove URLs that are not Novu agent webhooks\"],\"RemovePhotonWebhooks.execute\"]]",
+        "[\"novu-subscribers\",[[\"apps/api/src/app/agents/channels/photon-imessage/remove-photon-webhooks/remove-photon-webhooks.usecase.spec.ts\",[\"RemovePhotonWebhooks usecase\"],\"resolves supplied URLs to webhook ids and removes them\"],\"RemovePhotonWebhooks.execute\"]]",
+        "[\"novu-subscribers\",[[\"apps/api/src/app/agents/channels/photon-imessage/remove-photon-webhooks/remove-photon-webhooks.usecase.spec.ts\",[\"RemovePhotonWebhooks usecase\"],\"returns a failure message when Photon rejects the deletion\"],\"RemovePhotonWebhooks.execute\"]]"
+      ],
+      "unexpected": []
+    }
+  },
+  "repositories": [
+    {
+      "id": "amplication-billing",
+      "repository": "amplication/amplication",
+      "commitSha": "7656495d27f0dceff89657590c3f14149e45c7a6",
+      "selectedFiles": 4,
+      "durationMs": 432,
+      "cases": {
+        "expected": 20,
+        "predicted": 16,
+        "truePositive": 16,
+        "falsePositive": 0,
+        "falseNegative": 4,
+        "precision": 1,
+        "recall": 0.8,
+        "missing": [
+          "[\"packages/amplication-server/src/core/billing/billing.service.spec.ts\",[\"BillingService\",\"getSubscription, as amplication always have only one subscription\"],\"should return %s subscription when subscription status is %s\"]",
+          "[\"packages/amplication-server/src/core/billing/billing.service.spec.ts\",[\"BillingService\",\"getSubscription, as amplication always have only one subscription\"],\"should return null as subscription when subscription status is %s\"]",
+          "[\"packages/amplication-server/src/core/billing/billing.service.spec.ts\",[\"BillingService\",\"validateSubscriptionPlanLimitationsForWorkspace\"],\"should not throw exception when using %s git provider as it is the default provider and never checked for entitlements\"]",
+          "[\"packages/amplication-server/src/core/billing/billing.service.spec.ts\",[\"BillingService\",\"validateSubscriptionPlanLimitationsForWorkspace\"],\"should throw exception when using %s git provider if the workspace has no entitlement or bypass code generation limitation\"]"
+        ],
+        "unexpected": []
+      },
+      "calls": {
+        "expected": 20,
+        "predicted": 20,
+        "truePositive": 20,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1,
+        "missing": [],
+        "unexpected": []
+      },
+      "tests": {
+        "expected": 21,
+        "predicted": 17,
+        "truePositive": 17,
+        "falsePositive": 0,
+        "falseNegative": 4,
+        "precision": 1,
+        "recall": 0.8095238095238095,
+        "missing": [
+          "[[\"packages/amplication-server/src/core/billing/billing.service.spec.ts\",[\"BillingService\",\"getSubscription, as amplication always have only one subscription\"],\"should return %s subscription when subscription status is %s\"],\"BillingService.getSubscription\"]",
+          "[[\"packages/amplication-server/src/core/billing/billing.service.spec.ts\",[\"BillingService\",\"getSubscription, as amplication always have only one subscription\"],\"should return null as subscription when subscription status is %s\"],\"BillingService.getSubscription\"]",
+          "[[\"packages/amplication-server/src/core/billing/billing.service.spec.ts\",[\"BillingService\",\"validateSubscriptionPlanLimitationsForWorkspace\"],\"should not throw exception when using %s git provider as it is the default provider and never checked for entitlements\"],\"BillingService.validateSubscriptionPlanLimitationsForWorkspace\"]",
+          "[[\"packages/amplication-server/src/core/billing/billing.service.spec.ts\",[\"BillingService\",\"validateSubscriptionPlanLimitationsForWorkspace\"],\"should throw exception when using %s git provider if the workspace has no entitlement or bypass code generation limitation\"],\"BillingService.validateSubscriptionPlanLimitationsForWorkspace\"]"
+        ],
+        "unexpected": []
+      },
+      "diagnostics": [
+        {
+          "code": "JEST_UNSUPPORTED_DECLARATION",
+          "severity": "WARN",
+          "category": "SCANNER",
+          "message": "Some test declarations have unsupported or ambiguous identities; inspect the test file.",
+          "count": 4,
+          "samplePaths": [
+            "packages/amplication-server/src/core/billing/billing.service.spec.ts"
+          ],
+          "payload": {
+            "relativePath": "packages/amplication-server/src/core/billing/billing.service.spec.ts",
+            "unsupportedPattern": "JEST_UNSUPPORTED_DECLARATION"
+          }
+        },
+        {
+          "code": "TEST_TARGET_UNRESOLVED",
+          "filePath": "packages/amplication-server/src/core/billing/billing.service.spec.ts",
+          "sourceSymbol": "BillingService > should be defined",
+          "message": "No supported source relationship could be resolved; no dependency edge was inferred."
+        },
+        {
+          "code": "UNRESOLVED_INJECTION_TOKEN",
+          "filePath": "packages/amplication-server/src/core/billing/billing.service.ts",
+          "sourceSymbol": "BillingService.getStiggClient",
+          "message": "No supported source relationship could be resolved; no dependency edge was inferred."
+        },
+        {
+          "code": "UNRESOLVED_INJECTION_TOKEN",
+          "filePath": "packages/amplication-server/src/core/billing/billing.service.ts",
+          "sourceSymbol": "BillingService.reportUsage",
+          "message": "No supported source relationship could be resolved; no dependency edge was inferred."
+        },
+        {
+          "code": "UNRESOLVED_INJECTION_TOKEN",
+          "filePath": "packages/amplication-server/src/core/billing/billing.service.ts",
+          "sourceSymbol": "BillingService.setUsage",
+          "message": "No supported source relationship could be resolved; no dependency edge was inferred."
+        },
+        {
+          "code": "UNRESOLVED_INJECTION_TOKEN",
+          "filePath": "packages/amplication-server/src/core/billing/billing.service.ts",
+          "sourceSymbol": "BillingService.getMeteredEntitlement",
+          "message": "No supported source relationship could be resolved; no dependency edge was inferred."
+        },
+        {
+          "code": "UNRESOLVED_INJECTION_TOKEN",
+          "filePath": "packages/amplication-server/src/core/billing/billing.service.ts",
+          "sourceSymbol": "BillingService.getNumericEntitlement",
+          "message": "No supported source relationship could be resolved; no dependency edge was inferred."
+        },
+        {
+          "code": "UNRESOLVED_INJECTION_TOKEN",
+          "filePath": "packages/amplication-server/src/core/billing/billing.service.ts",
+          "sourceSymbol": "BillingService.getBooleanEntitlement",
+          "message": "No supported source relationship could be resolved; no dependency edge was inferred."
+        },
+        {
+          "code": "UNRESOLVED_INJECTION_TOKEN",
+          "filePath": "packages/amplication-server/src/core/billing/billing.service.ts",
+          "sourceSymbol": "BillingService.provisionSubscription",
+          "message": "No supported source relationship could be resolved; no dependency edge was inferred."
+        },
+        {
+          "code": "UNRESOLVED_INJECTION_TOKEN",
+          "filePath": "packages/amplication-server/src/core/billing/billing.service.ts",
+          "sourceSymbol": "BillingService.getSubscription",
+          "message": "No supported source relationship could be resolved; no dependency edge was inferred."
+        },
+        {
+          "code": "UNRESOLVED_INJECTION_TOKEN",
+          "filePath": "packages/amplication-server/src/core/billing/billing.service.ts",
+          "sourceSymbol": "BillingService.provisionCustomer",
+          "message": "No supported source relationship could be resolved; no dependency edge was inferred."
+        },
+        {
+          "code": "UNRESOLVED_INJECTION_TOKEN",
+          "filePath": "packages/amplication-server/src/core/billing/billing.service.ts",
+          "sourceSymbol": "BillingService.validateSubscriptionPlanLimitationsForWorkspace",
+          "message": "No supported source relationship could be resolved; no dependency edge was inferred."
+        },
+        {
+          "code": "TEST_TARGET_UNRESOLVED",
+          "filePath": "packages/amplication-server/src/core/subscription/subscription.service.spec.ts",
+          "sourceSymbol": "SubscriptionService > should be defined",
+          "message": "No supported source relationship could be resolved; no dependency edge was inferred."
+        },
+        {
+          "code": "UNRESOLVED_INJECTION_TOKEN",
+          "filePath": "packages/amplication-server/src/core/subscription/subscription.service.ts",
+          "sourceSymbol": "SubscriptionService.getSubscriptionById",
+          "message": "No supported source relationship could be resolved; no dependency edge was inferred."
+        },
+        {
+          "code": "UNRESOLVED_INJECTION_TOKEN",
+          "filePath": "packages/amplication-server/src/core/subscription/subscription.service.ts",
+          "sourceSymbol": "SubscriptionService.getCurrentSubscription",
+          "message": "No supported source relationship could be resolved; no dependency edge was inferred."
+        },
+        {
+          "code": "UNRESOLVED_INJECTION_TOKEN",
+          "filePath": "packages/amplication-server/src/core/subscription/subscription.service.ts",
+          "sourceSymbol": "SubscriptionService.trackUpgradeCompletedEvent",
+          "message": "No supported source relationship could be resolved; no dependency edge was inferred."
+        },
+        {
+          "code": "UNRESOLVED_INJECTION_TOKEN",
+          "filePath": "packages/amplication-server/src/core/subscription/subscription.service.ts",
+          "sourceSymbol": "SubscriptionService.updateProjectLicensed",
+          "message": "No supported source relationship could be resolved; no dependency edge was inferred."
+        },
+        {
+          "code": "UNRESOLVED_INJECTION_TOKEN",
+          "filePath": "packages/amplication-server/src/core/subscription/subscription.service.ts",
+          "sourceSymbol": "SubscriptionService.updateServiceLicensed",
+          "message": "No supported source relationship could be resolved; no dependency edge was inferred."
+        },
+        {
+          "code": "UNRESOLVED_INJECTION_TOKEN",
+          "filePath": "packages/amplication-server/src/core/subscription/subscription.service.ts",
+          "sourceSymbol": "SubscriptionService.handleUpdateSubscriptionStatusEvent",
+          "message": "No supported source relationship could be resolved; no dependency edge was inferred."
+        },
+        {
+          "code": "UNRESOLVED_INJECTION_TOKEN",
+          "filePath": "packages/amplication-server/src/core/subscription/subscription.service.ts",
+          "sourceSymbol": "SubscriptionService.resolveSubscription",
+          "message": "No supported source relationship could be resolved; no dependency edge was inferred."
+        }
+      ]
+    },
+    {
+      "id": "novu-subscribers",
+      "repository": "novuhq/novu",
+      "commitSha": "3d5fb5ffb54405e0d94bb3f8ba4e2fb4b1a3ef2d",
+      "selectedFiles": 6,
+      "durationMs": 152,
+      "cases": {
+        "expected": 7,
+        "predicted": 7,
+        "truePositive": 7,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1,
+        "missing": [],
+        "unexpected": []
+      },
+      "calls": {
+        "expected": 2,
+        "predicted": 0,
+        "truePositive": 0,
+        "falsePositive": 0,
+        "falseNegative": 2,
+        "precision": null,
+        "recall": 0,
+        "missing": [
+          "[\"GetSubscriber.execute\",\"GetSubscriber.fetchSubscriber\"]",
+          "[\"GetSubscriber.execute\",\"GetSubscriber.fetchSubscriberTopics\"]"
+        ],
+        "unexpected": []
+      },
+      "tests": {
+        "expected": 7,
+        "predicted": 4,
+        "truePositive": 4,
+        "falsePositive": 0,
+        "falseNegative": 3,
+        "precision": 1,
+        "recall": 0.5714285714285714,
+        "missing": [
+          "[[\"apps/api/src/app/agents/channels/photon-imessage/remove-photon-webhooks/remove-photon-webhooks.usecase.spec.ts\",[\"RemovePhotonWebhooks usecase\"],\"refuses to remove URLs that are not Novu agent webhooks\"],\"RemovePhotonWebhooks.execute\"]",
+          "[[\"apps/api/src/app/agents/channels/photon-imessage/remove-photon-webhooks/remove-photon-webhooks.usecase.spec.ts\",[\"RemovePhotonWebhooks usecase\"],\"resolves supplied URLs to webhook ids and removes them\"],\"RemovePhotonWebhooks.execute\"]",
+          "[[\"apps/api/src/app/agents/channels/photon-imessage/remove-photon-webhooks/remove-photon-webhooks.usecase.spec.ts\",[\"RemovePhotonWebhooks usecase\"],\"returns a failure message when Photon rejects the deletion\"],\"RemovePhotonWebhooks.execute\"]"
+        ],
+        "unexpected": []
+      },
+      "diagnostics": [
+        {
+          "code": "UNRESOLVED_METHOD_TARGET",
+          "filePath": "apps/api/src/app/subscribers/usecases/get-subscriber/get-subscriber.usecase.ts",
+          "sourceSymbol": "GetSubscriber.execute",
+          "message": "No supported source relationship could be resolved; no dependency edge was inferred."
+        },
+        {
+          "code": "UNRESOLVED_INJECTION_TOKEN",
+          "filePath": "apps/api/src/app/subscribers/usecases/remove-subscriber/remove-subscriber.usecase.ts",
+          "sourceSymbol": "RemoveSubscriber.execute",
+          "message": "No supported source relationship could be resolved; no dependency edge was inferred."
+        },
+        {
+          "code": "TEST_TARGET_UNRESOLVED",
+          "filePath": "apps/api/src/app/agents/channels/photon-imessage/remove-photon-webhooks/remove-photon-webhooks.usecase.spec.ts",
+          "sourceSymbol": "RemovePhotonWebhooks usecase > refuses to remove URLs that are not Novu agent webhooks",
+          "message": "No supported source relationship could be resolved; no dependency edge was inferred."
+        },
+        {
+          "code": "TEST_TARGET_UNRESOLVED",
+          "filePath": "apps/api/src/app/agents/channels/photon-imessage/remove-photon-webhooks/remove-photon-webhooks.usecase.spec.ts",
+          "sourceSymbol": "RemovePhotonWebhooks usecase > resolves supplied URLs to webhook ids and removes them",
+          "message": "No supported source relationship could be resolved; no dependency edge was inferred."
+        },
+        {
+          "code": "TEST_TARGET_UNRESOLVED",
+          "filePath": "apps/api/src/app/agents/channels/photon-imessage/remove-photon-webhooks/remove-photon-webhooks.usecase.spec.ts",
+          "sourceSymbol": "RemovePhotonWebhooks usecase > returns a failure message when Photon rejects the deletion",
+          "message": "No supported source relationship could be resolved; no dependency edge was inferred."
+        },
+        {
+          "code": "UNRESOLVED_INJECTION_TOKEN",
+          "filePath": "apps/api/src/app/agents/channels/photon-imessage/remove-photon-webhooks/remove-photon-webhooks.usecase.ts",
+          "sourceSymbol": "RemovePhotonWebhooks.execute",
+          "message": "No supported source relationship could be resolved; no dependency edge was inferred."
+        }
+      ]
+    }
+  ]
+}

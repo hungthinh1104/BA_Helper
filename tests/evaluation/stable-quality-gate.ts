@@ -123,6 +123,9 @@ function scoreCase(
 
   // Per-case failure floors — averages alone must never hide a broken case.
   const failures: string[] = [];
+  if (precisionExpected.length > 0 && layer2.length === 0) {
+    failures.push('positive case produced no committed claims');
+  }
   if (criticalRecall.score < floors.criticalArtifactRecall) {
     failures.push(
       `criticalArtifactRecall ${criticalRecall.score.toFixed(3)} < ${floors.criticalArtifactRecall} (missing ${criticalRecall.missing.join(', ') || 'none'})`,

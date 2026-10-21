@@ -1,6 +1,7 @@
-import { JwtAuthGuard, IS_PUBLIC_KEY } from './jwt-auth.guard';
+import { JwtAuthGuard, IS_PUBLIC_KEY, OPTIONAL_AUTH_KEY } from './jwt-auth.guard';
 import { Reflector } from '@nestjs/core';
-import type { ExecutionContext} from '@nestjs/common';
+import type { ExecutionContext } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { UnauthorizedException } from '@nestjs/common';
 
 describe('JwtAuthGuard', () => {
@@ -12,10 +13,13 @@ describe('JwtAuthGuard', () => {
     guard = new JwtAuthGuard(reflector);
   });
 
-  const mockContext = () => {
+  const mockContext = (authorization?: string) => {
     return {
       getHandler: jest.fn(),
       getClass: jest.fn(),
+      switchToHttp: () => ({
+        getRequest: () => ({ headers: authorization === undefined ? {} : { authorization } }),
+      }),
     } as unknown as ExecutionContext;
   };
 
@@ -27,6 +31,26 @@ describe('JwtAuthGuard', () => {
 
     const context = mockContext();
     expect(guard.canActivate(context)).toBe(true);
+  });
+
+  it('allows an anonymous request on an optional-auth route', () => {
+    jest.spyOn(reflector, 'getAllAndOverride').mockImplementation((key) => key === OPTIONAL_AUTH_KEY);
+    expect(guard.canActivate(mockContext())).toBe(true);
+  });
+
+  it('runs JWT authentication when an optional-auth route receives a bearer token', () => {
+    jest.spyOn(reflector, 'getAllAndOverride').mockImplementation((key) =>
+      key === OPTIONAL_AUTH_KEY || key === IS_PUBLIC_KEY,
+    );
+    const baseGuard = Object.getPrototypeOf(JwtAuthGuard.prototype) as {
+      canActivate(context: ExecutionContext): boolean;
+    };
+    const passportCanActivate = jest.spyOn(baseGuard, 'canActivate').mockReturnValue(false);
+    const context = mockContext('Bearer invalid-token');
+
+    expect(guard.canActivate(context)).toBe(false);
+    expect(passportCanActivate).toHaveBeenCalledWith(context);
+    passportCanActivate.mockRestore();
   });
 
   describe('handleRequest', () => {

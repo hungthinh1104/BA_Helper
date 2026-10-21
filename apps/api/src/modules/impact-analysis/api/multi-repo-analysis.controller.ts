@@ -1,3 +1,4 @@
+import { parseApiInput } from '../../../shared/parse-api-input';
 import { Body, Controller, Get, Param, Post, Query, BadRequestException, NotFoundException, Res } from '@nestjs/common';
 import {
   impactAnalysisCreateRequestSchema,
@@ -96,7 +97,7 @@ export class MultiRepoAnalysisController {
       'analysis:create',
       'Project',
     );
-    const input = multiRepoImpactAnalysisCreateRequestSchema.parse(body);
+    const input = parseApiInput(multiRepoImpactAnalysisCreateRequestSchema, body);
     const result = await this.createMultiRepoAnalyses.execute({
       actorId: actor.id,
       projectId,
@@ -185,7 +186,7 @@ export class MultiRepoAnalysisController {
       runId,
       'review:write',
     );
-    const input = reviewDecisionRequestSchema.parse(body);
+    const input = parseApiInput(reviewDecisionRequestSchema, body);
     const result = await this.createMergedReportReviewDecision.execute({
       runId,
       decision: input.decision,

@@ -1,3 +1,4 @@
+import { parseApiInput } from '../../../shared/parse-api-input';
 import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, HttpCode, NotFoundException, Param, Post, Query, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Public } from '../application/jwt-auth.guard';
@@ -15,8 +16,6 @@ import {
   type AccountListResponse,
   type AccountOperationResponse,
   type AccountSummary,
-  type DevLoginRequest,
-  type LoginRequest,
   type LoginResponse,
 } from '@ba-helper/contracts';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
@@ -42,11 +41,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Login with email and password' })
   @ApiResponse({ status: 200, description: 'Returns JWT and user profile' })
   async login(@Body() body: unknown): Promise<LoginResponse> {
-    const parsed = loginRequestSchema.safeParse(body);
-    if (!parsed.success) {
-      throw new BadRequestException(parsed.error.errors);
-    }
-    const input: LoginRequest = parsed.data;
+    const input = parseApiInput(loginRequestSchema, body);
 
     const user = await this.prisma.user.findUnique({
       where: { email: input.email },
@@ -81,18 +76,14 @@ export class AuthController {
   @Public()
   @Post('dev-login')
   @ApiOperation({ summary: 'Login or create a dev user (MVP only)' })
-  @ApiResponse({ status: 200, description: 'Returns JWT and user profile' })
+  @ApiResponse({ status: 201, description: 'Returns JWT and user profile' })
   async devLogin(@Body() body: unknown): Promise<LoginResponse> {
     const config = getRuntimeConfig();
     if (!config.enableDevLogin) {
       throw new ForbiddenException('Dev login is disabled by runtime policy. Set ENABLE_DEV_LOGIN=true and ensure mode allows it.');
     }
 
-    const parsed = devLoginRequestSchema.safeParse(body);
-    if (!parsed.success) {
-      throw new BadRequestException(parsed.error.errors);
-    }
-    const input: DevLoginRequest = parsed.data;
+    const input = parseApiInput(devLoginRequestSchema, body);
 
     let user = await this.prisma.user.findUnique({
       where: { email: input.email },
@@ -130,7 +121,7 @@ export class AuthController {
     @Body() body: unknown,
     @CurrentUser() actor: RequestUser,
   ): Promise<AccountOperationResponse> {
-    const input = changeOwnPasswordRequestSchema.parse(body);
+    const input = parseApiInput(changeOwnPasswordRequestSchema, body);
     const user = await this.prisma.user.findUnique({ where: { id: actor.id } });
     // A verifiable current password is required; local accounts without a hash
     // must go through an admin reset instead of self-service change.
@@ -161,7 +152,7 @@ export class AuthController {
     @Body() body: unknown,
     @CurrentUser() actor: RequestUser,
   ): Promise<AccountOperationResponse> {
-    const input = accountProvisionRequestSchema.parse(body);
+    const input = parseApiInput(accountProvisionRequestSchema, body);
     const existing = await this.prisma.user.findUnique({
       where: { email: input.email },
     });
@@ -188,7 +179,7 @@ export class AuthController {
     @Body() body: unknown,
     @CurrentUser() actor: RequestUser,
   ): Promise<AccountOperationResponse> {
-    const input = accountPasswordResetRequestSchema.parse(body);
+    const input = parseApiInput(accountPasswordResetRequestSchema, body);
     const passwordHash = await this.passwords.hashPassword(input.password);
     const user = await this.prisma.user.update({
       where: { id: userId },
@@ -248,7 +239,7 @@ export class AuthController {
     @Body() body: unknown,
     @CurrentUser() actor: RequestUser,
   ): Promise<AccountOperationResponse> {
-    const input = accountRoleUpdateRequestSchema.parse(body);
+    const input = parseApiInput(accountRoleUpdateRequestSchema, body);
     if (actor.id === userId) {
       // Prevent an admin from demoting themselves into a lockout.
       throw new BadRequestException('Administrators cannot change their own role.');

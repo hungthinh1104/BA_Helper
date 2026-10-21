@@ -8,6 +8,7 @@ const en = {
   inspect: 'Inspect source reference', evidence: 'Source evidence', noEvidence: 'Source evidence is unavailable.',
   more: 'Show more artifacts', omitted: 'Additional case paths were omitted.', limits: 'Search limits',
   omittedLocations: 'Additional source locations omitted: {count}',
+  parameterized: 'Parameterized source declaration; data rows are not expanded.',
   calls: 'calls', testReference: 'test reference', cases: 'cases per artifact', artifacts: 'impacted artifacts', edges: 'edges',
   limitations: {
     SNAPSHOT_PARTIAL: 'Repository extraction is partial.', LEGACY_TEST_IDENTITIES: 'This scan has legacy test file identities.',
@@ -27,6 +28,7 @@ const vi: typeof en = {
   inspect: 'Xem bằng chứng tham chiếu', evidence: 'Bằng chứng mã nguồn', noEvidence: 'Chưa có bằng chứng mã nguồn.',
   more: 'Xem thêm artifact', omitted: 'Các đường test bổ sung đã được lược bớt.', limits: 'Giới hạn tìm kiếm',
   omittedLocations: 'Số vị trí nguồn bổ sung đã lược bớt: {count}',
+  parameterized: 'Khai báo test theo bảng; chưa bung các dòng dữ liệu.',
   calls: 'lời gọi', testReference: 'tham chiếu test', cases: 'case mỗi artifact', artifacts: 'artifact tác động', edges: 'quan hệ',
   limitations: {
     SNAPSHOT_PARTIAL: 'Việc trích xuất repository chưa đầy đủ.', LEGACY_TEST_IDENTITIES: 'Bản quét này chỉ có định danh test file cũ.',
@@ -46,6 +48,7 @@ const ja: typeof en = {
   inspect: '参照元の証拠を表示', evidence: 'ソースの証拠', noEvidence: 'ソースの証拠を取得できません。',
   more: 'コードをさらに表示', omitted: '追加のテスト経路は省略されています。', limits: '検索範囲',
   omittedLocations: '省略された追加のソース位置: {count}',
+  parameterized: 'パラメータ化されたソース宣言です。データ行は展開していません。',
   calls: '呼び出し', testReference: 'テスト参照', cases: 'コードごとのテスト数', artifacts: '影響を受けるコード', edges: '関係',
   limitations: {
     SNAPSHOT_PARTIAL: 'リポジトリの抽出は部分的です。', LEGACY_TEST_IDENTITIES: '古いテストファイル単位の識別情報です。',

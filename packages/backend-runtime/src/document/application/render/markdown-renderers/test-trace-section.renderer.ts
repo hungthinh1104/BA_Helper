@@ -22,6 +22,9 @@ export function renderTestTraceSection(snapshot: ReportTestTraceSnapshot | null 
     lines.push(`### ${escape(item.artifactLabel)}`, '', statuses[item.status], '');
     for (const test of item.testArtifacts) {
       lines.push(`- ${escape(test.label)} (${escape(test.testCase?.modifier ?? '')})`);
+      if (test.testCase?.parameterized) lines.push(vi
+        ? '  - Khai báo test theo bảng; chưa bung các dòng dữ liệu.'
+        : '  - Parameterized source declaration; data rows are not expanded.');
       if (!test.trace) continue;
       lines.push(`  - ${test.trace.artifacts.map(a => escape(a.label)).join(' → ')}`);
       for (const edge of test.trace.edges) {

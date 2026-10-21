@@ -1,3 +1,4 @@
+import { parseApiInput } from '../../../shared/parse-api-input';
 import { Body, Controller, Get, Param, Post, Put, Delete } from '@nestjs/common';
 import {
   TraceabilityReviewRequest,
@@ -78,7 +79,7 @@ export class TraceabilityController {
       linkId,
       'review:write',
     );
-    const input = traceabilityReviewRequestSchema.parse(body);
+    const input = parseApiInput(traceabilityReviewRequestSchema, body);
     await this.reviewTraceability.execute({ 
       linkId, 
       reviewStatus: input.reviewStatus,
@@ -97,7 +98,7 @@ export class TraceabilityController {
       linkId,
       'review:write',
     );
-    const input = updateTraceabilityReviewDecisionRequestSchema.parse(body);
+    const input = parseApiInput(updateTraceabilityReviewDecisionRequestSchema, body);
     await this.updateReviewDecisionUseCase.execute({
       linkId,
       decision: input.decision,

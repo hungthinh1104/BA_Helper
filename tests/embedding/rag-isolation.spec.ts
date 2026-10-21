@@ -34,15 +34,15 @@ describe('EmbeddingChunkRepository — multi-tenant isolation', () => {
 
   beforeEach(() => {
     prismaMock = {
-      $executeRaw: jest.fn<any>().mockResolvedValue(1),
-      $queryRaw: jest.fn<any>().mockResolvedValue([]),
+      $executeRaw: jest.fn<(...args: unknown[]) => Promise<unknown>>().mockResolvedValue(1),
+      $queryRaw: jest.fn<(...args: unknown[]) => Promise<unknown>>().mockResolvedValue([]),
       embeddingChunk: {
-        deleteMany: jest.fn<any>().mockResolvedValue({ count: 3 }),
-        findMany: jest.fn<any>().mockResolvedValue([]),
+        deleteMany: jest.fn<(...args: unknown[]) => Promise<unknown>>().mockResolvedValue({ count: 3 }),
+        findMany: jest.fn<(...args: unknown[]) => Promise<unknown>>().mockResolvedValue([]),
       },
     };
     snapshotRepoMock = {
-      updateSnapshotIndexStatus: jest.fn<any>(),
+      updateSnapshotIndexStatus: jest.fn<(...args: unknown[]) => Promise<unknown>>(),
     };
     repo = new EmbeddingChunkRepository(prismaMock);
   });
@@ -165,17 +165,17 @@ describe('EmbedSnapshotArtifactsUseCase — stableChunkId cache semantics', () =
   };
 
   beforeEach(() => {
-    artifactRepoMock = { listBySnapshot: jest.fn<any>().mockResolvedValue([ARTIFACT]) };
+    artifactRepoMock = { listBySnapshot: jest.fn<(...args: unknown[]) => Promise<unknown>>().mockResolvedValue([ARTIFACT]) };
     chunkRepoMock = {
-      listBySnapshot: jest.fn<any>(),
-      insertMany: jest.fn<any>(),
+      listBySnapshot: jest.fn<(...args: unknown[]) => Promise<unknown>>(),
+      insertMany: jest.fn<(...args: unknown[]) => Promise<unknown>>(),
     };
     snapshotRepoMock = {
-      findSnapshotById: jest.fn<any>().mockResolvedValue(SNAPSHOT),
-      findArtifactsWithEvidenceBySnapshot: jest.fn<any>().mockResolvedValue([ARTIFACT]),
-      updateSnapshotIndexStatus: jest.fn<any>(),
-      findPreviousArtifactsBySnapshot: jest.fn<any>(),
-      updateSnapshotDiagnostics: jest.fn<any>(),
+      findSnapshotById: jest.fn<(...args: unknown[]) => Promise<unknown>>().mockResolvedValue(SNAPSHOT),
+      findArtifactsWithEvidenceBySnapshot: jest.fn<(...args: unknown[]) => Promise<unknown>>().mockResolvedValue([ARTIFACT]),
+      updateSnapshotIndexStatus: jest.fn<(...args: unknown[]) => Promise<unknown>>(),
+      findPreviousArtifactsBySnapshot: jest.fn<(...args: unknown[]) => Promise<unknown>>(),
+      updateSnapshotDiagnostics: jest.fn<(...args: unknown[]) => Promise<unknown>>(),
     };
     provider = new FakeEmbeddingProvider();
     useCase = new EmbedSnapshotArtifactsUseCase(chunkRepoMock, provider, snapshotRepoMock);

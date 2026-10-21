@@ -1,5 +1,18 @@
 # API Contracts
 
+## Executable Scalar Reference
+
+`GET /api/docs` renders Scalar; `GET /api/openapi.json` serves the same live
+OpenAPI document. Route discovery and HTTP/auth metadata come from Nest.
+Documentation under `apps/api/src/bootstrap/api-docs/` maps operations to shared
+Zod request/response contracts. Additions must update the catalogue: generation
+rejects undocumented or orphan operations, and tests compare controller inputs.
+The locally served, pinned Scalar bundle needs no external CDN or request proxy.
+See [API reference usage](../api/README.md) for authentication, workflow and checks.
+Existing acknowledgement shapes, report-job input, review-note lists and queue
+retry responses now have shared schemas as well. This documentation work adds
+no domain state or persisted fields and does not tighten endpoint validation.
+
 Impact graph dependency edges may expose `confidence` in [0, 1] and `provenance`
 validated by `dependencyEdgeProvenanceSchema`. Provenance describes a static
 source relationship and identifies its resolver, source line locations and
@@ -16,6 +29,13 @@ legacy metadata is absent. Raw database metadata is never returned.
 new scans. Multi-repo artifact counts may include `TEST_FILE` separately;
 existing case count fields retain historical snapshot semantics.
 
+`testCase.parameterized?: boolean` explicitly identifies a parameterized source
+callback. Current scans emit `true` for supported inline-array `it/test.each`
+declarations and omit the field for ordinary cases. Titles retain placeholders;
+one artifact represents one source callback regardless of data rows. No row
+count or runtime result is inferred. The field is additive in artifact/graph,
+QA and version-1 saved-report metadata. Missing historical flags remain absent.
+
 ## Static Code-To-Test Projection
 
 `GET /api/v1/impact-analyses/:analysisId/qa-coverage` reads persisted data for the
@@ -29,8 +49,8 @@ The existing wire statuses are retained for compatibility:
 
 | Wire status | Meaning |
 | --- | --- |
-| `COVERED` | A supported active Jest case directly references the artifact |
-| `INDIRECT_ONLY` | Such a case reaches the artifact through static `CALLS` edges |
+| `COVERED` | A supported active test source declaration directly references the artifact |
+| `INDIRECT_ONLY` | Such a declaration reaches the artifact through static `CALLS` edges |
 | `NO_TEST_FOUND` | No supported reference was found in the inspected paths |
 
 These are static-reference classifications. They do not certify assertions,
@@ -789,6 +809,12 @@ Validation failures do not create downstream job/analysis records unless a use
 case explicitly stores a rejected requirement revision for clarification.
 
 ## Change Discipline
+
+Impact graph nodes expose retrieval metadata only when it passes the shared
+retrieval schema. A null historical DB value or unsupported JSON shape is
+omitted from the optional field; it is never returned as null or replaced by
+invented retrieval information. Contract checks include real persisted graph
+rows, not only mocked JSON objects.
 
 Any API response change updates:
 

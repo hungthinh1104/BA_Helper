@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, Post, Query, BadRequestException, NotFoundException, Res } from '@nestjs/common';
+import { parseApiInput } from '../../../shared/parse-api-input';
+import { Body, Controller, Get, Param, Post, Query, NotFoundException, Res } from '@nestjs/common';
 import {
   impactAnalysisCreateRequestSchema,
   impactAnalysisListResponseSchema,
@@ -87,7 +88,7 @@ export class ImpactAnalysisLifecycleController {
       revisionId,
       'analysis:create',
     );
-    const input = impactAnalysisCreateRequestSchema.parse(body);
+    const input = parseApiInput(impactAnalysisCreateRequestSchema, body);
     const analysis = await this.createAnalysis.execute({
       requirementRevisionId: revisionId,
       snapshotId: input.snapshotId,
@@ -138,11 +139,7 @@ export class ImpactAnalysisLifecycleController {
     @CurrentUser() actor: RequestUser,
   ) {
     await this.permissions.assertCanReadProject(actor, projectId);
-    const parsedQuery = paginationQuerySchema.safeParse(query);
-    if (!parsedQuery.success) {
-      throw new BadRequestException(parsedQuery.error.errors);
-    }
-    const { limit, offset } = parsedQuery.data;
+    const { limit, offset } = parseApiInput(paginationQuerySchema, query);
 
     const analyses = await this.listAnalyses.execute({ projectId, limit, offset });
 
@@ -162,7 +159,7 @@ export class ImpactAnalysisLifecycleController {
       analysisId,
       'analysis:finalize',
     );
-    const input = finalizeImpactAnalysisRequestSchema.parse(body);
+    const input = parseApiInput(finalizeImpactAnalysisRequestSchema, body);
     const analysis = await this.finalizeAnalysis.execute({
       analysisId,
       acknowledgeUnreviewed: input.acknowledgeUnreviewed,

@@ -1,4 +1,7 @@
 import { spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
+
+const requireFromScript = createRequire(__filename);
 
 /**
  * Analyzer quality gate entry point.
@@ -11,10 +14,9 @@ import { spawnSync } from 'node:child_process';
  * (even on failure, so CI can always upload it).
  */
 const result = spawnSync(
-  'pnpm',
+  process.execPath,
   [
-    'exec',
-    'jest',
+    requireFromScript.resolve('jest/bin/jest'),
     '--config',
     'jest.e2e.config.ts',
     '--runInBand',

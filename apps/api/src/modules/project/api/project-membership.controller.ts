@@ -1,3 +1,4 @@
+import { parseApiInput } from '../../../shared/parse-api-input';
 import {
   Body,
   Controller,
@@ -55,7 +56,7 @@ export class ProjectMembershipController {
     @Body() body: unknown,
     @CurrentUser() actor: RequestUser,
   ) {
-    const input = projectMemberUpsertRequestSchema.parse(body);
+    const input = parseApiInput(projectMemberUpsertRequestSchema, body);
     await this.upsertMember.execute(actor, projectId, input);
     return this.list(projectId, actor);
   }
@@ -67,7 +68,7 @@ export class ProjectMembershipController {
     @Body() body: unknown,
     @CurrentUser() actor: RequestUser,
   ) {
-    const input = projectMemberUpdateRequestSchema.parse(body);
+    const input = parseApiInput(projectMemberUpdateRequestSchema, body);
     await this.updateMember.execute(actor, projectId, userId, input);
     return this.list(projectId, actor);
   }

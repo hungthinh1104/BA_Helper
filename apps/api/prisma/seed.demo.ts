@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import * as crypto from 'crypto';
+import { diagnosticItemSchema } from '@ba-helper/contracts';
 
 const databaseUrl = process.env.DATABASE_URL?.trim();
 if (!databaseUrl) {
@@ -16,6 +17,8 @@ const prisma = new PrismaClient({
 
 const DEMO_PROJECT_NAME = 'BA Helper Demo: Booking Cancellation';
 const DEMO_REPOSITORY_URL = 'demo://booking-cancellation';
+const DEMO_SCAN_DIAGNOSTIC = { code: 'SCAN_HEALTH', severity: 'INFO', message: 'Seeded demo repository snapshot' } as const;
+diagnosticItemSchema.parse(DEMO_SCAN_DIAGNOSTIC);
 const DEMO_REQUIREMENT_TEXT =
   'When a booking is cancelled after payment, the system must release room inventory, mark the booking as cancelled, and prevent duplicate refund requests.';
 
@@ -132,9 +135,11 @@ async function main() {
           }
           await prisma.traceabilityLink.deleteMany({ where: { impactAnalysisId: { in: analysisIds } } });
           await prisma.baInsight.deleteMany({ where: { impactAnalysisId: { in: analysisIds } } });
+          await prisma.generatedDocument.deleteMany({ where: { impactAnalysisId: { in: analysisIds } } });
           // Cascades review decisions, notes, clarifications, and report snapshots.
           await prisma.impactAnalysis.deleteMany({ where: { id: { in: analysisIds } } });
         }
+        await prisma.dependencyEdge.deleteMany({ where: { snapshotId: snap.id } });
         await prisma.evidence.deleteMany({ where: { snapshotId: snap.id } });
         await prisma.codeArtifact.deleteMany({ where: { snapshotId: snap.id } });
       }
@@ -212,7 +217,7 @@ async function main() {
       analyzerVersion: '1.0.0',
       coverageStatus: 'READY',
       indexStatus: 'VECTOR_READY',
-      diagnostics: [{ code: 'SCAN_HEALTH', message: 'Seeded demo repository snapshot' }],
+      diagnostics: [DEMO_SCAN_DIAGNOSTIC],
     },
   });
 

@@ -19,7 +19,7 @@ generation, enterprise compliance, or multi-language understanding.
 API/worker      NestJS + TypeScript
 Database        PostgreSQL + Prisma
 Queue           Redis + BullMQ
-Analyzer        simple-git + ts-morph, NestJS TypeScript MVP adapter
+Analyzer        git subprocess (argument arrays, no shell) + ts-morph, NestJS TypeScript MVP adapter
 Profiling       deterministic snapshot-scoped repository classification
 Contracts       Zod (packages/contracts — shared API wire types and enums)
 Shared utils    packages/shared — small cross-package utilities only

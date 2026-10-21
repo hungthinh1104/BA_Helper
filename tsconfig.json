@@ -5,7 +5,9 @@
     "apps/**/*.ts",
     "packages/**/*.ts",
     "tests/**/*.ts",
-    "tests/**/*.d.ts"
+    "tests/**/*.d.ts",
+    "e2e/**/*.ts",
+    "playwright.config.ts"
   ],
   "exclude": [
     "tests/fixtures/**/*.ts",

@@ -7,10 +7,13 @@ import { computeArtifactContentHash } from '../core/content-hasher';
 export function createJestTestArtifact(input: {
   call: CallExpression; parent: ScanArtifact; title: string; suitePath: string[];
   modifier: TestModifier; declaredModifier: TestModifier;
+  parameterized?: boolean;
   bodySpan?: { start: number; end: number };
 }): ScanArtifact {
   const { call, parent, title, suitePath, modifier, declaredModifier } = input;
-  const identity = createHash('sha256').update(JSON.stringify([suitePath, title])).digest('hex');
+  const identity = createHash('sha256').update(JSON.stringify([
+    suitePath, title, ...(input.parameterized ? ['PARAMETERIZED'] : []),
+  ])).digest('hex');
   const safeTitle = SecretRedactor.redact(title).redactedContent;
   const safeSuites = suitePath.map(suite => SecretRedactor.redact(suite).redactedContent);
   const excerpt = call.getText();
@@ -21,7 +24,8 @@ export function createJestTestArtifact(input: {
     startLine: call.getStartLineNumber(), endLine: call.getEndLineNumber(), excerpt,
     contentHash: computeArtifactContentHash(`${excerpt}\n${modifier}`),
     testCase: { framework: 'jest', suitePath: safeSuites, title: safeTitle, modifier,
-      declaredModifier, parentFileArtifactKey: parent.stableId },
+      declaredModifier, parentFileArtifactKey: parent.stableId,
+      ...(input.parameterized ? { parameterized: true } : {}) },
     ...(input.bodySpan ? { testBodySpan: input.bodySpan } : {}),
   };
 }

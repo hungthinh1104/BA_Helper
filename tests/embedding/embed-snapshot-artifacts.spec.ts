@@ -25,10 +25,10 @@ const ARTIFACT = {
 
 function makeChunkRepoMock() {
   return {
-    listBySnapshot: jest.fn<any>().mockResolvedValue([]),
-    insertMany: jest.fn<any>().mockResolvedValue(undefined),
-    listForReuseByArtifacts: jest.fn<any>().mockResolvedValue([]),
-    copyChunk: jest.fn<any>().mockResolvedValue(true),
+    listBySnapshot: jest.fn<(...args: unknown[]) => Promise<unknown>>().mockResolvedValue([]),
+    insertMany: jest.fn<(...args: unknown[]) => Promise<unknown>>().mockResolvedValue(undefined),
+    listForReuseByArtifacts: jest.fn<(...args: unknown[]) => Promise<unknown>>().mockResolvedValue([]),
+    copyChunk: jest.fn<(...args: unknown[]) => Promise<unknown>>().mockResolvedValue(true),
   };
 }
 
@@ -49,12 +49,12 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
   beforeEach(() => {
     chunkRepoMock = makeChunkRepoMock();
     snapshotRepoMock = {
-      findSnapshotById: jest.fn<any>(),
-      findArtifactsWithEvidenceBySnapshot: jest.fn<any>(),
-      updateSnapshotIndexStatus: jest.fn<any>(),
-      findPreviousArtifactsBySnapshot: jest.fn<any>(),
-      updateSnapshotDiagnostics: jest.fn<any>(),
-      markSnapshotFailed: jest.fn<any>(),
+      findSnapshotById: jest.fn<(...args: unknown[]) => Promise<unknown>>(),
+      findArtifactsWithEvidenceBySnapshot: jest.fn<(...args: unknown[]) => Promise<unknown>>(),
+      updateSnapshotIndexStatus: jest.fn<(...args: unknown[]) => Promise<unknown>>(),
+      findPreviousArtifactsBySnapshot: jest.fn<(...args: unknown[]) => Promise<unknown>>(),
+      updateSnapshotDiagnostics: jest.fn<(...args: unknown[]) => Promise<unknown>>(),
+      markSnapshotFailed: jest.fn<(...args: unknown[]) => Promise<unknown>>(),
     };
     provider = new FakeEmbeddingProvider();
     useCase = makeUseCase(chunkRepoMock, snapshotRepoMock, provider);

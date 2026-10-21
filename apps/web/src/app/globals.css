@@ -12,4 +12,4 @@
 @import "../styles/report.css";
 @import "../styles/responsive.css";
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import "../styles/ui-primitives.css";

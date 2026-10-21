@@ -1,5 +1,8 @@
 # BA Helper: Requirement-to-Code Impact Analyzer
 
+**API reference:** [Scalar setup and usage](docs/api/README.md). With the API
+running on its default port, open http://localhost:3001/api/docs.
+
 **BA Helper** is an evidence-backed Requirement-to-Code Impact Analyzer for backend teams. It helps teams understand what a requirement change may affect in backend systems, with source evidence, unknowns, risks, QA scenarios, human review, and traceable reports. In research contexts, the engine is referred to as **ReqImpact**.
 
 The core value is reducing risk when requirements change. The product is not a
@@ -111,14 +114,14 @@ Fresh clone validation:
 
 ### 1. Prerequisites
 - Docker & Docker Compose (for Postgres/pgvector and Redis)
-- Node.js (v20+)
-- pnpm (v9+)
+- Node.js 22.23.3 (verified runtime; pnpm requires at least 22.13)
+- pnpm 11.28.6 (use the integrity-pinned `packageManager` version)
 
 ### 2. Install
 ```bash
 git clone https://github.com/hungthinh1104/BA_helper_test.git
 cd BA_helper_test
-pnpm install
+pnpm install --frozen-lockfile
 ```
 
 ### 3. Environment Variables

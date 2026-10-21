@@ -1,0 +1,4 @@
+# Upstream Git blob pins and ground-truth digests must survive Windows checkout.
+tests/fixtures/public-test-trace/** text eol=lf
+tests/evaluation/public-test-trace*.json text eol=lf
+tests/evaluation/application-test-trace*.json text eol=lf

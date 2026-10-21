@@ -1,22 +1,11 @@
 import type { Config } from 'jest';
+import { backendTransform, backendTransformIgnorePatterns } from './jest.transforms.cjs';
 
 const config: Config = {
   testMatch: ['**/*.e2e-spec.ts'],
   moduleFileExtensions: ['ts', 'js', 'json'],
-  transform: {
-    '^.+\\.ts$': ['@swc/jest', {
-      jsc: {
-        parser: {
-          syntax: 'typescript',
-          decorators: true,
-        },
-        transform: {
-          legacyDecorator: true,
-          decoratorMetadata: true,
-        },
-      },
-    }],
-  },
+  transform: backendTransform,
+  transformIgnorePatterns: backendTransformIgnorePatterns,
   moduleNameMapper: {
     '^@ba-helper/contracts$': '<rootDir>/packages/contracts/src/index.ts',
     '^@ba-helper/shared$': '<rootDir>/packages/shared/src/index.ts',

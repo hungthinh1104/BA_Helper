@@ -104,7 +104,14 @@ An edge is `EVIDENCED` only when the supported parser can locate a direct
 relationship in source. A similarly named but disconnected symbol must not
 become an evidenced impact.
 
-### NestJS graph publication (`analyzer@0.5.0`)
+### NestJS graph publication (`analyzer@0.7.0`)
+
+The checkout root and accepted source-file paths are canonicalized through
+filesystem real paths before computing repository-relative artifact identity.
+This treats Windows short/long names and directory junction aliases as the
+same checkout. Only the accepted file list is canonicalized; it does not
+re-enumerate files or load excluded imports. Historical snapshots from earlier
+analyzer versions remain immutable; rescan to replace malformed path identities.
 
 The TypeScript adapter builds dependency edges from exactly the selected
 `tsFiles` used by extraction. Graph construction must not re-enumerate paths,
@@ -113,9 +120,46 @@ are normalized to repository-relative forward-slash paths on every platform.
 
 Direct method relationships resolve the receiver's local class declaration or
 relative named/default import and its constructor-injected parameter property.
-Test-case relationships resolve explicit `new Class()` instances with lexical
-scope and import aliases; variable receivers must be immutable `const`
-bindings. Changing-`this` function scopes and colliding artifact keys are
+Test-case relationships resolve explicit `new Class()` instances in immutable
+`const` bindings, preserving lexical scope and import aliases. They also resolve
+class-token `.get(Class)` calls on a variable whose observed writes all come
+from `await Test.createTestingModule(...).compile()`, with `Test` imported from
+`@nestjs/testing`. The acquired subject may be assigned in a setup hook; every
+observed write must resolve to the same imported class token. Generic type
+arguments, when present, must agree with that token. Receiver results are
+cached within one graph build.
+
+Graph construction indexes test artifacts by accepted source file and caches
+call-expression offsets once per file. Test bodies query fully contained calls
+through a sorted range index instead of rescanning every call for every test.
+Keep equal-offset traversal order, ambiguity exclusions, skip/todo handling,
+diagnostics and provenance identical. This optimization does not change the
+extraction contract or require an analyzer-version bump. The synthetic
+`pnpm benchmark:static-test-graph -- current` measurement records output digests
+and timing samples; it is not an end-to-end latency or accuracy gate.
+
+Injectable service methods include private/protected helpers because changed
+policy can live behind a public entry point. They retain SERVICE_METHOD identity
+and source evidence. Private/protected controller helpers remain excluded from
+API_ROUTE extraction; this does not make them HTTP endpoints.
+
+An active test body may also reference a method through a same-file,
+zero-argument function declaration whose sole statement is `return new Class(...)`.
+The factory must be synchronous, non-generator and non-generic, with no
+parameters, writes, aliases or escaped references. Only direct calls are
+accepted; imported factories, conditional returns and object-returning helpers
+remain unresolved. Factory results are cached per graph build. This is a source
+relationship even when constructor dependencies are mocks, never runtime coverage.
+The selected-file and legacy fixture entry points both default to the current
+analyzer version. Existing snapshots remain immutable and require a rescan.
+
+Type annotations, string tokens, arbitrary `.get()` methods, builder aliases,
+conflicting assignments, destructuring writes and mutable fake module bindings
+do not establish a relationship. Mocked providers remain static references to
+their declared class token; no runtime execution or assertion coverage is
+implied. Setup acquisition itself creates no TESTS edge.
+
+Changing-`this` function scopes and colliding artifact keys are
 reported as unresolved rather than mapped. Unresolved methods/imports produce diagnostics and
 never fall back to the first method of a class. Barrels, path aliases, runtime
 DI and dynamic receivers remain outside this resolver's supported patterns.
@@ -139,6 +183,11 @@ rescan. Historical snapshots are not backfilled with inferred relationships.
 Keep a `TEST` file container (`TEST_FILE`) and extract separate
 `JEST_TEST_CASE` (`TEST_CASE`) artifacts. Recognize literal `describe`, `it`,
 `test`, `.skip`, `.only`, `.todo`, and named aliases from `@jest/globals`.
+Inline-array `it.each([...])` / `test.each([...])`, including `.skip.each`
+and `.only.each`, produce one source declaration per callback with
+`parameterized: true`. Preserve the literal title template; do not interpolate
+values, execute data expressions, expand rows or claim a runtime case count.
+An empty inline table still has a source declaration and implies no execution.
 Unbound Jest-style globals are a syntax assumption, not verified runner
 configuration. Local shadows and imports from another framework are not Jest.
 Do not execute tests or load repository dependencies.
@@ -146,12 +195,18 @@ Do not execute tests or load repository dependencies.
 Each case stores redacted suite/title labels, effective and declared modifiers,
 source range and its parent file key. Modifiers describe declarations, not test
 results. Case identity is `test-case:<relative-path>::<sha256>` where the digest
-is SHA-256 of JSON `[suitePath, title]` before redaction. Body/line/modifier changes
-retain identity; content hashes capture body and effective modifier changes.
+is SHA-256 of JSON `[suitePath, title]` before redaction for literal cases.
+Parameterized declarations use `[suitePath, title, "PARAMETERIZED"]`, keeping
+them distinct from a literal case with the same title. Ordinary case identities
+remain unchanged. Body/line/modifier/table-row changes retain identity; content
+hashes capture source content and the effective modifier. The optional flag
+passes through persisted metadata, QA projection and saved reports without
+defaulting or rewriting historical metadata.
 Offsets used to assign calls to a body are transient and never persisted.
 
 Literal suites are bounded to 20 levels and labels to 1000 characters.
-Dynamic/parameterized/conditional declarations, async suites, nested tests and
+Dynamic titles/tables, tagged tables, `describe.each`, concurrent/conditional
+declarations, async suites, nested tests and
 malformed callbacks emit `JEST_UNSUPPORTED_DECLARATION`. Duplicate identities
 are all omitted with `JEST_DUPLICATE_TEST_IDENTITY`; retain the file as evidence.
 Unsupported declarations must not be presented as individually traced cases.

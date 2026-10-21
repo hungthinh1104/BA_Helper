@@ -143,7 +143,7 @@ describe('ScannerAdapterRegistry', () => {
 
   describe('Contract Compliance', () => {
     const mockInput: ScanAdapterInput = {
-      rootDir: '/mock/path',
+      rootDir: process.cwd(),
       tsFiles: [],
       javaFiles: [],
     };

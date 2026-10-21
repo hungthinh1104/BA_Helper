@@ -53,12 +53,19 @@ describe('ArtifactChunkBuilder', () => {
     expect(chunk.chunkType).toBe('ARTIFACT_SUMMARY');
   });
 
-  it('generates summary when evidence is missing', () => {
+  it('embeds metadata without a synthetic snippet when evidence is missing', () => {
     const chunk = ArtifactChunkBuilder.build({
       artifact: { ...baseArtifact, artifactType: 'SERVICE_METHOD' } as CodeArtifact,
       evidence: [],
     });
 
-    expect(chunk.content).toContain('No code snippet available for someMethod');
+    expect(chunk.content).toBe([
+      'artifactKey: some.file.ts::method',
+      'symbol: someMethod',
+      'type: SERVICE_METHOD',
+      'file: some.file.ts',
+    ].join('\n'));
+    expect(chunk.content).not.toContain('No code snippet available');
+    expect(chunk.content).not.toContain('excerpt:');
   });
 });

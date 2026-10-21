@@ -1,7 +1,8 @@
 "use client"
 
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import mermaid from 'mermaid'
+import DOMPurify from 'dompurify'
 
 interface MermaidRendererProps {
   chart: string
@@ -10,34 +11,34 @@ interface MermaidRendererProps {
 mermaid.initialize({
   startOnLoad: false,
   theme: 'default',
-  securityLevel: 'loose',
+  securityLevel: 'strict',
+  htmlLabels: false,
+  suppressErrorRendering: true,
 })
 
 export function MermaidRenderer({ chart }: MermaidRendererProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [hasError, setHasError] = useState(false)
-  const [svgContent, setSvgContent] = useState<string>('')
+  const [rendered, setRendered] = useState<{ chart: string; svg: string; failed: boolean } | null>(null)
+  const current = rendered?.chart === chart ? rendered : null
 
   useEffect(() => {
     let isMounted = true
     const renderChart = async () => {
       try {
-        setHasError(false)
-        const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`
+        const id = `mermaid-${Math.random().toString(36).slice(2, 11)}`
         const { svg } = await mermaid.render(id, chart)
         if (isMounted) {
-          setSvgContent(svg)
+          setRendered({ chart, svg: DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } }), failed: false })
         }
-      } catch (error) {
-        console.error('Mermaid rendering failed:', error)
+      } catch {
+        console.error('Mermaid rendering failed')
         if (isMounted) {
-          setHasError(true)
+          setRendered({ chart, svg: '', failed: true })
         }
       }
     }
 
     if (chart) {
-      renderChart()
+      void renderChart()
     }
 
     return () => {
@@ -45,7 +46,7 @@ export function MermaidRenderer({ chart }: MermaidRendererProps) {
     }
   }, [chart])
 
-  if (hasError) {
+  if (current?.failed) {
     // Fallback to raw code block if mermaid fails to render
     return (
       <pre className="report-pre my-4">
@@ -57,9 +58,8 @@ export function MermaidRenderer({ chart }: MermaidRendererProps) {
   return (
     <div className="report-mermaid my-6">
       <div
-        ref={containerRef}
         className="report-mermaid-preview flex justify-center rounded-lg border border-border/50 bg-background px-4 py-4 shadow-sm"
-        dangerouslySetInnerHTML={{ __html: svgContent }}
+        dangerouslySetInnerHTML={{ __html: current?.svg ?? '' }}
       />
       <pre className="report-pre report-mermaid-fallback mt-3">
         <code className="language-mermaid">{chart}</code>

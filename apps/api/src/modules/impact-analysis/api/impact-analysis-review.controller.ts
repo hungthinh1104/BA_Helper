@@ -1,3 +1,4 @@
+import { parseApiInput } from '../../../shared/parse-api-input';
 import { Body, Controller, Get, Param, Post, Query, BadRequestException, NotFoundException, Res } from '@nestjs/common';
 import {
   impactAnalysisCreateRequestSchema,
@@ -97,7 +98,7 @@ export class ImpactAnalysisReviewController {
       analysisId,
       'review:write',
     );
-    const input = reviewDecisionRequestSchema.parse(body);
+    const input = parseApiInput(reviewDecisionRequestSchema, body);
 
     const result = await this.createReviewDecision.execute({
       analysisId,

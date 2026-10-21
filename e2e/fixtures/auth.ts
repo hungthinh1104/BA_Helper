@@ -1,4 +1,4 @@
-import { type Page } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
 
 /**
  * Logs in through the real NextAuth credentials form (POST /api/v1/auth/login).
@@ -8,7 +8,10 @@ import { type Page } from '@playwright/test'
  */
 export async function login(page: Page, creds: { email: string; password: string }): Promise<void> {
   await page.goto('/login')
-  await page.fill('#email', creds.email)
+  // Cold dev compilation/HMR can outlast the normal action budget before hydration.
+  const email = page.locator('#email')
+  await expect(email).toBeEditable({ timeout: 60_000 })
+  await email.fill(creds.email)
   await page.fill('#password', creds.password)
   await page.getByRole('button', { name: 'Sign In' }).click()
   await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30_000 })

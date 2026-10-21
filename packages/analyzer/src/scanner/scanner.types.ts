@@ -1,12 +1,13 @@
 import type { GraphProvenance } from '../graph/graph.types';
 
 export const SCANNER_VERSION = 'scanner@0.3.0';
-export const ANALYZER_VERSION = 'analyzer@0.5.0';
+export const ANALYZER_VERSION = 'analyzer@0.7.0';
 
 export type TestModifier = 'NORMAL' | 'SKIP' | 'TODO' | 'ONLY';
 export type ScanTestCase = {
   framework: 'jest'; suitePath: string[]; title: string;
   modifier: TestModifier; declaredModifier: TestModifier; parentFileArtifactKey: string;
+  parameterized?: boolean;
 };
 
 export type ScanInput = {

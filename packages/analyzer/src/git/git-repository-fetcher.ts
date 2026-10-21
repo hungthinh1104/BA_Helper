@@ -1,4 +1,6 @@
 import { spawn } from 'node:child_process';
+import { isAbsolute } from 'node:path';
+import { fileURLToPath } from 'node:url';
 export interface GitFetchOptions {
   url: string;
   targetDir: string;
@@ -19,8 +21,8 @@ export class GitRepositoryFetcher {
     const timeout = options.timeoutMs || 60000;
 
     // In test environments, if it's a local absolute path, just copy it
-    if (process.env.NODE_ENV === 'test' && (options.url.startsWith('/') || options.url.startsWith('file://'))) {
-      const source = options.url.startsWith('file://') ? options.url.replace('file://', '') : options.url;
+    if (process.env.NODE_ENV === 'test' && (isAbsolute(options.url) || options.url.startsWith('file://'))) {
+      const source = options.url.startsWith('file://') ? fileURLToPath(options.url) : options.url;
       const { cp } = await import('node:fs/promises');
       await cp(source, options.targetDir, { recursive: true });
       // Fake a commit sha for local fixture copying

@@ -22,6 +22,11 @@ export const documentJobStatusSchema = z.enum([
 	'FAILED',
 ]);
 
+export const documentJobCreateRequestSchema = z.object({
+	requestKey: z.string().optional(),
+	retry: z.boolean().optional(),
+});
+
 export const documentJobSchema = z.object({
 	id: z.string().uuid(),
 	analysisId: z.string().uuid(),

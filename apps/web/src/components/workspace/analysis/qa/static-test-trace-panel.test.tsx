@@ -20,6 +20,17 @@ function panel() {
 describe('selected item static test trace', () => {
   beforeEach(() => { coverage = { data: staticTestTraceFixture(), isLoading: false, error: null, refetch }; });
 
+  it('labels parameterized source declarations in live and saved traces', () => {
+    const data = staticTestTraceFixture();
+    data.items[0].testArtifacts[0].testCase!.parameterized = true;
+    const view = render(<TestTraceView coverage={data} locale="en" />);
+    expect(screen.getByText('Parameterized source declaration; data rows are not expanded.')).toBeInTheDocument();
+    view.rerender(<TestTraceView coverage={data} locale="vi-VN" saved />);
+    expect(screen.getByText('Khai báo test theo bảng; chưa bung các dòng dữ liệu.')).toBeInTheDocument();
+    view.rerender(<TestTraceView coverage={data} locale="ja-JP" saved />);
+    expect(screen.getByText('パラメータ化されたソース宣言です。データ行は展開していません。')).toBeInTheDocument();
+  });
+
   it('shows case identity, ordered code path and source evidence without relying on the display graph', () => {
     (coverage.data as ReturnType<typeof staticTestTraceFixture>).items[0].testArtifacts[0].trace!.edges[0].provenance.omittedLocationCount = 2;
     panel();

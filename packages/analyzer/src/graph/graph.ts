@@ -4,6 +4,7 @@ import type { ClassDeclaration, MethodDeclaration, SourceFile } from 'ts-morph';
 import type { ScanArtifact, ScanResult } from '../scanner/scanner.types';
 import type { GraphDiagnostic, GraphEdge, GraphProvenance, GraphResult } from './graph.types';
 import { GraphSourceResolver } from './graph-source-resolver';
+import { TestCallIndex } from './test-call-index';
 
 export const buildGraph = (scan: ScanResult): GraphResult => {
   if (!scan.sourceRoot) return { edges: [] };
@@ -34,13 +35,12 @@ class SourceGraphBuilder {
 
   private testEdges(file: SourceFile, test: ScanArtifact): void {
     const cases = this.resolver.testCases(file);
-    const calls = file.getDescendantsOfKind(SyntaxKind.CallExpression);
+    const calls = new TestCallIndex(file.getDescendantsOfKind(SyntaxKind.CallExpression));
     for (const item of cases) {
       const span = item.testBodySpan;
       if (!span || item.testCase?.modifier === 'SKIP' || item.testCase?.modifier === 'TODO') continue;
       let resolved = false;
-      for (const call of calls) {
-        if (call.getStart() < span.start || call.getEnd() > span.end) continue;
+      for (const call of calls.within(span)) {
         const access = call.getExpression();
         if (!Node.isPropertyAccessExpression(access)) continue;
         const cls = this.resolver.receiverClass(access.getExpression());

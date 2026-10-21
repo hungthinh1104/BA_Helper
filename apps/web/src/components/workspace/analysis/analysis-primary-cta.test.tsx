@@ -63,7 +63,7 @@ const labels = analysisWorkspaceLabels.en
 const renderCta = (ws: AnalysisWorkspaceResponse) => render(<AnalysisPrimaryCta workspace={ws} labels={labels} />)
 
 describe("AnalysisPrimaryCta", () => {
-  beforeEach(() => push.mockClear())
+  beforeEach(() => { push.mockClear() })
 
   it("continues review and lands on the blocking filter", () => {
     renderCta(workspace({ queue: [queueItem("needs_review", true)] }))

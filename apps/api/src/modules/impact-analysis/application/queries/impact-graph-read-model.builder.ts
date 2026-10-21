@@ -5,6 +5,7 @@ import {
   ImpactGraphNode,
   ImpactGraphEdge,
   GraphEdgeType,
+  retrievalMetadataSchema,
 } from '@ba-helper/contracts';
 import { PrismaService } from "@ba-helper/backend-runtime";
 import { mapDependencyGraphEdge } from './impact-dependency-graph.mapper';
@@ -94,6 +95,7 @@ export class ImpactGraphReadModelBuilder {
       affectedArtifactIds.add(artifact.id);
 
       const type = mapArtifactGraphNodeType(artifact);
+      const retrieval = retrievalMetadataSchema.safeParse(link.retrievalMetadata);
 
       nodes.push({
         id: nodeId,
@@ -103,7 +105,7 @@ export class ImpactGraphReadModelBuilder {
         artifactKey: artifact.artifactKey,
         testCase: readTestCaseMetadata(artifact),
         reviewStatus: link.reviewStatus as any,
-        retrieval: link.retrievalMetadata as any,
+        retrieval: retrieval.success ? retrieval.data : undefined,
         commitSha: analysis.snapshot.commitSha,
         source: 'TRACEABILITY',
         rank: 2,

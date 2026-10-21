@@ -50,6 +50,12 @@ DocumentJob       owns asynchronous process state for building final documents
 DomainEvent       owns audit/debug history
 ```
 
+Jest declaration metadata remains in `CodeArtifact.metadata.testCase`. Its
+optional `parameterized` flag identifies a source callback with unexpanded
+data rows. This additive JSON field needs no Prisma column or migration;
+shared contracts validate it before persistence and projection. Historical
+metadata and saved-report payloads without the flag remain unchanged.
+
 `DependencyEdge.confidence` and `metadata` are nullable for historical rows.
 New TypeScript graph metadata follows the shared dependency provenance schema:
 static source-reference kind, resolver, repository-relative line locations

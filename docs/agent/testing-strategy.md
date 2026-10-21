@@ -2,6 +2,10 @@
 
 ## Approach
 
+The account lifecycle E2E has a scoped 30-second budget for its sequential
+real scrypt operations, HTTP requests and audit writes. Keep the complete
+provision/reset/disable/session-revocation assertions when verifying this path.
+
 Use-case-first development is mandatory for the analysis engine:
 
 ```text
@@ -12,8 +16,36 @@ acceptance criteria
 -> implementation
 ```
 
+Backend Jest entry points share `jest.transforms.cjs`. The patched
+sanitize-html parser and its five ESM dependency packages are transformed to
+CommonJS for Node 22 test compatibility; unrelated dependencies remain ignored.
+Scalar's small HTML serializer and JSON helpers use the same bounded transform
+policy. Its browser/Vue package is served as a static asset, not imported.
+Keep the same policy in local, CI, unit, integration, analyzer and API E2E
+configurations. The configuration helper is CommonJS so native Node
+and Jest's TypeScript config loader resolve it consistently.
+
+Jest mocks for asynchronous repository calls must declare a function returning
+a Promise; `jest.fn<any>()` does not reliably model async returns under current
+TypeScript/Jest types. UI tests use jest-dom 7 with its explicit DOM peer and
+the same Node 22 baseline as application verification.
+
 Do not validate quality by reading generated prose and deciding that it looks
 reasonable.
+
+The production-path fake-provider scorecard measures curated fixture behavior.
+Keep its precision and recall thresholds, and reject a positive case that emits
+no committed claims; empty-set precision must not make a broken case pass.
+Measure independent repository accuracy separately against source-authored
+ground truth, without changing expectations to match analyzer output.
+
+Run `pnpm verify:application-test-trace` for pinned Amplication/Novu application
+source slices. All frozen labels must be found; its regression policy now
+permits zero misses or false positives and rejects changed ground-truth
+digests or expected universes. Verify parameterized metadata through parsing,
+persistence, QA, saved reports and UI, preserving the distinction between a
+source callback and generated runtime cases. A passing corpus is not general
+accuracy certification. See [application trace evaluation](../evaluation/application-test-trace.md).
 
 Test files should remain readable by behavior. Keep expected artifact, edge,
 and insight payloads in dedicated fixture data instead of embedding large
@@ -132,7 +164,47 @@ wrapper. It starts Postgres/Redis, applies migrations, then runs the checks:
 pnpm verify:stability
 ```
 
+`pnpm typecheck` checks backend/test sources, browser E2E sources and the full
+web TypeScript project, including its tests. It builds the contracts/shared
+declarations before checking the web consumer. Do not substitute a production-
+source-only web config for this gate. `pnpm test:web` runs the web Jest suite;
+the backend Jest match does not include `.test.tsx` files. CI and the stability
+wrapper run this suite and the desktop/mobile Playwright journeys explicitly.
+Install Chromium first with `pnpm exec playwright install chromium` (CI also
+installs OS dependencies).
+Web builds and Playwright server commands use the existing `dotenv -v` option
+for environment assignments so the same commands work on Windows and Linux.
+For local database/browser checks, copy `.env.test.example` to `.env.test` and
+configure the running PostgreSQL/pgvector and Redis instances. Playwright reads
+the test URLs and passes the same database/queue configuration to its API,
+migration, seed and browser-fixture processes. CI does not reuse existing web
+or API servers. Database setup does not install PostgreSQL or Redis for you.
+Set `REDIS_URL_TEST` to a dedicated test database or Redis instance; the API
+E2E preparation helper fails before database setup if it is missing or points
+at the configured development Redis database. The example uses logical DB 1,
+leaving the default development DB 0 isolated.
+
+Database E2E preparation must run `prisma migrate deploy`, never `db push` or
+`--accept-data-loss`. It invokes the Prisma CLI through Node so Windows does
+not require a shell to launch a pnpm shim. `verify:migration-upgrade` applies
+the legacy chain before the email/index and three test-trace migrations, seeds
+legacy artifacts, a dependency and an approved report, then verifies content
+identity, nullable new fields, unchanged Markdown and confidence constraints.
+These checks require a real PostgreSQL instance with pgvector; mocked helper
+tests only verify command selection and one-time preparation.
+The upgrade gate works on a scratch migration copy and a uniquely named
+throwaway database. It never moves repository migration folders, verifies a
+second deploy is idempotent and validates cleanup targets before deleting them.
+
 ### Scanner fixture tests
+
+Canonical-path regression fixtures exercise root/file aliases (including a
+Windows directory junction), stable artifact keys and graph edges, and confirm
+that canonicalization does not expand the accepted source selection.
+Test-only local acquisition accepts native absolute paths and decodes file URLs
+with Node's URL parser, including spaces. Framework regression fixtures use
+that directory-copy path; Git initialization is unnecessary and must not add
+process overhead to their setup. Real remote acquisition remains separate.
 
 Verify routes, controller/service methods, entities/models, tests, line ranges,
 commit/analyzer-version identity, coverage, and skipped files.
@@ -198,11 +270,31 @@ Component tests cover selected-artifact rendering independent of the display
 graph, case identity, opening source evidence, loading/error/retry states,
 snapshot mismatches, uninspected artifacts, limitation messages and saved
 read-only report paths. A source dialog must suppress review decision
-shortcuts. Use the existing web Jest setup from `apps/web`:
+shortcuts. Run the existing web Jest suite from the workspace root:
 
 ```bash
-pnpm exec jest --config jest.config.ts --runInBand --testPathPatterns 'static-test-trace-panel|analysis-review-workbench|final-reviewed-report-viewer'
+pnpm test:web
 ```
+
+The desktop Playwright journey adds an explicitly synthetic persisted trace
+to the demo analysis, opens its real evidence endpoint and checks the numbered
+source highlight. It then reviews/finalizes through the UI, reloads the report
+after removing the live fixture edge and verifies the saved trace remains.
+This browser fixture does not establish scanner accuracy; the separate
+production-graph DB E2E covers extraction and persistence. Demo reseeding must
+delete dependency edges before artifacts and generated documents before their
+analyses, so a failed browser attempt or a real completed report can be reseeded.
+Playwright starts the actual document worker and waits for its structured
+`WORKER_READY` startup event. Finalization captures the reviewed snapshot and
+enqueues report rendering; it does not synchronously generate the document.
+Browser jobs default to Redis database 1 on the configured test Redis server;
+`PW_REDIS_URL` can override the complete URL. This keeps browser workers away
+from development/integration queues. Both the main
+report route and the separate snapshot viewer must render frozen trace data.
+Browser backend processes use ts-node transpilation without repeating the
+type checker at each API/worker boot. The separate full backend/web typecheck
+gate remains mandatory before browser CI. CI and local Jest configurations
+resolve both workspace root exports and capability subpaths to source.
 
 Backend tests cover analysis permission enforcement before source reads,
 evidence membership in a returned path, immutable source locator checks,

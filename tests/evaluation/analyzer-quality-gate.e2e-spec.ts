@@ -65,7 +65,7 @@ describe('Production-path analyzer quality gate', () => {
       adapter,
       cases: [...productionStableEvaluationCases, ...userOnboardingEvaluationCases],
       baseline,
-      generatedAt: '2026-01-01T00:00:00.000Z',
+      generatedAt: new Date().toISOString(),
     });
 
     // Always emit the scorecard artifact, even on failure, so CI can upload it.

@@ -56,9 +56,9 @@ describe.skip('disabled suite', () => { it('inherits skip', () => {}); });`);
     expect(result.diagnostics?.some(d => d.code === 'JEST_DUPLICATE_TEST_IDENTITY')).toBe(true);
   });
 
-  it('does not invent cases for dynamic titles, parameterized declarations or dynamic suites', () => {
+  it('does not invent cases for dynamic titles, dynamic tables or dynamic suites', () => {
     const result = scan(`it(getTitle(), () => {});
-test.each([1, 2])('refund %i', () => {});
+test.each(dynamicTable)('refund %i', () => {});
 describe.each([1])('suite %i', () => { it('nested', () => {}); });
 describe(getSuite(), () => { it('unknown suite', () => {}); });
 if (enabled) { it('conditional', () => {}); }

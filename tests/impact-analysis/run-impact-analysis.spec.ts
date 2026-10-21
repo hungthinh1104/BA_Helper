@@ -31,7 +31,7 @@ class StubImpactRepo {
 	      repository: { projectId: 'project-1' },
 	    },
 	    requirementRevision: {
-	      rawText: 'Allow users to cancel paid bookings and receive refund.',
+	      rawText: 'Allow users to cancel paid bookings and receive refund, release the slot and notify the owner.',
 	      requirement: { projectId: 'project-1' },
 	    },
   });

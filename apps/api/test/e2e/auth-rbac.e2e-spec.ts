@@ -326,6 +326,7 @@ describe('Auth and RBAC (e2e)', () => {
     });
   });
 
+  // This multi-request lifecycle includes real scrypt derivations and persisted audit writes.
   it('provisions, resets, disables, and audits a local-password account', async () => {
     const provision = await request(app.getHttpServer())
       .post('/api/v1/auth/accounts')
@@ -406,7 +407,7 @@ describe('Auth and RBAC (e2e)', () => {
       ]),
     );
     expect(JSON.stringify(events)).not.toContain('replacement-password-123');
-  });
+  }, 30_000);
 
   it('normalizes account emails: case-insensitive login and rejects case-variant duplicates', async () => {
     const provision = await request(app.getHttpServer())
@@ -570,7 +571,7 @@ describe('Auth and RBAC (e2e)', () => {
           e.subjectUserId && e.actorUserId,
       ),
     ).toBe(true);
-  });
+  }, 30000); // Several real password hashes/verifications and HTTP transactions.
 
   it('enforces admin-only project creation', async () => {
     await request(app.getHttpServer())

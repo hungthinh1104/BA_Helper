@@ -12,6 +12,8 @@ export const reviewNoteSchema = z.object({
 
 export type ReviewNoteResponse = z.infer<typeof reviewNoteSchema>;
 
+export const reviewNoteListResponseSchema = z.object({ items: z.array(reviewNoteSchema) });
+
 export const createReviewNoteRequestSchema = z
   .object({
     insightId: z.string().uuid().optional().nullable(),

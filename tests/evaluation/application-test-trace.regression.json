@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-21",
+  "analyzerVersion": "analyzer@0.7.0",
+  "groundTruthSha256": "d87059c07d9f36a4ae61e58515230aaf9bdcea96d65ac8a1bddd0fdd206c013f",
+  "reason": "All frozen application source labels are resolved. No missing declarations, missing relationships, false positives, label edits or changed expected universes are permitted.",
+  "expected": {
+    "cases": 27,
+    "calls": 22,
+    "tests": 28
+  },
+  "allowedMissing": {
+    "cases": [],
+    "calls": [],
+    "tests": []
+  }
+}

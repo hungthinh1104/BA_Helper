@@ -1,5 +1,6 @@
 import 'whatwg-fetch';
 import '@testing-library/jest-dom';
+import '@testing-library/jest-dom/jest-globals';
 import { server } from './src/test/msw/server';
 
 process.env.NEXT_PUBLIC_API_URL = 'http://localhost:3000';

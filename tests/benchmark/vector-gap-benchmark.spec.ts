@@ -13,7 +13,6 @@ import * as crypto from 'crypto';
 import * as dotenv from 'dotenv';
 
 dotenv.config({ path: resolve(__dirname, '../../.env.test') });
-process.env.DATABASE_URL = process.env.DATABASE_URL_TEST || process.env.DATABASE_URL;
 
 interface VectorGapCase {
   changeRequest: string;

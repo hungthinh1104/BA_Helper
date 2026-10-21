@@ -9,11 +9,13 @@ evaluation, automated tests, or model confidence as product-validation data.
 Use only public GitHub NestJS repositories pinned to an immutable 40-character
 commit SHA. For each requirement:
 
-1. A reviewer performs the analysis manually and records elapsed minutes.
-2. The same reviewer performs the analysis with BA Helper and records elapsed
-   minutes.
-3. The reviewer establishes the critical impacted artifact set independently
-   of the tool output.
+1. Establish the critical impacted artifact set from source before exposing
+   tool output; have another reviewer resolve disagreements.
+2. Assign manual and assisted conditions using matched tasks and counterbalance
+   their order across reviewers. Record elapsed minutes for each condition.
+3. Avoid giving the same person an identical task twice as an independent
+   timing comparison. Keep case-level observations and reviewer roles traceable
+   without collecting reviewer identities.
 4. The reviewer marks false-positive artifacts, useful unknowns, accepted QA
    scenarios, and confirmed evidence items.
 5. When a rerun or drift result exists, the reviewer records whether it changed
@@ -21,6 +23,12 @@ commit SHA. For each requirement:
 
 Do not store reviewer names, emails, repository credentials, or private source
 content in the dataset.
+
+For the specific visual-trace comparison, use the protocol in
+[static-test-trace.md](static-test-trace.md). The current version comparator
+requires different tool commits; it does not score a same-build trace-visible
+versus trace-hidden experiment. Keep those condition observations separately
+and do not invent tool commits to make them fit a version comparison.
 
 Each dataset identifies the exact BA Helper application version and 40-character
 tool commit. Every case must reference its persisted `analysisId`, immutable

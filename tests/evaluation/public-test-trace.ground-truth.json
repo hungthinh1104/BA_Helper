@@ -1,0 +1,377 @@
+{
+  "schemaVersion": 1,
+  "authoredAt": "2026-10-20",
+  "groundTruthMethod": "SOURCE_READ_BEFORE_ANALYZER_RUN",
+  "independentHumanReview": false,
+  "scope": "Exhaustive direct CALLS and active Jest case TESTS within the explicitly listed source slices. Static references only, including calls to mocked providers; never execution or assertion coverage.",
+  "repositories": [
+    {
+      "id": "typescript-starter",
+      "repository": "nestjs/typescript-starter",
+      "commitSha": "c4d9330f5513eda0fb5df594f6b34a11fde1a934",
+      "files": [
+        {
+          "path": "src/app.controller.ts",
+          "blobSha": "cce879ee622146012901c9adb47ef40c0fd3a555"
+        },
+        {
+          "path": "src/app.service.ts",
+          "blobSha": "927d7cca0badb13577152bf8753ce3552358f53b"
+        },
+        {
+          "path": "src/app.controller.spec.ts",
+          "blobSha": "b7bb7163ab0d6826f6156682c238e8a06ae0f074"
+        },
+        {
+          "path": "package.json",
+          "blobSha": "60356431b7825677cb92722efa5afb7b18277adb"
+        },
+        {
+          "path": "README.md",
+          "blobSha": "8f0f65f7e7f7a77781af65d82501109530d444f4"
+        }
+      ],
+      "cases": [
+        {
+          "filePath": "src/app.controller.spec.ts",
+          "suitePath": [
+            "AppController",
+            "getHello"
+          ],
+          "title": "should return \"Hello World!\"",
+          "targetSymbols": [
+            "AppController.getHello"
+          ]
+        }
+      ],
+      "calls": [
+        {
+          "fromSymbol": "AppController.getHello",
+          "toSymbol": "AppService.getHello"
+        }
+      ],
+      "licenseNote": "README.md and package.json declare MIT; LICENSE is the referenced nestjs/nest license at the pinned framework commit."
+    },
+    {
+      "id": "testing-nestjs",
+      "repository": "jmcdo29/testing-nestjs",
+      "commitSha": "47ab935278c662b5165e07f6783d395db047db2d",
+      "files": [
+        {
+          "path": "apps/complex-sample/src/cat/cat.controller.ts",
+          "blobSha": "130c536643662600d2d66e3c5ec4e83614cab5e0"
+        },
+        {
+          "path": "apps/complex-sample/src/cat/cat.controller.spec.ts",
+          "blobSha": "6363b16bb78dd162eac559714955459bc1db9533"
+        },
+        {
+          "path": "apps/complex-sample/src/cat/cat.service.ts",
+          "blobSha": "9385f1f44eddd766b14f0f0e31e917e76fe8be1a"
+        },
+        {
+          "path": "apps/complex-sample/src/cat/cat.service.spec.ts",
+          "blobSha": "fd7b443ce2a90be0e7a0b1cd0cb55e2e307465a6"
+        },
+        {
+          "path": "LICENSE",
+          "blobSha": "ecadffcf9dff914aaf88df580aea07ccb84025e5"
+        }
+      ],
+      "cases": [
+        {
+          "filePath": "apps/complex-sample/src/cat/cat.controller.spec.ts",
+          "suitePath": [
+            "Cat Controller"
+          ],
+          "title": "should be defined",
+          "targetSymbols": []
+        },
+        {
+          "filePath": "apps/complex-sample/src/cat/cat.controller.spec.ts",
+          "suitePath": [
+            "Cat Controller",
+            "getAllCats"
+          ],
+          "title": "should get the list of cats",
+          "targetSymbols": [
+            "CatController.getAllCats"
+          ]
+        },
+        {
+          "filePath": "apps/complex-sample/src/cat/cat.controller.spec.ts",
+          "suitePath": [
+            "Cat Controller",
+            "getCatById"
+          ],
+          "title": "should get the cat matching the id",
+          "targetSymbols": [
+            "CatController.getCatById"
+          ]
+        },
+        {
+          "filePath": "apps/complex-sample/src/cat/cat.controller.spec.ts",
+          "suitePath": [
+            "Cat Controller",
+            "createNewCat"
+          ],
+          "title": "should return a new cat",
+          "targetSymbols": [
+            "CatController.createNewCat"
+          ]
+        },
+        {
+          "filePath": "apps/complex-sample/src/cat/cat.controller.spec.ts",
+          "suitePath": [
+            "Cat Controller",
+            "deleteCat"
+          ],
+          "title": "should return true that there was a deletion",
+          "targetSymbols": [
+            "CatController.deleteCat"
+          ]
+        },
+        {
+          "filePath": "apps/complex-sample/src/cat/cat.controller.spec.ts",
+          "suitePath": [
+            "Cat Controller",
+            "updateCat"
+          ],
+          "title": "should return cat when cat is updated",
+          "targetSymbols": [
+            "CatController.updateCat"
+          ]
+        },
+        {
+          "filePath": "apps/complex-sample/src/cat/cat.service.spec.ts",
+          "suitePath": [
+            "CatService"
+          ],
+          "title": "should be defined",
+          "targetSymbols": []
+        },
+        {
+          "filePath": "apps/complex-sample/src/cat/cat.service.spec.ts",
+          "suitePath": [
+            "CatService",
+            "getAll"
+          ],
+          "title": "should return the array of cats",
+          "targetSymbols": [
+            "CatService.getAll"
+          ]
+        },
+        {
+          "filePath": "apps/complex-sample/src/cat/cat.service.spec.ts",
+          "suitePath": [
+            "CatService",
+            "getById"
+          ],
+          "title": "should return a found cat",
+          "targetSymbols": [
+            "CatService.getById"
+          ]
+        },
+        {
+          "filePath": "apps/complex-sample/src/cat/cat.service.spec.ts",
+          "suitePath": [
+            "CatService",
+            "getById"
+          ],
+          "title": "should throw and error for a bad id",
+          "targetSymbols": [
+            "CatService.getById"
+          ]
+        },
+        {
+          "filePath": "apps/complex-sample/src/cat/cat.service.spec.ts",
+          "suitePath": [
+            "CatService",
+            "addCat"
+          ],
+          "title": "should add the cat",
+          "targetSymbols": [
+            "CatService.addCat"
+          ]
+        },
+        {
+          "filePath": "apps/complex-sample/src/cat/cat.service.spec.ts",
+          "suitePath": [
+            "CatService",
+            "deleteCat"
+          ],
+          "title": "should return true if the id is valid",
+          "targetSymbols": [
+            "CatService.deleteCat"
+          ]
+        },
+        {
+          "filePath": "apps/complex-sample/src/cat/cat.service.spec.ts",
+          "suitePath": [
+            "CatService",
+            "deleteCat"
+          ],
+          "title": "should return false if the id is invalid",
+          "targetSymbols": [
+            "CatService.deleteCat"
+          ]
+        },
+        {
+          "filePath": "apps/complex-sample/src/cat/cat.service.spec.ts",
+          "suitePath": [
+            "CatService",
+            "updateCat"
+          ],
+          "title": "should update the cat",
+          "targetSymbols": [
+            "CatService.addCat",
+            "CatService.updateCat"
+          ]
+        },
+        {
+          "filePath": "apps/complex-sample/src/cat/cat.service.spec.ts",
+          "suitePath": [
+            "CatService",
+            "updateCat"
+          ],
+          "title": "should throw error when id is not valid",
+          "targetSymbols": [
+            "CatService.updateCat"
+          ]
+        },
+        {
+          "filePath": "apps/complex-sample/src/cat/cat.service.spec.ts",
+          "suitePath": [
+            "CatService",
+            "getAll, addCat, getAll, deleteCat, getAll, findCat"
+          ],
+          "title": "should get all cats, create new cat, get all cats again, delete a cat, get all cats and find a specified cat and update a cat and getAll cat again",
+          "targetSymbols": [
+            "CatService.getAll",
+            "CatService.addCat",
+            "CatService.deleteCat",
+            "CatService.getById",
+            "CatService.updateCat"
+          ]
+        }
+      ],
+      "calls": [
+        {
+          "fromSymbol": "CatController.getAllCats",
+          "toSymbol": "CatService.getAll"
+        },
+        {
+          "fromSymbol": "CatController.getCatById",
+          "toSymbol": "CatService.getById"
+        },
+        {
+          "fromSymbol": "CatController.createNewCat",
+          "toSymbol": "CatService.addCat"
+        },
+        {
+          "fromSymbol": "CatController.deleteCat",
+          "toSymbol": "CatService.deleteCat"
+        },
+        {
+          "fromSymbol": "CatController.updateCat",
+          "toSymbol": "CatService.updateCat"
+        }
+      ]
+    },
+    {
+      "id": "nest-sql-typeorm",
+      "repository": "nestjs/nest",
+      "commitSha": "d8ee0143bdd76b2e81b460a196c15a9387b73ee2",
+      "files": [
+        {
+          "path": "sample/05-sql-typeorm/src/users/users.controller.ts",
+          "blobSha": "4f88099cdd9ad05a0f01e3c36a3069c3c62ade94"
+        },
+        {
+          "path": "sample/05-sql-typeorm/src/users/users.controller.spec.ts",
+          "blobSha": "4d1160037c3e6dce57c1430a00761bd127440908"
+        },
+        {
+          "path": "sample/05-sql-typeorm/src/users/users.service.ts",
+          "blobSha": "ac82eb7e1a175e6697ed0b4acf814a20dd76edca"
+        },
+        {
+          "path": "LICENSE",
+          "blobSha": "d209764d20a03be35896a1ad8ebf6aba30bc7172"
+        }
+      ],
+      "cases": [
+        {
+          "filePath": "sample/05-sql-typeorm/src/users/users.controller.spec.ts",
+          "suitePath": [
+            "UsersController"
+          ],
+          "title": "should be defined",
+          "targetSymbols": []
+        },
+        {
+          "filePath": "sample/05-sql-typeorm/src/users/users.controller.spec.ts",
+          "suitePath": [
+            "UsersController",
+            "create()"
+          ],
+          "title": "should create a user",
+          "targetSymbols": [
+            "UsersController.create"
+          ]
+        },
+        {
+          "filePath": "sample/05-sql-typeorm/src/users/users.controller.spec.ts",
+          "suitePath": [
+            "UsersController",
+            "findAll()"
+          ],
+          "title": "should find all users ",
+          "targetSymbols": [
+            "UsersController.findAll"
+          ]
+        },
+        {
+          "filePath": "sample/05-sql-typeorm/src/users/users.controller.spec.ts",
+          "suitePath": [
+            "UsersController",
+            "findOne()"
+          ],
+          "title": "should find a user",
+          "targetSymbols": [
+            "UsersController.findOne"
+          ]
+        },
+        {
+          "filePath": "sample/05-sql-typeorm/src/users/users.controller.spec.ts",
+          "suitePath": [
+            "UsersController",
+            "remove()"
+          ],
+          "title": "should remove the user",
+          "targetSymbols": [
+            "UsersController.remove"
+          ]
+        }
+      ],
+      "calls": [
+        {
+          "fromSymbol": "UsersController.create",
+          "toSymbol": "UsersService.create"
+        },
+        {
+          "fromSymbol": "UsersController.findAll",
+          "toSymbol": "UsersService.findAll"
+        },
+        {
+          "fromSymbol": "UsersController.findOne",
+          "toSymbol": "UsersService.findOne"
+        },
+        {
+          "fromSymbol": "UsersController.remove",
+          "toSymbol": "UsersService.remove"
+        }
+      ]
+    }
+  ]
+}

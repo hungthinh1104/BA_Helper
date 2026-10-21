@@ -1,4 +1,5 @@
 import { Controller, Get, Param, Post, Body, Query, Res } from '@nestjs/common';
+import { parseApiInput } from '../../../shared/parse-api-input';
 import { documentListResponseSchema } from '@ba-helper/contracts';
 import { ListDocumentsUseCase } from '../application/queries/list-documents.usecase';
 import { GetApprovedReportUseCase } from '../application/get-approved-report.usecase';
@@ -158,7 +159,7 @@ export class DocumentController {
     @CurrentUser() actor: RequestUser,
   ) {
     await this.permissions.assertCanReadAnalysis(actor, analysisId);
-    const parsedQuery = localeAwareReportQuerySchema.parse(query ?? {});
+    const parsedQuery = parseApiInput(localeAwareReportQuerySchema, query ?? {});
     
     const result = await this.getFinalReviewedReport.execute(analysisId, {
       locale: parsedQuery.locale,

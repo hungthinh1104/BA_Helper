@@ -14,7 +14,6 @@ import * as dotenv from 'dotenv';
 import { resolve } from 'node:path';
 
 dotenv.config({ path: resolve(__dirname, '../../.env.test') });
-process.env.DATABASE_URL = process.env.DATABASE_URL_TEST || process.env.DATABASE_URL;
 
 describe('Domain Quality Evaluation Safety Guards', () => {
   let app: any;

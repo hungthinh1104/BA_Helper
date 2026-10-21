@@ -32,7 +32,8 @@ export function TestTraceView({ coverage, locale, saved = false, onInspectEviden
           {item.testArtifacts.map(test => <div key={test.id} className="grid min-w-0 gap-2 rounded-md border border-border/50 bg-background p-3">
             <div><p className="text-[11px] text-muted-foreground">{test.testCase?.suitePath.join(' › ')}</p>
               <h5 className="break-words text-xs font-semibold">{test.testCase?.title ?? test.label}</h5>
-              {test.testCase ? <span className="font-mono text-[10px] text-muted-foreground">Jest · {test.testCase.modifier}</span> : null}</div>
+              {test.testCase ? <span className="font-mono text-[10px] text-muted-foreground">Jest · {test.testCase.modifier}</span> : null}
+              {test.testCase?.parameterized ? <p className="mt-1 text-xs text-muted-foreground">{labels.parameterized}</p> : null}</div>
             {test.trace ? <ol className="grid min-w-0 gap-2" aria-label={statuses[item.status]}>
               {test.trace.artifacts.map((artifact, index) => {
                 const edge = test.trace!.edges[index];

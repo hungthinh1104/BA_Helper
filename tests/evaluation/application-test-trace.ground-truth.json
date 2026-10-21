@@ -1,0 +1,464 @@
+{
+  "schemaVersion": 1,
+  "authoredAt": "2026-10-21",
+  "groundTruthMethod": "SOURCE_READ_BEFORE_ANALYZER_RUN",
+  "independentHumanReview": false,
+  "selectionMethod": "Application-level source slices selected by billing/subscription and subscriber lifecycle capabilities, plus a local factory acquisition pattern found during source screening. Repositories and labels frozen before the first analyzer run. Purposeful selection is not random sampling.",
+  "scope": "Exhaustive selected-source direct CALLS and active literal test declaration TESTS, including it.each source callbacks counted once using the literal title. Tests from unbound Mocha-compatible describe/it syntax are included under the existing parser syntax assumption. Calls through a single-return local new-Class factory count as desired source references. Only endpoints declared in the listed production files are graded; external package calls are out of scope. No source execution, runtime coverage, impact reasoning, or assertion coverage is measured.",
+  "repositories": [
+    {
+      "id": "amplication-billing",
+      "repository": "amplication/amplication",
+      "commitSha": "7656495d27f0dceff89657590c3f14149e45c7a6",
+      "files": [
+        {
+          "path": "packages/amplication-server/src/core/billing/billing.service.ts",
+          "blobSha": "d04aa759d47cc57e6aa484002c1210aaadaa88ae"
+        },
+        {
+          "path": "packages/amplication-server/src/core/billing/billing.service.spec.ts",
+          "blobSha": "d018caa5f4993c2d22905e68c6a76258cb67c72f"
+        },
+        {
+          "path": "packages/amplication-server/src/core/subscription/subscription.service.ts",
+          "blobSha": "9eb88f09cceb2880a50afdec6ba2df9d2322c5c5"
+        },
+        {
+          "path": "packages/amplication-server/src/core/subscription/subscription.service.spec.ts",
+          "blobSha": "dbb7b3bd5c369efbc0f92700401358a7705b72ac"
+        },
+        {
+          "path": "LICENSE",
+          "blobSha": "7fafa9ed7d819c5e2206f5a82c84c699823650f6"
+        }
+      ],
+      "cases": [
+        {
+          "filePath": "packages/amplication-server/src/core/billing/billing.service.spec.ts",
+          "suitePath": [
+            "BillingService"
+          ],
+          "title": "should be defined",
+          "targetSymbols": []
+        },
+        {
+          "filePath": "packages/amplication-server/src/core/billing/billing.service.spec.ts",
+          "suitePath": [
+            "BillingService",
+            "getSubscription, as amplication always have only one subscription"
+          ],
+          "title": "should return %s subscription when subscription status is %s",
+          "targetSymbols": [
+            "BillingService.getSubscription"
+          ]
+        },
+        {
+          "filePath": "packages/amplication-server/src/core/billing/billing.service.spec.ts",
+          "suitePath": [
+            "BillingService",
+            "getSubscription, as amplication always have only one subscription"
+          ],
+          "title": "should return null as subscription when subscription status is %s",
+          "targetSymbols": [
+            "BillingService.getSubscription"
+          ]
+        },
+        {
+          "filePath": "packages/amplication-server/src/core/billing/billing.service.spec.ts",
+          "suitePath": [
+            "BillingService",
+            "provisionCustomer"
+          ],
+          "title": "should provision customer and not sync free plans to Stripe",
+          "targetSymbols": [
+            "BillingService.provisionCustomer"
+          ]
+        },
+        {
+          "filePath": "packages/amplication-server/src/core/billing/billing.service.spec.ts",
+          "suitePath": [
+            "BillingService"
+          ],
+          "title": "should provision customer with default plan: Enterprise with addons",
+          "targetSymbols": [
+            "BillingService.provisionCustomer"
+          ]
+        },
+        {
+          "filePath": "packages/amplication-server/src/core/billing/billing.service.spec.ts",
+          "suitePath": [
+            "BillingService",
+            "validateSubscriptionPlanLimitationsForWorkspace"
+          ],
+          "title": "should throw exceptions on number of services if the workspace has no entitlement to bypass code generation limitation",
+          "targetSymbols": [
+            "BillingService.validateSubscriptionPlanLimitationsForWorkspace",
+            "BillingService.getBooleanEntitlement",
+            "BillingService.getMeteredEntitlement"
+          ]
+        },
+        {
+          "filePath": "packages/amplication-server/src/core/billing/billing.service.spec.ts",
+          "suitePath": [
+            "BillingService",
+            "validateSubscriptionPlanLimitationsForWorkspace"
+          ],
+          "title": "should throw exceptions on number of team members if the workspace has no entitlement to bypass code generation limitation",
+          "targetSymbols": [
+            "BillingService.validateSubscriptionPlanLimitationsForWorkspace",
+            "BillingService.getBooleanEntitlement"
+          ]
+        },
+        {
+          "filePath": "packages/amplication-server/src/core/billing/billing.service.spec.ts",
+          "suitePath": [
+            "BillingService",
+            "validateSubscriptionPlanLimitationsForWorkspace"
+          ],
+          "title": "should throw exception when using %s git provider if the workspace has no entitlement or bypass code generation limitation",
+          "targetSymbols": [
+            "BillingService.validateSubscriptionPlanLimitationsForWorkspace"
+          ]
+        },
+        {
+          "filePath": "packages/amplication-server/src/core/billing/billing.service.spec.ts",
+          "suitePath": [
+            "BillingService",
+            "validateSubscriptionPlanLimitationsForWorkspace"
+          ],
+          "title": "should not throw exception when using %s git provider as it is the default provider and never checked for entitlements",
+          "targetSymbols": [
+            "BillingService.validateSubscriptionPlanLimitationsForWorkspace"
+          ]
+        },
+        {
+          "filePath": "packages/amplication-server/src/core/billing/billing.service.spec.ts",
+          "suitePath": [
+            "BillingService"
+          ],
+          "title": "should report usage as delta update by using the UsageUpdateBehavior.Delta",
+          "targetSymbols": [
+            "BillingService.reportUsage"
+          ]
+        },
+        {
+          "filePath": "packages/amplication-server/src/core/billing/billing.service.spec.ts",
+          "suitePath": [
+            "BillingService"
+          ],
+          "title": "should set usage overriding current usage by using the UsageUpdateBehavior.Set",
+          "targetSymbols": [
+            "BillingService.setUsage"
+          ]
+        },
+        {
+          "filePath": "packages/amplication-server/src/core/billing/billing.service.spec.ts",
+          "suitePath": [
+            "BillingService",
+            "resetUsage"
+          ],
+          "title": "should call setUsage for each feature when billing is enabled",
+          "targetSymbols": [
+            "BillingService.resetUsage"
+          ]
+        },
+        {
+          "filePath": "packages/amplication-server/src/core/billing/billing.service.spec.ts",
+          "suitePath": [
+            "BillingService",
+            "resetUsage"
+          ],
+          "title": "should not call setUsage when billing is disabled",
+          "targetSymbols": [
+            "BillingService.resetUsage"
+          ]
+        },
+        {
+          "filePath": "packages/amplication-server/src/core/subscription/subscription.service.spec.ts",
+          "suitePath": [
+            "SubscriptionService"
+          ],
+          "title": "should be defined",
+          "targetSymbols": []
+        },
+        {
+          "filePath": "packages/amplication-server/src/core/subscription/subscription.service.spec.ts",
+          "suitePath": [
+            "SubscriptionService",
+            "when updateProjectLicensed is called",
+            "when the billing is not enabled"
+          ],
+          "title": "should do nothing",
+          "targetSymbols": [
+            "SubscriptionService.updateProjectLicensed"
+          ]
+        },
+        {
+          "filePath": "packages/amplication-server/src/core/subscription/subscription.service.spec.ts",
+          "suitePath": [
+            "SubscriptionService",
+            "when updateProjectLicensed is called",
+            "when the billing is enabled"
+          ],
+          "title": "should update all projects with licensed true when there is no limit",
+          "targetSymbols": [
+            "SubscriptionService.updateProjectLicensed"
+          ]
+        },
+        {
+          "filePath": "packages/amplication-server/src/core/subscription/subscription.service.spec.ts",
+          "suitePath": [
+            "SubscriptionService",
+            "when updateProjectLicensed is called",
+            "when the billing is enabled"
+          ],
+          "title": "should update the first project with licensed true and the the second and the third projects with licensed false when the usage limitation is 1",
+          "targetSymbols": [
+            "SubscriptionService.updateProjectLicensed"
+          ]
+        },
+        {
+          "filePath": "packages/amplication-server/src/core/subscription/subscription.service.spec.ts",
+          "suitePath": [
+            "SubscriptionService",
+            "when updateServiceLicensed is called",
+            "when the billing is not enabled"
+          ],
+          "title": "should do nothing",
+          "targetSymbols": [
+            "SubscriptionService.updateServiceLicensed"
+          ]
+        },
+        {
+          "filePath": "packages/amplication-server/src/core/subscription/subscription.service.spec.ts",
+          "suitePath": [
+            "SubscriptionService",
+            "when updateServiceLicensed is called",
+            "when the billing is enabled"
+          ],
+          "title": "should update all services with licensed true when there is no limit",
+          "targetSymbols": [
+            "SubscriptionService.updateServiceLicensed"
+          ]
+        },
+        {
+          "filePath": "packages/amplication-server/src/core/subscription/subscription.service.spec.ts",
+          "suitePath": [
+            "SubscriptionService",
+            "when updateServiceLicensed is called",
+            "when the billing is enabled"
+          ],
+          "title": "should update the first service with licensed true and the the second and the third services with licensed false when the usage limitation is 1",
+          "targetSymbols": [
+            "SubscriptionService.updateServiceLicensed"
+          ]
+        }
+      ],
+      "calls": [
+        {
+          "fromSymbol": "BillingService.getMeteredEntitlement",
+          "toSymbol": "BillingService.getStiggClient"
+        },
+        {
+          "fromSymbol": "BillingService.getNumericEntitlement",
+          "toSymbol": "BillingService.getStiggClient"
+        },
+        {
+          "fromSymbol": "BillingService.getBooleanEntitlement",
+          "toSymbol": "BillingService.getStiggClient"
+        },
+        {
+          "fromSymbol": "BillingService.provisionSubscription",
+          "toSymbol": "BillingService.getStiggClient"
+        },
+        {
+          "fromSymbol": "BillingService.getSubscription",
+          "toSymbol": "BillingService.getStiggClient"
+        },
+        {
+          "fromSymbol": "BillingService.getSubscription",
+          "toSymbol": "BillingService.mapSubscriptionStatus"
+        },
+        {
+          "fromSymbol": "BillingService.getSubscription",
+          "toSymbol": "BillingService.mapSubscriptionPlan"
+        },
+        {
+          "fromSymbol": "BillingService.validateSubscriptionPlanLimitationsForWorkspace",
+          "toSymbol": "BillingService.getBooleanEntitlement"
+        },
+        {
+          "fromSymbol": "BillingService.validateSubscriptionPlanLimitationsForWorkspace",
+          "toSymbol": "BillingService.getMeteredEntitlement"
+        },
+        {
+          "fromSymbol": "BillingService.resetUsage",
+          "toSymbol": "BillingService.setUsage"
+        },
+        {
+          "fromSymbol": "SubscriptionService.updateProjectLicensed",
+          "toSymbol": "BillingService.getMeteredEntitlement"
+        },
+        {
+          "fromSymbol": "SubscriptionService.updateServiceLicensed",
+          "toSymbol": "BillingService.getMeteredEntitlement"
+        },
+        {
+          "fromSymbol": "SubscriptionService.handleUpdateSubscriptionStatusEvent",
+          "toSymbol": "SubscriptionService.mapUpdateStatusDtoToUpsertSubscriptionInput"
+        },
+        {
+          "fromSymbol": "SubscriptionService.handleUpdateSubscriptionStatusEvent",
+          "toSymbol": "SubscriptionService.updateProjectLicensed"
+        },
+        {
+          "fromSymbol": "SubscriptionService.handleUpdateSubscriptionStatusEvent",
+          "toSymbol": "SubscriptionService.updateServiceLicensed"
+        },
+        {
+          "fromSymbol": "SubscriptionService.handleUpdateSubscriptionStatusEvent",
+          "toSymbol": "SubscriptionService.trackUpgradeCompletedEvent"
+        },
+        {
+          "fromSymbol": "SubscriptionService.mapUpdateStatusDtoToUpsertSubscriptionInput",
+          "toSymbol": "BillingService.mapSubscriptionStatus"
+        },
+        {
+          "fromSymbol": "SubscriptionService.mapUpdateStatusDtoToUpsertSubscriptionInput",
+          "toSymbol": "BillingService.mapSubscriptionPlan"
+        },
+        {
+          "fromSymbol": "SubscriptionService.resolveSubscription",
+          "toSymbol": "SubscriptionService.getCurrentSubscription"
+        },
+        {
+          "fromSymbol": "SubscriptionService.resolveSubscription",
+          "toSymbol": "BillingService.getSubscription"
+        }
+      ],
+      "notes": "Billing/subscription application capability. Four it.each declarations are graded once per source callback with the literal unexpanded title, never once per runtime data row. Typed mock object property references and spyOn strings are not direct method calls."
+    },
+    {
+      "id": "novu-subscribers",
+      "repository": "novuhq/novu",
+      "commitSha": "3d5fb5ffb54405e0d94bb3f8ba4e2fb4b1a3ef2d",
+      "files": [
+        {
+          "path": "apps/api/src/app/subscribers/usecases/get-subscriber/get-subscriber.usecase.ts",
+          "blobSha": "675234ec14bb9f30d6734926ee2c004127231456"
+        },
+        {
+          "path": "apps/api/src/app/subscribers/usecases/get-subscriber/get-subscriber.spec.ts",
+          "blobSha": "6a76d6502eab095d5a445f4abb01deb359dc66c6"
+        },
+        {
+          "path": "apps/api/src/app/subscribers/usecases/remove-subscriber/remove-subscriber.usecase.ts",
+          "blobSha": "9fb3c076efca73f4311460100cae0acfddf6f235"
+        },
+        {
+          "path": "apps/api/src/app/subscribers/usecases/remove-subscriber/remove-subscriber.spec.ts",
+          "blobSha": "35c51a3fdbd9d2fa802ed21a01893d556039023b"
+        },
+        {
+          "path": "apps/api/src/app/agents/channels/photon-imessage/remove-photon-webhooks/remove-photon-webhooks.usecase.ts",
+          "blobSha": "c4da0ab095b2dd6b2dbade91b20f4b0a02d7fb43"
+        },
+        {
+          "path": "apps/api/src/app/agents/channels/photon-imessage/remove-photon-webhooks/remove-photon-webhooks.usecase.spec.ts",
+          "blobSha": "32d4e0bf0b3347b0d4e09d3138544eb57ef22ae0"
+        },
+        {
+          "path": "LICENSE-MIT",
+          "blobSha": "29a1b830e2babe4167c071c99dc9e5160eba93a6"
+        },
+        {
+          "path": "README.md",
+          "blobSha": "cdcbc6c4a750f6bf48a3fc457044ad66ef155e16"
+        }
+      ],
+      "cases": [
+        {
+          "filePath": "apps/api/src/app/subscribers/usecases/get-subscriber/get-subscriber.spec.ts",
+          "suitePath": [
+            "Get Subscriber"
+          ],
+          "title": "should get a subscriber",
+          "targetSymbols": [
+            "GetSubscriber.execute"
+          ]
+        },
+        {
+          "filePath": "apps/api/src/app/subscribers/usecases/get-subscriber/get-subscriber.spec.ts",
+          "suitePath": [
+            "Get Subscriber"
+          ],
+          "title": "should get a not found exception if subscriber does not exist",
+          "targetSymbols": [
+            "GetSubscriber.execute"
+          ]
+        },
+        {
+          "filePath": "apps/api/src/app/subscribers/usecases/remove-subscriber/remove-subscriber.spec.ts",
+          "suitePath": [
+            "Remove Subscriber"
+          ],
+          "title": "should remove a subscriber",
+          "targetSymbols": [
+            "RemoveSubscriber.execute"
+          ]
+        },
+        {
+          "filePath": "apps/api/src/app/subscribers/usecases/remove-subscriber/remove-subscriber.spec.ts",
+          "suitePath": [
+            "Remove Subscriber"
+          ],
+          "title": "should throw a not found exception if subscriber to remove does not exist",
+          "targetSymbols": [
+            "RemoveSubscriber.execute"
+          ]
+        },
+        {
+          "filePath": "apps/api/src/app/agents/channels/photon-imessage/remove-photon-webhooks/remove-photon-webhooks.usecase.spec.ts",
+          "suitePath": [
+            "RemovePhotonWebhooks usecase"
+          ],
+          "title": "refuses to remove URLs that are not Novu agent webhooks",
+          "targetSymbols": [
+            "RemovePhotonWebhooks.execute"
+          ]
+        },
+        {
+          "filePath": "apps/api/src/app/agents/channels/photon-imessage/remove-photon-webhooks/remove-photon-webhooks.usecase.spec.ts",
+          "suitePath": [
+            "RemovePhotonWebhooks usecase"
+          ],
+          "title": "resolves supplied URLs to webhook ids and removes them",
+          "targetSymbols": [
+            "RemovePhotonWebhooks.execute"
+          ]
+        },
+        {
+          "filePath": "apps/api/src/app/agents/channels/photon-imessage/remove-photon-webhooks/remove-photon-webhooks.usecase.spec.ts",
+          "suitePath": [
+            "RemovePhotonWebhooks usecase"
+          ],
+          "title": "returns a failure message when Photon rejects the deletion",
+          "targetSymbols": [
+            "RemovePhotonWebhooks.execute"
+          ]
+        }
+      ],
+      "calls": [
+        {
+          "fromSymbol": "GetSubscriber.execute",
+          "toSymbol": "GetSubscriber.fetchSubscriber"
+        },
+        {
+          "fromSymbol": "GetSubscriber.execute",
+          "toSymbol": "GetSubscriber.fetchSubscriberTopics"
+        }
+      ],
+      "notes": "Application source with Mocha/Chai and unbound describe/it syntax. This evaluates the analyzer's documented Jest-style global syntax assumption, not verified Jest runner identity. External package calls, including test setup and repositories, are outside this selected-source scope. Local factory return calls are included as desired static references."
+    }
+  ]
+}

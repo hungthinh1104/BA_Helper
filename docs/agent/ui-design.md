@@ -4,6 +4,16 @@ Do not mix them blindly
 Landing prioritizes clarity/trust
 Workspace prioritizes density/evidence review
 
+Login inputs and submission remain disabled while the client auth session is
+loading, so early interaction cannot submit the server-rendered native form
+before hydration. Typography uses the existing CSS token stacks; do not load
+unused remote font families during compilation.
+
+After a review decision, auto-advance to the next visible `needs_review` item,
+wrapping to earlier pending items. Skip accepted/rejected items and keep the
+selection when there is no pending successor. Manual navigation may still open
+reviewed items; finalization continues to use backend capabilities.
+
 Letters uses light theme, blue gradient, rounded cards, black CTA, blue accent.
 Linear uses dark command-center, compact density, mono/code surfaces.
 ## Static Test Trace In Review
@@ -27,3 +37,13 @@ payload. It does not fetch live QA or live excerpts to fill historical gaps.
 Markdown and PDF carry the same captured source-path appendix. Use existing
 theme tokens and UI primitives; the trace supplements the review loop and
 requires no separate dashboard or workflow.
+
+Report diagrams use Mermaid strict mode with SVG text labels and a separate
+DOMPurify SVG-only sanitization before DOM insertion. Suppress Mermaid's error
+markup and show the original chart as escaped text on failure. Clear a previous
+diagram on input changes and ignore late results from earlier render requests.
+
+For `testCase.parameterized: true`, show the localized source-declaration
+notice in both live and saved traces. Keep title placeholders intact and make
+clear that data rows have not been expanded. Markdown/PDF appendices carry the
+same notice. Never display generated row counts or execution results from it.

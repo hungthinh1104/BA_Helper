@@ -1,3 +1,4 @@
+import { parseApiInput } from '../../../shared/parse-api-input';
 import { Body, Controller, Param, Post, Get } from '@nestjs/common';
 import {
   requirementCreateRequestSchema,
@@ -41,7 +42,7 @@ export class RequirementController {
       'requirement:create',
       'Project',
     );
-    const input = requirementCreateRequestSchema.parse(body);
+    const input = parseApiInput(requirementCreateRequestSchema, body);
     const result = await this.createRequirement.execute({
       projectId,
       title: input.title,
@@ -69,7 +70,7 @@ export class RequirementController {
       requirementId,
       'requirement:create',
     );
-    const input = requirementRevisionCreateRequestSchema.parse(body);
+    const input = parseApiInput(requirementRevisionCreateRequestSchema, body);
     const result = await this.createRevision.execute({
       requirementId,
       title: input.title,

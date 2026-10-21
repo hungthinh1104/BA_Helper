@@ -3,6 +3,17 @@ import { workspaceModeSchema } from './project.contract';
 
 export const systemDependencyStatusSchema = z.enum(['up', 'down']);
 
+export const recoverableQueueNameSchema = z.enum([
+  'scan-job', 'embedding', 'impact-analysis', 'document-job',
+]);
+
+export const retryFailedJobResponseSchema = z.object({
+  queueName: recoverableQueueNameSchema,
+  jobId: z.string(),
+  productEntityId: z.string(),
+  status: z.literal('RETRIED'),
+});
+
 export const systemDependenciesSchema = z.object({
   database: systemDependencyStatusSchema,
   pgvector: systemDependencyStatusSchema,

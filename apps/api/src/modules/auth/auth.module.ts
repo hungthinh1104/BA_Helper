@@ -12,9 +12,11 @@ import { PasswordHashService } from './application/password-hash.service';
     PrismaModule,
     EventLogModule,
     PassportModule,
-    JwtModule.register({
-      secret: resolveJwtSecret(),
-      signOptions: { expiresIn: '1d' },
+    JwtModule.registerAsync({
+      useFactory: () => ({
+        secret: resolveJwtSecret(),
+        signOptions: { expiresIn: '1d' as const },
+      }),
     }),
   ],
   controllers: [AuthController],

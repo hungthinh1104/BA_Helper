@@ -6,9 +6,19 @@ type JestApi = 'describe' | 'it' | 'test';
 const apis = new Set(['describe', 'it', 'test']);
 
 export function readJestDeclaration(call: CallExpression): {
-  api: JestApi; modifier: TestModifier; supported: boolean;
+  api: JestApi; modifier: TestModifier; supported: boolean; parameterized?: boolean;
 } | undefined {
   let expression: Node = call.getExpression();
+  let parameterized = false;
+  // Parse the curried declaration, never evaluate its table or expand data rows.
+  if (Node.isCallExpression(expression) && expression.getArguments().length === 1 &&
+    Node.isArrayLiteralExpression(expression.getArguments()[0])) {
+    const each = expression.getExpression();
+    if (Node.isPropertyAccessExpression(each) && each.getName() === 'each') {
+      parameterized = true;
+      expression = each.getExpression();
+    }
+  }
   const modifiers: string[] = [];
   let factory = false;
   while (!Node.isIdentifier(expression)) {
@@ -37,8 +47,10 @@ export function readJestDeclaration(call: CallExpression): {
   const validSpelling = modifiers.length === 0 || ['skip', 'only', 'todo'].includes(modifiers[0]);
   const supported = importedFromJest && !factory && modifiers.length <= 1 &&
     validSpelling &&
-    ['NORMAL', 'SKIP', 'ONLY', ...(name === 'describe' ? [] : ['TODO'])].includes(modifier);
-  return { api: name as JestApi, modifier: supported ? modifier as TestModifier : 'NORMAL', supported };
+    ['NORMAL', 'SKIP', 'ONLY', ...(name === 'describe' ? [] : ['TODO'])].includes(modifier) &&
+    (!parameterized || (name !== 'describe' && modifier !== 'TODO'));
+  return { api: name as JestApi, modifier: supported ? modifier as TestModifier : 'NORMAL', supported,
+    ...(supported && parameterized ? { parameterized: true } : {}) };
 }
 
 export function literalJestTitle(node: Node | undefined): string | undefined {

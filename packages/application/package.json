@@ -35,11 +35,11 @@
   "dependencies": {
     "@ba-helper/contracts": "workspace:*",
     "@ba-helper/shared": "workspace:*",
-    "zod": "^3.22.4"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@types/node": "^20",
-    "eslint": "^9",
-    "typescript": "^5"
+    "@types/node": "^20.19.43",
+    "eslint": "^9.39.5",
+    "typescript": "^5.9.3"
   }
 }

@@ -2,6 +2,7 @@ import { GetImpactGraphUseCase } from './get-impact-graph.usecase';
 import { ImpactGraphReadModelBuilder } from './impact-graph-read-model.builder';
 import { AppError } from '@ba-helper/shared';
 import { PrismaService } from "@ba-helper/backend-runtime";
+import { impactGraphResponseSchema } from '@ba-helper/contracts';
 
 // ── Helper builders ──────────────────────────────────────────────────────────
 
@@ -70,6 +71,14 @@ function makePrisma(analysis: ReturnType<typeof makeAnalysis> | null, deps: unkn
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('GetImpactGraphUseCase', () => {
+  it.each([null, undefined, { method: 'UNSUPPORTED' }])('omits unavailable retrieval metadata from the wire response: %#', async metadata => {
+    const artifact = makeArtifact('artifact');
+    const analysis = makeAnalysis({ traceabilityLinks: [makeTraceabilityLink('link', artifact, { retrievalMetadata: metadata })] });
+    const result = await new GetImpactGraphUseCase(new ImpactGraphReadModelBuilder(makePrisma(analysis))).execute('analysis-1');
+    expect(result.nodes.find(node => node.artifactKey === artifact.artifactKey)?.retrieval).toBeUndefined();
+    expect(impactGraphResponseSchema.safeParse(result).success).toBe(true);
+  });
+
   it('preserves persisted static provenance without reversing the evidence origin for TESTS', async () => {
     const service = makeArtifact('svc');
     const testCase = { framework: 'jest', suitePath: ['Booking'], title: 'cancels',

@@ -5,6 +5,16 @@ import { artifact, edge, evidence, input, testCase } from './qa-trace.test-fixtu
 describe('snapshot-scoped static test trace projection', () => {
   const deriver = new QaCoverageDeriver();
 
+  it('projects a parameterized source declaration without multiplying paths into data rows', () => {
+    const code = artifact('refund'), test = testCase();
+    test.metadata = { testCase: { ...(test.metadata as { testCase: object }).testCase, parameterized: true } };
+    const result = deriver.derive(input([code], [test], [edge('tests', test, code, 'TESTS')]));
+    expect(result.items[0].testArtifacts).toHaveLength(1);
+    expect(result.items[0].testArtifacts[0].testCase).toHaveProperty('parameterized', true);
+    expect(result.items[0].reason).toContain('source declaration');
+    expect(result.summary.covered).toBe(1);
+  });
+
   it('returns only impacted code rows with evidence-backed direct and indirect paths', () => {
     const cancel = artifact('cancel');
     const refund = artifact('refund');

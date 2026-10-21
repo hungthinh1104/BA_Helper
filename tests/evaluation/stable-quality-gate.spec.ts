@@ -122,6 +122,12 @@ describe('two-layer stable quality gate scorer', () => {
     expect(scorecard.failures.some((f) => f.includes('artifactPrecision'))).toBe(true);
   });
 
+  it('fails when a positive case emits no committed claims instead of earning empty-set precision', async () => {
+    const scorecard = await run({ ...perfectResult, committedArtifactKeys: [] });
+    expect(scorecard.status).toBe('FAIL');
+    expect(scorecard.failures.some(failure => failure.includes('no committed claims'))).toBe(true);
+  });
+
   it('fails on orphan committed artifacts without evidence', async () => {
     const scorecard = await run({
       ...perfectResult,

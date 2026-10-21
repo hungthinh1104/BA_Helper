@@ -75,8 +75,8 @@ const workspace: AnalysisWorkspaceResponse = {
 
 const labels = analysisWorkspaceLabels.en
 
-function renderWorkbench(ws: AnalysisWorkspaceResponse = workspace) {
-  const viewModel = createAnalysisWorkbenchViewModel(ws)
+function renderWorkbench(ws: AnalysisWorkspaceResponse = workspace, selectedItemId: string | null = null) {
+  const viewModel = createAnalysisWorkbenchViewModel(ws, selectedItemId)
   return render(
     <AnalysisReviewWorkbench
       workspace={ws}
@@ -115,6 +115,20 @@ describe("AnalysisReviewWorkbench decision loop", () => {
     expect((decide.mock.calls[0][0] as { action: string }).action).toBe("accept")
     // onSuccess ran → advanced to the second item.
     expect(push).toHaveBeenCalledWith(expect.stringContaining("item=second"), { scroll: false })
+  })
+
+  it("wraps to an earlier pending decision instead of cycling through accepted items", () => {
+    renderWorkbench({ ...workspace, reviewQueue: [...workspace.reviewQueue,
+      { ...queueItem("done"), currentDecision: "accepted", blockingFinalize: false }] }, "second")
+    fireEvent.click(panel().getByRole("button", { name: "Accept" }))
+    expect(push).toHaveBeenCalledWith(expect.stringContaining("item=first"), { scroll: false })
+  })
+
+  it("stays on the last pending item when every other item has been reviewed", () => {
+    renderWorkbench({ ...workspace, reviewQueue: [queueItem("first"),
+      { ...queueItem("done"), currentDecision: "accepted", blockingFinalize: false }] })
+    fireEvent.click(panel().getByRole("button", { name: "Accept" }))
+    expect(push).not.toHaveBeenCalled()
   })
 
   it("blocks reject until a rationale is entered", () => {

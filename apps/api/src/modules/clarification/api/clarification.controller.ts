@@ -1,3 +1,4 @@
+import { parseApiInput } from '../../../shared/parse-api-input';
 import { Controller, Get, Post, Patch, Param, Body } from '@nestjs/common';
 import {
   CreateClarificationRequestSchema,
@@ -51,7 +52,7 @@ export class ClarificationController {
       analysisId,
       'clarification:write',
     );
-    const input = CreateClarificationRequestSchema.parse(body);
+    const input = parseApiInput(CreateClarificationRequestSchema, body);
     const item = await this.ensureUseCase.execute(analysisId, input.sourceInsightId);
     return ClarificationItemDtoSchema.parse(ClarificationMapper.toDto(item));
   }
@@ -67,7 +68,7 @@ export class ClarificationController {
       id,
       'clarification:write',
     );
-    const input = AnswerClarificationRequestSchema.parse(body);
+    const input = parseApiInput(AnswerClarificationRequestSchema, body);
     const item = await this.answerUseCase.execute(id, input.answer);
     return ClarificationItemDtoSchema.parse(ClarificationMapper.toDto(item));
   }
@@ -83,7 +84,7 @@ export class ClarificationController {
       id,
       'clarification:write',
     );
-    const input = DismissClarificationRequestSchema.parse(body);
+    const input = parseApiInput(DismissClarificationRequestSchema, body);
     const item = await this.dismissUseCase.execute(id, input.reason);
     return ClarificationItemDtoSchema.parse(ClarificationMapper.toDto(item));
   }

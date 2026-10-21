@@ -31,7 +31,7 @@ export class TypeScriptNestJsAdapter implements ScannerAdapter {
       'Prisma models',
       'method/class artifacts'
     ],
-    partialPatterns: ['Jest literal describe/it/test declarations and modifiers'],
+    partialPatterns: ['Jest literal declarations/modifiers and inline-array it/test.each source callbacks'],
     unsupportedPatterns: ['dynamic receivers', 'barrel/path-alias graph resolution', 'runtime test coverage'],
   };
 

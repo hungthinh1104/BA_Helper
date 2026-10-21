@@ -6,6 +6,7 @@ import { ScanJobStage, ScanJobStatus } from '@prisma/client';;
 
 jest.mock('node:fs/promises', () => ({
   mkdtemp: jest.fn(),
+  realpath: jest.fn(),
   rm: jest.fn(),
 }));
 
@@ -136,6 +137,7 @@ describe('RuntimeScanJobRunnerAdapter', () => {
 
   beforeEach(() => {
     jest.resetAllMocks();
+    (fs.realpath as jest.Mock).mockImplementation(async (value: string) => value);
     delete process.env.BA_HELPER_PRESERVE_SCAN_WORKSPACE;
     const secretRedactor = (
       jest.requireMock('@ba-helper/analyzer') as {

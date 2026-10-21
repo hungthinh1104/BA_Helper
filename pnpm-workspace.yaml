@@ -5,7 +5,7 @@ packages:
 allowBuilds:
   '@nestjs/core': false
   '@parcel/watcher': true
-  '@prisma/client': set this to true or false
+  '@prisma/client': false
   '@prisma/engines': false
   '@scarf/scarf': false
   '@swc/core': false
@@ -15,5 +15,19 @@ allowBuilds:
   prisma: false
   sharp: true
   unrs-resolver: false
+  vue-demi: false
 minimumReleaseAgeExclude:
-  - bullmq@5.77.6
+  - '@scalar/agent-chat@0.12.45'
+  - '@scalar/api-client@3.23.2'
+  - '@scalar/api-reference@1.75.1'
+  - '@scalar/blocks@0.5.4'
+  - '@scalar/components@0.32.1'
+  - '@scalar/json-magic@0.16.1'
+  - '@scalar/oas-utils@0.20.14'
+  - '@scalar/openapi-to-markdown@1.6.1'
+  - '@scalar/sidebar@0.12.2'
+  - '@scalar/snippetz@0.10.10'
+  - '@scalar/workspace-store@0.68.5'
+overrides:
+  # GHSA-r3ph-w7gj-g6xm: Swagger 11.4.7 pins js-yaml 5.3.0; remove when upstream fixes its pin.
+  '@nestjs/swagger@11.4.7>js-yaml': 5.4.1

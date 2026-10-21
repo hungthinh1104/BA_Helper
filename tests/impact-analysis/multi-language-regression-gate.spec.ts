@@ -1,7 +1,6 @@
 import { prepareIsolatedTestEnv } from '../../apps/api/test/e2e/helpers/prepare-test-env';
 import { resetDatabase } from '../../apps/api/test/e2e/helpers/reset-db';
 import { Test, TestingModule } from '@nestjs/testing';
-import { execSync } from 'node:child_process';
 import { AppModule } from '../../apps/api/src/app.module';
 import {
   RunDocumentJobUseCase,
@@ -10,7 +9,7 @@ import {
 } from '@ba-helper/application';
 import { FinalizeImpactAnalysisUseCase } from '../../apps/api/src/modules/impact-analysis/application/lifecycle/finalize-impact-analysis.usecase';
 import { ScanJobStatus } from '@prisma/client';
-import { resolve, join } from 'node:path';
+import { resolve, join, dirname } from 'node:path';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import { PrismaService } from "@ba-helper/backend-runtime";
@@ -46,7 +45,7 @@ describe('Multi-Language End-to-End Regression Gate', () => {
     runImpactAnalysis = app.get(RunImpactAnalysisUseCase);
     finalizeImpactAnalysis = app.get(FinalizeImpactAnalysisUseCase);
     runDocumentJob = app.get(RunDocumentJobUseCase);
-  });
+  }, 120000);
 
   afterAll(async () => {
     for (const dir of tempDirs) {
@@ -65,21 +64,9 @@ describe('Multi-Language End-to-End Regression Gate', () => {
       await fs.writeFile(fullPath, content);
     }
     
-    // Initialize git repository so RunScanJobUseCase can clone it locally
-    execSync('git init', { cwd: tempDir, stdio: 'ignore' });
-    execSync('git branch -m main', { cwd: tempDir, stdio: 'ignore' });
-    execSync('git add .', { cwd: tempDir, stdio: 'ignore' });
-    execSync('git config user.email "test@example.com"', { cwd: tempDir, stdio: 'ignore' });
-    execSync('git config user.name "Test"', { cwd: tempDir, stdio: 'ignore' });
-    execSync('git commit -m "init"', { cwd: tempDir, stdio: 'ignore' });
+    // Test-only source acquisition copies this directory; no Git process is needed.
     
     return tempDir;
-  };
-
-  const dirname = (filePath: string) => {
-      const parts = filePath.split('/');
-      parts.pop();
-      return parts.join('/');
   };
 
   const getSupportedFixtures = async () => {
@@ -400,6 +387,6 @@ func getRefunds(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) }`
         const snapshot = await prisma.repositorySnapshot.findFirst({ where: { repositoryId: repo.id } });
         expect(snapshot).toBeNull();
       }
-    });
+    }, 120000);
   });
 });

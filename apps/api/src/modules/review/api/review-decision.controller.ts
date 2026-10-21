@@ -1,3 +1,4 @@
+import { parseApiInput } from '../../../shared/parse-api-input';
 import { Body, Controller, Param, Put } from '@nestjs/common';
 import {
   RequestUser,
@@ -27,7 +28,7 @@ export class ReviewDecisionController {
     @Body() body: unknown,
     @CurrentUser() actor: RequestUser,
   ) {
-    const input = submitReviewItemDecisionRequestSchema.parse(body);
+    const input = parseApiInput(submitReviewItemDecisionRequestSchema, body);
 
     if (input.target === 'impact') {
       await this.permissions.assertPermissionForTraceabilityLink(

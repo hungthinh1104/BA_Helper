@@ -1,4 +1,5 @@
-import { Body, Controller, Param, Post, Get, Query, BadRequestException } from '@nestjs/common';
+import { parseApiInput } from '../../../shared/parse-api-input';
+import { Body, Controller, Param, Post, Get, Query } from '@nestjs/common';
 import {
   repositoryCreateRequestSchema,
   repositoryCreateResponseSchema,
@@ -103,7 +104,7 @@ export class RepositoryController {
       'repository:manage',
       'Project',
     );
-    const input = repositoryCreateRequestSchema.parse(body);
+    const input = parseApiInput(repositoryCreateRequestSchema, body);
     const repository = await this.createRepository.execute({
       projectId,
       url: input.url,
@@ -126,11 +127,7 @@ export class RepositoryController {
     @CurrentUser() actor: RequestUser,
   ) {
     await this.permissions.assertCanReadProject(actor, projectId);
-    const parsedQuery = paginationQuerySchema.safeParse(query);
-    if (!parsedQuery.success) {
-      throw new BadRequestException(parsedQuery.error.errors);
-    }
-    const { limit, offset } = parsedQuery.data;
+    const { limit, offset } = parseApiInput(paginationQuerySchema, query);
 
     const repositories = await this.listRepositories.execute({ projectId, limit, offset });
     return repositoryListResponseSchema.parse({

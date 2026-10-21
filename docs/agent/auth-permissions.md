@@ -31,6 +31,13 @@ encrypted credential handling beyond the current MVP
 
 ## Deploy Bootstrap Boundary
 
+JWT signing configuration resolves during Nest dependency initialization,
+after runtime configuration is loaded. Module import must not capture an
+earlier secret or development fallback while the verification strategy reads
+a later value. Missing or weak production secrets still fail before serving
+requests. Tests cover configuration loaded after module import and production
+startup rejection.
+
 Deployed MVP environments still run in `dev-single-user` mode. This is a
 deployment/runtime boundary only, not a fake auth system:
 

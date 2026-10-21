@@ -81,6 +81,7 @@ const PLANNED_CHECKS = [
   'dev-login-disabled',
   'health-live',
   'health-ready',
+  'api-reference',
   'operations-admin-gated',
   'boot-guard-fails-closed',
   'web-login-200',
@@ -467,6 +468,29 @@ async function stepOperationsGated(): Promise<void> {
   });
 }
 
+async function stepApiReference(): Promise<void> {
+  const start = Date.now();
+  const [page, spec, bundle] = await Promise.all([
+    http('GET', `${API}/api/docs`),
+    http('GET', `${API}/api/openapi.json`),
+    http('GET', `${API}/api/docs/scalar.js`),
+  ]);
+  const document = spec.json as { openapi?: string; paths?: Record<string, Record<string, unknown>> } | null;
+  const operationCount = Object.values(document?.paths ?? {}).reduce((total, path) =>
+    total + Object.keys(path).filter(method => ['get', 'post', 'put', 'patch', 'delete'].includes(method)).length, 0);
+  const passed = page.status === 200 && spec.status === 200 && bundle.status === 200
+    && page.body.includes('/api/openapi.json') && page.body.includes('/api/docs/scalar.js')
+    && !page.body.includes('cdn.jsdelivr.net') && document?.openapi === '3.0.0'
+    && operationCount > 90 && bundle.body.length > 100_000;
+  record({
+    id: 'api-reference', status: passed ? 'PASS' : 'FAIL',
+    detail: passed ? `Scalar, OpenAPI (${operationCount} operations) and the local browser bundle served from the production image.`
+      : 'Production API documentation or its pinned local asset is unavailable.',
+    durationMs: Date.now() - start,
+    evidence: { pageStatus: page.status, specStatus: spec.status, bundleStatus: bundle.status, operationCount },
+  });
+}
+
 async function stepBootGuard(): Promise<void> {
   const start = Date.now();
   const command = 'docker compose run --rm --no-deps -e REDIS_URL=redis://redis:6379 api';
@@ -680,6 +704,7 @@ async function main(): Promise<void> {
     await stepDevLoginDisabled();
     await stepHealthLive();
     await stepHealthReady();
+    await stepApiReference();
     await stepOperationsGated();
     await stepBootGuard();
     await stepWebLogin();
