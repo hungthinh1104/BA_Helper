@@ -31,8 +31,10 @@ export class TypeScriptNestJsAdapter implements ScannerAdapter {
       'Prisma models',
       'method/class artifacts'
     ],
-    partialPatterns: ['Jest literal declarations/modifiers and inline-array it/test.each source callbacks'],
-    unsupportedPatterns: ['dynamic receivers', 'barrel/path-alias graph resolution', 'runtime test coverage'],
+    partialPatterns: ['Jest behavior declarations for common hooks, inputs, actions, mocks and matchers',
+      'inline-array it/test.each source callbacks'],
+    unsupportedPatterns: ['dynamic matchers and nested callbacks', 'snapshot expectation contents',
+      'barrel/path-alias graph resolution', 'runtime test execution or coverage'],
   };
 
   canScan(input: ScanAdapterInput): boolean {
@@ -47,6 +49,7 @@ export class TypeScriptNestJsAdapter implements ScannerAdapter {
       fixturePath: input.rootDir || input.fixturePath || '',
       tsFiles: input.tsFiles || [],
       coverage: input.coverage,
+      commitSha: input.commitSha,
       analyzerVersion: this.adapterVersion,
     };
 

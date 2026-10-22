@@ -1,22 +1,40 @@
 {
   "results": [
     {
-      "artifactKey": "api:order.controller.cancelOrder"
+      "artifactKey": "test-case:src/order/order-cancel.spec.ts::58f5cc9f6025ac137fcc80fad2ef026a9ed3b963528a46f5a79c98beb55b72af"
     },
     {
-      "artifactKey": "service-method:order.service.cancelOrder"
+      "artifactKey": "test-case:src/inventory/inventory-reservation.spec.ts::d68aa161fe3c58b48bb810d1c1818d399659d37417836bd11976b82d0eed5b9f"
     },
     {
-      "artifactKey": "service-method:inventory.service.releaseReservation"
+      "artifactKey": "test-case:src/order/order-cancel.spec.ts::f51c2f57abd170d44b36ee75fc6e4e124d7f8dcd75d311179683a6a2dbc2bad1"
     },
     {
-      "artifactKey": "entity:order"
+      "artifactKey": "service-method:src%2Finventory%2Finventory.service.ts#InventoryService.releaseReservation~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371"
     },
     {
-      "artifactKey": "entity:stockreservation"
+      "artifactKey": "test-case:src/inventory/inventory-reservation.spec.ts::2ab2dd39af894bf7f3d0dfac6a87b93f4ca76b8ddb82bf2fd84f0bf7c0fccb7e"
     },
     {
-      "artifactKey": "test:src.order.order-cancel.spec.ts"
+      "artifactKey": "service-method:src%2Forder%2Forder.service.ts#OrderService.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371"
+    },
+    {
+      "artifactKey": "api:src%2Forder%2Forder.controller.ts#OrderController.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371"
+    },
+    {
+      "artifactKey": "test-case:src/order/order-cancel.spec.ts::6bc890c1634a2f22f33fbfd2f89cee6eaa01ef2bc7bd7fed4bad50a8710a5177"
+    },
+    {
+      "artifactKey": "test:src%2Forder%2Forder-cancel.spec.ts#file"
+    },
+    {
+      "artifactKey": "entity:src%2Finventory%2Fstock-reservation.entity.ts#StockReservation"
+    },
+    {
+      "artifactKey": "entity:src%2Fshipment%2Fshipment.entity.ts#Shipment"
+    },
+    {
+      "artifactKey": "service-method:src%2Finventory%2Finventory.service.ts#InventoryService.consumeReservation~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371"
     }
   ]
 }

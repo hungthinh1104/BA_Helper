@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { QaTraceEdge } from '@ba-helper/contracts';
 import { Button } from '@/components/ui/button';
 import { useQaCoverage } from '@/hooks/api/use-qa-coverage';
@@ -9,22 +9,25 @@ import type { SupportedLocale } from '@/lib/i18n/status-labels';
 import { TestTraceView } from './test-trace-view';
 import { TestTraceEvidenceSheet } from './test-trace-evidence-sheet';
 
-export function StaticTestTracePanel({ analysisId, snapshotId, commitSha, analyzerVersion, artifactKeys, locale }: {
-  analysisId: string; snapshotId: string; commitSha: string; analyzerVersion: string; artifactKeys: string[]; locale: SupportedLocale;
+export function StaticTestTracePanel({ analysisId, snapshotId, commitSha, analyzerVersion, artifactKeys, requirementTitle, requirementSummary, locale }: {
+  analysisId: string; snapshotId: string; commitSha: string; analyzerVersion: string; artifactKeys: string[];
+  requirementTitle?: string; requirementSummary?: string; locale: SupportedLocale;
 }) {
   const query = useQaCoverage(analysisId, { enabled: artifactKeys.length > 0 });
   const [selected, setSelected] = useState<QaTraceEdge | null>(null);
   const labels = testTraceLabels[locale];
+  const data = query.data;
+  const selectedItems = useMemo(() => data?.items.filter(item => item.artifactKey && artifactKeys.includes(item.artifactKey)) ?? [], [artifactKeys, data?.items]);
   if (query.isLoading) return <p role="status" className="text-xs text-muted-foreground">{labels.loading}</p>;
   if (query.error || !query.data) return <div role="alert" className="grid gap-2 rounded border border-border/50 p-3 text-xs">
     <p>{labels.error}</p><Button type="button" variant="outline" onClick={() => { void query.refetch(); }}>{labels.retry}</Button>
   </div>;
-  const data = query.data, context = data.traceContext;
+  const context = data.traceContext;
   if (data.analysisId !== analysisId || data.snapshotId !== snapshotId || context &&
     (context.commitSha !== commitSha || context.analyzerVersion !== analyzerVersion)) return <p role="alert" className="text-xs text-warning">{labels.mismatch}</p>;
   return <>
-    <TestTraceView coverage={{ ...data, items: data.items.filter(item => item.artifactKey && artifactKeys.includes(item.artifactKey)) }}
-      locale={locale} onInspectEvidence={setSelected} />
+    <TestTraceView coverage={{ ...data, items: selectedItems }} locale={locale} requirementTitle={requirementTitle}
+      requirementSummary={requirementSummary} onInspectEvidence={setSelected} />
     <TestTraceEvidenceSheet analysisId={analysisId} snapshotId={snapshotId} commitSha={commitSha} edge={selected} onClose={() => setSelected(null)} locale={locale} />
   </>;
 }

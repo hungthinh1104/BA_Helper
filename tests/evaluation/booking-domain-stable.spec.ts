@@ -133,12 +133,12 @@ describe('Booking domain STABLE evaluation cases', () => {
 
   it('treats admin refund report as deterministic keyword noise', () => {
     for (const evalCase of bookingStableEvaluationCases) {
-      expect(artifactsByKey.has('service-method:refund-report.service.generateReport')).toBe(true);
+      expect(artifactsByKey.has('service-method:src%2Fadmin%2Frefund-report.service.ts#AdminRefundReportService.generateReport~4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945')).toBe(true);
       expect(evalCase.expected.negativeArtifactKeys).toContain(
-        'service-method:refund-report.service.generateReport',
+        'service-method:src%2Fadmin%2Frefund-report.service.ts#AdminRefundReportService.generateReport~4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',
       );
       expect(evalCase.expected.impactedArtifactKeys).not.toContain(
-        'service-method:refund-report.service.generateReport',
+        'service-method:src%2Fadmin%2Frefund-report.service.ts#AdminRefundReportService.generateReport~4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',
       );
     }
   });

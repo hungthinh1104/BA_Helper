@@ -114,6 +114,7 @@ ADMIN and REVIEWER:
 - create derived analyses from review clarifications
 - create, answer, dismiss analysis clarifications
 - save review notes
+- generate localized report artifacts when the project role also grants `report:export`
 
 VIEWER:
 - read-only GET access

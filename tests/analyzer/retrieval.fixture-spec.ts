@@ -21,15 +21,16 @@ describe('retrieval fixture expectations', () => {
       expandGraph: false,
     });
 
+    const expectedKeys = [
+      'BookingController.cancel',
+      'BookingService.cancelBooking',
+      'PaymentService.refund',
+      'AdminRefundReportService.generateReport',
+    ].map(symbol => scan.artifacts.find(artifact => artifact.symbolName === symbol)!.stableId);
+    expectedKeys.push(scan.artifacts.find(artifact => artifact.type === 'JEST_TEST_CASE')!.stableId);
+    expectedKeys.push(scan.artifacts.find(artifact => artifact.type === 'TEST')!.stableId);
     const received = result.artifacts.map((a) => a.stableId).sort();
-    expect(received).toEqual([
-      'api:booking.controller.cancel',
-      'service-method:booking.service.cancelBooking',
-      'service-method:payment.service.refund',
-      'service-method:refund-report.service.generateReport',
-      'test-case:src/booking/booking-cancel.spec.ts::54a2d6ee0beb50fddd4cbe0ae68eb7aa8ba4d8c9c2b1051f71a97b43b606fbe0',
-      'test:src.booking.booking-cancel.spec.ts'
-    ].sort());
+    expect(received).toEqual(expectedKeys.sort());
   });
 
   it('expands retrieval to related artifacts when enabled', () => {
@@ -41,18 +42,14 @@ describe('retrieval fixture expectations', () => {
     });
 
     const received = result.artifacts.map((a) => a.stableId).sort();
-    expect(received).toEqual([
-      'api:booking.controller.cancel',
-      'entity:booking',
-      'entity:paymenttransaction',
-      'service-method:booking.service.cancelBooking',
-      'service-method:notification.service.notifyOwner',
-      'service-method:payment.service.refund',
-      'service-method:refund-report.service.generateReport',
-      'service-method:slot.service.releaseSlot',
-      'test-case:src/booking/booking-cancel.spec.ts::54a2d6ee0beb50fddd4cbe0ae68eb7aa8ba4d8c9c2b1051f71a97b43b606fbe0',
-      'test:src.booking.booking-cancel.spec.ts'
-    ].sort());
+    const expectedKeys = [
+      'BookingController.cancel', 'BookingService.cancelBooking', 'PaymentService.refund',
+      'AdminRefundReportService.generateReport', 'NotificationService.notifyOwner',
+      'SlotService.releaseSlot', 'Booking', 'PaymentTransaction',
+    ].map(symbol => scan.artifacts.find(artifact => artifact.symbolName === symbol)!.stableId);
+    expectedKeys.push(scan.artifacts.find(artifact => artifact.type === 'JEST_TEST_CASE')!.stableId);
+    expectedKeys.push(scan.artifacts.find(artifact => artifact.type === 'TEST')!.stableId);
+    expect(received).toEqual(expectedKeys.sort());
   });
 
   it('does not select keyword-noise artifacts', () => {

@@ -7,7 +7,7 @@ describe('internal service source artifacts', () => {
   let root: string;
   beforeEach(() => {
     root = realpathSync.native(mkdtempSync(join(tmpdir(), 'ba-internal-method-')));
-    mkdirSync(join(root, 'src'));
+    mkdirSync(join(root, 'src/payment'), { recursive: true });
   });
   afterEach(() => {
     const name = relative(realpathSync.native(tmpdir()), root);
@@ -16,7 +16,7 @@ describe('internal service source artifacts', () => {
   });
 
   it.each(['selected files', 'legacy fixture'] as const)('keeps private/protected helpers and their calls via %s', mode => {
-    const file = join(root, 'src/payment.service.ts');
+    const file = join(root, 'src/payment/payment.service.ts');
     writeFileSync(file, `import { Injectable } from '@nestjs/common';
       @Injectable() export class PaymentService {
         refund() { return this.validate(); }
@@ -25,17 +25,19 @@ describe('internal service source artifacts', () => {
       }
       class Unrelated { private hidden() {} }`);
     const scan = mode === 'selected files' ? scanProject({ fixturePath: root, tsFiles: [file] }) : scanFixture({ fixturePath: root });
+    if (mode === 'legacy fixture') expect(scan.sourceFiles).toEqual([file.replace(/\\/g, '/')]);
     expect(scan.analyzerVersion).toBe(ANALYZER_VERSION);
     expect(scan.artifacts.map(a => [a.type, a.symbolName])).toEqual([
       ['SERVICE_METHOD', 'PaymentService.refund'], ['SERVICE_METHOD', 'PaymentService.validate'],
       ['SERVICE_METHOD', 'PaymentService.checkPolicy'],
     ]);
     const graph = buildGraph(scan);
+    const key = (symbol: string) => scan.artifacts.find(artifact => artifact.symbolName === symbol)!.stableId;
     expect(graph.edges.map(e => [e.from, e.type, e.to])).toEqual([
-      ['service-method:payment.service.refund', 'CALLS', 'service-method:payment.service.validate'],
-      ['service-method:payment.service.validate', 'CALLS', 'service-method:payment.service.checkPolicy'],
+      [key('PaymentService.refund'), 'CALLS', key('PaymentService.validate')],
+      [key('PaymentService.validate'), 'CALLS', key('PaymentService.checkPolicy')],
     ]);
-    expect(graph.edges.every(e => e.provenance?.locations[0].sourcePath === 'src/payment.service.ts')).toBe(true);
+    expect(graph.edges.every(e => e.provenance?.locations[0].sourcePath === 'src/payment/payment.service.ts')).toBe(true);
   });
 
   it('does not label private controller helpers as HTTP endpoints', () => {

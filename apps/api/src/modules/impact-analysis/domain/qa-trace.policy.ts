@@ -1,5 +1,6 @@
 import { codeArtifactMetadataSchema, dependencyEdgeProvenanceSchema, dependencyConfidenceSchema } from '@ba-helper/contracts';
 import type { GraphNodeType } from '@ba-helper/contracts';
+import { createArtifactIdentity } from '@ba-helper/shared';
 import type { QaTraceArtifact, QaTraceEdge, QaTraceEvidence, ValidatedQaTraceEdge } from './qa-trace.types';
 
 export function qaTraceArtifactType(artifact: QaTraceArtifact): GraphNodeType | undefined {
@@ -22,7 +23,7 @@ export function activeJestCase(artifact: QaTraceArtifact) {
   if (!metadata.success) return undefined;
   const test = metadata.data.testCase;
   if (!['NORMAL', 'ONLY'].includes(test.modifier) ||
-    test.parentFileArtifactKey !== `test:${artifact.filePath.replace(/[/\\]/g, '.')}`) return undefined;
+    test.parentFileArtifactKey !== createArtifactIdentity('test', artifact.filePath, 'file')) return undefined;
   return test;
 }
 

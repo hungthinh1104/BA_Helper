@@ -1,15 +1,46 @@
 {
   "caseKey": "test-case:src/booking/booking-cancel.spec.ts::54a2d6ee0beb50fddd4cbe0ae68eb7aa8ba4d8c9c2b1051f71a97b43b606fbe0",
   "items": [
-    { "artifactKey": "api:booking.controller.cancel", "status": "NO_TEST_FOUND", "callPath": [] },
-    { "artifactKey": "entity:booking", "status": "NO_TEST_FOUND", "callPath": [] },
-    { "artifactKey": "service-method:booking.service.cancelBooking", "status": "COVERED",
-      "callPath": ["service-method:booking.service.cancelBooking"] },
-    { "artifactKey": "service-method:payment.service.refund", "status": "INDIRECT_ONLY",
-      "callPath": ["service-method:booking.service.cancelBooking", "service-method:payment.service.refund"] },
-    { "artifactKey": "service-method:slot.service.releaseSlot", "status": "INDIRECT_ONLY",
-      "callPath": ["service-method:booking.service.cancelBooking", "service-method:slot.service.releaseSlot"] },
-    { "artifactKey": "service-method:notification.service.notifyOwner", "status": "INDIRECT_ONLY",
-      "callPath": ["service-method:booking.service.cancelBooking", "service-method:notification.service.notifyOwner"] }
+    {
+      "artifactKey": "api:src%2Fbooking%2Fbooking.controller.ts#BookingController.cancel~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "status": "NO_TEST_FOUND",
+      "callPath": []
+    },
+    {
+      "artifactKey": "entity:src%2Fbooking%2Fbooking.entity.ts#Booking",
+      "status": "NO_TEST_FOUND",
+      "callPath": []
+    },
+    {
+      "artifactKey": "service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "status": "COVERED",
+      "callPath": [
+        "service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371"
+      ]
+    },
+    {
+      "artifactKey": "service-method:src%2Fpayment%2Fpayment.service.ts#PaymentService.refund~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "status": "INDIRECT_ONLY",
+      "callPath": [
+        "service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+        "service-method:src%2Fpayment%2Fpayment.service.ts#PaymentService.refund~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371"
+      ]
+    },
+    {
+      "artifactKey": "service-method:src%2Fslot%2Fslot.service.ts#SlotService.releaseSlot~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "status": "INDIRECT_ONLY",
+      "callPath": [
+        "service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+        "service-method:src%2Fslot%2Fslot.service.ts#SlotService.releaseSlot~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371"
+      ]
+    },
+    {
+      "artifactKey": "service-method:src%2Fnotification%2Fnotification.service.ts#NotificationService.notifyOwner~dd6f9df3949ebe095ea261fedb8d6afff333b1a449449ef86a9d6bba8b75dcbb",
+      "status": "INDIRECT_ONLY",
+      "callPath": [
+        "service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+        "service-method:src%2Fnotification%2Fnotification.service.ts#NotificationService.notifyOwner~dd6f9df3949ebe095ea261fedb8d6afff333b1a449449ef86a9d6bba8b75dcbb"
+      ]
+    }
   ]
 }

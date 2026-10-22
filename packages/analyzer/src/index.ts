@@ -20,3 +20,4 @@ export * from './scanner/core/secret-redactor';
 export * from './scanner/detectors/framework-detector';
 export * from './scanner/core/diagnostic-collector';
 export * from './scanner/detectors/repository-profile-detector';
+export * from './runtime/jest-runtime-trace';

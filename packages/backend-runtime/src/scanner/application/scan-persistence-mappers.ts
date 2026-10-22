@@ -5,7 +5,7 @@ import type {
   ScanHealthDiagnostics,
   ScanResult,
 } from '@ba-helper/analyzer';
-import { SecretRedactor } from '@ba-helper/analyzer';
+import { SCANNER_VERSION, SecretRedactor } from '@ba-helper/analyzer';
 import { AppError } from '@ba-helper/shared';
 import type { DiagnosticItem } from '@ba-helper/contracts';
 import { dependencyConfidenceSchema, dependencyEdgeProvenanceSchema } from '@ba-helper/contracts';
@@ -37,9 +37,10 @@ export function addScanHealthDiagnostic(params: {
 }): void {
   const scanHealth: ScanHealthDiagnostics = {
     coverageStatus: params.scanResult.coverage.status,
-    scannerVersion: 'scanner@0.2.0',
+    scannerVersion: SCANNER_VERSION,
     analyzerVersion: params.scanResult.analyzerVersion,
-    scannedFileCount: params.scanResult.artifacts.length,
+    scannedFileCount: params.scanResult.scannedFileCount ?? params.scanResult.sourceFiles?.length ??
+      new Set(params.scanResult.artifacts.map(artifact => artifact.filePath)).size,
     skippedFileCount: Object.values(params.scanResult.coverage?.skippedSummary || {})
       .reduce((a, b) => a + b, 0),
     artifactCount: params.scanResult.artifacts.length,

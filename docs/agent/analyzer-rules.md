@@ -104,7 +104,7 @@ An edge is `EVIDENCED` only when the supported parser can locate a direct
 relationship in source. A similarly named but disconnected symbol must not
 become an evidenced impact.
 
-### NestJS graph publication (`analyzer@0.7.0`)
+### NestJS graph publication (`analyzer@0.9.0`)
 
 The checkout root and accepted source-file paths are canonicalized through
 filesystem real paths before computing repository-relative artifact identity.
@@ -117,6 +117,14 @@ The TypeScript adapter builds dependency edges from exactly the selected
 `tsFiles` used by extraction. Graph construction must not re-enumerate paths,
 resolve excluded imports from disk, or execute repository code. Artifact paths
 are normalized to repository-relative forward-slash paths on every platform.
+Persisted artifact keys include the canonical repository-relative path and the
+qualified source symbol. Method overload keys also include a SHA-256 digest of
+their parameter signature. Test-file keys use an escaped canonical path; a
+basename or flattened path must never determine identity. Graph edge IDs encode
+the source, edge type, and target as separate components.
+`SCAN_HEALTH.scannerVersion` comes from the analyzer package's scanner version
+constant. Snapshot list and drift projections read that persisted diagnostic;
+they do not infer scanner version from analyzer version or repository profile.
 
 Direct method relationships resolve the receiver's local class declaration or
 relative named/default import and its constructor-injected parameter property.
@@ -210,6 +218,48 @@ declarations, async suites, nested tests and
 malformed callbacks emit `JEST_UNSUPPORTED_DECLARATION`. Duplicate identities
 are all omitted with `JEST_DUPLICATE_TEST_IDENTITY`; retain the file as evidence.
 Unsupported declarations must not be presented as individually traced cases.
+
+### Static Jest behavior evidence
+
+For active Jest cases, the scanner records common setup and teardown hooks, literal/static
+input declarations, direct calls, Jest mock APIs, matcher assertions and
+explicit matcher arguments as `behaviorEvidence` in case metadata. These are
+`STATIC_DECLARATION` claims: they describe source syntax only and never report
+test execution, pass/fail, or coverage. Parameterized tests retain one claim
+for their inline table expression; rows are not evaluated or expanded.
+
+Each claim is bound to the resolved scan `commitSha` and a canonical
+repository-relative path with UTF-16 start/end offsets (exclusive end),
+one-based line/column coordinates, and redacted source text. Persistence
+links claims to the persisted test-file evidence and rejects a claim whose path
+differs from its test file or whose commit differs from the published snapshot.
+Without commit context, no behavior claim
+is emitted and `JEST_BEHAVIOR_UNRESOLVED` reports `COMMIT_CONTEXT_REQUIRED`.
+The scanner bounds each case at 100 claims, each scan at 20,000 claims and
+each source excerpt at 2,000 characters. Dynamic matchers, nested callbacks and snapshot expectation
+contents remain unresolved with explicit diagnostics; do not infer their
+meaning or execution. Analyzer contract changes require a version bump and
+rescan; historical snapshots remain unchanged.
+
+### Opt-in Jest runtime observations
+
+The local runtime prototype consumes an explicit Jest JSON result only. It
+does not execute tests or source code from the analyzer, API or worker. Runtime
+records use `RUNTIME_OBSERVATION` and stay in a separate manifest; do not add
+them to static behavior evidence or reinterpret static `TESTS`/`CALLS` edges.
+Correlate only against a static test artifact from the same commit using the
+canonical repository-relative file and Jest's exact case declaration line.
+Missing, duplicate or mismatched inputs remain unmatched/ambiguous with
+diagnostics. Do not infer method execution from a matched test outcome.
+
+The importer accepts only bounded Jest JSON and static indexes, drops titles,
+source text, assertion arguments, mocks, failure messages and console output,
+and writes local output without overwriting an existing file. It captures the
+Jest case's final status and available timing only. Retry histories, method
+spans, mock invocations and assertion-to-method coverage remain unavailable;
+label these capabilities false. See
+[runtime-test-tracing.md](runtime-test-tracing.md) for the opt-in workflow and
+retention boundary.
 
 ### Persisted Static Test Paths
 

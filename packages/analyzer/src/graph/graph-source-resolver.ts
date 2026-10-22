@@ -8,6 +8,7 @@ import { LocalNewFactoryReceiver } from './local-new-factory-receiver';
 /** Resolves only lexical declarations in files already accepted by the scanner. */
 export class GraphSourceResolver {
   readonly ambiguousArtifacts: ScanArtifact[];
+  readonly ambiguousSymbols: ScanArtifact[];
   readonly project = new Project({
     skipFileDependencyResolution: true,
     compilerOptions: { noResolve: true, noLib: true },
@@ -48,6 +49,9 @@ export class GraphSourceResolver {
         this.casesByFile.set(path, cases);
       }
     }
+    this.ambiguousSymbols = [...this.artifacts.values()]
+      .filter(matches => matches.length > 1)
+      .flat();
   }
 
   artifactFor(cls: ClassDeclaration, methodName?: string): ScanArtifact | undefined {
@@ -66,16 +70,18 @@ export class GraphSourceResolver {
 
   resolveClass(identifier: Node): ClassDeclaration | undefined {
     if (!Node.isIdentifier(identifier)) return undefined;
-    for (const declaration of identifier.getSymbol()?.getDeclarations() ?? []) {
-      if (Node.isClassDeclaration(declaration)) return declaration;
+    const declarations = identifier.getSymbol()?.getDeclarations() ?? [];
+    const directClasses = declarations.filter(Node.isClassDeclaration);
+    if (directClasses.length > 0) return uniqueClass(directClasses);
+    for (const declaration of declarations) {
       if (Node.isImportSpecifier(declaration)) {
         const target = this.importSource(declaration.getImportDeclaration());
-        return target?.getClasses().find(c => c.getName() === declaration.getName() && c.isExported());
+        return uniqueClass(target?.getClasses().filter(c => c.getName() === declaration.getName() && c.isExported()) ?? []);
       }
       if (Node.isImportClause(declaration)) {
         const parent = declaration.getParent();
         if (Node.isImportDeclaration(parent)) {
-          return this.importSource(parent)?.getClasses().find(c => c.isDefaultExport());
+          return uniqueClass(this.importSource(parent)?.getClasses().filter(c => c.isDefaultExport()) ?? []);
         }
       }
     }
@@ -130,4 +136,8 @@ export class GraphSourceResolver {
     return [base, `${base}.ts`, resolve(base, 'index.ts'), base.replace(/\.js$/, '.ts')]
       .map(path => this.sources.get(path)).find(Boolean);
   }
+}
+
+function uniqueClass(classes: ClassDeclaration[]): ClassDeclaration | undefined {
+  return classes.length === 1 ? classes[0] : undefined;
 }

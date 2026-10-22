@@ -5,6 +5,12 @@ import { Injectable } from '@nestjs/common';
 @Injectable()
 export class FakeTranslationProvider extends TranslationProviderPort {
   async translate(request: TranslationRequest): Promise<TranslationResult> {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'FakeTranslationProvider is forbidden in production; configure a real translation provider.',
+      );
+    }
+
     const { payload, targetLocale } = request;
     
     // Simulate API delay

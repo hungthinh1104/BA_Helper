@@ -53,4 +53,11 @@ test('refunds once', () => { const payment = new PaymentService(); payment.refun
     expect(result.sourceFiles).toEqual([join(root, test)]);
     expect(buildGraph(result).edges).toEqual([]);
   });
+
+  it('rejects selected files outside the canonical repository root', () => {
+    const outside = join(parent, 'outside.spec.ts');
+    writeFileSync(outside, "it('outside', () => { expect(true).toBe(true); });");
+    expect(() => scanProject({ fixturePath: root, tsFiles: [outside], commitSha: 'commit' }))
+      .toThrow('SOURCE_FILE_OUTSIDE_ROOT');
+  });
 });

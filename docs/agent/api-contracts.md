@@ -36,6 +36,18 @@ one artifact represents one source callback regardless of data rows. No row
 count or runtime result is inferred. The field is additive in artifact/graph,
 QA and version-1 saved-report metadata. Missing historical flags remain absent.
 
+`testCase.behaviorEvidence?: StaticTestBehaviorClaim[]` optionally exposes
+bounded source-derived Jest declarations. Each claim has a `kind` (`SETUP_HOOK`,
+`TEARDOWN_HOOK`, `INPUT`, `ACTION`, `ASSERTION`, `MOCK`, or `EXPECTED_OUTCOME`),
+`evidenceKind: STATIC_DECLARATION`, redacted `sourceText`, an exact
+repository-relative source location (UTF-16 offsets with exclusive end and
+one-based line/column coordinates), and the snapshot `commitSha`. These claims
+also carry `evidenceProvenanceKey`, linking them to the persisted redacted test
+file evidence that contains their source locations. They do not establish runtime execution, pass/fail, or
+assertion coverage. Claims with invalid source paths or commit context are
+rejected at persistence; older test cases without this optional field remain
+valid.
+
 ## Static Code-To-Test Projection
 
 `GET /api/v1/impact-analyses/:analysisId/qa-coverage` reads persisted data for the
@@ -137,7 +149,7 @@ GET  /api/v1/projects/:projectId/repositories
 GET  /api/v1/projects/:projectId/repositories/:repositoryId
 POST /api/v1/projects/:projectId/repositories
 POST /api/v1/repositories/:repositoryId/scan-jobs
-GET  /api/v1/scan-jobs/:scanJobId
+GET  /api/v1/repositories/:repositoryId/scan-jobs/:scanJobId
 GET  /api/v1/snapshots/:snapshotId/artifacts
 GET  /api/v1/snapshots/:snapshotId/graph
 
@@ -176,7 +188,14 @@ GET  /api/v1/impact-analyses/:analysisId/approved-report
 GET  /api/v1/impact-analyses/:analysisId/approved-report/export.md
 GET  /api/v1/impact-analyses/:analysisId/approved-report/export.pdf
 GET  /api/v1/impact-analyses/:analysisId/final-reviewed-report?locale=en|vi
+POST /api/v1/analyses/:analysisId/localization
+GET  /api/v1/analyses/:analysisId/localization/:locale/status
 ```
+
+Generating a localized report requires Global `ADMIN` or `REVIEWER` and the
+project-scoped `report:export` permission. The operation is rate limited. The
+placeholder provider is development/test-only; production localization remains
+unavailable until a real translation provider is configured.
 
 Domain pack registry responses are backend-authored:
 

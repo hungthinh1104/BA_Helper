@@ -1,23 +1,58 @@
 {
   "edges": [
     {
-      "from": "api:order.controller.cancelOrder",
-      "to": "service-method:order.service.cancelOrder",
-      "type": "CALLS"
-    },
-    {
-      "from": "service-method:order.service.cancelOrder",
-      "to": "entity:order",
+      "from": "service-method:src%2Finventory%2Finventory.service.ts#InventoryService.reserveStock~8b917328fa3c600d727da2420f1049f03116d7635c1e2747265cf9e4821ba093",
+      "to": "entity:src%2Finventory%2Fstock-reservation.entity.ts#StockReservation",
       "type": "USES"
     },
     {
-      "from": "service-method:order.service.cancelOrder",
-      "to": "service-method:inventory.service.releaseReservation",
+      "from": "service-method:src%2Finventory%2Finventory.service.ts#InventoryService.releaseReservation~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "to": "entity:src%2Finventory%2Fstock-reservation.entity.ts#StockReservation",
+      "type": "USES"
+    },
+    {
+      "from": "service-method:src%2Finventory%2Finventory.service.ts#InventoryService.consumeReservation~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "to": "entity:src%2Finventory%2Fstock-reservation.entity.ts#StockReservation",
+      "type": "USES"
+    },
+    {
+      "from": "api:src%2Forder%2Forder.controller.ts#OrderController.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "to": "service-method:src%2Forder%2Forder.service.ts#OrderService.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
       "type": "CALLS"
     },
     {
-      "from": "service-method:inventory.service.releaseReservation",
-      "to": "entity:stockreservation",
+      "from": "api:src%2Forder%2Forder.controller.ts#OrderController.shipOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "to": "service-method:src%2Forder%2Forder.service.ts#OrderService.shipOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "type": "CALLS"
+    },
+    {
+      "from": "service-method:src%2Forder%2Forder.service.ts#OrderService.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "to": "entity:src%2Forder%2Forder.entity.ts#Order",
+      "type": "USES"
+    },
+    {
+      "from": "service-method:src%2Forder%2Forder.service.ts#OrderService.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "to": "service-method:src%2Finventory%2Finventory.service.ts#InventoryService.releaseReservation~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "type": "CALLS"
+    },
+    {
+      "from": "service-method:src%2Forder%2Forder.service.ts#OrderService.shipOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "to": "entity:src%2Forder%2Forder.entity.ts#Order",
+      "type": "USES"
+    },
+    {
+      "from": "service-method:src%2Forder%2Forder.service.ts#OrderService.shipOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "to": "service-method:src%2Finventory%2Finventory.service.ts#InventoryService.consumeReservation~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "type": "CALLS"
+    },
+    {
+      "from": "service-method:src%2Fproduct%2Fproduct.service.ts#ProductService.checkAvailability~6ad9cf17d5e6027963f32dec101b0e7d7605ee5b5f03b7cc1f6a34cc2383aee1",
+      "to": "entity:src%2Fproduct%2Fproduct.entity.ts#Product",
+      "type": "USES"
+    },
+    {
+      "from": "service-method:src%2Fshipment%2Fshipment.service.ts#ShipmentService.createShipment~dd6f9df3949ebe095ea261fedb8d6afff333b1a449449ef86a9d6bba8b75dcbb",
+      "to": "entity:src%2Fshipment%2Fshipment.entity.ts#Shipment",
       "type": "USES"
     }
   ]

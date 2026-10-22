@@ -386,6 +386,9 @@ importers:
 
   packages/analyzer:
     dependencies:
+      '@ba-helper/shared':
+        specifier: workspace:*
+        version: link:../shared
       ts-morph:
         specifier: 28.0.0
         version: 28.0.0

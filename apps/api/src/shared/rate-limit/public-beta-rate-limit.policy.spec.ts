@@ -5,6 +5,7 @@ describe('PublicBetaRateLimitPolicy', () => {
 
   it('flags configured public-beta mutation routes for limiting', () => {
     expect(policy.shouldLimit('POST', '/api/v1/impact-analyses/a1/finalize')).toBe(true);
+    expect(policy.shouldLimit('POST', '/api/v1/analyses/a1/localization')).toBe(true);
     expect(policy.shouldLimit('POST', '/api/v1/projects/p1/requirements')).toBe(true);
     expect(policy.shouldLimit('POST', '/api/v1/repositories/r1/scan-jobs')).toBe(true);
     expect(policy.shouldLimit('GET', '/api/v1/impact-analyses/a1/approved-report/export.md')).toBe(true);

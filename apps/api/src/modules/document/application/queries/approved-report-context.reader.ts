@@ -3,7 +3,7 @@ import { MarkdownReportRenderContext, computeCanonicalReportHash, PrismaService 
 import { GeneratedDocument } from '@prisma/client';
 
 export interface ApprovedReportContextResult {
-  sourceDocument: GeneratedDocument;
+  sourceDocument: Pick<GeneratedDocument, 'id'>;
   reviewedSnapshot: any;
   canonicalContext: MarkdownReportRenderContext;
   sourceContentHash: string;
@@ -27,12 +27,15 @@ export class ApprovedReportContextReader {
       throw new NotFoundException('Analysis not found');
     }
 
-    const document = await this.prisma.generatedDocument.findFirst({
+    const document = await this.prisma.generatedDocument.findUnique({
       where: {
-        impactAnalysisId: analysisId,
-        type: 'IMPACT_REPORT',
-        status: 'APPROVED',
-      }
+        impactAnalysisId_type_status: {
+          impactAnalysisId: analysisId,
+          type: 'IMPACT_REPORT',
+          status: 'APPROVED',
+        },
+      },
+      select: { id: true },
     });
 
     if (!document) {

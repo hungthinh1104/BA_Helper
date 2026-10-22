@@ -10,6 +10,7 @@ const LIMITED_ROUTES = [
   { method: 'POST', pattern: /^\/api\/v1\/requirements\/[^/]+\/revisions$/ },
   { method: 'POST', pattern: /^\/api\/v1\/requirement-revisions\/[^/]+\/impact-analyses$/ },
   { method: 'POST', pattern: /^\/api\/v1\/impact-analyses\/[^/]+\/finalize$/ },
+  { method: 'POST', pattern: /^\/api\/v1\/analyses\/[^/]+\/localization$/ },
   { method: 'GET', pattern: /^\/api\/v1\/impact-analyses\/[^/]+\/approved-report\/export\.(md|pdf)$/ },
   { method: 'POST', pattern: /^\/api\/v1\/projects\/[^/]+\/multi-repo-analyses$/ },
   { method: 'POST', pattern: /^\/api\/v1\/multi-repo-runs\/[^/]+\/merged-report\/finalize$/ },

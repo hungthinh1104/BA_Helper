@@ -1,11 +1,15 @@
 import { Project } from 'ts-morph';
 import type { ClassDeclaration, MethodDeclaration } from 'ts-morph';
-import { realpathSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { readdirSync, realpathSync } from 'node:fs';
+import type { Dirent } from 'node:fs';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { createHash } from 'node:crypto';
+import { createArtifactIdentity } from '@ba-helper/shared';
 import { ANALYZER_VERSION } from './scanner.types';
 import type { ScanInput, ScanResult, ScanArtifact, ScanCoverage } from './scanner.types';
 import { computeArtifactContentHash } from './core/content-hasher';
 import { extractJestTestArtifacts } from './jest/jest-test-extractor';
+import { createJestBehaviorBudget } from './jest/jest-test-behavior';
 import type { DiagnosticItem } from './core/diagnostic-collector';
 
 const createProject = () => new Project({
@@ -17,33 +21,63 @@ export const scanFixture = (input: ScanInput): ScanResult => {
   if (input.fixturePath.includes('express-unsupported')) throw new Error('UNSUPPORTED_FRAMEWORK');
   const sourceRoot = realpathSync.native(input.fixturePath);
   const project = createProject();
-  project.addSourceFilesAtPaths(join(sourceRoot, 'src/**/*.ts'));
-  project.addSourceFilesAtPaths(join(sourceRoot, 'test/**/*.ts'));
-  return extractProject(project, sourceRoot, input.analyzerVersion);
+  const sourceFiles = listFixtureTypeScriptFiles(sourceRoot);
+  for (const file of sourceFiles) project.addSourceFileAtPath(file);
+  return extractProject(project, sourceRoot, input.analyzerVersion, undefined, undefined, input.commitSha);
 };
+
+function listFixtureTypeScriptFiles(root: string): string[] {
+  const pending = ['src', 'test'].map(directory => resolve(root, directory));
+  const files: string[] = [];
+  while (pending.length > 0) {
+    const current = pending.pop()!;
+    let entries: Dirent[];
+    try { entries = readdirSync(current, { withFileTypes: true }); }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
+      throw error;
+    }
+    entries.sort((left, right) => left.name.localeCompare(right.name));
+    for (const entry of entries) {
+      const path = resolve(current, entry.name);
+      if (entry.isDirectory()) pending.push(path);
+      else if (entry.isFile() && path.endsWith('.ts')) {
+        files.push(path);
+        if (files.length > 5000) throw new Error('FIXTURE_SOURCE_FILE_LIMIT_EXCEEDED');
+      }
+    }
+  }
+  return files.sort();
+}
 
 export const scanProject = (input: ScanInput & { tsFiles: string[]; coverage?: ScanCoverage }): ScanResult => {
   const sourceRoot = realpathSync.native(input.fixturePath);
   const sourceFiles = [...new Set(input.tsFiles.map(file => realpathSync.native(file)))];
   const project = createProject();
   for (const file of sourceFiles) project.addSourceFileAtPath(file);
-  return extractProject(project, sourceRoot, input.analyzerVersion, input.coverage, sourceFiles);
+  return extractProject(project, sourceRoot, input.analyzerVersion, input.coverage, sourceFiles, input.commitSha);
 };
 
 function extractProject(project: Project, sourceRoot: string, version?: string,
-  coverage = defaultCoverage(), sourceFiles: string[] = project.getSourceFiles().map(file => file.getFilePath())): ScanResult {
+  coverage = defaultCoverage(), sourceFiles: string[] = project.getSourceFiles().map(file => file.getFilePath()),
+  commitSha?: string): ScanResult {
   const artifacts: ScanArtifact[] = [], diagnostics: DiagnosticItem[] = [];
+  const behaviorBudget = createJestBehaviorBudget();
   for (const file of project.getSourceFiles()) {
-    const filePath = relative(sourceRoot, file.getFilePath()).replace(/\\/g, '/');
+    const nativePath = relative(sourceRoot, file.getFilePath());
+    if (!nativePath || nativePath === '..' || nativePath.startsWith(`..${sep}`) || isAbsolute(nativePath)) {
+      throw new Error('SOURCE_FILE_OUTSIDE_ROOT');
+    }
+    const filePath = nativePath.replace(/\\/g, '/');
     if (filePath.includes('.spec.ts') || filePath.includes('.test.ts')) {
-      const tests = extractJestTestArtifacts(file, filePath);
+      const tests = extractJestTestArtifacts(file, filePath, commitSha, behaviorBudget);
       artifacts.push(...tests.artifacts);
       diagnostics.push(...tests.diagnostics);
     } else {
       for (const cls of file.getClasses()) artifacts.push(...classArtifacts(cls, filePath));
     }
   }
-  return { analyzerVersion: version || ANALYZER_VERSION, artifacts, diagnostics,
+  return { analyzerVersion: version || ANALYZER_VERSION, artifacts, scannedFileCount: sourceFiles.length, diagnostics,
     coverage, sourceRoot, sourceFiles };
 }
 
@@ -54,7 +88,7 @@ function classArtifacts(cls: ClassDeclaration, filePath: string): ScanArtifact[]
   const isController = decorators.includes('Controller');
   if (decorators.includes('Entity') || filePath.includes('.entity.ts')) {
     return [sourceArtifact(cls, filePath, {
-      stableId: `entity:${className.toLowerCase()}`, type: 'ENTITY', symbolName: className,
+      stableId: createArtifactIdentity('entity', filePath, className), type: 'ENTITY', symbolName: className,
     })];
   }
   if (!isController && !decorators.includes('Injectable')) return [];
@@ -62,9 +96,22 @@ function classArtifacts(cls: ClassDeclaration, filePath: string): ScanArtifact[]
   return cls.getMethods()
     .filter(method => !isController || method.getScope() === 'public' || method.getScope() === undefined)
     .map(method => sourceArtifact(method, filePath, {
-      stableId: `${isController ? 'api' : 'service-method'}:${filePath.split('/').pop()?.replace('.ts', '')}.${method.getName()}`,
+      stableId: createArtifactIdentity(
+        isController ? 'api' : 'service-method',
+        filePath,
+        `${className}.${method.getName()}~${methodSignatureHash(method)}`,
+      ),
       type: isController ? 'API_ROUTE' : 'SERVICE_METHOD', symbolName: `${className}.${method.getName()}`,
     }));
+}
+
+function methodSignatureHash(method: MethodDeclaration): string {
+  const parameters = method.getParameters().map(parameter => [
+    parameter.isRestParameter(),
+    parameter.isOptional(),
+    parameter.getTypeNode()?.getText() ?? '',
+  ]);
+  return createHash('sha256').update(JSON.stringify(parameters)).digest('hex');
 }
 
 function sourceArtifact(source: ClassDeclaration | MethodDeclaration, filePath: string,

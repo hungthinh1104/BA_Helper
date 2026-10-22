@@ -1,20 +1,24 @@
 import { Node, SyntaxKind } from 'ts-morph';
 import type { CallExpression, SourceFile, Statement } from 'ts-morph';
+import { createArtifactIdentity } from '@ba-helper/shared';
 import type { ScanArtifact, TestModifier } from '../scanner.types';
 import type { DiagnosticItem } from '../core/diagnostic-collector';
 import { computeArtifactContentHash } from '../core/content-hasher';
 import { createJestTestArtifact } from './jest-test-artifact';
+import { createJestBehaviorBudget, extractJestBehavior, readJestHook } from './jest-test-behavior';
+import type { JestBehaviorBudget } from './jest-test-behavior';
 import { effectiveTestModifier, literalJestTitle, readJestDeclaration } from './jest-declaration';
 
-export function extractJestTestArtifacts(file: SourceFile, filePath: string): {
+export function extractJestTestArtifacts(file: SourceFile, filePath: string, commitSha?: string,
+  behaviorBudget: JestBehaviorBudget = createJestBehaviorBudget()): {
   artifacts: ScanArtifact[]; diagnostics: DiagnosticItem[];
 } {
   const parent: ScanArtifact = {
-    stableId: `test:${filePath.replace(/[/\\]/g, '.')}`, type: 'TEST', filePath,
+    stableId: createArtifactIdentity('test', filePath, 'file'), type: 'TEST', filePath,
     symbolName: file.getBaseName(), startLine: 1, endLine: file.getEndLineNumber(),
     excerpt: file.getText(), contentHash: computeArtifactContentHash(file.getText()),
   };
-  const extractor = new JestTestExtractor(parent);
+  const extractor = new JestTestExtractor(parent, commitSha, behaviorBudget);
   return extractor.extract(file);
 }
 
@@ -22,10 +26,11 @@ class JestTestExtractor {
   private readonly cases: ScanArtifact[] = [];
   private readonly diagnostics = new Map<string, DiagnosticItem>();
 
-  constructor(private readonly parent: ScanArtifact) {}
+  constructor(private readonly parent: ScanArtifact, private readonly commitSha: string | undefined,
+    private readonly behaviorBudget: JestBehaviorBudget) {}
 
   extract(file: SourceFile) {
-    this.statements(file.getStatements(), [], 'NORMAL');
+    this.statements(file.getStatements(), [], 'NORMAL', []);
     const counts = new Map<string, number>();
     for (const test of this.cases) counts.set(test.stableId, (counts.get(test.stableId) ?? 0) + 1);
     const unique = this.cases.filter(test => counts.get(test.stableId) === 1);
@@ -33,12 +38,27 @@ class JestTestExtractor {
     return { artifacts: [this.parent, ...unique], diagnostics: [...this.diagnostics.values()] };
   }
 
-  private statements(statements: Statement[], suitePath: string[], inherited: TestModifier): void {
+  private statements(statements: Statement[], suitePath: string[], inherited: TestModifier,
+    inheritedHooks: CallExpression[]): void {
+    const localHooks: CallExpression[] = [];
+    const hookCalls = new Set<CallExpression>();
+    for (const statement of statements) {
+      const expression = Node.isExpressionStatement(statement) ? statement.getExpression() : undefined;
+      const call = expression && Node.isCallExpression(expression) ? expression : undefined;
+      const hook = call && readJestHook(call);
+      if (!call || !hook) continue;
+      hookCalls.add(call);
+      if (hook.supported) localHooks.push(call);
+      else this.behaviorUnresolved('UNSUPPORTED_SETUP_HOOK', call);
+    }
+    const setupHooks = [...inheritedHooks, ...localHooks];
+
     for (const statement of statements) {
       const expression = Node.isExpressionStatement(statement) ? statement.getExpression() : undefined;
       const declaration = expression && Node.isCallExpression(expression) ? readJestDeclaration(expression) : undefined;
+      if (expression && Node.isCallExpression(expression) && hookCalls.has(expression)) continue;
       if (declaration && expression && Node.isCallExpression(expression)) {
-        this.declaration(expression, declaration, suitePath, inherited);
+        this.declaration(expression, declaration, suitePath, inherited, setupHooks);
       } else if (statement.getDescendantsOfKind(SyntaxKind.CallExpression).some(call => readJestDeclaration(call))) {
         this.warn('JEST_UNSUPPORTED_DECLARATION');
       }
@@ -46,7 +66,7 @@ class JestTestExtractor {
   }
 
   private declaration(call: CallExpression, declaration: NonNullable<ReturnType<typeof readJestDeclaration>>,
-    suitePath: string[], inherited: TestModifier): void {
+    suitePath: string[], inherited: TestModifier, setupHooks: CallExpression[]): void {
     const title = literalJestTitle(call.getArguments()[0]);
     if (!declaration.supported || title === undefined ||
       (declaration.api === 'describe' && suitePath.length >= 20)) {
@@ -63,7 +83,7 @@ class JestTestExtractor {
         this.warn('JEST_UNSUPPORTED_DECLARATION');
         return;
       }
-      this.statements(body.getStatements(), [...suitePath, title], modifier);
+      this.statements(body.getStatements(), [...suitePath, title], modifier, setupHooks);
       return;
     }
     if (declaration.modifier !== 'TODO' && !body) {
@@ -78,17 +98,49 @@ class JestTestExtractor {
       this.warn('JEST_UNSUPPORTED_DECLARATION');
       return;
     }
-    this.cases.push(createJestTestArtifact({ call, parent: this.parent, title, suitePath,
+    const behavior = body && modifier !== 'SKIP' && modifier !== 'TODO'
+      ? extractJestBehavior({ body, setupHooks, relativePath: this.parent.filePath,
+        ...(declaration.parameterized ? { staticInputs: [this.parameterizedInput(call)].filter((node): node is Node => !!node) } : {}),
+        commitSha: this.commitSha, budget: this.behaviorBudget })
+      : undefined;
+    const artifact = createJestTestArtifact({ call, parent: this.parent, title, suitePath,
       modifier, declaredModifier: declaration.modifier,
       ...(declaration.parameterized ? { parameterized: true } : {}),
-      bodySpan: body ? { start: body.getStart(), end: body.getEnd() } : undefined }));
+      ...(behavior?.claims.length ? { behaviorEvidence: behavior.claims } : {}),
+      bodySpan: body ? { start: body.getStart(), end: body.getEnd() } : undefined });
+    for (const diagnostic of behavior?.diagnostics ?? []) this.addDiagnostic(diagnostic);
+    this.cases.push(artifact);
+  }
+
+  private parameterizedInput(call: CallExpression): Node | undefined {
+    const factory = call.getExpression();
+    if (!Node.isCallExpression(factory)) return undefined;
+    const each = factory.getExpression();
+    const table = factory.getArguments()[0];
+    return Node.isPropertyAccessExpression(each) && each.getName() === 'each' && table && Node.isArrayLiteralExpression(table)
+      ? table : undefined;
   }
 
   private warn(code: string): void {
-    const existing = this.diagnostics.get(code);
-    this.diagnostics.set(code, { code, severity: 'WARN', category: 'SCANNER',
+    this.addDiagnostic({ code, severity: 'WARN', category: 'SCANNER',
       message: 'Some test declarations have unsupported or ambiguous identities; inspect the test file.',
-      count: (existing?.count ?? 0) + 1, samplePaths: [this.parent.filePath],
+      count: 1, samplePaths: [this.parent.filePath],
       payload: { relativePath: this.parent.filePath, unsupportedPattern: code } });
+  }
+
+  private behaviorUnresolved(pattern: string, node: CallExpression): void {
+    this.addDiagnostic({ code: 'JEST_BEHAVIOR_UNRESOLVED', severity: 'WARN', category: 'SCANNER',
+      message: 'Some Jest behavior declarations were not analyzed; inspect the source location and pattern.',
+      count: 1, samplePaths: [this.parent.filePath],
+      payload: { relativePath: this.parent.filePath, unsupportedPattern: pattern,
+        startLine: node.getStartLineNumber(), startColumn: node.getSourceFile().getLineAndColumnAtPos(node.getStart()).column } });
+  }
+
+  private addDiagnostic(diagnostic: DiagnosticItem): void {
+    const key = `${diagnostic.code}::${diagnostic.payload?.relativePath ?? ''}::${diagnostic.payload?.unsupportedPattern ?? ''}`;
+    const existing = this.diagnostics.get(key);
+    this.diagnostics.set(key, existing
+      ? { ...existing, count: (existing.count ?? 1) + (diagnostic.count ?? 1) }
+      : { ...diagnostic });
   }
 }

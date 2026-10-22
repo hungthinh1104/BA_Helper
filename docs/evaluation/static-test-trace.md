@@ -38,6 +38,49 @@ integrity of 34/34 direct relationships. Symbol-only matching cannot pass if a
 graded production symbol occurs in more than one selected file; candidate paths
 are reported as an identity ambiguity.
 
+## Static semantic behavior gate
+
+The same command also evaluates the pinned fixture in
+`tests/evaluation/semantic-test-behavior.ground-truth.json`. The fixture is
+outside analyzer development fixtures and covers declared setup, a mock, a
+static input, an action, assertions, expected outcomes, and diagnosed dynamic
+or nested syntax. Each expected claim is anchored by exact source text and line;
+the evaluator checks its full line/column span, source bytes, static evidence
+kind, and fixture snapshot context. The fixture source hashes and content-derived
+snapshot ID (SHA-256 over UTF-8 text with CRLF normalized to LF) prevent silent
+input changes. Exact development-file, case-title,
+and normalized test-body overlap checks guard against copying a development
+fixture into the held-out set. Unsupported diagnostics have their own source anchors and are scored by
+pattern, file, line, and column; the scan's fixture snapshot context is recorded
+alongside them.
+
+This is a small curated regression set, not an external accuracy estimate. The
+labels are source-authored and frozen before evaluator execution, but they have
+not received a second human review (`independentHumanReview: false`). CI status
+means the current analyzer matches this frozen set; it does not certify broad
+semantic accuracy. Add independently adjudicated repository cases before
+making that claim. Static declarations never establish runtime execution,
+coverage, test pass/fail, or business-rule correctness.
+
+The behavior scorecard reports claim precision, recall and F1; unexpected and
+missing claims; exact source/commit provenance integrity; unsupported-pattern
+precision and recall; scan latency; and before/after RSS and heap observations.
+Raw memory deltas are informational because the CI runner and garbage collector
+affect them. The report does not gate on a noisy memory threshold. Unsupported
+pattern recall covers only the labeled negative controls; syntax the parser
+does not diagnose cannot enter that denominator.
+
+## Graph scalability gate
+
+CI runs `pnpm benchmark:static-test-graph -- ci`. It scans deterministic
+synthetic repositories at 100, 200, and 800 test cases, verifies claim/edge
+counts and repeat-run output digests, and records scan latency, graph latency
+samples, process memory observations, analyzer version, and implementation
+source hashes in `artifacts/performance/static-test-graph-ci.json`. Per-scale
+scan and median graph time budgets are regression limits. Memory observations
+are not thresholds, and these generated repositories do not estimate end-to-end
+latency or performance on arbitrary customer repositories.
+
 The fixed pilot is a regression corpus after resolver development. Add new
 application repositories as a held-out evaluation set before claiming broader
 accuracy. This is not human-adjudicated ground truth or a measurement of
@@ -77,3 +120,28 @@ with mocked dependencies, absent references and parameterized declarations
 with unexpanded or empty inline tables. Check whether reviewers distinguish a
 source callback from generated/executed cases. Report per-task
 results and uncertainty; a small pilot is not proof of product effectiveness.
+
+### Lightweight paired study workflow
+
+1. Select at least four booking/payment/refund change tasks with different
+   impact shapes. Before the study, two reviewers independently label critical
+   artifacts and false positives from the pinned source; resolve disagreements
+   before calculating scores.
+2. Freeze one tool build, requirement revision, repository snapshot, and report
+   for both conditions. In `TRACE_VISIBLE`, allow the Visual Test Trace panel.
+   In `TRACE_HIDDEN`, hide the panel and saved trace appendices while leaving the
+   same source, requirements, and ordinary review controls available.
+3. Assign task order with a balanced sequence. Each reviewer sees a given task
+   in only one condition; distribute matched tasks across reviewers so every
+   task appears in both conditions.
+4. Start timing when the requirement and repository are shown. Stop at the
+   recorded impact decision, before report appendices or ground truth are
+   exposed. Record identified, missed, and false-positive artifact IDs, task
+   accuracy, elapsed seconds, decision, and a 1–5 confidence rating.
+5. Compare per-task accuracy and time by condition, show paired differences
+   and the number of reviewers/tasks, and retain disagreements and exclusions.
+   Do not combine this human result with analyzer precision/recall or present a
+   small pilot as causal proof.
+
+Use [reviewer-study-template.csv](reviewer-study-template.csv) for the blank
+collection sheet. It contains no sample observations.

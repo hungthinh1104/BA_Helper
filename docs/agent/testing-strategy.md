@@ -236,6 +236,14 @@ API mapper tests validate metadata without exposing transient AST offsets or
 internal JSON. The DB pipeline test also checks parent identity and graph
 metadata projection.
 
+Behavior extraction tests must verify that active Jest cases retain setup,
+input, action, mock, assertion and outcome declarations with exact source
+offsets and commit context. Add negative cases for nested callbacks, dynamic
+matchers, snapshots and absent commit context. Keep static claims distinct from
+runtime execution and coverage. The synthetic static-test benchmark checks a
+fixed behavior-claim count/digest and enforces broad scan and median graph-time
+budgets.
+
 ### Static Test Trace Projection Tests
 
 Keep a separate gate for the persisted code-to-test projection. It must cover:
@@ -457,6 +465,24 @@ unsafe repository ref rejected before scan queueing
 limit-triggered scan publishes PARTIAL diagnostics visible in repository detail
 unsupported framework or blocked scan exposes stable FAILED error code and blocker diagnostics
 ```
+
+### Opt-in runtime trace import
+
+`packages/analyzer/tests/runtime/jest-runtime-trace.fixture-spec.ts` joins a
+local result shape to the real booking behavior fixture's scanned artifact.
+`packages/analyzer/tests/runtime/jest-runtime-trace.spec.ts` verifies separate
+runtime evidence, exact snapshot/path/source-line correlation, parallel result
+ordering, missing and ambiguous locations, outside-root paths, collection-only
+results, unsupported outcomes, and Jest runner column bases. It also verifies
+that titles and failure messages do not enter the manifest. The performance
+regression imports 5,000 synthetic results, checks a fixed latency ceiling and
+serialized output budget, and does not execute fixture code. Retry history,
+method spans and mock invocation details are explicit unsupported capabilities.
+
+The local import command is documented in
+[runtime-test-tracing.md](runtime-test-tracing.md). CI must never run a
+customer repository to create this evidence; CI may import only a report
+created by an explicitly configured, user-controlled test job.
 
 ## Test Completion Gate
 

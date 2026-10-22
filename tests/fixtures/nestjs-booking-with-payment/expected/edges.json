@@ -1,52 +1,52 @@
 {
   "edges": [
     {
-      "stableId": "edge:test-case:src/booking/booking-cancel.spec.ts::54a2d6ee0beb50fddd4cbe0ae68eb7aa8ba4d8c9c2b1051f71a97b43b606fbe0->service-method:booking.service.cancelBooking",
+      "stableId": "edge:api%3Asrc%252Fbooking%252Fbooking.controller.ts%23BookingController.cancel~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371:CALLS:service-method%3Asrc%252Fbooking%252Fbooking.service.ts%23BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "from": "api:src%2Fbooking%2Fbooking.controller.ts#BookingController.cancel~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "to": "service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "type": "CALLS",
+      "confidence": 1
+    },
+    {
+      "stableId": "edge:service-method%3Asrc%252Fbooking%252Fbooking.service.ts%23BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371:CALLS:service-method%3Asrc%252Fnotification%252Fnotification.service.ts%23NotificationService.notifyOwner~dd6f9df3949ebe095ea261fedb8d6afff333b1a449449ef86a9d6bba8b75dcbb",
+      "from": "service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "to": "service-method:src%2Fnotification%2Fnotification.service.ts#NotificationService.notifyOwner~dd6f9df3949ebe095ea261fedb8d6afff333b1a449449ef86a9d6bba8b75dcbb",
+      "type": "CALLS",
+      "confidence": 1
+    },
+    {
+      "stableId": "edge:service-method%3Asrc%252Fbooking%252Fbooking.service.ts%23BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371:CALLS:service-method%3Asrc%252Fpayment%252Fpayment.service.ts%23PaymentService.refund~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "from": "service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "to": "service-method:src%2Fpayment%2Fpayment.service.ts#PaymentService.refund~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "type": "CALLS",
+      "confidence": 1
+    },
+    {
+      "stableId": "edge:service-method%3Asrc%252Fbooking%252Fbooking.service.ts%23BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371:CALLS:service-method%3Asrc%252Fslot%252Fslot.service.ts%23SlotService.releaseSlot~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "from": "service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "to": "service-method:src%2Fslot%2Fslot.service.ts#SlotService.releaseSlot~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "type": "CALLS",
+      "confidence": 1
+    },
+    {
+      "stableId": "edge:service-method%3Asrc%252Fbooking%252Fbooking.service.ts%23BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371:USES:entity%3Asrc%252Fbooking%252Fbooking.entity.ts%23Booking",
+      "from": "service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "to": "entity:src%2Fbooking%2Fbooking.entity.ts#Booking",
+      "type": "USES",
+      "confidence": 1
+    },
+    {
+      "stableId": "edge:service-method%3Asrc%252Fpayment%252Fpayment.service.ts%23PaymentService.refund~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371:USES:entity%3Asrc%252Fpayment%252Fpayment.entity.ts%23PaymentTransaction",
+      "from": "service-method:src%2Fpayment%2Fpayment.service.ts#PaymentService.refund~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "to": "entity:src%2Fpayment%2Fpayment.entity.ts#PaymentTransaction",
+      "type": "USES",
+      "confidence": 1
+    },
+    {
+      "stableId": "edge:test-case%3Asrc%2Fbooking%2Fbooking-cancel.spec.ts%3A%3A54a2d6ee0beb50fddd4cbe0ae68eb7aa8ba4d8c9c2b1051f71a97b43b606fbe0:TESTS:service-method%3Asrc%252Fbooking%252Fbooking.service.ts%23BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
       "from": "test-case:src/booking/booking-cancel.spec.ts::54a2d6ee0beb50fddd4cbe0ae68eb7aa8ba4d8c9c2b1051f71a97b43b606fbe0",
-      "to": "service-method:booking.service.cancelBooking",
+      "to": "service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
       "type": "TESTS",
-      "confidence": 1
-    },
-    {
-      "stableId": "edge:api:booking.controller.cancel->service-method:booking.service.cancelBooking",
-      "from": "api:booking.controller.cancel",
-      "to": "service-method:booking.service.cancelBooking",
-      "type": "CALLS",
-      "confidence": 1
-    },
-    {
-      "stableId": "edge:service-method:booking.service.cancelBooking->service-method:payment.service.refund",
-      "from": "service-method:booking.service.cancelBooking",
-      "to": "service-method:payment.service.refund",
-      "type": "CALLS",
-      "confidence": 1
-    },
-    {
-      "stableId": "edge:service-method:booking.service.cancelBooking->service-method:slot.service.releaseSlot",
-      "from": "service-method:booking.service.cancelBooking",
-      "to": "service-method:slot.service.releaseSlot",
-      "type": "CALLS",
-      "confidence": 1
-    },
-    {
-      "stableId": "edge:service-method:booking.service.cancelBooking->service-method:notification.service.notifyOwner",
-      "from": "service-method:booking.service.cancelBooking",
-      "to": "service-method:notification.service.notifyOwner",
-      "type": "CALLS",
-      "confidence": 1
-    },
-    {
-      "stableId": "edge:service-method:booking.service.cancelBooking->entity:booking",
-      "from": "service-method:booking.service.cancelBooking",
-      "to": "entity:booking",
-      "type": "USES",
-      "confidence": 1
-    },
-    {
-      "stableId": "edge:service-method:payment.service.refund->entity:paymenttransaction",
-      "from": "service-method:payment.service.refund",
-      "to": "entity:paymenttransaction",
-      "type": "USES",
       "confidence": 1
     }
   ]

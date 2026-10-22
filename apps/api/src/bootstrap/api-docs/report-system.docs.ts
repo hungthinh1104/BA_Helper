@@ -13,7 +13,7 @@ export const reportSystemDocs: Record<string, ControllerDocs> = {
     enqueueJob: op('Queue or reuse reviewed report generation', c.documentJobSchema, { body: c.documentJobCreateRequestSchema, optionalBody: true, permission: 'report:export', description: 'Requires a completed, non-stale analysis with a saved reviewed report snapshot. retry=true requeues a failed job; otherwise the existing job is reused. documentType is fixed to IMPACT_REPORT.' }),
   } },
   LocalizationController: { tag: 'Report localization', operations: {
-    generateLocalizedReport: op('Generate a localized approved report', c.localizedReportArtifactSchema, { body: c.generateLocalizedReportRequestSchema, description: 'Requires analysis read access and an approved source report. Translation failure returns 500; localized content never becomes source evidence.' }),
+    generateLocalizedReport: op('Generate a localized approved report', c.localizedReportArtifactSchema, { body: c.generateLocalizedReportRequestSchema, permission: 'report:export', description: 'Requires Global ADMIN or REVIEWER, project report:export permission, and an approved source report. Rate limited. The placeholder translation provider is restricted to development/test; without a production provider the request is recorded as failed and returns 500. Localized content never becomes source evidence.' }),
     getLocalizationStatus: op('Read translation status against the approved source', c.localizationStatusResponseSchema),
   } },
   DomainPackController: { tag: 'Domain packs', operations: {

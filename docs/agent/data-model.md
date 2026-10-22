@@ -29,6 +29,12 @@ DomainEvent
 Auth membership models can be introduced after the backend engine proves its
 vertical slice, while preserving `Project` ownership boundaries.
 
+Requirement list reads return each requirement's latest immutable revision
+and revision count. The supporting indexes are ordered for project listing
+(`projectId`, newest `createdAt`, stable `id`) and latest-revision lookup
+(`requirementId`, newest `createdAt`, stable `id`); list queries should not
+load every historical revision just to select the newest one.
+
 ## Ownership
 
 ```text

@@ -1,5 +1,6 @@
 import type { RepositorySnapshotListResponse } from '@ba-helper/contracts';
 import { PrismaService } from "@ba-helper/backend-runtime";
+import { readScannerVersion } from './scanner-version.reader';
 
 export class ListRepositorySnapshotsUseCase {
   constructor(private readonly prisma: PrismaService) {}
@@ -37,7 +38,7 @@ export class ListRepositorySnapshotsUseCase {
         createdAt: s.createdAt.toISOString(),
         coverageStatus: s.coverageStatus,
         analyzerVersion: s.analyzerVersion,
-        scannerVersion: (s.profile as any)?.scannerVersion || undefined, // scannerVersion typically isn't in profile but keeping per prompt
+        scannerVersion: readScannerVersion(s.diagnostics),
         profileVersion: s.profile?.profileVersion,
         artifactCount: s._count.artifacts,
       })),

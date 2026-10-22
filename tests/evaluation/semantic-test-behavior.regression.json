@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-22",
+  "groundTruthSha256": "07958c42da36458ec15e441fe52f0641409f98633a8e5fad46bf36b144212f89",
+  "expectedClaims": 19,
+  "unsupportedPatterns": [
+    "DYNAMIC_MATCHER_NOT_ANALYZED",
+    "NESTED_CALLBACK_NOT_ANALYZED",
+    "SNAPSHOT_EXPECTATION_UNRESOLVED"
+  ],
+  "reason": "Frozen source-slice labels and unsupported-pattern expectations; update only after documented label review."
+}

@@ -1,6 +1,7 @@
 /* apps/web/src/app/globals.css */
 
 @import "tailwindcss";
+@import "@xyflow/react/dist/style.css";
 
 /* Split Design System Imports */
 @import "../styles/tokens.css";

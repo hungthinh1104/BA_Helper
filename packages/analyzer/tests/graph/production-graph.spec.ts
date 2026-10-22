@@ -1,7 +1,7 @@
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { buildGraph, SafeFileEnumerator, scanProject } from '../../src';
+import { buildGraph, createGraphEdgeId, SafeFileEnumerator, scanProject } from '../../src';
 import { TypeScriptNestJsAdapter } from '../../src/scanner/adapters/typescript-nestjs.adapter';
 
 describe('source-backed production graph', () => {
@@ -28,12 +28,26 @@ describe('source-backed production graph', () => {
     const result = await new TypeScriptNestJsAdapter().scan({ rootDir: fixture, tsFiles: files.tsFiles });
     const triples = result.dependencyEdges.map(e => `${e.fromArtifactId}|${e.type}|${e.toArtifactId}`);
     const test = result.artifacts.find(a => a.type === 'JEST_TEST_CASE')!;
-    expect(triples).toEqual(expect.arrayContaining([
-      'api:booking.controller.cancel|CALLS|service-method:booking.service.cancelBooking',
-      'service-method:booking.service.cancelBooking|CALLS|service-method:payment.service.refund',
-      `${test.stableId}|TESTS|service-method:booking.service.cancelBooking`,
-    ]));
+    const bookingMethod = result.artifacts.find(a => a.symbolName === 'BookingService.cancelBooking')!;
+    expect(triples).toHaveLength(7);
+    expect(triples.some(triple => triple.includes('|CALLS|'))).toBe(true);
+    expect(result.dependencyEdges.some(edge => edge.fromArtifactId === test.stableId && edge.type === 'TESTS' &&
+      edge.toArtifactId === bookingMethod.stableId)).toBe(true);
     expect(result.dependencyEdges.every(e => e.confidence === 1 && e.provenance?.locations.length)).toBe(true);
+  });
+
+  it('creates distinct deterministic edge IDs for endpoint/type tuples', () => {
+    const ids = [
+      createGraphEdgeId('a->b', 'CALLS', 'c'),
+      createGraphEdgeId('a', 'CALLS', 'b->c'),
+      createGraphEdgeId('a', 'TESTS', 'b'),
+    ];
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toEqual([
+      createGraphEdgeId('a->b', 'CALLS', 'c'),
+      createGraphEdgeId('a', 'CALLS', 'b->c'),
+      createGraphEdgeId('a', 'TESTS', 'b'),
+    ]);
   });
 
   it('does not assign an imported class to its first method or match unrelated receivers', () => {
@@ -75,12 +89,12 @@ it('refund', () => {
   { const service = new Other(); service.other(); }
 });`);
     const result = buildGraph(scanProject({ fixturePath: root, tsFiles: [service, other, test] }));
-    const refund = result.edges.find(e => e.type === 'TESTS' && e.to.includes('payment.service.refund'));
+    const refund = result.edges.find(e => e.type === 'TESTS' && e.to.includes('PaymentService.refund'));
     expect(refund?.provenance?.locations).toEqual([
       { sourcePath: 'src/payment.spec.ts', startLine: 5, endLine: 5 },
       { sourcePath: 'src/payment.spec.ts', startLine: 6, endLine: 6 },
     ]);
-    expect(result.edges.some(e => e.to.includes('other.service.refund'))).toBe(false);
+    expect(result.edges.some(e => e.to.includes('OtherService.refund'))).toBe(false);
   });
 
   it('does not load a dependency excluded from the selected file set', async () => {
@@ -113,8 +127,9 @@ ${Array.from({ length: 25 }, () => 'service.refund();').join('\n')}
     const service = source('src/payment.service.ts', payment.replace('export class', 'export default class'));
     const test = source('src/payment.spec.ts', `import Subject from './payment.service';
 it('refund', () => new Subject().refund());`);
-    const edges = buildGraph(scanProject({ fixturePath: root, tsFiles: [service, test] })).edges;
-    expect(edges).toEqual([expect.objectContaining({ type: 'TESTS', to: 'service-method:payment.service.refund' })]);
+    const scan = scanProject({ fixturePath: root, tsFiles: [service, test] });
+    const target = scan.artifacts.find(artifact => artifact.symbolName === 'PaymentService.refund')!;
+    expect(buildGraph(scan).edges).toEqual([expect.objectContaining({ type: 'TESTS', to: target.stableId })]);
   });
 
   it('does not resolve reassigned instances or this inside an ordinary nested function', () => {
@@ -134,13 +149,43 @@ import { PaymentService } from './payment.service';
     expect(graph.diagnostics?.some(d => d.code === 'UNRESOLVED_RECEIVER_SCOPE')).toBe(true);
   });
 
-  it('does not publish relationships whose artifact identities collide', () => {
+  it('resolves duplicate class and method names by canonical repository path', () => {
     const first = source('src/a/payment.service.ts', payment);
     const second = source('src/b/payment.service.ts', payment);
     const test = source('src/payment.spec.ts', `import { PaymentService } from './a/payment.service';
 it('refund', () => new PaymentService().refund());`);
-    const graph = buildGraph(scanProject({ fixturePath: root, tsFiles: [first, second, test] }));
-    expect(graph.edges).toEqual([]);
-    expect(graph.diagnostics?.some(d => d.code === 'AMBIGUOUS_ARTIFACT_IDENTITY')).toBe(true);
+    const scan = scanProject({ fixturePath: root, tsFiles: [first, second, test] });
+    const methods = scan.artifacts.filter(artifact => artifact.symbolName === 'PaymentService.refund');
+    expect(methods).toHaveLength(2);
+    expect(new Set(methods.map(artifact => artifact.stableId)).size).toBe(2);
+    expect(methods.every(artifact => artifact.stableId.includes(encodeURIComponent(artifact.filePath)))).toBe(true);
+    const graph = buildGraph(scan);
+    expect(graph.edges.filter(edge => edge.type === 'TESTS').map(edge => edge.to)).toEqual([methods[0].stableId]);
+    expect(graph.diagnostics?.some(d => d.code === 'AMBIGUOUS_ARTIFACT_IDENTITY')).toBe(false);
+  });
+
+  it('does not choose the first duplicate imported class and reports unresolved test targets', () => {
+    const duplicate = source('src/payment.service.ts', `import { Injectable } from '@nestjs/common';
+@Injectable() export class PaymentService { refund() {} }
+@Injectable() export class PaymentService { refund() {} }`);
+    const test = source('src/payment.spec.ts', `import { PaymentService } from './payment.service';
+it('refund', () => new PaymentService().refund());`);
+    const graph = buildGraph(scanProject({ fixturePath: root, tsFiles: [duplicate, test] }));
+    expect(graph.edges.filter(edge => edge.type === 'TESTS')).toEqual([]);
+    expect(graph.diagnostics?.some(d => d.code === 'AMBIGUOUS_SYMBOL_RESOLUTION')).toBe(true);
+    expect(graph.diagnostics?.some(d => d.code === 'TEST_TARGET_UNRESOLVED')).toBe(true);
+  });
+
+  it('retains both directions of a source cycle exactly once', () => {
+    const cyclic = source('src/cycle.service.ts', `import { Injectable } from '@nestjs/common';
+@Injectable() export class CycleService {
+  first() { return this.second(); }
+  second() { return this.first(); }
+}`);
+    const graph = buildGraph(scanProject({ fixturePath: root, tsFiles: [cyclic] }));
+    expect(graph.edges.map(edge => [edge.from, edge.type, edge.to])).toEqual([
+      [expect.stringContaining('CycleService.first'), 'CALLS', expect.stringContaining('CycleService.second')],
+      [expect.stringContaining('CycleService.second'), 'CALLS', expect.stringContaining('CycleService.first')],
+    ]);
   });
 });

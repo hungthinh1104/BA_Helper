@@ -6,6 +6,7 @@ import type {
   RepositorySnapshotDriftResponse,
 } from '@ba-helper/contracts';
 import { PrismaService } from "@ba-helper/backend-runtime";
+import { readScannerVersion } from './scanner-version.reader';
 
 export class GetRepositorySnapshotDriftUseCase {
   constructor(private readonly prisma: PrismaService) {}
@@ -121,7 +122,10 @@ export class GetRepositorySnapshotDriftUseCase {
       }
     }
 
-    const scannerVersionChanged = baseSnapshot.analyzerVersion !== targetSnapshot.analyzerVersion; // Actually scanner uses analyzerVersion field here? Wait, the schema has analyzerVersion but not scannerVersion.
+    const baseScannerVersion = readScannerVersion(baseSnapshot.diagnostics);
+    const targetScannerVersion = readScannerVersion(targetSnapshot.diagnostics);
+    const scannerVersionChanged = !!baseScannerVersion && !!targetScannerVersion &&
+      baseScannerVersion !== targetScannerVersion;
     const analyzerVersionChanged = baseSnapshot.analyzerVersion !== targetSnapshot.analyzerVersion;
 
     const baseArtifactCount = baseArtifacts.length;
@@ -142,14 +146,18 @@ export class GetRepositorySnapshotDriftUseCase {
     const churn = addedArtifactCount + removedArtifactCount + changedArtifactCount + unknownChangedArtifactCount;
     const maxArtifacts = Math.max(baseArtifactCount, targetArtifactCount);
 
-    if (analyzerVersionChanged && maxArtifacts > 0 && churn > 0.8 * maxArtifacts) {
+    if ((scannerVersionChanged || analyzerVersionChanged) && maxArtifacts > 0 && churn > 0.8 * maxArtifacts) {
       status = 'INCOMPATIBLE';
     }
 
     const warnings: { code: string; message: string }[] = [];
-    if (scannerVersionChanged) {
-      // Since schema doesn't have scannerVersion, we use analyzerVersion for now.
+    if (analyzerVersionChanged) {
       warnings.push({ code: 'ANALYZER_VERSION_CHANGED', message: 'Analyzer version changed between snapshots.' });
+    }
+    if (scannerVersionChanged) {
+      warnings.push({ code: 'SCANNER_VERSION_CHANGED', message: 'Scanner version changed between snapshots.' });
+    } else if (!baseScannerVersion || !targetScannerVersion) {
+      warnings.push({ code: 'SCANNER_VERSION_UNAVAILABLE', message: 'Scanner version is unavailable for one or both snapshots.' });
     }
     if (hashUnavailableCount > 0) {
       warnings.push({ code: 'HASH_UNAVAILABLE', message: 'Some matched artifacts are missing content hashes.' });
@@ -185,6 +193,8 @@ export class GetRepositorySnapshotDriftUseCase {
         hashUnavailableArtifactCount: hashUnavailableCount,
       },
       versionComparison: {
+        baseScannerVersion: baseScannerVersion ?? null,
+        targetScannerVersion: targetScannerVersion ?? null,
         baseAnalyzerVersion: baseSnapshot.analyzerVersion,
         targetAnalyzerVersion: targetSnapshot.analyzerVersion,
         scannerVersionChanged,
@@ -218,6 +228,9 @@ export class GetRepositorySnapshotDriftUseCase {
   }
 
   private createEmptyResponse(projectId: string, repositoryId: string, baseSnapshotId: string, targetSnapshotId: string, baseSnapshot: any, targetSnapshot: any): RepositorySnapshotDriftResponse {
+    const baseScannerVersion = readScannerVersion(baseSnapshot.diagnostics);
+    const targetScannerVersion = readScannerVersion(targetSnapshot.diagnostics);
+    const scannerVersionUnavailable = !baseScannerVersion || !targetScannerVersion;
     return {
       projectId,
       repositoryId,
@@ -235,6 +248,8 @@ export class GetRepositorySnapshotDriftUseCase {
         hashUnavailableArtifactCount: 0,
       },
       versionComparison: {
+        baseScannerVersion: baseScannerVersion ?? null,
+        targetScannerVersion: targetScannerVersion ?? null,
         baseAnalyzerVersion: baseSnapshot.analyzerVersion,
         targetAnalyzerVersion: targetSnapshot.analyzerVersion,
         scannerVersionChanged: false,
@@ -251,7 +266,10 @@ export class GetRepositorySnapshotDriftUseCase {
         changedArtifacts: [],
         unknownChangedArtifacts: [],
       },
-      warnings: [],
+      warnings: scannerVersionUnavailable ? [{
+        code: 'SCANNER_VERSION_UNAVAILABLE',
+        message: 'Scanner version is unavailable for one or both snapshots.',
+      }] : [],
     };
   }
 }

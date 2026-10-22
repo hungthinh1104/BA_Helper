@@ -7,7 +7,7 @@ import type {
 } from '@ba-helper/analyzer';
 import type { DiagnosticItem } from '@ba-helper/contracts';
 import { ArtifactRepository } from '../../artifact/infrastructure/artifact.repository';
-import { buildArtifactInputs } from './scan-artifact.mapper';
+import { assertArtifactPersistenceMatches, buildArtifactInputs } from './scan-artifact.mapper';
 import { EvidenceRepository } from '../../evidence/infrastructure/evidence.repository';
 import { GraphRepository } from '../../graph/infrastructure/graph.repository';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -143,6 +143,7 @@ export class RunScanJobPersistenceStep {
 
     const persistedArtifacts = await this.persistArtifacts(
       snapshot.id,
+      params.commitSha,
       params.scanResult.artifacts,
       params.collector,
       tx,
@@ -276,19 +277,15 @@ export class RunScanJobPersistenceStep {
 
   private async persistArtifacts(
     snapshotId: string,
+    commitSha: string,
     artifacts: ScanArtifact[],
     collector: DiagnosticCollectorLike,
     tx: Prisma.TransactionClient,
   ): Promise<PersistedArtifactRef[]> {
-    if (artifacts.length === 0) {
-      return [];
-    }
-
-    await this.artifactRepository.createMany(
-      buildArtifactInputs(snapshotId, artifacts, collector),
-      tx,
-    );
-
-    return this.artifactRepository.listBySnapshot(snapshotId, tx);
+    const inputs = buildArtifactInputs(snapshotId, artifacts, collector, commitSha);
+    await this.artifactRepository.createMany(inputs, tx);
+    const persisted = await this.artifactRepository.listBySnapshot(snapshotId, tx);
+    assertArtifactPersistenceMatches(inputs, persisted);
+    return persisted;
   }
 }

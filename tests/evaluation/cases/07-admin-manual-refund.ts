@@ -7,7 +7,7 @@ export const case07: EvaluationCase = {
   targetFixture: 'nestjs-booking-with-payment',
   expected: {
     impactedArtifactKeys: ['api:admin.controller.refund', 'service:payment.service.refund'],
-    negativeArtifactKeys: ['api:booking.controller.cancel'],
+    negativeArtifactKeys: ['api:src%2Fbooking%2Fbooking.controller.ts#BookingController.cancel~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371'],
     evidenceHints: ['admin', 'manual override'],
     unknownsOrQuestions: ['does manual refund bypass partial refund rules'],
     qaScenarios: ['admin refunding completed booking succeeds'],

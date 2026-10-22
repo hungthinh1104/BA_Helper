@@ -1,4 +1,5 @@
 import type { QaTraceArtifact, QaTraceEdge, QaTraceEvidence, QaTraceInput } from '../../domain/qa-trace.types';
+import { createArtifactIdentity } from '@ba-helper/shared';
 
 export function artifact(id: string, overrides: Partial<QaTraceArtifact> = {}): QaTraceArtifact {
   return { id, snapshotId: 'snapshot', artifactKey: `service:${id}`, name: id,
@@ -11,7 +12,7 @@ export function testCase(id = 'test', modifier = 'NORMAL'): QaTraceArtifact {
   return artifact(id, { artifactType: 'JEST_TEST_CASE', universalKind: 'TEST_CASE', filePath,
     artifactKey: `test-case:${filePath}::identity`, metadata: { testCase: { framework: 'jest',
       suitePath: ['Booking'], title: 'cancels and refunds', modifier, declaredModifier: modifier,
-      parentFileArtifactKey: `test:${filePath.replace(/[/\\]/g, '.')}` } } });
+      parentFileArtifactKey: createArtifactIdentity('test', filePath, 'file') } } });
 }
 
 export function edge(id: string, from: QaTraceArtifact, to: QaTraceArtifact, type = 'CALLS'): QaTraceEdge {

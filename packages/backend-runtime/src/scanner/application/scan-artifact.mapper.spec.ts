@@ -1,9 +1,10 @@
-import { buildArtifactInputs } from './scan-artifact.mapper';
+import { assertArtifactPersistenceMatches, buildArtifactInputs } from './scan-artifact.mapper';
 import { buildEvidenceInputs } from './scan-persistence-mappers';
 import type { ScanArtifact } from '@ba-helper/analyzer';
+import { createArtifactIdentity } from '@ba-helper/shared';
 
 describe('test artifact persistence', () => {
-  const parent: ScanArtifact = { stableId: 'test:payment.spec.ts', type: 'TEST', filePath: 'payment.spec.ts',
+  const parent: ScanArtifact = { stableId: createArtifactIdentity('test', 'payment.spec.ts', 'file'), type: 'TEST', filePath: 'payment.spec.ts',
     symbolName: 'payment.spec.ts', startLine: 1, endLine: 12, excerpt: 'test file' };
   const test: ScanArtifact = { ...parent, stableId: 'test-case:payment.spec.ts::hash', type: 'JEST_TEST_CASE',
     symbolName: 'refund > once', testBodySpan: { start: 42, end: 57 },
@@ -41,5 +42,50 @@ describe('test artifact persistence', () => {
     const parameterized = { ...test, testCase: { ...test.testCase!, parameterized: true } };
     const inputs = buildArtifactInputs('snapshot', [parameterized], collector);
     expect(inputs[0].metadata).toEqual({ testCase: parameterized.testCase });
+  });
+
+  it('redacts static behavior text and rejects claims that point outside their test file', () => {
+    const secret = `ghp_${'b'.repeat(36)}`;
+    const claim = { kind: 'INPUT' as const, evidenceKind: 'STATIC_DECLARATION' as const,
+      sourceText: `const token = '${secret}'`, sourceLocation: { relativePath: 'payment.spec.ts',
+        startOffset: 0, endOffset: 30, startLine: 1, startColumn: 1, endLine: 1, endColumn: 31 }, commitSha: 'commit-1' };
+    const withClaim = { ...test, testCase: { ...test.testCase!, behaviorEvidence: [claim] } };
+    const persisted = buildArtifactInputs('snapshot', [parent, withClaim], collector, 'commit-1');
+    expect(JSON.stringify(persisted)).not.toContain(secret);
+    expect(persisted[1].metadata).toMatchObject({ testCase: { behaviorEvidence: [{
+      sourceLocation: claim.sourceLocation, commitSha: 'commit-1', evidenceKind: 'STATIC_DECLARATION',
+      evidenceProvenanceKey: 'snapshot:snapshot:artifact:test:payment.spec.ts#file',
+    }] } });
+    expect(() => buildArtifactInputs('snapshot', [{ ...withClaim, testCase: { ...withClaim.testCase!,
+      behaviorEvidence: [{ ...claim, sourceLocation: { ...claim.sourceLocation, relativePath: 'other.spec.ts' } }] } }], collector))
+      .toThrow('reference its test case source file');
+    expect(() => buildArtifactInputs('snapshot', [withClaim], collector, 'different-commit'))
+      .toThrow('persisted snapshot commit');
+    expect(() => buildArtifactInputs('snapshot', [parent, { ...withClaim, testCase: { ...withClaim.testCase!,
+      behaviorEvidence: [{ ...claim, evidenceProvenanceKey: 'snapshot:other:artifact:case' }] } }], collector, 'commit-1'))
+      .toThrow('persisted source evidence');
+  });
+
+  it('rejects duplicate identities before persistence', () => {
+    expect(() => buildArtifactInputs('snapshot', [parent, { ...parent, symbolName: 'other' }], collector))
+      .toThrow('share the same stable identity');
+  });
+
+  it('rejects a persisted row whose identity conflicts with extracted source data', () => {
+    const [input] = buildArtifactInputs('snapshot', [parent], collector);
+    expect(() => assertArtifactPersistenceMatches([input], [{
+      id: 'artifact-id', ...input, startLine: input.startLine ?? null, endLine: input.endLine ?? null,
+      contentHash: 'older-content-hash', metadata: null,
+    }])).toThrow('conflicts with its extracted identity');
+  });
+
+  it('rejects extra stale rows from an earlier write to the same snapshot identity', () => {
+    const [input] = buildArtifactInputs('snapshot', [parent], collector);
+    expect(() => assertArtifactPersistenceMatches([input], [
+      { id: 'artifact-id', ...input, startLine: input.startLine ?? null, endLine: input.endLine ?? null,
+        contentHash: input.contentHash ?? null, metadata: null },
+      { id: 'stale-id', ...input, artifactKey: 'stale-artifact-key', startLine: input.startLine ?? null,
+        endLine: input.endLine ?? null, contentHash: input.contentHash ?? null, metadata: null },
+    ])).toThrow('identities conflict with the extracted snapshot');
   });
 });

@@ -16,7 +16,7 @@ import type { EvaluationCase } from '../evaluation-types';
 
 const BOOKING = 'nestjs-booking-with-payment';
 const ORDER = 'nestjs-order-inventory';
-const BOOKING_NEGATIVE = 'service-method:refund-report.service.generateReport';
+const BOOKING_NEGATIVE = 'service-method:src%2Fadmin%2Frefund-report.service.ts#AdminRefundReportService.generateReport~4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945';
 
 export const productionStableEvaluationCases: EvaluationCase[] = [
   {
@@ -27,22 +27,22 @@ export const productionStableEvaluationCases: EvaluationCase[] = [
     targetFixture: BOOKING,
     expected: {
       criticalArtifactKeys: [
-        'api:booking.controller.cancel',
-        'service-method:booking.service.cancelBooking',
-        'service-method:payment.service.refund',
-        'service-method:slot.service.releaseSlot',
+        'api:src%2Fbooking%2Fbooking.controller.ts#BookingController.cancel~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fpayment%2Fpayment.service.ts#PaymentService.refund~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fslot%2Fslot.service.ts#SlotService.releaseSlot~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
       ],
       impactedArtifactKeys: [
-        'api:booking.controller.cancel',
-        'service-method:booking.service.cancelBooking',
-        'service-method:payment.service.refund',
-        'service-method:slot.service.releaseSlot',
-        'entity:paymenttransaction',
+        'api:src%2Fbooking%2Fbooking.controller.ts#BookingController.cancel~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fpayment%2Fpayment.service.ts#PaymentService.refund~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fslot%2Fslot.service.ts#SlotService.releaseSlot~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'entity:src%2Fpayment%2Fpayment.entity.ts#PaymentTransaction',
       ],
       negativeArtifactKeys: [BOOKING_NEGATIVE],
       requiredEvidenceAnchors: [
-        { artifactKey: 'service-method:payment.service.refund', contains: 'REFUNDED' },
-        { artifactKey: 'api:booking.controller.cancel', contains: 'cancel' },
+        { artifactKey: 'service-method:src%2Fpayment%2Fpayment.service.ts#PaymentService.refund~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371', contains: 'REFUNDED' },
+        { artifactKey: 'api:src%2Fbooking%2Fbooking.controller.ts#BookingController.cancel~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371', contains: 'cancel' },
       ],
     },
     domain: { packId: 'booking', expectedConceptKeys: ['booking', 'payment', 'refund', 'cancellation'] },
@@ -55,19 +55,19 @@ export const productionStableEvaluationCases: EvaluationCase[] = [
     targetFixture: BOOKING,
     expected: {
       criticalArtifactKeys: [
-        'api:booking.controller.cancel',
-        'service-method:booking.service.cancelBooking',
-        'service-method:payment.service.refund',
+        'api:src%2Fbooking%2Fbooking.controller.ts#BookingController.cancel~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fpayment%2Fpayment.service.ts#PaymentService.refund~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
       ],
       impactedArtifactKeys: [
-        'api:booking.controller.cancel',
-        'service-method:booking.service.cancelBooking',
-        'service-method:payment.service.refund',
-        'entity:paymenttransaction',
+        'api:src%2Fbooking%2Fbooking.controller.ts#BookingController.cancel~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fpayment%2Fpayment.service.ts#PaymentService.refund~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'entity:src%2Fpayment%2Fpayment.entity.ts#PaymentTransaction',
       ],
       negativeArtifactKeys: [BOOKING_NEGATIVE],
       requiredEvidenceAnchors: [
-        { artifactKey: 'service-method:payment.service.refund', contains: 'REFUNDED' },
+        { artifactKey: 'service-method:src%2Fpayment%2Fpayment.service.ts#PaymentService.refund~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371', contains: 'REFUNDED' },
       ],
     },
     domain: { packId: 'booking', expectedConceptKeys: ['booking', 'payment', 'refund'] },
@@ -80,18 +80,18 @@ export const productionStableEvaluationCases: EvaluationCase[] = [
     targetFixture: BOOKING,
     expected: {
       criticalArtifactKeys: [
-        'api:booking.controller.cancel',
-        'service-method:booking.service.cancelBooking',
-        'service-method:slot.service.releaseSlot',
+        'api:src%2Fbooking%2Fbooking.controller.ts#BookingController.cancel~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fslot%2Fslot.service.ts#SlotService.releaseSlot~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
       ],
       impactedArtifactKeys: [
-        'api:booking.controller.cancel',
-        'service-method:booking.service.cancelBooking',
-        'service-method:slot.service.releaseSlot',
+        'api:src%2Fbooking%2Fbooking.controller.ts#BookingController.cancel~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fslot%2Fslot.service.ts#SlotService.releaseSlot~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
       ],
       negativeArtifactKeys: [BOOKING_NEGATIVE],
       requiredEvidenceAnchors: [
-        { artifactKey: 'service-method:slot.service.releaseSlot', contains: 'releaseSlot' },
+        { artifactKey: 'service-method:src%2Fslot%2Fslot.service.ts#SlotService.releaseSlot~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371', contains: 'releaseSlot' },
       ],
     },
     domain: { packId: 'booking', expectedConceptKeys: ['booking', 'cancellation'] },
@@ -104,18 +104,18 @@ export const productionStableEvaluationCases: EvaluationCase[] = [
     targetFixture: BOOKING,
     expected: {
       criticalArtifactKeys: [
-        'api:booking.controller.cancel',
-        'service-method:payment.service.refund',
+        'api:src%2Fbooking%2Fbooking.controller.ts#BookingController.cancel~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fpayment%2Fpayment.service.ts#PaymentService.refund~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
       ],
       impactedArtifactKeys: [
-        'api:booking.controller.cancel',
-        'service-method:booking.service.cancelBooking',
-        'service-method:payment.service.refund',
-        'entity:paymenttransaction',
+        'api:src%2Fbooking%2Fbooking.controller.ts#BookingController.cancel~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fpayment%2Fpayment.service.ts#PaymentService.refund~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'entity:src%2Fpayment%2Fpayment.entity.ts#PaymentTransaction',
       ],
       negativeArtifactKeys: [BOOKING_NEGATIVE],
       requiredEvidenceAnchors: [
-        { artifactKey: 'service-method:payment.service.refund', contains: 'REFUNDED' },
+        { artifactKey: 'service-method:src%2Fpayment%2Fpayment.service.ts#PaymentService.refund~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371', contains: 'REFUNDED' },
       ],
     },
     domain: { packId: 'booking', expectedConceptKeys: ['booking', 'payment', 'refund'] },
@@ -180,17 +180,17 @@ export const productionStableEvaluationCases: EvaluationCase[] = [
     targetFixture: BOOKING,
     expected: {
       criticalArtifactKeys: [
-        'api:booking.controller.cancel',
-        'service-method:payment.service.refund',
+        'api:src%2Fbooking%2Fbooking.controller.ts#BookingController.cancel~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fpayment%2Fpayment.service.ts#PaymentService.refund~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
       ],
       impactedArtifactKeys: [
-        'api:booking.controller.cancel',
-        'service-method:booking.service.cancelBooking',
-        'service-method:payment.service.refund',
+        'api:src%2Fbooking%2Fbooking.controller.ts#BookingController.cancel~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fpayment%2Fpayment.service.ts#PaymentService.refund~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
       ],
       negativeArtifactKeys: [BOOKING_NEGATIVE],
       requiredEvidenceAnchors: [
-        { artifactKey: 'service-method:payment.service.refund', contains: 'REFUNDED' },
+        { artifactKey: 'service-method:src%2Fpayment%2Fpayment.service.ts#PaymentService.refund~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371', contains: 'REFUNDED' },
       ],
     },
     domain: { packId: 'booking', expectedConceptKeys: ['booking', 'payment', 'refund', 'cancellation'] },
@@ -203,16 +203,16 @@ export const productionStableEvaluationCases: EvaluationCase[] = [
     targetFixture: BOOKING,
     expected: {
       criticalArtifactKeys: [
-        'api:booking.controller.cancel',
-        'service-method:booking.service.cancelBooking',
+        'api:src%2Fbooking%2Fbooking.controller.ts#BookingController.cancel~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
       ],
       impactedArtifactKeys: [
-        'api:booking.controller.cancel',
-        'service-method:booking.service.cancelBooking',
+        'api:src%2Fbooking%2Fbooking.controller.ts#BookingController.cancel~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
       ],
       negativeArtifactKeys: [BOOKING_NEGATIVE],
       requiredEvidenceAnchors: [
-        { artifactKey: 'api:booking.controller.cancel', contains: 'cancel' },
+        { artifactKey: 'api:src%2Fbooking%2Fbooking.controller.ts#BookingController.cancel~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371', contains: 'cancel' },
       ],
     },
     domain: { packId: 'booking', expectedConceptKeys: ['booking', 'cancellation'] },
@@ -251,21 +251,21 @@ export const productionStableEvaluationCases: EvaluationCase[] = [
     targetFixture: BOOKING,
     expected: {
       criticalArtifactKeys: [
-        'api:booking.controller.cancel',
-        'service-method:notification.service.notifyOwner',
+        'api:src%2Fbooking%2Fbooking.controller.ts#BookingController.cancel~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fnotification%2Fnotification.service.ts#NotificationService.notifyOwner~dd6f9df3949ebe095ea261fedb8d6afff333b1a449449ef86a9d6bba8b75dcbb',
       ],
       impactedArtifactKeys: [
-        'api:booking.controller.cancel',
-        'service-method:booking.service.cancelBooking',
-        'service-method:payment.service.refund',
-        'service-method:notification.service.notifyOwner',
-        'entity:paymenttransaction',
+        'api:src%2Fbooking%2Fbooking.controller.ts#BookingController.cancel~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fpayment%2Fpayment.service.ts#PaymentService.refund~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fnotification%2Fnotification.service.ts#NotificationService.notifyOwner~dd6f9df3949ebe095ea261fedb8d6afff333b1a449449ef86a9d6bba8b75dcbb',
+        'entity:src%2Fpayment%2Fpayment.entity.ts#PaymentTransaction',
       ],
       // refund-report is retrieved (layer 1) but must never be committed.
       negativeArtifactKeys: [BOOKING_NEGATIVE],
       requiredEvidenceAnchors: [
-        { artifactKey: 'service-method:notification.service.notifyOwner', contains: 'notifyOwner' },
-        { artifactKey: 'service-method:payment.service.refund', contains: 'REFUNDED' },
+        { artifactKey: 'service-method:src%2Fnotification%2Fnotification.service.ts#NotificationService.notifyOwner~dd6f9df3949ebe095ea261fedb8d6afff333b1a449449ef86a9d6bba8b75dcbb', contains: 'notifyOwner' },
+        { artifactKey: 'service-method:src%2Fpayment%2Fpayment.service.ts#PaymentService.refund~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371', contains: 'REFUNDED' },
       ],
     },
     domain: { packId: 'booking', expectedConceptKeys: ['booking', 'cancellation', 'notification', 'refund'] },

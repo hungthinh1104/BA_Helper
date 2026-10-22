@@ -44,7 +44,9 @@ describe('Scanner Golden Fixtures', () => {
     expect(entities.length).toBeGreaterThan(0);
     
     const stableKeys = result.artifacts.map(a => a.stableId);
-    expect(stableKeys).toContain('api:booking.controller.cancel');
+    expect(stableKeys.some(key => key.startsWith(
+      `api:${encodeURIComponent('src/booking/booking.controller.ts')}#${encodeURIComponent('BookingController.cancel')}~`,
+    ))).toBe(true);
 
     // Verify content hashes
     expect(result.artifacts.every(a => a.contentHash && a.contentHash.startsWith('sha256:'))).toBe(true);

@@ -27,7 +27,7 @@ describe('Nest TestingModule receiver bindings', () => {
       it('refunds', () => service.refund());`,
   ])('resolves a class token acquired from a verified testing module', body => {
     const result = graph(body);
-    expect(result.edges).toEqual([expect.objectContaining({ type: 'TESTS', to: 'service-method:payment.service.refund',
+    expect(result.edges).toEqual([expect.objectContaining({ type: 'TESTS', to: expect.stringContaining('PaymentService.refund'),
       provenance: expect.objectContaining({ resolver: 'TS_AST_DIRECT_CALL', locations: [expect.objectContaining({ sourcePath: 'src/payment.spec.ts' })] }) })]);
   });
 

@@ -1,17 +1,38 @@
 import type { GraphProvenance } from '../graph/graph.types';
 
-export const SCANNER_VERSION = 'scanner@0.3.0';
-export const ANALYZER_VERSION = 'analyzer@0.7.0';
+export const SCANNER_VERSION = 'scanner@0.5.0';
+export const ANALYZER_VERSION = 'analyzer@0.9.0';
 
 export type TestModifier = 'NORMAL' | 'SKIP' | 'TODO' | 'ONLY';
+export type ScanTestBehaviorKind = 'SETUP_HOOK' | 'TEARDOWN_HOOK' | 'INPUT' | 'ACTION' | 'ASSERTION' | 'MOCK' | 'EXPECTED_OUTCOME';
+export type ScanSourceLocation = {
+  relativePath: string;
+  startOffset: number;
+  endOffset: number;
+  startLine: number;
+  startColumn: number;
+  endLine: number;
+  endColumn: number;
+};
+export type ScanStaticBehaviorClaim = {
+  kind: ScanTestBehaviorKind;
+  evidenceKind: 'STATIC_DECLARATION';
+  sourceText: string;
+  sourceLocation: ScanSourceLocation;
+  commitSha: string;
+  evidenceProvenanceKey?: string;
+};
 export type ScanTestCase = {
   framework: 'jest'; suitePath: string[]; title: string;
   modifier: TestModifier; declaredModifier: TestModifier; parentFileArtifactKey: string;
   parameterized?: boolean;
+  behaviorEvidence?: ScanStaticBehaviorClaim[];
 };
 
 export type ScanInput = {
   fixturePath: string;
+  /** Resolved repository commit. Behavior evidence is omitted when this is unavailable. */
+  commitSha?: string;
   analyzerVersion?: string; // Kept for backwards compat, though we use constant internally
 };
 
@@ -137,6 +158,7 @@ export type DetectedRepositoryProfile = {
 export type ScanResult = {
   analyzerVersion: string;
   artifacts: ScanArtifact[];
+  scannedFileCount?: number;
   dependencyEdges?: DependencyEdge[];
   coverage: ScanCoverage;
   sourceRoot?: string;
@@ -180,6 +202,7 @@ export type ScanAdapterInput = {
   repositoryId?: string;
   projectId?: string;
   snapshotId?: string;
+  commitSha?: string;
   // internal fields to pass through from old ScanInput
   fixturePath?: string;
   tsFiles?: string[];

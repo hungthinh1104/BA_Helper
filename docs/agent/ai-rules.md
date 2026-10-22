@@ -122,6 +122,11 @@ interface LlmProvider {
 Use a deterministic fake provider for tests. Store model/prompt versions with
 real analysis output so changes can be traced and evaluated.
 
+The report localization fake provider is also development/test-only. It adds a
+locale marker rather than translating content and must fail in production until
+a real translation adapter is configured; placeholder output must never be
+persisted as a completed localized report in production.
+
 Fake-provider claims are curated dev/test data. In a structured impact prompt,
 filter those claims by method identifiers or literal method terms in the change
 request; the presence of an artifact in the evidence context alone must not

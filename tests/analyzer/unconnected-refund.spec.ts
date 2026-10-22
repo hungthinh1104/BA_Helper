@@ -21,8 +21,7 @@ describe('unconnected refund fixture', () => {
       expandGraph: true,
     });
 
-    expect(result.artifacts.map((artifact) => artifact.stableId)).toContain(
-      'service-method:payment.service.refund',
-    );
+    expect(result.artifacts.find(artifact => artifact.symbolName === 'PaymentService.refund')?.stableId)
+      .toContain('PaymentService.refund');
   });
 });

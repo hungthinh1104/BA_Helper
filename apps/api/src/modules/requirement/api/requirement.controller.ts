@@ -115,12 +115,12 @@ export class RequirementController {
     const requirements = await this.listRequirements.execute({ projectId });
     return requirementListResponseSchema.parse({
       items: requirements.map((r) => {
-        const latest = r.revisions[r.revisions.length - 1];
+        const latest = r.revisions[0];
         return {
           id: r.id,
           latestRevision: {
             id: latest.id,
-            versionNumber: r.revisions.length,
+            versionNumber: r._count.revisions,
             title: latest.title,
             rawText: latest.rawText,
             readinessStatus: latest.readinessStatus,

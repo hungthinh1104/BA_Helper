@@ -3,6 +3,10 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { ANALYZER_VERSION, buildGraph, scanProject } from '@ba-helper/analyzer';
 import type { GraphEdge, ScanArtifact } from '@ba-helper/analyzer';
+import { evaluateSemanticTestBehavior } from './semantic-test-behavior.evaluator';
+import { scoreReferenceSet } from './reference-set.scorer';
+
+export { scoreReferenceSet } from './reference-set.scorer';
 
 type Case = { filePath: string; suitePath: string[]; title: string; targetSymbols: string[] };
 export type TraceRepository = {
@@ -14,21 +18,6 @@ type GroundTruth = {
   schemaVersion: number; independentHumanReview: boolean; groundTruthMethod: string;
   scope: string; repositories: TraceRepository[];
 };
-
-export function scoreReferenceSet(expectedValues: Iterable<string>, predictedValues: Iterable<string>) {
-  const expected = new Set(expectedValues), predicted = new Set(predictedValues);
-  const missing = [...expected].filter(value => !predicted.has(value)).sort();
-  const unexpected = [...predicted].filter(value => !expected.has(value)).sort();
-  const truePositive = expected.size - missing.length;
-  const falsePositive = unexpected.length;
-  const falseNegative = missing.length;
-  const f1Denominator = 2 * truePositive + falsePositive + falseNegative;
-  return { expected: expected.size, predicted: predicted.size, truePositive,
-    falsePositive, falseNegative,
-    precision: predicted.size ? truePositive / predicted.size : null,
-    recall: expected.size ? truePositive / expected.size : null,
-    f1: f1Denominator ? (2 * truePositive) / f1Denominator : null, missing, unexpected };
-}
 
 const caseIdentity = (value: Pick<Case, 'filePath' | 'suitePath' | 'title'>) =>
   JSON.stringify([value.filePath, value.suitePath, value.title]);
@@ -179,5 +168,8 @@ export function evaluateTestTraceCorpus(root: string, manifestName: string) {
 }
 
 export function evaluatePublicTestTraces(root = process.cwd()) {
-  return evaluateTestTraceCorpus(root, 'public-test-trace.ground-truth.json');
+  const traces = evaluateTestTraceCorpus(root, 'public-test-trace.ground-truth.json');
+  const semanticBehavior = evaluateSemanticTestBehavior(root);
+  return { ...traces, semanticBehavior,
+    status: traces.status === 'PASS' && semanticBehavior.status === 'PASS' ? 'PASS' as const : 'FAIL' as const };
 }

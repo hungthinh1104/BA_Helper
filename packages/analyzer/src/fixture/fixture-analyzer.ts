@@ -1,4 +1,6 @@
 import { resolve } from 'node:path';
+import { ANALYZER_VERSION } from '../scanner/scanner.types';
+import { buildGraph } from '../graph/graph';
 import { scanFixture } from '../scanner/scanner';
 
 export type FixtureAnalysis = {
@@ -64,24 +66,32 @@ export const analyzeFixture = (fixtureName: string): FixtureAnalysis => {
   );
   const scan = scanFixture({
     fixturePath,
-    analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
+    analyzerVersion: ANALYZER_VERSION,
   });
 
   const apiRoute = scan.artifacts.find(
-    (artifact: { stableId: string }) =>
-      artifact.stableId === 'api:booking.controller.cancel',
+    (artifact) => artifact.symbolName === 'BookingController.cancel',
   );
+  const bookingService = scan.artifacts.find(artifact => artifact.symbolName === 'BookingService.cancelBooking');
+  const paymentService = scan.artifacts.find(artifact => artifact.symbolName === 'PaymentService.refund');
+  const bookingEntity = scan.artifacts.find(artifact => artifact.symbolName === 'Booking');
+  const paymentEntity = scan.artifacts.find(artifact => artifact.symbolName === 'PaymentTransaction');
+  const testFile = scan.artifacts.find(artifact => artifact.type === 'TEST');
+  const controllerEdge = apiRoute && bookingService && buildGraph(scan).edges.find(edge =>
+    edge.from === apiRoute.stableId && edge.to === bookingService.stableId && edge.type === 'CALLS');
 
   const startLine = apiRoute?.startLine ?? 0;
   const endLine = apiRoute?.endLine ?? 0;
-  const evidenceLine = startLine ? Math.min(startLine + 1, endLine || startLine) : 0;
+  const evidence = controllerEdge?.provenance?.locations[0] ?? {
+    sourcePath: apiRoute?.filePath ?? 'src/booking/booking.controller.ts', startLine: 0, endLine: 0,
+  };
 
   return {
-    analyzerVersion: 'ts-nestjs-analyzer@0.1.0',
+    analyzerVersion: scan.analyzerVersion,
     fixtureName,
     artifacts: [
       {
-        stableId: 'api:booking.controller.cancel',
+        stableId: apiRoute?.stableId ?? '',
         type: 'API_ROUTE',
         filePath: 'src/booking/booking.controller.ts',
         symbolName: 'BookingController.cancel',
@@ -97,40 +107,40 @@ export const analyzeFixture = (fixtureName: string): FixtureAnalysis => {
     ],
     edges: [
       {
-        stableId: 'edge:booking.controller.cancel->booking.service.cancelBooking',
+        stableId: controllerEdge?.stableId ?? '',
         type: 'CALLS',
-        from: 'api:booking.controller.cancel',
-        to: 'service-method:booking.service.cancelBooking',
+        from: apiRoute?.stableId ?? '',
+        to: bookingService?.stableId ?? '',
         confidence: 1.0,
         evidence: {
-          filePath: 'src/booking/booking.controller.ts',
-          startLine: evidenceLine,
-          endLine: evidenceLine,
+          filePath: evidence.sourcePath,
+          startLine: evidence.startLine,
+          endLine: evidence.endLine,
         },
       },
     ],
     impact: {
       changeRequest: 'Allow users to cancel paid bookings and receive refund.',
       affectedArtifacts: [
-        'api:booking.controller.cancel',
-        'service-method:booking.service.cancelBooking',
-        'service-method:payment.service.refund',
-        'entity:booking',
-        'entity:paymentTransaction',
-        'test:booking.cancel.spec',
+        apiRoute?.stableId ?? '',
+        bookingService?.stableId ?? '',
+        paymentService?.stableId ?? '',
+        bookingEntity?.stableId ?? '',
+        paymentEntity?.stableId ?? '',
+        testFile?.stableId ?? '',
       ],
       confirmedFacts: [
         {
           statement: 'The system exposes an API route for cancelling a booking.',
-          evidenceArtifactIds: ['api:booking.controller.cancel'],
+          evidenceArtifactIds: [apiRoute?.stableId ?? ''],
         },
       ],
       inferredImpacts: [
         {
           statement: 'Paid booking cancellation may affect refund behavior.',
           evidenceArtifactIds: [
-            'service-method:booking.service.cancelBooking',
-            'service-method:payment.service.refund',
+            bookingService?.stableId ?? '',
+            paymentService?.stableId ?? '',
           ],
           confidence: 0.75,
         },

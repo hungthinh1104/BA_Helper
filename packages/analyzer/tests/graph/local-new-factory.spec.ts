@@ -28,7 +28,7 @@ describe('static local factory test receivers', () => {
       beforeEach(() => build().authorize());
       it('refund', () => { build().refund(); build().refund(); });
       it.skip('skip', () => build().refund());`);
-    expect(result.edges).toEqual([expect.objectContaining({ type: 'TESTS', to: 'service-method:payment.service.refund',
+    expect(result.edges).toEqual([expect.objectContaining({ type: 'TESTS', to: expect.stringContaining('PaymentService.refund'),
       provenance: expect.objectContaining({ locations: [expect.objectContaining({ sourcePath: 'src/payment.spec.ts' })] }) })]);
   });
 

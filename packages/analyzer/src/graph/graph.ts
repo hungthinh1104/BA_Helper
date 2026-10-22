@@ -11,6 +11,10 @@ export const buildGraph = (scan: ScanResult): GraphResult => {
   return new SourceGraphBuilder(scan).build();
 };
 
+export function createGraphEdgeId(from: string, type: string, to: string): string {
+  return `edge:${encodeURIComponent(from)}:${encodeURIComponent(type)}:${encodeURIComponent(to)}`;
+}
+
 class SourceGraphBuilder {
   private readonly resolver: GraphSourceResolver;
   private readonly edges = new Map<string, GraphEdge>();
@@ -23,6 +27,10 @@ class SourceGraphBuilder {
     for (const artifact of this.resolver.ambiguousArtifacts) {
       const file = this.resolver.project.getSourceFile(resolve(this.scan.sourceRoot!, artifact.filePath));
       if (file) this.diagnose('AMBIGUOUS_ARTIFACT_IDENTITY', file, artifact);
+    }
+    for (const artifact of this.resolver.ambiguousSymbols) {
+      const file = this.resolver.project.getSourceFile(resolve(this.scan.sourceRoot!, artifact.filePath));
+      if (file) this.diagnose('AMBIGUOUS_SYMBOL_RESOLUTION', file, artifact);
     }
     for (const file of this.resolver.project.getSourceFiles()) {
       const test = this.resolver.testArtifact(file);
@@ -96,7 +104,7 @@ class SourceGraphBuilder {
 
   private addEdge(from: ScanArtifact, to: ScanArtifact, type: string, node: Node,
     resolver: GraphProvenance['resolver']): void {
-    const key = `${from.stableId}->${type}->${to.stableId}`;
+    const key = JSON.stringify([from.stableId, type, to.stableId]);
     const location = {
       sourcePath: relative(this.scan.sourceRoot!, node.getSourceFile().getFilePath()).replace(/\\/g, '/'),
       startLine: node.getStartLineNumber(),
@@ -113,7 +121,7 @@ class SourceGraphBuilder {
       else existing.provenance.omittedLocationCount = (existing.provenance.omittedLocationCount ?? 0) + 1;
       return;
     }
-    this.edges.set(key, { stableId: `edge:${from.stableId}->${to.stableId}`, from: from.stableId,
+    this.edges.set(key, { stableId: createGraphEdgeId(from.stableId, type, to.stableId), from: from.stableId,
       to: to.stableId, type, confidence: 1, provenance: { resolver, locations: [location] } });
   }
 
@@ -121,7 +129,9 @@ class SourceGraphBuilder {
     const filePath = relative(this.scan.sourceRoot!, file.getFilePath()).replace(/\\/g, '/');
     this.diagnostics.set(`${code}:${filePath}:${source.stableId}`, {
       code, filePath, sourceSymbol: source.symbolName,
-      message: 'No supported source relationship could be resolved; no dependency edge was inferred.',
+      message: code === 'AMBIGUOUS_SYMBOL_RESOLUTION'
+        ? 'Multiple extracted artifacts match this qualified source symbol; no dependency edge was inferred.'
+        : 'No supported source relationship could be resolved; no dependency edge was inferred.',
     });
   }
 }

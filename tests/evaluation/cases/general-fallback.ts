@@ -9,10 +9,10 @@ export const generalFallbackEvaluationCases: EvaluationCase[] = [
     targetFixture: 'nestjs-booking-with-payment',
     expected: {
       impactedArtifactKeys: [
-        'service-method:booking.service.cancelBooking',
-        'entity:booking',
+        'service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'entity:src%2Fbooking%2Fbooking.entity.ts#Booking',
       ],
-      negativeArtifactKeys: ['service-method:refund-report.service.generateReport'],
+      negativeArtifactKeys: ['service-method:src%2Fadmin%2Frefund-report.service.ts#AdminRefundReportService.generateReport~4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945'],
       evidenceHints: ['status', 'connected side effects'],
       unknownsOrQuestions: [
         'unknown: exact lifecycle eligibility requires source evidence or stakeholder confirmation',
@@ -37,10 +37,10 @@ export const generalFallbackEvaluationCases: EvaluationCase[] = [
     targetFixture: 'nestjs-booking-with-payment',
     expected: {
       impactedArtifactKeys: [
-        'service-method:payment.service.refund',
-        'entity:paymenttransaction',
+        'service-method:src%2Fpayment%2Fpayment.service.ts#PaymentService.refund~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'entity:src%2Fpayment%2Fpayment.entity.ts#PaymentTransaction',
       ],
-      negativeArtifactKeys: ['service-method:refund-report.service.generateReport'],
+      negativeArtifactKeys: ['service-method:src%2Fadmin%2Frefund-report.service.ts#AdminRefundReportService.generateReport~4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945'],
       evidenceHints: ['transaction', 'state'],
       unknownsOrQuestions: [
         'unknown: reversal eligibility and amount rules are not established by the fallback profile',
@@ -65,10 +65,10 @@ export const generalFallbackEvaluationCases: EvaluationCase[] = [
     targetFixture: 'nestjs-booking-with-payment',
     expected: {
       impactedArtifactKeys: [
-        'service-method:booking.service.cancelBooking',
-        'service-method:slot.service.releaseSlot',
+        'service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fslot%2Fslot.service.ts#SlotService.releaseSlot~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
       ],
-      negativeArtifactKeys: ['service-method:refund-report.service.generateReport'],
+      negativeArtifactKeys: ['service-method:src%2Fadmin%2Frefund-report.service.ts#AdminRefundReportService.generateReport~4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945'],
       evidenceHints: ['availability', 'side effect'],
       unknownsOrQuestions: [
         'unknown: downstream availability timing is not proven by fallback metadata',
@@ -93,10 +93,10 @@ export const generalFallbackEvaluationCases: EvaluationCase[] = [
     targetFixture: 'nestjs-booking-with-payment',
     expected: {
       impactedArtifactKeys: [
-        'service-method:booking.service.cancelBooking',
-        'service-method:notification.service.notifyOwner',
+        'service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fnotification%2Fnotification.service.ts#NotificationService.notifyOwner~dd6f9df3949ebe095ea261fedb8d6afff333b1a449449ef86a9d6bba8b75dcbb',
       ],
-      negativeArtifactKeys: ['service-method:refund-report.service.generateReport'],
+      negativeArtifactKeys: ['service-method:src%2Fadmin%2Frefund-report.service.ts#AdminRefundReportService.generateReport~4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945'],
       evidenceHints: ['outbound message', 'side effect'],
       unknownsOrQuestions: [
         'unknown: recipient and timing policy require source evidence or stakeholder confirmation',

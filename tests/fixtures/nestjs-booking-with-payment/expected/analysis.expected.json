@@ -1,9 +1,9 @@
 {
-  "analyzerVersion": "ts-nestjs-analyzer@0.1.0",
+  "analyzerVersion": "analyzer@0.9.0",
   "fixtureName": "nestjs-booking-with-payment",
   "artifacts": [
     {
-      "stableId": "api:booking.controller.cancel",
+      "stableId": "api:src%2Fbooking%2Fbooking.controller.ts#BookingController.cancel~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
       "type": "API_ROUTE",
       "filePath": "src/booking/booking.controller.ts",
       "symbolName": "BookingController.cancel",
@@ -19,40 +19,42 @@
   ],
   "edges": [
     {
-      "stableId": "edge:booking.controller.cancel->booking.service.cancelBooking",
+      "stableId": "edge:api%3Asrc%252Fbooking%252Fbooking.controller.ts%23BookingController.cancel~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371:CALLS:service-method%3Asrc%252Fbooking%252Fbooking.service.ts%23BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
       "type": "CALLS",
-      "from": "api:booking.controller.cancel",
-      "to": "service-method:booking.service.cancelBooking",
-      "confidence": 1.0,
+      "from": "api:src%2Fbooking%2Fbooking.controller.ts#BookingController.cancel~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "to": "service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "confidence": 1,
       "evidence": {
         "filePath": "src/booking/booking.controller.ts",
-        "startLine": 9,
-        "endLine": 9
+        "startLine": 10,
+        "endLine": 10
       }
     }
   ],
   "impact": {
     "changeRequest": "Allow users to cancel paid bookings and receive refund.",
     "affectedArtifacts": [
-      "api:booking.controller.cancel",
-      "service-method:booking.service.cancelBooking",
-      "service-method:payment.service.refund",
-      "entity:booking",
-      "entity:paymentTransaction",
-      "test:booking.cancel.spec"
+      "api:src%2Fbooking%2Fbooking.controller.ts#BookingController.cancel~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "service-method:src%2Fpayment%2Fpayment.service.ts#PaymentService.refund~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+      "entity:src%2Fbooking%2Fbooking.entity.ts#Booking",
+      "entity:src%2Fpayment%2Fpayment.entity.ts#PaymentTransaction",
+      "test:src%2Fbooking%2Fbooking-cancel.spec.ts#file"
     ],
     "confirmedFacts": [
       {
         "statement": "The system exposes an API route for cancelling a booking.",
-        "evidenceArtifactIds": ["api:booking.controller.cancel"]
+        "evidenceArtifactIds": [
+          "api:src%2Fbooking%2Fbooking.controller.ts#BookingController.cancel~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371"
+        ]
       }
     ],
     "inferredImpacts": [
       {
         "statement": "Paid booking cancellation may affect refund behavior.",
         "evidenceArtifactIds": [
-          "service-method:booking.service.cancelBooking",
-          "service-method:payment.service.refund"
+          "service-method:src%2Fbooking%2Fbooking.service.ts#BookingService.cancelBooking~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371",
+          "service-method:src%2Fpayment%2Fpayment.service.ts#PaymentService.refund~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371"
         ],
         "confidence": 0.75
       }

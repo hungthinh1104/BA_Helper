@@ -83,6 +83,9 @@ jobs:
       - name: Application static trace accuracy and regression
         run: pnpm verify:application-test-trace
 
+      - name: Static test trace scalability benchmark
+        run: pnpm benchmark:static-test-graph -- ci
+
       - name: Upload analyzer scorecard
         if: always()
         uses: actions/upload-artifact@v7.0.2
@@ -92,6 +95,7 @@ jobs:
             artifacts/evaluation/analyzer-scorecard.json
             artifacts/evaluation/public-test-trace-scorecard.json
             artifacts/evaluation/application-test-trace-scorecard.json
+            artifacts/performance/static-test-graph-ci.json
 
       - name: Worker boundary check (no api imports)
         run: |

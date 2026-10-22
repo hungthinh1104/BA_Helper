@@ -94,10 +94,11 @@ describe('Order/Inventory Benchmark', () => {
 
     // 2. Check for Noise Artifacts (Deliberate false positives)
     const noiseArtifacts = [
-      'service-method:discount.service.applyDiscount',
-      'service-method:product-recommendation.service.getRecommendations',
-      'service-method:shipment.service.trackShipment'
-    ];
+      'DiscountService.applyDiscountToOrder',
+      'ProductRecommendationService.getRecommendations',
+      'ShipmentService.trackShipment',
+    ].map(symbol => scanResult.artifacts.find(artifact => artifact.symbolName === symbol)?.stableId)
+      .filter((key): key is string => key !== undefined);
 
     noiseArtifacts.forEach(noiseKey => {
       const rank = actualKeys.indexOf(noiseKey);

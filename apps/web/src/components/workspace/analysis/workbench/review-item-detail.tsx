@@ -32,7 +32,8 @@ export function ReviewItemDetail({
       {(detail.artifact || item.linkedArtifactKeys.length > 0) ? <StaticTestTracePanel key={item.itemId}
         analysisId={workspace.overview.analysisId} snapshotId={workspace.overview.snapshot.snapshotId}
         commitSha={workspace.overview.snapshot.commitSha} analyzerVersion={workspace.overview.snapshot.analyzerVersion}
-        artifactKeys={detail.artifact ? [detail.artifact.artifactKey] : item.linkedArtifactKeys} locale={locale} /> : null}
+        artifactKeys={detail.artifact ? [detail.artifact.artifactKey] : item.linkedArtifactKeys}
+        requirementTitle={workspace.overview.requirement.title} requirementSummary={workspace.overview.requirement.summary} locale={locale} /> : null}
       <RelatedContextPanel risks={detail.risks} unknowns={detail.unknowns} qaScenarios={detail.qaScenarios} labels={labels} />
       {detail.traceabilityIds.length > 0 ? <details className="rounded-lg border border-border/50 p-3"><summary className="cursor-pointer text-xs font-medium text-foreground">{labels.traceabilityMetadata}</summary><p className="mt-2 break-all font-mono text-xs text-muted-foreground">{labels.traceabilityIds}: {detail.traceabilityIds.join(", ")}</p></details> : null}
     </article>

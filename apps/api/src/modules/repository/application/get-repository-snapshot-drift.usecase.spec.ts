@@ -143,4 +143,58 @@ describe('GetRepositorySnapshotDriftUseCase', () => {
     expect(result.warnings.some(w => w.code === 'ANALYZER_VERSION_CHANGED')).toBe(true);
     expect(result.warnings.some(w => w.code === 'DRIFT_INCOMPATIBLE')).toBe(true);
   });
+
+  it('compares scanner and analyzer versions from their distinct persisted sources', async () => {
+    const base = {
+      ...baseSnapshot,
+      diagnostics: [{ code: 'SCAN_HEALTH', payload: { scannerVersion: 'scanner@0.3.0' } }],
+    };
+    const target = {
+      ...targetSnapshot,
+      diagnostics: [{ code: 'SCAN_HEALTH', payload: { scannerVersion: 'scanner@0.4.0' } }],
+    };
+    (prisma.repositorySnapshot.findUnique as jest.Mock)
+      .mockResolvedValueOnce(base as any)
+      .mockResolvedValueOnce(target as any);
+    (prisma.codeArtifact.findMany as jest.Mock).mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+
+    const result = await useCase.execute({
+      projectId: 'proj-1', repositoryId: 'repo-1', baseSnapshotId: 'base-snap-id', targetSnapshotId: 'target-snap-id',
+    });
+
+    expect(result.versionComparison).toEqual({
+      baseScannerVersion: 'scanner@0.3.0',
+      targetScannerVersion: 'scanner@0.4.0',
+      baseAnalyzerVersion: '0.1.0',
+      targetAnalyzerVersion: '0.1.0',
+      scannerVersionChanged: true,
+      analyzerVersionChanged: false,
+    });
+    expect(result.warnings.some(warning => warning.code === 'SCANNER_VERSION_CHANGED')).toBe(true);
+    expect(result.warnings.some(warning => warning.code === 'ANALYZER_VERSION_CHANGED')).toBe(false);
+  });
+
+  it('marks high-churn comparisons incompatible when scanner versions differ', async () => {
+    const base = {
+      ...baseSnapshot,
+      diagnostics: [{ code: 'SCAN_HEALTH', payload: { scannerVersion: 'scanner@0.3.0' } }],
+    };
+    const target = {
+      ...targetSnapshot,
+      diagnostics: [{ code: 'SCAN_HEALTH', payload: { scannerVersion: 'scanner@0.4.0' } }],
+    };
+    (prisma.repositorySnapshot.findUnique as jest.Mock)
+      .mockResolvedValueOnce(base as any)
+      .mockResolvedValueOnce(target as any);
+    (prisma.codeArtifact.findMany as jest.Mock)
+      .mockResolvedValueOnce([{ id: 'old', artifactKey: 'old-key', contentHash: 'old-hash' }] as any)
+      .mockResolvedValueOnce([{ id: 'new', artifactKey: 'new-key', contentHash: 'new-hash' }] as any);
+
+    const result = await useCase.execute({
+      projectId: 'proj-1', repositoryId: 'repo-1', baseSnapshotId: 'base-snap-id', targetSnapshotId: 'target-snap-id',
+    });
+
+    expect(result.status).toBe('INCOMPATIBLE');
+    expect(result.warnings.some(warning => warning.code === 'DRIFT_INCOMPATIBLE')).toBe(true);
+  });
 });

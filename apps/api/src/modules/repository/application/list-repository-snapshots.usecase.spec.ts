@@ -55,6 +55,7 @@ describe('ListRepositorySnapshotsUseCase', () => {
         createdAt: new Date('2026-06-11T00:00:00Z'),
         coverageStatus: 'READY',
         analyzerVersion: '0.1.0',
+        diagnostics: [{ code: 'SCAN_HEALTH', payload: { scannerVersion: 'scanner@0.4.0' } }],
         profile: {
           profileVersion: '1.0.0',
         },
@@ -71,6 +72,7 @@ describe('ListRepositorySnapshotsUseCase', () => {
       createdAt: '2026-06-11T00:00:00.000Z',
       coverageStatus: 'READY',
       analyzerVersion: '0.1.0',
+      scannerVersion: 'scanner@0.4.0',
       profileVersion: '1.0.0',
       artifactCount: 42,
     });

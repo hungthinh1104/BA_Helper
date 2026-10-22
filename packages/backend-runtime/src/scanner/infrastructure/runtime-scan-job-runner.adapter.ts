@@ -5,6 +5,7 @@ import { AppError } from '@ba-helper/shared';
 import { ScanJobStatus, ScanJobStage } from '@prisma/client';;
 import { 
   scanFixture, 
+  ANALYZER_VERSION,
   FrameworkDetector, 
   RepositoryProfileDetector,
   SafeFileEnumerator, 
@@ -214,6 +215,7 @@ export class RuntimeScanJobRunnerAdapter extends ScanJobRunnerPort {
           rootDir: tempDir,
           repositoryId: job.repositoryId,
           projectId: job.repository.projectId,
+          commitSha,
           fixturePath: tempDir,
           tsFiles: enumResult.tsFiles,
           javaFiles: enumResult.javaFiles,
@@ -228,6 +230,7 @@ export class RuntimeScanJobRunnerAdapter extends ScanJobRunnerPort {
         scanResult = {
           analyzerVersion: adapter.adapterVersion,
           artifacts: adapterResult.artifacts,
+          scannedFileCount: this.selectedFilesForFramework(enumResult, frameworkResult.language).length,
           dependencyEdges: adapterResult.dependencyEdges,
           coverage: scanCoverage,
           sourceRoot: tempDir,
@@ -240,7 +243,8 @@ export class RuntimeScanJobRunnerAdapter extends ScanJobRunnerPort {
         commitSha = 'mock-commit-sha';
         scanResult = scanFixture({
           fixturePath: sourceRoot,
-          analyzerVersion: '0.2.0',
+          commitSha,
+          analyzerVersion: ANALYZER_VERSION,
         });
         collector.add({
           code: 'SCANNER_CAPABILITY_SUMMARY',
@@ -491,6 +495,22 @@ export class RuntimeScanJobRunnerAdapter extends ScanJobRunnerPort {
           this.logger.log(JSON.stringify(logPayload));
         }
       }
+    }
+  }
+
+  private selectedFilesForFramework(
+    result: { tsFiles: string[]; javaFiles: string[]; goFiles: string[]; pyFiles: string[]; csFiles: string[]; phpFiles: string[]; rbFiles: string[] },
+    language: string | undefined,
+  ): string[] {
+    switch (language) {
+      case 'typescript': return result.tsFiles;
+      case 'java': return result.javaFiles;
+      case 'go': return result.goFiles;
+      case 'python': return result.pyFiles;
+      case 'csharp': return result.csFiles;
+      case 'php': return result.phpFiles;
+      case 'ruby': return result.rbFiles;
+      default: return [];
     }
   }
 }

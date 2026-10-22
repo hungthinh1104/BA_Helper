@@ -456,6 +456,8 @@ model Requirement {
   project   Project               @relation(fields: [projectId], references: [id])
   createdAt DateTime              @default(now())
   updatedAt DateTime              @updatedAt
+
+  @@index([projectId, createdAt(sort: Desc), id(sort: Desc)])
 }
 
 model RequirementRevision {
@@ -472,6 +474,8 @@ model RequirementRevision {
   multiRepoRuns           MultiRepoAnalysisRun[]
   convertedClarifications ClarificationItem[]        @relation("ConvertedClarifications")
   createdAt               DateTime                   @default(now())
+
+  @@index([requirementId, createdAt(sort: Desc), id(sort: Desc)])
 }
 
 model MultiRepoAnalysisRun {

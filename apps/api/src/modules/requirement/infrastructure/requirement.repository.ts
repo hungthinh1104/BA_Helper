@@ -25,12 +25,23 @@ export class RequirementRepository {
   async findByProject(projectId: string) {
     return this.prisma.requirement.findMany({
       where: { projectId },
-      include: {
+      select: {
+        id: true,
+        _count: { select: { revisions: true } },
         revisions: {
-          orderBy: { createdAt: 'asc' },
+          select: {
+            id: true,
+            title: true,
+            rawText: true,
+            readinessStatus: true,
+            validationIssues: true,
+            createdAt: true,
+          },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          take: 1,
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     });
   }
 

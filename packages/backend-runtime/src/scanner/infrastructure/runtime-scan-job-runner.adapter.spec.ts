@@ -326,6 +326,10 @@ describe('RuntimeScanJobRunnerAdapter', () => {
 
     await useCase.run({ jobId: 'job-1' });
 
+    expect(analyzer.scanProject).toHaveBeenCalledWith(expect.objectContaining({
+      commitSha: '0123456789abcdef0123456789abcdef01234567',
+    }));
+
     expect(prisma.repositoryProfile.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { snapshotId: 'snapshot-1' },
@@ -776,10 +780,14 @@ describe('RuntimeScanJobRunnerAdapter', () => {
       analyzerVersion: '0.2.0',
     });
 
-    artifactRepository.listBySnapshot.mockResolvedValue([
-      { artifactKey: 'api:booking.controller.cancel', contentHash: 'hash-abc', universalKind: 'API_ROUTE', filePath: 'src/booking.ts' },
-      { artifactKey: 'api:booking.controller.other', contentHash: 'hash-def', universalKind: 'API_ROUTE', filePath: 'src/other.ts' },
-    ]);
+    artifactRepository.listBySnapshot.mockImplementation((snapshotId: string) => snapshotId === 'prev-snapshot'
+      ? Promise.resolve([
+        { artifactKey: 'api:booking.controller.cancel', contentHash: 'hash-abc', universalKind: 'API_ROUTE', filePath: 'src/booking.ts' },
+        { artifactKey: 'api:booking.controller.other', contentHash: 'hash-def', universalKind: 'API_ROUTE', filePath: 'src/other.ts' },
+      ])
+      : Promise.resolve([
+        { id: 'artifact-current', artifactKey: 'api:booking.controller.cancel' },
+      ]));
 
     await useCase.run({ jobId: 'job-1' });
 
@@ -831,6 +839,7 @@ describe('RuntimeScanJobRunnerAdapter', () => {
       artifacts: [],
       coverage: { status: 'READY', skippedSummary: {} },
     });
+    artifactRepository.listBySnapshot.mockResolvedValue([]);
 
     await useCase.run({ jobId: 'job-1' });
 
@@ -937,6 +946,7 @@ describe('RuntimeScanJobRunnerAdapter', () => {
       artifacts: [],
       coverage: { status: 'PARTIAL', skippedSummary: {} },
     });
+    artifactRepository.listBySnapshot.mockResolvedValue([]);
 
     await useCase.run({ jobId: 'job-1' });
 
@@ -978,6 +988,7 @@ describe('RuntimeScanJobRunnerAdapter', () => {
       artifacts: [],
       coverage: { status: 'READY', skippedSummary: {} },
     });
+    artifactRepository.listBySnapshot.mockResolvedValue([]);
 
     // Simulate DB failure when persisting final diagnostics
     prisma.repositorySnapshot.update.mockRejectedValueOnce(new Error('db connection lost'));

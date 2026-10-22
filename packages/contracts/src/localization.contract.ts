@@ -3,6 +3,7 @@ import { supportedAppLocales } from './locale.contract';
 
 export const supportedReportLocales = supportedAppLocales;
 export type SupportedReportLocale = typeof supportedReportLocales[number];
+export const supportedReportLocaleSchema = z.enum(supportedReportLocales);
 
 export const localizationStatusSchema = z.enum(['QUEUED', 'COMPLETED', 'FAILED']);
 export type LocalizationStatus = z.infer<typeof localizationStatusSchema>;
@@ -10,7 +11,7 @@ export type LocalizationStatus = z.infer<typeof localizationStatusSchema>;
 export const localizedReportArtifactSchema = z.object({
   id: z.string().uuid(),
   sourceDocumentId: z.string().uuid(),
-  locale: z.enum(supportedReportLocales),
+  locale: supportedReportLocaleSchema,
   sourceLocale: z.string(),
   localizationStatus: localizationStatusSchema,
   contentMarkdown: z.string().nullable(),
@@ -31,14 +32,14 @@ export const localizedReportArtifactSchema = z.object({
 export type LocalizedReportArtifact = z.infer<typeof localizedReportArtifactSchema>;
 
 export const generateLocalizedReportRequestSchema = z.object({
-  locale: z.enum(supportedReportLocales),
+  locale: supportedReportLocaleSchema,
 });
 
 export type GenerateLocalizedReportRequest = z.infer<typeof generateLocalizedReportRequestSchema>;
 
 export const localizationStatusResponseSchema = z.object({
   status: z.enum(['READY', 'NOT_TRANSLATED', 'QUEUED', 'FAILED', 'OUT_OF_SYNC', 'SOURCE_NOT_READY']),
-  locale: z.enum(supportedReportLocales),
+  locale: supportedReportLocaleSchema,
   sourceDocumentId: z.string().uuid().nullable(),
   errorCode: z.string().nullable(),
   updatedAt: z.string().datetime().nullable(),

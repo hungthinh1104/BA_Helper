@@ -32,6 +32,17 @@ states. Show backend search limits and readable limitation messages, including
 partial scans and omitted cases. Selection, expansion and display pagination
 are local UI state; classification and provenance come from the backend.
 
+The visual path is an optional, lazily loaded React Flow view for one expanded
+test case at a time. Keep its linear evidence path available as the primary
+reading order. The path uses backend-bounded test and call relationships; a
+dashed requirement-to-impact edge is analysis context, not source evidence.
+Label direct references and static call paths per test case, independently from
+the impact item's aggregate QA status. Expand static behavior declarations to
+show their exact source text, path, line/column, commit and evidence provenance.
+Hide declarations whose commit does not match the selected snapshot and show
+an uncertainty message. Always identify these as source declarations and state
+that runtime observations were not recorded.
+
 The read-only reviewed report also renders saved paths from its response
 payload. It does not fetch live QA or live excerpts to fill historical gaps.
 Markdown and PDF carry the same captured source-path appendix. Use existing

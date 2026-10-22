@@ -29,7 +29,8 @@ describe('parameterized Jest source declarations', () => {
     const result = scan("it.each([service.authorize(), 2])('refund %s', () => service.refund());");
     expect(result.cases).toHaveLength(1);
     expect(result.cases[0].testCase).toMatchObject({ title: 'refund %s', parameterized: true });
-    expect(buildGraph(result).edges).toEqual([expect.objectContaining({ type: 'TESTS', to: 'service-method:payment.service.refund' })]);
+    const target = result.artifacts.find(artifact => artifact.symbolName === 'PaymentService.refund')!;
+    expect(buildGraph(result).edges).toEqual([expect.objectContaining({ type: 'TESTS', to: target.stableId })]);
   });
 
   it('keeps row edits out of identity and includes them in content hashes', () => {
@@ -39,6 +40,23 @@ describe('parameterized Jest source declarations', () => {
     expect(after.stableId).toBe(before.stableId);
     expect(after.contentHash).not.toBe(before.contentHash);
     expect(after.testCase).toMatchObject({ parameterized: true, modifier: 'ONLY' });
+  });
+
+  it('keeps test-file identities distinct when flattened paths would collide', () => {
+    const firstPath = 'src/a.b/payment.spec.ts';
+    const secondPath = 'src/a/b.payment.spec.ts';
+    const firstFile = join(root, firstPath), secondFile = join(root, secondPath);
+    mkdirSync(join(root, 'src/a.b'), { recursive: true });
+    mkdirSync(join(root, 'src/a'), { recursive: true });
+    writeFileSync(firstFile, "it('first', () => {});");
+    writeFileSync(secondFile, "it('second', () => {});");
+    const result = scanProject({ fixturePath: root, tsFiles: [firstFile, secondFile] });
+    const files = result.artifacts.filter(artifact => artifact.type === 'TEST');
+    expect(new Set(files.map(artifact => artifact.stableId)).size).toBe(2);
+    expect(files.map(artifact => artifact.stableId)).toEqual(expect.arrayContaining([
+      `test:${encodeURIComponent(firstPath)}#file`,
+      `test:${encodeURIComponent(secondPath)}#file`,
+    ]));
   });
 
   it('distinguishes a parameterized declaration from an ordinary case with the same title', () => {
