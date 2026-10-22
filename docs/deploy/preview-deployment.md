@@ -29,7 +29,7 @@ The preview deployment is secured via these hard boundaries:
 
 ## Environment Variables Configuration
 
-### Backend (`apps/api/.env`)
+### Backend environment
 For a private controlled demo with dev-login, keep the API private and use a
 development-mode backend. This is not a production SaaS configuration:
 
@@ -56,7 +56,7 @@ ENABLE_DEV_LOGIN=true
 For a production-like deployment, `ENABLE_DEV_LOGIN` must be disabled and a real
 hosted auth flow is required before users can enter the workspace.
 
-### Frontend (`apps/web/.env.local`)
+### Frontend environment
 Set these explicitly in your Vercel project settings:
 ```env
 NEXT_PUBLIC_API_URL=https://your-render-backend-url.onrender.com

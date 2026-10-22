@@ -19,6 +19,10 @@ describe('source test declaration metadata', () => {
         startLine: 2, startColumn: 10, endLine: 2, endColumn: 20 }, commitSha: 'abc123',
       evidenceProvenanceKey: 'snapshot:snapshot:artifact:test:test/refund.spec.ts#file' };
     expect(testCaseMetadataSchema.parse({ ...literal, behaviorEvidence: [claim] })).toMatchObject({ behaviorEvidence: [claim] });
+    expect(testCaseMetadataSchema.parse({ ...literal, behaviorEvidence: [{ ...claim, assertionKind: 'CALL_COUNT' }] })
+      .behaviorEvidence?.[0]).toMatchObject({ assertionKind: 'CALL_COUNT' });
+    expect(testCaseMetadataSchema.safeParse({ ...literal, behaviorEvidence: [{ ...claim, assertionKind: 'RUNTIME_OBSERVATION' }] }).success)
+      .toBe(false);
     expect(testCaseMetadataSchema.safeParse({ ...literal, behaviorEvidence: [{ ...claim, commitSha: '' }] }).success).toBe(false);
     expect(testCaseMetadataSchema.safeParse({ ...literal, behaviorEvidence: [{ ...claim,
       sourceLocation: { ...claim.sourceLocation, relativePath: '../outside.spec.ts' } }] }).success).toBe(false);

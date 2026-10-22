@@ -4,6 +4,9 @@ export const testModifierSchema = z.enum(['NORMAL', 'SKIP', 'TODO', 'ONLY']);
 export const testBehaviorKindSchema = z.enum([
   'SETUP_HOOK', 'TEARDOWN_HOOK', 'INPUT', 'ACTION', 'ASSERTION', 'MOCK', 'EXPECTED_OUTCOME',
 ]);
+export const testAssertionKindSchema = z.enum([
+  'RETURN_VALUE', 'INVOCATION_ARGUMENTS', 'CALL_COUNT', 'EXCEPTION', 'STATE',
+]);
 export const testSourceLocationSchema = z.object({
   relativePath: z.string().min(1).max(1000).refine(path =>
     !path.startsWith('/') && !path.includes('\\') &&
@@ -18,6 +21,7 @@ export const testSourceLocationSchema = z.object({
 }).refine(location => location.endOffset > location.startOffset);
 export const testStaticBehaviorClaimSchema = z.object({
   kind: testBehaviorKindSchema,
+  assertionKind: testAssertionKindSchema.optional(),
   evidenceKind: z.literal('STATIC_DECLARATION'),
   sourceText: z.string().min(1).max(2000),
   sourceLocation: testSourceLocationSchema,

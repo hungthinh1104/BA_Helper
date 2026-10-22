@@ -1,9 +1,9 @@
 # October 21 maintenance and closure review
 
-This record covers the current working tree on `main`, based on
-`0ac83a7b5f585232ba276e15b3f0787954113584`. It is local evidence, not hosted CI
-or certification of a reviewed commit. The P0–P3 closure order remains in
-[roadmap status](roadmap-status.md#october-21-closure-review).
+Historical local record for the October 21 working tree on main, based on
+0ac83a7b5f585232ba276e15b3f0787954113584. It is not hosted CI or certification
+of a later checkout. Use the [current roadmap](roadmap-status.md#current-status-2026-10-22)
+for open gates.
 
 ## Dependency maintenance
 
@@ -69,8 +69,9 @@ Test files/cases are indexed by accepted source file, ambiguous identities use a
 set, and call offsets are cached once. A sorted call index performs full-body
 containment queries instead of revisiting every file call for every test.
 Equal-offset order, repeated locations, ambiguity exclusions, skipped cases,
-diagnostics and snapshot selection remain unchanged. The extraction contract
-remains `analyzer@0.7.0`.
+diagnostics and snapshot selection remained unchanged. The graph benchmark was
+measured against extraction contract `analyzer@0.7.0`; it does not measure the
+current `analyzer@0.10.0` contract.
 
 `pnpm benchmark:static-test-graph -- current` builds a deterministic synthetic
 fixture: 20 test files, 40 declarations per file, four calls per declaration and

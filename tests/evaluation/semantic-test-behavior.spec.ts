@@ -7,10 +7,10 @@ describe('held-out static Jest behavior evaluation', () => {
     expect(result.status).toBe('PASS');
     expect(result.regression).toEqual({ status: 'PASS', violations: [] });
     expect(result.behaviorClaims).toMatchObject({
-      expected: 19, predicted: 19, truePositive: 19, falsePositive: 0, falseNegative: 0,
+      expected: 13, predicted: 13, truePositive: 13, falsePositive: 0, falseNegative: 0,
       precision: 1, recall: 1, f1: 1,
     });
-    expect(result.provenance).toMatchObject({ checkedClaims: 19, supportedClaims: 19, integrityRate: 1, issues: [] });
+    expect(result.provenance).toMatchObject({ checkedClaims: 13, supportedClaims: 13, integrityRate: 1, issues: [] });
     expect(result.unsupportedPatterns).toMatchObject({
       expected: 3, predicted: 3, truePositive: 3, falsePositive: 0, falseNegative: 0,
       precision: 1, recall: 1,

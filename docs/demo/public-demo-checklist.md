@@ -57,11 +57,15 @@ parallel. The multi-repo golden path follows the same rule.
 - LLM output is constrained by extracted evidence and human review.
 - Automated CI verification uses fake providers; the manual public demo uses Gemini real LLM with a configured API key.
 
-## Phase 48A Freeze Result
+## Previous Phase 48A Freeze Record (Historical)
 
-Verdict: `READY`
+Recorded verdict: `READY`. This legacy note has no pinned commit or execution
+date and is not a current release decision. Use the
+[roadmap status](../release/roadmap-status.md) and its linked evidence for
+current gates.
 
-Validated sequentially on the Phase 48A freeze pass:
+The following commands were recorded as passing on that freeze pass; they have
+not been revalidated by this checklist update:
 
 ```text
 pnpm typecheck          PASS
@@ -80,3 +84,6 @@ Do not run DB-backed suites in parallel. `pnpm test:e2e` and
 `pnpm demo:golden-path` both reset/use the isolated test database.
 `pnpm demo:multi-repo-golden-path` must also run separately.
 ```
+
+Current visual asset status: the diagrams in the text proof pack are available;
+the screenshot assets listed in the capture checklist are not checked in.

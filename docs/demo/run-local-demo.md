@@ -24,10 +24,12 @@ docker compose up -d postgres redis
 ```
 
 ### 2. Environment Configuration
-Copy the safe default environments. The `.env.example` files are pre-configured to use local databases and fake AI providers.
+The root `.env.example` configures local services. The API, worker, and web
+scripts all load the root `.env`. It leaves provider credentials blank; fill a
+Google key before using Gemini-backed analysis. The demo seed and deterministic
+tests do not require a real provider call.
 ```bash
-cp apps/api/.env.example apps/api/.env
-cp apps/web/.env.example apps/web/.env.local
+cp .env.example .env
 ```
 
 ### 3. Install Dependencies

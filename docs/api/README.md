@@ -41,8 +41,8 @@ They do not establish execution, assertions, pass/fail or runtime coverage.
 
 ## Accuracy and maintenance
 
-All 104 current operations are documented. Nest discovers the registered HTTP
-routes. The documentation catalogue supplies
+The live OpenAPI document enumerates the operations registered by the running
+API. Nest discovers the HTTP routes. The documentation catalogue supplies
 human descriptions and binds each operation to shared Zod contracts. It does
 not generate schemas from Prisma or erased TypeScript types. Path parameters,
 actual HTTP status overrides, public routes and account-role metadata come from

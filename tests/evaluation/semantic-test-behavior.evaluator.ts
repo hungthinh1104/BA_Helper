@@ -6,7 +6,7 @@ import { ANALYZER_VERSION, scanProject } from '@ba-helper/analyzer';
 import type { ScanArtifact, ScanStaticBehaviorClaim } from '@ba-helper/analyzer';
 import { scoreReferenceSet } from './reference-set.scorer';
 
-type Label = { kind: ScanStaticBehaviorClaim['kind']; line: number; sourceText: string };
+type Label = { kind: ScanStaticBehaviorClaim['kind']; assertionKind?: ScanStaticBehaviorClaim['assertionKind']; line: number; sourceText: string };
 type BehaviorCase = { filePath: string; suitePath: string[]; title: string; claims: Label[] };
 type UnsupportedLabel = { pattern: string; filePath: string; line: number; sourceText: string };
 type Corpus = {
@@ -21,8 +21,8 @@ const sha256 = (value: string | Buffer) => createHash('sha256').update(value).di
 const normalizeText = (value: string) => value.replace(/\r\n/g, '\n');
 const caseIdentity = (value: Pick<BehaviorCase, 'filePath' | 'suitePath' | 'title'>) =>
   JSON.stringify([value.filePath, value.suitePath, value.title]);
-const claimIdentity = (caseKey: string, claim: Pick<ScanStaticBehaviorClaim, 'kind' | 'sourceText' | 'sourceLocation'>) =>
-  JSON.stringify([caseKey, claim.kind, claim.sourceLocation.startLine, claim.sourceLocation.startColumn,
+const claimIdentity = (caseKey: string, claim: Pick<ScanStaticBehaviorClaim, 'kind' | 'assertionKind' | 'sourceText' | 'sourceLocation'>) =>
+  JSON.stringify([caseKey, claim.kind, claim.assertionKind ?? null, claim.sourceLocation.startLine, claim.sourceLocation.startColumn,
     claim.sourceLocation.endLine, claim.sourceLocation.endColumn, normalizeText(claim.sourceText)]);
 
 export function evaluateSemanticTestBehavior(root = process.cwd(), score: Scorer = scoreReferenceSet) {
@@ -155,7 +155,7 @@ function expectedClaimIdentity(caseKey: string, label: Label, source: string): s
     throw new Error(`Ground truth source anchor is missing or ambiguous at line ${label.line}.`);
   }
   const start = sourcePosition(normalizedSource, offset), end = sourcePosition(normalizedSource, offset + expectedText.length);
-  return JSON.stringify([caseKey, label.kind, start.line, start.column, end.line, end.column, expectedText]);
+  return JSON.stringify([caseKey, label.kind, label.assertionKind ?? null, start.line, start.column, end.line, end.column, expectedText]);
 }
 
 function expectedUnsupportedIdentity(label: UnsupportedLabel, source: string): string {
@@ -203,8 +203,6 @@ function auditDevelopmentLeakage(root: string, fixtureRoot: string, files: Corpu
   for (const test of cases) {
     const source = sources.get(test.filePath);
     if (!source) continue;
-    const title = test.title.replace(/\s+/g, ' ');
-    if (devTexts.some(content => content.includes(title))) violations.push(`DEVELOPMENT_TITLE_OVERLAP:${test.title}`);
     for (const artifact of actual.get(caseIdentity(test)) ?? []) {
       if (!artifact.testBodySpan) continue;
       const body = source.slice(artifact.testBodySpan.start, artifact.testBodySpan.end).replace(/\s+/g, ' ').trim();

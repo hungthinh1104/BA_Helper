@@ -1,5 +1,11 @@
 # Application source trace evaluation
 
+> Historical measurement note: the results table below is for `analyzer@0.7.0`
+> and the source slices pinned in this report. The current analyzer contract is
+> `analyzer@0.10.0`; these numbers are not current-version accuracy results.
+> Re-run the command below for a current scorecard, and keep the immutable
+> source labels and limitations attached to either result.
+
 ## Reproduce
 
 Run `pnpm verify:application-test-trace`. It verifies upstream Git blob hashes,
@@ -35,12 +41,12 @@ runtime cases. Typed mock object properties, spyOn strings and assertion-only
 member references are not direct calls. Calls to classes outside the selected
 production files are outside the graded universe and remain unresolved.
 
-Novu uses Mocha/Chai and unbound `describe`/`it`. The current analyzer recognizes
+Novu uses Mocha/Chai and unbound `describe`/`it`. The recorded analyzer run recognizes
 that global syntax under its documented Jest-style assumption. These results
 do not verify runner identity. The precise difference must remain visible when
 interpreting the case metric.
 
-## Pattern compatibility (analyzer@0.7.0)
+## Pattern compatibility at analyzer@0.7.0
 
 | Pattern | Status | Evidence boundary |
 | --- | --- | --- |
@@ -62,7 +68,7 @@ tests, not by these public-repository accuracy denominators.
 
 ## Measured results, October 21
 
-| Measure | Baseline: 0.6.0 | 0.6.1 | Current: 0.7.0 |
+| Measure | Baseline: 0.6.0 | 0.6.1 | Recorded: 0.7.0 |
 | --- | ---: | ---: | ---: |
 | Source declarations found | 23/27 (85.2%) | 23/27 (85.2%) | 27/27 (100%) |
 | CALLS precision / recall / F1 | 100 / 90.9 / 95.2% | 100 / 100 / 100% | 100 / 100 / 100% |
@@ -78,14 +84,14 @@ data. These local runs used an uncommitted working tree on base commit
 `0ac83a7b5f585232ba276e15b3f0787954113584`. Analyzer versions label the
 measurements; there is no release-certified tool commit.
 
-The current scorecard checks each emitted CALLS and TESTS edge against its
+The `0.7.0` scorecard checks each emitted CALLS and TESTS edge against its
 pinned source file, artifact line range and direct-call token. The measured
 50/50 is a source-location integrity check, not a second human judgment that a
 relationship is relevant to the requirement. Diagnosed unsupported patterns
 were 0/27 observed declarations. Unsupported patterns that produce no parser
 diagnostic are not counted by this rate. The evaluator also refuses a passing
-accuracy result if a graded method symbol maps to multiple selected files;
-current ambiguity count is zero.
+accuracy result if a graded method symbol maps to multiple selected files; the
+recorded `0.7.0` ambiguity count is zero.
 
 The measured fixes are:
 

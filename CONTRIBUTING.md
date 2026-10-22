@@ -2,7 +2,9 @@
 
 Thank you for your interest in contributing to the Requirement-to-Code Impact Analyzer!
 
-This project is in **Public Beta**. To maintain the integrity of our impact analysis and deterministic tests, please adhere to the following guidelines.
+This project targets a **controlled beta**. To maintain the integrity of our
+impact analysis and deterministic tests, please adhere to the following
+guidelines.
 
 ## Local Setup
 
@@ -10,11 +12,17 @@ This project is in **Public Beta**. To maintain the integrity of our impact anal
    ```bash
    pnpm install
    ```
-2. **Start Local DB & Redis**:
+2. **Configure the shared root environment** (if `.env` does not already exist):
+   ```bash
+   cp .env.example .env
+   ```
+   Fill credentials only for providers you intend to use. API, worker, and web
+   scripts all load the root `.env`.
+3. **Start Local DB & Redis**:
    ```bash
    docker compose up -d postgres redis
    ```
-3. **Run Migrations**:
+4. **Run Migrations**:
    ```bash
    pnpm --dir apps/api prisma generate
    pnpm --dir apps/api prisma migrate dev

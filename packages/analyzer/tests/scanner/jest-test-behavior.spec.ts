@@ -36,13 +36,15 @@ describe('static Jest behavior evidence', () => {
         line: claim.sourceLocation.endLine, column: claim.sourceLocation.endColumn,
       });
     }
-    expect(claims.some(claim => claim.kind === 'ACTION' && claim.sourceText.includes('bookingRepository.insert'))).toBe(true);
+    expect(claims.some(claim => claim.kind === 'ACTION' && claim.sourceText.includes('bookingRepository.insert'))).toBe(false);
+    expect(claims.some(claim => claim.kind === 'SETUP_HOOK' && claim.sourceText.includes('bookingRepository.insert'))).toBe(true);
     expect(claims.some(claim => claim.kind === 'ACTION' && claim.sourceText.includes('cancelPaidBooking'))).toBe(true);
     expect(claims.some(claim => claim.kind === 'INPUT' && claim.sourceText.includes('paidBooking'))).toBe(true);
     expect(claims.filter(claim => claim.kind === 'MOCK').map(claim => claim.sourceText)).toEqual(expect.arrayContaining([
       'jest.clearAllMocks()', 'jest.restoreAllMocks()',
     ]));
     expect(claims.find(claim => claim.kind === 'EXPECTED_OUTCOME')?.sourceText).toBe('request');
+    expect(claims.find(claim => claim.kind === 'EXPECTED_OUTCOME')?.assertionKind).toBe('INVOCATION_ARGUMENTS');
     expect(result.dependencyEdges).toEqual(expect.arrayContaining([
       expect.objectContaining({ type: 'TESTS', toArtifactId: expect.stringContaining('BookingService.cancelPaidBooking') }),
     ]));
@@ -65,9 +67,65 @@ test.each([{ status: 'REFUNDED' }, { status: 'DECLINED' }])('status %s', row => 
       expect(cases[0].testCase?.behaviorEvidence).toEqual(expect.arrayContaining([
         expect.objectContaining({ kind: 'INPUT', sourceText: "[{ status: 'REFUNDED' }, { status: 'DECLINED' }]" }),
       ]));
-      expect(cases[0].testCase?.behaviorEvidence?.filter(claim => claim.kind === 'EXPECTED_OUTCOME')).toHaveLength(1);
+      expect(cases[0].testCase?.behaviorEvidence?.filter(claim => claim.kind === 'EXPECTED_OUTCOME')).toMatchObject([
+        { assertionKind: 'STATE', sourceText: "'REFUNDED'" },
+      ]);
     } finally {
       removeTempDirectory(root, 'ba-jest-behavior-each-');
+    }
+  });
+
+  it('separates assertion semantics, validates chained mock identity, and keeps inherited setup out of actions', () => {
+    const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'ba-jest-behavior-semantics-')));
+    try {
+      const file = join(root, 'refund.spec.ts');
+      writeFileSync(file, `import { expect, it, jest } from '@jest/globals';
+const gateway = { refund: jest.fn() };
+beforeAll(() => { Test.createTestingModule({ providers: [] }).compile(); });
+describe('refund', () => {
+  beforeEach(() => { const module = Test.createTestingModule({ providers: [] }).compile(); module.get(RefundService); });
+  it('classifies evidence', () => {
+    const output = service.run();
+    gateway.refund.mockResolvedValue('REFUNDED');
+    expect(output).toEqual('ok');
+    expect(state.status).toBe('REFUNDED');
+    expect(gateway.refund).toHaveBeenNthCalledWith(2, 'payment-id', 7);
+    expect(gateway.refund).toHaveBeenCalledTimes(3);
+    expect(() => service.fail()).toThrow('failed');
+    expect(state).toHaveProperty('status', 'PAID');
+    business.mockResolvedValue('unknown mock');
+    expect(output).toEventuallyBe('ok');
+    service.wait(() => service.runNested());
+  });
+  it('does not trust a shadowed expect identifier', () => {
+    const expect = (value: unknown) => ({ toBe: (_expected: unknown) => value });
+    expect(1).toBe(1);
+  });
+});`);
+      const result = scanProject({ fixturePath: root, tsFiles: [file], commitSha });
+      const cases = result.artifacts.filter(artifact => artifact.type === 'JEST_TEST_CASE');
+      const claims = cases[0].testCase?.behaviorEvidence ?? [];
+      expect(cases).toHaveLength(2);
+      expect(claims.some(claim => claim.kind === 'SETUP_HOOK' && claim.sourceText.includes('Test.createTestingModule'))).toBe(true);
+      expect(claims.some(claim => claim.kind === 'ACTION' && /Test\.createTestingModule|module\.get/.test(claim.sourceText))).toBe(false);
+      expect(claims.some(claim => claim.kind === 'ACTION' && claim.sourceText === 'service.run()')).toBe(true);
+      expect(claims.some(claim => claim.kind === 'MOCK' && claim.sourceText.includes('gateway.refund.mockResolvedValue'))).toBe(true);
+      expect(claims.some(claim => claim.kind === 'ACTION' && claim.sourceText.includes('business.mockResolvedValue'))).toBe(false);
+      expect(claims.filter(claim => claim.kind === 'EXPECTED_OUTCOME').map(claim => [claim.assertionKind, claim.sourceText]))
+        .toEqual(expect.arrayContaining([
+          ['RETURN_VALUE', "'ok'"], ['STATE', "'REFUNDED'"], ['CALL_COUNT', '2'],
+          ['INVOCATION_ARGUMENTS', "'payment-id'"], ['INVOCATION_ARGUMENTS', '7'],
+          ['CALL_COUNT', '3'], ['EXCEPTION', "'failed'"], ['STATE', "'status'"], ['STATE', "'PAID'"],
+        ]));
+      const unresolved = result.diagnostics?.filter(item => item.code === 'JEST_BEHAVIOR_UNRESOLVED')
+        .map(item => item.payload?.unsupportedPattern);
+      expect(unresolved).toEqual(expect.arrayContaining([
+        'MOCK_IDENTITY_UNRESOLVED', 'ASSERTION_SEMANTICS_UNRESOLVED', 'NESTED_CALLBACK_NOT_ANALYZED',
+        'ASSERTION_IDENTITY_UNRESOLVED',
+      ]));
+      expect(cases[1].testCase?.behaviorEvidence?.some(claim => claim.kind === 'ASSERTION')).toBe(false);
+    } finally {
+      removeTempDirectory(root, 'ba-jest-behavior-semantics-');
     }
   });
 
@@ -190,6 +248,28 @@ it('refunds', () => {});`);
       expect(changed.contentHash).not.toBe(original.contentHash);
     } finally {
       removeTempDirectory(root, 'ba-jest-behavior-hash-');
+    }
+  });
+
+  it('keeps deterministic bounded extraction under a large test file', () => {
+    const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'ba-jest-behavior-perf-')));
+    try {
+      const file = join(root, 'refund.spec.ts');
+      const tests = Array.from({ length: 250 }, (_, index) =>
+        `it('case ${index}', () => { const input = ${index}; expect(input).toBe(${index}); });`).join('\n');
+      writeFileSync(file, tests);
+      const startedAt = Date.now();
+      const first = scanProject({ fixturePath: root, tsFiles: [file], commitSha });
+      const second = scanProject({ fixturePath: root, tsFiles: [file], commitSha });
+      const elapsedMs = Date.now() - startedAt;
+      const firstCases = first.artifacts.filter(artifact => artifact.type === 'JEST_TEST_CASE');
+      const secondCases = second.artifacts.filter(artifact => artifact.type === 'JEST_TEST_CASE');
+      expect(firstCases).toHaveLength(250);
+      expect(firstCases.map(item => item.contentHash)).toEqual(secondCases.map(item => item.contentHash));
+      expect(firstCases.every(item => item.testCase?.behaviorEvidence?.length === 3)).toBe(true);
+      expect(elapsedMs).toBeLessThan(5000);
+    } finally {
+      removeTempDirectory(root, 'ba-jest-behavior-perf-');
     }
   });
 });

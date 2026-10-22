@@ -9,11 +9,11 @@ export const ecommercePartialEvaluationCases: EvaluationCase[] = [
     targetFixture: 'nestjs-order-inventory',
     expected: {
       impactedArtifactKeys: [
-        'api:order.controller.cancelOrder',
-        'service-method:order.service.cancelOrder',
-        'service-method:inventory.service.releaseReservation',
-        'entity:order',
-        'entity:stockreservation',
+        'api:src%2Forder%2Forder.controller.ts#OrderController.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Forder%2Forder.service.ts#OrderService.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Finventory%2Finventory.service.ts#InventoryService.releaseReservation~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'entity:src%2Forder%2Forder.entity.ts#Order',
+        'entity:src%2Finventory%2Fstock-reservation.entity.ts#StockReservation',
       ],
       negativeArtifactKeys: ['service-method:discount.service.applyDiscountToOrder'],
       evidenceHints: ['cancelOrder', 'releaseReservation', 'CANCELLED'],
@@ -40,8 +40,8 @@ export const ecommercePartialEvaluationCases: EvaluationCase[] = [
     targetFixture: 'nestjs-order-inventory',
     expected: {
       impactedArtifactKeys: [
-        'service-method:inventory.service.reserveStock',
-        'entity:stockreservation',
+        'service-method:src%2Finventory%2Finventory.service.ts#InventoryService.reserveStock~8b917328fa3c600d727da2420f1049f03116d7635c1e2747265cf9e4821ba093',
+        'entity:src%2Finventory%2Fstock-reservation.entity.ts#StockReservation',
       ],
       negativeArtifactKeys: ['service-method:discount.service.applyDiscountToOrder'],
       evidenceHints: ['reserveStock', 'ReservationStatus.ACTIVE'],
@@ -74,11 +74,11 @@ export const ecommercePartialEvaluationCases: EvaluationCase[] = [
     targetFixture: 'nestjs-order-inventory',
     expected: {
       impactedArtifactKeys: [
-        'api:order.controller.shipOrder',
-        'service-method:order.service.shipOrder',
-        'service-method:inventory.service.consumeReservation',
-        'entity:order',
-        'entity:stockreservation',
+        'api:src%2Forder%2Forder.controller.ts#OrderController.shipOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Forder%2Forder.service.ts#OrderService.shipOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Finventory%2Finventory.service.ts#InventoryService.consumeReservation~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'entity:src%2Forder%2Forder.entity.ts#Order',
+        'entity:src%2Finventory%2Fstock-reservation.entity.ts#StockReservation',
       ],
       negativeArtifactKeys: ['service-method:discount.service.applyDiscountToOrder'],
       evidenceHints: ['shipOrder', 'consumeReservation', 'SHIPPED'],

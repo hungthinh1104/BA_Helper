@@ -143,6 +143,7 @@ export function createFakeOnboardingAnalysis(userPrompt: string) {
       },
     ].filter(
       (insight) =>
+        userPrompt.includes('[EVIDENCE ') ||
         insight.evidenceKeys.length === 0 ||
         insight.evidenceKeys.some((key) => userPrompt.includes(key)),
     ),

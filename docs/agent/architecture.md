@@ -11,7 +11,10 @@ and produce BA-ready follow-up artifacts.
 ```
 
 The MVP does not attempt general repository documentation, automatic BRD/SRS
-generation, enterprise compliance, or multi-language understanding.
+generation, or enterprise compliance. TypeScript/NestJS is the only stable
+scanner path; Java/Spring is bounded `PARTIAL`, and other parser pilots are
+`EXPERIMENTAL`, not a claim of multi-language parity. See the
+[capability matrix](supported-capability-matrix.md).
 
 ## Target Stack
 
@@ -94,7 +97,7 @@ retrieval         hybrid evidence retrieval (lexical + vector + graph)
 embedding         artifact embedding pipeline and vector chunk persistence
 ai                adapts LLM providers only
 
-Vector retrieval design is documented in [docs/agent/adr-0007-vector-retrieval.md](adr-0007-vector-retrieval.md).
+Vector retrieval design is documented in the historical [ADR-0007](../adr/adr-0007-vector-retrieval.md); current implementation rules live in this document and the analyzer/retrieval code.
 queue             queues work only
 prisma            persistence integration only
 ```
@@ -156,7 +159,6 @@ they do not import API QA classes. Markdown/PDF and the final report viewer
 render the captured paths. Legacy snapshots are not reconstructed from live
 data.
 
-Repository profiling is backend/analyzer-only in Phase 20A. It is persisted on
-published snapshots to make later universal artifact normalization and
-profile-aware retrieval explicit, but it does not change supported extraction
-targets. NestJS remains the only extraction-capable framework in the MVP.
+Repository profiling is backend/analyzer-only. It is persisted on published
+snapshots to support repository-aware retrieval and scan health. It does not
+upgrade an experimental or partial adapter into the stable NestJS support path.

@@ -1,4 +1,4 @@
-import { EvaluationCase, EvaluationSummaryReport, CaseScoreReport, NormalizedEvaluationResult } from './evaluation-types';
+import type { EvaluationCase, EvaluationSummaryReport, CaseScoreReport, NormalizedEvaluationResult } from './evaluation-types';
 import {
   computeArtifactRecall,
   computeArtifactPrecision,
@@ -10,6 +10,18 @@ import {
 } from './evaluation-scoring';
 
 import { DomainPackRegistry } from '@ba-helper/backend-runtime';
+
+const MAX_TEXT_SUMMARY_CHARS = 14_000;
+const TEXT_SUMMARY_TRUNCATION_NOTICE = '\n... summary truncated; full case details are available in report.cases.';
+
+function boundTextSummary(summary: string): string {
+  if (summary.length <= MAX_TEXT_SUMMARY_CHARS) return summary;
+
+  const bodyLimit = MAX_TEXT_SUMMARY_CHARS - TEXT_SUMMARY_TRUNCATION_NOTICE.length;
+  const lineBoundary = summary.lastIndexOf('\n', bodyLimit);
+  const end = lineBoundary > 0 ? lineBoundary : bodyLimit;
+  return `${summary.slice(0, end).trimEnd()}${TEXT_SUMMARY_TRUNCATION_NOTICE}`;
+}
 
 export interface EvaluationAdapter {
   evaluateCase(evalCase: EvaluationCase): Promise<NormalizedEvaluationResult>;
@@ -196,7 +208,7 @@ export class EvaluationRunner {
 
     return {
       report: reportObj,
-      textSummary: textSummary.trim(),
+      textSummary: boundTextSummary(textSummary.trim()),
     };
   }
 }

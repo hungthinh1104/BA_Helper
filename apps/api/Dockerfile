@@ -28,8 +28,8 @@ WORKDIR /app/apps/api
 RUN /app/apps/api/node_modules/.bin/prisma generate --schema /app/apps/api/prisma/schema.prisma
 RUN /app/node_modules/.bin/tsc -p /app/packages/contracts/tsconfig.json \
  && /app/node_modules/.bin/tsc -p /app/packages/shared/tsconfig.json \
- && /app/node_modules/.bin/tsc -p /app/packages/analyzer/tsconfig.json \
- && /app/node_modules/.bin/tsc -p /app/packages/application/tsconfig.json \
+ && /app/node_modules/.bin/tsc -p /app/packages/analyzer/tsconfig.build.json \
+ && /app/node_modules/.bin/tsc -p /app/packages/application/tsconfig.build.json \
  && /app/node_modules/.bin/tsc -p /app/packages/backend-runtime/tsconfig.json \
  && /app/node_modules/.bin/tsc -p /app/apps/api/tsconfig.build.json
 

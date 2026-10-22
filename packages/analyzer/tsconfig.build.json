@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "../..",
+    "paths": {
+      "@ba-helper/shared": ["packages/shared/dist/index.d.ts"]
+    }
+  }
+}

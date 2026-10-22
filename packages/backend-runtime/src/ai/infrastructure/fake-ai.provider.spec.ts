@@ -65,6 +65,15 @@ describe('FakeLlmProvider', () => {
     expect(rawOutput).toContain('cancel');
   });
 
+  it('binds fake evidenced claims to canonical evidence keys from formatted records', async () => {
+    const routeKey = 'api:src%2Forder%2Forder.controller.ts#OrderController.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371';
+    const serviceKey = 'service-method:src%2Forder%2Forder.service.ts#OrderService.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371';
+    const userPrompt = `## Change Request\nCancel order through OrderService.cancelOrder.\n\n## Domain Context\nOrder\n\n## Evidence Excerpts\n[EVIDENCE 1]\nartifactKey: ${routeKey}\nsymbol: OrderController.cancelOrder\nfile: src/order/order.controller.ts\ntype: API_ROUTE\nretrievalMethod: direct\nexcerpt:\n@Post('cancel')\n\n[EVIDENCE 2]\nartifactKey: ${serviceKey}\nsymbol: OrderService.cancelOrder\nfile: src/order/order.service.ts\ntype: SERVICE_METHOD\nretrievalMethod: direct\nexcerpt:\nasync cancelOrder() {}`;
+    const result = await provider.generateStructured({ systemPrompt: '', userPrompt }, schema);
+    const claims = result.data.insights.filter(item => item.certainty === 'EVIDENCED');
+    expect(claims.flatMap(item => item.evidenceKeys).sort()).toEqual([routeKey, serviceKey].sort());
+  });
+
   it.each([
     ['Release an occupied slot', ['service-method:slot.service.releaseSlot']],
     ['Prevent a duplicate payment refund', ['service-method:payment.service.refund']],

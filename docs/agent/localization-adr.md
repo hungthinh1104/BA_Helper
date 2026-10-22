@@ -1,11 +1,13 @@
-# Post-v0.1 Backlog: Localized Report Rendering
+# ADR: Localized Report Rendering (Historical Design Record)
 
 ## Status
 
-APPROVED as post-v0.1 backlog design.
-DO NOT implement before v0.1 tag.
-
-This is not part of v0.1 debt closure. It must only be implemented after the v0.1 boundary hardening is verified on the remote branch, including real `@ba-helper/backend-runtime` extraction, removal of `@ba-helper/api/*`, removal of worker imports from `apps/api/src`, and CI architecture checks.
+Implemented. This document preserves the original design decision and is not a
+current implementation checklist. Current locale behavior and glossary rules
+are in [localization and domain glossary](localization-and-domain-glossary.md),
+public shapes are in [API contracts](api-contracts.md), and implementation
+state is owned by the localization code and tests. The old v0.1 sequencing
+below is retained only as history.
 
 ---
 
@@ -467,9 +469,10 @@ SOURCE_HASH_MISMATCH
 
 ---
 
-## 14. Suggested Post-v0.1 Implementation Order
+## 14. Original Implementation Order (Historical)
 
-Only start after v0.1 tag and verified boundary hardening.
+This was the proposed order before implementation. Do not use it to plan new
+work; check current code, tests, and the documents linked in the status note.
 
 Recommended phase name:
 

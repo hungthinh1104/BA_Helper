@@ -27,16 +27,13 @@
       "title": "refunds a paid booking",
       "claims": [
         { "kind": "SETUP_HOOK", "line": 9, "sourceText": "beforeEach(async () => {\n    const module: TestingModule = await Test.createTestingModule({\n      providers: [RefundService, { provide: 'RefundGateway', useValue: gateway }],\n    }).compile();\n    service = module.get(RefundService);\n    gateway.refund.mockResolvedValue({ status: 'REFUNDED' });\n  })" },
-        { "kind": "ACTION", "line": 10, "sourceText": "Test.createTestingModule({\n      providers: [RefundService, { provide: 'RefundGateway', useValue: gateway }],\n    }).compile()" },
-        { "kind": "ACTION", "line": 10, "sourceText": "Test.createTestingModule({\n      providers: [RefundService, { provide: 'RefundGateway', useValue: gateway }],\n    })" },
-        { "kind": "ACTION", "line": 13, "sourceText": "module.get(RefundService)" },
         { "kind": "MOCK", "line": 14, "sourceText": "gateway.refund.mockResolvedValue({ status: 'REFUNDED' })" },
         { "kind": "INPUT", "line": 18, "sourceText": "booking = { id: 'booking-42', paymentId: 'payment-42', status: 'PAID' }" },
         { "kind": "ACTION", "line": 19, "sourceText": "service.cancelAndRefund(booking)" },
-        { "kind": "ASSERTION", "line": 20, "sourceText": "expect(gateway.refund).toHaveBeenCalledWith(booking.paymentId)" },
-        { "kind": "EXPECTED_OUTCOME", "line": 20, "sourceText": "booking.paymentId" },
-        { "kind": "ASSERTION", "line": 21, "sourceText": "expect(result.status).toBe('REFUNDED')" },
-        { "kind": "EXPECTED_OUTCOME", "line": 21, "sourceText": "'REFUNDED'" }
+        { "kind": "ASSERTION", "assertionKind": "INVOCATION_ARGUMENTS", "line": 20, "sourceText": "expect(gateway.refund).toHaveBeenCalledWith(booking.paymentId)" },
+        { "kind": "EXPECTED_OUTCOME", "assertionKind": "INVOCATION_ARGUMENTS", "line": 20, "sourceText": "booking.paymentId" },
+        { "kind": "ASSERTION", "assertionKind": "STATE", "line": 21, "sourceText": "expect(result.status).toBe('REFUNDED')" },
+        { "kind": "EXPECTED_OUTCOME", "assertionKind": "STATE", "line": 21, "sourceText": "'REFUNDED'" }
       ]
     },
     {
@@ -45,9 +42,6 @@
       "title": "diagnoses unsupported assertions and nested callbacks",
       "claims": [
         { "kind": "SETUP_HOOK", "line": 9, "sourceText": "beforeEach(async () => {\n    const module: TestingModule = await Test.createTestingModule({\n      providers: [RefundService, { provide: 'RefundGateway', useValue: gateway }],\n    }).compile();\n    service = module.get(RefundService);\n    gateway.refund.mockResolvedValue({ status: 'REFUNDED' });\n  })" },
-        { "kind": "ACTION", "line": 10, "sourceText": "Test.createTestingModule({\n      providers: [RefundService, { provide: 'RefundGateway', useValue: gateway }],\n    }).compile()" },
-        { "kind": "ACTION", "line": 10, "sourceText": "Test.createTestingModule({\n      providers: [RefundService, { provide: 'RefundGateway', useValue: gateway }],\n    })" },
-        { "kind": "ACTION", "line": 13, "sourceText": "module.get(RefundService)" },
         { "kind": "MOCK", "line": 14, "sourceText": "gateway.refund.mockResolvedValue({ status: 'REFUNDED' })" },
         { "kind": "INPUT", "line": 25, "sourceText": "booking = { id: 'booking-43', paymentId: 'payment-43', status: 'PAID' }" },
         { "kind": "ACTION", "line": 26, "sourceText": "service.cancelAndRefund(booking)" },

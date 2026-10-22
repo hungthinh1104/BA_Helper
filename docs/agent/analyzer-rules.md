@@ -2,8 +2,11 @@
 
 ## Scope
 
-The MVP analyzer extracts evidence from TypeScript NestJS repositories for the
-booking cancellation/refund vertical slice.
+The stable MVP path extracts evidence from TypeScript/NestJS repositories for
+the booking cancellation/refund vertical slice. Bounded Java/Spring extraction
+is `PARTIAL`; Go, Python, C#, PHP, and Ruby adapters are `EXPERIMENTAL` capability
+proofs only. These pilots do not claim parity with the stable path; see the
+[controlled-beta capability matrix](supported-capability-matrix.md).
 
 Supported now:
 
@@ -16,16 +19,15 @@ test files
 dependency edges required by the fixture
 ```
 
-Not supported in the MVP:
+The stable MVP support claim does not include:
 
 ```text
-Express repositories
-multi-language repositories
 AI-based code extraction
 security/compliance analysis
 general architecture documentation
 ```
 
+Frameworks without an adapter or explicit capability entry remain unsupported.
 An unsupported framework must fail scan intake with
 `UNSUPPORTED_FRAMEWORK`; it must not be represented as a partially supported
 NestJS scan.
@@ -104,7 +106,7 @@ An edge is `EVIDENCED` only when the supported parser can locate a direct
 relationship in source. A similarly named but disconnected symbol must not
 become an evidenced impact.
 
-### NestJS graph publication (`analyzer@0.9.0`)
+### NestJS graph publication (`analyzer@0.10.0`)
 
 The checkout root and accepted source-file paths are canonicalized through
 filesystem real paths before computing repository-relative artifact identity.
@@ -222,11 +224,22 @@ Unsupported declarations must not be presented as individually traced cases.
 ### Static Jest behavior evidence
 
 For active Jest cases, the scanner records common setup and teardown hooks, literal/static
-input declarations, direct calls, Jest mock APIs, matcher assertions and
-explicit matcher arguments as `behaviorEvidence` in case metadata. These are
+input declarations, direct calls, verified Jest mock APIs, matcher assertions
+and explicit matcher arguments as `behaviorEvidence` in case metadata. Setup
+and teardown bodies remain part of their hook declaration: module construction
+and fixture utilities inside hooks are not promoted to business `ACTION`
+claims. A mock configuration method is classified as `MOCK` only when its
+receiver traces to a Jest mock factory, spy, or statically initialized mock
+property; otherwise `MOCK_IDENTITY_UNRESOLVED` is emitted. These are
 `STATIC_DECLARATION` claims: they describe source syntax only and never report
 test execution, pass/fail, or coverage. Parameterized tests retain one claim
 for their inline table expression; rows are not evaluated or expanded.
+
+Assertions retain their existing claim kinds and may include an additive
+`assertionKind`: `RETURN_VALUE`, `INVOCATION_ARGUMENTS`, `CALL_COUNT`,
+`EXCEPTION`, or `STATE`. Matcher arguments keep exact per-expression spans;
+unknown matcher semantics and shadowed `expect` bindings emit unresolved
+diagnostics rather than guessed outcomes.
 
 Each claim is bound to the resolved scan `commitSha` and a canonical
 repository-relative path with UTF-16 start/end offsets (exclusive end),

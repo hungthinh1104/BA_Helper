@@ -19,7 +19,7 @@ export function createJestTestArtifact(input: {
   const safeSuites = suitePath.map(suite => SecretRedactor.redact(suite).redactedContent);
   const excerpt = call.getText();
   const behaviorFingerprint = input.behaviorEvidence?.length
-    ? JSON.stringify(input.behaviorEvidence.map(claim => [claim.kind, claim.sourceText])) : '';
+    ? JSON.stringify(input.behaviorEvidence.map(claim => [claim.kind, claim.assertionKind ?? null, claim.sourceText])) : '';
   const contentSource = behaviorFingerprint
     ? `${excerpt}\n${modifier}\n${behaviorFingerprint}` : `${excerpt}\n${modifier}`;
   return {

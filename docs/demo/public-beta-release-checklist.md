@@ -1,9 +1,10 @@
 # Controlled Beta Release Checklist
 
-This document acts as the final gate to verify that the Requirement-to-Code
-Impact Analyzer is prepared for controlled beta or portfolio demo review. The
-supported beta boundary is local-password accounts against public GitHub
-TypeScript/NestJS repositories; hosted SaaS capabilities remain locked.
+Historical checklist snapshot. Checked items record an earlier freeze and do
+not certify the current checkout or hosted CI. Current open gates are in the
+[roadmap status](../release/roadmap-status.md); use its linked evidence for a
+release decision. The supported beta boundary is local-password accounts
+against public GitHub TypeScript/NestJS repositories; hosted SaaS remains locked.
 
 ## Verification Tasks
 
@@ -28,6 +29,6 @@ TypeScript/NestJS repositories; hosted SaaS capabilities remain locked.
       boots the production stack and validates the executed, commit-matched
       evidence above (production-startup + restore-drill derive from the drill).
 
-_Current engineering status: controlled-beta ready. Product validation still
-requires real BA/QC observations; SaaS remains locked until that comparison
-returns `PROMOTE`._
+Historical status note: this checklist recorded controlled-beta readiness
+before real BA/QC product observations were available. It does not establish
+current readiness; consult the roadmap and commit-matched release evidence.

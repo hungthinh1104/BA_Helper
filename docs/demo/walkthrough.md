@@ -19,14 +19,12 @@ pnpm --dir apps/web dev
 
 Required local env:
 
-- `apps/api/.env`
-- `apps/web/.env.local`
+- root `.env` (shared by API, worker, and web)
 
-Use the checked-in examples:
+Use the root example if you do not already have a local `.env`:
 
 ```bash
-cp apps/api/.env.example apps/api/.env
-cp apps/web/.env.example apps/web/.env.local
+cp .env.example .env
 ```
 
 ## Login

@@ -9,10 +9,10 @@ export const rentalPartialEvaluationCases: EvaluationCase[] = [
     targetFixture: 'nestjs-rental-partial',
     expected: {
       impactedArtifactKeys: [
-        'api:rental-contract.controller.updateDeposit',
-        'service-method:rental-contract.service.updateDepositPayment',
-        'service-method:payment-record.service.recordDeposit',
-        'entity:rentalcontract',
+        'api:src%2Frental-contract%2Frental-contract.controller.ts#RentalContractController.updateDeposit~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Frental-contract%2Frental-contract.service.ts#RentalContractService.updateDepositPayment~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fpayment%2Fpayment-record.service.ts#PaymentRecordService.recordDeposit~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'entity:src%2Frental-contract%2Frental-contract.entity.ts#RentalContract',
       ],
       negativeArtifactKeys: ['service-method:maintenance-request.service.openMaintenanceRequest'],
       evidenceHints: ['updateDepositPayment', 'recordDeposit', 'DEPOSIT_PAID'],
@@ -39,8 +39,8 @@ export const rentalPartialEvaluationCases: EvaluationCase[] = [
     targetFixture: 'nestjs-rental-partial',
     expected: {
       impactedArtifactKeys: [
-        'service-method:booking-request.service.markRoomUnavailableForRequest',
-        'service-method:room-availability.service.updateAvailability',
+        'service-method:src%2Fbooking-request%2Fbooking-request.service.ts#BookingRequestService.markRoomUnavailableForRequest~dd6f9df3949ebe095ea261fedb8d6afff333b1a449449ef86a9d6bba8b75dcbb',
+        'service-method:src%2Froom%2Froom-availability.service.ts#RoomAvailabilityService.updateAvailability~56fa983d0e53409b683164f4e331009c27a55f598d6e307e4f04d0f2fcb2aa78',
       ],
       negativeArtifactKeys: ['service-method:maintenance-request.service.openMaintenanceRequest'],
       evidenceHints: ['markRoomUnavailableForRequest', 'updateAvailability'],
@@ -67,11 +67,11 @@ export const rentalPartialEvaluationCases: EvaluationCase[] = [
     targetFixture: 'nestjs-rental-partial',
     expected: {
       impactedArtifactKeys: [
-        'api:rental-contract.controller.cancel',
-        'service-method:rental-contract.service.cancelContract',
-        'service-method:payment-record.service.markContractCancelled',
-        'service-method:tenant-notification.service.notifyTenantAndLandlord',
-        'entity:rentalcontract',
+        'api:src%2Frental-contract%2Frental-contract.controller.ts#RentalContractController.cancel~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Frental-contract%2Frental-contract.service.ts#RentalContractService.cancelContract~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fpayment%2Fpayment-record.service.ts#PaymentRecordService.markContractCancelled~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fnotification%2Ftenant-notification.service.ts#TenantNotificationService.notifyTenantAndLandlord~0e541b15754744277076f1e5143b5556d2ad87f44ab4512bc6d44313d254a5d7',
+        'entity:src%2Frental-contract%2Frental-contract.entity.ts#RentalContract',
       ],
       negativeArtifactKeys: ['service-method:maintenance-request.service.openMaintenanceRequest'],
       evidenceHints: ['cancelContract', 'markContractCancelled', 'notifyTenantAndLandlord'],

@@ -75,7 +75,6 @@ review is the final authority.
 
 ```text
 - Extract infrastructure repository classes from apps/api to shared backend package
-- Move RunScanJobUseCase, RunDocumentJobUseCase to @ba-helper/application
 - Multi-tenant organizationId boundary
 - Private repository OAuth integration
 - Scanner maturity gates for non-NestJS frameworks

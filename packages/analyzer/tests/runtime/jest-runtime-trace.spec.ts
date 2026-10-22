@@ -96,9 +96,10 @@ describe('local Jest runtime trace import', () => {
   });
 
   it('returns an explicit partial import instead of exceeding the case storage bound', () => {
-    const rows = Array.from({ length: JEST_RUNTIME_TRACE_LIMITS.maxCases + 1 }, () => ({
-      testFilePath: `${repoRoot}/test/refund.spec.ts`, testResults: [caseResult().testResults[0]],
-    }));
+    const rows = [{
+      testFilePath: `${repoRoot}/test/refund.spec.ts`,
+      testResults: Array.from({ length: JEST_RUNTIME_TRACE_LIMITS.maxCases + 1 }, () => caseResult().testResults[0]),
+    }];
     const trace = importJestRuntimeTrace(report(rows), input([testArtifact()]));
 
     expect(trace.observations).toHaveLength(0);

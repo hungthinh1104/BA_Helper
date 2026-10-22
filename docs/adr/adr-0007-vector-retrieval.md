@@ -1,5 +1,13 @@
 # ADR-0007: Vector Retrieval Architecture & Contracts
 
+## Status
+
+Accepted historical design record. Tenant/snapshot isolation remains a
+non-negotiable invariant in [AGENTS.md](../../AGENTS.md); implementation and
+current retrieval behavior are defined by code and current engineering docs.
+Use this ADR for the original design rationale, not as a substitute for the
+current contract.
+
 ## Context
 
 The system currently relies on a deterministic Lexical + Graph Expansion retrieval engine to supply code evidence to the LLM. While this is sufficient for many exact-match keywords, semantic queries containing terms like "abort a purchase" or "withdraw" fail to match symbols like `cancelOrder` without hardcoded synonyms. 

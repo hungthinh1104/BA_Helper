@@ -16,8 +16,8 @@ import type { EvaluationCase } from '../evaluation-types';
 
 const FIXTURE = 'nestjs-user-onboarding';
 const NEGATIVES = [
-  'service-method:user-admin.service.deleteUser',
-  'service-method:user-admin.service.exportUsers',
+  'service-method:src%2Fadmin%2Fuser-admin.service.ts#UserAdminService.deleteUser~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+  'service-method:src%2Fadmin%2Fuser-admin.service.ts#UserAdminService.exportUsers~4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',
 ];
 const DOMAIN = { packId: 'general', expectedConceptKeys: [] as string[] };
 
@@ -30,18 +30,18 @@ export const userOnboardingEvaluationCases: EvaluationCase[] = [
     targetFixture: FIXTURE,
     expected: {
       criticalArtifactKeys: [
-        'service-method:user.service.registerUser',
-        'service-method:welcome-email.service.sendWelcomeEmail',
+        'service-method:src%2Fuser%2Fuser.service.ts#UserService.registerUser~e3bea7a5b74640e4734fa0affe9b2d624c5a471974f866238d89239d1a65f907',
+        'service-method:src%2Femail%2Fwelcome-email.service.ts#WelcomeEmailService.sendWelcomeEmail~32b64d39f4c7d0026fcdbda88b73c36758405343e353d47ff14b659a5ae608dc',
       ],
       impactedArtifactKeys: [
-        'service-method:user.service.registerUser',
-        'service-method:welcome-email.service.sendWelcomeEmail',
-        'service-method:user-registered.handler.handleUserRegistered',
+        'service-method:src%2Fuser%2Fuser.service.ts#UserService.registerUser~e3bea7a5b74640e4734fa0affe9b2d624c5a471974f866238d89239d1a65f907',
+        'service-method:src%2Femail%2Fwelcome-email.service.ts#WelcomeEmailService.sendWelcomeEmail~32b64d39f4c7d0026fcdbda88b73c36758405343e353d47ff14b659a5ae608dc',
+        'service-method:src%2Fevents%2Fuser-registered.handler.ts#UserRegisteredHandler.handleUserRegistered~ae3484e577c6f8e5d8c3e4c01fdcfff045e8a0e4628ba9602767a691ec472823',
       ],
       negativeArtifactKeys: NEGATIVES,
       requiredEvidenceAnchors: [
-        { artifactKey: 'service-method:user.service.registerUser', contains: 'registerUser' },
-        { artifactKey: 'service-method:welcome-email.service.sendWelcomeEmail', contains: 'sendWelcomeEmail' },
+        { artifactKey: 'service-method:src%2Fuser%2Fuser.service.ts#UserService.registerUser~e3bea7a5b74640e4734fa0affe9b2d624c5a471974f866238d89239d1a65f907', contains: 'registerUser' },
+        { artifactKey: 'service-method:src%2Femail%2Fwelcome-email.service.ts#WelcomeEmailService.sendWelcomeEmail~32b64d39f4c7d0026fcdbda88b73c36758405343e353d47ff14b659a5ae608dc', contains: 'sendWelcomeEmail' },
       ],
     },
     domain: DOMAIN,
@@ -54,16 +54,16 @@ export const userOnboardingEvaluationCases: EvaluationCase[] = [
     targetFixture: FIXTURE,
     expected: {
       criticalArtifactKeys: [
-        'service-method:user.repository.findByEmail',
-        'service-method:user.service.registerUser',
+        'service-method:src%2Fuser%2Fuser.repository.ts#UserRepository.findByEmail~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fuser%2Fuser.service.ts#UserService.registerUser~e3bea7a5b74640e4734fa0affe9b2d624c5a471974f866238d89239d1a65f907',
       ],
       impactedArtifactKeys: [
-        'service-method:user.repository.findByEmail',
-        'service-method:user.service.registerUser',
+        'service-method:src%2Fuser%2Fuser.repository.ts#UserRepository.findByEmail~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fuser%2Fuser.service.ts#UserService.registerUser~e3bea7a5b74640e4734fa0affe9b2d624c5a471974f866238d89239d1a65f907',
       ],
       negativeArtifactKeys: NEGATIVES,
       requiredEvidenceAnchors: [
-        { artifactKey: 'service-method:user.repository.findByEmail', contains: 'findByEmail' },
+        { artifactKey: 'service-method:src%2Fuser%2Fuser.repository.ts#UserRepository.findByEmail~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371', contains: 'findByEmail' },
       ],
     },
     domain: DOMAIN,
@@ -75,14 +75,14 @@ export const userOnboardingEvaluationCases: EvaluationCase[] = [
       'After a successful registration, sendWelcomeEmail delivers the onboarding welcome email; it is invoked by handleUserRegistered.',
     targetFixture: FIXTURE,
     expected: {
-      criticalArtifactKeys: ['service-method:welcome-email.service.sendWelcomeEmail'],
+      criticalArtifactKeys: ['service-method:src%2Femail%2Fwelcome-email.service.ts#WelcomeEmailService.sendWelcomeEmail~32b64d39f4c7d0026fcdbda88b73c36758405343e353d47ff14b659a5ae608dc'],
       impactedArtifactKeys: [
-        'service-method:welcome-email.service.sendWelcomeEmail',
-        'service-method:user-registered.handler.handleUserRegistered',
+        'service-method:src%2Femail%2Fwelcome-email.service.ts#WelcomeEmailService.sendWelcomeEmail~32b64d39f4c7d0026fcdbda88b73c36758405343e353d47ff14b659a5ae608dc',
+        'service-method:src%2Fevents%2Fuser-registered.handler.ts#UserRegisteredHandler.handleUserRegistered~ae3484e577c6f8e5d8c3e4c01fdcfff045e8a0e4628ba9602767a691ec472823',
       ],
       negativeArtifactKeys: NEGATIVES,
       requiredEvidenceAnchors: [
-        { artifactKey: 'service-method:welcome-email.service.sendWelcomeEmail', contains: 'sendWelcomeEmail' },
+        { artifactKey: 'service-method:src%2Femail%2Fwelcome-email.service.ts#WelcomeEmailService.sendWelcomeEmail~32b64d39f4c7d0026fcdbda88b73c36758405343e353d47ff14b659a5ae608dc', contains: 'sendWelcomeEmail' },
       ],
     },
     domain: DOMAIN,
@@ -94,16 +94,16 @@ export const userOnboardingEvaluationCases: EvaluationCase[] = [
     targetFixture: FIXTURE,
     expected: {
       criticalArtifactKeys: [
-        'api:user.controller.verifyEmail',
-        'service-method:user.service.verifyEmail',
+        'api:src%2Fuser%2Fuser.controller.ts#UserController.verifyEmail~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fuser%2Fuser.service.ts#UserService.verifyEmail~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
       ],
       impactedArtifactKeys: [
-        'api:user.controller.verifyEmail',
-        'service-method:user.service.verifyEmail',
+        'api:src%2Fuser%2Fuser.controller.ts#UserController.verifyEmail~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fuser%2Fuser.service.ts#UserService.verifyEmail~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
       ],
       negativeArtifactKeys: NEGATIVES,
       requiredEvidenceAnchors: [
-        { artifactKey: 'api:user.controller.verifyEmail', contains: 'verify' },
+        { artifactKey: 'api:src%2Fuser%2Fuser.controller.ts#UserController.verifyEmail~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371', contains: 'verify' },
       ],
     },
     domain: DOMAIN,
@@ -115,15 +115,15 @@ export const userOnboardingEvaluationCases: EvaluationCase[] = [
       'handleUserRegistered reacts to the user.registered event emitted by registerUser and calls sendWelcomeEmail.',
     targetFixture: FIXTURE,
     expected: {
-      criticalArtifactKeys: ['service-method:user-registered.handler.handleUserRegistered'],
+      criticalArtifactKeys: ['service-method:src%2Fevents%2Fuser-registered.handler.ts#UserRegisteredHandler.handleUserRegistered~ae3484e577c6f8e5d8c3e4c01fdcfff045e8a0e4628ba9602767a691ec472823'],
       impactedArtifactKeys: [
-        'service-method:user-registered.handler.handleUserRegistered',
-        'service-method:user.service.registerUser',
-        'service-method:welcome-email.service.sendWelcomeEmail',
+        'service-method:src%2Fevents%2Fuser-registered.handler.ts#UserRegisteredHandler.handleUserRegistered~ae3484e577c6f8e5d8c3e4c01fdcfff045e8a0e4628ba9602767a691ec472823',
+        'service-method:src%2Fuser%2Fuser.service.ts#UserService.registerUser~e3bea7a5b74640e4734fa0affe9b2d624c5a471974f866238d89239d1a65f907',
+        'service-method:src%2Femail%2Fwelcome-email.service.ts#WelcomeEmailService.sendWelcomeEmail~32b64d39f4c7d0026fcdbda88b73c36758405343e353d47ff14b659a5ae608dc',
       ],
       negativeArtifactKeys: NEGATIVES,
       requiredEvidenceAnchors: [
-        { artifactKey: 'service-method:user-registered.handler.handleUserRegistered', contains: 'handleUserRegistered' },
+        { artifactKey: 'service-method:src%2Fevents%2Fuser-registered.handler.ts#UserRegisteredHandler.handleUserRegistered~ae3484e577c6f8e5d8c3e4c01fdcfff045e8a0e4628ba9602767a691ec472823', contains: 'handleUserRegistered' },
       ],
     },
     domain: DOMAIN,
@@ -135,14 +135,14 @@ export const userOnboardingEvaluationCases: EvaluationCase[] = [
       'registerUser must persist the new pending-verification account and look up existing accounts with findByEmail.',
     targetFixture: FIXTURE,
     expected: {
-      criticalArtifactKeys: ['service-method:user.service.registerUser'],
+      criticalArtifactKeys: ['service-method:src%2Fuser%2Fuser.service.ts#UserService.registerUser~e3bea7a5b74640e4734fa0affe9b2d624c5a471974f866238d89239d1a65f907'],
       impactedArtifactKeys: [
-        'service-method:user.service.registerUser',
-        'service-method:user.repository.findByEmail',
+        'service-method:src%2Fuser%2Fuser.service.ts#UserService.registerUser~e3bea7a5b74640e4734fa0affe9b2d624c5a471974f866238d89239d1a65f907',
+        'service-method:src%2Fuser%2Fuser.repository.ts#UserRepository.findByEmail~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
       ],
       negativeArtifactKeys: NEGATIVES,
       requiredEvidenceAnchors: [
-        { artifactKey: 'service-method:user.service.registerUser', contains: 'registerUser' },
+        { artifactKey: 'service-method:src%2Fuser%2Fuser.service.ts#UserService.registerUser~e3bea7a5b74640e4734fa0affe9b2d624c5a471974f866238d89239d1a65f907', contains: 'registerUser' },
       ],
     },
     domain: DOMAIN,
@@ -156,15 +156,15 @@ export const userOnboardingEvaluationCases: EvaluationCase[] = [
       // findByVerificationToken is retrieved and evidenced (layer 1) but has no
       // adjudicated claim, so it stays out of the committed layer — exercising the
       // two-layer distinction.
-      criticalArtifactKeys: ['service-method:user.service.verifyEmail'],
+      criticalArtifactKeys: ['service-method:src%2Fuser%2Fuser.service.ts#UserService.verifyEmail~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371'],
       impactedArtifactKeys: [
-        'api:user.controller.verifyEmail',
-        'service-method:user.service.verifyEmail',
-        'service-method:user.repository.findByVerificationToken',
+        'api:src%2Fuser%2Fuser.controller.ts#UserController.verifyEmail~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fuser%2Fuser.service.ts#UserService.verifyEmail~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fuser%2Fuser.repository.ts#UserRepository.findByVerificationToken~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
       ],
       negativeArtifactKeys: NEGATIVES,
       requiredEvidenceAnchors: [
-        { artifactKey: 'service-method:user.repository.findByVerificationToken', contains: 'findByVerificationToken' },
+        { artifactKey: 'service-method:src%2Fuser%2Fuser.repository.ts#UserRepository.findByVerificationToken~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371', contains: 'findByVerificationToken' },
       ],
     },
     domain: DOMAIN,
@@ -175,14 +175,14 @@ export const userOnboardingEvaluationCases: EvaluationCase[] = [
     requirementText: 'A successful registerUser must lead to sendWelcomeEmail for the new account.',
     targetFixture: FIXTURE,
     expected: {
-      criticalArtifactKeys: ['service-method:welcome-email.service.sendWelcomeEmail'],
+      criticalArtifactKeys: ['service-method:src%2Femail%2Fwelcome-email.service.ts#WelcomeEmailService.sendWelcomeEmail~32b64d39f4c7d0026fcdbda88b73c36758405343e353d47ff14b659a5ae608dc'],
       impactedArtifactKeys: [
-        'service-method:user.service.registerUser',
-        'service-method:welcome-email.service.sendWelcomeEmail',
+        'service-method:src%2Fuser%2Fuser.service.ts#UserService.registerUser~e3bea7a5b74640e4734fa0affe9b2d624c5a471974f866238d89239d1a65f907',
+        'service-method:src%2Femail%2Fwelcome-email.service.ts#WelcomeEmailService.sendWelcomeEmail~32b64d39f4c7d0026fcdbda88b73c36758405343e353d47ff14b659a5ae608dc',
       ],
       negativeArtifactKeys: NEGATIVES,
       requiredEvidenceAnchors: [
-        { artifactKey: 'service-method:user.service.registerUser', contains: 'registerUser' },
+        { artifactKey: 'service-method:src%2Fuser%2Fuser.service.ts#UserService.registerUser~e3bea7a5b74640e4734fa0affe9b2d624c5a471974f866238d89239d1a65f907', contains: 'registerUser' },
       ],
     },
     domain: DOMAIN,
@@ -195,20 +195,20 @@ export const userOnboardingEvaluationCases: EvaluationCase[] = [
     targetFixture: FIXTURE,
     expected: {
       criticalArtifactKeys: [
-        'service-method:user.service.registerUser',
-        'service-method:user.service.verifyEmail',
+        'service-method:src%2Fuser%2Fuser.service.ts#UserService.registerUser~e3bea7a5b74640e4734fa0affe9b2d624c5a471974f866238d89239d1a65f907',
+        'service-method:src%2Fuser%2Fuser.service.ts#UserService.verifyEmail~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
       ],
       impactedArtifactKeys: [
-        'api:user.controller.verifyEmail',
-        'service-method:user.service.registerUser',
-        'service-method:user.service.verifyEmail',
-        'service-method:user-registered.handler.handleUserRegistered',
-        'service-method:welcome-email.service.sendWelcomeEmail',
+        'api:src%2Fuser%2Fuser.controller.ts#UserController.verifyEmail~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fuser%2Fuser.service.ts#UserService.registerUser~e3bea7a5b74640e4734fa0affe9b2d624c5a471974f866238d89239d1a65f907',
+        'service-method:src%2Fuser%2Fuser.service.ts#UserService.verifyEmail~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Fevents%2Fuser-registered.handler.ts#UserRegisteredHandler.handleUserRegistered~ae3484e577c6f8e5d8c3e4c01fdcfff045e8a0e4628ba9602767a691ec472823',
+        'service-method:src%2Femail%2Fwelcome-email.service.ts#WelcomeEmailService.sendWelcomeEmail~32b64d39f4c7d0026fcdbda88b73c36758405343e353d47ff14b659a5ae608dc',
       ],
       negativeArtifactKeys: NEGATIVES,
       requiredEvidenceAnchors: [
-        { artifactKey: 'service-method:user.service.registerUser', contains: 'registerUser' },
-        { artifactKey: 'service-method:user.service.verifyEmail', contains: 'verifyEmail' },
+        { artifactKey: 'service-method:src%2Fuser%2Fuser.service.ts#UserService.registerUser~e3bea7a5b74640e4734fa0affe9b2d624c5a471974f866238d89239d1a65f907', contains: 'registerUser' },
+        { artifactKey: 'service-method:src%2Fuser%2Fuser.service.ts#UserService.verifyEmail~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371', contains: 'verifyEmail' },
       ],
     },
     domain: DOMAIN,

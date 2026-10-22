@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "../..",
+    "paths": {
+      "@ba-helper/contracts": ["packages/contracts/dist/index.d.ts"],
+      "@ba-helper/shared": ["packages/shared/dist/index.d.ts"]
+    }
+  }
+}

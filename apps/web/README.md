@@ -14,14 +14,12 @@ Next.js frontend for the BA Helper MVP.
 ```bash
 pnpm install
 
-cp apps/web/.env.example apps/web/.env.local
+cp .env.example .env
 
-NEXT_PUBLIC_API_URL=http://localhost:3002 \
-NEXTAUTH_SECRET=dev-super-secret-key-nextauth \
 pnpm --dir apps/web dev
 ```
 
-The API should be running on `http://localhost:3002` with `ENABLE_DEV_LOGIN=true`.
+The API should be running on `http://localhost:3001` with `ENABLE_DEV_LOGIN=true`.
 
 ## Related docs
 

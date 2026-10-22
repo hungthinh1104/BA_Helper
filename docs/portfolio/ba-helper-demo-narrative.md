@@ -44,10 +44,9 @@ Every node is backed by real code lines (e.g., `booking.service.ts: L45-60`). If
 The system guarantees that the **Final Reviewed Report** is strictly tied to an immutable reviewed snapshot.
 When a "Snapshot" is taken, all live decisions are deeply copied into a `ReviewedReportSnapshot`. The final report is derived *exclusively* from this snapshot. Post-snapshot decision drift (if a user continues editing) does not mutate the historical snapshot, ensuring the downloaded `.md` file is a perfect, deterministic reflection of the audited state at the exact millisecond the snapshot was taken.
 
-## 10. Testing Story (E17A + E17B)
+## 10. Testing Story
 To prove the reliability of the audit workflow, the system is backed by strict invariants:
-- **E17A (Backend Integration):** E2E test suites enforce that missing snapshots or unreviewed links fail the gate, and that post-snapshot modifications do not alter the exported payload.
-- **E17B (Frontend Integration):** UI test suites (using MSW and JSDOM) enforce that the download gate correctly blocks interactions when incomplete, and properly triggers a Blob download constructed strictly from the frozen payload when complete.
+- API, web, and browser tests cover review gates, frozen report behavior, and user-visible export paths. See the [testing strategy](../agent/testing-strategy.md); dated verification records are scoped to their recorded checkouts and do not certify current CI.
 
 ## 11. Demo Flow
 The optimal way to demonstrate BA Helper is sequentially:

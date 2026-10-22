@@ -1,5 +1,9 @@
 # Controlled Beta Release: Requirement-to-Code Impact Analyzer
 
+> Product summary only: this note is not a release approval or a live status
+> report. Use the [roadmap status](../release/roadmap-status.md) for current
+> engineering and validation gates.
+
 ## 1. What is BA Helper?
 BA Helper is a Requirement-to-Code Impact Analyzer designed specifically for backend teams.
 
@@ -51,4 +55,6 @@ pnpm demo:golden-path
 For more detailed setup, see the [Golden Path Docs](golden-path.md) and [Sample Requirement](sample-requirement-change.md).
 
 ## 8. Next Roadmap
-Our immediate focus is hardening pilot scanner adapters while keeping maturity labels explicit, improving visual review flows, and securing multi-user workspace flows in preparation for SaaS deployments.
+Current open engineering and validation gates are maintained in the
+[roadmap status](../release/roadmap-status.md). Product validation still needs
+real BA/QC observations; SaaS work remains locked until its evidence gate opens.

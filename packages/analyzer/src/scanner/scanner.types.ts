@@ -1,10 +1,11 @@
 import type { GraphProvenance } from '../graph/graph.types';
 
-export const SCANNER_VERSION = 'scanner@0.5.0';
-export const ANALYZER_VERSION = 'analyzer@0.9.0';
+export const SCANNER_VERSION = 'scanner@0.6.0';
+export const ANALYZER_VERSION = 'analyzer@0.10.0';
 
 export type TestModifier = 'NORMAL' | 'SKIP' | 'TODO' | 'ONLY';
 export type ScanTestBehaviorKind = 'SETUP_HOOK' | 'TEARDOWN_HOOK' | 'INPUT' | 'ACTION' | 'ASSERTION' | 'MOCK' | 'EXPECTED_OUTCOME';
+export type ScanAssertionKind = 'RETURN_VALUE' | 'INVOCATION_ARGUMENTS' | 'CALL_COUNT' | 'EXCEPTION' | 'STATE';
 export type ScanSourceLocation = {
   relativePath: string;
   startOffset: number;
@@ -16,6 +17,7 @@ export type ScanSourceLocation = {
 };
 export type ScanStaticBehaviorClaim = {
   kind: ScanTestBehaviorKind;
+  assertionKind?: ScanAssertionKind;
   evidenceKind: 'STATIC_DECLARATION';
   sourceText: string;
   sourceLocation: ScanSourceLocation;

@@ -10,6 +10,7 @@ import { createFakeOrderAnalysis } from './fake-order-analysis';
 import { createFakeBookingAnalysis } from './fake-booking-analysis';
 import { createFakeOnboardingAnalysis } from './fake-onboarding-analysis';
 import { scopeFakeClaims } from './fake-claim-scope';
+import { bindFakeClaimsToEvidence, hasEvidenceSymbol } from './fake-evidence-binding';
 
 @Injectable()
 export class FakeLlmProvider extends LlmProvider {
@@ -22,28 +23,32 @@ export class FakeLlmProvider extends LlmProvider {
     const start = Date.now();
 
     const isOrderInventory =
-      request.userPrompt.includes('InventoryService.releaseReservation') ||
-      request.userPrompt.includes('OrderService.cancelOrder');
+      hasEvidenceSymbol(request.userPrompt, 'InventoryService.releaseReservation') ||
+      hasEvidenceSymbol(request.userPrompt, 'OrderService.cancelOrder') ||
+      request.userPrompt.includes('order.controller.cancelOrder') ||
+      request.userPrompt.includes('order.service.cancelOrder');
 
     let mockData: any;
 
     const isBookingRefund =
+      hasEvidenceSymbol(request.userPrompt, 'BookingController.cancel') ||
+      hasEvidenceSymbol(request.userPrompt, 'PaymentService.refund') ||
+      hasEvidenceSymbol(request.userPrompt, 'SlotService.releaseSlot') ||
+      hasEvidenceSymbol(request.userPrompt, 'NotificationService.notifyOwner') ||
       request.userPrompt.includes('booking.controller.cancel') ||
       request.userPrompt.includes('payment.service.refund') ||
       request.userPrompt.includes('slot.service.releaseSlot') ||
       request.userPrompt.includes('notification.service.notifyOwner');
 
-    const isUserOnboarding =
-      request.userPrompt.includes('user.controller.register') ||
-      request.userPrompt.includes('user.controller.verifyEmail') ||
-      request.userPrompt.includes('user.service.registerUser') ||
-      request.userPrompt.includes('user.service.verifyEmail') ||
-      request.userPrompt.includes('user.repository.findByEmail') ||
-      request.userPrompt.includes('email-uniqueness.validator.validate') ||
-      request.userPrompt.includes('welcome-email.service.sendWelcomeEmail') ||
-      request.userPrompt.includes(
-        'user-registered.handler.handleUserRegistered',
-      );
+    const isUserOnboarding = [
+      'UserController.register', 'UserController.verifyEmail', 'UserService.registerUser',
+      'UserService.verifyEmail', 'UserRepository.findByEmail', 'EmailUniquenessValidator.validate',
+      'WelcomeEmailService.sendWelcomeEmail', 'UserRegisteredHandler.handleUserRegistered',
+    ].some(symbol => hasEvidenceSymbol(request.userPrompt, symbol)) ||
+      ['user.controller.register', 'user.controller.verifyEmail', 'user.service.registerUser',
+        'user.service.verifyEmail', 'user.repository.findByEmail', 'email-uniqueness.validator.validate',
+        'welcome-email.service.sendWelcomeEmail', 'user-registered.handler.handleUserRegistered']
+        .some(key => request.userPrompt.includes(key));
 
     if (isOrderInventory) {
       mockData = createFakeOrderAnalysis(request.userPrompt);
@@ -69,7 +74,8 @@ export class FakeLlmProvider extends LlmProvider {
       };
     }
 
-    mockData.insights = scopeFakeClaims(request.userPrompt, mockData.insights);
+    mockData.insights = scopeFakeClaims(request.userPrompt,
+      bindFakeClaimsToEvidence(request.userPrompt, mockData.insights));
     const rawText = JSON.stringify(mockData);
 
     const { data, parseMode, rawLength, jsonLength } = parseStructuredLlmOutput(

@@ -2,16 +2,18 @@
 
 Scope: document the existing API accurately and make the Scalar reference work
 from the running API without a CDN. No new domain endpoints or schema migrations.
-Evidence is from the current dirty working tree based on
+This is a historical verification record for a dirty working tree based on
 `0ac83a7b5f585232ba276e15b3f0787954113584`, not hosted CI on a reviewed commit.
+Its operation count and checks describe that run only, not the current checkout.
 
 ## Delivered
 
 - `/api/docs` and `/api/docs/`: Scalar reference.
 - `/api/openapi.json`: generated OpenAPI 3.0 document, current-origin server.
 - `/api/docs/scalar.js`: exact installed standalone bundle, served locally.
-- All 104 controller operations: descriptions, tags, Zod-backed JSON request and
-  success schemas, request examples where provided, path/query parameters,
+- At that revision, all 104 controller operations had descriptions, tags,
+  Zod-backed JSON request and success schemas, request examples where provided,
+  path/query parameters,
   HTTP status overrides, error envelopes, auth and permission notes.
 - Markdown/PDF downloads have their actual content types and attachment header.
 - Public login, development-only login, optional workspace authentication and
@@ -73,13 +75,13 @@ pgvector and its seeded audit record intact. Evidence:
 Real-provider scan/analysis/export was not executed by that drill; fake-provider
 quality and real-worker browser checks are separate evidence.
 
-The final Scalar-only browser rerun also passed after the UI settings were
-finalized: no external requests, console errors, page errors or external AI chat.
-The API is left running locally at `http://localhost:3001/api/docs`; the live
-OpenAPI endpoint returned 104 operations after the final workflow clarification.
+The final Scalar-only browser rerun for this record passed after the UI settings
+were finalized: no external requests, console errors, page errors or external
+AI chat. The 104-operation count belongs to that verification run.
 
 Usage and maintenance commands are in [API reference instructions](../api/README.md).
-Current API/browser suites enforce these checks in the existing CI pipeline.
+The API/browser suites at that time enforced these checks in the existing CI
+pipeline; consult current workflow results for today's CI state.
 
 Primary integration references checked:
 [Scalar NestJS](https://scalar.com/products/api-references/integrations/nestjs),

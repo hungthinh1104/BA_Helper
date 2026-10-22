@@ -128,20 +128,20 @@ export const productionStableEvaluationCases: EvaluationCase[] = [
     targetFixture: ORDER,
     expected: {
       criticalArtifactKeys: [
-        'api:order.controller.cancelOrder',
-        'service-method:order.service.cancelOrder',
+        'api:src%2Forder%2Forder.controller.ts#OrderController.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Forder%2Forder.service.ts#OrderService.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
       ],
       impactedArtifactKeys: [
-        'api:order.controller.cancelOrder',
-        'service-method:order.service.cancelOrder',
-        'entity:order',
+        'api:src%2Forder%2Forder.controller.ts#OrderController.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Forder%2Forder.service.ts#OrderService.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'entity:src%2Forder%2Forder.entity.ts#Order',
       ],
       negativeArtifactKeys: [
-        'service-method:order.service.shipOrder',
-        'api:order.controller.shipOrder',
+        'service-method:src%2Forder%2Forder.service.ts#OrderService.shipOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'api:src%2Forder%2Forder.controller.ts#OrderController.shipOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
       ],
       requiredEvidenceAnchors: [
-        { artifactKey: 'api:order.controller.cancelOrder', contains: 'cancel' },
+        { artifactKey: 'api:src%2Forder%2Forder.controller.ts#OrderController.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371', contains: 'cancel' },
       ],
     },
     domain: { packId: 'ecommerce', expectedConceptKeys: ['order', 'inventory', 'cancellation'] },
@@ -154,20 +154,20 @@ export const productionStableEvaluationCases: EvaluationCase[] = [
     targetFixture: ORDER,
     expected: {
       criticalArtifactKeys: [
-        'api:order.controller.cancelOrder',
-        'service-method:order.service.cancelOrder',
+        'api:src%2Forder%2Forder.controller.ts#OrderController.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Forder%2Forder.service.ts#OrderService.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
       ],
       impactedArtifactKeys: [
-        'api:order.controller.cancelOrder',
-        'service-method:order.service.cancelOrder',
-        'entity:order',
+        'api:src%2Forder%2Forder.controller.ts#OrderController.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Forder%2Forder.service.ts#OrderService.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'entity:src%2Forder%2Forder.entity.ts#Order',
       ],
       negativeArtifactKeys: [
-        'service-method:order.service.shipOrder',
-        'api:order.controller.shipOrder',
+        'service-method:src%2Forder%2Forder.service.ts#OrderService.shipOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'api:src%2Forder%2Forder.controller.ts#OrderController.shipOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
       ],
       requiredEvidenceAnchors: [
-        { artifactKey: 'service-method:order.service.cancelOrder', contains: 'cancel' },
+        { artifactKey: 'service-method:src%2Forder%2Forder.service.ts#OrderService.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371', contains: 'cancel' },
       ],
     },
     domain: { packId: 'ecommerce', expectedConceptKeys: ['order', 'cancellation'] },
@@ -225,20 +225,20 @@ export const productionStableEvaluationCases: EvaluationCase[] = [
     targetFixture: ORDER,
     expected: {
       criticalArtifactKeys: [
-        'api:order.controller.cancelOrder',
-        'service-method:order.service.cancelOrder',
+        'api:src%2Forder%2Forder.controller.ts#OrderController.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Forder%2Forder.service.ts#OrderService.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
       ],
       impactedArtifactKeys: [
-        'api:order.controller.cancelOrder',
-        'service-method:order.service.cancelOrder',
-        'entity:order',
+        'api:src%2Forder%2Forder.controller.ts#OrderController.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Forder%2Forder.service.ts#OrderService.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'entity:src%2Forder%2Forder.entity.ts#Order',
       ],
       negativeArtifactKeys: [
-        'service-method:order.service.shipOrder',
-        'api:order.controller.shipOrder',
+        'service-method:src%2Forder%2Forder.service.ts#OrderService.shipOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'api:src%2Forder%2Forder.controller.ts#OrderController.shipOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
       ],
       requiredEvidenceAnchors: [
-        { artifactKey: 'api:order.controller.cancelOrder', contains: 'cancel' },
+        { artifactKey: 'api:src%2Forder%2Forder.controller.ts#OrderController.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371', contains: 'cancel' },
       ],
     },
     domain: { packId: 'ecommerce', expectedConceptKeys: ['order', 'cancellation'] },
@@ -278,23 +278,23 @@ export const productionStableEvaluationCases: EvaluationCase[] = [
     targetFixture: ORDER,
     expected: {
       criticalArtifactKeys: [
-        'api:order.controller.cancelOrder',
-        'service-method:inventory.service.releaseReservation',
+        'api:src%2Forder%2Forder.controller.ts#OrderController.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Finventory%2Finventory.service.ts#InventoryService.releaseReservation~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
       ],
       impactedArtifactKeys: [
-        'api:order.controller.cancelOrder',
-        'service-method:order.service.cancelOrder',
-        'service-method:inventory.service.releaseReservation',
-        'entity:order',
+        'api:src%2Forder%2Forder.controller.ts#OrderController.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Forder%2Forder.service.ts#OrderService.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'service-method:src%2Finventory%2Finventory.service.ts#InventoryService.releaseReservation~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'entity:src%2Forder%2Forder.entity.ts#Order',
       ],
       // shipOrder (controller + service) is retrieved but must never be committed.
       negativeArtifactKeys: [
-        'service-method:order.service.shipOrder',
-        'api:order.controller.shipOrder',
+        'service-method:src%2Forder%2Forder.service.ts#OrderService.shipOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
+        'api:src%2Forder%2Forder.controller.ts#OrderController.shipOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371',
       ],
       requiredEvidenceAnchors: [
-        { artifactKey: 'service-method:inventory.service.releaseReservation', contains: 'releaseReservation' },
-        { artifactKey: 'api:order.controller.cancelOrder', contains: 'cancel' },
+        { artifactKey: 'service-method:src%2Finventory%2Finventory.service.ts#InventoryService.releaseReservation~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371', contains: 'releaseReservation' },
+        { artifactKey: 'api:src%2Forder%2Forder.controller.ts#OrderController.cancelOrder~ad0b8b37b55e51a2df881ec47da6a9555b3f444e34dd4d6a58e847d066454371', contains: 'cancel' },
       ],
     },
     domain: { packId: 'ecommerce', expectedConceptKeys: ['order', 'inventory', 'cancellation'] },

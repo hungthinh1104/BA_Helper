@@ -124,7 +124,7 @@ describe('NestJS scan → persisted dependencies → API graph', () => {
     const qa = qaCoverageResponseSchema.parse(await new GetQaCoverageUseCase(
       new QaTraceRepository(prisma), new QaCoverageDeriver()).execute(analysis.id));
     expect(qa.traceContext).toMatchObject({ commitSha: sha, analyzerVersion: ANALYZER_VERSION,
-      basis: 'STATIC_SOURCE_REFERENCE', limitations: [] });
+      basis: 'STATIC_SOURCE_REFERENCE', limitations: ['SCANNER_LIMITATIONS'] });
     expect(qa.items.find(i => i.artifactId === service.id)?.status).toBe('COVERED');
     const refundTrace = qa.items.find(i => i.artifactId === refund.id)!;
     expect(refundTrace.status).toBe('INDIRECT_ONLY');

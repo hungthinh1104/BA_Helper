@@ -52,8 +52,8 @@ You can run the definitive automated integration test for the focused TypeScript
 pnpm demo:golden-path
 ```
 
-**Visual Case Study:**
-For a step-by-step visual walkthrough of this workflow, see the [Demo Case Study](docs/portfolio/case-study.md), which features a partial visual proof pack demonstrating key milestones of the audit and lifecycle process.
+**Case Study:**
+See the [text case study](docs/portfolio/case-study.md) for the workflow narrative. Screenshot assets are not included in this repository.
 
 **Sample Requirement:**
 > "When a paid booking is cancelled, the system must refund the tenant, prevent double refunds, update booking/payment state, and notify relevant parties."
@@ -67,9 +67,10 @@ Built as a TypeScript modular monolith to balance speed of development with even
 - **Contracts:** Shared Zod API schemas bounding the frontend and backend.
 
 ## 7. Test Coverage
-This reviewed snapshot behavior is covered by invariant test suites:
-- **E17A Backend Tests:** Asserts that missing snapshots and unreviewed links block the gate at the API level, and that final reports are derived purely from snapshot payloads.
-- **E17B Frontend Tests:** MSW/JSDOM UI test suites assert that incomplete gate states visually disable export functionality, and complete states correctly dispatch the frozen markdown Blob to the user.
+Snapshot, review, export, and static test-trace behavior are covered by the
+current API, web, analyzer, and browser suites. See the [testing strategy](docs/agent/testing-strategy.md)
+for test boundaries and the [test-trace evaluation](docs/evaluation/static-test-trace.md)
+for the measured source fixtures and their limits.
 
 ## Visual Overview
 
@@ -206,7 +207,7 @@ When running the containerized stack, use the dedicated migration owner first:
 docker compose up -d --build migrate api worker web
 ```
 
-This compose topology now matches the current project shape:
+The compose services are split by responsibility:
 - `migrate` owns schema deployment
 - `api` serves the backend on `3001`
 - `worker` handles queued jobs
@@ -248,6 +249,7 @@ Built as a TypeScript modular monolith to balance speed of development with even
 - **Pilot scanner adapters:** Java/Spring Boot is `PARTIAL`; Go `net/http`, Go/Gin, Python/FastAPI, C#/ASP.NET Core, PHP/Laravel, and Ruby/Rails are `EXPERIMENTAL` capability proofs.
 - **Capability metadata:** Every scan exposes `SCANNER_CAPABILITY_SUMMARY` so reviewers can see whether a result came from a `STABLE`, `PARTIAL`, or `EXPERIMENTAL` adapter.
 - **Output generation:** Impact matrices, QA scenarios, unknown/risk tracking, human review gates, deterministic snapshot-sourced Markdown/PDF exports, and drift-aware lineage reports.
+- **Static test trace:** Bounded Jest source paths and declared behavior evidence are available with source provenance; they do not establish test execution or coverage.
 
 ## Known Limits
 - TypeScript/NestJS is the strongest scanner path.
@@ -259,39 +261,32 @@ Built as a TypeScript modular monolith to balance speed of development with even
   and review remain the trust anchors.
 - LLM output is constrained by extracted evidence and human review; it is not allowed to finalize reports by itself.
 - Evaluation metrics are internal quality signals, not public benchmarks.
+- Static Jest evidence is source-based; imported runtime traces are opt-in observations and may be incomplete or unmatched.
 - Automated CI golden path uses fake providers; manual UI demo runs with Gemini real LLM when configured.
 - Production SaaS concerns such as GitHub App auth, billing, and hosted multi-tenant deployment are not complete.
 
 ## Roadmap Status
 
-- Refactor boundary and analyzer quality gate are complete; controlled-beta
-  hardening is engineering-complete with **executable** release evidence
-  available (an executable release drill + a migration-upgrade/data-survival
-  gate), pending field validation.
-- Product-validation tooling is complete and waiting for real BA/QC field
-  observations.
-- SaaS work is locked until a provenance-backed comparison demonstrates a
-  positive product signal.
+- Dated verification reports are historical and apply only to their recorded
+  tool version, commit, and environment. They do not certify the current
+  checkout or hosted CI.
+- Independent human review of analyzer labels and real BA/QC product-validation
+  observations remain open; SaaS work remains locked pending evidence.
 
-See the [roadmap closure status](docs/release/roadmap-status.md). Before a beta
-release, run the executable drill and the readiness gate:
+See [current roadmap and release gates](docs/release/roadmap-status.md). For a
+release candidate, run the full stability gate on the reviewed revision:
 
 ```bash
-pnpm verify:release-drill && pnpm verify:controlled-beta-readiness
+pnpm verify:stability
 ```
 
 ## Documentation & Assets
-- **[Golden Path Demo Guide](docs/demo/golden-path.md)**
-- **[Sample Requirement Change](docs/demo/sample-requirement-change.md)**
-- **[Controlled Beta Release Note](docs/demo/public-beta-release-note.md)**
-- **[Portfolio Proof Pack](docs/demo/portfolio-proof-pack.md)**
-- **[Public Demo Checklist](docs/demo/public-demo-checklist.md)**
-- **[Impact Evaluation Docs](docs/evaluation/impact-evaluation.md)**
-- **[Product Validation Protocol](docs/evaluation/product-validation.md)**
-- **[Roadmap Closure Status](docs/release/roadmap-status.md)**
-- **[Domain Pack Governance](docs/agent/domain-packs.md)**
-- **[Security Policy](SECURITY.md)**
-- **[Contributing Guide](CONTRIBUTING.md)**
+- See the [documentation guide](docs/README.md) for canonical sources, owners,
+  and historical-record policy.
+- Start with [engineering task routing](docs/agent/CONTEXT_INDEX.md) for
+  implementation work.
+- Read [security policy](SECURITY.md) and [contribution guidance](CONTRIBUTING.md)
+  before submitting changes.
 
 ## Contributing
 Please see our [agent rules](AGENTS.md) and [coding standards](docs/agent/code-quality-governance.md) before submitting pull requests. All code must adhere to the modular monolith boundaries and state machine invariants.

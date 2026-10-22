@@ -19,7 +19,7 @@ export function StaticTestTracePanel({ analysisId, snapshotId, commitSha, analyz
   const data = query.data;
   const selectedItems = useMemo(() => data?.items.filter(item => item.artifactKey && artifactKeys.includes(item.artifactKey)) ?? [], [artifactKeys, data?.items]);
   if (query.isLoading) return <p role="status" className="text-xs text-muted-foreground">{labels.loading}</p>;
-  if (query.error || !query.data) return <div role="alert" className="grid gap-2 rounded border border-border/50 p-3 text-xs">
+  if (query.error || !data) return <div role="alert" className="grid gap-2 rounded border border-border/50 p-3 text-xs">
     <p>{labels.error}</p><Button type="button" variant="outline" onClick={() => { void query.refetch(); }}>{labels.retry}</Button>
   </div>;
   const context = data.traceContext;

@@ -1,7 +1,10 @@
 # Local analyzer verification, October 21, 2026
 
-The latest source is `analyzer@0.7.0`; see the follow-up below. The original
-0.6.1 record is retained as the earlier measurement.
+Historical local verification record. It captures the October 21 working tree
+based on commit `0ac83a7b5f585232ba276e15b3f0787954113584`; it is not evidence
+for the current checkout. The follow-up in this file measured `analyzer@0.7.0`;
+the current analyzer contract is `analyzer@0.10.0`. The original `0.6.1` results are
+retained as the earlier measurement.
 
 ## Source and environment
 
@@ -21,7 +24,7 @@ never executed; its dependencies are not installed.
 
 Measured fixes preserve private/protected Injectable service method artifacts
 and resolve static test references through a bounded local constructor factory.
-The legacy fixture scanner also defaults to the current analyzer version.
+The legacy fixture scanner also defaults to the version under test.
 Negative tests reject ambiguous/dynamic factories and preserve controller
 visibility rules. See [application evaluation](../evaluation/application-test-trace.md)
 for exact pins, units, before/after results and remaining limitations.

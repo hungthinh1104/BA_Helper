@@ -3,6 +3,7 @@ import type { CallExpression, Node as MorphNode } from 'ts-morph';
 import { SecretRedactor } from '../core/secret-redactor';
 import type { DiagnosticItem } from '../core/diagnostic-collector';
 import type { ScanStaticBehaviorClaim } from '../scanner.types';
+import { classifyAssertion, isVerifiedJestMockCall, looksLikeMockConfiguration } from './jest-test-semantics';
 
 const MAX_CLAIMS_PER_CASE = 100;
 const MAX_CLAIMS_PER_SCAN = 20_000;
@@ -10,17 +11,6 @@ const MAX_SOURCE_TEXT_LENGTH = 2000;
 const HOOK_KINDS = new Map<string, 'SETUP_HOOK' | 'TEARDOWN_HOOK'>([
   ['beforeEach', 'SETUP_HOOK'], ['beforeAll', 'SETUP_HOOK'],
   ['afterEach', 'TEARDOWN_HOOK'], ['afterAll', 'TEARDOWN_HOOK'],
-]);
-const MOCK_METHODS = new Set([
-  'fn', 'mock', 'doMock', 'dontMock', 'unmock', 'setMock', 'spyOn', 'replaceProperty',
-  'clearAllMocks', 'resetAllMocks', 'restoreAllMocks', 'requireActual', 'requireMock',
-  'mockClear', 'mockReset', 'mockRestore', 'mockImplementation', 'mockImplementationOnce',
-  'mockReturnThis', 'mockReturnValue', 'mockReturnValueOnce', 'mockResolvedValue',
-  'mockResolvedValueOnce', 'mockRejectedValue', 'mockRejectedValueOnce', 'mockName',
-]);
-const ZERO_ARGUMENT_OUTCOMES = new Set([
-  'toBeDefined', 'toBeUndefined', 'toBeNull', 'toBeTruthy', 'toBeFalsy', 'toBeNaN',
-  'toHaveBeenCalled', 'toHaveReturned', 'toThrow', 'toThrowError',
 ]);
 
 export type JestBehaviorBudget = { remaining: number };
@@ -58,7 +48,8 @@ type BehaviorInput = {
 type ClaimRecorder = {
   claims: ScanStaticBehaviorClaim[];
   diagnostics: Map<string, DiagnosticItem>;
-  addClaim(kind: ScanStaticBehaviorClaim['kind'], node: MorphNode): void;
+  addClaim(kind: ScanStaticBehaviorClaim['kind'], node: MorphNode,
+    assertionKind?: ScanStaticBehaviorClaim['assertionKind']): void;
   addDiagnostic(pattern: string, node?: MorphNode): void;
 };
 
@@ -101,7 +92,8 @@ function createClaimRecorder(input: BehaviorInput): ClaimRecorder {
       },
     });
   };
-  const addClaim = (kind: ScanStaticBehaviorClaim['kind'], node: MorphNode): void => {
+  const addClaim = (kind: ScanStaticBehaviorClaim['kind'], node: MorphNode,
+    assertionKind?: ScanStaticBehaviorClaim['assertionKind']): void => {
     if (!input.commitSha) {
       addDiagnostic('COMMIT_CONTEXT_REQUIRED', node);
       return;
@@ -127,6 +119,7 @@ function createClaimRecorder(input: BehaviorInput): ClaimRecorder {
     const location = sourcePosition(node);
     claims.push({
       kind,
+      ...(assertionKind ? { assertionKind } : {}),
       evidenceKind: 'STATIC_DECLARATION',
       sourceText,
       sourceLocation: { relativePath: input.relativePath, ...location },
@@ -137,35 +130,39 @@ function createClaimRecorder(input: BehaviorInput): ClaimRecorder {
   return { claims, diagnostics, addClaim, addDiagnostic };
 }
 
-function recordCallClaims(calls: CallExpression[], callsWithCallbacks: Set<CallExpression>, recorder: ClaimRecorder): void {
+function recordCallClaims(calls: CallExpression[], callsWithCallbacks: Set<CallExpression>, recorder: ClaimRecorder,
+  allowActions = true): void {
   for (const call of calls) {
-    if (isDynamicAssertionCall(call)) {
-      recorder.addDiagnostic('DYNAMIC_MATCHER_NOT_ANALYZED', call);
+    if (isDynamicAssertionShapedCall(call)) {
+      recorder.addDiagnostic(isJestExpectCallFromDynamic(call)
+        ? 'DYNAMIC_MATCHER_NOT_ANALYZED' : 'ASSERTION_IDENTITY_UNRESOLVED', call);
       continue;
     }
-    if (isAssertionCall(call)) {
-      recordAssertion(call, recorder);
+    if (isAssertionShapedCall(call)) {
+      if (isAssertionCall(call)) recordAssertion(call, recorder);
+      else recorder.addDiagnostic('ASSERTION_IDENTITY_UNRESOLVED', call);
       continue;
     }
-    if (isJestExpectCall(call)) continue;
-    if (isMockCall(call)) {
+    if (isJestExpectCall(call) || isExpectationCall(call)) continue;
+    if (isVerifiedJestMockCall(call, isJestRoot)) {
       recorder.addClaim('MOCK', call);
       continue;
     }
+    if (looksLikeMockConfiguration(call)) {
+      recorder.addDiagnostic('MOCK_IDENTITY_UNRESOLVED', call);
+      continue;
+    }
     if (callsWithCallbacks.has(call)) continue;
-    if (!isJestDeclarationOrHook(call)) recorder.addClaim('ACTION', call);
+    if (allowActions && !isJestDeclarationOrHook(call)) recorder.addClaim('ACTION', call);
   }
 }
 
 function recordAssertion(call: CallExpression, recorder: ClaimRecorder): void {
-  recorder.addClaim('ASSERTION', call);
-  const matcher = callName(call);
-  const expected = call.getArguments()[0];
-  const isSnapshot = matcher === 'toMatchSnapshot' || matcher === 'toMatchInlineSnapshot';
-  if (isSnapshot) recorder.addDiagnostic('SNAPSHOT_EXPECTATION_UNRESOLVED', call);
-  else if (expected) recorder.addClaim('EXPECTED_OUTCOME', expected);
-  else if (matcher && ZERO_ARGUMENT_OUTCOMES.has(matcher)) recorder.addClaim('EXPECTED_OUTCOME', call);
-  else recorder.addDiagnostic('OUTCOME_NOT_EXPLICIT', call);
+  const semantics = classifyAssertion(call);
+  recorder.addClaim('ASSERTION', call, semantics.assertionKind);
+  for (const outcome of semantics.expected) recorder.addClaim('EXPECTED_OUTCOME', outcome.node, outcome.kind);
+  if (semantics.unresolved) recorder.addDiagnostic(semantics.unresolved, call);
+  else if (!semantics.expected.length) recorder.addDiagnostic('OUTCOME_NOT_EXPLICIT', call);
 }
 
 function recordInputClaims(candidates: MorphNode[], recorder: ClaimRecorder): void {
@@ -179,7 +176,7 @@ function recordHookClaims(hook: CallExpression, recorder: ClaimRecorder): void {
   const parsed = readJestHook(hook);
   if (!parsed?.callbackBody) return;
   const { candidates, callsWithCallbacks } = collectDirectBodyNodes(parsed.callbackBody);
-  recordCallClaims(candidates.filter(Node.isCallExpression), callsWithCallbacks, recorder);
+  recordCallClaims(candidates.filter(Node.isCallExpression), callsWithCallbacks, recorder, false);
   recordInputClaims(candidates, recorder);
   for (const node of candidates.filter(isFunctionLike)) recorder.addDiagnostic('NESTED_CALLBACK_NOT_ANALYZED', node);
 }
@@ -222,6 +219,14 @@ function isAssertionCall(call: CallExpression): boolean {
   return Node.isCallExpression(base) && isJestExpectCall(base);
 }
 
+function isAssertionShapedCall(call: CallExpression): boolean {
+  const expression = call.getExpression();
+  if (!Node.isPropertyAccessExpression(expression)) return false;
+  let base: MorphNode = expression.getExpression();
+  while (Node.isPropertyAccessExpression(base)) base = base.getExpression();
+  return Node.isCallExpression(base) && isExpectationCall(base);
+}
+
 function isJestExpectCall(call: CallExpression): boolean {
   const expression = call.getExpression();
   return Node.isIdentifier(expression) &&
@@ -229,11 +234,18 @@ function isJestExpectCall(call: CallExpression): boolean {
     isJestGlobalOrImport(expression, 'expect');
 }
 
-function isDynamicAssertionCall(call: CallExpression): boolean {
+function isDynamicAssertionShapedCall(call: CallExpression): boolean {
   const expression = call.getExpression();
   if (!Node.isElementAccessExpression(expression)) return false;
   const candidate = expression.getExpression();
-  return Node.isCallExpression(candidate) && isJestExpectCall(candidate as CallExpression);
+  return Node.isCallExpression(candidate) && isExpectationCall(candidate as CallExpression);
+}
+
+function isJestExpectCallFromDynamic(call: CallExpression): boolean {
+  const expression = call.getExpression();
+  if (!Node.isElementAccessExpression(expression)) return false;
+  const candidate = expression.getExpression();
+  return Node.isCallExpression(candidate) && isJestExpectCall(candidate);
 }
 
 function isJestDeclarationOrHook(call: CallExpression): boolean {
@@ -243,17 +255,14 @@ function isJestDeclarationOrHook(call: CallExpression): boolean {
     isJestGlobalOrImport(expression, resolveJestImportName(expression) ?? expression.getText());
 }
 
-function isMockCall(call: CallExpression): boolean {
-  const name = callName(call);
-  if (!name || !MOCK_METHODS.has(name)) return false;
-  if (name === 'fn' || ['mock', 'doMock', 'dontMock', 'unmock', 'setMock', 'spyOn', 'replaceProperty',
-    'clearAllMocks', 'resetAllMocks', 'restoreAllMocks', 'requireActual', 'requireMock'].includes(name)) {
-    const expression = call.getExpression();
-    return Node.isPropertyAccessExpression(expression) && Node.isIdentifier(expression.getExpression()) &&
-      (resolveJestImportName(expression.getExpression()) ?? expression.getExpression().getText()) === 'jest' &&
-      isJestGlobalOrImport(expression.getExpression(), 'jest');
-  }
-  return true;
+function isJestRoot(identifier: MorphNode): boolean {
+  return (resolveJestImportName(identifier) ?? identifier.getText()) === 'jest' && isJestGlobalOrImport(identifier, 'jest');
+}
+
+function isExpectationCall(call: CallExpression): boolean {
+  const expression = call.getExpression();
+  return Node.isIdentifier(expression) &&
+    (resolveJestImportName(expression) ?? expression.getText()) === 'expect';
 }
 
 function callName(call: CallExpression): string | undefined {

@@ -65,7 +65,7 @@ function parseTestSuites(reportJson: string): unknown[] {
 }
 
 function countTestCases(suites: unknown[]): number {
-  return suites.reduce((count, value) => {
+  return suites.reduce<number>((count, value) => {
     const suite = isRecord(value) ? value as RawSuite : undefined;
     return count + (suite && Array.isArray(suite.testResults) ? suite.testResults.length : 0);
   }, 0);

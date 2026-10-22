@@ -1,6 +1,8 @@
-import { evaluationCaseSchema, NormalizedEvaluationResult, EvaluationCase } from './evaluation-types';
+import { evaluationCaseSchema } from './evaluation-types';
+import type { NormalizedEvaluationResult, EvaluationCase } from './evaluation-types';
 import { ALL_EVALUATION_CASES } from './cases';
-import { EvaluationRunner, EvaluationAdapter } from './evaluation-runner';
+import { EvaluationRunner } from './evaluation-runner';
+import type { EvaluationAdapter } from './evaluation-runner';
 import { LexicalRetrievalEvaluationAdapter } from './adapters/lexical-retrieval.adapter';
 import {
   computeArtifactRecall,
@@ -147,6 +149,35 @@ describe('Impact Evaluation Pack', () => {
 
       // We explicitly did not connect to Prisma or any LLM clients here.
       // The tests are entirely offline and CPU bound.
+    });
+
+    it('bounds oversized display summaries while retaining full deterministic report identities', async () => {
+      const longArtifactKey = `service-method:${'a'.repeat(80)}#Payment.refund~${'b'.repeat(64)}`;
+      const sourceCase = ALL_EVALUATION_CASES[0];
+      const cases = Array.from({ length: 250 }, (_, index) => ({
+        ...sourceCase,
+        id: `bounded-summary-${index}`,
+        expected: { ...sourceCase.expected, impactedArtifactKeys: ['expected:refund'] },
+      }));
+      const adapter: EvaluationAdapter = {
+        async evaluateCase() {
+          return {
+            foundImpactedArtifactKeys: [longArtifactKey],
+            evidenceByArtifactKey: { [longArtifactKey]: ['source excerpt'] },
+            unknownsOrQuestions: [],
+            risks: [],
+            qaScenarios: [],
+          };
+        },
+      };
+      const boundedRunner = new EvaluationRunner(adapter);
+      const first = await boundedRunner.run(cases);
+      const second = await boundedRunner.run(cases);
+
+      expect(first.textSummary.length).toBeLessThan(15000);
+      expect(first.textSummary).toContain('summary truncated; full case details are available in report.cases.');
+      expect(first.report.cases[0].unexpectedArtifacts).toEqual([longArtifactKey]);
+      expect(second).toEqual(first);
     });
   });
 

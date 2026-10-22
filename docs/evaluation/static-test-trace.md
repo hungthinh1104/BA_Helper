@@ -1,5 +1,11 @@
 # Static test trace evaluation
 
+> Version scope: the TESTS/CALLS corpus figures in the first section are
+> historical measurements from the analyzer versions named there. The current
+> analyzer contract is `analyzer@0.10.0`; run the reproduction commands to
+> produce a scorecard for the current checkout. Historical figures below do not
+> certify current accuracy.
+
 ## Reproducible extraction pilot
 
 Run `pnpm verify:public-test-trace`. This uses source slices from three public
@@ -32,7 +38,7 @@ the source artifact, and the target method call at that location. This checks
 trace provenance integrity; it does not independently establish business
 relevance or prove that the test executes. The unsupported rate counts only
 declarations explicitly reported by the parser; unsupported forms the parser
-fails to diagnose cannot be counted. This corpus currently reports 0 diagnosed
+fails to diagnose cannot be counted. The recorded corpus run reported 0 diagnosed
 unsupported declarations among 22 observed declarations and source evidence
 integrity of 34/34 direct relationships. Symbol-only matching cannot pass if a
 graded production symbol occurs in more than one selected file; candidate paths

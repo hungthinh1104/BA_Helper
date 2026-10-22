@@ -16,9 +16,14 @@ export function scopeFakeClaims<T extends FakeInsight>(
     (insight) =>
       insight.certainty !== 'EVIDENCED' ||
       insight.evidenceKeys.some((key) =>
-        mentionsMethod(request, words, key.split('.').pop() ?? ''),
+        mentionsMethod(request, words, artifactMethod(key)),
       ),
   );
+}
+
+function artifactMethod(key: string): string {
+  const qualified = key.includes('#') ? key.slice(key.indexOf('#') + 1) : key;
+  return (qualified.split('.').pop() ?? '').split('~')[0];
 }
 
 function mentionsMethod(

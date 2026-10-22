@@ -51,33 +51,27 @@ graph LR
     REVIEW --> DRIFT[Drift & Evaluation Monitors]
 ```
 
-## 4. Screenshot Capture Checklist
+## 4. Screenshot Capture Checklist (Assets Not Packaged)
 
-The following visual assets demonstrate the finalized UI flows and capabilities:
+No screenshot assets are checked into the repository. Capture and review these
+items before describing a visual proof pack as complete:
 
 - **README / project overview**: High-level dashboard showing scanned repos.
-  *(See Demo Repositories screenshot below)*
 
 - **golden path test output**: Terminal screenshot showing `pnpm demo:golden-path` passing locally.
   *(Terminal proof managed separately)*
 
 - **scan health panel**: Component displaying `READY` vs `PARTIAL` extraction constraints and scanner maturity.
-  ![Scan Status and Maturity](../assets/demo/01-scan-status-maturity.png)
 
 - **impact analysis screen**: UI showing requirement mapped to code artifacts.
-  ![Impact Analysis Result](../assets/demo/02-impact-analysis-result.png)
 
 - **evidence appendix/report**: Detailed view of specific code lines cited by the LLM.
-  *[PENDING: 03-evidence-backed-artifacts.png]*
 
 - **unknown/risk diagnostics**: View showing unknown components properly isolated.
-  *[PENDING: 04-unknown-risk-diagnostics.png]*
 
 - **human review panel**: Reviewer gate for confirming/rejecting insights.
-  *[PENDING: 05-human-review-panel.png]*
 
 - **traceability report preview**: Approved markdown report.
-  ![Traceability Report](../assets/demo/06-traceability-report.png)
 
 - **drift warning**: UI alert showing `STALE_ARTIFACTS` when a commit is pushed during review.
   *(Captured via separate test fixture)*
