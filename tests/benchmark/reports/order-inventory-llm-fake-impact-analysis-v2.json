@@ -4,6 +4,13 @@
   "model": "unknown",
   "parseMode": "raw",
   "fixture": "nestjs-order-inventory",
-  "totalMismatches": 0,
-  "mismatches": []
+  "totalMismatches": 1,
+  "mismatches": [
+    {
+      "failureClass": "REPORT_OMITS_EVIDENCE",
+      "expected": "Inventory reservation release is affected",
+      "actual": "Missing",
+      "details": "Report omitted required EVIDENCED concept: Inventory reservation release is affected"
+    }
+  ]
 }

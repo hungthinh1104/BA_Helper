@@ -29,12 +29,15 @@ export class TypeScriptNestJsAdapter implements ScannerAdapter {
       'providers',
       'DTOs',
       'Prisma models',
-      'method/class artifacts'
+      'method/class artifacts',
+      'tsconfig baseUrl and paths, including extends',
+      'relative imports and named/default re-exports inside scanned source files',
+      'Nest TestingModule.get<T>() and supported setup provider chains',
     ],
     partialPatterns: ['Jest behavior declarations for common hooks, inputs, actions, mocks and matchers',
-      'inline-array it/test.each source callbacks'],
+      'inline-array it/test.each source callbacks', 'typed variable and class property receiver resolution'],
     unsupportedPatterns: ['dynamic matchers and nested callbacks', 'snapshot expectation contents',
-      'barrel/path-alias graph resolution', 'runtime test execution or coverage'],
+      'namespace re-exports and runtime test execution or coverage'],
   };
 
   canScan(input: ScanAdapterInput): boolean {
@@ -61,7 +64,15 @@ export class TypeScriptNestJsAdapter implements ScannerAdapter {
       severity: 'WARN',
       category: 'SCANNER',
       message: d.message,
-      payload: { relativePath: d.filePath, unsupportedPattern: d.code },
+      count: d.count ?? 1,
+      payload: {
+        relativePath: d.filePath,
+        unsupportedPattern: d.reason ?? d.code,
+        reason: d.reason,
+        sourceSymbol: d.sourceSymbol,
+        targetExpression: d.targetExpression,
+        sampleEvidence: d.sampleEvidence,
+      },
       samplePaths: d.filePath ? [d.filePath] : undefined,
     } as DiagnosticItem))];
 

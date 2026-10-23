@@ -129,6 +129,212 @@ describe('refund', () => {
     }
   });
 
+  it('does not classify typed Jest mock setup, asymmetric matchers, or data helpers as business actions', () => {
+    const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'ba-jest-behavior-action-context-')));
+    try {
+      const file = join(root, 'refund.spec.ts');
+      writeFileSync(file, `import { expect, it, jest } from '@jest/globals';
+type Gateway = { refund(input: unknown): Promise<unknown> };
+const mockedGateway: jest.Mocked<Gateway> = {} as jest.Mocked<Gateway>;
+it('keeps setup and matchers out of actions', async () => {
+  const request = Object.assign({ createdAt: Date.now() }, { status: 'PAID' });
+  mockedGateway.refund.mockResolvedValue(Object.assign({}, request));
+  await expect(subject.refund(request)).resolves.toMatchObject({
+    status: expect.any(String),
+    values: expect.arrayContaining([expect.any(Number)]),
+  });
+});`);
+      const result = scanProject({ fixturePath: root, tsFiles: [file], commitSha });
+      const claims = result.artifacts.find(artifact => artifact.type === 'JEST_TEST_CASE')?.testCase?.behaviorEvidence ?? [];
+      const actions = claims.filter(claim => claim.kind === 'ACTION').map(claim => claim.sourceText);
+      expect(actions).toEqual(['subject.refund(request)']);
+      expect(claims.some(claim => claim.kind === 'MOCK' &&
+        claim.sourceText.includes('mockedGateway.refund.mockResolvedValue'))).toBe(true);
+      expect(claims.filter(claim => claim.kind === 'EXPECTED_OUTCOME').map(claim => claim.sourceText))
+        .toContain("{\n    status: expect.any(String),\n    values: expect.arrayContaining([expect.any(Number)]),\n  }");
+      expect(actions.some(text => /Object\.assign|Date\.now|expect\.(?:any|arrayContaining)|mockResolvedValue/.test(text))).toBe(false);
+    } finally {
+      removeTempDirectory(root, 'ba-jest-behavior-action-context-');
+    }
+  });
+
+  it('keeps imported data builders and external fluent assertions out of business actions', () => {
+    const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'ba-jest-behavior-action-receiver-')));
+    try {
+      const file = join(root, 'refund.spec.ts');
+      writeFileSync(file, `import { expect, it } from '@jest/globals';
+import fc from 'fast-check';
+import { spec } from 'pactum';
+import { makeInput, makeExpected } from './test-data';
+import { refundFactory } from './fixture';
+import { importedSubject } from './subject';
+class Subject { refund(_input: unknown) { return 'REFUNDED'; } }
+const subject = new Subject();
+it('separates subject calls from preparation and fluent test APIs', async () => {
+  const input = refundFactory.buildOne();
+  const expected = makeExpected();
+  await fc.assert(fc.property(fc.integer(), value => value > 0));
+  await spec().post('/refund').withBody(input).expectStatus(201).toss();
+  const actual = subject.refund(makeInput());
+  expect(actual).toEqual(makeExpected());
+  expect(importedSubject.refund(input)).toBe(expected);
+});`);
+      const result = scanProject({ fixturePath: root, tsFiles: [file], commitSha });
+      const claims = result.artifacts.find(artifact => artifact.type === 'JEST_TEST_CASE')?.testCase?.behaviorEvidence ?? [];
+      const actions = claims.filter(claim => claim.kind === 'ACTION').map(claim => claim.sourceText);
+      expect(actions).toEqual(['subject.refund(makeInput())', 'importedSubject.refund(input)']);
+      expect(claims.every(claim => claim.evidenceKind === 'STATIC_DECLARATION' && claim.commitSha === commitSha)).toBe(true);
+      expect(result.diagnostics?.some(item => item.code === 'JEST_BEHAVIOR_UNRESOLVED' &&
+        item.payload?.unsupportedPattern === 'ACTION_RECEIVER_UNRESOLVED')).toBe(true);
+    } finally {
+      removeTempDirectory(root, 'ba-jest-behavior-action-receiver-');
+    }
+  });
+
+  it('does not turn local test clients, backups, mock callbacks, or DTO builders into actions', () => {
+    const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'ba-jest-behavior-indirect-utility-')));
+    try {
+      const file = join(root, 'refund.spec.ts');
+      writeFileSync(file, `import { agent } from 'supertest';
+import { e2e } from 'pactum';
+import { back } from 'nock';
+import { database } from './database';
+class DTO { static from(data: unknown) { return data; } }
+class Subject { refund(_input: unknown) { return 'ok'; } }
+const subject = new Subject();
+const testCase = e2e('refund');
+it('uses a subject and several test utilities', async () => {
+  const client = agent(server);
+  const backup = database.backup();
+  const { nockDone } = await back('refund.json');
+  const title = 'Paid Booking';
+  const slug = title.toLowerCase().replaceAll(' ', '-');
+  const longText = 'A'.repeat(2000);
+  const dto = DTO.from({ slug });
+  await client.post('/refund').expect(200);
+  await testCase.step('refund').spec().post('/refund').toss();
+  await testCase${'.step("refund")'.repeat(20)}.toss();
+  backup.restore();
+  nockDone();
+  expect(subject.refund(dto)).toBe('ok');
+});`);
+      const result = scanProject({ fixturePath: root, tsFiles: [file], commitSha });
+      const claims = result.artifacts.find(artifact => artifact.type === 'JEST_TEST_CASE')?.testCase?.behaviorEvidence ?? [];
+      expect(claims.filter(claim => claim.kind === 'ACTION').map(claim => claim.sourceText))
+        .toEqual(['subject.refund(dto)']);
+      expect(result.diagnostics?.some(item => item.code === 'JEST_BEHAVIOR_UNRESOLVED' &&
+        item.payload?.unsupportedPattern === 'ACTION_RECEIVER_UNRESOLVED')).toBe(true);
+    } finally {
+      removeTempDirectory(root, 'ba-jest-behavior-indirect-utility-');
+    }
+  });
+
+  it('retains a constructed subject action inside an external async wrapper', () => {
+    const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'ba-jest-behavior-wrapped-action-')));
+    try {
+      const file = join(root, 'interceptor.spec.ts');
+      writeFileSync(file, `import { lastValueFrom } from 'rxjs';
+import { Test } from '@nestjs/testing';
+import { CurrentUserInterceptor } from './current-user.interceptor';
+let assigned: CurrentUserInterceptor;
+beforeEach(async () => {
+  const module = await Test.createTestingModule({ providers: [CurrentUserInterceptor] }).compile();
+  assigned = module.get(CurrentUserInterceptor);
+});
+it('intercepts', async () => {
+  const interceptor = new CurrentUserInterceptor();
+  await lastValueFrom(interceptor.intercept(context, next));
+});
+it('intercepts after setup assignment', async () => {
+  await lastValueFrom(assigned.intercept(context, next));
+});`);
+      const result = scanProject({ fixturePath: root, tsFiles: [file], commitSha });
+      const cases = result.artifacts.filter(artifact => artifact.type === 'JEST_TEST_CASE');
+      const claims = cases[0].testCase?.behaviorEvidence ?? [];
+      expect(claims.filter(claim => claim.kind === 'ACTION').map(claim => claim.sourceText))
+        .toEqual(['interceptor.intercept(context, next)']);
+      expect(cases[1].testCase?.behaviorEvidence?.filter(claim => claim.kind === 'ACTION').map(claim => claim.sourceText))
+        .toEqual(['assigned.intercept(context, next)']);
+    } finally {
+      removeTempDirectory(root, 'ba-jest-behavior-wrapped-action-');
+    }
+  });
+
+  it('retains a direct action on a class token resolved from a testing module', () => {
+    const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'ba-jest-behavior-token-action-')));
+    try {
+      const file = join(root, 'refund.spec.ts');
+      writeFileSync(file, `import { Test } from '@nestjs/testing';
+import { RefundService } from './refund.service';
+it('refunds', async () => {
+  const module = await Test.createTestingModule({ providers: [RefundService] }).compile();
+  const service = module.get<RefundService>(RefundService);
+  service.refund();
+});`);
+      const result = scanProject({ fixturePath: root, tsFiles: [file], commitSha });
+      const claims = result.artifacts.find(artifact => artifact.type === 'JEST_TEST_CASE')?.testCase?.behaviorEvidence ?? [];
+      expect(claims.filter(claim => claim.kind === 'ACTION').map(claim => claim.sourceText))
+        .toEqual(['service.refund()']);
+    } finally {
+      removeTempDirectory(root, 'ba-jest-behavior-token-action-');
+    }
+  });
+
+  it('records only verified Jest throw callback actions with exact static provenance', () => {
+    const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'ba-jest-behavior-throw-action-')));
+    try {
+      const file = join(root, 'throw.spec.ts');
+      const source = `import { expect, it } from '@jest/globals';
+it('throws', () => {
+  expect(() => service.fail()).toThrowError('failed');
+  const action = () => service.reject();
+  expect(action).not.toThrow();
+  expect(() => setTimeout(() => service.later(), 0)).toThrow();
+  const unused = () => service.notObserved();
+});
+it('shadows expect', () => {
+  const expect = (value: unknown) => ({ toThrow: () => value });
+  expect(() => service.shadowed()).toThrow();
+});`;
+      writeFileSync(file, source);
+      const result = scanProject({ fixturePath: root, tsFiles: [file], commitSha });
+      const cases = result.artifacts.filter(artifact => artifact.type === 'JEST_TEST_CASE');
+      const actions = cases[0].testCase?.behaviorEvidence?.filter(claim => claim.kind === 'ACTION') ?? [];
+      expect(actions.map(claim => claim.sourceText)).toEqual(['service.fail()', 'service.reject()']);
+      expect(actions.every(claim => claim.evidenceKind === 'STATIC_DECLARATION' && claim.commitSha === commitSha &&
+        source.slice(claim.sourceLocation.startOffset, claim.sourceLocation.endOffset) === claim.sourceText)).toBe(true);
+      expect(cases[1].testCase?.behaviorEvidence?.some(claim => claim.kind === 'ACTION')).toBe(false);
+      expect(result.diagnostics?.some(item => item.code === 'JEST_BEHAVIOR_UNRESOLVED' &&
+        item.payload?.unsupportedPattern === 'NESTED_CALLBACK_NOT_ANALYZED')).toBe(true);
+    } finally {
+      removeTempDirectory(root, 'ba-jest-behavior-throw-action-');
+    }
+  });
+
+  it('keeps inherited setup declarations distinct from a nested test action', () => {
+    const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'ba-jest-behavior-inherited-setup-')));
+    try {
+      const file = join(root, 'nested.spec.ts');
+      const source = `describe('outer', () => {
+  beforeEach(() => { harness.prepare(); });
+  describe('inner', () => {
+    it('runs the operation', () => subject.run());
+  });
+});`;
+      writeFileSync(file, source);
+      const result = scanProject({ fixturePath: root, tsFiles: [file], commitSha });
+      const test = result.artifacts.find(artifact => artifact.type === 'JEST_TEST_CASE')!;
+      const claims = test.testCase?.behaviorEvidence ?? [];
+      expect(claims.some(claim => claim.kind === 'SETUP_HOOK' && claim.sourceText.includes('harness.prepare'))).toBe(true);
+      expect(claims.some(claim => claim.kind === 'ACTION' && claim.sourceText === 'harness.prepare()')).toBe(false);
+      expect(claims.some(claim => claim.kind === 'ACTION' && claim.sourceText === 'subject.run()')).toBe(true);
+      expect(claims.every(claim => source.slice(claim.sourceLocation.startOffset, claim.sourceLocation.endOffset) ===
+        claim.sourceText)).toBe(true);
+    } finally {
+      removeTempDirectory(root, 'ba-jest-behavior-inherited-setup-');
+    }
+  });
+
   it('reports unsupported callbacks, dynamic matchers and snapshots without inventing claims', () => {
     const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'ba-jest-behavior-negative-')));
     try {

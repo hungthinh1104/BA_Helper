@@ -50,4 +50,76 @@ describe('Nest TestingModule receiver bindings', () => {
       it('unresolved', () => service.refund());`, "import { Test as Factory } from 'unrelated-package';");
     expect(result.edges).toEqual([]);
   });
+
+  it('does not borrow a setup binding from a sibling suite or another test case', () => {
+    const result = graph(`let service;
+      describe('unbound', () => { it('refunds', () => service.refund()); });
+      describe('other suite', () => { beforeEach(() => { service = new Subject(); }); });
+      it('writes in its own case', () => { service = new Subject(); });
+      it('cannot borrow the other case write', () => service.refund());`);
+    expect(result.edges.filter(edge => edge.type === 'TESTS')).toEqual([]);
+    expect(result.diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'TEST_TARGET_UNRESOLVED', reason: 'SETUP_BINDING_NOT_PROVEN', count: 2 }),
+    ]));
+  });
+
+  it('uses only the current suite setup and direct earlier writes in the same case', () => {
+    const result = graph(`let service;
+      describe('bound', () => {
+        beforeEach(() => { service = new Subject(); });
+        it('refunds from setup', () => service.refund());
+      });
+      describe('other suite', () => { beforeEach(() => { service = { refund() {} }; }); });
+      it('refunds after a direct assignment', () => {
+        let local;
+        local = new Subject();
+        local.refund();
+      });`);
+    expect(result.edges.filter(edge => edge.type === 'TESTS')).toHaveLength(2);
+  });
+
+  it('resolves a setup receiver inside proven synchronous throw callbacks only', () => {
+    const result = graph(`let service: Subject;
+      beforeEach(async () => {
+        const module = await Factory.createTestingModule({ providers: [Subject] }).compile();
+        service = module.get<Subject>(Subject);
+      });
+      it('throws directly', () => { expect(() => service.refund()).toThrowError(Error); });
+      it('throws through a local callback', () => {
+        const action = () => service.refund();
+        expect(action).toThrowError(Error);
+      });
+      it('passes a callback to a helper', () => {
+        const action = () => service.refund();
+        runLater(action);
+      });`);
+    expect(result.edges.filter(edge => edge.type === 'TESTS')).toHaveLength(2);
+    expect(result.diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'TEST_TARGET_UNRESOLVED', reason: 'UNSUPPORTED_NESTED_CALLBACK' }),
+    ]));
+  });
+
+  it('rejects conditional hook writes as proof of a receiver binding', () => {
+    const result = graph(`let service;
+      describe('conditional', () => {
+        beforeEach(() => { if (process.env.USE_REAL) service = new Subject(); });
+        it('refunds', () => service.refund());
+      });`);
+    expect(result.edges.filter(edge => edge.type === 'TESTS')).toEqual([]);
+    expect(result.diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'TEST_TARGET_UNRESOLVED', reason: 'SETUP_BINDING_NOT_PROVEN' }),
+    ]));
+  });
+
+  it('does not use a teardown assignment as proof of a test receiver', () => {
+    const result = graph(`let service;
+      describe('teardown only', () => {
+        afterEach(() => { service = new Subject(); });
+        it('refunds', () => service.refund());
+      });`);
+    expect(result.edges.filter(edge => edge.type === 'TESTS')).toEqual([]);
+    expect(result.diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'TEST_TARGET_UNRESOLVED', reason: 'SETUP_BINDING_NOT_PROVEN' }),
+    ]));
+  });
 });

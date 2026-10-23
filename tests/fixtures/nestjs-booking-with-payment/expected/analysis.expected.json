@@ -1,5 +1,5 @@
 {
-  "analyzerVersion": "analyzer@0.10.0",
+  "analyzerVersion": "analyzer@0.12.0",
   "fixtureName": "nestjs-booking-with-payment",
   "artifacts": [
     {

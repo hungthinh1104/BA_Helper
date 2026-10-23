@@ -3,9 +3,19 @@ import { backendTransform, backendTransformIgnorePatterns } from './jest.transfo
 
 const config: Config = {
   testMatch: ['**/*.spec.ts', '!**/*.integration-spec.ts', '!**/*.fixture-spec.ts'],
-  moduleFileExtensions: ['ts', 'js', 'json'],
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'json'],
   transform: backendTransform,
   transformIgnorePatterns: backendTransformIgnorePatterns,
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/apps/web/src/$1',
+    '^@ba-helper/contracts$': '<rootDir>/packages/contracts/src/index.ts',
+    '^@ba-helper/shared$': '<rootDir>/packages/shared/src/index.ts',
+    '^@ba-helper/analyzer$': '<rootDir>/packages/analyzer/src/index.ts',
+    '^@ba-helper/application/(.*)$': '<rootDir>/packages/application/src/$1/index.ts',
+    '^@ba-helper/application$': '<rootDir>/packages/application/src/index.ts',
+    '^@ba-helper/backend-runtime/(.*)$': '<rootDir>/packages/backend-runtime/src/$1/index.ts',
+    '^@ba-helper/backend-runtime$': '<rootDir>/packages/backend-runtime/src/index.ts',
+  },
   testPathIgnorePatterns: [
     '/node_modules/',
     '/dist/',

@@ -7,8 +7,9 @@ const result = { generatedAt: new Date().toISOString(),
 const output = path.resolve('artifacts/evaluation/application-test-trace-scorecard.json');
 mkdirSync(path.dirname(output), { recursive: true });
 writeFileSync(output, `${JSON.stringify(result, null, 2)}\n`);
-console.log(`Application static trace accuracy: ${result.status === 'PASS' ? 'COMPLETE' : 'INCOMPLETE'}`);
-console.log(`Application static trace regression: ${result.regression.status}`);
+console.log(`Application static trace corpus: ${result.status}`);
+console.log(`Regression gate: ${result.regression.status}`);
+console.log('Scope: selected pinned source slices; this is a corpus regression, not a general accuracy estimate.');
 console.log(JSON.stringify(Object.fromEntries(Object.entries(result.totals).map(([key, { missing, unexpected, ...score }]) => {
   void missing; void unexpected;
   return [key, score];

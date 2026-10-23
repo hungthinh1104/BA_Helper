@@ -16,9 +16,18 @@ export type GraphEdge = {
 export type GraphDiagnostic = {
   code: string;
   message: string;
+  reason?: string;
+  count?: number;
   filePath?: string;
   sourceSymbol?: string;
   targetExpression?: string;
+  sampleEvidence?: Array<{
+    sourcePath: string;
+    sourceSymbol: string;
+    startLine: number;
+    endLine: number;
+    targetExpression?: string;
+  }>;
 };
 
 export type GraphResult = {

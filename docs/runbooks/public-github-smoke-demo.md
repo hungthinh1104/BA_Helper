@@ -49,7 +49,6 @@ AI_PROVIDER=google
 GEMINI_API_KEY=<your-gemini-key>
 AI_MAX_TOKENS=8192
 EMBEDDING_PROVIDER=fake
-GOOGLE_EMBEDDING_MODEL=gemini-embedding-001
 DATABASE_URL=postgresql://ba_helper:ba_helper@localhost:5432/ba_helper
 REDIS_URL=redis://localhost:6379
 ENABLE_DEV_LOGIN=true

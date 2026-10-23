@@ -126,7 +126,12 @@ pnpm install --frozen-lockfile
 ```
 
 ### 3. Environment Variables
-Create the environment files from their examples. The examples contain safe, pre-configured local placeholders (including a fake AI provider).
+Create the shared root environment file from its example. It has local database
+and queue defaults, blank provider credentials, and a Google LLM selection;
+choose `AI_PROVIDER` and fill its matching API key to use another real adapter.
+Docker Compose forwards the selected provider, key, and model settings to both
+API and worker. The seed and automated tests use fake providers and do not need
+external AI credentials.
 
 ```bash
 cp .env.example .env
@@ -163,7 +168,7 @@ Run the automated integration test to verify the deterministic, end-to-end impac
 pnpm demo:golden-path
 # Or explicitly: pnpm test tests/demo/golden-path-demo.spec.ts
 ```
-*Note: This automated command runs entirely locally using `FakeLlmProvider` and `FakeEmbeddingProvider` so CI stays deterministic. The manual UI demo uses Gemini when `AI_PROVIDER=google` and `GEMINI_API_KEY` or `GOOGLE_API_KEY` is set.*
+*Note: This automated command runs entirely locally using `FakeLlmProvider` and `FakeEmbeddingProvider` so CI stays deterministic. The manual UI demo uses Gemini when `AI_PROVIDER=google` and `GEMINI_API_KEY` (or its supported Google key aliases) is set.*
 
 ### 8. Run Evaluation Tests (Optional)
 If you wish to test the retrieval and domain matching logic explicitly:

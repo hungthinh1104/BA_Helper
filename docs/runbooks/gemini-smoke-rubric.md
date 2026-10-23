@@ -41,7 +41,7 @@ Open `docs/runbooks/public-github-smoke-real-path-output.json` and verify:
 ```
 
 - [ ] `provider` = `"google"`, not `"fake"`
-- [ ] `model` = `"gemini-2.5-flash"` (matches `GEMINI_MODEL` env)
+- [ ] `model` = `"gemini-2.5-flash"` (matches `GOOGLE_MODEL` env; `GEMINI_MODEL` is a supported fallback)
 - [ ] `promptVersion` = `"2.0.0"` (matches `PROMPTS.IMPACT_ANALYSIS.version`)
 - [ ] `parseMode` = `"raw"` — if `"extracted"`, flag as warning and investigate
 - [ ] `inputTokens` > 0

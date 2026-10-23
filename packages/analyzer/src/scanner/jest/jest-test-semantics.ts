@@ -11,6 +11,9 @@ const MOCK_CONFIGURATION_METHODS = new Set([
   'mockReturnThis', 'mockReturnValue', 'mockReturnValueOnce', 'mockResolvedValue',
   'mockResolvedValueOnce', 'mockRejectedValue', 'mockRejectedValueOnce', 'mockName',
 ]);
+const JEST_ASYMMETRIC_MATCHERS = new Set([
+  'any', 'anything', 'arrayContaining', 'objectContaining', 'stringContaining', 'stringMatching',
+]);
 const RETURN_MATCHERS = new Set([
   'toBe', 'toEqual', 'toStrictEqual', 'toMatchObject', 'toContain', 'toContainEqual',
   'toBeCloseTo', 'toBeGreaterThan', 'toBeGreaterThanOrEqual', 'toBeLessThan',
@@ -34,6 +37,32 @@ export type AssertionSemantics = {
 export function looksLikeMockConfiguration(call: CallExpression): boolean {
   const name = propertyName(call);
   return !!name && MOCK_CONFIGURATION_METHODS.has(name);
+}
+
+/** Built-in static/data helpers do not establish a business action by themselves. */
+export function isBuiltInDataPreparationCall(call: CallExpression): boolean {
+  const expression = call.getExpression();
+  const receiver = Node.isPropertyAccessExpression(expression) ? expression.getExpression() : undefined;
+  if (receiver && Node.isIdentifier(receiver) && BUILTIN_DATA_HELPERS.has(receiver.getText())) {
+    return (receiver.getSymbol()?.getDeclarations().length ?? 0) === 0;
+  }
+  return Node.isIdentifier(expression) && BUILTIN_DATA_HELPERS.has(expression.getText()) &&
+    (expression.getSymbol()?.getDeclarations().length ?? 0) === 0;
+}
+
+const BUILTIN_DATA_HELPERS = new Set([
+  'Array', 'BigInt', 'Boolean', 'Buffer', 'Date', 'JSON', 'Map', 'Math', 'Number', 'Object', 'Promise',
+  'RegExp', 'Set', 'String', 'URL', 'URLSearchParams', 'WeakMap', 'WeakSet', 'isFinite', 'isNaN',
+  'parseFloat', 'parseInt', 'structuredClone',
+]);
+
+export function isJestAsymmetricMatcher(call: CallExpression,
+  isJestRoot: (identifier: MorphNode) => boolean): boolean {
+  const expression = call.getExpression();
+  if (!Node.isPropertyAccessExpression(expression) || !JEST_ASYMMETRIC_MATCHERS.has(expression.getName())) return false;
+  let root: MorphNode = expression.getExpression();
+  while (Node.isPropertyAccessExpression(root)) root = root.getExpression();
+  return Node.isIdentifier(root) && isJestRoot(root);
 }
 
 export function isVerifiedJestMockCall(call: CallExpression,
@@ -121,15 +150,25 @@ function isVerifiedMockValue(node: MorphNode,
     return declarations.some(declaration => {
       if (!Node.isVariableDeclaration(declaration)) return false;
       const initializer = declaration.getInitializer();
-      return !!initializer && Node.isObjectLiteralExpression(initializer) &&
-        initializer.getProperties().some(member => {
+      if (initializer && Node.isObjectLiteralExpression(initializer) && initializer.getProperties().some(member => {
           if (!Node.isPropertyAssignment(member) || member.getName() !== property) return false;
           const propertyInitializer = member.getInitializer();
           return !!propertyInitializer && isVerifiedMockValue(propertyInitializer, isJestRoot, visited);
-        });
+        })) return true;
+      return isJestMockedType(declaration.getTypeNode());
     });
   }
   return false;
+}
+
+function isJestMockedType(type: MorphNode | undefined): boolean {
+  if (!type || !Node.isTypeReference(type)) return false;
+  const name = type.getTypeName().getText();
+  if (name === 'jest.Mocked') return true;
+  if (name !== 'Mocked') return false;
+  const declarations = type.getTypeName().getSymbol()?.getDeclarations() ?? [];
+  return declarations.some(declaration => Node.isImportSpecifier(declaration) &&
+    declaration.getName() === 'Mocked' && declaration.getImportDeclaration().getModuleSpecifierValue() === '@jest/globals');
 }
 
 function assertionSubject(call: CallExpression): MorphNode | undefined {

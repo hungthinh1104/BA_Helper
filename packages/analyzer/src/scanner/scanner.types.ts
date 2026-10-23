@@ -1,7 +1,7 @@
 import type { GraphProvenance } from '../graph/graph.types';
 
 export const SCANNER_VERSION = 'scanner@0.6.0';
-export const ANALYZER_VERSION = 'analyzer@0.10.0';
+export const ANALYZER_VERSION = 'analyzer@0.12.0';
 
 export type TestModifier = 'NORMAL' | 'SKIP' | 'TODO' | 'ONLY';
 export type ScanTestBehaviorKind = 'SETUP_HOOK' | 'TEARDOWN_HOOK' | 'INPUT' | 'ACTION' | 'ASSERTION' | 'MOCK' | 'EXPECTED_OUTCOME';

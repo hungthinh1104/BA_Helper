@@ -106,7 +106,7 @@ An edge is `EVIDENCED` only when the supported parser can locate a direct
 relationship in source. A similarly named but disconnected symbol must not
 become an evidenced impact.
 
-### NestJS graph publication (`analyzer@0.10.0`)
+### NestJS graph publication (`analyzer@0.12.0`)
 
 The checkout root and accepted source-file paths are canonicalized through
 filesystem real paths before computing repository-relative artifact identity.
@@ -117,8 +117,8 @@ analyzer versions remain immutable; rescan to replace malformed path identities.
 
 The TypeScript adapter builds dependency edges from exactly the selected
 `tsFiles` used by extraction. Graph construction must not re-enumerate paths,
-resolve excluded imports from disk, or execute repository code. Artifact paths
-are normalized to repository-relative forward-slash paths on every platform.
+load excluded imports, or execute repository code. Artifact paths are
+normalized to repository-relative forward-slash paths on every platform.
 Persisted artifact keys include the canonical repository-relative path and the
 qualified source symbol. Method overload keys also include a SHA-256 digest of
 their parameter signature. Test-file keys use an escaped canonical path; a
@@ -128,23 +128,30 @@ the source, edge type, and target as separate components.
 constant. Snapshot list and drift projections read that persisted diagnostic;
 they do not infer scanner version from analyzer version or repository profile.
 
-Direct method relationships resolve the receiver's local class declaration or
-relative named/default import and its constructor-injected parameter property.
-Test-case relationships resolve explicit `new Class()` instances in immutable
-`const` bindings, preserving lexical scope and import aliases. They also resolve
-class-token `.get(Class)` calls on a variable whose observed writes all come
-from `await Test.createTestingModule(...).compile()`, with `Test` imported from
-`@nestjs/testing`. The acquired subject may be assigned in a setup hook; every
-observed write must resolve to the same imported class token. Generic type
-arguments, when present, must agree with that token. Receiver results are
-cached within one graph build.
+Direct method relationships resolve the receiver's unique source class through
+relative imports, `baseUrl`/`paths` aliases (including inherited `extends`
+configuration), and named/default re-exports. The TypeScript module resolver is
+restricted to the accepted source-file set; a diagnostic-only path check may
+identify an excluded in-repository target, but excluded files are never parsed
+or used to create edges. Ambiguous exports, missing aliases, unsupported
+namespace re-exports, and unresolved receiver types remain diagnostics.
+
+Receiver resolution supports constructor-injected parameter properties, typed
+class properties, uniquely resolved typed variables, and explicit
+`new Class()` instances. Test-case relationships also resolve class-token
+`.get(Class)` calls on a variable whose observed writes all come from a
+supported `await Test.createTestingModule(...).compile()` chain, including
+known setup provider modifiers such as `.useMocker()`. `Test` must be imported
+from `@nestjs/testing`; every observed write must resolve to the same imported
+class token, and generic type arguments, when present, must agree with it.
+Resolution and module lookups are cached within one graph build.
 
 Graph construction indexes test artifacts by accepted source file and caches
 call-expression offsets once per file. Test bodies query fully contained calls
 through a sorted range index instead of rescanning every call for every test.
 Keep equal-offset traversal order, ambiguity exclusions, skip/todo handling,
 diagnostics and provenance identical. This optimization does not change the
-extraction contract or require an analyzer-version bump. The synthetic
+extraction contract. The synthetic
 `pnpm benchmark:static-test-graph -- current` measurement records output digests
 and timing samples; it is not an end-to-end latency or accuracy gate.
 
@@ -163,16 +170,29 @@ relationship even when constructor dependencies are mocks, never runtime coverag
 The selected-file and legacy fixture entry points both default to the current
 analyzer version. Existing snapshots remain immutable and require a rescan.
 
-Type annotations, string tokens, arbitrary `.get()` methods, builder aliases,
-conflicting assignments, destructuring writes and mutable fake module bindings
-do not establish a relationship. Mocked providers remain static references to
-their declared class token; no runtime execution or assertion coverage is
-implied. Setup acquisition itself creates no TESTS edge.
+Type annotations alone, string tokens, arbitrary `.get()` methods, unsupported
+builder aliases, conflicting assignments, destructuring writes and mutable
+fake module bindings do not establish a relationship. Mocked providers remain
+static references to their declared class token; no runtime execution or
+assertion coverage is implied. Setup acquisition itself creates no TESTS edge.
 
-Changing-`this` function scopes and colliding artifact keys are
-reported as unresolved rather than mapped. Unresolved methods/imports produce diagnostics and
-never fall back to the first method of a class. Barrels, path aliases, runtime
-DI and dynamic receivers remain outside this resolver's supported patterns.
+Changing-`this` function scopes, nested test callbacks, and colliding artifact
+keys are reported as unresolved rather than mapped. The direct callback passed
+to a Jest `expect(...).toThrow*()` matcher is supported, including a local
+callback variable passed to that matcher; further callbacks nested inside it
+remain unresolved. Unresolved methods/imports produce diagnostics with a
+reason, count, and bounded source-location samples; they never fall back to a
+method with the same name on another class. Runtime DI and dynamic receivers
+remain outside this resolver's supported patterns.
+
+Jest ACTION claims exclude verified Jest assertions and asymmetric matchers,
+verified mock configuration (including `jest.Mocked<T>` variables), nested mock
+return-value preparation, recognized built-in data/time helpers, imported data
+builders, and fluent test-client calls. Receiver identity and AST position are
+used to retain direct subject calls inside wrappers while withholding utility
+calls in setup and assertion arguments. Ambiguous receiver or mock identity is
+reported without becoming an ACTION. These claims remain static declarations
+and do not imply that a test or callback executed.
 
 Edges carry deterministic resolver provenance and up to 20 unique source line
 locations, with an omitted-location count when bounded. Persistence references
@@ -186,7 +206,17 @@ dependencies is not runtime coverage.
 Confidence describes extraction resolution, not a calibrated probability.
 
 Changing the graph extraction contract requires a new analyzer version and
-rescan. Historical snapshots are not backfilled with inferred relationships.
+rescan. `analyzer@0.11.0` added bounded TypeScript path/re-export resolution and
+more specific unresolved reasons. `analyzer@0.12.0` resolves cyclic star
+re-exports independently of traversal order. Each export lookup visits a key
+once, with a 256-level depth limit and 4,096-key work limit; exhausting either
+reports `EXPORT_RESOLUTION_LIMIT_EXCEEDED` and yields no partial target edge.
+This version accepts Nest testing bindings
+only from the current Jest case, its suite/ancestor setup hooks, or direct
+lexical initialization. Conditional writes, teardown hooks, sibling-suite hooks,
+and writes in other cases do not establish a receiver; unresolved candidate calls report
+`SETUP_BINDING_NOT_PROVEN`. Historical snapshots are not backfilled with
+inferred relationships.
 
 ### Jest case extraction
 
@@ -250,9 +280,10 @@ Without commit context, no behavior claim
 is emitted and `JEST_BEHAVIOR_UNRESOLVED` reports `COMMIT_CONTEXT_REQUIRED`.
 The scanner bounds each case at 100 claims, each scan at 20,000 claims and
 each source excerpt at 2,000 characters. Dynamic matchers, nested callbacks and snapshot expectation
-contents remain unresolved with explicit diagnostics; do not infer their
-meaning or execution. Analyzer contract changes require a version bump and
-rescan; historical snapshots remain unchanged.
+contents and unsupported nested callbacks remain unresolved with explicit
+diagnostics; do not infer their meaning or execution. A direct synchronous Jest
+throw-assertion callback is a source reference only. Analyzer contract changes
+require a version bump and rescan; historical snapshots remain unchanged.
 
 ### Opt-in Jest runtime observations
 
