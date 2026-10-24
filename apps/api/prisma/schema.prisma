@@ -423,6 +423,7 @@ model DependencyEdge {
   createdAt      DateTime           @default(now())
 
   @@unique([snapshotId, fromArtifactId, toArtifactId, type])
+  @@index([snapshotId, toArtifactId, type])
 }
 
 model Evidence {
@@ -447,6 +448,7 @@ model Evidence {
   createdAt             DateTime               @default(now())
 
   @@unique([provenanceKey])
+  @@index([snapshotId, artifactId])
 }
 
 model Requirement {

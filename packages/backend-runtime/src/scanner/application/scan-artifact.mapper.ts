@@ -1,6 +1,6 @@
 import { SecretRedactor, type ScanArtifact } from '@ba-helper/analyzer';
 import { createArtifactIdentity } from '@ba-helper/shared';
-import { scanTestCaseMetadataSchema, testCaseMetadataSchema } from '@ba-helper/contracts';
+import { codeEvidenceMetadataSchema, scanTestCaseMetadataSchema, testCaseMetadataSchema } from '@ba-helper/contracts';
 import { AppError } from '@ba-helper/shared';
 import type { ArtifactRepository } from '../../artifact/infrastructure/artifact.repository';
 import { normalizeArtifactKind } from '../../artifact/domain/universal-artifact-kind';
@@ -29,7 +29,9 @@ export function buildArtifactInputs(
     };
     const metadata = artifact.type === 'JEST_TEST_CASE'
       ? { testCase: validatedCase(snapshotId, artifact, artifactByStableId, redact, commitSha) }
-      : undefined;
+      : artifact.codeEvidence
+        ? { codeEvidence: validatedCodeEvidence(artifact.codeEvidence, redact) }
+        : undefined;
     return {
       snapshotId,
       artifactKey: artifact.stableId,
@@ -42,6 +44,17 @@ export function buildArtifactInputs(
       contentHash: artifact.contentHash,
       ...(metadata ? { metadata } : {}),
     };
+  });
+}
+
+function validatedCodeEvidence(codeEvidence: NonNullable<ScanArtifact['codeEvidence']>, redact: (text: string) => string) {
+  return codeEvidenceMetadataSchema.parse({
+    parameters: codeEvidence.parameters.map(parameter => ({ ...parameter, typeText: redact(parameter.typeText), sourceText: redact(parameter.sourceText) })),
+    ...(codeEvidence.returnType ? {
+      returnType: { ...codeEvidence.returnType, text: redact(codeEvidence.returnType.text) },
+    } : {}),
+    conditions: codeEvidence.conditions.map(condition => ({ ...condition, sourceText: redact(condition.sourceText) })),
+    exceptionHandlers: codeEvidence.exceptionHandlers.map(handler => ({ ...handler, sourceText: redact(handler.sourceText) })),
   });
 }
 
@@ -122,6 +135,7 @@ function validatedCase(snapshotId: string, artifact: ScanArtifact, artifactBySta
     suitePath: testCase.suitePath.map(redact),
     ...(testCase.behaviorEvidence ? {
       behaviorEvidence: testCase.behaviorEvidence.map(claim => ({ ...claim, sourceText: redact(claim.sourceText),
+        ...(claim.relatedSubjectText ? { relatedSubjectText: redact(claim.relatedSubjectText) } : {}),
         evidenceProvenanceKey })),
     } : {}),
   });

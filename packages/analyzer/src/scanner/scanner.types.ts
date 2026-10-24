@@ -1,7 +1,7 @@
 import type { GraphProvenance } from '../graph/graph.types';
 
-export const SCANNER_VERSION = 'scanner@0.6.0';
-export const ANALYZER_VERSION = 'analyzer@0.12.0';
+export const SCANNER_VERSION = 'scanner@0.7.0';
+export const ANALYZER_VERSION = 'analyzer@0.14.0';
 
 export type TestModifier = 'NORMAL' | 'SKIP' | 'TODO' | 'ONLY';
 export type ScanTestBehaviorKind = 'SETUP_HOOK' | 'TEARDOWN_HOOK' | 'INPUT' | 'ACTION' | 'ASSERTION' | 'MOCK' | 'EXPECTED_OUTCOME';
@@ -23,6 +23,18 @@ export type ScanStaticBehaviorClaim = {
   sourceLocation: ScanSourceLocation;
   commitSha: string;
   evidenceProvenanceKey?: string;
+  /** AST-backed association to the subject invocation of an assertion. */
+  relatedInvocationSourceLocation?: ScanSourceLocation;
+  /** AST-backed association to the parent assertion for an expected value. */
+  relatedAssertionSourceLocation?: ScanSourceLocation;
+  /** Redacted source text for the assertion subject when it was statically resolved. */
+  relatedSubjectText?: string;
+};
+export type ScanCodeEvidence = {
+  parameters: Array<{ name: string; typeText: string; sourceText: string; sourceLocation: ScanSourceLocation }>;
+  returnType?: { text: string; sourceLocation: ScanSourceLocation };
+  conditions: Array<{ kind: 'IF' | 'SWITCH_CASE' | 'SWITCH_DEFAULT'; sourceText: string; sourceLocation: ScanSourceLocation }>;
+  exceptionHandlers: Array<{ kind: 'CATCH' | 'THROW'; sourceText: string; sourceLocation: ScanSourceLocation }>;
 };
 export type ScanTestCase = {
   framework: 'jest'; suitePath: string[]; title: string;
@@ -48,6 +60,7 @@ export type ScanArtifact = {
   excerpt: string;
   contentHash?: string | null;
   testCase?: ScanTestCase;
+  codeEvidence?: ScanCodeEvidence;
   /** Transient parser offsets for the callback body, never used as identity. */
   testBodySpan?: { start: number; end: number };
 };

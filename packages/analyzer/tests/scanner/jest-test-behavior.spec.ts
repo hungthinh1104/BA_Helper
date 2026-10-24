@@ -75,6 +75,63 @@ test.each([{ status: 'REFUNDED' }, { status: 'DECLINED' }])('status %s', row => 
     }
   });
 
+  it('records AST-backed assertion to invocation associations for multiple results', () => {
+    const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'ba-jest-behavior-association-')));
+    try {
+      const file = join(root, 'refund.spec.ts');
+      writeFileSync(file, `import { expect, it } from '@jest/globals';
+class Subject { run(value: string) { return value; } }
+it('links each assertion', () => {
+  const service = new Subject();
+  const first = service.run('first');
+  const second = service.run('second');
+  expect(first).toBe('first');
+  expect(second).toBe('second');
+});`);
+      const result = scanProject({ fixturePath: root, tsFiles: [file], commitSha });
+      const test = result.artifacts.find(artifact => artifact.type === 'JEST_TEST_CASE')!;
+      const claims = test.testCase?.behaviorEvidence ?? [];
+      const actions = claims.filter(claim => claim.kind === 'ACTION');
+      const assertions = claims.filter(claim => claim.kind === 'ASSERTION');
+      expect(actions.map(claim => claim.sourceText)).toEqual(['service.run(\'first\')', 'service.run(\'second\')']);
+      expect(assertions).toHaveLength(2);
+      expect(assertions.every(claim => claim.relatedInvocationSourceLocation)).toBe(true);
+      expect(assertions.map(claim => claim.relatedInvocationSourceLocation?.startOffset)).toEqual(
+        actions.map(claim => claim.sourceLocation.startOffset));
+      expect(assertions.map(claim => claim.relatedSubjectText)).toEqual(['first', 'second']);
+      expect(result.diagnostics?.some(item => item.payload?.unsupportedPattern === 'ASSERTION_INVOCATION_UNRESOLVED')).toBe(false);
+    } finally {
+      removeTempDirectory(root, 'ba-jest-behavior-association-');
+    }
+  });
+
+  it('leaves an ambiguous reassigned assertion subject unresolved', () => {
+    const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'ba-jest-behavior-association-ambiguous-')));
+    try {
+      const file = join(root, 'refund.spec.ts');
+      writeFileSync(file, `import { expect, it } from '@jest/globals';
+class Subject { run(value: string) { return value; } }
+it('does not guess one assignment', () => {
+  const service = new Subject();
+  let result: string;
+  result = service.run('first');
+  result = service.run('second');
+  expect(result).toBe('second');
+});`);
+      const result = scanProject({ fixturePath: root, tsFiles: [file], commitSha });
+      const test = result.artifacts.find(artifact => artifact.type === 'JEST_TEST_CASE')!;
+      const assertion = test.testCase?.behaviorEvidence?.find(claim => claim.kind === 'ASSERTION');
+      expect(assertion?.relatedInvocationSourceLocation).toBeUndefined();
+      expect(result.diagnostics).toEqual(expect.arrayContaining([
+        expect.objectContaining({ code: 'JEST_BEHAVIOR_UNRESOLVED', payload: expect.objectContaining({
+          unsupportedPattern: 'ASSERTION_INVOCATION_UNRESOLVED',
+        }) }),
+      ]));
+    } finally {
+      removeTempDirectory(root, 'ba-jest-behavior-association-ambiguous-');
+    }
+  });
+
   it('separates assertion semantics, validates chained mock identity, and keeps inherited setup out of actions', () => {
     const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'ba-jest-behavior-semantics-')));
     try {

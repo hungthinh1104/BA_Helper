@@ -42,6 +42,7 @@ export class AppExceptionFilter implements ExceptionFilter {
       case 'UNSUPPORTED_FRAMEWORK':
       case 'REPORT_NOT_EXPORTABLE':
       case 'REVIEW_COMPLETION_REQUIRED':
+      case 'ARTIFACT_NOT_PRODUCTION_CODE':
         return HttpStatus.BAD_REQUEST;
       case 'REPO_LIMIT_EXCEEDED':
         return HttpStatus.PAYLOAD_TOO_LARGE;
@@ -70,6 +71,7 @@ export class AppExceptionFilter implements ExceptionFilter {
       case 'IMPACT_ANALYSIS_NOT_FOUND':
       case 'APPROVED_REPORT_NOT_FOUND':
       case 'FAILED_JOB_NOT_FOUND':
+      case 'ARTIFACT_NOT_FOUND':
         return HttpStatus.NOT_FOUND;
       case 'REQUEST_KEY_MISMATCH':
       case 'REPOSITORY_NOT_ANALYZABLE':

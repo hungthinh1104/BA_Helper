@@ -1,12 +1,19 @@
-import { Node, SyntaxKind } from 'ts-morph';
+import { Node } from 'ts-morph';
 import type { CallExpression, Node as MorphNode } from 'ts-morph';
 import { SecretRedactor } from '../core/secret-redactor';
 import type { DiagnosticItem } from '../core/diagnostic-collector';
 import type { ScanStaticBehaviorClaim } from '../scanner.types';
 import {
-  classifyAssertion, isBuiltInDataPreparationCall, isJestAsymmetricMatcher, isVerifiedJestMockCall,
+  assertionSubject, classifyAssertion, isBuiltInDataPreparationCall, isJestAsymmetricMatcher, isVerifiedJestMockCall,
+  resolveAssertionInvocation,
   looksLikeMockConfiguration,
 } from './jest-test-semantics';
+import {
+  classifyActionCall, isAssertionCall, isAssertionShapedCall, isDynamicAssertionShapedCall,
+  isInsideMockConfiguration, isJestDeclarationOrHook, isJestExpectCall, isJestExpectCallFromDynamic,
+  isJestExpectIdentifier, isJestRoot, isExpectationCall, isJestGlobalOrImport, resolveJestImportName,
+  verifiedThrowCallback,
+} from './jest-test-behavior-helpers';
 
 const MAX_CLAIMS_PER_CASE = 100;
 const MAX_CLAIMS_PER_SCAN = 20_000;
@@ -52,7 +59,9 @@ type ClaimRecorder = {
   claims: ScanStaticBehaviorClaim[];
   diagnostics: Map<string, DiagnosticItem>;
   addClaim(kind: ScanStaticBehaviorClaim['kind'], node: MorphNode,
-    assertionKind?: ScanStaticBehaviorClaim['assertionKind']): void;
+    assertionKind?: ScanStaticBehaviorClaim['assertionKind'], relation?: {
+      relatedInvocation?: MorphNode; relatedAssertion?: MorphNode; relatedSubject?: MorphNode;
+    }): void;
   addDiagnostic(pattern: string, node?: MorphNode): void;
 };
 
@@ -108,7 +117,9 @@ function createClaimRecorder(input: BehaviorInput): ClaimRecorder {
     });
   };
   const addClaim = (kind: ScanStaticBehaviorClaim['kind'], node: MorphNode,
-    assertionKind?: ScanStaticBehaviorClaim['assertionKind']): void => {
+    assertionKind?: ScanStaticBehaviorClaim['assertionKind'], relation?: {
+      relatedInvocation?: MorphNode; relatedAssertion?: MorphNode; relatedSubject?: MorphNode;
+    }): void => {
     if (!input.commitSha) {
       addDiagnostic('COMMIT_CONTEXT_REQUIRED', node);
       return;
@@ -132,6 +143,12 @@ function createClaimRecorder(input: BehaviorInput): ClaimRecorder {
       return;
     }
     const location = sourcePosition(node);
+    const relatedInvocationSourceLocation = relation?.relatedInvocation
+      ? { relativePath: input.relativePath, ...sourcePosition(relation.relatedInvocation) } : undefined;
+    const relatedAssertionSourceLocation = relation?.relatedAssertion
+      ? { relativePath: input.relativePath, ...sourcePosition(relation.relatedAssertion) } : undefined;
+    const relatedSubjectText = relation?.relatedSubject
+      ? SecretRedactor.redact(relation.relatedSubject.getText()).redactedContent : undefined;
     claims.push({
       kind,
       ...(assertionKind ? { assertionKind } : {}),
@@ -139,6 +156,9 @@ function createClaimRecorder(input: BehaviorInput): ClaimRecorder {
       sourceText,
       sourceLocation: { relativePath: input.relativePath, ...location },
       commitSha: input.commitSha,
+      ...(relatedInvocationSourceLocation ? { relatedInvocationSourceLocation } : {}),
+      ...(relatedAssertionSourceLocation ? { relatedAssertionSourceLocation } : {}),
+      ...(relatedSubjectText ? { relatedSubjectText } : {}),
     });
     input.budget.remaining--;
   };
@@ -177,158 +197,17 @@ function recordCallClaims(calls: CallExpression[], callsWithCallbacks: Set<CallE
   }
 }
 
-function classifyActionCall(call: CallExpression): 'ACTION' | 'SKIP' | 'UNRESOLVED' {
-  if (isFluentReceiver(call) || isInsideAssertionExpectedValue(call)) return 'SKIP';
-  if (isPrimitiveDataReceiver(call)) return 'SKIP';
-  const enclosing = enclosingArgumentCall(call);
-  if (enclosing && !isJestExpectCall(enclosing) &&
-    (importedRoot(enclosing) || Node.isIdentifier(call.getExpression())) &&
-    !isLocallyConstructedReceiver(call) && !isClassTokenBoundReceiver(call)) return 'SKIP';
-  if (isLocallyConstructedReceiver(call) || isClassTokenBoundReceiver(call)) return 'ACTION';
-  const imported = importedRoot(call);
-  if (imported) {
-    const expression = call.getExpression();
-    const directNamedReceiver = Node.isPropertyAccessExpression(expression) &&
-      Node.isIdentifier(expression.getExpression()) && imported === 'named';
-    return directNamedReceiver && enclosing && isJestExpectCall(enclosing) ? 'ACTION' : 'UNRESOLVED';
-  }
-  const expression = call.getExpression();
-  if (Node.isPropertyAccessExpression(expression) && Node.isCallExpression(expression.getExpression()) &&
-    !callRootIdentifier(call)) return 'UNRESOLVED';
-  if (isLocalClassDataBuilder(call)) return 'UNRESOLVED';
-  if (Node.isIdentifier(call.getExpression()) && Node.isVariableDeclaration(call.getParent())) return 'UNRESOLVED';
-  return 'ACTION';
-}
-
-function isFluentReceiver(call: CallExpression): boolean {
-  const parent = call.getParent();
-  const outer = parent?.getParent();
-  return Node.isPropertyAccessExpression(parent) && parent.getExpression() === call &&
-    Node.isCallExpression(outer) && outer.getExpression() === parent;
-}
-
-function isInsideAssertionExpectedValue(call: CallExpression): boolean {
-  return actionAncestors(call).some(node => Node.isCallExpression(node) && isAssertionShapedCall(node) &&
-    node.getArguments().some(argument => containsNode(argument, call)));
-}
-
-function enclosingArgumentCall(call: CallExpression): CallExpression | undefined {
-  return actionAncestors(call).find((node): node is CallExpression => Node.isCallExpression(node) &&
-    node.getArguments().some(argument => containsNode(argument, call)));
-}
-
-function actionAncestors(call: CallExpression): MorphNode[] {
-  const ancestors: MorphNode[] = [];
-  for (const node of call.getAncestors()) {
-    if (isFunctionLike(node)) break;
-    ancestors.push(node);
-  }
-  return ancestors;
-}
-
-function containsNode(container: MorphNode, node: MorphNode): boolean {
-  return container.getStart() <= node.getStart() && container.getEnd() >= node.getEnd();
-}
-
-function callRootIdentifier(call: CallExpression): MorphNode | undefined {
-  let root: MorphNode = call.getExpression();
-  for (let depth = 0; depth < 64; depth++) {
-    if (Node.isCallExpression(root)) root = root.getExpression();
-    else if (Node.isPropertyAccessExpression(root) || Node.isElementAccessExpression(root)) root = root.getExpression();
-    else break;
-  }
-  return Node.isIdentifier(root) ? root : undefined;
-}
-
-function importedRoot(call: CallExpression, depth = 0): 'named' | 'default' | 'namespace' | undefined {
-  const root = callRootIdentifier(call);
-  if (!root) return undefined;
-  const declarations = root.getSymbol()?.getDeclarations() ?? [];
-  if (declarations.some(Node.isImportSpecifier)) return 'named';
-  if (declarations.some(Node.isNamespaceImport)) return 'namespace';
-  if (declarations.some(Node.isImportClause)) return 'default';
-  if (depth >= 4) return undefined;
-  const local = declarations.find(declaration => Node.isVariableDeclaration(declaration) || Node.isBindingElement(declaration));
-  const variable = local && Node.isVariableDeclaration(local) ? local :
-    local?.getFirstAncestorByKind(SyntaxKind.VariableDeclaration);
-  let initializer: MorphNode | undefined = variable?.getInitializer();
-  if (initializer && Node.isAwaitExpression(initializer)) initializer = initializer.getExpression();
-  if (initializer && Node.isParenthesizedExpression(initializer)) initializer = initializer.getExpression();
-  if (initializer && Node.isCallExpression(initializer)) return importedRoot(initializer, depth + 1);
-  return undefined;
-}
-
-function isPrimitiveDataReceiver(call: CallExpression): boolean {
-  const expression = call.getExpression();
-  if (Node.isPropertyAccessExpression(expression)) {
-    const receiver = expression.getExpression();
-    if (Node.isStringLiteral(receiver) || Node.isNoSubstitutionTemplateLiteral(receiver) ||
-      Node.isNumericLiteral(receiver)) return true;
-  }
-  const root = callRootIdentifier(call);
-  if (!root) return false;
-  const variable = root.getSymbol()?.getDeclarations().find(Node.isVariableDeclaration);
-  const initializer = variable?.getInitializer();
-  return !!initializer && (Node.isStringLiteral(initializer) || Node.isNoSubstitutionTemplateLiteral(initializer) ||
-    Node.isNumericLiteral(initializer));
-}
-
-function isLocallyConstructedReceiver(call: CallExpression): boolean {
-  const expression = call.getExpression();
-  if (!Node.isPropertyAccessExpression(expression) || !Node.isIdentifier(expression.getExpression())) return false;
-  const receiver = expression.getExpression();
-  const variable = receiver.getSymbol()?.getDeclarations().find(Node.isVariableDeclaration);
-  return !!variable?.getInitializer() && Node.isNewExpression(variable.getInitializer());
-}
-
-function isLocalClassDataBuilder(call: CallExpression): boolean {
-  if (!Node.isVariableDeclaration(call.getParent())) return false;
-  const root = callRootIdentifier(call);
-  return !!root && (root.getSymbol()?.getDeclarations().some(Node.isClassDeclaration) ?? false);
-}
-
-function isClassTokenBoundReceiver(call: CallExpression): boolean {
-  const root = callRootIdentifier(call);
-  if (!root) return false;
-  const variable = root.getSymbol()?.getDeclarations().find(Node.isVariableDeclaration);
-  if (!variable) return false;
-  const initializer = variable?.getInitializer();
-  const declaredType = variable.getTypeNode();
-  const typeName = declaredType && Node.isTypeReference(declaredType) ? declaredType.getTypeName().getText() : undefined;
-  if (initializer && !isMatchingClassTokenGet(initializer, typeName)) return false;
-  if (!initializer && !typeName) return false;
-  const references = variable.findReferencesAsNodes();
-  if (references.length > 64) return false;
-  let hasBinding = !!initializer;
-  for (const reference of references) {
-    const parent = reference.getParent();
-    if (!Node.isBinaryExpression(parent) || parent.getLeft() !== reference) continue;
-    if (parent.getOperatorToken().getKind() !== SyntaxKind.EqualsToken ||
-      !isMatchingClassTokenGet(parent.getRight(), typeName)) return false;
-    hasBinding = true;
-  }
-  return hasBinding;
-}
-
-function isMatchingClassTokenGet(node: MorphNode, declaredType?: string): boolean {
-  if (!Node.isCallExpression(node)) return false;
-  const access = node.getExpression(), token = node.getArguments()[0], generic = node.getTypeArguments()[0];
-  return Node.isPropertyAccessExpression(access) && access.getName() === 'get' &&
-    node.getArguments().length === 1 && !!token && Node.isIdentifier(token) &&
-    (!declaredType || declaredType === token.getText()) &&
-    (!generic || (Node.isTypeReference(generic) && generic.getTypeName().getText() === token.getText())) &&
-    (!!declaredType || !!generic);
-}
-
-function isInsideMockConfiguration(call: CallExpression): boolean {
-  return call.getAncestors().some(node => Node.isCallExpression(node) && node !== call &&
-    looksLikeMockConfiguration(node));
-}
-
 function recordAssertion(call: CallExpression, recorder: ClaimRecorder): void {
   const semantics = classifyAssertion(call);
-  recorder.addClaim('ASSERTION', call, semantics.assertionKind);
-  for (const outcome of semantics.expected) recorder.addClaim('EXPECTED_OUTCOME', outcome.node, outcome.kind);
+  const subject = assertionSubject(call);
+  const invocation = resolveAssertionInvocation(subject);
+  recorder.addClaim('ASSERTION', call, semantics.assertionKind, {
+    ...(invocation ? { relatedInvocation: invocation } : {}),
+    ...(subject ? { relatedSubject: subject } : {}),
+  });
+  for (const outcome of semantics.expected) recorder.addClaim('EXPECTED_OUTCOME', outcome.node, outcome.kind,
+    { relatedAssertion: call });
+  if (subject && !invocation) recorder.addDiagnostic('ASSERTION_INVOCATION_UNRESOLVED', call);
   if (semantics.unresolved) recorder.addDiagnostic(semantics.unresolved, call);
   else if (!semantics.expected.length) recorder.addDiagnostic('OUTCOME_NOT_EXPLICIT', call);
 }
@@ -378,104 +257,6 @@ function collectDirectBodyNodes(body: MorphNode): { candidates: MorphNode[]; cal
 function isFunctionLike(node: MorphNode): boolean {
   return Node.isArrowFunction(node) || Node.isFunctionExpression(node) || Node.isFunctionDeclaration(node) ||
     Node.isMethodDeclaration(node) || Node.isConstructorDeclaration(node);
-}
-
-function verifiedThrowCallback(call: CallExpression, body: MorphNode) {
-  if (!isAssertionCall(call) || !['toThrow', 'toThrowError'].includes(callName(call) ?? '')) return undefined;
-  let expectCall: MorphNode = call.getExpression();
-  while (Node.isPropertyAccessExpression(expectCall)) expectCall = expectCall.getExpression();
-  if (!Node.isCallExpression(expectCall)) return undefined;
-  const subject = expectCall.getArguments()[0];
-  let callback = Node.isArrowFunction(subject) || Node.isFunctionExpression(subject) ? subject : undefined;
-  if (Node.isIdentifier(subject)) {
-    const declaration = subject.getSymbol()?.getDeclarations().find(Node.isVariableDeclaration);
-    const initializer = declaration?.getInitializer();
-    const list = declaration?.getParent();
-    if (Node.isVariableDeclarationList(list) && list.getDeclarationKind() === 'const' &&
-      (Node.isArrowFunction(initializer) || Node.isFunctionExpression(initializer))) callback = initializer;
-  }
-  return callback && !callback.isAsync() && callback.getStart() >= body.getStart() &&
-    callback.getEnd() <= body.getEnd() ? callback : undefined;
-}
-
-function isAssertionCall(call: CallExpression): boolean {
-  const expression = call.getExpression();
-  if (!Node.isPropertyAccessExpression(expression)) return false;
-  let base: MorphNode = expression.getExpression();
-  while (Node.isPropertyAccessExpression(base)) base = base.getExpression();
-  return Node.isCallExpression(base) && isJestExpectCall(base);
-}
-
-function isAssertionShapedCall(call: CallExpression): boolean {
-  const expression = call.getExpression();
-  if (!Node.isPropertyAccessExpression(expression)) return false;
-  let base: MorphNode = expression.getExpression();
-  while (Node.isPropertyAccessExpression(base)) base = base.getExpression();
-  return Node.isCallExpression(base) && isExpectationCall(base);
-}
-
-function isJestExpectCall(call: CallExpression): boolean {
-  const expression = call.getExpression();
-  return Node.isIdentifier(expression) &&
-    (resolveJestImportName(expression) ?? expression.getText()) === 'expect' &&
-    isJestGlobalOrImport(expression, 'expect');
-}
-
-function isDynamicAssertionShapedCall(call: CallExpression): boolean {
-  const expression = call.getExpression();
-  if (!Node.isElementAccessExpression(expression)) return false;
-  const candidate = expression.getExpression();
-  return Node.isCallExpression(candidate) && isExpectationCall(candidate as CallExpression);
-}
-
-function isJestExpectCallFromDynamic(call: CallExpression): boolean {
-  const expression = call.getExpression();
-  if (!Node.isElementAccessExpression(expression)) return false;
-  const candidate = expression.getExpression();
-  return Node.isCallExpression(candidate) && isJestExpectCall(candidate);
-}
-
-function isJestDeclarationOrHook(call: CallExpression): boolean {
-  const expression = call.getExpression();
-  return Node.isIdentifier(expression) &&
-    ['describe', 'it', 'test', ...HOOK_KINDS.keys()].includes(resolveJestImportName(expression) ?? expression.getText()) &&
-    isJestGlobalOrImport(expression, resolveJestImportName(expression) ?? expression.getText());
-}
-
-function isJestRoot(identifier: MorphNode): boolean {
-  return (resolveJestImportName(identifier) ?? identifier.getText()) === 'jest' && isJestGlobalOrImport(identifier, 'jest');
-}
-
-function isJestExpectIdentifier(identifier: MorphNode): boolean {
-  return (resolveJestImportName(identifier) ?? identifier.getText()) === 'expect' && isJestGlobalOrImport(identifier, 'expect');
-}
-
-function isExpectationCall(call: CallExpression): boolean {
-  const expression = call.getExpression();
-  return Node.isIdentifier(expression) &&
-    (resolveJestImportName(expression) ?? expression.getText()) === 'expect';
-}
-
-function callName(call: CallExpression): string | undefined {
-  const expression = call.getExpression();
-  if (Node.isPropertyAccessExpression(expression)) return expression.getName();
-  return Node.isIdentifier(expression) ? expression.getText() : undefined;
-}
-
-function resolveJestImportName(identifier: MorphNode): string | undefined {
-  if (!Node.isIdentifier(identifier)) return undefined;
-  const declarations = identifier.getSymbol()?.getDeclarations() ?? [];
-  const imported = declarations.find(Node.isImportSpecifier);
-  return imported?.getImportDeclaration().getModuleSpecifierValue() === '@jest/globals' ? imported.getName() : undefined;
-}
-
-function isJestGlobalOrImport(identifier: MorphNode, expectedName: string): boolean {
-  if (!Node.isIdentifier(identifier)) return false;
-  const declarations = identifier.getSymbol()?.getDeclarations() ?? [];
-  if (declarations.length === 0) return identifier.getText() === expectedName || resolveJestImportName(identifier) === expectedName;
-  const imported = declarations.find(Node.isImportSpecifier);
-  return !!imported && imported.getImportDeclaration().getModuleSpecifierValue() === '@jest/globals' &&
-    imported.getName() === expectedName;
 }
 
 function sourcePosition(node: MorphNode) {

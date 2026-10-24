@@ -133,6 +133,29 @@ it('refund', () => new Subject().refund());`);
     expect(buildGraph(scan).edges).toEqual([expect.objectContaining({ type: 'TESTS', to: target.stableId })]);
   });
 
+  it('extracts Nest exception filters and links direct filter calls from Jest cases', () => {
+    const filter = source('src/common/filters/http-exception.filter.ts', `import { Catch } from '@nestjs/common';
+@Catch() export class AllExceptionsFilter {
+  catch(exception: unknown, host: unknown) { return { exception, host }; }
+}`);
+    const test = source('src/common/filters/http-exception.filter.spec.ts', `import { AllExceptionsFilter } from './http-exception.filter';
+const filter = new AllExceptionsFilter();
+const mockHost = {};
+it('handles an exception', () => filter.catch(new Error('boom'), mockHost));`);
+    const scan = scanProject({ fixturePath: root, tsFiles: [filter, test] });
+    const target = scan.artifacts.find(artifact => artifact.symbolName === 'AllExceptionsFilter.catch');
+    const testCase = scan.artifacts.find(artifact => artifact.type === 'JEST_TEST_CASE');
+    expect(target?.type).toBe('SERVICE_METHOD');
+    expect(target?.filePath).toBe('src/common/filters/http-exception.filter.ts');
+    expect(buildGraph(scan).edges).toEqual([expect.objectContaining({
+      type: 'TESTS', from: testCase?.stableId, to: target?.stableId,
+      provenance: expect.objectContaining({ locations: [expect.objectContaining({
+        sourcePath: 'src/common/filters/http-exception.filter.spec.ts',
+      })] }),
+    })]);
+    expect((scan.diagnostics ?? []).filter(diagnostic => diagnostic.code === 'TEST_TARGET_UNRESOLVED')).toEqual([]);
+  });
+
   it('resolves inherited path aliases, re-exports, constructor injection, and Nest testing assignments', () => {
     source('tsconfig.base.json', JSON.stringify({ compilerOptions: {
       baseUrl: '.', paths: { '~services/*': ['src/services/*'] },

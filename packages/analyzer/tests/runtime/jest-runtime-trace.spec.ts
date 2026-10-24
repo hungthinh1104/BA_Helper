@@ -48,6 +48,7 @@ describe('local Jest runtime trace import', () => {
 
   it('does not correlate results from another commit, duplicate source identities, or absent locations', () => {
     const mismatch = importJestRuntimeTrace(report([caseResult()]), input([testArtifact()], { staticCommitSha: 'b'.repeat(40) }));
+    const mismatchWithoutCandidate = importJestRuntimeTrace(report([caseResult({ line: 999 })]), input([testArtifact()], { staticCommitSha: 'b'.repeat(40) }));
     const ambiguous = importJestRuntimeTrace(report([caseResult()]), input([
       testArtifact(), testArtifact({ stableId: 'second-static-case' }),
     ]));
@@ -56,6 +57,8 @@ describe('local Jest runtime trace import', () => {
 
     expect(mismatch.observations[0]).toMatchObject({ correlation: 'SNAPSHOT_MISMATCH', testCaseId: null });
     expect(mismatch.diagnostics).toContainEqual({ code: 'STATIC_SNAPSHOT_MISMATCH', count: 1 });
+    expect(mismatchWithoutCandidate.observations[0]).toMatchObject({ correlation: 'SNAPSHOT_MISMATCH', testCaseId: null });
+    expect(mismatchWithoutCandidate.diagnostics).toContainEqual({ code: 'STATIC_SNAPSHOT_MISMATCH', count: 1 });
     expect(ambiguous.observations[0]).toMatchObject({ correlation: 'AMBIGUOUS', testCaseId: null });
     expect(ambiguous.diagnostics).toContainEqual({ code: 'STATIC_CASE_AMBIGUOUS', count: 1 });
     expect(unmatched.observations[0]).toMatchObject({ correlation: 'UNMATCHED', testCaseId: null });

@@ -25,6 +25,8 @@ export const repositoryDocs: Record<string, ControllerDocs> = {
   } },
   ArtifactController: { tag: 'Artifacts & source evidence', operations: {
     list: op('List artifacts in an immutable snapshot', c.artifactListResponseSchema),
+    comprehensionProjection: op('Read bounded code-first comprehension evidence for a production artifact', c.codeComprehensionResponseSchema,
+      { query: z.object({ scenarioLimit: z.coerce.number().int().min(1).max(50).default(50), scenarioOffset: z.coerce.number().int().min(0).max(500).default(0) }), description: 'Returns persisted source evidence, bounded static calls, and a paginated related Jest declaration page with explicit limitations. It never reports runtime execution or coverage.' }),
   } },
   GraphController: { tag: 'Artifacts & source evidence', operations: {
     get: op('Read persisted snapshot dependency edges', c.graphResponseSchema),

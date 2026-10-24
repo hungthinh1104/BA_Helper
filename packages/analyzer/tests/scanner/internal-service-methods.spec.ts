@@ -51,4 +51,45 @@ describe('internal service source artifacts', () => {
     expect(scan.artifacts.map(a => a.symbolName)).toEqual(['PaymentController.refund']);
     expect(buildGraph(scan).edges).toEqual([]);
   });
+
+  it('persists deterministic signature, branch, and exception evidence with exact locations', () => {
+    const file = join(root, 'src/payment/payment.service.ts');
+    writeFileSync(file, `import { Injectable } from '@nestjs/common';
+      type PaymentInput = { paid: boolean; status: string };
+      type PaymentResult = { ok: boolean };
+      @Injectable() export class PaymentService {
+        refund(input: PaymentInput): Promise<PaymentResult> {
+          if (input.paid) return Promise.resolve({ ok: true });
+          switch (input.status) {
+            case 'PENDING': return Promise.resolve({ ok: false });
+            default: return Promise.resolve({ ok: false });
+          }
+          try { return Promise.resolve({ ok: false }); } catch (error) { throw error; }
+        }
+      }`);
+    const scan = scanProject({ fixturePath: root, tsFiles: [file] });
+    const method = scan.artifacts.find(artifact => artifact.symbolName === 'PaymentService.refund');
+    expect(method?.codeEvidence).toMatchObject({
+      parameters: [{ name: 'input', typeText: 'PaymentInput', sourceText: 'input: PaymentInput' }],
+      returnType: { text: 'Promise<PaymentResult>' },
+      conditions: [
+        { kind: 'IF', sourceText: 'input.paid' },
+        { kind: 'SWITCH_CASE', sourceText: "case 'PENDING': return Promise.resolve({ ok: false });" },
+        { kind: 'SWITCH_DEFAULT', sourceText: 'default: return Promise.resolve({ ok: false });' },
+      ],
+      exceptionHandlers: [
+        { kind: 'CATCH' }, { kind: 'THROW', sourceText: 'throw error;' },
+      ],
+    });
+    const locations = [
+      ...(method?.codeEvidence?.parameters ?? []).map(item => item.sourceLocation),
+      ...(method?.codeEvidence?.returnType ? [method.codeEvidence.returnType.sourceLocation] : []),
+      ...(method?.codeEvidence?.conditions ?? []).map(item => item.sourceLocation),
+      ...(method?.codeEvidence?.exceptionHandlers ?? []).map(item => item.sourceLocation),
+    ];
+    expect(locations.every(location => location.relativePath === 'src/payment/payment.service.ts' &&
+      location.endOffset > location.startOffset && location.startLine > 0 && location.endLine >= location.startLine)).toBe(true);
+    expect(scan.artifacts.find(artifact => artifact.symbolName === 'PaymentService.refund')?.codeEvidence)
+      .toEqual(method?.codeEvidence);
+  });
 });

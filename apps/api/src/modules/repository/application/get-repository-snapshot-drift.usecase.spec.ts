@@ -197,4 +197,25 @@ describe('GetRepositorySnapshotDriftUseCase', () => {
     expect(result.status).toBe('INCOMPATIBLE');
     expect(result.warnings.some(warning => warning.code === 'DRIFT_INCOMPATIBLE')).toBe(true);
   });
+
+  it('bounds the combined sample payload and reports truncation', async () => {
+    (prisma.repositorySnapshot.findUnique as jest.Mock)
+      .mockResolvedValueOnce(baseSnapshot as any)
+      .mockResolvedValueOnce(targetSnapshot as any);
+    const baseArtifacts = Array.from({ length: 25 }, (_, index) => ({
+      id: `base-${index}`, artifactKey: `removed-${index}`, contentHash: `hash-${index}`,
+    }));
+    (prisma.codeArtifact.findMany as jest.Mock)
+      .mockResolvedValueOnce(baseArtifacts as any)
+      .mockResolvedValueOnce([] as any);
+
+    const result = await useCase.execute({
+      projectId: 'proj-1', repositoryId: 'repo-1', baseSnapshotId: 'base-snap-id', targetSnapshotId: 'target-snap-id',
+    });
+
+    expect(result.samples.sampleLimit).toBe(10);
+    expect(result.samples.samplesTruncated).toBe(true);
+    expect(result.samples.removedArtifacts).toHaveLength(10);
+    expect(result.summary.removedArtifactCount).toBe(25);
+  });
 });

@@ -1,5 +1,6 @@
-import { Node } from 'ts-morph';
-import type { CallExpression, Node as MorphNode } from 'ts-morph';
+import { Node, SyntaxKind } from 'ts-morph';
+import type { CallExpression } from 'ts-morph';
+import type { Node as MorphNode } from 'ts-morph';
 import type { ScanAssertionKind } from '../scanner.types';
 
 const JEST_ROOT_MOCK_METHODS = new Set([
@@ -171,12 +172,57 @@ function isJestMockedType(type: MorphNode | undefined): boolean {
     declaration.getName() === 'Mocked' && declaration.getImportDeclaration().getModuleSpecifierValue() === '@jest/globals');
 }
 
-function assertionSubject(call: CallExpression): MorphNode | undefined {
+export function assertionSubject(call: CallExpression): MorphNode | undefined {
   let expression = call.getExpression();
   while (Node.isPropertyAccessExpression(expression)) expression = expression.getExpression();
   if (!Node.isCallExpression(expression)) return undefined;
   const callee = expression.getExpression();
   return Node.isIdentifier(callee) && callee.getText() === 'expect' ? expression.getArguments()[0] : undefined;
+}
+
+/**
+ * Resolve the invocation used as an assertion subject when the AST gives one
+ * unique declaration or assignment. This deliberately stops at ambiguous
+ * symbols and wrappers whose business subject cannot be proven.
+ */
+export function resolveAssertionInvocation(subject: MorphNode | undefined): MorphNode | undefined {
+  return resolveAssertionInvocationNode(subject, new Set<MorphNode>(), 0);
+}
+
+function resolveAssertionInvocationNode(subject: MorphNode | undefined, visited: Set<MorphNode>, depth: number): MorphNode | undefined {
+  if (!subject || depth > 8 || visited.has(subject)) return undefined;
+  visited.add(subject);
+  const unwrapped = unwrapExpression(subject);
+  if (unwrapped !== subject) return resolveAssertionInvocationNode(unwrapped, visited, depth + 1);
+  if (Node.isCallExpression(subject)) return subject;
+  if (Node.isPropertyAccessExpression(subject) || Node.isElementAccessExpression(subject)) {
+    return resolveAssertionInvocationNode(subject.getExpression(), visited, depth + 1);
+  }
+  if (!Node.isIdentifier(subject)) return undefined;
+  const declarations = subject.getSymbol()?.getDeclarations() ?? [];
+  const variables = declarations.filter(Node.isVariableDeclaration);
+  if (variables.length > 1) return undefined;
+  const declaration = variables[0];
+  if (declaration?.getInitializer()) {
+    return resolveAssertionInvocationNode(declaration.getInitializer(), visited, depth + 1);
+  }
+  const assignments = subject.findReferencesAsNodes().flatMap(reference => {
+    const parent = reference.getParent();
+    if (!Node.isBinaryExpression(parent) || parent.getLeft() !== reference ||
+      parent.getOperatorToken().getKind() !== SyntaxKind.EqualsToken) return [];
+    return [parent.getRight()];
+  });
+  if (assignments.length !== 1) return undefined;
+  return resolveAssertionInvocationNode(assignments[0], visited, depth + 1);
+}
+
+function unwrapExpression(node: MorphNode): MorphNode {
+  if (Node.isParenthesizedExpression(node) || Node.isAwaitExpression(node) ||
+    Node.isAsExpression(node) || Node.isNonNullExpression(node) || Node.isTypeAssertion(node) ||
+    Node.isSatisfiesExpression(node)) {
+    return (node as MorphNode & { getExpression(): MorphNode }).getExpression();
+  }
+  return node;
 }
 
 function isStateSubject(node: MorphNode | undefined): boolean {

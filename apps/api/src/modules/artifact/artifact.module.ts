@@ -3,9 +3,12 @@ import { ArtifactController } from './api/artifact.controller';
 import { ListArtifactsUseCase } from './application/list-artifacts.usecase';
 import { ProjectModule } from '../project/project.module';
 import { PrismaModule, PrismaService, ArtifactRepository } from "@ba-helper/backend-runtime";
+import { EvidenceModule } from '../evidence/evidence.module';
+import { GraphModule } from '../graph/graph.module';
+import { GetCodeComprehensionUseCase } from './application/get-code-comprehension.usecase';
 
 @Module({
-  imports: [PrismaModule, ProjectModule],
+  imports: [PrismaModule, ProjectModule, EvidenceModule, GraphModule],
   controllers: [ArtifactController],
   providers: [
     {
@@ -19,6 +22,7 @@ import { PrismaModule, PrismaService, ArtifactRepository } from "@ba-helper/back
         new ListArtifactsUseCase(repo, prisma),
       inject: [ArtifactRepository, PrismaService],
     },
+    GetCodeComprehensionUseCase,
   ],
   exports: [ArtifactRepository],
 })

@@ -16,6 +16,9 @@ export const queryKeys = {
     list: (projectId: string, params?: { limit?: number; offset?: number }) => ["repositories", "list", projectId, params] as const,
     detail: (repositoryId: string) => ["repositories", "detail", repositoryId] as const,
     snapshots: (repositoryId: string, params?: { limit?: number }) => ["repositories", "snapshots", repositoryId, params] as const,
+    snapshotArtifacts: (snapshotId: string) => ["repositories", "snapshot-artifacts", snapshotId] as const,
+    artifactComprehension: (snapshotId: string, artifactId: string) =>
+      ["repositories", "artifact-comprehension", snapshotId, artifactId] as const,
     snapshotDrift: (repositoryId: string, baseSnapshotId: string, targetSnapshotId?: string) => ["repositories", "snapshot-drift", repositoryId, baseSnapshotId, targetSnapshotId] as const,
   },
   requirements: {

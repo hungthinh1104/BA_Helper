@@ -63,6 +63,8 @@ export const repositorySnapshotDriftResponseSchema = z.object({
     removedArtifacts: z.array(driftArtifactSampleSchema),
     changedArtifacts: z.array(driftChangedArtifactSampleSchema),
     unknownChangedArtifacts: z.array(driftArtifactSampleSchema),
+    sampleLimit: z.number().int().positive().optional(),
+    samplesTruncated: z.boolean().optional(),
   }),
 
   warnings: z.array(

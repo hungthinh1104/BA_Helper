@@ -191,6 +191,22 @@ const saasComparisonSchema = z.object({
   reasons: z.array(z.string()),
   candidateTool: z.object({ commitSha: z.string().regex(/^[a-f0-9]{40}$/i) }),
   baselineTool: z.object({ commitSha: z.string().regex(/^[a-f0-9]{40}$/i) }),
+  // Older comparison artifacts omit study status; defaulting them to
+  // NOT_COLLECTED keeps the gate backward-compatible while failing closed.
+  candidateStudyStatus: z
+    .enum(['NOT_COLLECTED', 'INCOMPLETE', 'COLLECTED'])
+    .default('NOT_COLLECTED'),
+  baselineStudyStatus: z
+    .enum(['NOT_COLLECTED', 'INCOMPLETE', 'COLLECTED'])
+    .default('NOT_COLLECTED'),
+  candidateStudyObservationCount: z.number().int().nonnegative().default(0),
+  baselineStudyObservationCount: z.number().int().nonnegative().default(0),
+  candidateStudyCellCount: z.number().int().nonnegative().default(0),
+  baselineStudyCellCount: z.number().int().nonnegative().default(0),
+  candidateStudyCaseCount: z.number().int().nonnegative().default(0),
+  baselineStudyCaseCount: z.number().int().nonnegative().default(0),
+  candidateStudySessionCount: z.number().int().nonnegative().default(0),
+  baselineStudySessionCount: z.number().int().nonnegative().default(0),
 });
 
 export function evaluateSaasEntry(input: unknown) {
@@ -216,6 +232,28 @@ export function evaluateSaasEntry(input: unknown) {
     comparison.candidateTool.commitSha === comparison.baselineTool.commitSha
   ) {
     reasons.push('Candidate and baseline tool commits must differ.');
+  }
+  if (comparison.candidateStudyStatus !== 'COLLECTED') {
+    reasons.push(
+      'Candidate reviewer study must include all three conditions and five tasks before SaaS entry.',
+    );
+  }
+  if (comparison.baselineStudyStatus !== 'COLLECTED') {
+    reasons.push(
+      'Baseline reviewer study must include all three conditions and five tasks before SaaS entry.',
+    );
+  }
+  if (comparison.candidateStudyObservationCount < 15 || comparison.candidateStudyCellCount < 15) {
+    reasons.push('Candidate reviewer study must contain at least one observation for each of the 15 condition/task cells.');
+  }
+  if (comparison.baselineStudyObservationCount < 15 || comparison.baselineStudyCellCount < 15) {
+    reasons.push('Baseline reviewer study must contain at least one observation for each of the 15 condition/task cells.');
+  }
+  if (comparison.candidateStudyCaseCount < 3 || comparison.candidateStudySessionCount < 3) {
+    reasons.push('Candidate reviewer study must cover at least three cases and three independent reviewer sessions.');
+  }
+  if (comparison.baselineStudyCaseCount < 3 || comparison.baselineStudySessionCount < 3) {
+    reasons.push('Baseline reviewer study must cover at least three cases and three independent reviewer sessions.');
   }
 
   return {

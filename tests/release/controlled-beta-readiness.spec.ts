@@ -129,6 +129,16 @@ describe('SaaS entry gate', () => {
         baselineTool: {
           commitSha: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
         },
+        candidateStudyStatus: 'COLLECTED',
+        baselineStudyStatus: 'COLLECTED',
+        candidateStudyObservationCount: 15,
+        baselineStudyObservationCount: 15,
+        candidateStudyCellCount: 15,
+        baselineStudyCellCount: 15,
+        candidateStudyCaseCount: 3,
+        baselineStudyCaseCount: 3,
+        candidateStudySessionCount: 3,
+        baselineStudySessionCount: 3,
       }).status,
     ).toBe('OPEN');
   });
@@ -152,6 +162,45 @@ describe('SaaS entry gate', () => {
     expect(result.status).toBe('LOCKED');
     expect(result.reasons).toContain(
       'Product-validation comparison must be PROMOTE.',
+    );
+  });
+
+  it('keeps a metric-only promotion locked until both study datasets are complete', () => {
+    const result = evaluateSaasEntry({
+      decision: 'PROMOTE',
+      candidateCaseCount: 3,
+      baselineCaseCount: 3,
+      improvements: ['analysisTimeReductionRate'],
+      regressions: [],
+      reasons: [],
+      candidateTool: {
+        commitSha: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      },
+      baselineTool: {
+        commitSha: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      },
+      candidateStudyStatus: 'INCOMPLETE',
+      baselineStudyStatus: 'NOT_COLLECTED',
+      candidateStudyObservationCount: 1,
+      baselineStudyObservationCount: 1,
+      candidateStudyCellCount: 1,
+      baselineStudyCellCount: 1,
+      candidateStudyCaseCount: 1,
+      baselineStudyCaseCount: 1,
+      candidateStudySessionCount: 1,
+      baselineStudySessionCount: 1,
+    });
+
+    expect(result.status).toBe('LOCKED');
+    expect(result.reasons).toEqual(
+      expect.arrayContaining([
+        'Candidate reviewer study must include all three conditions and five tasks before SaaS entry.',
+        'Baseline reviewer study must include all three conditions and five tasks before SaaS entry.',
+        'Candidate reviewer study must contain at least one observation for each of the 15 condition/task cells.',
+        'Baseline reviewer study must contain at least one observation for each of the 15 condition/task cells.',
+        'Candidate reviewer study must cover at least three cases and three independent reviewer sessions.',
+        'Baseline reviewer study must cover at least three cases and three independent reviewer sessions.',
+      ]),
     );
   });
 });

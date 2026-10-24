@@ -151,7 +151,11 @@ function assignObservationIds(pending: PendingObservation[]): JestRuntimeObserva
 
 function resolveCorrelation(candidateCount: number, hasLocation: boolean, sameCommit: boolean,
   diagnostics: Map<string, number>): RuntimeTraceCorrelation {
-  if (hasLocation && !sameCommit && candidateCount > 0) {
+  // A source location from a different static snapshot cannot safely identify
+  // a test, even when the current index happens to contain no candidate at that
+  // line. Preserve the stronger failure reason instead of collapsing it into
+  // a generic unmatched result.
+  if (hasLocation && !sameCommit) {
     increment(diagnostics, 'STATIC_SNAPSHOT_MISMATCH');
     return 'SNAPSHOT_MISMATCH';
   }

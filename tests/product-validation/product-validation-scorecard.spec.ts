@@ -45,6 +45,34 @@ function makeCase(caseId: string, suffix: number) {
   };
 }
 
+function studyObservation(
+  observationId: string,
+  condition: 'EXISTING_WORKFLOW' | 'TEXTUAL_EVIDENCE' | 'VISUAL_TEST_TRACE',
+  reviewerSessionId: string,
+  taskCorrect: boolean,
+  task: 'EXPLAIN_BEHAVIOR' | 'UNDERSTAND_TESTED_BEHAVIOR' | 'PREDICT_NEW_SCENARIO' | 'VERIFY_EVIDENCE' | 'IDENTIFY_UNCERTAINTY' = 'EXPLAIN_BEHAVIOR',
+  caseId = completeCase.caseId,
+) {
+  return {
+    observationId,
+    reviewerSessionId,
+    caseId,
+    task,
+    condition,
+    repositoryCommitSha: completeCase.repository.commitSha,
+    toolCommitSha: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+    observedAt: '2026-07-25T12:00:00.000Z',
+    elapsedSeconds: 120,
+    taskCorrect,
+    confidenceRating: taskCorrect ? 5 : 2,
+    navigationActions: 3,
+    claimsReviewed: 4,
+    incorrectConfidentConclusions: taskCorrect ? 0 : 1,
+    usefulnessRating: taskCorrect ? 5 : 2,
+    voluntaryReuse: taskCorrect,
+  };
+}
+
 describe('product validation scorecard', () => {
   const baselineTool = {
     commitSha: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
@@ -129,6 +157,118 @@ describe('product validation scorecard', () => {
     expect(scorecard.reviewerRoles).toEqual(['TECHNICAL_BA']);
   });
 
+  it('does not treat an all-zero scaffold as measured product evidence', () => {
+    const placeholder = {
+      ...completeCase,
+      measurements: {
+        manualAnalysisMinutes: 0,
+        assistedAnalysisMinutes: 0,
+        criticalArtifactsExpected: 0,
+        criticalArtifactsFound: 0,
+        artifactsReviewed: 0,
+        falsePositiveArtifacts: 0,
+        unknownsReviewed: 0,
+        usefulUnknowns: 0,
+        qaScenariosReviewed: 0,
+        acceptedQaScenarios: 0,
+        evidenceItemsReviewed: 0,
+        reviewerConfirmedEvidenceItems: 0,
+        rerunOrDriftReviewed: false,
+        rerunOrDriftUseful: null,
+      },
+    };
+    const scorecard = buildProductValidationScorecard({
+      datasetVersion: 1,
+      collectedAt: '2026-07-25',
+      tool: candidateTool,
+      cases: [placeholder, { ...makeCase('case-2', 2), measurements: placeholder.measurements },
+        { ...makeCase('case-3', 3), measurements: placeholder.measurements }],
+    });
+
+    expect(scorecard.status).toBe('INSUFFICIENT_OBSERVATIONS');
+  });
+
+  it('keeps the three-condition comprehension study explicit and provenance-pinned', () => {
+    const conditions = [
+      ['EXISTING_WORKFLOW', 'session-a', false],
+      ['TEXTUAL_EVIDENCE', 'session-b', true],
+      ['VISUAL_TEST_TRACE', 'session-c', true],
+    ] as const;
+    const tasks = ['EXPLAIN_BEHAVIOR', 'UNDERSTAND_TESTED_BEHAVIOR', 'PREDICT_NEW_SCENARIO', 'VERIFY_EVIDENCE', 'IDENTIFY_UNCERTAINTY'] as const;
+    const studyCases = [completeCase, makeCase('case-2', 2), makeCase('case-3', 3)];
+    const observations = conditions.flatMap(([condition, session, correct], conditionIndex) => tasks.map((task, index) =>
+      studyObservation(`${condition.toLowerCase()}-${index}`, condition, session, correct, task,
+        studyCases[(conditionIndex + index) % studyCases.length].caseId)));
+    const scorecard = buildProductValidationScorecard({
+      datasetVersion: 1,
+      collectedAt: '2026-07-25',
+      tool: candidateTool,
+      cases: studyCases,
+      studyObservations: observations,
+    });
+
+    expect(scorecard.study.status).toBe('COLLECTED');
+    expect(scorecard.study).toMatchObject({
+      observationCount: 15, caseCount: 3, sessionCount: 3, conditionTaskCellCount: 15,
+    });
+    expect(scorecard.study.conditions.VISUAL_TEST_TRACE).toMatchObject({
+      observationCount: 5,
+      taskCorrectRate: 1,
+      confidenceCalibrationGap: 0,
+      timeToCorrectUnderstandingSeconds: 120,
+      navigationActions: 3,
+      usefulnessRating: 5,
+      voluntaryReuseRate: 1,
+    });
+    expect(scorecard.study.conditions.EXISTING_WORKFLOW.taskCorrectRate).toBe(0);
+  });
+
+  it('keeps a three-condition study incomplete when one required task is missing', () => {
+    const scorecard = buildProductValidationScorecard({
+      datasetVersion: 1,
+      collectedAt: '2026-07-25',
+      tool: candidateTool,
+      cases: [completeCase],
+      studyObservations: [
+        studyObservation('existing', 'EXISTING_WORKFLOW', 'session-a', true),
+        studyObservation('textual', 'TEXTUAL_EVIDENCE', 'session-b', true),
+        studyObservation('visual', 'VISUAL_TEST_TRACE', 'session-c', true),
+      ],
+    });
+
+    expect(scorecard.study.status).toBe('INCOMPLETE');
+    expect(scorecard.study.limitations[0]).toMatch(/missing condition\/task cells/);
+  });
+
+  it('does not treat one case as independent product evidence even when every cell is filled', () => {
+    const conditions = ['EXISTING_WORKFLOW', 'TEXTUAL_EVIDENCE', 'VISUAL_TEST_TRACE'] as const;
+    const tasks = ['EXPLAIN_BEHAVIOR', 'UNDERSTAND_TESTED_BEHAVIOR', 'PREDICT_NEW_SCENARIO', 'VERIFY_EVIDENCE', 'IDENTIFY_UNCERTAINTY'] as const;
+    const observations = conditions.flatMap((condition) => tasks.map((task) =>
+      studyObservation(`${condition}-${task}`, condition, `${condition}-session`, true, task)));
+    const scorecard = buildProductValidationScorecard({
+      datasetVersion: 1,
+      collectedAt: '2026-07-25',
+      tool: candidateTool,
+      cases: [completeCase],
+      studyObservations: observations,
+    });
+
+    expect(scorecard.study.status).toBe('INCOMPLETE');
+    expect(scorecard.study.limitations[0]).toContain('cases=1');
+  });
+
+  it('reports an uncollected study instead of treating engineering fixtures as product evidence', () => {
+    const scorecard = buildProductValidationScorecard({
+      datasetVersion: 1,
+      collectedAt: '2026-07-25',
+      tool: candidateTool,
+      cases: [completeCase],
+    });
+
+    expect(scorecard.study).toMatchObject({ status: 'NOT_COLLECTED' });
+    expect(scorecard.study.limitations[0]).toMatch(/No participant observations/);
+  });
+
   it('rejects inconsistent counts and non-public GitHub repositories', () => {
     expect(() =>
       productValidationDatasetSchema.parse({
@@ -163,6 +303,28 @@ describe('product validation scorecard', () => {
         cases: [completeCase, completeCase],
       }),
     ).toThrow(/caseId values must be unique/);
+  });
+
+  it('rejects repeated reviewer-task observations and cross-commit study rows', () => {
+    const observation = studyObservation('duplicate-1', 'EXISTING_WORKFLOW', 'same-session', true);
+    expect(() => productValidationDatasetSchema.parse({
+      datasetVersion: 1,
+      collectedAt: '2026-07-25',
+      tool: candidateTool,
+      cases: [completeCase],
+      studyObservations: [
+        observation,
+        { ...observation, observationId: 'duplicate-2', condition: 'VISUAL_TEST_TRACE' },
+      ],
+    })).toThrow(/reviewer session cannot repeat/);
+
+    expect(() => productValidationDatasetSchema.parse({
+      datasetVersion: 1,
+      collectedAt: '2026-07-25',
+      tool: candidateTool,
+      cases: [completeCase],
+      studyObservations: [{ ...observation, repositoryCommitSha: 'b'.repeat(40) }],
+    })).toThrow(/not pinned to its case repository commit/);
   });
 
   it('promotes a candidate only when at least one metric improves without regression', () => {
@@ -201,6 +363,8 @@ describe('product validation scorecard', () => {
       ]),
     );
     expect(comparison.regressions).toEqual([]);
+    expect(comparison.candidateStudyStatus).toBe('NOT_COLLECTED');
+    expect(comparison.baselineStudyStatus).toBe('NOT_COLLECTED');
   });
 
   it('defers a candidate when critical recall regresses, regardless of tolerance', () => {

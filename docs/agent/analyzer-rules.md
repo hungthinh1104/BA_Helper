@@ -106,7 +106,7 @@ An edge is `EVIDENCED` only when the supported parser can locate a direct
 relationship in source. A similarly named but disconnected symbol must not
 become an evidenced impact.
 
-### NestJS graph publication (`analyzer@0.12.0`)
+### NestJS graph publication (`scanner@0.7.0`, `analyzer@0.14.0`)
 
 The checkout root and accepted source-file paths are canonicalized through
 filesystem real paths before computing repository-relative artifact identity.
@@ -207,16 +207,21 @@ Confidence describes extraction resolution, not a calibrated probability.
 
 Changing the graph extraction contract requires a new analyzer version and
 rescan. `analyzer@0.11.0` added bounded TypeScript path/re-export resolution and
-more specific unresolved reasons. `analyzer@0.12.0` resolves cyclic star
+more specific unresolved reasons. `analyzer@0.14.0` resolves cyclic star
 re-exports independently of traversal order. Each export lookup visits a key
 once, with a 256-level depth limit and 4,096-key work limit; exhausting either
 reports `EXPORT_RESOLUTION_LIMIT_EXCEEDED` and yields no partial target edge.
-This version accepts Nest testing bindings
+The `analyzer@0.14.0` contract accepts Nest testing bindings
 only from the current Jest case, its suite/ancestor setup hooks, or direct
 lexical initialization. Conditional writes, teardown hooks, sibling-suite hooks,
 and writes in other cases do not establish a receiver; unresolved candidate calls report
 `SETUP_BINDING_NOT_PROVEN`. Historical snapshots are not backfilled with
 inferred relationships.
+
+`analyzer@0.14.0` also extracts methods on classes decorated with NestJS
+`@Catch()`. These exception-filter methods use the existing `SERVICE_METHOD`
+identity and are eligible for direct source-backed `CALLS`/`TESTS` links; no
+runtime filter execution is inferred.
 
 ### Jest case extraction
 
@@ -293,8 +298,10 @@ records use `RUNTIME_OBSERVATION` and stay in a separate manifest; do not add
 them to static behavior evidence or reinterpret static `TESTS`/`CALLS` edges.
 Correlate only against a static test artifact from the same commit using the
 canonical repository-relative file and Jest's exact case declaration line.
-Missing, duplicate or mismatched inputs remain unmatched/ambiguous with
-diagnostics. Do not infer method execution from a matched test outcome.
+Missing inputs remain unmatched, duplicate identities remain ambiguous, and a
+commit mismatch is reported as `SNAPSHOT_MISMATCH`; each case retains its
+diagnostic instead of being guessed into a static relationship. Do not infer
+method execution from a matched test outcome.
 
 The importer accepts only bounded Jest JSON and static indexes, drops titles,
 source text, assertion arguments, mocks, failure messages and console output,

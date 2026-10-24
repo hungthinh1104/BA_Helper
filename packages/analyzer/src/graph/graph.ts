@@ -6,6 +6,7 @@ import type { GraphDiagnostic, GraphEdge, GraphProvenance, GraphResult } from '.
 import { isBuiltInDataPreparationCall, looksLikeMockConfiguration } from '../scanner/jest/jest-test-semantics';
 import { GraphSourceResolver } from './graph-source-resolver';
 import { TestCallIndex } from './test-call-index';
+import { isJestThrowCallback } from './jest-throw-callback';
 
 export const buildGraph = (scan: ScanResult): GraphResult => {
   if (!scan.sourceRoot) return { edges: [] };
@@ -214,33 +215,9 @@ function isNestedCallback(call: CallExpression, span: { start: number; end: numb
 function isThrowAssertionCallback(call: CallExpression, span: { start: number; end: number }): boolean {
   const callback = call.getFirstAncestor(node => Node.isArrowFunction(node) || Node.isFunctionExpression(node));
   if (!callback || callback.getStart() <= span.start || callback.getStart() >= span.end) return false;
-  const callbackParent = callback.getParent();
-  if (Node.isVariableDeclaration(callbackParent) && callbackParent.getInitializer() === callback) {
-    return callbackParent.findReferencesAsNodes().some(reference => {
-      if (reference.getStart() <= span.start || reference.getStart() >= span.end) return false;
-      const parent = reference.getParent();
-      return Node.isCallExpression(parent) && Node.isIdentifier(parent.getExpression()) &&
-        jestIdentifier(parent.getExpression(), 'expect') && parent.getArguments().includes(reference) &&
-        hasThrowMatcher(parent);
-    });
-  }
-  return Node.isCallExpression(callbackParent) && Node.isIdentifier(callbackParent.getExpression()) &&
-    jestIdentifier(callbackParent.getExpression(), 'expect') && callbackParent.getArguments().includes(callback) &&
-    hasThrowMatcher(callbackParent);
-}
-
-function hasThrowMatcher(expectCall: CallExpression): boolean {
-  let current: Node = expectCall;
-  for (let depth = 0; depth < 6; depth++) {
-    const parent = current.getParent();
-    if (!Node.isPropertyAccessExpression(parent) || parent.getExpression() !== current) return false;
-    if (/^toThrow(?:Error)?/.test(parent.getName())) {
-      const matcherCall = parent.getParent();
-      return Node.isCallExpression(matcherCall) && matcherCall.getExpression() === parent;
-    }
-    current = parent;
-  }
-  return false;
+  return Node.isArrowFunction(callback) || Node.isFunctionExpression(callback)
+    ? isJestThrowCallback(callback, span)
+    : false;
 }
 
 function hasChangingFunctionScope(call: CallExpression, method: MethodDeclaration): boolean {

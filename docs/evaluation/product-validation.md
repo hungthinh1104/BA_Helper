@@ -4,6 +4,17 @@ This protocol measures whether BA Helper reduces analysis effort and
 missed-impact risk for Technical BA and QC reviewers. It does not treat fixture
 evaluation, automated tests, or model confidence as product-validation data.
 
+The optional `studyObservations` array in the dataset template records the
+three-condition comprehension study without storing participant identity:
+`EXISTING_WORKFLOW`, `TEXTUAL_EVIDENCE`, and `VISUAL_TEST_TRACE`. Each row is
+pinned to a case repository commit, tool commit, task, reviewer session code,
+and timestamp. It records task correctness, confidence, elapsed time,
+navigation actions, unsupported conclusions, usefulness, and voluntary reuse.
+The scorecard reports `NOT_COLLECTED` when no observations exist and
+`INCOMPLETE` until every one of the five tasks is represented in each of the
+three conditions. It never converts missing participant observations into a
+product success result.
+
 ## Case protocol
 
 Use only public GitHub NestJS repositories pinned to an immutable 40-character
@@ -11,8 +22,10 @@ commit SHA. For each requirement:
 
 1. Establish the critical impacted artifact set from source before exposing
    tool output; have another reviewer resolve disagreements.
-2. Assign manual and assisted conditions using matched tasks and counterbalance
-   their order across reviewers. Record elapsed minutes for each condition.
+2. Assign Existing Workflow, Textual Evidence, and Visual Test Trace conditions
+   using matched tasks and counterbalance their order across reviewers. Record
+   elapsed time, task correctness, confidence, navigation effort, and usefulness
+   for each condition.
 3. Avoid giving the same person an identical task twice as an independent
    timing comparison. Keep case-level observations and reviewer roles traceable
    without collecting reviewer identities.
@@ -57,6 +70,14 @@ A denominator of zero produces `null`, never an invented zero or perfect score.
 Counts are validated so accepted/found/useful values cannot exceed their
 reviewed/expected totals.
 
+For `studyObservations`, the scorecard reports per-condition task correctness,
+behavior explanation, tested-behavior understanding, unseen-scenario
+prediction, source-evidence identification, unsupported-conclusion rate,
+confidence calibration gap, time to correct understanding, navigation actions,
+usefulness, and voluntary reuse. These metrics are null when their denominator
+is absent. A complete five-task, three-condition set is still a measurement
+artifact, not causal proof from a small pilot.
+
 ## Running the scorecard
 
 Copy `tests/product-validation/dataset.template.json` (a three-case scaffold —
@@ -68,9 +89,13 @@ pnpm validate:product-beta -- path/to/product-validation-dataset.json
 ```
 
 The command writes
-`artifacts/product-validation/scorecard.json`. Fewer than three complete cases
-produce `INSUFFICIENT_CASES` and exit code 2. Three cases make the dataset ready
-for a product decision; they do not automatically prove product success.
+`artifacts/product-validation/scorecard.json`. Fewer than three cases produce
+`INSUFFICIENT_CASES`; three all-zero placeholder cases produce
+`INSUFFICIENT_OBSERVATIONS`; either status exits with code 2. Three cases with
+real measured observations make the aggregate scorecard ready for a product
+decision, but they do not automatically prove product success.
+The scorecard's separate `study.status` remains `NOT_COLLECTED` or `INCOMPLETE`
+until real observations cover all five tasks in all three conditions.
 
 To evaluate a feature candidate against a prior baseline collected on the same
 case scope, start the baseline from
@@ -97,6 +122,12 @@ datasets are reported as `NOT_OBSERVED` and are not silently converted to zero.
 The candidate must identify a different tool commit and cannot have a collection
 date earlier than the baseline.
 
+The comparison also records candidate/baseline study status, observation count,
+distinct condition/task cell count, case count, and reviewer-session count.
+These values remain insufficient until all five tasks are represented in all
+three reviewer-study conditions across at least three cases and three
+non-identifying reviewer sessions.
+
 ## Phase 5 entry
 
 SaaS work remains locked until a real comparison returns `PROMOTE`. Verify the
@@ -108,7 +139,10 @@ pnpm verify:saas-entry -- artifacts/product-validation/comparison.json
 
 This emits `artifacts/release/saas-entry.json`. The gate rejects insufficient
 case counts, no measured improvement, any regression, identical tool commits,
-or a `DEFER`/`INCONCLUSIVE` comparison.
+incomplete reviewer-study condition/task cells, fewer than 15 observations or
+distinct cells, fewer than three cases or sessions in either dataset, or a
+`DEFER`/`INCONCLUSIVE` comparison.
+A metric-only `PROMOTE` therefore cannot open SaaS entry.
 
 ## Decision rule
 

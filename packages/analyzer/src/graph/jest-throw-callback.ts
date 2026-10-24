@@ -10,17 +10,22 @@ export function provenJestThrowCallback(call: CallExpression, span: Span): Arrow
     callback.getStart() <= span.start || callback.getStart() >= span.end) return undefined;
   if (callback.getAncestors().some(node => isFunctionLike(node) &&
     node.getStart() > span.start && node.getStart() < span.end)) return undefined;
+  return isJestThrowCallback(callback, span) ? callback : undefined;
+}
+
+/** Recognizes only callbacks directly proven as the subject of a Jest throw matcher. */
+export function isJestThrowCallback(callback: ArrowFunction | FunctionExpression, span?: Span): boolean {
   const parent = callback.getParent();
   if (Node.isVariableDeclaration(parent) && parent.getInitializer() === callback) {
     return parent.findReferencesAsNodes().some(reference => {
-      if (reference.getStart() <= span.start || reference.getStart() >= span.end) return false;
+      if (span && (reference.getStart() <= span.start || reference.getStart() >= span.end)) return false;
       const expectCall = reference.getParent();
       return Node.isCallExpression(expectCall) && isJestExpectIdentifier(expectCall.getExpression()) &&
         expectCall.getArguments().includes(reference) && hasThrowMatcher(expectCall);
-    }) ? callback : undefined;
+    });
   }
   return Node.isCallExpression(parent) && isJestExpectIdentifier(parent.getExpression()) &&
-    parent.getArguments().includes(callback) && hasThrowMatcher(parent) ? callback : undefined;
+    parent.getArguments().includes(callback) && hasThrowMatcher(parent);
 }
 
 export function isJestExpectIdentifier(node: Node): boolean {

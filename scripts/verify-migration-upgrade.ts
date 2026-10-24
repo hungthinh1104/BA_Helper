@@ -29,6 +29,7 @@ const UPGRADE_MIGRATIONS = [
   '20261019000000_dependency_edge_provenance',
   '20261019010000_code_artifact_test_metadata',
   '20261020000000_reviewed_report_test_trace',
+  '20261024130000_comprehension_projection_indexes',
 ];
 
 const TEMP_DB = `ba_helper_upgrade_${process.pid}_${randomBytes(4).toString('hex')}`;
@@ -121,6 +122,10 @@ async function main(): Promise<void> {
 
       const eventIndex = await c.query(`SELECT to_regclass('"DomainEvent_eventType_createdAt_idx"') AS idx`);
       if (!eventIndex.rows[0].idx) failures.push('domain-event index missing after upgrade');
+      const reverseEdgeIndex = await c.query(`SELECT to_regclass('"DependencyEdge_snapshotId_toArtifactId_type_idx"') AS idx`);
+      if (!reverseEdgeIndex.rows[0].idx) failures.push('reverse comprehension edge index missing after upgrade');
+      const evidenceIndex = await c.query(`SELECT to_regclass('"Evidence_snapshotId_artifactId_idx"') AS idx`);
+      if (!evidenceIndex.rows[0].idx) failures.push('comprehension evidence index missing after upgrade');
       failures.push(...await verifyLegacyTestTraceData(c));
     });
 

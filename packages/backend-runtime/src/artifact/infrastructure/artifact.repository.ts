@@ -20,6 +20,28 @@ export class ArtifactRepository {
     });
   }
 
+  async findBySnapshotAndId(snapshotId: string, id: string) {
+    return this.prisma.codeArtifact.findFirst({
+      where: { snapshotId, id },
+    });
+  }
+
+  async listBySnapshotAndIds(snapshotId: string, ids: string[]) {
+    if (ids.length === 0) return [];
+    return this.prisma.codeArtifact.findMany({
+      where: { snapshotId, id: { in: [...new Set(ids)] } },
+      orderBy: [{ filePath: 'asc' }, { startLine: 'asc' }, { id: 'asc' }],
+    });
+  }
+
+  async listBySnapshotAndArtifactKeys(snapshotId: string, artifactKeys: string[]) {
+    if (artifactKeys.length === 0) return [];
+    return this.prisma.codeArtifact.findMany({
+      where: { snapshotId, artifactKey: { in: [...new Set(artifactKeys)] } },
+      orderBy: [{ artifactKey: 'asc' }, { id: 'asc' }],
+    });
+  }
+
   async createMany(data: Array<{
     snapshotId: string;
     artifactKey: string;

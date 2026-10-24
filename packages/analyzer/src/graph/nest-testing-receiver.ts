@@ -2,11 +2,12 @@ import { Node, SyntaxKind } from 'ts-morph';
 import type { CallExpression, ClassDeclaration, Expression, VariableDeclaration } from 'ts-morph';
 import { readJestDeclaration } from '../scanner/jest/jest-declaration';
 import { readJestHook } from '../scanner/jest/jest-test-behavior';
+import { isJestThrowCallback } from './jest-throw-callback';
 
 type BindingWrite = { node: Node; value?: Expression };
 type BindingContext = {
   suites: CallExpression[];
-  kind: 'CASE' | 'SETUP_HOOK' | 'TEARDOWN_HOOK' | 'STATIC' | 'OTHER';
+  kind: 'CASE' | 'THROW_CALLBACK' | 'SETUP_HOOK' | 'TEARDOWN_HOOK' | 'STATIC' | 'OTHER';
   owner?: Node;
   body: Node;
   position: number;
@@ -157,7 +158,19 @@ function bindingContext(node: Node): BindingContext {
       if (kind === 'STATIC') body = ancestor.getBody() ?? ancestor;
       continue;
     }
+    if (kind === 'THROW_CALLBACK' && declaration?.supported && declaration.api !== 'describe') {
+      kind = 'CASE';
+      owner = ancestor;
+      body = ancestor.getBody() ?? ancestor;
+      continue;
+    }
     if (kind !== 'STATIC') continue;
+    if ((Node.isArrowFunction(ancestor) || Node.isFunctionExpression(ancestor)) && isJestThrowCallback(ancestor)) {
+      kind = 'THROW_CALLBACK';
+      owner = ancestor;
+      body = ancestor.getBody() ?? ancestor;
+      continue;
+    }
     const hook = call && readJestHook(call);
     kind = declaration?.supported && declaration.api !== 'describe' ? 'CASE'
       : hook?.supported ? hook.kind === 'SETUP_HOOK' ? 'SETUP_HOOK' : 'TEARDOWN_HOOK' : 'OTHER';
@@ -173,9 +186,12 @@ function isSuitePrefix(prefix: CallExpression[], suites: CallExpression[]): bool
 }
 
 function isRelevantWrite(write: BindingContext, use: BindingContext, node: Node): boolean {
-  if (write.kind === 'CASE') return use.kind === 'CASE' && write.owner === use.owner && node.getStart() < use.position;
+  if (write.kind === 'CASE') {
+    return (use.kind === 'CASE' || use.kind === 'THROW_CALLBACK') &&
+      write.owner === use.owner && node.getStart() < use.position;
+  }
   if (write.kind === 'SETUP_HOOK') {
-    return use.kind === 'CASE' || use.kind === 'SETUP_HOOK' && write.owner === use.owner &&
+    return (use.kind === 'CASE' || use.kind === 'THROW_CALLBACK') || use.kind === 'SETUP_HOOK' && write.owner === use.owner &&
       node.getStart() < use.position;
   }
   if (write.kind === 'STATIC') return use.kind !== 'OTHER' && use.kind !== 'TEARDOWN_HOOK' &&

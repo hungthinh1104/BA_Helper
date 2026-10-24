@@ -52,7 +52,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  if (scorecard.status === 'INSUFFICIENT_CASES') {
+  if (scorecard.status === 'INSUFFICIENT_CASES' || scorecard.status === 'INSUFFICIENT_OBSERVATIONS') {
     process.exitCode = 2;
   }
 }

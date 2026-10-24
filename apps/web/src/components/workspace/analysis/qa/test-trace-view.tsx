@@ -140,7 +140,7 @@ function BehaviorDeclarations({ behaviorEvidence, commitSha, locale }: {
   const labels = testTraceLabels[locale];
   const [expanded, setExpanded] = useState(false);
   const [visible, setVisible] = useState(8);
-  const claims = behaviorEvidence ?? [];
+  const claims = useMemo(() => behaviorEvidence ?? [], [behaviorEvidence]);
   const verifiedClaims = useMemo(() => claims.filter(claim => claim.commitSha === commitSha), [claims, commitSha]);
   const visibleClaims = useMemo(() => verifiedClaims.slice(0, visible), [verifiedClaims, visible]);
   const hiddenCount = claims.length - verifiedClaims.length;
@@ -152,6 +152,7 @@ function BehaviorDeclarations({ behaviorEvidence, commitSha, locale }: {
       <p className="text-[11px] text-muted-foreground">{labels.runtimeUnavailable}</p>
       {claims.length === 0 ? <p className="text-xs text-muted-foreground">{labels.behaviorUnavailable}</p> : null}
       {hiddenCount > 0 ? <p className="text-xs text-warning">{labels.unverifiedBehavior}</p> : null}
+      {verifiedClaims.length > 0 ? <p className="break-all font-mono text-[10px] text-muted-foreground">{labels.sourceCommit}: {commitSha}</p> : null}
       {visibleClaims.map((claim, index) => <BehaviorClaimView key={`${claim.evidenceProvenanceKey}:${claim.sourceLocation.startOffset}:${index}`} claim={claim} labels={labels} />)}
       {visible < verifiedClaims.length ? <Button type="button" variant="outline" size="sm" className="w-fit" onClick={() => setVisible(value => value + 8)}>{labels.showMoreBehavior}</Button> : null}
     </div> : null}
@@ -164,7 +165,6 @@ function BehaviorClaimView({ claim, labels }: { claim: BehaviorClaim; labels: Te
     <div className="mt-2 grid min-w-0 gap-2">
       <p className="break-all font-mono text-[10px] text-muted-foreground">{labels.sourceLocation}: {claim.sourceLocation.relativePath}:{claim.sourceLocation.startLine}:{claim.sourceLocation.startColumn}–{claim.sourceLocation.endLine}:{claim.sourceLocation.endColumn}</p>
       <pre className="overflow-x-auto rounded bg-surface-muted p-2 text-xs"><code><mark className="rounded bg-warning/20 px-0.5 text-foreground">{claim.sourceText}</mark></code></pre>
-      <p className="break-all font-mono text-[10px] text-muted-foreground">{labels.sourceCommit}: {claim.commitSha}</p>
       <p className="break-all font-mono text-[10px] text-muted-foreground">{labels.provenance}: {claim.evidenceProvenanceKey}</p>
     </div>
   </details>;

@@ -51,6 +51,12 @@
   ],
   "unsupportedPatterns": [
     {
+      "pattern": "ASSERTION_INVOCATION_UNRESOLVED",
+      "filePath": "test/refund.service.test.ts",
+      "line": 20,
+      "sourceText": "expect(gateway.refund).toHaveBeenCalledWith(booking.paymentId)"
+    },
+    {
       "pattern": "NESTED_CALLBACK_NOT_ANALYZED",
       "filePath": "test/refund.service.test.ts",
       "line": 27,

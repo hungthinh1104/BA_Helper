@@ -40,4 +40,10 @@ describe('production dependency surface', () => {
     expect(manifest.scripts['verify:dependencies']).toBe('pnpm audit --prod --audit-level=high');
     expect(read('.github/workflows/ci.yml')).toContain('run: pnpm verify:dependencies');
   });
+
+  it('isolates the CI Redis database used by test queues', () => {
+    const workflow = read('.github/workflows/ci.yml');
+    expect(workflow).toContain('REDIS_URL: redis://localhost:6379/0');
+    expect(workflow).toContain('REDIS_URL_TEST: redis://localhost:6379/1');
+  });
 });

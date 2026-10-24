@@ -22,6 +22,7 @@ export function activeJestCase(artifact: QaTraceArtifact) {
   const metadata = codeArtifactMetadataSchema.safeParse(artifact.metadata);
   if (!metadata.success) return undefined;
   const test = metadata.data.testCase;
+  if (!test) return undefined;
   if (!['NORMAL', 'ONLY'].includes(test.modifier) ||
     test.parentFileArtifactKey !== createArtifactIdentity('test', artifact.filePath, 'file')) return undefined;
   return test;

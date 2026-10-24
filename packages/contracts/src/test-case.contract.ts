@@ -1,4 +1,8 @@
 import { z } from 'zod';
+import { codeEvidenceMetadataSchema } from './code-evidence.contract';
+import { sourceLocationSchema } from './source-location.contract';
+
+export const testSourceLocationSchema = sourceLocationSchema;
 
 export const testModifierSchema = z.enum(['NORMAL', 'SKIP', 'TODO', 'ONLY']);
 export const testBehaviorKindSchema = z.enum([
@@ -7,18 +11,6 @@ export const testBehaviorKindSchema = z.enum([
 export const testAssertionKindSchema = z.enum([
   'RETURN_VALUE', 'INVOCATION_ARGUMENTS', 'CALL_COUNT', 'EXCEPTION', 'STATE',
 ]);
-export const testSourceLocationSchema = z.object({
-  relativePath: z.string().min(1).max(1000).refine(path =>
-    !path.startsWith('/') && !path.includes('\\') &&
-    path.split('/').every(segment => segment !== '' && segment !== '.' && segment !== '..')),
-  /** UTF-16 source offsets; endOffset is exclusive. */
-  startOffset: z.number().int().nonnegative(),
-  endOffset: z.number().int().positive(),
-  startLine: z.number().int().positive(),
-  startColumn: z.number().int().positive(),
-  endLine: z.number().int().positive(),
-  endColumn: z.number().int().positive(),
-}).refine(location => location.endOffset > location.startOffset);
 export const testStaticBehaviorClaimSchema = z.object({
   kind: testBehaviorKindSchema,
   assertionKind: testAssertionKindSchema.optional(),
@@ -27,6 +19,9 @@ export const testStaticBehaviorClaimSchema = z.object({
   sourceLocation: testSourceLocationSchema,
   commitSha: z.string().min(1).max(256),
   evidenceProvenanceKey: z.string().min(1).max(1000),
+  relatedInvocationSourceLocation: testSourceLocationSchema.optional(),
+  relatedAssertionSourceLocation: testSourceLocationSchema.optional(),
+  relatedSubjectText: z.string().min(1).max(2000).optional(),
 });
 export const scanStaticBehaviorClaimSchema = testStaticBehaviorClaimSchema.extend({
   evidenceProvenanceKey: z.string().min(1).max(1000).optional(),
@@ -51,5 +46,11 @@ export const testCaseMetadataSchema = testCaseMetadataBaseSchema.extend({
   behaviorEvidence: z.array(testStaticBehaviorClaimSchema).max(100).optional(),
 });
 
-export const codeArtifactMetadataSchema = z.object({ testCase: testCaseMetadataSchema });
+export const codeArtifactMetadataSchema = z.object({
+  testCase: testCaseMetadataSchema.optional(),
+  codeEvidence: codeEvidenceMetadataSchema.optional(),
+}).refine(value => value.testCase !== undefined || value.codeEvidence !== undefined, {
+  message: 'Artifact metadata must contain a validated test case or code evidence payload.',
+});
 export type TestCaseMetadata = z.infer<typeof testCaseMetadataSchema>;
+export type TestStaticBehaviorClaim = z.infer<typeof testStaticBehaviorClaimSchema>;

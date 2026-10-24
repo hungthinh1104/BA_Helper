@@ -1,6 +1,5 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as glob from 'glob';
 
 // Define the boundaries
 const API_MODULES_PATH = path.resolve(__dirname, '../apps/api/src/modules');
@@ -16,14 +15,31 @@ const PATTERNS_TO_CHECK = [
 
 function getBasenames(baseDir: string, patterns: string[]): Map<string, string> {
   const map = new Map<string, string>();
-  for (const pattern of patterns) {
-    const matches = glob.sync(pattern, { cwd: baseDir });
-    for (const match of matches) {
-      const basename = path.basename(match);
-      map.set(basename, match);
-    }
+  const matches = walkFiles(baseDir).filter(match => patterns.some(pattern => {
+    const suffix = pattern.replace('**/*', '');
+    return match.endsWith(suffix);
+  }));
+  for (const match of matches) {
+    const relative = path.relative(baseDir, match);
+    const basename = path.basename(relative);
+    map.set(basename, relative);
   }
   return map;
+}
+
+function walkFiles(directory: string): string[] {
+  if (!fs.existsSync(directory)) return [];
+  const files: string[] = [];
+  const pending = [directory];
+  while (pending.length > 0) {
+    const current = pending.pop()!;
+    for (const entry of fs.readdirSync(current, { withFileTypes: true }).sort((left, right) => left.name.localeCompare(right.name))) {
+      const absolute = path.join(current, entry.name);
+      if (entry.isDirectory() && !['dist', 'node_modules'].includes(entry.name)) pending.push(absolute);
+      else if (entry.isFile()) files.push(absolute);
+    }
+  }
+  return files.sort();
 }
 
 console.log('Verifying backend-runtime boundaries to prevent file duplication...');

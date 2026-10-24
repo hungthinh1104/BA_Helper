@@ -8,6 +8,8 @@ import type {
 import { PrismaService } from "@ba-helper/backend-runtime";
 import { readScannerVersion } from './scanner-version.reader';
 
+const MAX_DRIFT_SAMPLE_ITEMS = 10;
+
 export class GetRepositorySnapshotDriftUseCase {
   constructor(private readonly prisma: PrismaService) {}
 
@@ -166,15 +168,29 @@ export class GetRepositorySnapshotDriftUseCase {
       warnings.push({ code: 'DRIFT_INCOMPATIBLE', message: 'Drift comparison is incompatible due to version churn.' });
     }
 
-    const sortSamples = (arr: any[]) => {
+    const sortSamples = <T extends { universalKind?: string | null; filePath?: string | null; name?: string | null; artifactKey: string }>(arr: T[]) => {
       arr.sort((a, b) => {
         if (a.universalKind !== b.universalKind) return (a.universalKind || '').localeCompare(b.universalKind || '');
         if (a.filePath !== b.filePath) return (a.filePath || '').localeCompare(b.filePath || '');
         if (a.name !== b.name) return (a.name || '').localeCompare(b.name || '');
         return a.artifactKey.localeCompare(b.artifactKey);
       });
-      return arr.slice(0, 50);
+      return arr;
     };
+
+    const sortedSamples = [sortSamples(added), sortSamples(removed), sortSamples(changed), sortSamples(unknownChanged)];
+    const boundedSamples: Array<Array<DriftArtifactSample | DriftChangedArtifactSample>> = sortedSamples.map(() => []);
+    let remainingSamples = MAX_DRIFT_SAMPLE_ITEMS;
+    while (remainingSamples > 0 && sortedSamples.some((samples, index) => boundedSamples[index].length < samples.length)) {
+      for (let index = 0; index < sortedSamples.length && remainingSamples > 0; index++) {
+        const source = sortedSamples[index];
+        if (boundedSamples[index].length >= source.length) continue;
+        boundedSamples[index].push(source[boundedSamples[index].length]);
+        remainingSamples--;
+      }
+    }
+    const samplesTruncated = sortedSamples.some((samples, index) => boundedSamples[index].length < samples.length);
+    const [addedSamples, removedSamples, changedSamples, unknownChangedSamples] = boundedSamples;
 
     return {
       projectId,
@@ -206,10 +222,12 @@ export class GetRepositorySnapshotDriftUseCase {
         coverageStatusChanged: baseSnapshot.coverageStatus !== targetSnapshot.coverageStatus,
       },
       samples: {
-        addedArtifacts: sortSamples(added),
-        removedArtifacts: sortSamples(removed),
-        changedArtifacts: sortSamples(changed),
-        unknownChangedArtifacts: sortSamples(unknownChanged),
+        addedArtifacts: addedSamples as DriftArtifactSample[],
+        removedArtifacts: removedSamples as DriftArtifactSample[],
+        changedArtifacts: changedSamples as DriftChangedArtifactSample[],
+        unknownChangedArtifacts: unknownChangedSamples as DriftArtifactSample[],
+        sampleLimit: MAX_DRIFT_SAMPLE_ITEMS,
+        samplesTruncated,
       },
       warnings,
     };
@@ -265,6 +283,8 @@ export class GetRepositorySnapshotDriftUseCase {
         removedArtifacts: [],
         changedArtifacts: [],
         unknownChangedArtifacts: [],
+        sampleLimit: MAX_DRIFT_SAMPLE_ITEMS,
+        samplesTruncated: false,
       },
       warnings: scannerVersionUnavailable ? [{
         code: 'SCANNER_VERSION_UNAVAILABLE',

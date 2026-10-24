@@ -93,5 +93,6 @@
       },
       "notes": "Same scope as candidate case 3. The candidate must be collected on or after the baseline date and identify a different tool.commitSha."
     }
-  ]
+  ],
+  "studyObservations": []
 }

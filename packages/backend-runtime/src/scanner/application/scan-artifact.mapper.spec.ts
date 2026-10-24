@@ -66,6 +66,31 @@ describe('test artifact persistence', () => {
       .toThrow('persisted source evidence');
   });
 
+  it('persists production code evidence with canonical locations and redacted excerpts', () => {
+    const secret = `ghp_${'c'.repeat(36)}`;
+    const production: ScanArtifact = {
+      stableId: 'service-method:src/payment.service.ts#PaymentService.refund', type: 'SERVICE_METHOD',
+      filePath: 'src/payment.service.ts', symbolName: 'PaymentService.refund', startLine: 4, endLine: 12,
+      excerpt: 'refund(input: PaymentInput)', codeEvidence: {
+        parameters: [{ name: 'input', typeText: 'PaymentInput', sourceText: 'input: PaymentInput', sourceLocation: {
+          relativePath: 'src/payment.service.ts', startOffset: 80, endOffset: 98, startLine: 4, startColumn: 10, endLine: 4, endColumn: 28,
+        } }],
+        returnType: { text: 'Promise<Result>', sourceLocation: {
+          relativePath: 'src/payment.service.ts', startOffset: 99, endOffset: 113, startLine: 4, startColumn: 29, endLine: 4, endColumn: 43,
+        } },
+        conditions: [{ kind: 'IF', sourceText: `input.enabled && '${secret}'`, sourceLocation: {
+          relativePath: 'src/payment.service.ts', startOffset: 120, endOffset: 150, startLine: 5, startColumn: 5, endLine: 5, endColumn: 35,
+        } }], exceptionHandlers: [],
+      },
+    };
+    const [input] = buildArtifactInputs('snapshot', [production], collector);
+    expect(input.metadata).toMatchObject({ codeEvidence: {
+      parameters: [{ sourceText: 'input: PaymentInput', sourceLocation: { relativePath: 'src/payment.service.ts' } }],
+      returnType: { text: 'Promise<Result>' }, conditions: [{ kind: 'IF' }],
+    } });
+    expect(JSON.stringify(input.metadata)).not.toContain(secret);
+  });
+
   it('rejects duplicate identities before persistence', () => {
     expect(() => buildArtifactInputs('snapshot', [parent, { ...parent, symbolName: 'other' }], collector))
       .toThrow('share the same stable identity');

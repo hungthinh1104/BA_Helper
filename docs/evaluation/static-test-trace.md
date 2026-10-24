@@ -2,7 +2,7 @@
 
 > Version scope: the TESTS/CALLS corpus figures in the first section are
 > historical measurements from the analyzer versions named there. The current
-> analyzer contract is `analyzer@0.10.0`; run the reproduction commands to
+> analyzer contract is `analyzer@0.14.0`; run the reproduction commands to
 > produce a scorecard for the current checkout. Historical figures below do not
 > certify current accuracy.
 
@@ -80,12 +80,14 @@ does not diagnose cannot enter that denominator.
 
 CI runs `pnpm benchmark:static-test-graph -- ci`. It scans deterministic
 synthetic repositories at 100, 200, and 800 test cases, verifies claim/edge
-counts and repeat-run output digests, and records scan latency, graph latency
-samples, process memory observations, analyzer version, and implementation
-source hashes in `artifacts/performance/static-test-graph-ci.json`. Per-scale
-scan and median graph time budgets are regression limits. Memory observations
-are not thresholds, and these generated repositories do not estimate end-to-end
-latency or performance on arbitrary customer repositories.
+counts and repeat-run output digests, and records scan p50/p95 samples, graph
+latency p50/p95 samples, process memory observations, analyzer version, and
+implementation source hashes in `artifacts/performance/static-test-graph-ci.json`.
+The existing per-scale first-scan and median-graph budgets remain regression
+limits; p50/p95 values are retained to expose tail latency without silently
+turning a small sample into a capacity guarantee. Memory observations are not
+thresholds, and these generated repositories do not estimate end-to-end latency
+or performance on arbitrary customer repositories.
 
 The fixed pilot is a regression corpus after resolver development. Add new
 application repositories as a held-out evaluation set before claiming broader
@@ -103,19 +105,20 @@ Product validation remains unmeasured until real reviewers participate. Use
 the existing Booking/Payment/Refund tasks and the provenance requirements in
 `product-validation.md`; do not use fake-provider scorecards as observations.
 
-For the visual trace question, compare the same application build and persisted
-snapshot/report data with the trace panel visible or hidden by an operator's
-study browser configuration. Keep all other evidence and review controls the
-same. A comparison against an older, otherwise different build cannot isolate
-the contribution of visual traces.
+For the visual trace question, compare three conditions on matched tasks:
+`EXISTING_WORKFLOW`, `TEXTUAL_EVIDENCE`, and `VISUAL_TEST_TRACE`. Keep the same
+application build, pinned snapshot/report data, and underlying evidence for the
+last two conditions. A comparison against an older, otherwise different build
+cannot isolate the contribution of visual traces.
 
 End timed review at the recorded decision/finalization before exposing report
 appendices. If report reading is part of a timed task, the trace-hidden
 condition must also hide saved traces and Markdown/PDF trace appendices;
 hiding only the live panel would expose the same information elsewhere.
 
-Assign matched tasks to the two conditions and counterbalance their order
-across reviewers. Do not give one person the identical task twice and treat
+Assign matched tasks to the three conditions and counterbalance their order
+across reviewers. Cover the five comprehension tasks in each condition before
+calling the study complete. Do not give one person the identical task twice and treat
 the second attempt as an independent timing observation. Establish the
 critical artifact and false-positive sets from source before exposing tool
 output, then have a second reviewer adjudicate disagreements.
@@ -134,18 +137,22 @@ results and uncertainty; a small pilot is not proof of product effectiveness.
    artifacts and false positives from the pinned source; resolve disagreements
    before calculating scores.
 2. Freeze one tool build, requirement revision, repository snapshot, and report
-   for both conditions. In `TRACE_VISIBLE`, allow the Visual Test Trace panel.
-   In `TRACE_HIDDEN`, hide the panel and saved trace appendices while leaving the
-   same source, requirements, and ordinary review controls available.
+   for all conditions. `EXISTING_WORKFLOW` exposes the reviewer's normal tools;
+   `TEXTUAL_EVIDENCE` exposes structured evidence without the visual trace;
+   `VISUAL_TEST_TRACE` exposes the same evidence through the trace panel. Hide
+   saved trace appendices in the first two conditions.
 3. Assign task order with a balanced sequence. Each reviewer sees a given task
    in only one condition; distribute matched tasks across reviewers so every
-   task appears in both conditions.
+   task appears in all three conditions.
 4. Start timing when the requirement and repository are shown. Stop at the
    recorded impact decision, before report appendices or ground truth are
    exposed. Record identified, missed, and false-positive artifact IDs, task
    accuracy, elapsed seconds, decision, and a 1–5 confidence rating.
-5. Compare per-task accuracy and time by condition, show paired differences
-   and the number of reviewers/tasks, and retain disagreements and exclusions.
+5. Compare per-task accuracy and time by condition, show paired differences,
+   confidence calibration, navigation effort, unsupported conclusions, and the
+   number of reviewers/tasks. Retain disagreements and exclusions. Store each
+   observation in `studyObservations` with a non-identifying reviewer session
+   code; no participant identity is required.
    Do not combine this human result with analyzer precision/recall or present a
    small pilot as causal proof.
 

@@ -27,6 +27,7 @@ import { RepositoryScannerProfile } from "./_components/repository-scanner-profi
 import { RepositoryArtifactAnalytics } from "./_components/repository-artifact-analytics"
 import { useTranslations } from "next-intl"
 import { useLocalizedHref } from "@/i18n/navigation"
+import { CodeEvidenceNavigator } from "./_components/code-evidence-navigator"
 
 interface PageProps {
   params: Promise<{ repositoryId: string }>
@@ -199,6 +200,8 @@ export default function RepositoryDetailsPage({ params }: PageProps) {
           )}
 
           <RepositoryArtifactAnalytics stats={repo.artifactStats} />
+
+          <CodeEvidenceNavigator repositoryId={repositoryId} snapshotId={latestUsable?.id} />
 
           {job && (
             <AuditTimeline

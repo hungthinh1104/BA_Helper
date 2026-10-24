@@ -12,9 +12,10 @@ describe('held-out static Jest behavior evaluation', () => {
     });
     expect(result.provenance).toMatchObject({ checkedClaims: 13, supportedClaims: 13, integrityRate: 1, issues: [] });
     expect(result.unsupportedPatterns).toMatchObject({
-      expected: 3, predicted: 3, truePositive: 3, falsePositive: 0, falseNegative: 0,
+      expected: 4, predicted: 4, truePositive: 4, falsePositive: 0, falseNegative: 0,
       precision: 1, recall: 1,
       observedPatterns: [
+        { pattern: 'ASSERTION_INVOCATION_UNRESOLVED', filePath: 'test/refund.service.test.ts', line: 20, column: 5, count: 1 },
         { pattern: 'DYNAMIC_MATCHER_NOT_ANALYZED', filePath: 'test/refund.service.test.ts', line: 28, column: 5, count: 1 },
         { pattern: 'NESTED_CALLBACK_NOT_ANALYZED', filePath: 'test/refund.service.test.ts', line: 27, column: 16, count: 1 },
         { pattern: 'SNAPSHOT_EXPECTATION_UNRESOLVED', filePath: 'test/refund.service.test.ts', line: 29, column: 5, count: 1 },

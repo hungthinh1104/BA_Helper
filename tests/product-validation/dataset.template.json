@@ -91,7 +91,8 @@
         "rerunOrDriftReviewed": false,
         "rerunOrDriftUseful": null
       },
-      "notes": "Three complete cases make the dataset READY_FOR_PRODUCT_DECISION — a floor for measuring, not proof of product success. For a candidate-vs-baseline comparison, copy baseline.template.json with the SAME case scope and a DIFFERENT tool.commitSha."
+      "notes": "Replace all zero placeholders with measured observations. Three cases with measured observations make the aggregate scorecard READY_FOR_PRODUCT_DECISION; the separate study remains NOT_COLLECTED until participant rows cover all five tasks in all three conditions."
     }
-  ]
+  ],
+  "studyObservations": []
 }

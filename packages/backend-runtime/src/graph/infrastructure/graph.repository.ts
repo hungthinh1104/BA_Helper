@@ -22,6 +22,38 @@ export class GraphRepository {
     });
   }
 
+  async listIncomingBySnapshotAndTargets(
+    snapshotId: string,
+    targetArtifactIds: string[],
+    types: DependencyEdgeType[] = ['CALLS', 'TESTS'],
+  ) {
+    if (targetArtifactIds.length === 0 || types.length === 0) return [];
+    return this.prisma.dependencyEdge.findMany({
+      where: {
+        snapshotId,
+        toArtifactId: { in: [...new Set(targetArtifactIds)] },
+        type: { in: types },
+      },
+      orderBy: [{ toArtifactId: 'asc' }, { fromArtifactId: 'asc' }, { id: 'asc' }],
+    });
+  }
+
+  async listOutgoingBySnapshotAndSources(
+    snapshotId: string,
+    sourceArtifactIds: string[],
+    types?: DependencyEdgeType[],
+  ) {
+    if (sourceArtifactIds.length === 0 || types?.length === 0) return [];
+    return this.prisma.dependencyEdge.findMany({
+      where: {
+        snapshotId,
+        fromArtifactId: { in: [...new Set(sourceArtifactIds)] },
+        ...(types ? { type: { in: types } } : {}),
+      },
+      orderBy: [{ fromArtifactId: 'asc' }, { toArtifactId: 'asc' }, { id: 'asc' }],
+    });
+  }
+
   async expandFromSeeds(snapshotId: string, seedArtifactIds: string[]): Promise<string[]> {
     if (seedArtifactIds.length === 0) return [];
 

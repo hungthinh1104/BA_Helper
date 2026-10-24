@@ -1,9 +1,10 @@
 {
   "schemaVersion": 1,
   "recordedAt": "2026-10-22",
-  "groundTruthSha256": "06b40b5c5b9a07bd1cf330a6b329cb905bb0a6857e73ad304798cd6a06e7b2f2",
+  "groundTruthSha256": "c511ea8044185c661d8556832b292dfcacb772f5f05268e92c9c541e121cc2cd",
   "expectedClaims": 13,
   "unsupportedPatterns": [
+    "ASSERTION_INVOCATION_UNRESOLVED",
     "DYNAMIC_MATCHER_NOT_ANALYZED",
     "NESTED_CALLBACK_NOT_ANALYZED",
     "SNAPSHOT_EXPECTATION_UNRESOLVED"

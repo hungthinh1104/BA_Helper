@@ -111,6 +111,47 @@ that captured projection. They do not invoke the live QA projection. Historical
 null values mean no saved test trace is available; no execution results or
 retrospective paths may be inferred for them.
 
+### Code-First Comprehension Projection
+
+`GET /api/v1/snapshots/:snapshotId/artifacts/:artifactId/comprehension` is a
+read-only, snapshot-scoped projection for a production artifact. It returns the
+persisted source excerpt, bounded direct dependencies, reverse static call paths,
+and related Jest declarations grouped as setup, inputs, invocations, assertions,
+mocks, and expected outcomes. `behaviorAssociations` links an assertion to an
+invocation only when the scanner persisted an exact AST subject reference;
+ambiguous or unsupported subjects remain unresolved. Every returned source item
+carries the selected commit SHA and either persisted evidence provenance or an
+explicit limitation.
+
+The projection is deliberately static: `snapshotContext.basis` is
+`STATIC_SOURCE_REFERENCE` and `runtimeObservations` is always `NOT_IMPORTED`.
+`CALL_PATH` and `DIRECT_REFERENCE` describe graph relationships only; they do not
+claim that a test ran, passed, asserted coverage, or reached a branch. Conditions
+and method signature/exception declarations are returned only when the selected
+artifact carries scanner-produced AST metadata. Missing metadata produces the
+bounded `CODE_EVIDENCE_UNAVAILABLE` limitation; the reader never reconstructs
+control flow or runtime values from an excerpt.
+Unsupported or incomplete metadata remains in `unresolved`/`limitations` rather
+than being inferred. The reader enforces snapshot permissions and rejects test
+artifacts as comprehension roots.
+When no supported `TESTS` relationship exists, `limitations` includes
+`NO_SUPPORTED_TEST_REFERENCE`; this keeps production evidence explorable without
+making a no-coverage or no-tests claim. If test edges exist but no bounded path
+reaches the selected artifact, the response reports
+`RELATED_TEST_PATH_UNRESOLVED` instead.
+
+The response is bounded to four reverse `CALLS` hops, 50 scenarios per page,
+an offset of at most 500, and 80 relationships. `scenarioPagination.hasMore`,
+`truncated`, and `COMPREHENSION_LIMIT` make omitted paths visible. Clients may
+request `scenarioLimit` and `scenarioOffset`; the default page is 50 scenarios
+at offset 0.
+The projection reads existing artifact, evidence, and dependency-edge records;
+it does not run a second analyzer or persist a new graph. Completed projections
+are cached in the API process by immutable snapshot ID, artifact ID, page, and
+projection version with a bounded 64-entry FIFO; authorization and snapshot
+validation still run before a cache hit is served. A new projection version
+invalidates the process cache without a schema migration.
+
 ## Contract Boundary
 
 Use REST resources and shared Zod contracts:
@@ -151,6 +192,7 @@ POST /api/v1/projects/:projectId/repositories
 POST /api/v1/repositories/:repositoryId/scan-jobs
 GET  /api/v1/repositories/:repositoryId/scan-jobs/:scanJobId
 GET  /api/v1/snapshots/:snapshotId/artifacts
+GET  /api/v1/snapshots/:snapshotId/artifacts/:artifactId/comprehension
 GET  /api/v1/snapshots/:snapshotId/graph
 
 GET  /api/v1/projects/:projectId/requirements
@@ -690,6 +732,12 @@ project/repository context. Cross-project input is rejected before analysis
 persistence. For a moving target, its latest observed commit must equal
 `snapshot.commitSha` at analysis creation; otherwise use the latest scanned
 snapshot or a pinned commit target.
+
+Snapshot drift samples are deterministic projections, not complete artifact
+lists. The response sorts each category by canonical `artifactKey`, limits the
+combined sample to `sampleLimit` items, and sets `samplesTruncated` when the
+summary contains more items than the projection. Consumers must use the
+summary counts for totals and treat samples as representative navigation hints.
 
 Only published `READY` or acknowledged `PARTIAL` snapshots may be passed to
 this command. Scan failures expose no snapshot eligible for analysis.

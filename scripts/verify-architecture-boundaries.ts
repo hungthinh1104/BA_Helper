@@ -1,16 +1,28 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import * as glob from 'glob';
 
 const root = path.resolve(__dirname, '..');
 const violations: string[] = [];
 
 const sourceFiles = (directory: string) =>
-  glob.sync('**/*.ts', {
-    cwd: path.join(root, directory),
-    absolute: true,
-    ignore: ['**/*.spec.ts', '**/dist/**', '**/node_modules/**'],
-  });
+  walkFiles(path.join(root, directory)).filter(file => file.endsWith('.ts') &&
+    !file.endsWith('.spec.ts') && !file.includes(`${path.sep}dist${path.sep}`) &&
+    !file.includes(`${path.sep}node_modules${path.sep}`));
+
+function walkFiles(directory: string): string[] {
+  if (!fs.existsSync(directory)) return [];
+  const files: string[] = [];
+  const pending = [directory];
+  while (pending.length > 0) {
+    const current = pending.pop()!;
+    for (const entry of fs.readdirSync(current, { withFileTypes: true }).sort((left, right) => left.name.localeCompare(right.name))) {
+      const absolute = path.join(current, entry.name);
+      if (entry.isDirectory() && !['dist', 'node_modules'].includes(entry.name)) pending.push(absolute);
+      else if (entry.isFile()) files.push(absolute);
+    }
+  }
+  return files.sort();
+}
 
 const read = (file: string) => fs.readFileSync(file, 'utf8');
 const relative = (file: string) => path.relative(root, file);
@@ -113,10 +125,10 @@ for (const packageDir of ['packages/application', 'packages/backend-runtime']) {
 }
 
 function detectWorkspaceDependencyCycle(): string | null {
-  const packageDirs = glob.sync('packages/*/package.json', {
-    cwd: root,
-    absolute: true,
-  });
+  const packageDirs = fs.readdirSync(path.join(root, 'packages'), { withFileTypes: true })
+    .filter(entry => entry.isDirectory())
+    .map(entry => path.join(root, 'packages', entry.name, 'package.json'))
+    .filter(manifestPath => fs.existsSync(manifestPath));
   const graph = new Map<string, string[]>();
   for (const manifestPath of packageDirs) {
     const manifest = JSON.parse(read(manifestPath)) as {
