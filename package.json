@@ -35,6 +35,7 @@
     "verify:analyzer-quality": "tsx scripts/run-analyzer-quality-gate.ts",
     "verify:public-test-trace": "tsx scripts/verify-public-test-trace.ts",
     "verify:application-test-trace": "tsx scripts/evaluate-application-test-trace.ts",
+    "prove:pinned-comprehension": "tsx scripts/prove-pinned-code-comprehension.ts",
     "validate:product-beta": "tsx scripts/run-product-validation-scorecard.ts",
     "verify:controlled-beta-readiness": "tsx scripts/verify-controlled-beta-readiness.ts",
     "verify:release-drill": "tsx scripts/run-release-drill.ts",

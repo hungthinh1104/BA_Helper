@@ -292,6 +292,36 @@ This browser fixture does not establish scanner accuracy; the separate
 production-graph DB E2E covers extraction and persistence. Demo reseeding must
 delete dependency edges before artifacts and generated documents before their
 analyses, so a failed browser attempt or a real completed report can be reseeded.
+For an opt-in proof against an external repository, use a clean checkout of
+`leosuncin/nest-api-example` at commit
+`b49ae92a6c0b0db39b6542338a2ffea3eda15717` under
+`tmp/corpora/nest-api-example` (or set `PINNED_CORPUS_PATH`). Do not install
+its dependencies or execute its code. With Postgres/Redis running and
+`.env.test` configured, migrate and seed only the `ba_helper_test` database,
+then run `pnpm prove:pinned-comprehension` and
+`pnpm exec playwright test e2e/pinned-real-comprehension.pw.ts --project=desktop`.
+On PowerShell, the preparation commands are:
+
+```powershell
+git clone https://github.com/leosuncin/nest-api-example tmp/corpora/nest-api-example
+git -C tmp/corpora/nest-api-example checkout b49ae92a6c0b0db39b6542338a2ffea3eda15717
+$testUrlLine = Get-Content .env.test | Where-Object { $_ -match '^DATABASE_URL_TEST=' } | Select-Object -First 1
+$env:DATABASE_URL = ($testUrlLine -split '=', 2)[1].Trim('"', "'")
+if (([uri]$env:DATABASE_URL).AbsolutePath -ne '/ba_helper_test') { throw 'Expected ba_helper_test' }
+pnpm --dir apps/api exec prisma migrate deploy --config prisma.config.ts --schema prisma/schema.prisma
+pnpm --dir apps/api exec tsx prisma/seed.demo.ts
+pnpm prove:pinned-comprehension
+pnpm exec playwright test e2e/pinned-real-comprehension.pw.ts --project=desktop
+```
+
+The proof command refuses a dirty or wrong-commit checkout and any database
+other than `ba_helper_test`. It writes an ignored
+`artifacts/evaluation/pinned-code-comprehension-proof.json` with snapshot IDs,
+source-backed projection counts, path-shape counts, and local timing/hardware.
+The browser test reads that file and skips when no proof was prepared. Run it
+before database-resetting E2E suites; a reset invalidates the saved snapshot.
+These samples verify one pinned workflow and are not a general accuracy or
+production latency estimate.
 Playwright starts the actual document worker and waits for its structured
 `WORKER_READY` startup event. Finalization captures the reviewed snapshot and
 enqueues report rendering; it does not synchronously generate the document.
