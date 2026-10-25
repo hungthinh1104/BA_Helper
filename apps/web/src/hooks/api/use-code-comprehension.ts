@@ -12,7 +12,7 @@ export function useSnapshotArtifacts(snapshotId: string | undefined, enabled = t
   return useQuery({
     queryKey: queryKeys.repositories.snapshotArtifacts(snapshotId ?? ""),
     queryFn: () => apiGet<ArtifactListResponse>(
-      `/api/v1/snapshots/${encodeURIComponent(snapshotId ?? "")}/artifacts`, artifactListResponseSchema,
+      `/api/v1/snapshots/${encodeURIComponent(snapshotId ?? "")}/artifacts?scope=production&limit=50&offset=0`, artifactListResponseSchema,
     ),
     enabled: Boolean(snapshotId && enabled),
     staleTime: 60_000,

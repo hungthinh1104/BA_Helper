@@ -25,6 +25,9 @@ export const artifactSchema = z.object({
 
 export const artifactListResponseSchema = z.object({
 	items: z.array(artifactSchema),
+	hasMore: z.boolean().optional(),
+	limit: z.number().int().positive().optional(),
+	offset: z.number().int().nonnegative().optional(),
 });
 
 export type ArtifactListResponse = ZodTypeOf<typeof artifactListResponseSchema>;

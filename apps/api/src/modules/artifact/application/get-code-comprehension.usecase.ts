@@ -12,6 +12,8 @@ import {
 import { AppError } from '@ba-helper/shared';
 import type { DependencyEdgeType } from '@prisma/client';
 import { PrismaService, ArtifactRepository, EvidenceRepository, GraphRepository } from '@ba-helper/backend-runtime';
+import { validateQaTraceEdge } from '../../impact-analysis/domain/qa-trace.policy';
+import { validateStaticEntityUse } from './validate-static-entity-use';
 import {
   dedupeDiagnostics, findCallPath, limitation, mapArtifact, mapEdgeEvidence, readSnapshotLimitations,
   mapCodeEvidence, readCodeEvidence, readTestCase, safeProvenance, type ArtifactRecord, type Diagnostic, type EdgeRecord, type EvidenceRecord,
@@ -20,15 +22,17 @@ import {
 const MAX_CALL_DEPTH = 4;
 const MAX_SCENARIOS = 50;
 const MAX_SCENARIO_OFFSET = 500;
-const MAX_SCENARIO_SCAN = 200;
+const MAX_SCENARIO_SOURCE_SCAN = 5000;
+const SCENARIO_SOURCE_BATCH = 50;
 const MAX_RELATIONSHIPS = 80;
 const MAX_STATIC_CALLS = 50;
 const MAX_DEPENDENCIES = 50;
+const MAX_DIRECT_EDGES = MAX_STATIC_CALLS + MAX_DEPENDENCIES + 1;
 const PROJECTION_VERSION = 'code-comprehension@2';
 const MAX_PROJECTION_CACHE_ENTRIES = 64;
 const PRODUCTION_ARTIFACT_TYPES = new Set(['CONTROLLER', 'API_ROUTE', 'SERVICE', 'SERVICE_METHOD', 'ENTITY']);
 const CALL_EDGE_TYPES: DependencyEdgeType[] = ['CALLS'];
-const CODE_EDGE_TYPES: DependencyEdgeType[] = ['CALLS', 'REFERENCES', 'IMPORTS'];
+const CODE_EDGE_TYPES: DependencyEdgeType[] = ['CALLS', 'REFERENCES'];
 
 @Injectable()
 export class GetCodeComprehensionUseCase {
@@ -66,30 +70,38 @@ export class GetCodeComprehensionUseCase {
     limitations.push(limitation(
       'RUNTIME_OBSERVATIONS_NOT_IMPORTED', 'This projection contains static declarations only; no test execution or runtime observation was imported.', 'INFO'));
 
-    const directEdges = await this.graph.listOutgoingBySnapshotAndSources(snapshotId, [selected.id], CODE_EDGE_TYPES);
+    const directEdges = await this.graph.listOutgoingBySnapshotAndSources(
+      snapshotId, [selected.id], CODE_EDGE_TYPES, MAX_DIRECT_EDGES);
     const incomingCallEdges = await this.collectIncomingCallEdges(snapshotId, selected.id, limitations);
     const codeIds = new Set([selected.id]);
     for (const edge of incomingCallEdges) codeIds.add(edge.fromArtifactId);
 
-    const testEdges = await this.graph.listIncomingBySnapshotAndTargets(snapshotId, [...codeIds], ['TESTS']);
     const allRelatedIds = new Set<string>([selected.id]);
     for (const edge of directEdges) allRelatedIds.add(edge.toArtifactId);
     for (const edge of incomingCallEdges) allRelatedIds.add(edge.fromArtifactId);
-    for (const edge of testEdges) allRelatedIds.add(edge.fromArtifactId);
     const relatedArtifacts = await this.artifacts.listBySnapshotAndIds(snapshotId, [...allRelatedIds]);
     const artifactById = new Map(relatedArtifacts.map(artifact => [artifact.id, artifact]));
     artifactById.set(selected.id, selected);
-    const parentFileKeys = relatedArtifacts.flatMap(artifact => {
-      const testCase = readTestCase(artifact);
+    const evidenceRecords = await this.evidence.listByArtifactIds({ snapshotId, artifactIds: [...allRelatedIds] });
+    const evidenceByProvenance = new Map(evidenceRecords.map(record => [record.provenanceKey, record]));
+    const validatedDirectEdges = this.validateEdges(directEdges, snapshotId, artifactById, evidenceByProvenance, limitations);
+    const validatedIncomingCallEdges = this.validateEdges(incomingCallEdges, snapshotId, artifactById, evidenceByProvenance, limitations);
+    const reachableCodeIds = [selected.id, ...validatedIncomingCallEdges.map(edge => edge.fromArtifactId)];
+    const scenarioEdges = await this.collectScenarioEdges(snapshotId, reachableCodeIds, validatedIncomingCallEdges,
+      selected.id, scenarioOffset + scenarioLimit + 1, artifactById, evidenceByProvenance, limitations);
+    const pageEdges = scenarioEdges.slice(scenarioOffset, scenarioOffset + scenarioLimit);
+    const parentFileKeys = pageEdges.flatMap(edge => {
+      const artifact = artifactById.get(edge.fromArtifactId);
+      const testCase = artifact ? readTestCase(artifact) : undefined;
       return testCase?.parentFileArtifactKey ? [testCase.parentFileArtifactKey] : [];
     });
     const parentFileArtifacts = await this.artifacts.listBySnapshotAndArtifactKeys(snapshotId, parentFileKeys);
-    for (const artifact of parentFileArtifacts) {
-      allRelatedIds.add(artifact.id);
-      artifactById.set(artifact.id, artifact);
+    if (parentFileArtifacts.length > 0) {
+      const parentEvidence = await this.evidence.listByArtifactIds({ snapshotId,
+        artifactIds: parentFileArtifacts.map(artifact => artifact.id) });
+      for (const artifact of parentFileArtifacts) artifactById.set(artifact.id, artifact);
+      for (const record of parentEvidence) evidenceByProvenance.set(record.provenanceKey, record);
     }
-    const evidenceRecords = await this.evidence.listByArtifactIds({ snapshotId, artifactIds: [...allRelatedIds] });
-    const evidenceByProvenance = new Map(evidenceRecords.map(record => [record.provenanceKey, record]));
     const source = this.sourceEvidence(selected, evidenceRecords, snapshot.commitSha, limitations);
     const codeMetadata = readCodeEvidence(selected);
     const structuredCodeEvidence = codeMetadata
@@ -98,30 +110,30 @@ export class GetCodeComprehensionUseCase {
     if (!structuredCodeEvidence) limitations.push(limitation(
       'CODE_EVIDENCE_UNAVAILABLE', 'The selected artifact predates structured signature, condition, and exception evidence.', 'WARN'));
 
-    const staticCalls = directEdges.filter(edge => edge.type === 'CALLS')
+    const staticCalls = validatedDirectEdges.filter(edge => edge.type === 'CALLS')
       .slice(0, MAX_STATIC_CALLS)
       .map(edge => this.mapRelationship(edge, evidenceByProvenance, snapshot.commitSha, limitations));
     const dependencyById = new Map<string, ArtifactRecord>();
-    for (const edge of directEdges) {
+    for (const edge of validatedDirectEdges) {
       const artifact = artifactById.get(edge.toArtifactId);
       if (artifact) dependencyById.set(artifact.id, artifact);
     }
     const dependencies = [...dependencyById.values()].slice(0, MAX_DEPENDENCIES).map(mapArtifact);
-    const scenarioScanLimit = Math.min(MAX_SCENARIO_SCAN, scenarioOffset + scenarioLimit + 1);
-    const allScenarios = this.mapScenarios(testEdges, incomingCallEdges, selected.id, artifactById,
-      evidenceByProvenance, snapshot.commitSha, limitations, scenarioScanLimit);
-    if (testEdges.length === 0) limitations.push(limitation(
+    const scenarios = this.mapScenarios(pageEdges, validatedIncomingCallEdges, selected.id, artifactById,
+      evidenceByProvenance, snapshot.commitSha, limitations, scenarioLimit);
+    if (scenarioEdges.length === 0) limitations.push(limitation(
       'NO_SUPPORTED_TEST_REFERENCE',
       'No supported static test relationship was found in this snapshot; this does not establish that no tests exist.',
       'INFO'));
-    else if (allScenarios.length === 0) limitations.push(limitation(
-      'RELATED_TEST_PATH_UNRESOLVED',
-      'Test relationships exist, but no bounded static path to the selected artifact was established.',
-      'WARN'));
-    const hasMoreScenarios = allScenarios.length > scenarioOffset + scenarioLimit || allScenarios.length >= scenarioScanLimit;
-    const scenarios = allScenarios.slice(scenarioOffset, scenarioOffset + scenarioLimit);
-    const truncated = directEdges.length > MAX_DEPENDENCIES || directEdges.filter(edge => edge.type === 'CALLS').length > MAX_STATIC_CALLS ||
-      hasMoreScenarios || incomingCallEdges.length >= MAX_RELATIONSHIPS;
+    const nextOffset = scenarioOffset + scenarioLimit;
+    const additionalScenarioExists = scenarioEdges.length > nextOffset;
+    const hasMoreScenarios = additionalScenarioExists && nextOffset <= MAX_SCENARIO_OFFSET;
+    if (additionalScenarioExists && !hasMoreScenarios) limitations.push(limitation(
+      'SCENARIO_OFFSET_LIMIT', 'Additional validated scenarios exist beyond the last retrievable page.', 'WARN'));
+    const truncated = directEdges.length > MAX_DIRECT_EDGES || directEdges.length >= MAX_DIRECT_EDGES ||
+      validatedDirectEdges.filter(edge => edge.type === 'CALLS').length > MAX_STATIC_CALLS ||
+      additionalScenarioExists || incomingCallEdges.length >= MAX_RELATIONSHIPS ||
+      limitations.some(item => item.code === 'SCENARIO_SOURCE_SCAN_LIMIT');
     if (truncated) limitations.push(limitation(
       'COMPREHENSION_LIMIT', 'The projection was bounded and one or more related paths may be omitted.', 'WARN'));
 
@@ -148,12 +160,54 @@ export class GetCodeComprehensionUseCase {
     return response;
   }
 
+  private async collectScenarioEdges(snapshotId: string, codeIds: string[], callEdges: EdgeRecord[], selectedId: string,
+    requested: number, artifacts: Map<string, ArtifactRecord>, evidences: Map<string, EvidenceRecord>,
+    limitations: Diagnostic[]): Promise<EdgeRecord[]> {
+    const scenarios: EdgeRecord[] = [];
+    let cursor: string | undefined;
+    let scanned = 0;
+    let hasValidatedReference = false;
+    while (scenarios.length < requested && scanned < MAX_SCENARIO_SOURCE_SCAN) {
+      const batchSize = Math.min(SCENARIO_SOURCE_BATCH, MAX_SCENARIO_SOURCE_SCAN - scanned);
+      const sourceIds = await this.graph.listIncomingTestSourceIds(snapshotId, codeIds, cursor, batchSize);
+      if (sourceIds.length === 0) break;
+      cursor = sourceIds[sourceIds.length - 1];
+      scanned += sourceIds.length;
+      const [edges, testArtifacts] = await Promise.all([
+        this.graph.listTestEdgesBySourcesAndTargets(snapshotId, sourceIds, codeIds),
+        this.artifacts.listBySnapshotAndIds(snapshotId, sourceIds),
+      ]);
+      const testEvidences = await this.evidence.listByArtifactIds({ snapshotId,
+        artifactIds: testArtifacts.map(artifact => artifact.id) });
+      const batchArtifacts = new Map([...artifacts, ...testArtifacts.map(artifact => [artifact.id, artifact] as const)]);
+      const batchEvidences = new Map([...evidences, ...testEvidences.map(record => [record.provenanceKey, record] as const)]);
+      const validated = this.validateEdges(edges, snapshotId, batchArtifacts, batchEvidences, limitations);
+      hasValidatedReference ||= validated.length > 0;
+      const selected = this.selectScenarioEdges(validated, callEdges, selectedId);
+      scenarios.push(...selected);
+      for (const edge of selected) {
+        const artifact = batchArtifacts.get(edge.fromArtifactId);
+        if (artifact) artifacts.set(artifact.id, artifact);
+        for (const record of testEvidences) {
+          if (record.artifactId === edge.fromArtifactId) evidences.set(record.provenanceKey, record);
+        }
+      }
+      if (sourceIds.length < batchSize) break;
+    }
+    if (scanned === MAX_SCENARIO_SOURCE_SCAN && scenarios.length < requested) limitations.push(limitation(
+      'SCENARIO_SOURCE_SCAN_LIMIT', 'The bounded test-case search ended before all candidates could be validated.', 'WARN'));
+    if (hasValidatedReference && scenarios.length === 0) limitations.push(limitation(
+      'RELATED_TEST_PATH_UNRESOLVED', 'Test relationships exist, but no bounded static path to the selected artifact was established.', 'WARN'));
+    return scenarios;
+  }
+
   private async collectIncomingCallEdges(snapshotId: string, selectedId: string, limitations: Diagnostic[]): Promise<EdgeRecord[]> {
     const edges: EdgeRecord[] = [];
     const visited = new Set([selectedId]);
     let frontier = [selectedId];
     for (let depth = 0; depth < MAX_CALL_DEPTH && frontier.length > 0; depth++) {
-      const incoming = await this.graph.listIncomingBySnapshotAndTargets(snapshotId, frontier, CALL_EDGE_TYPES);
+      const incoming = await this.graph.listIncomingBySnapshotAndTargets(
+        snapshotId, frontier, CALL_EDGE_TYPES, MAX_RELATIONSHIPS - edges.length + 1);
       const next = new Set<string>();
       for (const edge of incoming) {
         if (edges.length >= MAX_RELATIONSHIPS) {
@@ -168,6 +222,49 @@ export class GetCodeComprehensionUseCase {
     if (frontier.length > 0) limitations.push(limitation(
       'CALL_DEPTH_LIMIT', 'Callers beyond the bounded reverse search depth were not inspected.', 'WARN'));
     return edges;
+  }
+
+  private validateEdges(edges: EdgeRecord[], snapshotId: string, artifacts: Map<string, ArtifactRecord>,
+    evidences: Map<string, EvidenceRecord>, limitations: Diagnostic[]): EdgeRecord[] {
+    const qaArtifacts = new Map([...artifacts].map(([id, artifact]) => [id, {
+      ...artifact, universalKind: artifact.universalKind ?? 'UNKNOWN', metadata: artifact.metadata ?? null,
+    }]));
+    const qaEvidences = new Map([...evidences].map(([key, evidence]) => [key, {
+      ...evidence, sourcePath: evidence.sourcePath ?? null, startLine: evidence.startLine ?? null,
+      endLine: evidence.endLine ?? null,
+    }]));
+    let omitted = 0;
+    const examples: string[] = [];
+    const validated = edges.filter(edge => {
+      const valid = edge.type === 'REFERENCES'
+        ? validateStaticEntityUse(edge, snapshotId, artifacts, evidences)
+        : validateQaTraceEdge(edge, snapshotId, qaArtifacts, qaEvidences);
+      if (!valid) {
+        omitted += 1;
+        if (examples.length < 3) examples.push(edge.id);
+      }
+      return Boolean(valid);
+    });
+    if (omitted > 0) limitations.push(limitation('EDGE_PROVENANCE_UNRESOLVED',
+      `${omitted} graph edge(s) were omitted because snapshot, artifact, source, or provenance evidence was not validated. Example IDs: ${examples.join(', ')}.`,
+      'WARN'));
+    return validated;
+  }
+
+  private selectScenarioEdges(testEdges: EdgeRecord[], callEdges: EdgeRecord[], selectedId: string): EdgeRecord[] {
+    const outgoing = new Map<string, EdgeRecord[]>();
+    for (const edge of callEdges) outgoing.set(edge.fromArtifactId, [...(outgoing.get(edge.fromArtifactId) ?? []), edge]);
+    for (const edges of outgoing.values()) edges.sort((a, b) => a.toArtifactId.localeCompare(b.toArtifactId) || a.id.localeCompare(b.id));
+    const grouped = new Map<string, Array<{ edge: EdgeRecord; path: EdgeRecord[] }>>();
+    for (const edge of testEdges.slice().sort((a, b) => a.fromArtifactId.localeCompare(b.fromArtifactId) ||
+      a.toArtifactId.localeCompare(b.toArtifactId) || a.id.localeCompare(b.id))) {
+      const path = findCallPath(edge.toArtifactId, selectedId, outgoing, MAX_CALL_DEPTH);
+      if (edge.toArtifactId !== selectedId && !path) continue;
+      grouped.set(edge.fromArtifactId, [...(grouped.get(edge.fromArtifactId) ?? []), { edge, path: path ?? [] }]);
+    }
+    return [...grouped.values()].map(candidates => candidates.sort((a, b) => a.path.length - b.path.length ||
+      a.edge.toArtifactId.localeCompare(b.edge.toArtifactId) || a.edge.id.localeCompare(b.edge.id))[0].edge)
+      .sort((a, b) => a.fromArtifactId.localeCompare(b.fromArtifactId) || a.id.localeCompare(b.id));
   }
 
   private sourceEvidence(artifact: ArtifactRecord, records: EvidenceRecord[], commitSha: string,
@@ -207,7 +304,7 @@ export class GetCodeComprehensionUseCase {
     for (const edge of callEdges) outgoing.set(edge.fromArtifactId, [...(outgoing.get(edge.fromArtifactId) ?? []), edge]);
     for (const edges of outgoing.values()) edges.sort((a, b) => a.toArtifactId.localeCompare(b.toArtifactId) || a.id.localeCompare(b.id));
     const scenarios = [];
-    for (const testEdge of testEdges.sort((a, b) => a.fromArtifactId.localeCompare(b.fromArtifactId) || a.id.localeCompare(b.id))) {
+    for (const testEdge of testEdges.slice().sort((a, b) => a.fromArtifactId.localeCompare(b.fromArtifactId) || a.id.localeCompare(b.id))) {
       if (scenarios.length >= maxScenarios) break;
       const path = findCallPath(testEdge.toArtifactId, selectedId, outgoing, MAX_CALL_DEPTH);
       if (testEdge.toArtifactId !== selectedId && !path) continue;

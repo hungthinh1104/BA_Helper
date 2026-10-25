@@ -7,7 +7,7 @@ export const eventLogDtoSchema = z.object({
   actorType: z.enum(['SYSTEM', 'USER']).catch('SYSTEM'),
   actorName: z.string().nullable().optional(),
   triggeredByUserId: z.string().nullable().optional(),
-  metadata: z.record(z.union([z.string(), z.number(), z.boolean(), z.null()])),
+  metadata: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])),
   createdAt: z.string(),
 });
 

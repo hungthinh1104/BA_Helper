@@ -17,9 +17,21 @@ export class ArtifactController {
   @Get('/snapshots/:snapshotId/artifacts')
   async list(
     @Param('snapshotId') snapshotId: string,
+    @Query('limit') limitRaw: string | undefined,
+    @Query('offset') offsetRaw: string | undefined,
+    @Query('search') search: string | undefined,
+    @Query('scope') scope: string | undefined,
     @CurrentUser() actor: RequestUser,
   ) {
     await this.permissions.assertCanReadSnapshot(actor, snapshotId);
+    if (limitRaw !== undefined || offsetRaw !== undefined || search !== undefined || scope !== undefined) {
+      const result = await this.listArtifacts.search(snapshotId, {
+        limit: parseBoundedInteger(limitRaw, 50, 100), offset: parseBoundedInteger(offsetRaw, 0, 500),
+        search, productionOnly: scope === 'production',
+      });
+      const { items, ...pagination } = result;
+      return artifactListResponseSchema.parse({ items: items.map(mapArtifactResponse), ...pagination });
+    }
     const items = await this.listArtifacts.execute(snapshotId);
     const mapped = items.map(mapArtifactResponse);
 
@@ -40,6 +52,12 @@ export class ArtifactController {
     });
     return codeComprehensionResponseSchema.parse(result);
   }
+}
+
+function parseBoundedInteger(value: string | undefined, fallback: number, max: number): number {
+  if (value === undefined || value.trim() === '') return fallback;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? Math.min(max, Math.max(0, parsed)) : fallback;
 }
 
 function parseQueryInteger(value: string | undefined): number | undefined {

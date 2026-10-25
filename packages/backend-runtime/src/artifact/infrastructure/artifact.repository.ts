@@ -4,6 +4,13 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 type ArtifactPrismaClient = PrismaService | Prisma.TransactionClient;
 
+export type ArtifactSearchOptions = {
+  limit: number;
+  offset: number;
+  search?: string;
+  artifactTypes?: string[];
+};
+
 @Injectable()
 export class ArtifactRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -40,6 +47,27 @@ export class ArtifactRepository {
       where: { snapshotId, artifactKey: { in: [...new Set(artifactKeys)] } },
       orderBy: [{ artifactKey: 'asc' }, { id: 'asc' }],
     });
+  }
+
+  async searchBySnapshot(snapshotId: string, options: ArtifactSearchOptions) {
+    const limit = Math.min(100, Math.max(1, Math.trunc(options.limit)));
+    const offset = Math.min(500, Math.max(0, Math.trunc(options.offset)));
+    const search = options.search?.trim();
+    const rows = await this.prisma.codeArtifact.findMany({
+      where: {
+        snapshotId,
+        ...(options.artifactTypes?.length ? { artifactType: { in: options.artifactTypes } } : {}),
+        ...(search ? { OR: [
+          { artifactKey: { contains: search, mode: 'insensitive' } },
+          { name: { contains: search, mode: 'insensitive' } },
+          { filePath: { contains: search, mode: 'insensitive' } },
+        ] } : {}),
+      },
+      orderBy: [{ artifactType: 'asc' }, { artifactKey: 'asc' }, { id: 'asc' }],
+      skip: offset,
+      take: limit + 1,
+    });
+    return { items: rows.slice(0, limit), hasMore: rows.length > limit, limit, offset };
   }
 
   async createMany(data: Array<{

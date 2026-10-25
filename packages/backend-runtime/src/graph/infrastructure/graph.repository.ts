@@ -26,8 +26,10 @@ export class GraphRepository {
     snapshotId: string,
     targetArtifactIds: string[],
     types: DependencyEdgeType[] = ['CALLS', 'TESTS'],
+    take?: number,
   ) {
     if (targetArtifactIds.length === 0 || types.length === 0) return [];
+    const boundedTake = normalizeTake(take);
     return this.prisma.dependencyEdge.findMany({
       where: {
         snapshotId,
@@ -35,6 +37,7 @@ export class GraphRepository {
         type: { in: types },
       },
       orderBy: [{ toArtifactId: 'asc' }, { fromArtifactId: 'asc' }, { id: 'asc' }],
+      ...(boundedTake ? { take: boundedTake } : {}),
     });
   }
 
@@ -42,8 +45,10 @@ export class GraphRepository {
     snapshotId: string,
     sourceArtifactIds: string[],
     types?: DependencyEdgeType[],
+    take?: number,
   ) {
     if (sourceArtifactIds.length === 0 || types?.length === 0) return [];
+    const boundedTake = normalizeTake(take);
     return this.prisma.dependencyEdge.findMany({
       where: {
         snapshotId,
@@ -51,6 +56,30 @@ export class GraphRepository {
         ...(types ? { type: { in: types } } : {}),
       },
       orderBy: [{ fromArtifactId: 'asc' }, { toArtifactId: 'asc' }, { id: 'asc' }],
+      ...(boundedTake ? { take: boundedTake } : {}),
+    });
+  }
+
+  async listIncomingTestSourceIds(snapshotId: string, targetArtifactIds: string[], afterId: string | undefined, take: number): Promise<string[]> {
+    if (targetArtifactIds.length === 0) return [];
+    const rows = await this.prisma.dependencyEdge.groupBy({
+      by: ['fromArtifactId'],
+      where: { snapshotId, type: 'TESTS', toArtifactId: { in: [...new Set(targetArtifactIds)] },
+        ...(afterId ? { fromArtifactId: { gt: afterId } } : {}) },
+      orderBy: { fromArtifactId: 'asc' },
+      take: normalizeTake(take) ?? 1,
+    });
+    return rows.map(row => row.fromArtifactId);
+  }
+
+  async listTestEdgesBySourcesAndTargets(snapshotId: string, sourceArtifactIds: string[], targetArtifactIds: string[]) {
+    if (sourceArtifactIds.length === 0 || targetArtifactIds.length === 0) return [];
+    const sources = [...new Set(sourceArtifactIds)];
+    const targets = [...new Set(targetArtifactIds)];
+    return this.prisma.dependencyEdge.findMany({
+      where: { snapshotId, type: 'TESTS', fromArtifactId: { in: sources }, toArtifactId: { in: targets } },
+      orderBy: [{ fromArtifactId: 'asc' }, { toArtifactId: 'asc' }, { id: 'asc' }],
+      take: sources.length * targets.length,
     });
   }
 
@@ -88,4 +117,10 @@ export class GraphRepository {
       skipDuplicates: true,
     });
   }
+}
+
+function normalizeTake(value: number | undefined): number | undefined {
+  if (value === undefined || !Number.isFinite(value)) return undefined;
+  const take = Math.trunc(value);
+  return take > 0 ? take : undefined;
 }

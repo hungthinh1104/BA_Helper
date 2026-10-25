@@ -38,9 +38,9 @@ describe('RepositorySnapshotController (API/E2E)', () => {
   });
 
   const validProjId = '00000000-0000-0000-0000-000000000000';
-  const validRepoId = '11111111-1111-1111-1111-111111111111';
-  const validBaseSnapId = '22222222-2222-2222-2222-222222222222';
-  const validTargetSnapId = '33333333-3333-3333-3333-333333333333';
+  const validRepoId = '11111111-1111-4111-8111-111111111111';
+  const validBaseSnapId = '22222222-2222-4222-8222-222222222222';
+  const validTargetSnapId = '33333333-3333-4333-8333-333333333333';
 
   const mockActor = { id: 'user-1', email: 'test@example.com', name: 'Test', role: 'ADMIN' as const };
   const mockDriftResult = {
@@ -127,7 +127,7 @@ describe('RepositorySnapshotController (API/E2E)', () => {
       listUseCase.execute.mockResolvedValueOnce({
         items: [
           {
-            id: '55555555-5555-5555-5555-555555555555',
+            id: '55555555-5555-4555-8555-555555555555',
             commitSha: 'c1',
             createdAt: '2026-06-11T00:00:00.000Z',
             coverageStatus: 'READY',

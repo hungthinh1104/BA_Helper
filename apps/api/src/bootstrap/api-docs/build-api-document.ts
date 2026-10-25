@@ -1,4 +1,5 @@
 import type { INestApplication } from '@nestjs/common';
+import type { ZodType } from 'zod';
 import { DocumentBuilder, SwaggerModule, type OpenAPIObject } from '@nestjs/swagger';
 import type { OperationObject, ParameterObject, ResponseObject, SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { apiErrorResponseSchema, recoverableQueueNameSchema, supportedReportLocales } from '@ba-helper/contracts';
@@ -127,7 +128,7 @@ function applyQueryParameters(document: OpenAPIObject, schemas: ContractSchemas)
   for (const { operation, name, doc } of queries) {
     const query = document.components!.schemas![name] as SchemaObject;
     for (const [key, value] of Object.entries(query.properties ?? {})) operation.parameters!.push({
-      name: key, in: 'query', required: !doc.query!.shape[key].isOptional(), schema: value,
+      name: key, in: 'query', required: !(doc.query!.shape[key] as ZodType).safeParse(undefined).success, schema: value,
       ...('description' in value ? { description: value.description } : {}),
     });
   }

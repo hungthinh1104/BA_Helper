@@ -1,9 +1,14 @@
-import * as contracts from '@ba-helper/contracts';
 import { extendZodWithOpenApi, OpenAPIRegistry, OpenApiGeneratorV3 } from '@asteasolutions/zod-to-openapi';
 import type { ReferenceObject, SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { z, type ZodTypeAny } from 'zod';
+import type * as Contracts from '@ba-helper/contracts';
 
 extendZodWithOpenApi(z);
+
+// Zod 4 extensions must be installed before contract schemas are constructed.
+// Keep the contracts package independent from the OpenAPI adapter while loading
+// it after the adapter has patched the shared Zod prototype.
+const contracts = require('@ba-helper/contracts') as typeof Contracts;
 
 // The v3-compatible generator does not support ZodCatch. Catch affects parsing,
 // not the valid actorType output enum; retain every other field from the contract.
@@ -28,7 +33,8 @@ export class ContractSchemas {
     let name = this.registered.get(schema);
     if (!name) {
       name = this.names.get(schema) ?? fallback;
-      this.registry.register(name, schema === contracts.eventLogListResponseSchema ? eventList : schema);
+      const openApiSchema = schema === contracts.eventLogListResponseSchema ? eventList : schema;
+      this.registry.register(name, ensureOpenApiSchema(openApiSchema));
       this.registered.set(schema, name);
     }
     return { $ref: `#/components/schemas/${name}` };
@@ -40,4 +46,12 @@ export class ContractSchemas {
     // the generated wire document with a full OpenAPI validator in API E2E.
     return (new OpenApiGeneratorV3(this.registry.definitions).generateComponents().components?.schemas ?? {}) as Record<string, SchemaObject | ReferenceObject>;
   }
+}
+
+function ensureOpenApiSchema(schema: ZodTypeAny): ZodTypeAny {
+  if (typeof (schema as ZodTypeAny & { openapi?: unknown }).openapi === 'function') return schema;
+  const openapi = (z.ZodType.prototype as unknown as { openapi?: (...args: unknown[]) => unknown }).openapi;
+  if (!openapi) throw new Error('OpenAPI Zod extension was not installed.');
+  Object.defineProperty(schema, 'openapi', { configurable: true, value: openapi.bind(schema) });
+  return schema;
 }

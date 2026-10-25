@@ -49,7 +49,7 @@ export const normalizedEvaluationResultSchema = z.object({
   // to; graded for precision, negative control, and orphan claims). Defaults to
   // the Layer 1 net for adapters that do not distinguish the two layers.
   committedArtifactKeys: z.array(z.string()).optional(),
-  evidenceByArtifactKey: z.record(z.array(z.string())), // key -> evidence excerpts
+  evidenceByArtifactKey: z.record(z.string(), z.array(z.string())), // key -> evidence excerpts
   unknownsOrQuestions: z.array(z.string()),
   risks: z.array(z.string()),
   qaScenarios: z.array(z.string()),

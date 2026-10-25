@@ -141,8 +141,16 @@ reaches the selected artifact, the response reports
 `RELATED_TEST_PATH_UNRESOLVED` instead.
 
 The response is bounded to four reverse `CALLS` hops, 50 scenarios per page,
-an offset of at most 500, and 80 relationships. `scenarioPagination.hasMore`,
-`truncated`, and `COMPREHENSION_LIMIT` make omitted paths visible. Clients may
+an offset of at most 500, and 80 relationships. Test pagination orders distinct
+Jest case identities, validates their persisted source paths, and sets
+`scenarioPagination.hasMore` only when another validated case is retrievable
+at an allowed next offset. `SCENARIO_OFFSET_LIMIT` reports validated cases
+beyond the last page clients can request.
+The candidate search stops after 5,000 distinct source identities and reports
+`SCENARIO_SOURCE_SCAN_LIMIT` if that bound prevents a complete answer. Direct
+analyzer `USES` entity dependencies, persisted as `REFERENCES`, require matching
+source provenance before display.
+`truncated` and `COMPREHENSION_LIMIT` make omitted paths visible. Clients may
 request `scenarioLimit` and `scenarioOffset`; the default page is 50 scenarios
 at offset 0.
 The projection reads existing artifact, evidence, and dependency-edge records;
@@ -151,6 +159,13 @@ are cached in the API process by immutable snapshot ID, artifact ID, page, and
 projection version with a bounded 64-entry FIFO; authorization and snapshot
 validation still run before a cache hit is served. A new projection version
 invalidates the process cache without a schema migration.
+
+`GET /api/v1/snapshots/:snapshotId/artifacts` keeps its historical unfiltered
+response for compatibility. Visual Test Trace uses the bounded discovery form:
+`scope=production&limit=50&offset=0` with optional `search`. It returns stable
+artifact-key ordering, only supported production artifact types, and optional
+`hasMore`, `limit`, and `offset` fields. The API overfetches one row to compute
+`hasMore` and never loads the full snapshot for this path.
 
 ## Contract Boundary
 

@@ -38,7 +38,7 @@ async function requestJson<T>(
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
   path: string,
   body?: unknown,
-  schema?: z.ZodType<T, z.ZodTypeDef, unknown>,
+  schema?: z.ZodType<T>,
   headers?: Record<string, string>,
 ): Promise<T> {
   const apiBaseUrl = getApiBaseUrl()
@@ -137,23 +137,23 @@ async function requestJson<T>(
   return data as T
 }
 
-export async function apiGet<T>(path: string, schema?: z.ZodType<T, z.ZodTypeDef, unknown>, headers?: Record<string, string>): Promise<T> {
+export async function apiGet<T>(path: string, schema?: z.ZodType<T>, headers?: Record<string, string>): Promise<T> {
   return requestJson("GET", path, undefined, schema, headers)
 }
 
-export async function apiPost<T>(path: string, body: unknown, schema?: z.ZodType<T, z.ZodTypeDef, unknown>, headers?: Record<string, string>): Promise<T> {
+export async function apiPost<T>(path: string, body: unknown, schema?: z.ZodType<T>, headers?: Record<string, string>): Promise<T> {
   return requestJson("POST", path, body, schema, headers)
 }
 
-export async function apiPut<T>(path: string, body: unknown, schema?: z.ZodType<T, z.ZodTypeDef, unknown>, headers?: Record<string, string>): Promise<T> {
+export async function apiPut<T>(path: string, body: unknown, schema?: z.ZodType<T>, headers?: Record<string, string>): Promise<T> {
   return requestJson("PUT", path, body, schema, headers)
 }
 
-export async function apiPatch<T>(path: string, body: unknown, schema?: z.ZodType<T, z.ZodTypeDef, unknown>, headers?: Record<string, string>): Promise<T> {
+export async function apiPatch<T>(path: string, body: unknown, schema?: z.ZodType<T>, headers?: Record<string, string>): Promise<T> {
   return requestJson("PATCH", path, body, schema, headers)
 }
 
-export async function apiDelete<T>(path: string, schema?: z.ZodType<T, z.ZodTypeDef, unknown>, headers?: Record<string, string>): Promise<T> {
+export async function apiDelete<T>(path: string, schema?: z.ZodType<T>, headers?: Record<string, string>): Promise<T> {
   return requestJson("DELETE", path, undefined, schema, headers)
 }
 

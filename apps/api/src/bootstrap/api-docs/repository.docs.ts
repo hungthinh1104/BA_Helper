@@ -24,7 +24,15 @@ export const repositoryDocs: Record<string, ControllerDocs> = {
     getEvents: op('Read scan audit events', c.eventLogListResponseSchema),
   } },
   ArtifactController: { tag: 'Artifacts & source evidence', operations: {
-    list: op('List artifacts in an immutable snapshot', c.artifactListResponseSchema),
+    list: op('List artifacts in an immutable snapshot', c.artifactListResponseSchema, {
+      query: z.object({
+        scope: z.enum(['production']).optional().describe('Restrict discovery to supported production code artifacts.'),
+        search: z.string().trim().min(1).max(120).optional().describe('Case-insensitive search over artifact key, symbol name, and repository path.'),
+        limit: z.coerce.number().int().min(1).max(100).default(50),
+        offset: z.coerce.number().int().min(0).max(500).default(0),
+      }),
+      description: 'The unfiltered compatibility response remains available. Bounded discovery uses scope=production with stable artifact-key ordering and reports hasMore.',
+    }),
     comprehensionProjection: op('Read bounded code-first comprehension evidence for a production artifact', c.codeComprehensionResponseSchema,
       { query: z.object({ scenarioLimit: z.coerce.number().int().min(1).max(50).default(50), scenarioOffset: z.coerce.number().int().min(0).max(500).default(0) }), description: 'Returns persisted source evidence, bounded static calls, and a paginated related Jest declaration page with explicit limitations. It never reports runtime execution or coverage.' }),
   } },

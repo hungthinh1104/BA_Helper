@@ -152,7 +152,7 @@ describe('Error Mapping (E2E)', () => {
         snapshotId: snapshot.id,
         sourceTargetId: target.id,
         allowPartialSnapshot: false,
-        requestKey: '11111111-1111-1111-1111-111111111111',
+        requestKey: '11111111-1111-4111-8111-111111111111',
       })
       .expect(400);
 

@@ -407,6 +407,7 @@ model CodeArtifact {
   updatedAt         DateTime           @updatedAt
 
   @@unique([snapshotId, artifactKey])
+  @@index([snapshotId, artifactType, artifactKey])
 }
 
 model DependencyEdge {
@@ -424,6 +425,7 @@ model DependencyEdge {
 
   @@unique([snapshotId, fromArtifactId, toArtifactId, type])
   @@index([snapshotId, toArtifactId, type])
+  @@index([snapshotId, fromArtifactId, type])
 }
 
 model Evidence {

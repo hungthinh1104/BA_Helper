@@ -25,7 +25,7 @@ export const lineageTimelineEventSchema = z.object({
   clarificationRequestId: z.string().uuid().optional(),
   relatedAnalysisId: z.string().uuid().optional(),
 
-  metadata: z.record(z.union([
+  metadata: z.record(z.string(), z.union([
     z.string(),
     z.number(),
     z.boolean(),

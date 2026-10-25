@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react"
 import type { ComprehensionScenario, TestStaticBehaviorClaim } from "@ba-helper/contracts"
-import { Scenario, ScenarioComparison } from "./page"
+import { Scenario, ScenarioComparison } from "./_components/scenario-inspector"
 
 const claim: TestStaticBehaviorClaim = {
   kind: "ACTION",

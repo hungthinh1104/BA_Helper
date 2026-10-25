@@ -31,3 +31,6 @@ minimumReleaseAgeExclude:
 overrides:
   # GHSA-r3ph-w7gj-g6xm: Swagger 11.4.7 pins js-yaml 5.3.0; remove when upstream fixes its pin.
   '@nestjs/swagger@11.4.7>js-yaml': 5.4.1
+  # Security patches compatible with the Express 5 ranges used by Nest 11.
+  body-parser: 2.4.0
+  multer: 2.5.0
