@@ -20,6 +20,15 @@ the failure with that environment and fixed the test to pass an explicit
 focused regression now passes 32/32 tests with the outer CI-style variable set
 to true. The next hosted run is pending push.
 
+Hosted run #114 passed App tests, E2E, both golden-path demos, and browser
+journeys, but failed while persisting the pinned proof: CI had not built
+`@ba-helper/analyzer`, whose package entry is `dist/index.js` and which the
+runtime proof imports through `@ba-helper/backend-runtime`. I reproduced the
+missing-module error by temporarily removing the generated analyzer `dist`
+directory, then restored it; `pnpm --filter @ba-helper/analyzer build` followed
+by a runtime import passed. The workflow now explicitly builds the analyzer
+before backend-runtime. The next hosted run is pending push.
+
 The follow-up normalizes accepted TypeScript source to LF before both scanner
 and graph parsing, defines source offsets against that canonical decoded text,
 and bumps `ANALYZER_VERSION` to `analyzer@0.15.0`. Consumers opening working
@@ -45,9 +54,12 @@ after that correction; lint retained 61 pre-existing
 `consistent-type-imports` warnings and no errors. The full `test:ci` result
 (229 suites / 1,329 tests / 1 snapshot) and full E2E result (22 suites / 132
 tests) were run before that final graph-loader correction; they are not
-represented as post-fix runs. Hosted run #113 reports the isolated environment
-leak and its focused local regression now passes; the next hosted result is
-pending push. This addendum
+represented as post-fix runs. Hosted run #113 exposed the test env leak; #114
+passed App tests, E2E, demos, and browser journeys but failed on the missing
+analyzer runtime build. The env regression passes locally with CI's outer
+`ENABLE_DEV_LOGIN=true`; the analyzer build and runtime package import also
+pass locally. A dedicated analyzer build step is now in the workflow; its
+hosted result is pending. This addendum
 supersedes later statements in this report that no first hosted run existed.
 
 Remaining pinned diagnostics are still explicit: 122 unresolved test targets,
@@ -285,10 +297,12 @@ capacity benchmark or pinned-repository high-fanout result.
 
 **G1: PARTIAL. G2 readiness: NOT READY.** The latest analyzer@0.15.0 pinned
 scan, persisted API proof, and 5/5 required browser proof pass locally. Hosted
-run #112 exposed line-ending-dependent offsets; run #113 passed analyzer gates,
-lint, typecheck, builds, and Analyzer tests, then exposed a leaked CI env in one
-runtime-config test. The follow-up normalizes scanner/graph source and isolates
-that test's env; the next hosted run is pending. The manually labeled 18-link
+run #112 exposed line-ending-dependent offsets; #113 passed analyzer gates,
+lint, typecheck, builds, and Analyzer tests, then exposed a leaked CI env in
+one runtime-config test. Run #114 passed App tests and browser journeys, then
+showed the workflow had omitted the analyzer package build before pinned proof.
+The follow-up normalizes scanner/graph source, isolates the test env, and adds
+that package build; hosted validation is pending. The manually labeled 18-link
 evaluation also needs a post-fix rerun. The normal Playwright webServer
 shutdown remains unverified on this Windows worker. The controlled local
 differential did not reproduce the reported twofold slowdown, but additional

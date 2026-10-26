@@ -133,6 +133,9 @@ jobs:
       - name: Build application
         run: pnpm --filter @ba-helper/application build
 
+      - name: Build analyzer
+        run: pnpm --filter @ba-helper/analyzer build
+
       - name: Build backend-runtime
         run: pnpm --filter @ba-helper/backend-runtime build
 
