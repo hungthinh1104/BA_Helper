@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { config } from 'dotenv';
 import { Client } from 'pg';
+import { createArtifactIdentity } from '@ba-helper/shared';
 import { dependencyEdgeProvenanceSchema, testCaseMetadataSchema } from '@ba-helper/contracts';
 
 export const traceCaseTitle = 'cancels a paid booking once';
@@ -31,7 +32,7 @@ export async function seedTestTrace(analysisId: string, options: { parameterized
         AND c."artifactKey" = 'api:booking.service.cancelBooking'`, [analysisId]);
     if (result.rowCount !== 1) throw new Error('Expected the isolated demo booking artifact.');
     const { snapshotId, artifactId } = result.rows[0];
-    const fileKey = `test:${sourcePath.replace(/[/\\]/g, '.')}`;
+    const fileKey = createArtifactIdentity('test', sourcePath, 'file');
     const caseKey = `test-case:${sourcePath}::${hash(JSON.stringify([
       suitePath, traceCaseTitle, ...(options.parameterized ? ['PARAMETERIZED'] : []),
     ]))}`;

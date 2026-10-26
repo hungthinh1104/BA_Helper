@@ -1,55 +1,8 @@
 import { GetCodeComprehensionUseCase } from './get-code-comprehension.usecase';
 import { findCallPath } from './get-code-comprehension.mapper';
 import { validateStaticEntityUse } from './validate-static-entity-use';
-import { createArtifactIdentity } from '@ba-helper/shared';
-
-const snapshotId = '00000000-0000-4000-8000-000000000001';
-const selectedId = '00000000-0000-4000-8000-000000000002';
-const callerId = '00000000-0000-4000-8000-000000000003';
-const testId = '00000000-0000-4000-8000-000000000004';
-const dependencyId = '00000000-0000-4000-8000-000000000005';
-const repositoryId = '00000000-0000-4000-8000-000000000006';
-const entityId = '00000000-0000-4000-8000-000000000007';
-
-function artifact(id: string, type: string, name: string, metadata: unknown = null) {
-  return { id, snapshotId, artifactKey: `${type.toLowerCase()}:${name}`, name, artifactType: type,
-    universalKind: type === 'JEST_TEST_CASE' ? 'TEST_CASE' : 'DOMAIN_SERVICE', filePath: `${name}.ts`,
-    startLine: 1, endLine: 12, language: 'typescript', contentHash: 'sha256:artifact', metadata,
-    createdAt: new Date(), updatedAt: new Date() };
-}
-
-function artifactKey(id: string) {
-  if (id === selectedId) return 'service_method:Service.run';
-  if (id === callerId) return 'service_method:Controller.handle';
-  if (id === testId) return 'jest_test_case:runs';
-  if (id === dependencyId) return 'service_method:Dependency.run';
-  if (id === entityId) return 'entity:Booking';
-  return `service_method:${id}`;
-}
-
-function artifactFile(id: string) {
-  if (id === selectedId) return 'Service.run.ts';
-  if (id === callerId) return 'Controller.handle.ts';
-  if (id === testId) return 'runs.ts';
-  if (id === dependencyId) return 'Dependency.run.ts';
-  if (id === entityId) return 'Booking.ts';
-  return `${id}.ts`;
-}
-
-function edge(id: string, fromArtifactId: string, toArtifactId: string, type: 'CALLS' | 'TESTS' | 'REFERENCES') {
-  return { id, snapshotId, fromArtifactId, toArtifactId, type, confidence: 1,
-    metadata: { kind: 'STATIC_SOURCE_REFERENCE', resolver: type === 'REFERENCES' ? 'TS_AST_ENTITY_REFERENCE' : 'TS_AST_DIRECT_CALL',
-      evidenceProvenanceKey: `snapshot:${snapshotId}:artifact:${artifactKey(fromArtifactId)}`,
-      locations: [{ sourcePath: artifactFile(fromArtifactId), startLine: 5, endLine: 5 }] },
-    createdAt: new Date() };
-}
-
-function evidence(id: string, artifactId: string, sourceType: 'CODE' | 'TEST') {
-  return { id, provenanceKey: `snapshot:${snapshotId}:artifact:${artifactKey(artifactId)}`, sourceType,
-    snapshotId, artifactId, requirementRevisionId: null, sourcePath: artifactFile(artifactId),
-    startLine: 1, endLine: 12, excerpt: sourceType === 'CODE' ? 'return dependency.run();' : 'it(\'runs\', () => service.run());',
-    contentHash: 'sha256:evidence', isRedacted: false, redactionMetadata: null, createdAt: new Date() };
-}
+import { artifact, artifactFile, artifactKey, callerId, dependencyId, edge, entityId, evidence, repositoryId,
+  selectedId, snapshotId, testId } from './get-code-comprehension.test-fixtures';
 
 describe('GetCodeComprehensionUseCase', () => {
   it('accepts entity dependencies only with a matching source artifact and evidence', () => {
@@ -94,111 +47,6 @@ describe('GetCodeComprehensionUseCase', () => {
       [testToCaller, testToSelected], [callerToSelected], selectedId);
     expect(selected).toHaveLength(1);
     expect(selected[0].id).toBe(testToSelected.id);
-  });
-
-  it('does not advertise another page when a bounded edge scan contains only repeated test cases', async () => {
-    const selected = artifact(selectedId, 'SERVICE_METHOD', 'Service.run');
-    const callers = Array.from({ length: 80 }, (_, index) => artifact(
-      `00000000-0000-4000-8000-${String(1000 + index).padStart(12, '0')}`,
-      'SERVICE_METHOD', `Caller${index}`));
-    const tests = Array.from({ length: 7 }, (_, index) => {
-      const item = artifact(`00000000-0000-4000-8000-${String(2000 + index).padStart(12, '0')}`,
-        'JEST_TEST_CASE', `case-${index}`);
-      return { ...item, metadata: { testCase: { framework: 'jest', suitePath: ['Service'],
-        title: `case-${index}`, modifier: 'NORMAL', declaredModifier: 'NORMAL',
-        parentFileArtifactKey: createArtifactIdentity('test', item.filePath, 'file'), behaviorEvidence: [] } } };
-    });
-    const makeEdge = (id: number, from: typeof selected, to: typeof selected, type: 'CALLS' | 'TESTS') => ({
-      id: `00000000-0000-4000-8000-${String(3000 + id).padStart(12, '0')}`,
-      snapshotId, fromArtifactId: from.id, toArtifactId: to.id, type, confidence: 1,
-      metadata: { kind: 'STATIC_SOURCE_REFERENCE', resolver: 'TS_AST_DIRECT_CALL',
-        evidenceProvenanceKey: `snapshot:${snapshotId}:artifact:${from.artifactKey}`,
-        locations: [{ sourcePath: from.filePath, startLine: 5, endLine: 5 }] }, createdAt: new Date(),
-    });
-    const calls = callers.map((caller, index) => makeEdge(index, caller, selected, 'CALLS'));
-    const testEdges = callers.flatMap((caller, callerIndex) => tests.map((test, testIndex) =>
-      makeEdge(100 + callerIndex * tests.length + testIndex, test, caller, 'TESTS')));
-    const allArtifacts = [selected, ...callers, ...tests];
-    const evidences = allArtifacts.map((item, index) => ({
-      id: `00000000-0000-4000-8000-${String(4000 + index).padStart(12, '0')}`,
-      snapshotId, artifactId: item.id, provenanceKey: `snapshot:${snapshotId}:artifact:${item.artifactKey}`,
-      sourceType: item.artifactType === 'JEST_TEST_CASE' ? 'TEST' : 'CODE', sourcePath: item.filePath,
-      startLine: 1, endLine: 12, excerpt: 'source declaration', contentHash: 'sha256:evidence',
-      requirementRevisionId: null, isRedacted: false, redactionMetadata: null, createdAt: new Date(),
-    }));
-    const prisma = { repositorySnapshot: { findUnique: jest.fn().mockResolvedValue({ id: snapshotId,
-      repositoryId, commitSha: 'commit-1', analyzerVersion: 'analyzer@0.14.0', coverageStatus: 'READY', diagnostics: [] }) } } as any;
-    const artifacts = { findBySnapshotAndId: jest.fn().mockResolvedValue(selected),
-      listBySnapshotAndIds: jest.fn().mockResolvedValue(allArtifacts),
-      listBySnapshotAndArtifactKeys: jest.fn().mockResolvedValue([]) } as any;
-    const graph = { listOutgoingBySnapshotAndSources: jest.fn().mockResolvedValue([]),
-      listIncomingBySnapshotAndTargets: jest.fn().mockImplementation((_snapshot: string, targets: string[],
-        types: string[], take: number) => types[0] === 'CALLS'
-        ? targets.includes(selectedId) ? calls.slice(0, take) : [] : []),
-      listIncomingTestSourceIds: jest.fn().mockResolvedValue(tests.map(test => test.id)),
-      listTestEdgesBySourcesAndTargets: jest.fn().mockResolvedValue(testEdges) } as any;
-    const evidenceRepository = { listByArtifactIds: jest.fn().mockResolvedValue(evidences) } as any;
-
-    const useCase = new GetCodeComprehensionUseCase(prisma, artifacts, graph, evidenceRepository);
-    const result = await useCase.execute(snapshotId, selectedId);
-
-    expect(result.relatedScenarios).toHaveLength(7);
-    expect(result.scenarioPagination.hasMore).toBe(false);
-    const middle = await useCase.execute(snapshotId, selectedId, { scenarioOffset: 3, scenarioLimit: 2 });
-    expect(middle.relatedScenarios.map(scenario => scenario.testCase?.title)).toEqual(['case-3', 'case-4']);
-    expect(middle.scenarioPagination.hasMore).toBe(true);
-    const last = await useCase.execute(snapshotId, selectedId, { scenarioOffset: 5, scenarioLimit: 2 });
-    expect(last.relatedScenarios.map(scenario => scenario.testCase?.title)).toEqual(['case-5', 'case-6']);
-    expect(last.scenarioPagination.hasMore).toBe(false);
-  });
-
-  it('reports validated scenarios beyond the maximum offset without advertising an unreachable page', async () => {
-    const selected = artifact(selectedId, 'SERVICE_METHOD', 'Service.run');
-    const tests = Array.from({ length: 502 }, (_, index) => {
-      const item = artifact(`00000000-0000-4000-8000-${String(5000 + index).padStart(12, '0')}`,
-        'JEST_TEST_CASE', `case-${index}`);
-      return { ...item, metadata: { testCase: { framework: 'jest', suitePath: ['Service'],
-        title: `case-${index}`, modifier: 'NORMAL', declaredModifier: 'NORMAL',
-        parentFileArtifactKey: createArtifactIdentity('test', item.filePath, 'file'), behaviorEvidence: [] } } };
-    });
-    const edges = tests.map((test, index) => ({
-      id: `00000000-0000-4000-8000-${String(6000 + index).padStart(12, '0')}`,
-      snapshotId, fromArtifactId: test.id, toArtifactId: selectedId, type: 'TESTS', confidence: 1,
-      metadata: { kind: 'STATIC_SOURCE_REFERENCE', resolver: 'TS_AST_DIRECT_CALL',
-        evidenceProvenanceKey: `snapshot:${snapshotId}:artifact:${test.artifactKey}`,
-        locations: [{ sourcePath: test.filePath, startLine: 5, endLine: 5 }] }, createdAt: new Date(),
-    }));
-    const allArtifacts = [selected, ...tests];
-    const evidences = allArtifacts.map((item, index) => ({
-      id: `00000000-0000-4000-8000-${String(7000 + index).padStart(12, '0')}`,
-      snapshotId, artifactId: item.id, provenanceKey: `snapshot:${snapshotId}:artifact:${item.artifactKey}`,
-      sourceType: item.artifactType === 'JEST_TEST_CASE' ? 'TEST' : 'CODE', sourcePath: item.filePath,
-      startLine: 1, endLine: 12, excerpt: 'source declaration', contentHash: 'sha256:evidence',
-      requirementRevisionId: null, isRedacted: false, redactionMetadata: null, createdAt: new Date(),
-    }));
-    const prisma = { repositorySnapshot: { findUnique: jest.fn().mockResolvedValue({ id: snapshotId,
-      repositoryId, commitSha: 'commit-1', analyzerVersion: 'analyzer@0.14.0', coverageStatus: 'READY', diagnostics: [] }) } } as any;
-    const artifacts = { findBySnapshotAndId: jest.fn().mockResolvedValue(selected),
-      listBySnapshotAndIds: jest.fn().mockImplementation((_snapshot: string, ids: string[]) =>
-        allArtifacts.filter(item => ids.includes(item.id))),
-      listBySnapshotAndArtifactKeys: jest.fn().mockResolvedValue([]) } as any;
-    const graph = { listOutgoingBySnapshotAndSources: jest.fn().mockResolvedValue([]),
-      listIncomingBySnapshotAndTargets: jest.fn().mockResolvedValue([]),
-      listIncomingTestSourceIds: jest.fn().mockImplementation((_snapshot: string, _targets: string[],
-        afterId: string | undefined, take: number) => tests.filter(item => !afterId || item.id > afterId)
-        .slice(0, take).map(item => item.id)),
-      listTestEdgesBySourcesAndTargets: jest.fn().mockImplementation((_snapshot: string, ids: string[]) =>
-        edges.filter(item => ids.includes(item.fromArtifactId))) } as any;
-    const evidenceRepository = { listByArtifactIds: jest.fn().mockImplementation(
-      ({ artifactIds }: { artifactIds: string[] }) => evidences.filter(item => artifactIds.includes(item.artifactId))) } as any;
-
-    const result = await new GetCodeComprehensionUseCase(prisma, artifacts, graph, evidenceRepository)
-      .execute(snapshotId, selectedId, { scenarioOffset: 500, scenarioLimit: 1 });
-
-    expect(result.relatedScenarios.map(item => item.testCase?.title)).toEqual(['case-500']);
-    expect(result.scenarioPagination.hasMore).toBe(false);
-    expect(result.truncated).toBe(true);
-    expect(result.limitations.map(item => item.code)).toContain('SCENARIO_OFFSET_LIMIT');
   });
 
   it('returns bounded code-first evidence and a static test-to-code path', async () => {
@@ -318,6 +166,99 @@ describe('GetCodeComprehensionUseCase', () => {
     expect(result.codeEvidence.staticCalls).toHaveLength(50);
     expect(result.truncated).toBe(true);
     expect(result.limitations.map(item => item.code)).toContain('COMPREHENSION_LIMIT');
+  });
+
+  it.each([[101, false], [102, true]])(
+    'distinguishes %i direct edges from a real overflow', async (edgeCount, expectedTruncated) => {
+      const outgoing = Array.from({ length: edgeCount }, (_, index) => edge(
+        `00000000-0000-4000-8000-${String(300 + index).padStart(12, '0')}`, selectedId,
+        `00000000-0000-4000-8000-${String(500 + index).padStart(12, '0')}`, 'CALLS'));
+      const selected = artifact(selectedId, 'SERVICE_METHOD', 'Service.run');
+      const prisma = { repositorySnapshot: { findUnique: jest.fn().mockResolvedValue({ id: snapshotId,
+        repositoryId, commitSha: 'commit-1', analyzerVersion: 'analyzer@0.14.0', coverageStatus: 'READY', diagnostics: [] }) } } as any;
+      const artifacts = { findBySnapshotAndId: jest.fn().mockResolvedValue(selected),
+        listBySnapshotAndIds: jest.fn().mockResolvedValue([selected]),
+        listBySnapshotAndArtifactKeys: jest.fn().mockResolvedValue([]) } as any;
+      const graph = { listOutgoingBySnapshotAndSources: jest.fn().mockImplementation(
+        (_snapshot: string, _sources: string[], _types: string[], take: number) => outgoing.slice(0, take)),
+      listIncomingBySnapshotAndTargets: jest.fn().mockResolvedValue([]),
+      listIncomingTestSourceIds: jest.fn().mockResolvedValue([]) } as any;
+      const evidenceRepository = { listByArtifactIds: jest.fn().mockResolvedValue([evidence(
+        '00000000-0000-4000-8000-000000000010', selectedId, 'CODE')]) } as any;
+
+      const result = await new GetCodeComprehensionUseCase(prisma, artifacts, graph, evidenceRepository)
+        .execute(snapshotId, selectedId);
+
+      expect(graph.listOutgoingBySnapshotAndSources).toHaveBeenCalledWith(
+        snapshotId, [selectedId], ['CALLS', 'REFERENCES'], 102);
+      expect(result.truncated).toBe(expectedTruncated);
+      expect(result.limitations.map(item => item.code).includes('COMPREHENSION_LIMIT')).toBe(expectedTruncated);
+    },
+  );
+
+  it('reports when validated direct dependencies exceed the displayed relationship limit', async () => {
+    const selected = artifact(selectedId, 'SERVICE_METHOD', 'Service.run');
+    const targets = Array.from({ length: 51 }, (_, index) => ({
+      ...artifact(`00000000-0000-4000-8000-${String(1000 + index).padStart(12, '0')}`,
+        'ENTITY', `Entity${index}`),
+      universalKind: 'DATA_MODEL',
+    }));
+    const references = targets.map((target, index) => edge(
+      `00000000-0000-4000-8000-${String(2000 + index).padStart(12, '0')}`,
+      selectedId, target.id, 'REFERENCES'));
+    const prisma = { repositorySnapshot: { findUnique: jest.fn().mockResolvedValue({ id: snapshotId,
+      repositoryId, commitSha: 'commit-1', analyzerVersion: 'analyzer@0.14.0', coverageStatus: 'READY', diagnostics: [] }) } } as any;
+    const artifacts = { findBySnapshotAndId: jest.fn().mockResolvedValue(selected),
+      listBySnapshotAndIds: jest.fn().mockResolvedValue([selected, ...targets]),
+      listBySnapshotAndArtifactKeys: jest.fn().mockResolvedValue([]) } as any;
+    const graph = { listOutgoingBySnapshotAndSources: jest.fn().mockResolvedValue(references),
+      listIncomingBySnapshotAndTargets: jest.fn().mockResolvedValue([]),
+      listIncomingTestSourceIds: jest.fn().mockResolvedValue([]) } as any;
+    const evidenceRepository = { listByArtifactIds: jest.fn().mockResolvedValue([
+      evidence('00000000-0000-4000-8000-000000000010', selectedId, 'CODE'),
+    ]) } as any;
+
+    const result = await new GetCodeComprehensionUseCase(prisma, artifacts, graph, evidenceRepository)
+      .execute(snapshotId, selectedId);
+
+    expect(result.codeEvidence.dependencies).toHaveLength(50);
+    expect(result.truncated).toBe(true);
+    expect(result.limitations.map(item => item.code)).toContain('COMPREHENSION_LIMIT');
+  });
+
+  it('reports a reverse-call truncation only after a caller beyond the relationship cap exists', async () => {
+    const selected = artifact(selectedId, 'SERVICE_METHOD', 'Service.run');
+    const callers = Array.from({ length: 81 }, (_, index) => {
+      const id = `00000000-0000-4000-8000-${String(4000 + index).padStart(12, '0')}`;
+      return artifact(id, 'SERVICE_METHOD', id);
+    });
+    const incoming = callers.map((caller, index) => edge(
+      `00000000-0000-4000-8000-${String(5000 + index).padStart(12, '0')}`,
+      caller.id, selectedId, 'CALLS'));
+    const allArtifacts = [selected, ...callers];
+    const allEvidence = allArtifacts.map((item, index) => evidence(
+      `00000000-0000-4000-8000-${String(6000 + index).padStart(12, '0')}`,
+      item.id, 'CODE'));
+    const prisma = { repositorySnapshot: { findUnique: jest.fn().mockResolvedValue({ id: snapshotId,
+      repositoryId, commitSha: 'commit-1', analyzerVersion: 'analyzer@0.14.0', coverageStatus: 'READY', diagnostics: [] }) } } as any;
+    const artifactsRepository = { findBySnapshotAndId: jest.fn().mockResolvedValue(selected),
+      listBySnapshotAndIds: jest.fn().mockImplementation((_snapshot: string, ids: string[]) =>
+        allArtifacts.filter(item => ids.includes(item.id))),
+      listBySnapshotAndArtifactKeys: jest.fn().mockResolvedValue([]) } as any;
+    const graph = { listOutgoingBySnapshotAndSources: jest.fn().mockResolvedValue([]),
+      listIncomingBySnapshotAndTargets: jest.fn().mockImplementation(
+        (_snapshot: string, targets: string[], _types: string[], take: number) =>
+          targets.includes(selectedId) ? incoming.slice(0, take) : []),
+      listIncomingTestSourceIds: jest.fn().mockResolvedValue([]) } as any;
+    const evidenceRepository = { listByArtifactIds: jest.fn().mockImplementation(
+      ({ artifactIds }: { artifactIds: string[] }) => allEvidence.filter(item => artifactIds.includes(item.artifactId))) } as any;
+
+    const result = await new GetCodeComprehensionUseCase(prisma, artifactsRepository, graph, evidenceRepository)
+      .execute(snapshotId, selectedId);
+
+    expect(result.truncated).toBe(true);
+    expect(result.limitations.map(item => item.code)).toContain('CALL_DEPTH_LIMIT');
+    expect(graph.listIncomingBySnapshotAndTargets).toHaveBeenCalledWith(snapshotId, [selectedId], ['CALLS'], 81);
   });
 
   it('keeps production evidence visible and reports missing supported test references', async () => {

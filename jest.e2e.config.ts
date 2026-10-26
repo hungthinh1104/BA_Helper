@@ -2,6 +2,7 @@ import type { Config } from 'jest';
 import { backendTransform, backendTransformIgnorePatterns } from './jest.transforms.cjs';
 
 const config: Config = {
+  roots: ['<rootDir>/apps', '<rootDir>/packages', '<rootDir>/scripts', '<rootDir>/tests'],
   testMatch: ['**/*.e2e-spec.ts'],
   moduleFileExtensions: ['ts', 'js', 'json'],
   transform: backendTransform,

@@ -27,7 +27,7 @@ export const repositoryDocs: Record<string, ControllerDocs> = {
     list: op('List artifacts in an immutable snapshot', c.artifactListResponseSchema, {
       query: z.object({
         scope: z.enum(['production']).optional().describe('Restrict discovery to supported production code artifacts.'),
-        search: z.string().trim().min(1).max(120).optional().describe('Case-insensitive search over artifact key, symbol name, and repository path.'),
+        search: c.artifactSearchTermSchema.describe('Case-insensitive search over artifact key, symbol name, and repository path; maximum 120 characters.'),
         limit: z.coerce.number().int().min(1).max(100).default(50),
         offset: z.coerce.number().int().min(0).max(500).default(0),
       }),

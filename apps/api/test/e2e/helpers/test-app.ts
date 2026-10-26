@@ -7,7 +7,7 @@ import { getRuntimeConfig } from '../../../src/bootstrap/runtime-config';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
-export async function createTestApp(): Promise<INestApplication> {
+export async function createTestApp(beforeInitialize?: (moduleFixture: TestingModule) => void): Promise<INestApplication> {
   // Load .env.test explicitly
   dotenv.config({ path: path.resolve(process.cwd(), '.env.test') });
 
@@ -19,6 +19,7 @@ export async function createTestApp(): Promise<INestApplication> {
   const moduleFixture: TestingModule = await Test.createTestingModule({
     imports: [AppModule],
   }).compile();
+  beforeInitialize?.(moduleFixture);
 
   const app = moduleFixture.createNestApplication();
   app.useLogger(false);

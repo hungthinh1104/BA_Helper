@@ -4,6 +4,43 @@ const snapshotId = '00000000-0000-4000-8000-000000000001';
 const artifactId = '00000000-0000-4000-8000-000000000002';
 
 describe('ArtifactController comprehension projection', () => {
+  it('preserves the search limit state after snapshot authorization and DTO mapping', async () => {
+    const actor = { id: '00000000-0000-4000-8000-000000000003' } as any;
+    const permissions = { assertCanReadSnapshot: jest.fn().mockResolvedValue(undefined) } as any;
+    const listArtifacts = { search: jest.fn().mockResolvedValue({
+      items: [{ id: artifactId, artifactKey: 'service:src/service.ts:run', name: 'Service.run',
+        artifactType: 'SERVICE_METHOD', universalKind: 'DOMAIN_SERVICE', filePath: 'src/service.ts',
+        startLine: 2, endLine: 5, language: 'typescript' }],
+      hasMore: false, limitReached: true, limit: 50, offset: 500,
+    }) } as any;
+    const controller = new ArtifactController(listArtifacts, {} as any, permissions);
+
+    const result = await controller.list(snapshotId, '50', '500', 'run', 'production', actor);
+
+    expect(permissions.assertCanReadSnapshot).toHaveBeenCalledWith(actor, snapshotId);
+    expect(listArtifacts.search).toHaveBeenCalledWith(snapshotId,
+      { limit: 50, offset: 500, search: 'run', productionOnly: true });
+    expect(result).toMatchObject({ hasMore: false, limitReached: true, limit: 50, offset: 500,
+      items: [expect.objectContaining({ id: artifactId, filePath: 'src/service.ts' })] });
+  });
+
+  it('rejects search text beyond the documented bound after checking snapshot access', async () => {
+    const actor = { id: '00000000-0000-4000-8000-000000000003' } as any;
+    const permissions = { assertCanReadSnapshot: jest.fn().mockResolvedValue(undefined) } as any;
+    const listArtifacts = { search: jest.fn().mockResolvedValue({ items: [], hasMore: false, limit: 50, offset: 0 }) } as any;
+    const controller = new ArtifactController(listArtifacts, {} as any, permissions);
+
+    await expect(controller.list(snapshotId, '50', '0', 'x'.repeat(121), 'production', actor))
+      .rejects.toThrow('Request input is invalid.');
+
+    expect(permissions.assertCanReadSnapshot).toHaveBeenCalledWith(actor, snapshotId);
+    expect(listArtifacts.search).not.toHaveBeenCalled();
+
+    await controller.list(snapshotId, '50', '0', ` ${'x'.repeat(120)} `, 'production', actor);
+    expect(listArtifacts.search).toHaveBeenCalledWith(snapshotId,
+      { limit: 50, offset: 0, search: 'x'.repeat(120), productionOnly: true });
+  });
+
   it('enforces snapshot read permission before returning the bounded projection', async () => {
     const actor = { id: '00000000-0000-4000-8000-000000000003', email: 'reviewer@example.com', role: 'REVIEWER' } as const;
     const permissions = { assertCanReadSnapshot: jest.fn().mockResolvedValue(undefined) } as any;

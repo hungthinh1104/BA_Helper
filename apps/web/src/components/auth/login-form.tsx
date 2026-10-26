@@ -1,6 +1,6 @@
 "use client"
 
-import { type FormEvent, useMemo, useState } from "react"
+import { type FormEvent, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { Workflow } from "lucide-react"
@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/use-auth"
 export function LoginForm() {
   const searchParams = useSearchParams()
   const { login, isLoading } = useAuth()
+  const [clientReady, setClientReady] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [errorCode, setErrorCode] = useState<string | null>(null)
@@ -24,6 +25,12 @@ export function LoginForm() {
     () => getSafeNext(searchParams?.get("next")),
     [searchParams],
   )
+
+  useEffect(() => {
+    // Browser tests wait for React's submit handler to exist before clicking.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setClientReady(true)
+  }, [])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -67,7 +74,8 @@ export function LoginForm() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+            <form className="flex flex-col gap-4" onSubmit={handleSubmit}
+              data-client-ready={clientReady ? "true" : undefined}>
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-foreground" htmlFor="email">
                   Email

@@ -2,6 +2,7 @@ import type { Config } from 'jest';
 import { backendTransform, backendTransformIgnorePatterns } from './jest.transforms.cjs';
 
 const config: Config = {
+  roots: ['<rootDir>/apps', '<rootDir>/packages', '<rootDir>/scripts', '<rootDir>/tests'],
   // The fixture is a source-to-persistence-mapper integration check. Keep the
   // explicit integration suffix for future DB-backed suites, while ensuring
   // this gate exercises at least one real cross-package path today.

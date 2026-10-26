@@ -134,6 +134,9 @@ control flow or runtime values from an excerpt.
 Unsupported or incomplete metadata remains in `unresolved`/`limitations` rather
 than being inferred. The reader enforces snapshot permissions and rejects test
 artifacts as comprehension roots.
+Repeated edge provenance failures are summarized with a count and up to three
+edge IDs so they cannot crowd out a scan-bound limitation in the 50-item
+response limit.
 When no supported `TESTS` relationship exists, `limitations` includes
 `NO_SUPPORTED_TEST_REFERENCE`; this keeps production evidence explorable without
 making a no-coverage or no-tests claim. If test edges exist but no bounded path
@@ -150,9 +153,11 @@ The candidate search stops after 5,000 distinct source identities and reports
 `SCENARIO_SOURCE_SCAN_LIMIT` if that bound prevents a complete answer. Direct
 analyzer `USES` entity dependencies, persisted as `REFERENCES`, require matching
 source provenance before display.
-`truncated` and `COMPREHENSION_LIMIT` make omitted paths visible. Clients may
-request `scenarioLimit` and `scenarioOffset`; the default page is 50 scenarios
-at offset 0.
+`truncated` and `COMPREHENSION_LIMIT` make paths omitted by a hard bound
+visible. A retrievable page indicated by `scenarioPagination.hasMore` is not
+truncation; scenarios beyond the last allowed offset or beyond the bounded
+candidate scan are. Clients may request `scenarioLimit` and `scenarioOffset`;
+the default page is 50 scenarios at offset 0.
 The projection reads existing artifact, evidence, and dependency-edge records;
 it does not run a second analyzer or persist a new graph. Completed projections
 are cached in the API process by immutable snapshot ID, artifact ID, page, and
@@ -162,10 +167,15 @@ invalidates the process cache without a schema migration.
 
 `GET /api/v1/snapshots/:snapshotId/artifacts` keeps its historical unfiltered
 response for compatibility. Visual Test Trace uses the bounded discovery form:
-`scope=production&limit=50&offset=0` with optional `search`. It returns stable
-artifact-key ordering, only supported production artifact types, and optional
-`hasMore`, `limit`, and `offset` fields. The API overfetches one row to compute
-`hasMore` and never loads the full snapshot for this path.
+`scope=production&limit=50&offset=<page start>` with optional `search` over
+method names, artifact keys, and file paths. The navigator debounces search and
+loads additional pages on request. It stops after offset 500 and shows a search
+prompt if more artifacts exist beyond that browsing limit. Results are ordered
+by artifact type, artifact key, then ID. The API returns only supported
+production artifact types and optional `hasMore`, `limit`, `offset`, and
+`limitReached` fields. `hasMore` means another page can be requested within
+the offset 500 bound; `limitReached` means additional matching rows exist past
+that bound. The API overfetches one row without loading the full snapshot.
 
 ## Contract Boundary
 

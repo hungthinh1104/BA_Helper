@@ -1,5 +1,7 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
-import { artifactListResponseSchema, codeComprehensionResponseSchema, RequestUser } from '@ba-helper/contracts';
+import { artifactListResponseSchema, artifactSearchTermSchema, codeComprehensionResponseSchema,
+  MAX_ARTIFACT_SEARCH_OFFSET, RequestUser } from '@ba-helper/contracts';
+import { parseApiInput } from '../../../shared/parse-api-input';
 import { ListArtifactsUseCase } from '../application/list-artifacts.usecase';
 import { GetCodeComprehensionUseCase } from '../application/get-code-comprehension.usecase';
 import { mapArtifactResponse } from '../application/artifact-response.mapper';
@@ -25,9 +27,11 @@ export class ArtifactController {
   ) {
     await this.permissions.assertCanReadSnapshot(actor, snapshotId);
     if (limitRaw !== undefined || offsetRaw !== undefined || search !== undefined || scope !== undefined) {
+      const validatedSearch = parseApiInput(artifactSearchTermSchema, search);
       const result = await this.listArtifacts.search(snapshotId, {
-        limit: parseBoundedInteger(limitRaw, 50, 100), offset: parseBoundedInteger(offsetRaw, 0, 500),
-        search, productionOnly: scope === 'production',
+        limit: parseBoundedInteger(limitRaw, 50, 100),
+        offset: parseBoundedInteger(offsetRaw, 0, MAX_ARTIFACT_SEARCH_OFFSET),
+        search: validatedSearch, productionOnly: scope === 'production',
       });
       const { items, ...pagination } = result;
       return artifactListResponseSchema.parse({ items: items.map(mapArtifactResponse), ...pagination });

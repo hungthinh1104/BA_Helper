@@ -2,6 +2,8 @@ import { execSync } from 'node:child_process'
 
 export interface DemoSeed {
   analysisId: string
+  projectId: string
+  projectName: string
   email: string
   password: string
 }
@@ -18,11 +20,15 @@ export function seedDemo(): DemoSeed {
   // production scripts or running target repository code.
   const out = execSync('pnpm --dir apps/api exec ts-node -r tsconfig-paths/register --project tsconfig.json prisma/seed.demo.ts', { encoding: 'utf8' })
   const match = /Scenario A \(open review\)\s*:\s*(\S+)/.exec(out)
-  if (!match) {
+  const projectId = /^Project ID:\s*(\S+)/m.exec(out)?.[1]
+  const projectName = /^Project\s*:\s*(.+)$/m.exec(out)?.[1]?.trim()
+  if (!match || !projectId || !projectName) {
     throw new Error(`Could not parse the Scenario A analysis id from the seed output:\n${out.slice(-800)}`)
   }
   return {
     analysisId: match[1],
+    projectId,
+    projectName,
     email: 'demo@ba-helper.local',
     password: 'demo-password-2026',
   }

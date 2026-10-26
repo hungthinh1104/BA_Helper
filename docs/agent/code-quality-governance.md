@@ -299,3 +299,11 @@ coverage thresholds for critical policies/use cases
 ```
 
 Do not install governance tooling before there is code for it to protect.
+
+The backend-runtime HTTP boundary CI gate parses TypeScript under
+`packages/backend-runtime/src`, including test files. It rejects actual HTTP
+decorators, imports of Nest HTTP decorators or API modules, and API guard
+identifiers. Source excerpts and comments that merely contain text such as
+`@Post` do not violate the boundary. Run
+`pnpm verify:backend-runtime-http-boundary` locally; the parser regression
+tests cover both real violations and evidence-string false positives.

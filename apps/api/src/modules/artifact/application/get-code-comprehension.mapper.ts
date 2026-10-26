@@ -11,7 +11,8 @@ import type { ArtifactRepository, EvidenceRepository, GraphRepository } from '@b
 export type ArtifactRecord = Awaited<ReturnType<ArtifactRepository['listBySnapshotAndIds']>>[number];
 export type EdgeRecord = Awaited<ReturnType<GraphRepository['listIncomingBySnapshotAndTargets']>>[number];
 export type EvidenceRecord = Awaited<ReturnType<EvidenceRepository['listByArtifactIds']>>[number];
-export type Diagnostic = { code: string; message: string; severity: 'INFO' | 'WARN' };
+export type Diagnostic = { code: string; message: string; severity: 'INFO' | 'WARN'; count?: number;
+  payload?: { sampleEdgeIds: string[] } };
 
 export function mapArtifact(artifact: ArtifactRecord) {
   return { id: artifact.id, artifactKey: artifact.artifactKey, name: artifact.name, artifactType: artifact.artifactType,

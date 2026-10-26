@@ -78,7 +78,8 @@ describe('internal service source artifacts', () => {
         { kind: 'SWITCH_DEFAULT', sourceText: 'default: return Promise.resolve({ ok: false });' },
       ],
       exceptionHandlers: [
-        { kind: 'CATCH' }, { kind: 'THROW', sourceText: 'throw error;' },
+        { kind: 'CATCH', sourceText: 'catch (error) { throw error; }' },
+        { kind: 'THROW', sourceText: 'throw error;' },
       ],
     });
     const locations = [

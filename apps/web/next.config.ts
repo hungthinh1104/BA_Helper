@@ -16,6 +16,8 @@ function resolveApiProxyTarget(): string {
 }
 
 const nextConfig: NextConfig = {
+  ...(process.env.NEXT_BUILD_DIST_DIR ? { distDir: process.env.NEXT_BUILD_DIST_DIR } : {}),
+  typescript: { tsconfigPath: process.env.NEXT_TSCONFIG_PATH ?? 'tsconfig.json' },
   async rewrites() {
     const target = resolveApiProxyTarget();
     if (!target) return [];

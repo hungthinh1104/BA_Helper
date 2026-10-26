@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
+import { MAX_ARTIFACT_SEARCH_OFFSET } from '@ba-helper/contracts';
 import { PrismaService } from '../../prisma/prisma.service';
 
 type ArtifactPrismaClient = PrismaService | Prisma.TransactionClient;
@@ -51,7 +52,7 @@ export class ArtifactRepository {
 
   async searchBySnapshot(snapshotId: string, options: ArtifactSearchOptions) {
     const limit = Math.min(100, Math.max(1, Math.trunc(options.limit)));
-    const offset = Math.min(500, Math.max(0, Math.trunc(options.offset)));
+    const offset = Math.min(MAX_ARTIFACT_SEARCH_OFFSET, Math.max(0, Math.trunc(options.offset)));
     const search = options.search?.trim();
     const rows = await this.prisma.codeArtifact.findMany({
       where: {
@@ -67,7 +68,10 @@ export class ArtifactRepository {
       skip: offset,
       take: limit + 1,
     });
-    return { items: rows.slice(0, limit), hasMore: rows.length > limit, limit, offset };
+    const moreRowsExist = rows.length > limit;
+    const limitReached = moreRowsExist && offset + limit > MAX_ARTIFACT_SEARCH_OFFSET;
+    return { items: rows.slice(0, limit), hasMore: moreRowsExist && !limitReached,
+      ...(limitReached ? { limitReached: true } : {}), limit, offset };
   }
 
   async createMany(data: Array<{

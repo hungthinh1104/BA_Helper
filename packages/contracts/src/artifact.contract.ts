@@ -1,6 +1,8 @@
 import { z, type TypeOf as ZodTypeOf } from 'zod';
 import { testCaseMetadataSchema } from './test-case.contract';
 
+export const MAX_ARTIFACT_SEARCH_OFFSET = 500;
+
 export const universalArtifactKindSchema = z.enum([
 	'API_ENDPOINT',
 	'DOMAIN_SERVICE',
@@ -23,9 +25,12 @@ export const artifactSchema = z.object({
 	testCase: testCaseMetadataSchema.optional(),
 });
 
+export const artifactSearchTermSchema = z.string().trim().max(120).optional();
+
 export const artifactListResponseSchema = z.object({
 	items: z.array(artifactSchema),
 	hasMore: z.boolean().optional(),
+	limitReached: z.boolean().optional(),
 	limit: z.number().int().positive().optional(),
 	offset: z.number().int().nonnegative().optional(),
 });

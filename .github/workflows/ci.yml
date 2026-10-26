@@ -62,6 +62,14 @@ jobs:
       - name: Install deps
         run: pnpm install --frozen-lockfile
 
+      - name: Checkout pinned NestJS comprehension corpus
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: leosuncin/nest-api-example
+          ref: b49ae92a6c0b0db39b6542338a2ffea3eda15717
+          path: tmp/corpora/nest-api-example
+          persist-credentials: false
+
       - name: Production dependency advisories (high and critical)
         run: pnpm verify:dependencies
 
@@ -104,12 +112,8 @@ jobs:
             exit 1
           fi
 
-      - name: Backend-runtime boundary check (no api decorators)
-        run: |
-          if grep -rE '@Controller|@UseGuards|@CurrentUser|@Req|@Get|@Post|@Put|@Delete|@Patch|JwtAuthGuard|RolesGuard' packages/backend-runtime/src/; then
-            echo "BOUNDARY VIOLATION: backend-runtime must not contain HTTP controllers or guards"
-            exit 1
-          fi
+      - name: Backend-runtime HTTP and guard boundary check
+        run: pnpm verify:backend-runtime-http-boundary
 
       - name: Backend-runtime duplication boundary check
         run: pnpm verify:architecture-boundaries
@@ -164,11 +168,23 @@ jobs:
         env:
           REDIS_URL_TEST: redis://localhost:6379/1
 
+      - name: Seed demo identity for pinned proof
+        run: pnpm --dir apps/api exec tsx prisma/seed.demo.ts
+
+      - name: Persist pinned real-repository comprehension proof
+        run: pnpm prove:pinned-comprehension
+
+      - name: Verify pinned real-repository browser proof
+        run: pnpm verify:pinned-comprehension-browser
+
       - name: Upload browser evidence
         if: always()
         uses: actions/upload-artifact@v7.0.2
         with:
           name: browser-review-results
-          path: e2e/.artifacts
+          path: |
+            e2e/.artifacts
+            artifacts/evaluation/pinned-code-comprehension-proof.json
+            artifacts/evaluation/code-comprehension-fanout-e2e.json
           include-hidden-files: true
           if-no-files-found: ignore

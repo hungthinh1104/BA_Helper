@@ -3,7 +3,10 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@ba-helper/backend-runtime';
 import { codeComprehensionResponseSchema } from '@ba-helper/contracts';
 import crypto from 'node:crypto';
+import { installQueryMeter } from '../../../../scripts/pinned-comprehension-query-meter';
 import request from 'supertest';
+import { measureHighFanoutProjection } from './helpers/code-comprehension-fanout';
+import { createPersistedScenarioPageCorpus } from './helpers/code-comprehension-pagination';
 import { createTestApp } from './helpers/test-app';
 import { resetDatabase } from './helpers/reset-db';
 
@@ -16,9 +19,12 @@ describe('Code comprehension projection (E2E)', () => {
   let adminToken: string;
   let snapshotId: string;
   let selectedArtifactId: string;
+  let measureQueries: ReturnType<typeof installQueryMeter>;
 
   beforeAll(async () => {
-    app = await createTestApp();
+    app = await createTestApp(moduleFixture => {
+      measureQueries = installQueryMeter(moduleFixture.get(PrismaService));
+    });
     prisma = app.get(PrismaService);
     jwtService = app.get(JwtService);
   });
@@ -172,71 +178,48 @@ describe('Code comprehension projection (E2E)', () => {
   });
 
   it('does not invent a next page when many TESTS edges share few Jest cases', async () => {
-    const callers = Array.from({ length: 80 }, (_, index) => ({
-      id: crypto.randomUUID(), key: `service:src/fanout-${index}.ts:Caller${index}.run`,
-      path: `src/fanout-${index}.ts`, name: `Caller${index}.run`,
-    }));
-    const tests = Array.from({ length: 7 }, (_, index) => ({
-      id: crypto.randomUUID(), key: `test:test%2Ffanout.spec.ts#case-${index}`, name: `case-${index}`,
-    }));
-    await prisma.codeArtifact.createMany({ data: [
-      ...callers.map(item => ({ id: item.id, snapshotId, artifactKey: item.key, name: item.name,
-        artifactType: 'SERVICE_METHOD', universalKind: 'DOMAIN_SERVICE', filePath: item.path,
-        startLine: 1, endLine: 10, language: 'typescript', contentHash: 'sha256:caller' })),
-      ...tests.map(item => ({ id: item.id, snapshotId, artifactKey: item.key, name: item.name,
-        artifactType: 'JEST_TEST_CASE', universalKind: 'TEST_CASE', filePath: 'test/fanout.spec.ts',
-        startLine: 1, endLine: 10, language: 'typescript', contentHash: 'sha256:test',
-        metadata: { testCase: { framework: 'jest', suitePath: ['Fanout'], title: item.name,
-          modifier: 'NORMAL', declaredModifier: 'NORMAL', parentFileArtifactKey: 'test:test%2Ffanout.spec.ts#file',
-          behaviorEvidence: [] } } })),
-    ] });
-    await prisma.evidence.createMany({ data: [
-      ...callers.map(item => ({ id: crypto.randomUUID(), snapshotId, artifactId: item.id,
-        provenanceKey: `snapshot:${snapshotId}:artifact:${item.key}`, sourceType: 'CODE' as const,
-        sourcePath: item.path, startLine: 1, endLine: 10, excerpt: 'return service.cancel(id);', contentHash: 'sha256:caller' })),
-      ...tests.map(item => ({ id: crypto.randomUUID(), snapshotId, artifactId: item.id,
-        provenanceKey: `snapshot:${snapshotId}:artifact:${item.key}`, sourceType: 'TEST' as const,
-        sourcePath: 'test/fanout.spec.ts', startLine: 1, endLine: 10,
-        excerpt: 'it("case", () => caller.run());', contentHash: 'sha256:test' })),
-    ] });
-    await prisma.dependencyEdge.createMany({ data: [
-      ...callers.map(item => ({ id: crypto.randomUUID(), snapshotId, fromArtifactId: item.id,
-        toArtifactId: selectedArtifactId, type: 'CALLS' as const, confidence: 1,
-        metadata: { kind: 'STATIC_SOURCE_REFERENCE', resolver: 'TS_AST_DIRECT_CALL',
-          evidenceProvenanceKey: `snapshot:${snapshotId}:artifact:${item.key}`,
-          locations: [{ sourcePath: item.path, startLine: 5, endLine: 5 }] } })),
-      ...callers.flatMap(caller => tests.map(test => ({ id: crypto.randomUUID(), snapshotId,
-        fromArtifactId: test.id, toArtifactId: caller.id, type: 'TESTS' as const, confidence: 1,
-        metadata: { kind: 'STATIC_SOURCE_REFERENCE', resolver: 'TS_AST_DIRECT_CALL',
-          evidenceProvenanceKey: `snapshot:${snapshotId}:artifact:${test.key}`,
-          locations: [{ sourcePath: 'test/fanout.spec.ts', startLine: 5, endLine: 5 }] } }))),
-    ] });
+    const sample = await measureHighFanoutProjection({ app, prisma, measureQueries, snapshotId,
+      selectedArtifactId, adminToken });
+    expect(sample.cold.projection.relatedScenarios).toHaveLength(8);
+    expect(new Set(sample.cold.projection.relatedScenarios.map(item => item.testArtifact.id)).size).toBe(8);
+    expect(sample.cold.projection.scenarioPagination.hasMore).toBe(false);
+    expect(sample.cold.projection.truncated).toBe(false);
+    expect(sample.cacheMisses).toHaveLength(5);
+    expect(sample.cacheMisses.map(item => item.projection.scenarioPagination.offset)).toEqual([0, 1, 2, 3, 4]);
+    expect(sample.cacheMisses.every(item => item.projection.relatedScenarios.length === 8 - item.scenarioOffset &&
+      !item.projection.scenarioPagination.hasMore && !item.projection.truncated &&
+      item.database.queryCount > 0 && item.database.returnedRows > 0 && item.database.nonPromiseQueries === 0)).toBe(true);
+    expect(sample.warm).toHaveLength(10);
+    expect(sample.warm.every(item => item.database.nonPromiseQueries === 0)).toBe(true);
+    expect(sample.edgeCounts).toEqual({ testEdges: sample.edgeCounts.expectedTestEdges,
+      callEdges: sample.edgeCounts.expectedCallEdges, expectedTestEdges: 561, expectedCallEdges: 80 });
+    expect(sample.report.result.responseBytes).toBeLessThan(1_000_000);
+  });
 
-    const started = performance.now();
-    const response = await request(app.getHttpServer())
-      .get(`/api/v1/snapshots/${snapshotId}/artifacts/${selectedArtifactId}/comprehension`)
-      .set('Authorization', `Bearer ${adminToken}`)
-      .expect(200);
-    const latencyMs = performance.now() - started;
-    const projection = codeComprehensionResponseSchema.parse(response.body);
-    expect(projection.relatedScenarios).toHaveLength(8);
-    expect(new Set(projection.relatedScenarios.map(item => item.testArtifact.id)).size).toBe(8);
-    expect(projection.scenarioPagination.hasMore).toBe(false);
-    const payloadBytes = Buffer.byteLength(JSON.stringify(response.body), 'utf8');
-    const warmSamples: number[] = [];
-    for (let index = 0; index < 10; index += 1) {
-      const warmStart = performance.now();
-      await request(app.getHttpServer())
+  it.each([49, 50, 51])('pages %i persisted scenarios across the PostgreSQL boundary without repeats', async total => {
+    const expectedTitles = await createPersistedScenarioPageCorpus(prisma, snapshotId, selectedArtifactId, total);
+    const observedTitles: string[] = [];
+    const observedIds = new Set<string>();
+
+    for (let offset = 0; offset < total; offset += 50) {
+      const response = await request(app.getHttpServer())
         .get(`/api/v1/snapshots/${snapshotId}/artifacts/${selectedArtifactId}/comprehension`)
+        .query({ scenarioLimit: 50, scenarioOffset: offset })
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
-      warmSamples.push(performance.now() - warmStart);
+      const projection = codeComprehensionResponseSchema.parse(response.body);
+      const current = projection.relatedScenarios.map(item => item.testArtifact.id);
+
+      expect(current.every(id => !observedIds.has(id))).toBe(true);
+      for (const id of current) observedIds.add(id);
+      observedTitles.push(...projection.relatedScenarios.map(item => item.testCase?.title ?? 'missing'));
+      expect(projection.relatedScenarios.every(item => item.trace?.relation === 'DIRECT_REFERENCE')).toBe(true);
+      expect(projection.scenarioPagination.hasMore).toBe(offset + 50 < total);
+      expect(projection.truncated).toBe(false);
     }
-    const ordered = warmSamples.slice().sort((left, right) => left - right);
-    process.stdout.write(`${JSON.stringify({ comprehensionFanoutSample: { callers: 80, cases: 8,
-      testEdges: 561, coldMs: latencyMs, warmP50Ms: ordered[4], warmP95Ms: ordered[9],
-      payloadBytes, rssBytes: process.memoryUsage().rss } })}\n`);
-    expect(payloadBytes).toBeLessThan(1_000_000);
+
+    expect(observedTitles).toEqual(expectedTitles);
+    expect(observedIds.size).toBe(total);
   });
 
   it('keeps a method explorable when no supported test reference exists', async () => {

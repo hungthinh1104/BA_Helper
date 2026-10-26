@@ -297,9 +297,9 @@ For an opt-in proof against an external repository, use a clean checkout of
 `b49ae92a6c0b0db39b6542338a2ffea3eda15717` under
 `tmp/corpora/nest-api-example` (or set `PINNED_CORPUS_PATH`). Do not install
 its dependencies or execute its code. With Postgres/Redis running and
-`.env.test` configured, migrate and seed only the `ba_helper_test` database,
+`.env.test` configured, migrate only the `ba_helper_test` database,
 then run `pnpm prove:pinned-comprehension` and
-`pnpm exec playwright test e2e/pinned-real-comprehension.pw.ts --project=desktop`.
+`pnpm verify:pinned-comprehension-browser`.
 On PowerShell, the preparation commands are:
 
 ```powershell
@@ -307,19 +307,34 @@ git clone https://github.com/leosuncin/nest-api-example tmp/corpora/nest-api-exa
 git -C tmp/corpora/nest-api-example checkout b49ae92a6c0b0db39b6542338a2ffea3eda15717
 $testUrlLine = Get-Content .env.test | Where-Object { $_ -match '^DATABASE_URL_TEST=' } | Select-Object -First 1
 $env:DATABASE_URL = ($testUrlLine -split '=', 2)[1].Trim('"', "'")
-if (([uri]$env:DATABASE_URL).AbsolutePath -ne '/ba_helper_test') { throw 'Expected ba_helper_test' }
+$testDatabase = [uri]$env:DATABASE_URL
+if ($testDatabase.AbsolutePath -ne '/ba_helper_test' -or $testDatabase.DnsSafeHost -notin @('localhost', '127.0.0.1', '::1')) { throw 'Expected local ba_helper_test' }
 pnpm --dir apps/api exec prisma migrate deploy --config prisma.config.ts --schema prisma/schema.prisma
 pnpm --dir apps/api exec tsx prisma/seed.demo.ts
 pnpm prove:pinned-comprehension
-pnpm exec playwright test e2e/pinned-real-comprehension.pw.ts --project=desktop
+pnpm verify:pinned-comprehension-browser
 ```
 
 The proof command refuses a dirty or wrong-commit checkout and any database
-other than `ba_helper_test`. It writes an ignored
+other than `ba_helper_test` on a loopback host (`localhost`, `127.0.0.1`, or
+`::1`). Remote database hosts are rejected to keep proof data out of unrelated
+databases. It writes an ignored
 `artifacts/evaluation/pinned-code-comprehension-proof.json` with snapshot IDs,
 source-backed projection counts, path-shape counts, and local timing/hardware.
-The browser test reads that file and skips when no proof was prepared. Run it
-before database-resetting E2E suites; a reset invalidates the saved snapshot.
+Seed the demo login before running the proof. The browser command starts and
+stops the API and web servers, runs five required real-browser samples, and
+fails if assertions, process exit, or server cleanup do not pass. It measures fresh-process
+projection, initialized-pool cache misses, and projection cache hits separately,
+then records five samples for multi-scenario, indirect, most-related, unresolved,
+and no-test methods. The required browser command fails if the proof or its
+measurement groups are absent; ordinary Playwright runs may still skip this
+optional corpus test. It appends API and browser verification, response sizes,
+and five timing samples to the artifact. Run it after database-resetting
+E2E suites; a reset invalidates the saved snapshot.
+The proof independently matches displayed source evidence and graph edges to
+persisted snapshot rows, artifact ownership, canonical repository paths, and
+existing source line ranges. Its unresolved workload must retain the scenario
+diagnostic `ASSERTION_INVOCATION_UNRESOLVED` in every sample.
 These samples verify one pinned workflow and are not a general accuracy or
 production latency estimate.
 Playwright starts the actual document worker and waits for its structured

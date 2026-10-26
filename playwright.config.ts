@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test'
 import { config } from 'dotenv'
 
 config({ path: '.env.test', quiet: true })
+config({ path: '.env', quiet: true })
 if (process.env.DATABASE_URL_TEST) process.env.DATABASE_URL = process.env.DATABASE_URL_TEST
 if (process.env.REDIS_URL_TEST) process.env.REDIS_URL = process.env.REDIS_URL_TEST
 
@@ -9,7 +10,7 @@ if (process.env.REDIS_URL_TEST) process.env.REDIS_URL = process.env.REDIS_URL_TE
  * Browser E2E for the decision-first analysis workspace.
  *
  * Files use the `.pw.ts` suffix and live under ./e2e so the repo-wide Jest
- * `**​/*.spec.ts` match never sweeps them (and Playwright never runs the ~200
+ * Browser tests use `.pw.ts` files, separate from the repo-wide Jest specs.
  * Jest specs). Boots live source (next dev / api dev) against the already-running
  * postgres+redis; the seeded review→finalize journey makes no AI calls, and
  * finalization enqueues deterministic report rendering in the real worker.
@@ -21,10 +22,38 @@ if (process.env.REDIS_URL_TEST) process.env.REDIS_URL = process.env.REDIS_URL_TE
 const WEB_PORT = process.env.PW_WEB_PORT ?? '3000'
 const API_PORT = process.env.PW_API_PORT ?? '3001'
 const BASE_URL = `http://localhost:${WEB_PORT}`
+const WEB_DIST_DIR = '.next/g1-playwright'
+const NODE_COMMAND = `"${process.execPath}"`
 process.env.NEXTAUTH_URL = BASE_URL
 const browserRedisUrl = new URL(process.env.PW_REDIS_URL ?? process.env.REDIS_URL ?? 'redis://localhost:6379')
 if (!process.env.PW_REDIS_URL) browserRedisUrl.pathname = '/1'
 process.env.REDIS_URL = browserRedisUrl.toString()
+
+const webServers = [
+  {
+    command: `${NODE_COMMAND} -r ts-node/register -r tsconfig-paths/register src/main.ts`,
+    cwd: 'apps/api',
+    env: { PORT: API_PORT, TS_NODE_PROJECT: 'tsconfig.json', TS_NODE_TRANSPILE_ONLY: 'true' } as Record<string, string>,
+    url: `http://localhost:${API_PORT}/api/v1/system/live`,
+    timeout: 120_000,
+    reuseExistingServer: !process.env.CI,
+  },
+  {
+    command: `${NODE_COMMAND} -r ts-node/register -r tsconfig-paths/register src/main.ts`,
+    cwd: 'apps/worker',
+    env: { TS_NODE_PROJECT: 'tsconfig.json', TS_NODE_TRANSPILE_ONLY: 'true' } as Record<string, string>,
+    wait: { stdout: /"event":"WORKER_READY"/ },
+    timeout: 120_000,
+  },
+  {
+    command: `${NODE_COMMAND} node_modules/next/dist/bin/next dev --webpack -p ${WEB_PORT}`,
+    cwd: 'apps/web',
+    env: { INTERNAL_API_URL: `http://localhost:${API_PORT}`, NEXT_BUILD_DIST_DIR: WEB_DIST_DIR } as Record<string, string>,
+    url: `${BASE_URL}/login`,
+    timeout: 180_000,
+    reuseExistingServer: !process.env.CI,
+  },
+]
 
 export default defineConfig({
   testDir: './e2e',
@@ -58,23 +87,5 @@ export default defineConfig({
       testMatch: /decision-mobile\.pw\.ts/,
     },
   ],
-  webServer: [
-    {
-      command: `pnpm exec dotenv -v PORT=${API_PORT} -v TS_NODE_TRANSPILE_ONLY=true -- pnpm dev:api`,
-      url: `http://localhost:${API_PORT}/api/v1/system/live`,
-      timeout: 120_000,
-      reuseExistingServer: !process.env.CI,
-    },
-    {
-      command: 'pnpm exec dotenv -v TS_NODE_TRANSPILE_ONLY=true -- pnpm dev:worker',
-      wait: { stdout: /"event":"WORKER_READY"/ },
-      timeout: 120_000,
-    },
-    {
-      command: `pnpm exec dotenv -e .env -v INTERNAL_API_URL=http://localhost:${API_PORT} -- pnpm --dir apps/web exec next dev --webpack -p ${WEB_PORT}`,
-      url: `${BASE_URL}/login`,
-      timeout: 180_000,
-      reuseExistingServer: !process.env.CI,
-    },
-  ],
+  webServer: process.env.PW_PRESTARTED_SERVERS === '1' ? [] : webServers,
 })

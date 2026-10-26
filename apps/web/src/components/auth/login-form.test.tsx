@@ -19,3 +19,9 @@ it('keeps credentials disabled until the client auth session is ready', () => {
   expect(screen.getByLabelText('Password')).toBeEnabled();
   expect(screen.getByRole('button', { name: 'Sign In' })).toBeEnabled();
 });
+
+it('exposes submit readiness only after the client form has mounted', () => {
+  jest.mocked(useAuth).mockReturnValue({ login: jest.fn(), isLoading: false } as unknown as ReturnType<typeof useAuth>);
+  render(<LoginForm />);
+  expect(screen.getByRole('button', { name: 'Sign In' }).closest('form')).toHaveAttribute('data-client-ready', 'true');
+});
