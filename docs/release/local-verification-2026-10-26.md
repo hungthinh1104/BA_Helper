@@ -1,6 +1,58 @@
 # Local release hardening verification, October 26, 2026
 
-This records local results for the release-hardening tree on branch
+## Follow-up after hosted run #112
+
+The first release-hardening commit `333ff432c3e0fbff83b6734dd9dca29b89ea37c1`
+was pushed. Hosted workflow run #112 failed in **Analyzer tests** because the
+golden source offsets were produced from CRLF checkouts while Linux CI checked
+out LF. The source text, line/column coordinates, and hashes matched; only
+UTF-16 offsets differed. Reproducing this exposed a second issue: the scanner
+parsed normalized LF text, while `GraphSourceResolver` independently loaded raw
+CRLF text, so late-in-test call spans could miss `TESTS` edges.
+
+The follow-up normalizes accepted TypeScript source to LF before both scanner
+and graph parsing, defines source offsets against that canonical decoded text,
+and bumps `ANALYZER_VERSION` to `analyzer@0.15.0`. Consumers opening working
+files with other line endings should map by the persisted line/column values.
+Regression cases compare LF and CRLF artifacts, graph edges, and source slices,
+including a call near the end of a long test body. The pinned corpus was scanned
+again at `leosuncin/nest-api-example@b49ae92a6c0b0db39b6542338a2ffea3eda15717`;
+its API-backed browser flow passed 5/5 samples and server cleanup passed.
+
+Latest pinned scan: 108 files, 246 artifacts, 96 edges (43 `TESTS`, 19
+`CALLS`, 34 `USES`), 246 evidence records, and 0 dropped edges. Six same-process
+outputs had the same digest. Five measured passes gave scan p50/p95
+786/945 ms, graph 698/853 ms, and combined enumeration/scan/graph 1,587/1,912
+ms. This is one local run, not a controlled benchmark; its combined p50 is near
+the earlier approximate 2-second scan-plus-graph baseline. Browser samples
+used the pinned commit and a 127,449-byte response; time-to-usable p50 was
+2,639 ms and p95 12,057 ms due to first-use development compilation. These
+figures do not establish production capacity.
+
+The follow-up analyzer suite passed 45 suites / 272 tests, and typecheck passed
+after the graph-loader correction. Full workspace lint and build also passed
+after that correction; lint retained 61 pre-existing
+`consistent-type-imports` warnings and no errors. The full `test:ci` result
+(229 suites / 1,329 tests / 1 snapshot) and full E2E result (22 suites / 132
+tests) were run before that final graph-loader correction; they are not
+represented as post-fix runs. The latest hosted result for the follow-up is
+pending push. This addendum
+supersedes later statements in this report that no first hosted run existed.
+
+Remaining pinned diagnostics are still explicit: 122 unresolved test targets,
+357 unresolved behavior claims, 7 unresolved injection tokens, and 3 unresolved
+method targets. The manually labeled 18-link score was not rerun after this
+follow-up, so these graph totals do not establish precision or recall. G1 stays
+**PARTIAL** until hosted CI and the labeled edge evaluation pass.
+
+The original local-verification sections below record the pre-follow-up tree at
+`27b388a`; rows labeled “Current” refer to that historical run. The addendum
+above supersedes them for current analyzer version, pinned proof, CI status, and
+post-fix checks.
+
+## Initial checks before line-ending follow-up
+
+This records local results for the initial release-hardening tree on branch
 `codex/fix-backend-runtime-ci-boundary`, based on HEAD
 `27b388adc25638e0c9737578872baf71e9aa0d2a`. It is not hosted CI certification
 or a broad accuracy claim. No target repository dependencies or tests were
@@ -65,11 +117,13 @@ fixture. The replacement AST verifier passes locally. GitHub's job details confi
 production dependency advisories passed at step 7, then the backend-runtime
 boundary check failed at step 17; boundary duplication, migration, lint,
 typecheck, builds, analyzer/app/web/E2E, and browser steps 18-34 were skipped.
-Remote `main` at `27b388a` still contains the old check. The release-hardening
-branch has not yet been pushed, so hosted CI has not evaluated these changes.
-The base commit's combined status reports a Vercel failure.
+Remote `main` at `27b388a` still contains the old check. At the time of run
+#111, the release-hardening branch had not yet been pushed. The first hardening
+commit was later pushed; its run #112 failure and the follow-up are recorded at
+the top of this report. The base commit's combined status reports a Vercel
+failure.
 
-## Pinned repository evidence
+## Initial pinned repository evidence (analyzer@0.14.0)
 
 The proof used `leosuncin/nest-api-example` at
 `b49ae92a6c0b0db39b6542338a2ffea3eda15717`. It scanned source with the
@@ -191,8 +245,8 @@ capacity benchmark or pinned-repository high-fanout result.
 
 ## Remaining limits
 
-- The release-hardening commit has no hosted CI result yet; local success does not replace
-  the hosted workflow.
+- The follow-up commit does not yet have a hosted CI result; local success does
+  not replace the hosted workflow.
 - The local production dependency audit remains unverified because automatic
   approval review rejected the npm advisory request. The remote run's earlier
   advisory step is evidence for the unchanged dependencies at that HEAD, not a
@@ -218,15 +272,16 @@ capacity benchmark or pinned-repository high-fanout result.
 
 ## Release decision
 
-**G1: PARTIAL. G2 readiness: NOT READY.** The fresh pinned scan, persisted API
-proof, and 5/5 required browser proof pass locally. Six ordinary browser tests
-also pass when servers are prestarted; the pinned test is intentionally
-separate and was run in required mode. Hosted CI has not evaluated this dirty
-tree: remote `main` remains at `27b388a`, where run #111 failed the old
-text-based boundary check. The normal Playwright webServer shutdown also
-remains unverified on this Windows worker. The controlled local differential
-did not reproduce the reported twofold slowdown, but additional repeated
-profiling is still needed before making a performance claim. Hosted CI, a clean
-CI browser run, and stable performance evidence remain required for G1 closure.
+**G1: PARTIAL. G2 readiness: NOT READY.** The latest analyzer@0.15.0 pinned
+scan, persisted API proof, and 5/5 required browser proof pass locally. The
+first pushed release-hardening commit failed hosted run #112 in Analyzer tests
+due to line-ending-dependent offsets. The follow-up fixes scanner/graph source
+normalization and is pending hosted CI. The manually labeled 18-link
+evaluation also needs a post-fix rerun. The normal Playwright webServer
+shutdown remains unverified on this Windows worker. The controlled local
+differential did not reproduce the reported twofold slowdown, but additional
+repeated profiling is still needed before making a performance claim. Hosted
+CI, a clean CI browser run, and stable performance evidence remain required for
+G1 closure.
 
 The user authorized committing and pushing the release-hardening branch. No merge authorization was given. Hosted CI remains a required release gate.

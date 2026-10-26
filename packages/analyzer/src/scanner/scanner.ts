@@ -5,6 +5,7 @@ import type { Dirent } from 'node:fs';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { createHash } from 'node:crypto';
 import { createArtifactIdentity } from '@ba-helper/shared';
+import { addCanonicalSourceFile } from './canonical-source-file';
 import { ANALYZER_VERSION } from './scanner.types';
 import type { ScanCodeEvidence, ScanInput, ScanResult, ScanArtifact, ScanCoverage, ScanSourceLocation } from './scanner.types';
 import { computeArtifactContentHash } from './core/content-hasher';
@@ -22,7 +23,7 @@ export const scanFixture = (input: ScanInput): ScanResult => {
   const sourceRoot = realpathSync.native(input.fixturePath);
   const project = createProject();
   const sourceFiles = listFixtureTypeScriptFiles(sourceRoot);
-  for (const file of sourceFiles) project.addSourceFileAtPath(file);
+  addCanonicalSourceFiles(project, sourceFiles);
   return extractProject(project, sourceRoot, input.analyzerVersion, undefined, undefined, input.commitSha);
 };
 
@@ -54,7 +55,7 @@ export const scanProject = (input: ScanInput & { tsFiles: string[]; coverage?: S
   const sourceRoot = realpathSync.native(input.fixturePath);
   const sourceFiles = [...new Set(input.tsFiles.map(file => realpathSync.native(file)))];
   const project = createProject();
-  for (const file of sourceFiles) project.addSourceFileAtPath(file);
+  addCanonicalSourceFiles(project, sourceFiles);
   return extractProject(project, sourceRoot, input.analyzerVersion, input.coverage, sourceFiles, input.commitSha);
 };
 
@@ -84,6 +85,10 @@ function extractProject(project: Project, sourceRoot: string, version?: string,
   // compiler AST and inflate the process heap.
   for (const sourceFile of project.getSourceFiles()) project.removeSourceFile(sourceFile);
   return result;
+}
+
+function addCanonicalSourceFiles(project: Project, sourceFiles: string[]): void {
+  for (const file of sourceFiles) addCanonicalSourceFile(project, file);
 }
 
 function classArtifacts(cls: ClassDeclaration, filePath: string): ScanArtifact[] {

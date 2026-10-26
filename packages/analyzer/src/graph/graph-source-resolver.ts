@@ -2,6 +2,7 @@ import { isAbsolute, relative, resolve } from 'node:path';
 import { Node, Project } from 'ts-morph';
 import type { ClassDeclaration, Expression, SourceFile, TypeNode } from 'ts-morph';
 import type { ScanArtifact, ScanResult } from '../scanner/scanner.types';
+import { addCanonicalSourceFile } from '../scanner/canonical-source-file';
 import { NestTestingReceiver } from './nest-testing-receiver';
 import { LocalNewFactoryReceiver } from './local-new-factory-receiver';
 import { ScannedModuleResolver } from './scanned-module-resolver';
@@ -38,7 +39,7 @@ export class GraphSourceResolver {
       const path = relative(root, absolute);
       if (isAbsolute(path) || path === '..' || path.startsWith('../') || path.startsWith('..\\')) continue;
       if (!absolute.endsWith('.ts')) continue;
-      this.sources.set(absolute, this.project.addSourceFileAtPath(absolute));
+      this.sources.set(absolute, addCanonicalSourceFile(this.project, absolute));
     }
     this.moduleResolver = new ScannedModuleResolver(root, this.sources);
     this.exportResolver = new ScannedExportResolver(this.moduleResolver);

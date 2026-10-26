@@ -106,7 +106,7 @@ An edge is `EVIDENCED` only when the supported parser can locate a direct
 relationship in source. A similarly named but disconnected symbol must not
 become an evidenced impact.
 
-### NestJS graph publication (`scanner@0.7.0`, `analyzer@0.14.0`)
+### NestJS graph publication (`scanner@0.7.0`, `analyzer@0.15.0`)
 
 The checkout root and accepted source-file paths are canonicalized through
 filesystem real paths before computing repository-relative artifact identity.
@@ -207,18 +207,18 @@ Confidence describes extraction resolution, not a calibrated probability.
 
 Changing the graph extraction contract requires a new analyzer version and
 rescan. `analyzer@0.11.0` added bounded TypeScript path/re-export resolution and
-more specific unresolved reasons. `analyzer@0.14.0` resolves cyclic star
+more specific unresolved reasons. `analyzer@0.15.0` resolves cyclic star
 re-exports independently of traversal order. Each export lookup visits a key
 once, with a 256-level depth limit and 4,096-key work limit; exhausting either
 reports `EXPORT_RESOLUTION_LIMIT_EXCEEDED` and yields no partial target edge.
-The `analyzer@0.14.0` contract accepts Nest testing bindings
+The `analyzer@0.15.0` contract accepts Nest testing bindings
 only from the current Jest case, its suite/ancestor setup hooks, or direct
 lexical initialization. Conditional writes, teardown hooks, sibling-suite hooks,
 and writes in other cases do not establish a receiver; unresolved candidate calls report
 `SETUP_BINDING_NOT_PROVEN`. Historical snapshots are not backfilled with
 inferred relationships.
 
-`analyzer@0.14.0` also extracts methods on classes decorated with NestJS
+`analyzer@0.15.0` also extracts methods on classes decorated with NestJS
 `@Catch()`. These exception-filter methods use the existing `SERVICE_METHOD`
 identity and are eligible for direct source-backed `CALLS`/`TESTS` links; no
 runtime filter execution is inferred.
@@ -277,8 +277,12 @@ unknown matcher semantics and shadowed `expect` bindings emit unresolved
 diagnostics rather than guessed outcomes.
 
 Each claim is bound to the resolved scan `commitSha` and a canonical
-repository-relative path with UTF-16 start/end offsets (exclusive end),
-one-based line/column coordinates, and redacted source text. Persistence
+repository-relative path with UTF-16 start/end offsets (exclusive end) into
+the LF-normalized decoded source text, one-based line/column coordinates, and
+redacted source text. The scanner normalizes CRLF and CR line endings before
+parsing so offsets, claims, and excerpts remain deterministic across checkout
+platforms. Consumers mapping an offset into a working-tree file with different
+line endings should use the line/column coordinates. Persistence
 links claims to the persisted test-file evidence and rejects a claim whose path
 differs from its test file or whose commit differs from the published snapshot.
 Without commit context, no behavior claim
