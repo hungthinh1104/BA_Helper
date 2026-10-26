@@ -2,7 +2,7 @@
 
 > Historical measurement note: the results table below is for `analyzer@0.7.0`
 > and the source slices pinned in this report. The current analyzer contract is
-> `analyzer@0.14.0`; the historical table is not a current-version accuracy claim.
+> `analyzer@0.15.0`; the historical table is not a current-version accuracy claim.
 > Re-run the command below for a current scorecard, and keep the immutable
 > source labels and limitations attached to either result.
 

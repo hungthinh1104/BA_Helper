@@ -2,7 +2,7 @@
 
 > Version scope: the TESTS/CALLS corpus figures in the first section are
 > historical measurements from the analyzer versions named there. The current
-> analyzer contract is `analyzer@0.14.0`; run the reproduction commands to
+> analyzer contract is `analyzer@0.15.0`; run the reproduction commands to
 > produce a scorecard for the current checkout. Historical figures below do not
 > certify current accuracy.
 

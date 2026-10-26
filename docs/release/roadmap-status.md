@@ -3,18 +3,19 @@
 This is the authoritative engineering status and closure order for the
 Booking/Payment/Refund MVP.
 
-## Current status (2026-10-24)
+## Current status (2026-10-26)
 
 This section is the current summary. Dated verification documents are
 historical snapshots and do not certify a later checkout. The current analyzer
-scanner/analyzer contract versions are scanner@0.7.0 / analyzer@0.14.0.
+scanner/analyzer contract versions are scanner@0.7.0 / analyzer@0.15.0.
 
 | Gate | Current state | Next evidence needed |
 | --- | --- | --- |
-| Release verification | The current working-tree checks are recorded in [October 24 verification](local-verification-2026-10-24.md). They do not certify hosted CI or the Docker release drill. | Run `pnpm verify:stability` on the reviewed revision and retain commit-matched local and hosted CI evidence. |
-| Analyzer and semantic evidence | Static Jest extraction, bounded behavior claims, explicit unresolved diagnostics, code signature/condition/exception evidence, and opt-in runtime-trace import are implemented under analyzer@0.14.0. Curated gates are reproducible; they are not a general accuracy estimate. | Keep running the existing [analyzer and trace evaluation gates](../evaluation/static-test-trace.md) against the reviewed revision; independently adjudicate labels and add held-out source tasks before broader accuracy claims. |
-| Visual Test Trace | The snapshot-scoped code-first API and lazy repository explorer expose source, bounded graph paths, static Jest scenarios, provenance, and uncertainty indicators. Runtime observations remain excluded. | Run the reviewer study and capture comprehension/time observations before claiming product effectiveness. |
+| Release verification | GitHub Actions [run #116](https://github.com/hungthinh1104/BA_Helper/actions/runs/40342054804) passed the commit-matched CI workflow at `8540b1a`. The Vercel deployment status for that SHA is failed; its logs were not accessible during this review. | Inspect the Vercel deployment logs with project access. Keep this separate from the passing GitHub Actions result. |
+| Analyzer and semantic evidence | Analyzer `0.15.0` passes the committed public and application trace gates with zero false positives/misses in their selected source slices and full checked provenance. These curated labels are not independent human adjudication or a general accuracy estimate. The previous 18-link pinned-repository label list is not present in the repository, so its post-fix precision/recall is unverified. | Preserve a reproducible label set for the pinned 18-link evaluation and independently adjudicate it before claiming that score. |
+| Visual Test Trace | The snapshot-scoped API, bounded artifact search/pagination, and lazy repository navigator are implemented. Hosted run #116 passed the persisted pinned-repository API and browser proof. Static relationships remain distinct from runtime observations. | Inspect the failed Vercel deployment; run the reviewer study before claiming product effectiveness. |
 | Product validation | The [reviewer-study protocol](../evaluation/product-validation.md) exists; no reviewer time or accuracy observations are recorded. | Run the counterbalanced study described in product validation and static trace evaluation. |
+| G1 closure | **PARTIAL.** Hosted GitHub CI, persisted pinned proof, browser proof, >50 artifact discovery, and separated cache miss/hit measurements are verified. The pinned 18-link accuracy result is not reproducible from a committed label set; the Vercel deployment also failed. | Restore the exact labels for a post-fix accuracy run and inspect the failed Vercel deployment. |
 | SaaS | Locked. Private repository access, organizations, hosted multi-tenancy, billing, and compliance work remain outside the MVP. | Open only if provenance-backed product validation meets the entry gate in Phase 5. |
 
 Keep the Booking/Payment/Refund MVP boundary. Use the

@@ -1,6 +1,36 @@
 # Local release hardening verification, October 26, 2026
 
-## Latest hosted verification — run #115 passed
+## Latest hosted verification — run #116 passed
+
+Commit `8540b1a30de8c50d15338b8723007e82d91260a6` is the local HEAD and the
+remote branch tip checked through the GitHub API. GitHub Actions
+[#116](https://github.com/hungthinh1104/BA_Helper/actions/runs/40342054804)
+passed all steps: dependency advisories, migrations, analyzer and trace gates,
+scalability, architecture boundaries, lint, typecheck, builds, unit/integration
+and E2E tests, demos, browser journeys, pinned proof persistence, and the pinned
+browser proof. The run uploaded the browser proof bundle (including
+`artifacts/evaluation/pinned-code-comprehension-proof.json`) and the analyzer
+scorecard. The Vercel deployment status for this SHA is separately `failure`;
+the Vercel deployment page was not accessible to this review, so its cause is
+unverified. This is not a failed GitHub Actions run.
+
+Focused local checks against this HEAD passed: artifact/comprehension API and
+repository unit tests, 4 suites / 32 tests; Code Evidence Navigator integration,
+1 suite / 11 tests. The committed public trace gate passed with 22/22 Jest
+cases, 24/24 `TESTS`, 10/10 `CALLS`, zero false positives/misses, and source
+evidence integrity 34/34. The application trace gate passed with 27/27 cases,
+28/28 `TESTS`, 22/22 `CALLS`, zero false positives/misses, and source evidence
+integrity 50/50. These are fixed selected-source regression sets; their labels
+are not independently human-adjudicated and do not estimate general accuracy.
+
+G1 remains **PARTIAL** under the earlier real-repository accuracy requirement:
+the October 24 report records 18/18 links, but the exact label list is not
+checked in, so the result cannot be rerun reproducibly against analyzer@0.15.0.
+The pinned scan still reports unresolved relationships; aggregate edge counts
+do not establish precision or recall. G2 remains **NOT READY** because no
+reviewer-study observations exist.
+
+## Previous hosted verification — run #115 passed
 
 Commit `62f10cc3e751570c593db127816d649f0460a7c1` passed hosted workflow
 [#115](https://github.com/hungthinh1104/BA_Helper/actions/runs/40339953306)
@@ -307,20 +337,12 @@ capacity benchmark or pinned-repository high-fanout result.
 
 ## Release decision
 
-**G1: PARTIAL. G2 readiness: NOT READY.** The latest analyzer@0.15.0 pinned
-scan, persisted API proof, and 5/5 required browser proof pass locally. Hosted
-run #112 exposed line-ending-dependent offsets; #113 passed analyzer gates,
-lint, typecheck, builds, and Analyzer tests, then exposed a leaked CI env in
-one runtime-config test. Run #114 passed App tests and browser journeys, then
-showed the workflow had omitted the analyzer package build before pinned proof.
-Run #115 passed the entire hosted workflow. The follow-up normalizes
-scanner/graph source, isolates the test env, and adds that package build. The
-manually labeled 18-link
-evaluation also needs a post-fix rerun. The normal Playwright webServer
-shutdown remains unverified on this Windows worker. The controlled local
-differential did not reproduce the reported twofold slowdown, but additional
-repeated profiling is still needed before making a performance claim. Hosted
-CI, a clean CI browser run, and stable performance evidence remain required for
-G1 closure.
+**Historical decision at the time of the earlier local report: G1 PARTIAL; G2
+NOT READY.** The latest hosted state is recorded at the top of this document.
+The manually labeled 18-link result remains unreproducible because its exact
+labels are not checked in. Performance samples distinguish fresh-process,
+cache-miss, and cache-hit conditions, but remain small local samples and are
+not a capacity benchmark. The Vercel deployment failure is separate from
+GitHub Actions and still needs authorized project-log inspection.
 
-The user authorized committing and pushing the release-hardening branch. No merge authorization was given. Hosted CI remains a required release gate.
+The user authorized committing and pushing this branch; no merge authorization was given. Hosted GitHub Actions CI passed in run #116. The pinned-label and Vercel deployment limits above remain.
