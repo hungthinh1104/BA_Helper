@@ -1,36 +1,90 @@
 # Local release hardening verification, October 26, 2026
 
-## Latest hosted verification — run #117 passed
+## Latest hosted verification — run #118 passed
 
-Commit `fe8bb14e4833c565bb8e69a540089a77cf24ec6e` is the remote branch tip
-checked through the GitHub API. GitHub Actions
-[#117](https://github.com/hungthinh1104/BA_Helper/actions/runs/40347216487)
-passed all 46 workflow steps: dependency advisories, migrations, analyzer and
-trace gates, scalability, architecture boundaries, lint, typecheck, builds,
-tests, demos, browser journeys, pinned proof persistence, and the pinned browser
-proof. It uploaded `browser-review-results` (artifact 12662882786, including
-`artifacts/evaluation/pinned-code-comprehension-proof.json`) and
-`analyzer-quality-scorecard` (artifact 12662006759). The Vercel deployment
-status for this SHA is separately `failure` at
-[the deployment](https://vercel.com/diphungthinh-projects/ba-helper-web/FiFsR4KZnBS5DtkQu1LZH79bAwT3).
-The deployment page was not accessible to this review, so its cause is
-unverified. This is not a failed GitHub Actions run.
+Commit `59d6c5d6988bfe3907dee75f0734ffb69a74ffd7` is the local and remote
+branch tip. GitHub Actions
+[#118](https://github.com/hungthinh1104/BA_Helper/actions/runs/40349912038)
+passed all 46 workflow steps, including production dependency advisories,
+migrations, analyzer and trace gates, scalability, architecture boundaries,
+lint, typecheck, builds, tests, demos, browser journeys, persisted proof, and
+the required pinned browser proof. The code-bearing parent commit also passed
+all 46 steps in run #117; #118 revalidated its documentation-only descendant.
+Run #118 uploaded `browser-review-results` (artifact
+[12663912089](https://github.com/hungthinh1104/BA_Helper/actions/runs/40349912038/artifacts/12663912089),
+including `artifacts/evaluation/pinned-code-comprehension-proof.json`) and
+`analyzer-quality-scorecard` (artifact
+[12663221854](https://github.com/hungthinh1104/BA_Helper/actions/runs/40349912038/artifacts/12663221854)).
+The ordinary browser-review command keeps the pinned corpus case opt-in; the
+separate required pinned browser command ran five real-browser samples and
+completed successfully.
 
-Focused local checks against this HEAD passed: artifact/comprehension API and
-repository unit tests, 4 suites / 32 tests; Code Evidence Navigator integration,
-1 suite / 11 tests. The committed public trace gate passed with 22/22 Jest
-cases, 24/24 `TESTS`, 10/10 `CALLS`, zero false positives/misses, and source
-evidence integrity 34/34. The application trace gate passed with 27/27 cases,
-28/28 `TESTS`, 22/22 `CALLS`, zero false positives/misses, and source evidence
-integrity 50/50. These are fixed selected-source regression sets; their labels
-are not independently human-adjudicated and do not estimate general accuracy.
+The pinned proof used a clean tool checkout at `59d6c5d`, corpus
+`leosuncin/nest-api-example` at
+`b49ae92a6c0b0db39b6542338a2ffea3eda15717`, and analyzer `0.15.0`. It scanned
+108 files and persisted 246 artifacts, 96 edges, and 246 evidence records with
+zero dropped edges. Five measured scan passes after one warm-up produced the
+same digest on all six passes:
+`9200c1684cf0f707491cff90ead6dc1f32b33bed2aeaf3e81c40d4f9ead93880`.
+Persisted projection checks covered 5 source evidence items, 8 relationships,
+and 7 source files. The live API/browser proof validated 25 responses over five
+samples against the same snapshot and commit.
 
-G1 remains **PARTIAL** under the earlier real-repository accuracy requirement:
-the October 24 report records 18/18 links, but the exact label list is not
-checked in, so the result cannot be rerun reproducibly against analyzer@0.15.0.
-The pinned scan still reports unresolved relationships; aggregate edge counts
-do not establish precision or recall. G2 remains **NOT READY** because no
-reviewer-study observations exist.
+The latest pinned scan still reports 122 `TEST_TARGET_UNRESOLVED` diagnostics
+(118 `NO_SUPPORTED_DIRECT_REFERENCE`, 4 `METHOD_ARTIFACT_NOT_EXTRACTED`), 7
+`UNRESOLVED_INJECTION_TOKEN` diagnostics (`IMPORT_RESOLUTION_FAILED`), 3
+`UNRESOLVED_METHOD_TARGET` diagnostics, 357 unresolved semantic behavior
+claims, and 1 unsupported Jest declaration. The behavior diagnostics include
+183 nested callbacks, 130 unresolved action receivers, 16 unresolved mock
+identities, and 11 unresolved assertion invocations. These counts describe
+explicit gaps; aggregate edge totals and zero dropped edges do not establish
+precision or recall.
+
+### Latest hosted performance samples
+
+The scan ran on Linux with Node `v22.23.3`, an AMD EPYC 9V45 runner reporting 4
+logical cores and 16,766,414,848 bytes of system memory. One warm-up and five
+measured passes shared a process; filesystem/runtime caches were warm after the
+first pass. Scan p50/p95 was 371/423 ms, graph construction 211/239 ms, and
+end-to-end enumeration, scan, and graph 581/687 ms. This is a small CI sample,
+not a capacity benchmark.
+
+| Projection condition | Samples | p50 / p95 | Database work and response |
+| --- | ---: | ---: | --- |
+| Fresh Node processes; initialization excluded from timed projection | 5 | 106.85 / 113.26 ms | 12 queries, 16 rows, 22,457 bytes per sample |
+| Warm database pool; projection cache miss | 10 | 7.58 / 8.78 ms | 12 queries, 16 rows per sample |
+| Populated projection cache hit | 10 | 1.20 / 2.11 ms | 2 queries, 2 rows per sample |
+
+For the fresh-process projection, RSS p50 before/after was 316/364 MB and
+heap-used p50 was 163/169 MB. These are process snapshots, not incremental
+endpoint memory. Five browser samples each covered five API responses totaling
+127,449 bytes. Browser p50/p95 was 2,442/4,514 ms to usable; 61/86 ms to expand
+a scenario; 379/393 ms for graph readiness; 64/70 ms for evidence inspection;
+2,367/2,416 ms for method switching; and 439/447 ms for scenario switching.
+The first-use development-server sample affects time-to-usable p95; these
+browser measurements do not establish production latency.
+
+The Vercel status for this SHA is separately `failure` at deployment
+`dpl_7KpxkPLUsKrT9173AjGp3otnH2ms`:
+[deployment details](https://vercel.com/diphungthinh-projects/ba-helper-web/7KpxkPLUsKrT9173AjGp3otnH2ms).
+The page/logs are inaccessible in this environment, and neither the Vercel CLI
+nor a Vercel token is configured here, so the cause remains unverified. This is
+not a failed GitHub Actions run.
+
+Focused local checks on the same code-bearing source tree passed: API/repository
+unit tests, 4 suites / 32 tests; Code Evidence Navigator integration, 1 suite /
+11 tests. The public trace gate passed 22/22 cases, 24/24 `TESTS`, 10/10
+`CALLS`, zero false positives/misses, and evidence integrity 34/34. The
+application trace gate passed 27/27 cases, 28/28 `TESTS`, 22/22 `CALLS`, zero
+false positives/misses, and evidence integrity 50/50. These fixed selected
+source sets are not independent human adjudication or a general accuracy
+estimate.
+
+G1 remains **PARTIAL**: the October 24 report records 18/18 links, but its exact
+label list is not checked in, so that score cannot be rerun against
+analyzer@0.15.0. The pinned scan still has unresolved relationships, and the
+Vercel deployment failure remains unexplained. G2 remains **NOT READY** because
+no reviewer-study observations exist.
 
 ## Previous hosted verification — run #115 passed
 
@@ -347,4 +401,4 @@ cache-miss, and cache-hit conditions, but remain small local samples and are
 not a capacity benchmark. The Vercel deployment failure is separate from
 GitHub Actions and still needs authorized project-log inspection.
 
-The user authorized committing and pushing this branch; no merge authorization was given. Hosted GitHub Actions CI passed in run #117. The pinned-label and Vercel deployment limits above remain.
+The user authorized committing and pushing this branch; no merge authorization was given. Hosted GitHub Actions CI passed in run #118. The pinned-label, Vercel deployment, and reviewer-study limits above remain.
