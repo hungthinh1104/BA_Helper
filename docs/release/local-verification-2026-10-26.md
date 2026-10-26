@@ -1,5 +1,20 @@
 # Local release hardening verification, October 26, 2026
 
+## Latest hosted verification — run #115 passed
+
+Commit `62f10cc3e751570c593db127816d649f0460a7c1` passed hosted workflow
+[#115](https://github.com/hungthinh1104/BA_Helper/actions/runs/40339953306)
+on 2026-10-26. Every step passed, including production dependency advisories,
+analyzer quality and corpus gates, scalability, boundaries, migration upgrade,
+lint, typecheck, all builds, all test suites, E2E, golden-path demos, browser
+review journeys, and both persisted and browser pinned-repository proofs.
+
+Hosted test totals: Analyzer 45 suites / 272 tests; App 229 / 1,329 tests / 1
+snapshot; Web 26 / 126 tests; E2E 22 / 132 tests. The analyzer package build
+step passed before backend-runtime, and the pinned proof completed after the
+previous missing-dist failure. This certifies the workflow at `62f10cc`; the
+remaining accuracy limits below still apply.
+
 ## Follow-up after hosted run #112
 
 The first release-hardening commit `333ff432c3e0fbff83b6734dd9dca29b89ea37c1`
@@ -18,7 +33,7 @@ environment, where `ENABLE_DEV_LOGIN=true` is intentionally set. I reproduced
 the failure with that environment and fixed the test to pass an explicit
 `ENABLE_DEV_LOGIN=false` env to both config creation and validation. The
 focused regression now passes 32/32 tests with the outer CI-style variable set
-to true. The next hosted run is pending push.
+to true.
 
 Hosted run #114 passed App tests, E2E, both golden-path demos, and browser
 journeys, but failed while persisting the pinned proof: CI had not built
@@ -27,7 +42,7 @@ runtime proof imports through `@ba-helper/backend-runtime`. I reproduced the
 missing-module error by temporarily removing the generated analyzer `dist`
 directory, then restored it; `pnpm --filter @ba-helper/analyzer build` followed
 by a runtime import passed. The workflow now explicitly builds the analyzer
-before backend-runtime. The next hosted run is pending push.
+before backend-runtime. Hosted run #115 passed this path and the full workflow.
 
 The follow-up normalizes accepted TypeScript source to LF before both scanner
 and graph parsing, defines source offsets against that canonical decoded text,
@@ -56,17 +71,17 @@ after that correction; lint retained 61 pre-existing
 tests) were run before that final graph-loader correction; they are not
 represented as post-fix runs. Hosted run #113 exposed the test env leak; #114
 passed App tests, E2E, demos, and browser journeys but failed on the missing
-analyzer runtime build. The env regression passes locally with CI's outer
-`ENABLE_DEV_LOGIN=true`; the analyzer build and runtime package import also
-pass locally. A dedicated analyzer build step is now in the workflow; its
-hosted result is pending. This addendum
+analyzer runtime build. Run #115 passed all tests and workflow steps, including
+the pinned real-repository proof. The env regression passes locally with CI's
+outer `ENABLE_DEV_LOGIN=true`; the analyzer build and runtime package import
+also pass locally. This addendum
 supersedes later statements in this report that no first hosted run existed.
 
 Remaining pinned diagnostics are still explicit: 122 unresolved test targets,
 357 unresolved behavior claims, 7 unresolved injection tokens, and 3 unresolved
 method targets. The manually labeled 18-link score was not rerun after this
 follow-up, so these graph totals do not establish precision or recall. G1 stays
-**PARTIAL** until hosted CI and the labeled edge evaluation pass.
+**PARTIAL** until the labeled edge evaluation is rerun against analyzer@0.15.0.
 
 The original local-verification sections below record the pre-follow-up tree at
 `27b388a`; rows labeled “Current” refer to that historical run. The addendum
@@ -268,12 +283,9 @@ capacity benchmark or pinned-repository high-fanout result.
 
 ## Remaining limits
 
-- The follow-up commit does not yet have a hosted CI result; local success does
-  not replace the hosted workflow.
 - The local production dependency audit remains unverified because automatic
-  approval review rejected the npm advisory request. The remote run's earlier
-  advisory step is evidence for the unchanged dependencies at that HEAD, not a
-  rerun against this dirty tree.
+  approval review rejected the npm advisory request. The hosted production
+  advisory step passed in run #115 for commit `62f10cc`.
 - The manually labeled 18-link evaluation was not rerun in this record.
 - The pinned corpus still has unresolved target and semantic diagnostics shown
   above. Fixture quality gates do not establish broad real-repository
@@ -301,8 +313,9 @@ run #112 exposed line-ending-dependent offsets; #113 passed analyzer gates,
 lint, typecheck, builds, and Analyzer tests, then exposed a leaked CI env in
 one runtime-config test. Run #114 passed App tests and browser journeys, then
 showed the workflow had omitted the analyzer package build before pinned proof.
-The follow-up normalizes scanner/graph source, isolates the test env, and adds
-that package build; hosted validation is pending. The manually labeled 18-link
+Run #115 passed the entire hosted workflow. The follow-up normalizes
+scanner/graph source, isolates the test env, and adds that package build. The
+manually labeled 18-link
 evaluation also needs a post-fix rerun. The normal Playwright webServer
 shutdown remains unverified on this Windows worker. The controlled local
 differential did not reproduce the reported twofold slowdown, but additional
