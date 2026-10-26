@@ -1,14 +1,16 @@
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { ANALYZER_VERSION, buildGraph, scanProject } from '@ba-helper/analyzer';
-import type { GraphEdge, ScanArtifact } from '@ba-helper/analyzer';
+import type { GraphEdge, ScanArtifact, ScanResult } from '@ba-helper/analyzer';
 import { evaluateSemanticTestBehavior } from './semantic-test-behavior.evaluator';
 import { scoreReferenceSet } from './reference-set.scorer';
 
 export { scoreReferenceSet } from './reference-set.scorer';
 
-type Case = { filePath: string; suitePath: string[]; title: string; targetSymbols: string[] };
+type TargetArtifact = { filePath: string; symbolName: string };
+type Case = { filePath: string; suitePath: string[]; title: string; targetSymbols: string[]; targetArtifacts?: TargetArtifact[] };
 export type TraceRepository = {
   id: string; repository: string; commitSha: string;
   files: Array<{ path: string; blobSha: string }>;
@@ -16,6 +18,7 @@ export type TraceRepository = {
 };
 type GroundTruth = {
   schemaVersion: number; independentHumanReview: boolean; groundTruthMethod: string;
+  heldOutFromResolverDevelopment?: boolean; labelReviewStatus?: string;
   scope: string; repositories: TraceRepository[];
 };
 
@@ -25,15 +28,35 @@ const edgeIdentity = (from: string, to: string) => JSON.stringify([from.startsWi
 
 function verifySourcePins(root: string, repository: TraceRepository): string[] {
   if (!/^[a-f0-9]{40}$/.test(repository.commitSha)) throw new Error('Unpinned repository.');
-  return repository.files.filter(file => {
+  let isPinnedGitWorktree = false;
+  try {
+    const gitRoot = execFileSync('git', ['-C', root, 'rev-parse', '--show-toplevel'],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    isPinnedGitWorktree = path.resolve(gitRoot) === path.resolve(root);
+  } catch {
+    isPinnedGitWorktree = false;
+  }
+  if (isPinnedGitWorktree) {
+    const head = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+    const changes = execFileSync('git', ['-C', root, 'status', '--porcelain', '--untracked-files=all'],
+      { encoding: 'utf8' }).trim();
+    if (head !== repository.commitSha || changes) throw new Error('Corpus checkout is not clean at the pinned commit.');
+  }
+  const files = repository.files.filter(file => {
     if (!/^[\w./-]+$/.test(file.path) || file.path.split('/').includes('..') || path.isAbsolute(file.path)) {
       throw new Error('Unsafe corpus file path.');
     }
-    const content = readFileSync(path.join(root, file.path));
-    const hash = createHash('sha1').update(`blob ${content.length}\0`).update(content).digest('hex');
+    let hash: string;
+    if (isPinnedGitWorktree) {
+      hash = execFileSync('git', ['-C', root, 'rev-parse', `${repository.commitSha}:${file.path}`], { encoding: 'utf8' }).trim();
+    } else {
+      const content = readFileSync(path.join(root, file.path));
+      hash = createHash('sha1').update(`blob ${content.length}\0`).update(content).digest('hex');
+    }
     if (hash !== file.blobSha) throw new Error(`Upstream blob mismatch: ${repository.id}/${file.path}`);
-    return file.path.endsWith('.ts');
-  }).map(file => path.join(root, file.path));
+    return true;
+  });
+  return files.filter(file => file.path.endsWith('.ts')).map(file => path.join(root, file.path));
 }
 
 export function auditSourceEvidence(root: string, repository: TraceRepository, edges: GraphEdge[],
@@ -78,22 +101,37 @@ export function auditSourceEvidence(root: string, repository: TraceRepository, e
     new Set(findings.map(finding => finding.edge)).size, issues: findings };
 }
 
-function evaluateRepository(fixtureRoot: string, repository: TraceRepository) {
-  const root = path.join(fixtureRoot, repository.id);
+type PrecomputedAnalysis = { scan: ScanResult; graph: ReturnType<typeof buildGraph> };
+
+export function evaluateTraceRepository(root: string, repository: TraceRepository,
+  precomputed?: PrecomputedAnalysis) {
   const tsFiles = verifySourcePins(root, repository);
   const started = performance.now();
-  const scan = scanProject({ fixturePath: root, tsFiles });
-  const graph = buildGraph(scan);
+  const scan = precomputed?.scan ?? scanProject({ fixturePath: root, tsFiles });
+  const graph = precomputed?.graph ?? buildGraph(scan);
   const artifacts = new Map(scan.artifacts.map(artifact => [artifact.stableId, artifact]));
+  const selectedSourcePaths = new Set(repository.files.filter(file => file.path.endsWith('.ts')).map(file => file.path));
+  const selectedTestPaths = new Set(repository.cases.map(test => test.filePath));
   const expectedCases = repository.cases.map(caseIdentity);
-  const actualCases = scan.artifacts.flatMap(artifact => artifact.testCase ? [caseIdentity({
+  const actualCases = scan.artifacts.flatMap(artifact => artifact.testCase && selectedTestPaths.has(artifact.filePath) ? [caseIdentity({
     filePath: artifact.filePath, suitePath: artifact.testCase.suitePath, title: artifact.testCase.title,
   })] : []);
-  const expectedTests = repository.cases.flatMap(test => test.targetSymbols.map(target => edgeIdentity(caseIdentity(test), target)));
+  const expectedTests = repository.cases.flatMap(test => (test.targetArtifacts
+    ? test.targetArtifacts.map(target => edgeIdentity(caseIdentity(test), JSON.stringify([target.filePath, target.symbolName])))
+    : test.targetSymbols.map(target => edgeIdentity(caseIdentity(test), target))));
   const expectedCalls = repository.calls.map(call => edgeIdentity(call.fromSymbol, call.toSymbol));
+  const qualifiedTargets = repository.cases.flatMap(test => test.targetArtifacts ?? []);
+  const qualifiedCaseKeys = new Set(repository.cases.filter(test => test.targetArtifacts !== undefined).map(caseIdentity));
+  const unqualifiedSymbols = repository.cases.filter(test => !test.targetArtifacts)
+    .flatMap(test => test.targetSymbols);
+  for (const target of qualifiedTargets) {
+    if (!repository.files.some(file => file.path === target.filePath)) {
+      throw new Error(`Target artifact file is not source-pinned: ${repository.id}/${target.filePath}`);
+    }
+  }
   const gradedSymbols = new Set([
     ...repository.calls.flatMap(call => [call.fromSymbol, call.toSymbol]),
-    ...repository.cases.flatMap(test => test.targetSymbols),
+    ...unqualifiedSymbols,
   ]);
   const artifactsBySymbol = new Map<string, ScanArtifact[]>();
   for (const artifact of scan.artifacts) {
@@ -106,16 +144,26 @@ function evaluateRepository(fixtureRoot: string, repository: TraceRepository) {
     const candidateFiles = (artifactsBySymbol.get(symbolName) ?? []).map(artifact => artifact.filePath).sort();
     return candidateFiles.length > 1 ? [{ symbolName, candidateFiles }] : [];
   });
+  identityAmbiguities.push(...qualifiedTargets.flatMap(target => {
+    const matches = scan.artifacts.filter(artifact => artifact.filePath === target.filePath && artifact.symbolName === target.symbolName);
+    return matches.length === 1 ? [] : [{ symbolName: target.symbolName,
+      candidateFiles: matches.map(artifact => artifact.filePath).sort() }];
+  }));
   const actualTests: string[] = [], actualCalls: string[] = [];
-  for (const edge of graph.edges) {
+  const scopedEdges = graph.edges.filter(edge => selectedSourcePaths.has(artifacts.get(edge.from)?.filePath ?? ''));
+  for (const edge of scopedEdges) {
     const from = artifacts.get(edge.from), to = artifacts.get(edge.to);
     if (!from || !to) throw new Error('Graph returned an unknown endpoint.');
     if (edge.type === 'CALLS') actualCalls.push(edgeIdentity(from.symbolName, to.symbolName));
-    if (edge.type === 'TESTS') actualTests.push(edgeIdentity(from.testCase ? caseIdentity({
-      filePath: from.filePath, suitePath: from.testCase.suitePath, title: from.testCase.title,
-    }) : `UNEXPECTED_FILE_TRACE:${from.filePath}`, to.symbolName));
+    if (edge.type === 'TESTS' && selectedTestPaths.has(from.filePath)) {
+      const testIdentity = from.testCase ? caseIdentity({ filePath: from.filePath,
+        suitePath: from.testCase.suitePath, title: from.testCase.title }) : `UNEXPECTED_FILE_TRACE:${from.filePath}`;
+      const targetIdentity = from.testCase && qualifiedCaseKeys.has(testIdentity)
+        ? JSON.stringify([to.filePath, to.symbolName]) : to.symbolName;
+      actualTests.push(edgeIdentity(testIdentity, targetIdentity));
+    }
   }
-  const evidence = auditSourceEvidence(root, repository, graph.edges, artifacts);
+  const evidence = auditSourceEvidence(root, repository, scopedEdges, artifacts);
   const unsupportedDeclarations = (scan.diagnostics ?? [])
     .filter(item => item.code === 'JEST_UNSUPPORTED_DECLARATION')
     .reduce((total, item) => total + (item.count ?? 1), 0);
@@ -134,7 +182,8 @@ function evaluateRepository(fixtureRoot: string, repository: TraceRepository) {
 export function evaluateTestTraceCorpus(root: string, manifestName: string) {
   const truthSource = readFileSync(path.join(root, 'tests/evaluation', manifestName), 'utf8');
   const truth = JSON.parse(truthSource) as GroundTruth;
-  const repositories = truth.repositories.map(repository => evaluateRepository(path.join(root, 'tests/fixtures/public-test-trace'), repository));
+  const repositories = truth.repositories.map(repository => evaluateTraceRepository(
+    path.join(root, 'tests/fixtures/public-test-trace', repository.id), repository));
   const scoped = (key: string, value: string) => JSON.stringify([key, JSON.parse(value)]);
   const combine = (expected: 'expectedCases' | 'expectedCalls' | 'expectedTests', actual: 'actualCases' | 'actualCalls' | 'actualTests') =>
     scoreReferenceSet(repositories.flatMap(repo => repo.raw[expected].map(value => scoped(repo.id, value))),

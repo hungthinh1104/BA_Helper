@@ -1,9 +1,81 @@
 # Local release hardening verification, October 26, 2026
 
-## Latest hosted verification — run #118 passed
+## Latest local accuracy recheck; hosted run #119 passed its parent revision
 
-Commit `59d6c5d6988bfe3907dee75f0734ffb69a74ffd7` is the local and remote
-branch tip. GitHub Actions
+GitHub Actions [run #119](https://github.com/hungthinh1104/BA_Helper/actions/runs/40354710445)
+passed all 46 workflow steps at tool commit `9eef47378e364897b8c118bf1a973be700cbbdde`.
+It ran before the evaluator changes recorded below. The new local evaluator uses
+the same pinned corpus checkout and analyzer scan, but still needs a hosted CI
+run on the commit that contains this change.
+
+The 18-link labels are now recorded in
+`tests/evaluation/pinned-nest-api-example.ground-truth.json`, pinned to
+`leosuncin/nest-api-example@b49ae92a6c0b0db39b6542338a2ffea3eda15717` and eight
+Git blob identities. Each test is identified by repository-relative spec path,
+suite path, and title; each target uses repository-relative source path and
+qualified symbol. The evaluator verifies those source pins through Git when it
+receives a clean pinned checkout, then scores only the labeled source slice.
+The source was inspected during this review, but the labels are **not held out**
+from resolver development and **have not received independent human review**.
+Ground-truth SHA-256:
+`48fe169aeda21ca217c4741a37798b9af2f7c855aae0bc4b19e1965961220874`.
+
+Local result against analyzer `0.15.0`: 21/21 test declarations,
+18/18 labeled `TESTS` links, precision 1.0, recall 1.0, zero false positives,
+zero false negatives, zero ambiguous targets, and 22/22 checked relationships
+with valid direct source locations. The proof output records each recovered
+link, target file/symbol, resolver, and exact test call location. The external
+repository dependencies were not installed and its code/tests were not run.
+
+On the full pinned scan, the production enumerator found 108 files and the
+scanner produced 246 artifacts and 96 graph edges (43 `TESTS`, 19 `CALLS`, 34
+`USES`). A separate source-location audit checked all 62 direct `TESTS` and
+`CALLS` edges; all 62 locations were inside their source artifacts and matched
+the reported method call. This validates location integrity, not full-corpus
+edge precision. The scan digest was identical across six passes:
+`9200c1684cf0f707491cff90ead6dc1f32b33bed2aeaf3e81c40d4f9ead93880`.
+
+The full scan still has 122 `TEST_TARGET_UNRESOLVED` diagnostics: 118
+`NO_SUPPORTED_DIRECT_REFERENCE` and 4 `METHOD_ARTIFACT_NOT_EXTRACTED`. The
+first group includes `TestingModule`/module integration cases, Supertest e2e
+requests, DTO/decorator validation, and "should be defined" cases where no
+supported direct method call is present. The second group points to
+`User.fromPartial` / `Article.fromPartial` calls whose method artifacts were
+not extracted. There are also 7 unresolved injection tokens for imports from
+`@nestjs/terminus`, `@nestjs/jwt`, and `@nestjs/core`, and 3 missing method
+artifacts for `Article.extractId`. These remain unknowns, not inferred edges.
+
+Semantic scan output contained 43 `ACTION` claims across the repository. A
+pattern check found none of the known setup/data/matcher forms
+(`Object.assign`, `Date.now`, mock configuration, `expect.any`, or
+`expect.arrayContaining`) among those claims. The analyzer's adversarial Jest
+fixture also passed in the focused test run. This is a targeted false-positive
+check, not an independent semantic precision estimate. The full scan reported
+357 unresolved semantic behavior claims and one unsupported Jest declaration.
+
+One warm-up plus five local same-process scan passes measured p50/p95 at
+788/822 ms for extraction, 682/717 ms for graph construction, and 1,541/1,600
+ms end to end. This is not directly comparable with the Linux CI samples, and
+no isolated whole-scan memory measurement was taken in this run.
+
+Focused local verification passed: public trace evaluation (22/22 cases,
+24/24 `TESTS`, 10/10 `CALLS`, 34/34 provenance), semantic behavior evaluation
+(13/13 claims and 4/4 diagnosed unsupported patterns), 2 Jest suites / 24
+tests, `tsconfig.scripts.json` typecheck, and targeted ESLint with zero
+warnings. Hosted verification for the evaluator change is pending.
+
+Vercel reports the deployment for `9eef473` as failed at
+`dpl_G5fNeoTo4LZqY8x7HygdWn17Z3hH` and suggests `vercel inspect --logs`.
+Neither the Vercel page nor logs are accessible here, so its cause is
+unverified. G1 remains **PARTIAL** because 122 full-scan test targets remain
+unresolved and this 18-link regression set is neither held out nor independently
+reviewed. G2 remains **NOT READY** because there are no reviewer-study
+observations.
+
+## Prior hosted verification — run #118 passed
+
+At the time of run #118, commit `59d6c5d6988bfe3907dee75f0734ffb69a74ffd7`
+was the local and remote branch tip. GitHub Actions
 [#118](https://github.com/hungthinh1104/BA_Helper/actions/runs/40349912038)
 passed all 46 workflow steps, including production dependency advisories,
 migrations, analyzer and trace gates, scalability, architecture boundaries,
@@ -80,11 +152,11 @@ false positives/misses, and evidence integrity 50/50. These fixed selected
 source sets are not independent human adjudication or a general accuracy
 estimate.
 
-G1 remains **PARTIAL**: the October 24 report records 18/18 links, but its exact
-label list is not checked in, so that score cannot be rerun against
-analyzer@0.15.0. The pinned scan still has unresolved relationships, and the
-Vercel deployment failure remains unexplained. G2 remains **NOT READY** because
-no reviewer-study observations exist.
+At that time, G1 remained **PARTIAL** because the October 24 report's exact
+18-link label list was not checked in. The current local recheck above records
+and reproduces that slice. The full pinned scan still has unresolved
+relationships, the Vercel deployment failure remains unexplained, and no
+reviewer-study observations exist.
 
 ## Previous hosted verification — run #115 passed
 
@@ -163,11 +235,10 @@ outer `ENABLE_DEV_LOGIN=true`; the analyzer build and runtime package import
 also pass locally. This addendum
 supersedes later statements in this report that no first hosted run existed.
 
-Remaining pinned diagnostics are still explicit: 122 unresolved test targets,
-357 unresolved behavior claims, 7 unresolved injection tokens, and 3 unresolved
-method targets. The manually labeled 18-link score was not rerun after this
-follow-up, so these graph totals do not establish precision or recall. G1 stays
-**PARTIAL** until the labeled edge evaluation is rerun against analyzer@0.15.0.
+At the time of this follow-up, pinned diagnostics included 122 unresolved test
+targets, 357 unresolved behavior claims, 7 unresolved injection tokens, and 3
+unresolved method targets. The 18-link score had not yet been rerun then. The
+current local score and remaining limits are recorded at the top of this file.
 
 The original local-verification sections below record the pre-follow-up tree at
 `27b388a`; rows labeled “Current” refer to that historical run. The addendum
@@ -394,11 +465,13 @@ capacity benchmark or pinned-repository high-fanout result.
 ## Release decision
 
 **Historical decision at the time of the earlier local report: G1 PARTIAL; G2
-NOT READY.** The latest hosted state is recorded at the top of this document.
-The manually labeled 18-link result remains unreproducible because its exact
-labels are not checked in. Performance samples distinguish fresh-process,
-cache-miss, and cache-hit conditions, but remain small local samples and are
-not a capacity benchmark. The Vercel deployment failure is separate from
-GitHub Actions and still needs authorized project-log inspection.
+NOT READY.** Its label list was not checked in then; the current recheck at the
+top records the recovered pinned slice and its review limits. Performance
+samples distinguish fresh-process, cache-miss, and cache-hit conditions, but
+remain small local samples and are not a capacity benchmark. The Vercel
+deployment failure is separate from GitHub Actions and still needs project-log
+inspection.
 
-The user authorized committing and pushing this branch; no merge authorization was given. Hosted GitHub Actions CI passed in run #118. The pinned-label, Vercel deployment, and reviewer-study limits above remain.
+The user authorized committing and pushing this branch; no merge authorization
+was given. The latest hosted run and local pinned-label limitations are recorded
+at the top. The Vercel and reviewer-study limits remain.

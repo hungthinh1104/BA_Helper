@@ -15,6 +15,7 @@ import { isIsolatedPinnedTestDatabaseUrl } from './pinned-proof-environment';
 import { summarizePinnedScanDiagnostics } from './pinned-proof-diagnostics';
 import { scanPinnedRepository } from './pinned-proof-scan';
 import { measurePinnedProjections } from './pinned-proof-projections';
+import { evaluatePinnedTestTrace } from '../tests/evaluation/pinned-test-trace.evaluator';
 
 const PINNED_COMMIT = 'b49ae92a6c0b0db39b6542338a2ffea3eda15717';
 const CORPUS_URL = 'https://github.com/leosuncin/nest-api-example';
@@ -79,6 +80,8 @@ async function main(): Promise<void> {
     await prisma.$connect();
     const user = await getDemoUser(prisma);
     const scan = await scanPinnedRepository(root, PINNED_COMMIT);
+    const pinnedTestTrace = evaluatePinnedTestTrace(process.cwd(), root, PINNED_COMMIT,
+      scan.scanResult, scan.graph);
     const saved = await persistPinnedScan(prisma, user.id, scan.scanResult, scan.fileDiagnostics);
     const projection = await measurePinnedProjections({ prisma, root, snapshotId: saved.persisted.snapshotId,
       measureQueries, repositories: saved.repositories });
@@ -86,6 +89,7 @@ async function main(): Promise<void> {
     const proof = {
       toolCommitSha, toolWorkingTreeDirty, corpusUrl: CORPUS_URL, commitSha: PINNED_COMMIT,
       analyzerVersion: scan.scanResult.analyzerVersion,
+      pinnedTestTrace,
       diagnosticCounts: diagnosticSummary.codeCounts, diagnosticReasonCounts: diagnosticSummary.reasonCounts,
       diagnosticExamples: diagnosticSummary.examples,
       fileDiagnosticExamples: diagnosticSummary.fileDiagnosticExamples,
@@ -114,6 +118,9 @@ async function main(): Promise<void> {
     mkdirSync(path.dirname(OUTPUT), { recursive: true });
     writeFileSync(OUTPUT, `${JSON.stringify(proof, null, 2)}\n`);
     process.stdout.write(`${JSON.stringify({ ...proof, output: path.relative(process.cwd(), OUTPUT) })}\n`);
+    if (pinnedTestTrace.status !== 'PASS') {
+      throw new Error(`Pinned test trace accuracy gate failed: ${pinnedTestTrace.tests.truePositive}/${pinnedTestTrace.tests.expected} links, ${pinnedTestTrace.tests.falsePositive} false positives.`);
+    }
   } finally {
     await prisma.$disconnect();
   }

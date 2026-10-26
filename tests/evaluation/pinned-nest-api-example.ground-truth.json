@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "authoredAt": "2026-10-26",
+  "groundTruthMethod": "SOURCE_AUDITED_FROM_PINNED_TEST_FILES_DURING_REVIEW",
+  "independentHumanReview": false,
+  "heldOutFromResolverDevelopment": false,
+  "labelReviewStatus": "PENDING_INDEPENDENT_REVIEW",
+  "scope": "All active test declarations in the three pinned Jest spec files and direct test-to-method TESTS relationships explicitly labeled below. Targets use canonical repository-relative source paths plus qualified symbols. Static references only; no claim of execution or coverage.",
+  "repositories": [
+    {
+      "id": "leosuncin-nest-api-example",
+      "repository": "leosuncin/nest-api-example",
+      "commitSha": "b49ae92a6c0b0db39b6542338a2ffea3eda15717",
+      "files": [
+        { "path": "src/blog/services/article.service.spec.ts", "blobSha": "4c983a397c87be16bc9cfd92606ffd341744e817" },
+        { "path": "src/blog/services/article.service.ts", "blobSha": "04b25157467dd64c5930f7351af652437c17bacd" },
+        { "path": "src/blog/controllers/article.controller.spec.ts", "blobSha": "0547c0e0d670260408724fe70cfa87050ac0558f" },
+        { "path": "src/blog/controllers/article.controller.ts", "blobSha": "aebbb1cc830f30567252b46639301c03add931ba" },
+        { "path": "src/auth/services/authentication.service.spec.ts", "blobSha": "b4edfed0dfd72ba3e63f3a1eb68c1dd6b94d69f0" },
+        { "path": "src/auth/services/authentication.service.ts", "blobSha": "f7c73c5f996b823a8293aaf59f7120b07656973a" },
+        { "path": "tsconfig.json", "blobSha": "a5576b6a709fb41bffc1f92a897164bd1f5fa002" },
+        { "path": "package.json", "blobSha": "99aebff8d514998c08c0ea27739805fcc46e3f86" }
+      ],
+      "cases": [
+        { "filePath": "src/blog/services/article.service.spec.ts", "suitePath": ["ArticleService"], "title": "should be defined", "targetSymbols": [], "targetArtifacts": [] },
+        { "filePath": "src/blog/services/article.service.spec.ts", "suitePath": ["ArticleService"], "title": "should save the new article", "targetSymbols": ["ArticleService.create"], "targetArtifacts": [{ "filePath": "src/blog/services/article.service.ts", "symbolName": "ArticleService.create" }] },
+        { "filePath": "src/blog/services/article.service.spec.ts", "suitePath": ["ArticleService"], "title": "should get an article by its id", "targetSymbols": ["ArticleService.getById"], "targetArtifacts": [{ "filePath": "src/blog/services/article.service.ts", "symbolName": "ArticleService.getById" }] },
+        { "filePath": "src/blog/services/article.service.spec.ts", "suitePath": ["ArticleService"], "title": "should find and paginate articles", "targetSymbols": ["ArticleService.findBy"], "targetArtifacts": [{ "filePath": "src/blog/services/article.service.ts", "symbolName": "ArticleService.findBy" }] },
+        { "filePath": "src/blog/services/article.service.spec.ts", "suitePath": ["ArticleService"], "title": "should update one article", "targetSymbols": ["ArticleService.update"], "targetArtifacts": [{ "filePath": "src/blog/services/article.service.ts", "symbolName": "ArticleService.update" }] },
+        { "filePath": "src/blog/services/article.service.spec.ts", "suitePath": ["ArticleService"], "title": "should soft remove one article", "targetSymbols": ["ArticleService.remove"], "targetArtifacts": [{ "filePath": "src/blog/services/article.service.ts", "symbolName": "ArticleService.remove" }] },
+        { "filePath": "src/blog/services/article.service.spec.ts", "suitePath": ["ArticleService"], "title": "should check if article with a given id exist", "targetSymbols": ["ArticleService.checkExist"], "targetArtifacts": [{ "filePath": "src/blog/services/article.service.ts", "symbolName": "ArticleService.checkExist" }] },
+        { "filePath": "src/blog/controllers/article.controller.spec.ts", "suitePath": ["ArticleController"], "title": "should be defined", "targetSymbols": [], "targetArtifacts": [] },
+        { "filePath": "src/blog/controllers/article.controller.spec.ts", "suitePath": ["ArticleController"], "title": "should save the new article", "targetSymbols": ["ArticleController.create"], "targetArtifacts": [{ "filePath": "src/blog/controllers/article.controller.ts", "symbolName": "ArticleController.create" }] },
+        { "filePath": "src/blog/controllers/article.controller.spec.ts", "suitePath": ["ArticleController"], "title": "should get one article", "targetSymbols": ["ArticleController.getOne"], "targetArtifacts": [{ "filePath": "src/blog/controllers/article.controller.ts", "symbolName": "ArticleController.getOne" }] },
+        { "filePath": "src/blog/controllers/article.controller.spec.ts", "suitePath": ["ArticleController"], "title": "should get all articles by page", "targetSymbols": ["ArticleController.getAll"], "targetArtifacts": [{ "filePath": "src/blog/controllers/article.controller.ts", "symbolName": "ArticleController.getAll" }] },
+        { "filePath": "src/blog/controllers/article.controller.spec.ts", "suitePath": ["ArticleController"], "title": "should update an article", "targetSymbols": ["ArticleController.update"], "targetArtifacts": [{ "filePath": "src/blog/controllers/article.controller.ts", "symbolName": "ArticleController.update" }] },
+        { "filePath": "src/blog/controllers/article.controller.spec.ts", "suitePath": ["ArticleController"], "title": "should remove an article", "targetSymbols": ["ArticleController.remove"], "targetArtifacts": [{ "filePath": "src/blog/controllers/article.controller.ts", "symbolName": "ArticleController.remove" }] },
+        { "filePath": "src/auth/services/authentication.service.spec.ts", "suitePath": ["AuthenticationService"], "title": "should be defined", "targetSymbols": [], "targetArtifacts": [] },
+        { "filePath": "src/auth/services/authentication.service.spec.ts", "suitePath": ["AuthenticationService"], "title": "should save the new user when register", "targetSymbols": ["AuthenticationService.register"], "targetArtifacts": [{ "filePath": "src/auth/services/authentication.service.ts", "symbolName": "AuthenticationService.register" }] },
+        { "filePath": "src/auth/services/authentication.service.spec.ts", "suitePath": ["AuthenticationService"], "title": "should login with an existing user without fail", "targetSymbols": ["AuthenticationService.login"], "targetArtifacts": [{ "filePath": "src/auth/services/authentication.service.ts", "symbolName": "AuthenticationService.login" }] },
+        { "filePath": "src/auth/services/authentication.service.spec.ts", "suitePath": ["AuthenticationService"], "title": "should find a user from the payload", "targetSymbols": ["AuthenticationService.verifyPayload"], "targetArtifacts": [{ "filePath": "src/auth/services/authentication.service.ts", "symbolName": "AuthenticationService.verifyPayload" }] },
+        { "filePath": "src/auth/services/authentication.service.spec.ts", "suitePath": ["AuthenticationService"], "title": "should update a user", "targetSymbols": ["AuthenticationService.update"], "targetArtifacts": [{ "filePath": "src/auth/services/authentication.service.ts", "symbolName": "AuthenticationService.update" }] },
+        { "filePath": "src/auth/services/authentication.service.spec.ts", "suitePath": ["AuthenticationService"], "title": "should check if it is registered with %j", "targetSymbols": ["AuthenticationService.isRegistered"], "targetArtifacts": [{ "filePath": "src/auth/services/authentication.service.ts", "symbolName": "AuthenticationService.isRegistered" }] },
+        { "filePath": "src/auth/services/authentication.service.spec.ts", "suitePath": ["AuthenticationService"], "title": "should check if it is not registered with %j", "targetSymbols": ["AuthenticationService.isRegistered"], "targetArtifacts": [{ "filePath": "src/auth/services/authentication.service.ts", "symbolName": "AuthenticationService.isRegistered" }] },
+        { "filePath": "src/auth/services/authentication.service.spec.ts", "suitePath": ["AuthenticationService"], "title": "should verify the credentials %j", "targetSymbols": ["AuthenticationService.verifyCredentials"], "targetArtifacts": [{ "filePath": "src/auth/services/authentication.service.ts", "symbolName": "AuthenticationService.verifyCredentials" }] }
+      ],
+      "calls": []
+    }
+  ]
+}

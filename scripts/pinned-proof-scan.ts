@@ -18,6 +18,7 @@ export function summarizeMs(samples: number[]) {
 
 type ScanPass = {
   result: ScanResult;
+  graph: ReturnType<typeof buildGraph>;
   fileDiagnostics: FileDiagnostic[];
   enumerationMs: number;
   scannerMs: number;
@@ -69,7 +70,7 @@ async function scanPass(root: string, commitSha: string, adapter: TypeScriptNest
     dependencyEdges: graph.edges.map(edge => ({ fromArtifactId: edge.from, toArtifactId: edge.to,
       type: edge.type, confidence: edge.confidence, provenance: edge.provenance })),
     diagnostics, coverage, sourceRoot: root, sourceFiles: enumerated.tsFiles },
-  fileDiagnostics: enumerated.diagnostics, enumerationMs, scannerMs, graphMs,
+  graph, fileDiagnostics: enumerated.diagnostics, enumerationMs, scannerMs, graphMs,
   pipelineMs, digest };
 }
 
@@ -103,6 +104,6 @@ export async function scanPinnedRepository(root: string, commitSha: string) {
     outputDigest: outputDigests[0], outputDigestsAcrossRuns: outputDigests,
     driverMetricLimitations: ['All three passes share one Node process; OS filesystem and runtime caches are warm after the first pass.'],
   };
-  return { scanResult: lastPass.result, fileDiagnostics: lastPass.fileDiagnostics,
+  return { scanResult: lastPass.result, graph: lastPass.graph, fileDiagnostics: lastPass.fileDiagnostics,
     scanMs: summarizeMs(scannerSamples).p50, graphMs: summarizeMs(graphSamples).p50, scanPerformance };
 }

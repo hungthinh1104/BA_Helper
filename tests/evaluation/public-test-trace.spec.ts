@@ -1,5 +1,6 @@
-import { auditSourceEvidence, evaluatePublicTestTraces, scoreReferenceSet } from './public-test-trace.evaluator';
-import type { GraphEdge, ScanArtifact } from '@ba-helper/analyzer';
+import { auditSourceEvidence, evaluatePublicTestTraces, evaluateTraceRepository, scoreReferenceSet } from './public-test-trace.evaluator';
+import { createHash } from 'node:crypto';
+import type { GraphEdge, ScanArtifact, ScanResult } from '@ba-helper/analyzer';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -71,5 +72,70 @@ describe('independent public NestJS static trace corpus', () => {
     expect(result.evidence.issues).toEqual([]);
     expect(result.identityAmbiguities).toEqual([]);
     expect(result.independentHumanReview).toBe(false);
+  });
+
+  it('scores a test target by canonical file path and qualified symbol when names collide', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'ba-trace-qualified-target-'));
+    try {
+      const sources = new Map([
+        ['src/first/thing.service.ts', 'export class ThingService { act(): void {} }\n'],
+        ['src/second/thing.service.ts', 'export class ThingService { act(): void {} }\n'],
+        ['src/first/thing.service.spec.ts', [
+          "import { ThingService } from './thing.service';",
+          "describe('ThingService', () => {",
+          '  let service: ThingService;',
+          '  beforeEach(() => { service = new ThingService(); });',
+          "  it('acts on the first service', () => { service.act(); });",
+          '});',
+          '',
+        ].join('\n')],
+      ]);
+      for (const [relativePath, source] of sources) {
+        mkdirSync(path.dirname(path.join(root, relativePath)), { recursive: true });
+        writeFileSync(path.join(root, relativePath), source);
+      }
+      const repository = {
+        id: 'duplicate-symbols', repository: 'local/duplicate-symbols', commitSha: 'a'.repeat(40),
+        files: [...sources].map(([filePath, source]) => ({
+          path: filePath,
+          blobSha: createHash('sha1').update(`blob ${Buffer.byteLength(source)}\0`).update(source).digest('hex'),
+        })),
+        cases: [{ filePath: 'src/first/thing.service.spec.ts', suitePath: ['ThingService'],
+          title: 'acts on the first service', targetSymbols: ['ThingService.act'],
+          targetArtifacts: [{ filePath: 'src/first/thing.service.ts', symbolName: 'ThingService.act' }] }],
+        calls: [],
+      };
+
+      const testPath = 'src/first/thing.service.spec.ts';
+      const testArtifact: ScanArtifact = { stableId: 'test', type: 'JEST_TEST_CASE', filePath: testPath,
+        symbolName: 'ThingService > acts on the first service', startLine: 5, endLine: 5,
+        excerpt: 'service.act();', testCase: { framework: 'jest', suitePath: ['ThingService'],
+          title: 'acts on the first service', modifier: 'NORMAL', declaredModifier: 'NORMAL', parentFileArtifactKey: testPath } };
+      const firstTarget: ScanArtifact = { stableId: 'first', type: 'SERVICE_METHOD',
+        filePath: 'src/first/thing.service.ts', symbolName: 'ThingService.act', startLine: 1,
+        endLine: 1, excerpt: 'act(): void {}' };
+      const duplicateTarget: ScanArtifact = { ...firstTarget, stableId: 'second',
+        filePath: 'src/second/thing.service.ts' };
+      const outsideTest: ScanArtifact = { ...testArtifact, stableId: 'outside-test',
+        filePath: 'src/other/thing.service.spec.ts', testCase: { ...testArtifact.testCase!, title: 'outside scope' } };
+      const scan = { analyzerVersion: 'test', artifacts: [testArtifact, outsideTest, firstTarget, duplicateTarget],
+        coverage: {} } as unknown as ScanResult;
+      const edge = (target: ScanArtifact): GraphEdge => ({ stableId: `test-${target.stableId}`, type: 'TESTS',
+        from: 'test', to: target.stableId, confidence: 1,
+        provenance: { resolver: 'TS_AST_DIRECT_CALL', locations: [{ sourcePath: testPath, startLine: 5, endLine: 5 }] } });
+      const outsideEdge: GraphEdge = { ...edge(duplicateTarget), stableId: 'outside-edge', from: 'outside-test',
+        provenance: { resolver: 'TS_AST_DIRECT_CALL', locations: [{ sourcePath: outsideTest.filePath, startLine: 5, endLine: 5 }] } };
+      const result = evaluateTraceRepository(root, repository, { scan, graph: { edges: [edge(firstTarget), outsideEdge] } });
+
+      expect(result.tests).toMatchObject({ expected: 1, truePositive: 1, falsePositive: 0, falseNegative: 0 });
+      expect(result.identityAmbiguities).toEqual([]);
+      expect(result.evidence.issues).toEqual([]);
+
+      const wrongTarget = evaluateTraceRepository(root, repository,
+        { scan, graph: { edges: [edge(duplicateTarget)] } });
+      expect(wrongTarget.tests).toMatchObject({ truePositive: 0, falsePositive: 1, falseNegative: 1 });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
