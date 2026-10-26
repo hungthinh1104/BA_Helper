@@ -34,14 +34,16 @@ describe('runtime-config', () => {
   });
 
   it('accepts explicit CORS allowlist in production-like env', () => {
-    const config = getRuntimeConfig({
+    const env = {
       CORS_ALLOWED_ORIGINS: 'https://web.example.com',
       NODE_ENV: 'production',
       PORT: '3001',
       WORKSPACE_MODE: 'dev-single-user',
-    });
+      ENABLE_DEV_LOGIN: 'false',
+    };
+    const config = getRuntimeConfig(env);
 
-    expect(() => validateRuntimeConfig(config)).not.toThrow();
+    expect(() => validateRuntimeConfig(config, env)).not.toThrow();
     expect(config.corsAllowedOrigins).toEqual(['https://web.example.com']);
   });
 

@@ -10,6 +10,16 @@ UTF-16 offsets differed. Reproducing this exposed a second issue: the scanner
 parsed normalized LF text, while `GraphSourceResolver` independently loaded raw
 CRLF text, so late-in-test call spans could miss `TESTS` edges.
 
+The first follow-up commit `1cfc671dda7fe161b28ad09264ef059540445030` passed
+hosted analyzer gates, lint, typecheck, all builds, and Analyzer tests, but run
+#113 then failed one app test: `runtime-config.spec.ts` built a production
+config from an explicit env object but validated it against the CI process
+environment, where `ENABLE_DEV_LOGIN=true` is intentionally set. I reproduced
+the failure with that environment and fixed the test to pass an explicit
+`ENABLE_DEV_LOGIN=false` env to both config creation and validation. The
+focused regression now passes 32/32 tests with the outer CI-style variable set
+to true. The next hosted run is pending push.
+
 The follow-up normalizes accepted TypeScript source to LF before both scanner
 and graph parsing, defines source offsets against that canonical decoded text,
 and bumps `ANALYZER_VERSION` to `analyzer@0.15.0`. Consumers opening working
@@ -35,7 +45,8 @@ after that correction; lint retained 61 pre-existing
 `consistent-type-imports` warnings and no errors. The full `test:ci` result
 (229 suites / 1,329 tests / 1 snapshot) and full E2E result (22 suites / 132
 tests) were run before that final graph-loader correction; they are not
-represented as post-fix runs. The latest hosted result for the follow-up is
+represented as post-fix runs. Hosted run #113 reports the isolated environment
+leak and its focused local regression now passes; the next hosted result is
 pending push. This addendum
 supersedes later statements in this report that no first hosted run existed.
 
@@ -273,10 +284,11 @@ capacity benchmark or pinned-repository high-fanout result.
 ## Release decision
 
 **G1: PARTIAL. G2 readiness: NOT READY.** The latest analyzer@0.15.0 pinned
-scan, persisted API proof, and 5/5 required browser proof pass locally. The
-first pushed release-hardening commit failed hosted run #112 in Analyzer tests
-due to line-ending-dependent offsets. The follow-up fixes scanner/graph source
-normalization and is pending hosted CI. The manually labeled 18-link
+scan, persisted API proof, and 5/5 required browser proof pass locally. Hosted
+run #112 exposed line-ending-dependent offsets; run #113 passed analyzer gates,
+lint, typecheck, builds, and Analyzer tests, then exposed a leaked CI env in one
+runtime-config test. The follow-up normalizes scanner/graph source and isolates
+that test's env; the next hosted run is pending. The manually labeled 18-link
 evaluation also needs a post-fix rerun. The normal Playwright webServer
 shutdown remains unverified on this Windows worker. The controlled local
 differential did not reproduce the reported twofold slowdown, but additional
