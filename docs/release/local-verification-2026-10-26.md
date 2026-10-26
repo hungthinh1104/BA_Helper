@@ -1,17 +1,19 @@
 # Local release hardening verification, October 26, 2026
 
-## Latest hosted verification — run #116 passed
+## Latest hosted verification — run #117 passed
 
-Commit `8540b1a30de8c50d15338b8723007e82d91260a6` is the local HEAD and the
-remote branch tip checked through the GitHub API. GitHub Actions
-[#116](https://github.com/hungthinh1104/BA_Helper/actions/runs/40342054804)
-passed all steps: dependency advisories, migrations, analyzer and trace gates,
-scalability, architecture boundaries, lint, typecheck, builds, unit/integration
-and E2E tests, demos, browser journeys, pinned proof persistence, and the pinned
-browser proof. The run uploaded the browser proof bundle (including
-`artifacts/evaluation/pinned-code-comprehension-proof.json`) and the analyzer
-scorecard. The Vercel deployment status for this SHA is separately `failure`;
-the Vercel deployment page was not accessible to this review, so its cause is
+Commit `fe8bb14e4833c565bb8e69a540089a77cf24ec6e` is the remote branch tip
+checked through the GitHub API. GitHub Actions
+[#117](https://github.com/hungthinh1104/BA_Helper/actions/runs/40347216487)
+passed all 46 workflow steps: dependency advisories, migrations, analyzer and
+trace gates, scalability, architecture boundaries, lint, typecheck, builds,
+tests, demos, browser journeys, pinned proof persistence, and the pinned browser
+proof. It uploaded `browser-review-results` (artifact 12662882786, including
+`artifacts/evaluation/pinned-code-comprehension-proof.json`) and
+`analyzer-quality-scorecard` (artifact 12662006759). The Vercel deployment
+status for this SHA is separately `failure` at
+[the deployment](https://vercel.com/diphungthinh-projects/ba-helper-web/FiFsR4KZnBS5DtkQu1LZH79bAwT3).
+The deployment page was not accessible to this review, so its cause is
 unverified. This is not a failed GitHub Actions run.
 
 Focused local checks against this HEAD passed: artifact/comprehension API and
@@ -345,4 +347,4 @@ cache-miss, and cache-hit conditions, but remain small local samples and are
 not a capacity benchmark. The Vercel deployment failure is separate from
 GitHub Actions and still needs authorized project-log inspection.
 
-The user authorized committing and pushing this branch; no merge authorization was given. Hosted GitHub Actions CI passed in run #116. The pinned-label and Vercel deployment limits above remain.
+The user authorized committing and pushing this branch; no merge authorization was given. Hosted GitHub Actions CI passed in run #117. The pinned-label and Vercel deployment limits above remain.
