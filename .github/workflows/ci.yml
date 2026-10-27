@@ -79,6 +79,9 @@ jobs:
           pnpm exec jest --config jest.analyzer.config.ts --runInBand packages/analyzer/tests/scanner/core/safe-file-enumerator.spec.ts
           pnpm exec jest --config jest.unit.config.ts --runInBand packages/backend-runtime/src/scanner/application/scan-health-diagnostics.spec.ts
 
+      - name: Runtime config isolation regression
+        run: pnpm exec jest --config jest.ci.config.ts --runInBand apps/api/src/bootstrap/runtime-config.spec.ts
+
       - name: Analyzer quality gate
         run: pnpm verify:analyzer-quality
 
