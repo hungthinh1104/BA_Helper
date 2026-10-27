@@ -29,6 +29,7 @@ const en = {
     IMPACTED_ARTIFACT_LIMIT: 'The impacted artifact limit was reached.', EDGE_LIMIT: 'The relationship search limit was reached.',
     CALL_DEPTH_LIMIT: 'Deeper callers were outside the search depth.', TRACE_SAMPLE_LIMIT: 'Only a bounded sample of test cases is shown.',
     UNSUPPORTED_SOURCE_RELATIONSHIP: 'Relationships without valid source evidence were excluded.',
+    UNSUPPORTED_IMPACT_ARTIFACT: 'Some impacted artifacts were excluded from test coverage.',
   },
 };
 const vi: typeof en = {
@@ -63,6 +64,7 @@ const vi: typeof en = {
     IMPACTED_ARTIFACT_LIMIT: 'Đã chạm giới hạn artifact tác động.', EDGE_LIMIT: 'Đã chạm giới hạn tìm quan hệ.',
     CALL_DEPTH_LIMIT: 'Các lời gọi sâu hơn nằm ngoài độ sâu tìm kiếm.', TRACE_SAMPLE_LIMIT: 'Chỉ hiển thị một mẫu test case có giới hạn.',
     UNSUPPORTED_SOURCE_RELATIONSHIP: 'Đã loại quan hệ thiếu bằng chứng nguồn hợp lệ.',
+    UNSUPPORTED_IMPACT_ARTIFACT: 'Một số artifact bị tác động đã bị loại khỏi kết quả tham chiếu test.',
   },
 };
 const ja: typeof en = {
@@ -97,6 +99,7 @@ const ja: typeof en = {
     IMPACTED_ARTIFACT_LIMIT: '影響コードの上限に達しました。', EDGE_LIMIT: '関係検索の上限に達しました。',
     CALL_DEPTH_LIMIT: 'より深い呼び出しは検索範囲外です。', TRACE_SAMPLE_LIMIT: 'テストの一部のみを表示しています。',
     UNSUPPORTED_SOURCE_RELATIONSHIP: '有効な証拠のない関係を除外しました。',
+    UNSUPPORTED_IMPACT_ARTIFACT: '一部の影響対象アーティファクトはテスト参照の対象外です。',
   },
 };
 export const testTraceLabels = { en, 'vi-VN': vi, 'ja-JP': ja };
