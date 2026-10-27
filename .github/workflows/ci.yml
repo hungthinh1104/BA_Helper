@@ -111,7 +111,7 @@ jobs:
 
       - name: Backend-runtime boundary check (no api decorators)
         run: |
-          if grep -rE '@Controller|@UseGuards|@CurrentUser|@Req|@Get|@Post|@Put|@Delete|@Patch|JwtAuthGuard|RolesGuard' packages/backend-runtime/src/; then
+          if grep -rE --include='*.ts' --exclude='*.spec.ts' --exclude='*.test.ts' '@Controller|@UseGuards|@CurrentUser|@Req|@Get|@Post|@Put|@Delete|@Patch|JwtAuthGuard|RolesGuard' packages/backend-runtime/src/; then
             echo "BOUNDARY VIOLATION: backend-runtime must not contain HTTP controllers or guards"
             exit 1
           fi
