@@ -13,8 +13,21 @@ export class QaCoverageDeriver {
     const artifacts = new Map(input.artifacts.map(a => [a.id, a]));
     const limitations = new Set(input.limitations);
     const incoming = this.indexEdges(input, limitations);
-    const impacted = [...new Set(input.impactedArtifactIds)].map(id => artifacts.get(id))
-      .filter((a): a is QaTraceArtifact => a !== undefined && a.snapshotId === snapshot.id && isQaTraceCode(a));
+    const impacted: QaTraceArtifact[] = [];
+    const excludedImpactedArtifacts: NonNullable<NonNullable<QaCoverageResponse['traceContext']>['excludedImpactedArtifacts']> = [];
+    for (const id of new Set(input.impactedArtifactIds)) {
+      const artifact = artifacts.get(id);
+      if (artifact && artifact.snapshotId === snapshot.id && isQaTraceCode(artifact)) {
+        impacted.push(artifact);
+        continue;
+      }
+      excludedImpactedArtifacts.push({
+        artifactId: id, artifactKey: artifact?.artifactKey, artifactType: artifact?.artifactType,
+        universalKind: artifact?.universalKind,
+        reason: !artifact ? 'MISSING_ARTIFACT' : artifact.snapshotId !== snapshot.id ? 'FOREIGN_SNAPSHOT' : 'UNSUPPORTED_TYPE',
+      });
+    }
+    if (excludedImpactedArtifacts.length > 0) limitations.add('UNSUPPORTED_IMPACT_ARTIFACT');
     const items = impacted.map(artifact => {
       const result = findQaTestPaths(artifact.id, incoming);
       if (result.truncated) limitations.add('TRACE_SAMPLE_LIMIT');
@@ -28,7 +41,7 @@ export class QaCoverageDeriver {
     return { analysisId: input.analysisId, snapshotId: snapshot.id,
       traceContext: { basis: 'STATIC_SOURCE_REFERENCE', commitSha: snapshot.commitSha,
         analyzerVersion: snapshot.analyzerVersion, snapshotCoverageStatus: snapshot.coverageStatus,
-        limits: QA_TRACE_LIMITS, limitations: [...limitations].sort() },
+        limits: QA_TRACE_LIMITS, limitations: [...limitations].sort(), excludedImpactedArtifacts },
       summary: { covered: items.filter(i => i.status === 'COVERED').length,
         indirectOnly: items.filter(i => i.status === 'INDIRECT_ONLY').length,
         noTestFound: items.filter(i => i.status === 'NO_TEST_FOUND').length,
