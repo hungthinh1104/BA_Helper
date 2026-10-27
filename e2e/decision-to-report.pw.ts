@@ -20,7 +20,11 @@ test.describe('decision-to-report journey', () => {
     const trace = await seedTestTrace(seed.analysisId, { parameterized: true })
     // Verify the real DB -> QA projection path before asserting the visible UI.
     // A 200 response can still omit a TESTS edge when its canonical identity is invalid.
-    const coverageResponse = await page.request.get(`/api/v1/impact-analyses/${seed.analysisId}/qa-coverage`)
+    const coverageWire = page.waitForResponse(response =>
+      response.request().method() === 'GET' &&
+      response.url().includes(`/api/v1/impact-analyses/${seed.analysisId}/qa-coverage`));
+    await page.goto(`/analyses/${seed.analysisId}?view=review&locale=en-US`);
+    const coverageResponse = await coverageWire;
     expect(coverageResponse.ok()).toBe(true)
     const coverage = await coverageResponse.json() as {
       items: Array<{ artifactKey?: string; status: string;
@@ -31,8 +35,6 @@ test.describe('decision-to-report journey', () => {
     expect(booking).toMatchObject({ status: 'COVERED',
       testArtifacts: [{ testCase: { title: traceCaseTitle, parameterized: true } }] })
     expect(coverage.traceContext?.limitations).not.toContain('UNSUPPORTED_SOURCE_RELATIONSHIP')
-    await page.goto(`/analyses/${seed.analysisId}?view=review&locale=en-US`)
-
     const workbench = page.locator('[data-review-workbench]')
     await expect(workbench).toBeVisible()
     await expect(page.locator('[data-stale-notice]')).toHaveCount(0)
