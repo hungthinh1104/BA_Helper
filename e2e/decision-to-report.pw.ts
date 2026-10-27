@@ -35,6 +35,12 @@ test.describe('decision-to-report journey', () => {
     expect(booking).toMatchObject({ status: 'COVERED',
       testArtifacts: [{ testCase: { title: traceCaseTitle, parameterized: true } }] })
     expect(coverage.traceContext?.limitations).not.toContain('UNSUPPORTED_SOURCE_RELATIONSHIP')
+    expect(coverage.traceContext?.limitations).not.toContain('UNSUPPORTED_IMPACT_ARTIFACT')
+    expect(coverage.items.map(item => item.artifactKey).sort()).toEqual([
+      'api:booking.service.cancelBooking',
+      'api:inventory.service.releaseRoom',
+      'api:refund.controller.processRefund',
+    ])
     const workbench = page.locator('[data-review-workbench]')
     await expect(workbench).toBeVisible()
     await expect(page.locator('[data-stale-notice]')).toHaveCount(0)
