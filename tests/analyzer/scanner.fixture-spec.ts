@@ -40,4 +40,36 @@ describe('scanner fixture expectations', () => {
     );
     expect(result.coverage).toEqual(expectedCoverage);
   });
+
+  it('validates pinned fixture source offsets against actual LF source bytes', () => {
+    const fixturePath = resolve(__dirname, '../fixtures/nestjs-booking-with-payment');
+    const expectedPath = resolve(fixturePath, 'expected/artifacts.json');
+    const { artifacts } = JSON.parse(readFileSync(expectedPath, 'utf-8')) as { artifacts: ScanArtifact[] };
+    const locations = artifacts.flatMap(artifact => [
+      ...(artifact.codeEvidence?.parameters ?? []).map(item => ({ location: item.sourceLocation, text: item.sourceText })),
+      ...(artifact.codeEvidence?.returnType ? [{ location: artifact.codeEvidence.returnType.sourceLocation,
+        text: artifact.codeEvidence.returnType.text }] : []),
+      ...(artifact.codeEvidence?.conditions ?? []).map(item => ({ location: item.sourceLocation, text: item.sourceText })),
+      ...(artifact.codeEvidence?.exceptionHandlers ?? []).map(item => ({ location: item.sourceLocation, text: item.sourceText })),
+    ]);
+
+    expect(locations.length).toBeGreaterThan(0);
+    const sourceCache = new Map<string, string>();
+    for (const { location, text } of locations) {
+      let source = sourceCache.get(location.relativePath);
+      if (source === undefined) {
+        source = readFileSync(resolve(fixturePath, location.relativePath), 'utf-8');
+        sourceCache.set(location.relativePath, source);
+      }
+      // Git attributes pin this fixture to LF on every runner. Do not silently
+      // normalize offsets to make a stale golden file pass.
+      expect(source).not.toContain('\\r');
+      const lines = source.split('\\n');
+      const offset = (line: number, column: number) =>
+        lines.slice(0, line - 1).reduce((sum, value) => sum + value.length + 1, 0) + column - 1;
+      expect(location.startOffset).toBe(offset(location.startLine, location.startColumn));
+      expect(location.endOffset).toBe(offset(location.endLine, location.endColumn));
+      expect(source.slice(location.startOffset, location.endOffset)).toBe(text);
+    }
+  });
 });
