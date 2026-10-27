@@ -31,13 +31,15 @@ export class QaTraceRepository {
       } });
       if (!analysis) return null;
       const impacted = await tx.codeArtifact.findMany({ where: {
-        snapshotId: analysis.snapshotId, traceabilityLinks: { some: { impactAnalysisId: analysisId } },
+        // Read all linked artifact identities; foreign snapshots are reported as exclusions, not silently omitted.
+        traceabilityLinks: { some: { impactAnalysisId: analysisId } },
       }, select: artifactSelect, orderBy: [{ artifactKey: 'asc' }, { id: 'asc' }],
       take: QA_TRACE_LIMITS.maxImpactedArtifacts + 1 });
       const limitations: QaTraceLimitation[] = impacted.length > QA_TRACE_LIMITS.maxImpactedArtifacts
         ? ['IMPACTED_ARTIFACT_LIMIT'] : [];
       const selected = impacted.slice(0, QA_TRACE_LIMITS.maxImpactedArtifacts);
-      const upstream = await this.readUpstream(tx, analysis.snapshotId, selected, limitations);
+      const sameSnapshot = selected.filter(artifact => artifact.snapshotId === analysis.snapshotId);
+      const upstream = await this.readUpstream(tx, analysis.snapshotId, sameSnapshot, limitations);
       const sourceKeys = [...new Set(upstream.edges.map(edge => upstream.artifacts.get(edge.fromArtifactId))
         .filter((a): a is QaTraceArtifact => Boolean(a))
         .map(a => `snapshot:${analysis.snapshotId}:artifact:${a.artifactKey}`))].sort();
@@ -46,7 +48,8 @@ export class QaTraceRepository {
       }, select: { id: true, snapshotId: true, artifactId: true, provenanceKey: true,
         sourceType: true, sourcePath: true, startLine: true, endLine: true, excerpt: true } }) : [];
       return { analysisId: analysis.id, snapshot: analysis.snapshot,
-        impactedArtifactIds: selected.map(a => a.id), artifacts: [...upstream.artifacts.values()],
+        impactedArtifactIds: selected.map(a => a.id), artifacts: [...upstream.artifacts.values(),
+          ...selected.filter(artifact => artifact.snapshotId !== analysis.snapshotId)],
         edges: upstream.edges, evidences, limitations };
     }, { isolationLevel: 'RepeatableRead' });
   }
