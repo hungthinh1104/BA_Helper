@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { config } from 'dotenv';
 import { Client } from 'pg';
 import { dependencyEdgeProvenanceSchema, testCaseMetadataSchema } from '@ba-helper/contracts';
+import { createArtifactIdentity } from '@ba-helper/shared';
 
 export const traceCaseTitle = 'cancels a paid booking once';
 const sourcePath = 'src/booking/booking.service.spec.ts';
@@ -31,7 +32,9 @@ export async function seedTestTrace(analysisId: string, options: { parameterized
         AND c."artifactKey" = 'api:booking.service.cancelBooking'`, [analysisId]);
     if (result.rowCount !== 1) throw new Error('Expected the isolated demo booking artifact.');
     const { snapshotId, artifactId } = result.rows[0];
-    const fileKey = `test:${sourcePath.replace(/[/\\]/g, '.')}`;
+    // Keep fixture identities identical to scanner output; otherwise activeJestCase()
+    // rejects the TESTS edge and the API silently reports NO_TEST_FOUND.
+    const fileKey = createArtifactIdentity('test', sourcePath, 'file');
     const caseKey = `test-case:${sourcePath}::${hash(JSON.stringify([
       suitePath, traceCaseTitle, ...(options.parameterized ? ['PARAMETERIZED'] : []),
     ]))}`;

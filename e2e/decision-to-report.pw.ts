@@ -18,6 +18,19 @@ test.describe('decision-to-report journey', () => {
   test('accept all review items, finalize, and reach the approved report', async ({ page }) => {
     test.setTimeout(180_000)
     const trace = await seedTestTrace(seed.analysisId, { parameterized: true })
+    // Verify the real DB -> QA projection path before asserting the visible UI.
+    // A 200 response can still omit a TESTS edge when its canonical identity is invalid.
+    const coverageResponse = await page.request.get(`/api/v1/impact-analyses/${seed.analysisId}/qa-coverage`)
+    expect(coverageResponse.ok()).toBe(true)
+    const coverage = await coverageResponse.json() as {
+      items: Array<{ artifactKey?: string; status: string;
+        testArtifacts: Array<{ testCase?: { title: string; parameterized?: boolean } }> }>
+      traceContext?: { limitations: string[] }
+    }
+    const booking = coverage.items.find(item => item.artifactKey === 'api:booking.service.cancelBooking')
+    expect(booking).toMatchObject({ status: 'COVERED',
+      testArtifacts: [{ testCase: { title: traceCaseTitle, parameterized: true } }] })
+    expect(coverage.traceContext?.limitations).not.toContain('UNSUPPORTED_SOURCE_RELATIONSHIP')
     await page.goto(`/analyses/${seed.analysisId}?view=review&locale=en-US`)
 
     const workbench = page.locator('[data-review-workbench]')
