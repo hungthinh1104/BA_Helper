@@ -38,6 +38,7 @@
     "verify:application-test-trace": "tsx scripts/evaluate-application-test-trace.ts",
     "prove:pinned-comprehension": "ts-node --transpile-only scripts/prove-pinned-code-comprehension.ts",
     "verify:pinned-comprehension-browser": "ts-node --transpile-only scripts/run-pinned-comprehension-browser.ts",
+    "validate:developer-study": "tsx scripts/validate-developer-study.ts",
     "validate:product-beta": "tsx scripts/run-product-validation-scorecard.ts",
     "verify:controlled-beta-readiness": "tsx scripts/verify-controlled-beta-readiness.ts",
     "verify:release-drill": "tsx scripts/run-release-drill.ts",

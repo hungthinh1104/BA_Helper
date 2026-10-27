@@ -4,6 +4,10 @@ This protocol measures whether BA Helper reduces analysis effort and
 missed-impact risk for Technical BA and QC reviewers. It does not treat fixture
 evaluation, automated tests, or model confidence as product-validation data.
 
+The separate developer code-comprehension study (G2A) uses a different task
+schema and protocol: [developer-comprehension-study.md](developer-comprehension-study.md).
+It does not use BA analysis/report IDs and does not share the BA/QA scorecard.
+
 The optional `studyObservations` array in the dataset template records the
 three-condition comprehension study without storing participant identity:
 `EXISTING_WORKFLOW`, `TEXTUAL_EVIDENCE`, and `VISUAL_TEST_TRACE`. Each row is

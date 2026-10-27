@@ -1,0 +1,209 @@
+{
+  "schemaVersion": 1,
+  "datasetId": "suites-unit-comprehension-candidate-v1",
+  "authoredAt": "2026-10-27",
+  "groundTruthMethod": "SOURCE_AUDITED_CANDIDATE_LABELS_WITHOUT_ANALYZER_OUTPUT",
+  "independentHumanReview": false,
+  "heldOutFromResolverDevelopment": true,
+  "heldOutBasis": "The repository does not occur in local fixtures, ground-truth manifests, or evaluation scripts at the audited BA_Helper HEAD. No analyzer output was generated for this candidate. A separate reviewer must still confirm holdout suitability before approval.",
+  "labelReviewStatus": "PENDING_INDEPENDENT_REVIEW",
+  "annotationNote": "These are candidate labels written from pinned source. They are not independent human ground truth and must not be used to claim accuracy until a separate reviewer completes the blinded packet.",
+  "repository": {
+    "repositoryId": "suites-unit",
+    "repository": "suites-dev/suites-unit",
+    "url": "https://github.com/suites-dev/suites-unit",
+    "commitSha": "8fdabcbdd12cb5144199ad3ba7b93eaed0a20275",
+    "defaultBranchAtSelection": "master",
+    "licenseId": "Apache-2.0",
+    "licenseEvidence": [
+      {
+        "path": "LICENSE",
+        "blobSha": "f77caa97266cc1cc8dc37a2309dbc83bf000fda4",
+        "url": "https://github.com/suites-dev/suites-unit/blob/8fdabcbdd12cb5144199ad3ba7b93eaed0a20275/LICENSE"
+      },
+      {
+        "path": "package.json",
+        "blobSha": "954886a78fcada6310168d0bd549b1ee06bdc3d8",
+        "url": "https://github.com/suites-dev/suites-unit/blob/8fdabcbdd12cb5144199ad3ba7b93eaed0a20275/package.json"
+      }
+    ],
+    "suitability": {
+      "typescript": true,
+      "nestjs": true,
+      "jest": true,
+      "evidence": "The pinned tree contains a NestJS dependency-injection adapter and its integration tests, Jest configuration files, and TypeScript unit tests using Jest declarations. The selected unit is a NestJS testing library, not a booking/payment application.",
+      "limitations": [
+        "One repository and three target classes do not establish generalization to NestJS business applications.",
+        "The annotation package covers static declarations only and makes no claim that tests ran or passed.",
+        "The sample is small and requires an independent reviewer to approve each relationship."
+      ]
+    }
+  },
+  "sourceFiles": [
+    { "path": "LICENSE", "blobSha": "f77caa97266cc1cc8dc37a2309dbc83bf000fda4", "role": "license" },
+    { "path": "package.json", "blobSha": "954886a78fcada6310168d0bd549b1ee06bdc3d8", "role": "test-and-license-metadata" },
+    { "path": "packages/core/package.json", "blobSha": "73fd8e6093af309bd16e5403410a451e9e747712", "role": "Jest-package-configuration" },
+    { "path": "packages/core/jest.config.ts", "blobSha": "0af3c142c036def10ea830e74dc030d30a03ac7d", "role": "Jest-configuration" },
+    { "path": "packages/core/src/services/dependency-container.spec.ts", "blobSha": "fc141ba79a694d75cb786ae6b77f572977ad8451", "role": "test-source" },
+    { "path": "packages/core/src/services/dependency-container.ts", "blobSha": "e91ffcba2d7204e0e04f91fa7f63827bd8a3a275", "role": "production-source" },
+    { "path": "packages/core/src/services/unit-mocker.spec.ts", "blobSha": "e4ea919af2848681c31cee29d09e83166aa109c1", "role": "test-source" },
+    { "path": "packages/core/src/services/unit-mocker.ts", "blobSha": "3427be5fe04b525bb6eb2e6fc9e49b3e0ee8aa61", "role": "production-source" },
+    { "path": "packages/core/src/services/unit-reference.spec.ts", "blobSha": "4ad40b3827e8ce97e3a8e273ef0e1ec83aaf5f94", "role": "test-source" },
+    { "path": "packages/core/src/services/unit-reference.ts", "blobSha": "33986e350adb2855176a8bc7af72de1f5ddc6682", "role": "production-source" },
+    { "path": "packages/di/nestjs/__test__/nestjs-adapter.integration.test.ts", "blobSha": "1a20500788897a283e6ddff4b01e1e720b6578b3", "role": "NestJS-Jest-suitability-evidence" }
+  ],
+  "annotations": [
+    {
+      "annotationId": "DC-01",
+      "testIdentity": {
+        "path": "packages/core/src/services/dependency-container.spec.ts",
+        "suitePath": ["Dependency Container Unit Spec"],
+        "title": "should return the corresponding value when the identifier matches a single identifier and metadata is not provided",
+        "lineRange": { "start": 8, "end": 18 }
+      },
+      "targetIdentity": {
+        "path": "packages/core/src/services/dependency-container.ts",
+        "qualifiedSymbol": "DependencyContainer.resolve",
+        "definitionRange": { "start": 31, "end": 56 }
+      },
+      "expectedRelationship": "DIRECT",
+      "sourceSupport": [
+        { "path": "packages/core/src/services/dependency-container.spec.ts", "startLine": 15, "endLine": 17, "purpose": "direct invocation and returned-value assertion" },
+        { "path": "packages/core/src/services/dependency-container.ts", "startLine": 35, "endLine": 46, "purpose": "single-identifier resolution branch" }
+      ],
+      "mockBoundary": { "status": "PRESENT", "detail": "The container is initialized with test-controlled mock values." },
+      "assertionToInvocation": "DIRECT",
+      "rationale": "The test body calls resolve on the constructed dependency container and asserts its returned value.",
+      "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "annotationId": "DC-02",
+      "testIdentity": {
+        "path": "packages/core/src/services/dependency-container.spec.ts",
+        "suitePath": ["Dependency Container Unit Spec"],
+        "title": "should return undefined when the identifier matches a single identifier but metadata does not match",
+        "lineRange": { "start": 44, "end": 53 }
+      },
+      "targetIdentity": {
+        "path": "packages/core/src/services/dependency-container.ts",
+        "qualifiedSymbol": "DependencyContainer.resolve",
+        "definitionRange": { "start": 31, "end": 56 }
+      },
+      "expectedRelationship": "DIRECT",
+      "sourceSupport": [
+        { "path": "packages/core/src/services/dependency-container.spec.ts", "startLine": 49, "endLine": 52, "purpose": "direct invocation with mismatching metadata and undefined assertion" },
+        { "path": "packages/core/src/services/dependency-container.ts", "startLine": 48, "endLine": 56, "purpose": "metadata matching branch" }
+      ],
+      "mockBoundary": { "status": "PRESENT", "detail": "The registered value is test-controlled." },
+      "assertionToInvocation": "DIRECT",
+      "rationale": "The test directly calls resolve with a mismatching metadata object and asserts that the result is undefined.",
+      "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "annotationId": "UR-01",
+      "testIdentity": {
+        "path": "packages/core/src/services/unit-reference.spec.ts",
+        "suitePath": ["Unit Reference Unit Spec"],
+        "title": "should return the corresponding class or value impl unique identifier with no metadata",
+        "lineRange": { "start": 63, "end": 74 }
+      },
+      "targetIdentity": {
+        "path": "packages/core/src/services/unit-reference.ts",
+        "qualifiedSymbol": "UnitReference.get",
+        "definitionRange": { "start": 165, "end": 203 }
+      },
+      "expectedRelationship": "DIRECT",
+      "sourceSupport": [
+        { "path": "packages/core/src/services/unit-reference.spec.ts", "startLine": 63, "endLine": 73, "purpose": "parameterized callback invocation and equality assertion" },
+        { "path": "packages/core/src/services/unit-reference.ts", "startLine": 165, "endLine": 202, "purpose": "overloaded public method implementation" }
+      ],
+      "mockBoundary": { "status": "PRESENT", "detail": "The unit reference resolves configured mocked values from a dependency container." },
+      "assertionToInvocation": "DIRECT",
+      "parameterizedRows": "Static table entries are visible in source; no row is labeled as executed by this annotation.",
+      "rationale": "The callback directly calls get(identifier) and compares the result to the paired value for each declared table row.",
+      "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "annotationId": "UM-01",
+      "testIdentity": {
+        "path": "packages/core/src/services/unit-mocker.spec.ts",
+        "suitePath": [
+          "Unit Mocker Unit Spec",
+          "given that the adapter returns container with the following dependencies",
+          "and given there are some already mocked injectables from advanced in the mocks container",
+          "when applying all the mocks on the target unit, including the already mocked"
+        ],
+        "title": "should stay mocked",
+        "lineRange": { "start": 106, "end": 141 }
+      },
+      "targetIdentity": {
+        "path": "packages/core/src/services/unit-mocker.ts",
+        "qualifiedSymbol": "UnitMocker.constructUnit",
+        "definitionRange": { "start": 24, "end": 46 }
+      },
+      "expectedRelationship": "INDIRECT",
+      "sourceSupport": [
+        { "path": "packages/core/src/services/unit-mocker.spec.ts", "startLine": 100, "endLine": 104, "purpose": "preconfigured mock boundary" },
+        { "path": "packages/core/src/services/unit-mocker.spec.ts", "startLine": 107, "endLine": 109, "purpose": "shared beforeAll invocation" },
+        { "path": "packages/core/src/services/unit-mocker.spec.ts", "startLine": 137, "endLine": 140, "purpose": "assertions against the shared result" },
+        { "path": "packages/core/src/services/unit-mocker.ts", "startLine": 24, "endLine": 46, "purpose": "target implementation" }
+      ],
+      "mockBoundary": { "status": "PRESENT", "detail": "Advanced mocks are supplied through mocksContainer and checked in the result." },
+      "assertionToInvocation": "INDIRECT_SHARED_SETUP",
+      "rationale": "The test case reads a value produced by a constructUnit call in its enclosing beforeAll hook; the relationship is static and setup-mediated.",
+      "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "annotationId": "UM-02",
+      "testIdentity": {
+        "path": "packages/core/src/services/unit-mocker.spec.ts",
+        "suitePath": [
+          "Unit Mocker Unit Spec",
+          "given that the adapter returns container with the following dependencies",
+          "and given there are some already mocked injectables from advanced in the mocks container",
+          "when applying all the mocks on the target unit, including the already mocked"
+        ],
+        "title": "should apply the mocks to the class properties as well",
+        "lineRange": { "start": 106, "end": 149 }
+      },
+      "targetIdentity": {
+        "path": "packages/core/src/services/unit-mocker.ts",
+        "qualifiedSymbol": "UnitMocker.constructUnit",
+        "definitionRange": { "start": 24, "end": 46 }
+      },
+      "expectedRelationship": "INDIRECT",
+      "sourceSupport": [
+        { "path": "packages/core/src/services/unit-mocker.spec.ts", "startLine": 107, "endLine": 109, "purpose": "shared setup invocation" },
+        { "path": "packages/core/src/services/unit-mocker.spec.ts", "startLine": 143, "endLine": 149, "purpose": "property mock assertions" },
+        { "path": "packages/core/src/services/unit-mocker.ts", "startLine": 29, "endLine": 46, "purpose": "dependency resolution and result construction" }
+      ],
+      "mockBoundary": { "status": "PRESENT", "detail": "The assertions compare injected properties with test-controlled mock values." },
+      "assertionToInvocation": "UNRESOLVED_SHARED_SETUP_DATAFLOW",
+      "rationale": "The enclosing hook creates the value under test, but the exact invocation-to-assertion association crosses a shared setup boundary and is intentionally flagged for independent adjudication.",
+      "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "annotationId": "NC-01",
+      "testIdentity": {
+        "path": "packages/core/src/services/dependency-container.spec.ts",
+        "suitePath": ["Dependency Container Unit Spec"],
+        "title": "should return undefined when the identifier does not match any identifier",
+        "lineRange": { "start": 32, "end": 42 }
+      },
+      "targetIdentity": {
+        "path": "packages/core/src/services/unit-mocker.ts",
+        "qualifiedSymbol": "UnitMocker.constructUnit",
+        "definitionRange": { "start": 24, "end": 46 }
+      },
+      "expectedRelationship": "ABSENT",
+      "sourceSupport": [
+        { "path": "packages/core/src/services/dependency-container.spec.ts", "startLine": 32, "endLine": 42, "purpose": "negative-control test declaration and assertions" },
+        { "path": "packages/core/src/services/unit-mocker.ts", "startLine": 24, "endLine": 46, "purpose": "target symbol identity" }
+      ],
+      "mockBoundary": { "status": "PRESENT", "detail": "The test uses a dependency container with test values, but does not reference UnitMocker." },
+      "assertionToInvocation": "NOT_APPLICABLE",
+      "rationale": "This target/test pair is a negative control: the test references DependencyContainer.resolve and contains no supported reference to UnitMocker.constructUnit.",
+      "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+    }
+  ]
+}

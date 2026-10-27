@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "studyStatus": "NOT_STARTED",
+  "studyStatusNote": null,
+  "groundTruthReviewStatus": "PENDING_INDEPENDENT_REVIEW",
+  "tool": {
+    "commitSha": null,
+    "appVersion": null
+  },
+  "repositories": [
+    {
+      "repositoryId": "suites-unit",
+      "url": "https://github.com/suites-dev/suites-unit",
+      "commitSha": "8fdabcbdd12cb5144199ad3ba7b93eaed0a20275",
+      "licenseId": "Apache-2.0"
+    }
+  ],
+  "tasks": [
+    {
+      "taskId": "T1-explain-resolution",
+      "taskFamily": "EXPLAIN_BEHAVIOR",
+      "caseId": "dependency-container",
+      "repositoryId": "suites-unit",
+      "repositoryCommitSha": "8fdabcbdd12cb5144199ad3ba7b93eaed0a20275",
+      "target": {
+        "filePath": "packages/core/src/services/dependency-container.ts",
+        "symbol": "DependencyContainer.resolve"
+      },
+      "participantPrompt": "Explain how this method resolves a missing identifier, a single registration with metadata, and duplicate registrations with or without matching metadata. Cite exact production-source lines and say which cases you found in Jest declarations."
+    },
+    {
+      "taskId": "T2-verify-mocker-tests",
+      "taskFamily": "VERIFY_TEST_EVIDENCE",
+      "caseId": "unit-mocker",
+      "repositoryId": "suites-unit",
+      "repositoryCommitSha": "8fdabcbdd12cb5144199ad3ba7b93eaed0a20275",
+      "target": {
+        "filePath": "packages/core/src/services/unit-mocker.ts",
+        "symbol": "UnitMocker.constructUnit"
+      },
+      "participantPrompt": "Inspect the scenario titled “should stay mocked”. Identify the setup invocation, test-controlled mocks, and assertions. Explain what the source and test declarations support, and what they do not establish about test execution or passing."
+    },
+    {
+      "taskId": "T3-predict-reference",
+      "taskFamily": "PREDICT_UNSEEN_CASE",
+      "caseId": "unit-reference",
+      "repositoryId": "suites-unit",
+      "repositoryCommitSha": "8fdabcbdd12cb5144199ad3ba7b93eaed0a20275",
+      "target": {
+        "filePath": "packages/core/src/services/unit-reference.ts",
+        "symbol": "UnitReference.get"
+      },
+      "participantPrompt": "Given the registration for DEPENDENCY_TWO with metadata dependency=two, predict what get('DEPENDENCY_TWO') does when the caller omits metadata. Trace the relevant source path and identify whether a Jest declaration asserts this exact input."
+    },
+    {
+      "taskId": "T4-prepare-safe-change",
+      "taskFamily": "PREPARE_SAFE_CHANGE",
+      "caseId": "unit-mocker",
+      "repositoryId": "suites-unit",
+      "repositoryCommitSha": "8fdabcbdd12cb5144199ad3ba7b93eaed0a20275",
+      "target": {
+        "filePath": "packages/core/src/services/unit-mocker.ts",
+        "symbol": "UnitMocker.constructUnit"
+      },
+      "participantPrompt": "A behavior change requires explicit advanced mocks to take precedence over generated mocks for both constructor and property injection. Identify the relevant production path, existing regression tests, any uncovered cases, and a safe test plan. Do not implement the change."
+    },
+    {
+      "taskId": "T5-verify-claim",
+      "taskFamily": "VERIFY_CLAIM",
+      "caseId": "unit-reference",
+      "repositoryId": "suites-unit",
+      "repositoryCommitSha": "8fdabcbdd12cb5144199ad3ba7b93eaed0a20275",
+      "target": {
+        "filePath": "packages/core/src/services/unit-reference.ts",
+        "symbol": "UnitReference.get"
+      },
+      "participantPrompt": "Verify this claim from source: “The missing-identifier test proves UnitReference.get throws in a passing test.” Identify supporting and unsupported parts, with exact source lines and an evidence-based confidence rating."
+    }
+  ],
+  "observations": []
+}

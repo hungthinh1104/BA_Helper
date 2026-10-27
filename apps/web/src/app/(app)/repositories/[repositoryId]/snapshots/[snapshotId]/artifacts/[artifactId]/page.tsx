@@ -2,29 +2,42 @@
 
 import { use } from "react"
 import type { ReactNode } from "react"
-import { AlertTriangle, CheckCircle2, Clock3, FileCode2, GitBranch, Loader2 } from "lucide-react"
+import { AlertTriangle, CheckCircle2, FileCode2, GitBranch, Loader2 } from "lucide-react"
 import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
 import { BackButton } from "@/components/workspace/shared/back-button"
 import { useLocalizedHref } from "@/i18n/navigation"
-import { useCodeComprehension } from "@/hooks/api/use-code-comprehension"
-import { Scenario, ScenarioComparison } from "./_components/scenario-inspector"
-import type { CodeComprehensionResponse, ComprehensionScenario } from "@ba-helper/contracts"
+import { mergeComprehensionPages, useCodeComprehension } from "@/hooks/api/use-code-comprehension"
+import { ScenarioList } from "./_components/scenario-list"
+import type { CodeComprehensionResponse } from "@ba-helper/contracts"
 
 interface PageProps {
   params: Promise<{ repositoryId: string; snapshotId: string; artifactId: string }>
+  searchParams: Promise<{ studyCondition?: string | string[] }>
 }
 
-export default function CodeComprehensionPage({ params }: PageProps) {
+export default function CodeComprehensionPage({ params, searchParams }: PageProps) {
   const { repositoryId, snapshotId, artifactId } = use(params)
+  const { studyCondition: requestedCondition } = use(searchParams)
+  const studyCondition = Array.isArray(requestedCondition) ? requestedCondition[0] : requestedCondition
+  const isExistingWorkflow = studyCondition === "EXISTING_WORKFLOW"
   const href = useLocalizedHref()
-  const { data, isLoading, isError, error } = useCodeComprehension(snapshotId, artifactId)
+  const query = useCodeComprehension(snapshotId, artifactId, !isExistingWorkflow)
+  const data = mergeComprehensionPages(query.data?.pages ?? [])
 
-  if (isLoading) {
+  if (isExistingWorkflow) {
+    return <StateCard icon={<FileCode2 className="h-5 w-5" />} title="Use the existing workflow" detail="This study condition is completed in the participant’s normal IDE and AI workflow, outside BA Helper." />
+  }
+
+  if (query.isLoading) {
     return <StateCard icon={<Loader2 className="h-5 w-5 animate-spin" />} title="Loading code evidence" detail="Reading the bounded projection for this immutable snapshot." />
   }
-  if (isError || !data) {
-    return <StateCard icon={<AlertTriangle className="h-5 w-5" />} title="Code evidence unavailable" detail={error instanceof Error ? error.message : "The snapshot or artifact could not be read."} />
+  if ((query.isError && !data) || !data) {
+    return <StateCard icon={<AlertTriangle className="h-5 w-5" />} title="Code evidence unavailable" detail={query.error instanceof Error ? query.error.message : "The snapshot or artifact could not be read."} />
   }
+
+  const tracePresentation = studyCondition === "TEXTUAL_EVIDENCE"
+    ? "TEXTUAL_EVIDENCE"
+    : studyCondition === "VISUAL_TEST_TRACE" ? "VISUAL_TEST_TRACE" : "NORMAL"
 
   return (
     <div className="app-page-scroll">
@@ -53,7 +66,17 @@ export default function CodeComprehensionPage({ params }: PageProps) {
           </div>
           <div className="flex min-w-0 flex-col gap-6">
             <Limitations data={data} />
-            <ScenarioList scenarios={data.relatedScenarios} snapshotContext={data.snapshotContext} pagination={data.scenarioPagination} />
+            <ScenarioList
+              scenarios={data.relatedScenarios}
+              snapshotContext={data.snapshotContext}
+              pagination={data.scenarioPagination}
+              limitations={data.limitations}
+              hasNextPage={Boolean(query.hasNextPage)}
+              isFetchingNextPage={query.isFetchingNextPage}
+              isFetchNextPageError={query.isFetchNextPageError}
+              onLoadMore={() => { void query.fetchNextPage() }}
+              tracePresentation={tracePresentation}
+            />
           </div>
         </div>
       </div>
@@ -118,20 +141,6 @@ function Limitations({ data }: { data: { limitations: Array<{ code: string; mess
       <div className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-warning" /><h2 id="uncertainty-title" className="text-[14px] font-semibold">Uncertainty and limits</h2></div>
       <p className="mt-1 text-[12px] text-muted-foreground">Runtime observations: {data.snapshotContext.runtimeObservations}. {data.truncated ? "The result was bounded and may be incomplete." : "No projection bound was reached."}</p>
       <ul className="mt-3 space-y-2">{data.limitations.map((item) => <li key={`${item.code}-${item.message}`} className="rounded-lg border border-border/40 px-3 py-2"><span className={`mr-2 text-[10px] font-semibold ${item.severity === "WARN" ? "text-warning" : "text-muted-foreground"}`}>{item.severity}</span><span className="font-mono text-[10px]">{item.code}</span><p className="mt-1 text-[11px] text-muted-foreground">{item.message}</p></li>)}</ul>
-    </section>
-  )
-}
-
-type SnapshotEvidenceContext = Pick<CodeComprehensionResponse["snapshotContext"], "snapshotId" | "commitSha">
-
-function ScenarioList({ scenarios, snapshotContext, pagination }: { scenarios: ComprehensionScenario[]; snapshotContext: SnapshotEvidenceContext; pagination: CodeComprehensionResponse["scenarioPagination"] }) {
-  return (
-    <section className="rounded-xl border border-border/40 bg-surface/50 p-4 shadow-sm" aria-labelledby="scenario-title">
-      <div className="flex items-center gap-2"><Clock3 className="h-4 w-4 text-muted-foreground" /><h2 id="scenario-title" className="text-[14px] font-semibold">Related Jest scenarios</h2></div>
-      <p className="mt-1 text-[12px] text-muted-foreground">Declarations are shown with their exact static source claims. No execution or coverage is inferred.</p>
-      {scenarios.length === 0 ? <p className="mt-4 text-[12px] text-muted-foreground">No supported test-to-code reference was persisted. This does not prove that no tests exist; inspect the scan limitations above.</p> : <div className="mt-3 space-y-2">{scenarios.map((scenario) => <Scenario key={scenario.testArtifact.id} scenario={scenario} snapshotContext={snapshotContext} />)}</div>}
-      {pagination.hasMore && <p className="mt-3 rounded border border-warning/30 bg-warning/5 px-2 py-1.5 text-[11px] text-warning">More related scenarios are available beyond this bounded page ({pagination.offset + 1}-{pagination.offset + scenarios.length} shown).</p>}
-      {scenarios.length > 1 && <ScenarioComparison scenarios={scenarios} />}
     </section>
   )
 }

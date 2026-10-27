@@ -1,10 +1,11 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
+import { useInfiniteQuery } from "@tanstack/react-query"
 import {
   artifactListResponseSchema,
   codeComprehensionResponseSchema,
   MAX_ARTIFACT_SEARCH_OFFSET,
   type ArtifactListResponse,
   type CodeComprehensionResponse,
+  type ComprehensionScenario,
 } from "@ba-helper/contracts"
 import { apiGet } from "@/lib/api-client"
 import { queryKeys } from "@/lib/api/query-keys"
@@ -33,15 +34,53 @@ export function useSnapshotArtifacts(snapshotId: string | undefined, enabled = t
   })
 }
 
-export function useCodeComprehension(snapshotId: string | undefined, artifactId: string | undefined) {
-  return useQuery({
+export function useCodeComprehension(snapshotId: string | undefined, artifactId: string | undefined, enabled = true) {
+  return useInfiniteQuery({
     queryKey: queryKeys.repositories.artifactComprehension(snapshotId ?? "", artifactId ?? ""),
-    queryFn: () => apiGet<CodeComprehensionResponse>(
-      `/api/v1/snapshots/${encodeURIComponent(snapshotId ?? "")}/artifacts/${encodeURIComponent(artifactId ?? "")}/comprehension`,
+    queryFn: ({ pageParam }) => {
+      const params = new URLSearchParams({ scenarioLimit: "50", scenarioOffset: String(pageParam) })
+      return apiGet<CodeComprehensionResponse>(
+      `/api/v1/snapshots/${encodeURIComponent(snapshotId ?? "")}/artifacts/${encodeURIComponent(artifactId ?? "")}/comprehension?${params}`,
       codeComprehensionResponseSchema,
-    ),
-    enabled: Boolean(snapshotId && artifactId),
+      )
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.scenarioPagination.hasMore
+      ? lastPage.scenarioPagination.offset + lastPage.scenarioPagination.limit
+      : undefined,
+    enabled: Boolean(snapshotId && artifactId && enabled),
     retry: false,
     staleTime: 60_000,
   })
+}
+
+export function mergeComprehensionPages(pages: readonly CodeComprehensionResponse[]): CodeComprehensionResponse | undefined {
+  const firstPage = pages[0]
+  const lastPage = pages[pages.length - 1]
+  if (!firstPage || !lastPage) return undefined
+
+  const limitations = new Map<string, CodeComprehensionResponse["limitations"][number]>()
+  for (const page of pages) {
+    for (const limitation of page.limitations) {
+      limitations.set(`${limitation.code}:${limitation.message}`, limitation)
+    }
+  }
+
+  return {
+    ...firstPage,
+    relatedScenarios: mergeScenarioPages(pages.map((page) => page.relatedScenarios)),
+    scenarioPagination: lastPage.scenarioPagination,
+    limitations: [...limitations.values()],
+    truncated: pages.some((page) => page.truncated),
+  }
+}
+
+export function mergeScenarioPages(pages: readonly ComprehensionScenario[][]): ComprehensionScenario[] {
+  const scenarios = new Map<string, ComprehensionScenario>()
+  for (const page of pages) {
+    for (const scenario of page) {
+      if (!scenarios.has(scenario.testArtifact.id)) scenarios.set(scenario.testArtifact.id, scenario)
+    }
+  }
+  return [...scenarios.values()]
 }
