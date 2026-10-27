@@ -1,6 +1,6 @@
 import { relative, resolve } from 'node:path';
 import { Node, SyntaxKind } from 'ts-morph';
-import type { CallExpression, ClassDeclaration, MethodDeclaration, SourceFile } from 'ts-morph';
+import type { CallExpression, ClassDeclaration, ElementAccessExpression, MethodDeclaration, SourceFile } from 'ts-morph';
 import type { ScanArtifact, ScanResult } from '../scanner/scanner.types';
 import type { GraphDiagnostic, GraphEdge, GraphProvenance, GraphResult } from './graph.types';
 import { isBuiltInDataPreparationCall, looksLikeMockConfiguration } from '../scanner/jest/jest-test-semantics';
@@ -53,6 +53,15 @@ class SourceGraphBuilder {
       let candidateCount = 0;
       for (const call of calls.within(span)) {
         const access = call.getExpression();
+        if (Node.isElementAccessExpression(access)) {
+          const receiver = access.getExpression();
+          if (!this.resolver.isPotentialTestReceiver(receiver)) continue;
+          candidateCount++;
+          this.diagnose('TEST_TARGET_UNRESOLVED', file, item, {
+            reason: computedMethodReason(access), node: call, targetExpression: call.getText(),
+          });
+          continue;
+        }
         if (!Node.isPropertyAccessExpression(access) || isTestInfrastructureCall(call)) continue;
         const receiver = access.getExpression();
         if (!this.resolver.isPotentialTestReceiver(receiver)) continue;
@@ -104,6 +113,14 @@ class SourceGraphBuilder {
   private methodCalls(cls: ClassDeclaration, method: MethodDeclaration, source: ScanArtifact): void {
     for (const call of method.getDescendantsOfKind(SyntaxKind.CallExpression)) {
       const access = call.getExpression();
+      if (Node.isElementAccessExpression(access)) {
+        if (this.resolver.receiverClass(access.getExpression(), cls)) {
+          this.diagnose('UNRESOLVED_METHOD_TARGET', call.getSourceFile(), source, {
+            reason: computedMethodReason(access), node: call, targetExpression: call.getText(),
+          });
+        }
+        continue;
+      }
       if (!Node.isPropertyAccessExpression(access)) continue;
       if (call.getFirstAncestorByKind(SyntaxKind.ClassDeclaration) !== cls || hasChangingFunctionScope(call, method)) {
         this.diagnose('UNRESOLVED_RECEIVER_SCOPE', call.getSourceFile(), source, {
@@ -197,6 +214,13 @@ function isTestInfrastructureCall(call: CallExpression): boolean {
   }
   return Node.isIdentifier(root) && jestIdentifier(root, 'expect') &&
     ['any', 'anything', 'arrayContaining', 'objectContaining', 'stringContaining', 'stringMatching'].includes(access.getName());
+}
+
+function computedMethodReason(access: ElementAccessExpression): string {
+  const argument = access.getArgumentExpression();
+  return argument && Node.isStringLiteral(argument)
+    ? 'COMPUTED_METHOD_REFERENCE_UNSUPPORTED'
+    : 'DYNAMIC_METHOD_REFERENCE';
 }
 
 function jestIdentifier(identifier: Node, name: string): boolean {

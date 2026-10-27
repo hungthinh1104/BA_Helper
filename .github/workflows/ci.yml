@@ -88,6 +88,9 @@ jobs:
       - name: Public NestJS static trace corpus
         run: pnpm verify:public-test-trace
 
+      - name: Adversarial static evidence verification
+        run: pnpm verify:adversarial-evidence
+
       - name: Application static trace accuracy and regression
         run: pnpm verify:application-test-trace
 
@@ -101,6 +104,7 @@ jobs:
           name: analyzer-quality-scorecard
           path: |
             artifacts/evaluation/analyzer-scorecard.json
+            artifacts/evaluation/adversarial-evidence-verification.json
             artifacts/evaluation/public-test-trace-scorecard.json
             artifacts/evaluation/application-test-trace-scorecard.json
             artifacts/performance/static-test-graph-ci.json

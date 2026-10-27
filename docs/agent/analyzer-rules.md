@@ -106,7 +106,7 @@ An edge is `EVIDENCED` only when the supported parser can locate a direct
 relationship in source. A similarly named but disconnected symbol must not
 become an evidenced impact.
 
-### NestJS graph publication (`scanner@0.7.0`, `analyzer@0.15.0`)
+### NestJS graph publication (`scanner@0.7.0`, `analyzer@0.16.0`)
 
 The checkout root and accepted source-file paths are canonicalized through
 filesystem real paths before computing repository-relative artifact identity.
@@ -222,6 +222,13 @@ inferred relationships.
 `@Catch()`. These exception-filter methods use the existing `SERVICE_METHOD`
 identity and are eligible for direct source-backed `CALLS`/`TESTS` links; no
 runtime filter execution is inferred.
+
+`analyzer@0.16.0` reports computed method calls on a statically identified test
+or injected-service receiver as unresolved `DYNAMIC_METHOD_REFERENCE` (or
+`COMPUTED_METHOD_REFERENCE_UNSUPPORTED` for a string-literal element key). It
+does not create a `TESTS` or `CALLS` edge for these expressions. This makes a
+dynamic target distinguishable from an absent source relationship without
+expanding computed-member resolution.
 
 ### Jest case extraction
 

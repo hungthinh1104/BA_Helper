@@ -34,6 +34,7 @@
     "verify:dependencies": "pnpm audit --prod --audit-level=high",
     "benchmark:static-test-graph": "tsx scripts/benchmark-static-test-graph.ts",
     "verify:analyzer-quality": "tsx scripts/run-analyzer-quality-gate.ts",
+    "verify:adversarial-evidence": "tsx scripts/verify-adversarial-evidence.ts",
     "verify:public-test-trace": "tsx scripts/verify-public-test-trace.ts",
     "verify:application-test-trace": "tsx scripts/evaluate-application-test-trace.ts",
     "prove:pinned-comprehension": "ts-node --transpile-only scripts/prove-pinned-code-comprehension.ts",
@@ -47,7 +48,7 @@
     "verify:architecture-boundaries": "tsx scripts/verify-architecture-boundaries.ts && pnpm verify:backend-runtime-boundary",
     "verify:backend-runtime-boundary": "tsx scripts/verify-backend-runtime-boundary.ts",
     "verify:backend-runtime-http-boundary": "ts-node --transpile-only scripts/verify-backend-runtime-http-boundary.ts",
-    "verify:stability": "pnpm verify:dependencies && pnpm infra:up && pnpm db:migrate && pnpm verify:migration-upgrade && pnpm verify:domain-packs && pnpm verify:analyzer-quality && pnpm verify:public-test-trace && pnpm verify:application-test-trace && pnpm verify:architecture-boundaries && pnpm verify:release-drill && pnpm verify:controlled-beta-readiness && pnpm typecheck && pnpm lint && pnpm test && pnpm test:web && pnpm test:e2e && pnpm demo:golden-path && pnpm demo:multi-repo-golden-path && pnpm test:pw"
+    "verify:stability": "pnpm verify:dependencies && pnpm infra:up && pnpm db:migrate && pnpm verify:migration-upgrade && pnpm verify:domain-packs && pnpm verify:analyzer-quality && pnpm verify:public-test-trace && pnpm verify:adversarial-evidence && pnpm verify:application-test-trace && pnpm verify:architecture-boundaries && pnpm verify:release-drill && pnpm verify:controlled-beta-readiness && pnpm typecheck && pnpm lint && pnpm test && pnpm test:web && pnpm test:e2e && pnpm demo:golden-path && pnpm demo:multi-repo-golden-path && pnpm test:pw"
   },
   "devDependencies": {
     "@apidevtools/swagger-parser": "13.1.0",

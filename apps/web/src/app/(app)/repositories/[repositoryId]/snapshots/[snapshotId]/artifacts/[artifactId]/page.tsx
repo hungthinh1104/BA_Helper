@@ -10,6 +10,8 @@ import { mergeComprehensionPages, useCodeComprehension } from "@/hooks/api/use-c
 import { ScenarioList } from "./_components/scenario-list"
 import type { CodeComprehensionResponse } from "@ba-helper/contracts"
 
+const STUDY_CONDITIONS = ["EXISTING_WORKFLOW", "TEXTUAL_EVIDENCE", "VISUAL_TEST_TRACE"] as const
+
 interface PageProps {
   params: Promise<{ repositoryId: string; snapshotId: string; artifactId: string }>
   searchParams: Promise<{ studyCondition?: string | string[] }>
@@ -18,11 +20,23 @@ interface PageProps {
 export default function CodeComprehensionPage({ params, searchParams }: PageProps) {
   const { repositoryId, snapshotId, artifactId } = use(params)
   const { studyCondition: requestedCondition } = use(searchParams)
-  const studyCondition = Array.isArray(requestedCondition) ? requestedCondition[0] : requestedCondition
+  const conditionValues = Array.isArray(requestedCondition)
+    ? requestedCondition
+    : requestedCondition === undefined ? [] : [requestedCondition]
+  const studyCondition = conditionValues[0]
+  const hasStudyCondition = requestedCondition !== undefined
+  const isValidStudyCondition = !hasStudyCondition || (
+    conditionValues.length === 1 && STUDY_CONDITIONS.includes(studyCondition as typeof STUDY_CONDITIONS[number])
+  )
+  const studyModeEnabled = hasStudyCondition && isValidStudyCondition
   const isExistingWorkflow = studyCondition === "EXISTING_WORKFLOW"
   const href = useLocalizedHref()
-  const query = useCodeComprehension(snapshotId, artifactId, !isExistingWorkflow)
+  const query = useCodeComprehension(snapshotId, artifactId, !isExistingWorkflow && isValidStudyCondition)
   const data = mergeComprehensionPages(query.data?.pages ?? [])
+
+  if (!isValidStudyCondition) {
+    return <StateCard icon={<AlertTriangle className="h-5 w-5" />} title="Unsupported study condition" detail="Restart this task with the study condition assigned by the operator." />
+  }
 
   if (isExistingWorkflow) {
     return <StateCard icon={<FileCode2 className="h-5 w-5" />} title="Use the existing workflow" detail="This study condition is completed in the participant’s normal IDE and AI workflow, outside BA Helper." />
@@ -42,7 +56,7 @@ export default function CodeComprehensionPage({ params, searchParams }: PageProp
   return (
     <div className="app-page-scroll">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-4 pb-20">
-        <BackButton href={href(`/repositories/${repositoryId}`)} label="Back to repository" className="mb-0 w-fit" />
+        {!studyModeEnabled && <BackButton href={href(`/repositories/${repositoryId}`)} label="Back to repository" className="mb-0 w-fit" />}
         <WorkspacePageHeader
           title={data.selectedCode.name}
           description={<ArtifactLocation filePath={data.selectedCode.filePath} startLine={data.selectedCode.startLine} />}

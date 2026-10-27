@@ -48,6 +48,10 @@ Do not expose saved trace appendices or other visual traces during the timed
 TEXTUAL_EVIDENCE task. The operator supplies each participant's preassigned
 fixed URL, opens the condition for that task, and records it in the observation.
 Do not let participants change the URL or switch conditions during a timed task.
+The B/C Explorer routes hide the in-app back link, and duplicate or unsupported
+studyCondition values fail closed. The condition is still URL-based: removing
+the parameter opens the ordinary Explorer, so the operator must keep the
+assigned URL fixed for the duration of the task.
 
 Use the same AI assistant and prompt policy in the existing-workflow condition
 for all participants. Do not weaken normal IDE search or source navigation.
