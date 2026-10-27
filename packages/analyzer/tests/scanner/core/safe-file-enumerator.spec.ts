@@ -31,6 +31,7 @@ describe('SafeFileEnumerator', () => {
     expect(result.allFiles.length).toBe(1);
     expect(result.allFiles[0].endsWith('main.ts')).toBe(true);
     expect(result.tsFiles.length).toBe(1);
+    expect(result.isPartial).toBe(false);
   });
 
   it('skips binary/archive files', async () => {
@@ -44,6 +45,7 @@ describe('SafeFileEnumerator', () => {
     expect(result.allFiles.length).toBe(1);
     expect(result.allFiles[0].endsWith('main.ts')).toBe(true);
     expect(result.diagnostics.some(d => d.code === 'BINARY_SKIPPED')).toBe(true);
+    expect(result.isPartial).toBe(false); // Skipped images and archives are not source omissions.
   });
 
   it('skips binary content even when the extension looks supported', async () => {
@@ -57,6 +59,7 @@ describe('SafeFileEnumerator', () => {
     expect(result.tsFiles[0].endsWith('main.ts')).toBe(true);
     expect(result.allFiles.some(file => file.endsWith('malicious.ts'))).toBe(false);
     expect(result.skippedSummary.BINARY_FILE).toBeGreaterThanOrEqual(1);
+    expect(result.isPartial).toBe(true); // A source-looking file was never parsed.
   });
 
   it('skips files exceeding MAX_FILE_SIZE_KB', async () => {
@@ -80,6 +83,23 @@ describe('SafeFileEnumerator', () => {
     expect(result.allFiles.length).toBe(1);
     expect(result.allFiles[0].endsWith('small.ts')).toBe(true);
     expect(result.diagnostics.some(d => d.code === 'FILE_TOO_LARGE')).toBe(true);
+    expect(result.skippedSummary.FILE_TOO_LARGE).toBe(1);
+    expect(result.isPartial).toBe(true);
+  });
+
+  it('keeps file coverage FULL when only oversized documentation is skipped', async () => {
+    const policy = new ScanLimitsPolicy({
+      MAX_REPO_SIZE_MB: 100, MAX_FILE_COUNT: 1000, MAX_TS_FILE_COUNT: 1000,
+      MAX_FILE_SIZE_KB: 1, CLONE_TIMEOUT_MS: 10000, SCAN_TIMEOUT_MS: 10000,
+    });
+    await fs.writeFile(path.join(tmpDir, 'README.md'), 'x'.repeat(2048));
+    await fs.writeFile(path.join(tmpDir, 'main.ts'), 'export const ok = true;');
+
+    const result = await new SafeFileEnumerator(tmpDir, policy).enumerate();
+
+    expect(result.skippedSummary.FILE_TOO_LARGE).toBe(1);
+    expect(result.tsFiles).toHaveLength(1);
+    expect(result.isPartial).toBe(false);
   });
 
   it('skips all symlinks by default, including those pointing outside root', async () => {
@@ -99,8 +119,26 @@ describe('SafeFileEnumerator', () => {
 
     expect(result.diagnostics.some(d => d.code === 'SYMLINK_SKIPPED')).toBe(true);
     expect(result.allFiles.some(f => f.includes('secret.txt'))).toBe(false);
+    expect(result.isPartial).toBe(true); // Unfollowed directory symlinks may hide source files.
 
     await fs.rm(outsideDir, { recursive: true, force: true });
+  });
+
+  it('resets file health when the same enumerator scans again after a source omission is fixed', async () => {
+    const policy = new ScanLimitsPolicy({
+      MAX_REPO_SIZE_MB: 100, MAX_FILE_COUNT: 1000, MAX_TS_FILE_COUNT: 1000,
+      MAX_FILE_SIZE_KB: 1, CLONE_TIMEOUT_MS: 10000, SCAN_TIMEOUT_MS: 10000,
+    });
+    const source = path.join(tmpDir, 'main.ts');
+    await fs.writeFile(source, 'x'.repeat(2048));
+    const enumerator = new SafeFileEnumerator(tmpDir, policy);
+    expect((await enumerator.enumerate()).isPartial).toBe(true);
+
+    await fs.writeFile(source, 'export const valid = true;');
+    const second = await enumerator.enumerate();
+    expect(second.isPartial).toBe(false);
+    expect(second.skippedSummary.FILE_TOO_LARGE).toBe(0);
+    expect(second.tsFiles).toHaveLength(1);
   });
 
   it('enforces MAX_FILE_COUNT and MAX_TS_FILE_COUNT', async () => {

@@ -74,6 +74,11 @@ jobs:
       - name: Domain pack governance
         run: pnpm verify:domain-packs
 
+      - name: Scan source-omission regression
+        run: |
+          pnpm exec jest --config jest.analyzer.config.ts --runInBand packages/analyzer/tests/scanner/core/safe-file-enumerator.spec.ts
+          pnpm exec jest --config jest.unit.config.ts --runInBand packages/backend-runtime/src/scanner/application/scan-health-diagnostics.spec.ts
+
       - name: Analyzer quality gate
         run: pnpm verify:analyzer-quality
 

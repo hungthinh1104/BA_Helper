@@ -19,11 +19,42 @@ describe('scan health diagnostics', () => {
 
     expect(collector.add).toHaveBeenCalledWith(expect.objectContaining({
       code: 'SCAN_HEALTH',
+      severity: 'INFO',
+      message: expect.stringContaining('semantic completeness is not certified'),
       payload: expect.objectContaining({
         scannerVersion: SCANNER_VERSION,
         analyzerVersion: ANALYZER_VERSION,
         scannedFileCount: 3,
         artifactCount: 2,
+      }),
+    }));
+  });
+
+  it('emits a warning when source files were omitted, preserving reasons for downstream review', () => {
+    const collector = { add: jest.fn(), addSecretRedacted: jest.fn(), getItems: () => [] };
+    addScanHealthDiagnostic({
+      collector,
+      scanResult: {
+        analyzerVersion: ANALYZER_VERSION,
+        scannedFileCount: 1,
+        artifacts: [],
+        coverage: {
+          status: 'PARTIAL',
+          skippedSummary: { FILE_TOO_LARGE: 1 },
+          skippedFiles: [{ path: 'src/too-large.ts', reason: 'FILE_TOO_LARGE' }],
+        },
+      } as any,
+    });
+
+    expect(collector.add).toHaveBeenCalledWith(expect.objectContaining({
+      code: 'SCAN_HEALTH',
+      severity: 'WARN',
+      message: expect.stringContaining('File inventory incomplete'),
+      payload: expect.objectContaining({
+        coverageStatus: 'PARTIAL',
+        scannedFileCount: 1,
+        skippedFileCount: 1,
+        skippedSummary: expect.objectContaining({ FILE_TOO_LARGE: 1 }),
       }),
     }));
   });
