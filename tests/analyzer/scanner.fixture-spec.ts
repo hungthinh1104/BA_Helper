@@ -63,8 +63,8 @@ describe('scanner fixture expectations', () => {
       }
       // Git attributes pin this fixture to LF on every runner. Do not silently
       // normalize offsets to make a stale golden file pass.
-      expect(source).not.toContain('\\r');
-      const lines = source.split('\\n');
+      expect(source).not.toContain('\r');
+      const lines = source.split('\n');
       const offset = (line: number, column: number) =>
         lines.slice(0, line - 1).reduce((sum, value) => sum + value.length + 1, 0) + column - 1;
       expect(location.startOffset).toBe(offset(location.startLine, location.startColumn));
