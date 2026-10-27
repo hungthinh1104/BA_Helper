@@ -5,7 +5,7 @@ import { dependencyConfidenceSchema, dependencyEdgeProvenanceSchema } from './de
 export const qaTraceLimitationSchema = z.enum([
   'SNAPSHOT_PARTIAL', 'LEGACY_TEST_IDENTITIES', 'SCANNER_LIMITATIONS',
   'IMPACTED_ARTIFACT_LIMIT', 'EDGE_LIMIT', 'CALL_DEPTH_LIMIT', 'TRACE_SAMPLE_LIMIT',
-  'UNSUPPORTED_SOURCE_RELATIONSHIP',
+  'UNSUPPORTED_SOURCE_RELATIONSHIP', 'UNSUPPORTED_IMPACT_ARTIFACT',
 ]);
 
 export const qaTraceArtifactSchema = z.object({
@@ -44,6 +44,11 @@ export const qaTraceContextSchema = z.object({
   commitSha: z.string(), analyzerVersion: z.string(),
   snapshotCoverageStatus: z.enum(['READY', 'PARTIAL']),
   limitations: z.array(qaTraceLimitationSchema),
+  excludedImpactedArtifacts: z.array(z.object({
+    artifactId: z.string(), artifactKey: z.string().optional(),
+    artifactType: z.string().optional(), universalKind: z.string().optional(),
+    reason: z.enum(['MISSING_ARTIFACT', 'FOREIGN_SNAPSHOT', 'UNSUPPORTED_TYPE']),
+  })).optional(),
   limits: z.object({
     maxCallDepth: z.number().int().nonnegative().max(4),
     maxImpactedArtifacts: z.number().int().positive(),
