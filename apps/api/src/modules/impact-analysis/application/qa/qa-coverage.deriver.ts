@@ -21,9 +21,11 @@ export class QaCoverageDeriver {
         impacted.push(artifact);
         continue;
       }
+      // Do not expose metadata from a foreign snapshot through this analysis response.
+      const safeArtifact = artifact?.snapshotId === snapshot.id ? artifact : undefined;
       excludedImpactedArtifacts.push({
-        artifactId: id, artifactKey: artifact?.artifactKey, artifactType: artifact?.artifactType,
-        universalKind: artifact?.universalKind,
+        artifactId: id, artifactKey: safeArtifact?.artifactKey, artifactType: safeArtifact?.artifactType,
+        universalKind: safeArtifact?.universalKind,
         reason: !artifact ? 'MISSING_ARTIFACT' : artifact.snapshotId !== snapshot.id ? 'FOREIGN_SNAPSHOT' : 'UNSUPPORTED_TYPE',
       });
     }
