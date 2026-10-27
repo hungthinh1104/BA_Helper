@@ -43,6 +43,14 @@ function TraceContext({ coverage, labels }: { coverage: QaCoverageResponse; labe
     <ul className="grid gap-1 text-xs text-warning" aria-label={labels.limits}>
       {context.limitations.map(code => <li key={code}>{labels.limitations[code]}</li>)}
     </ul>
+    {context.excludedImpactedArtifacts?.length ? <details className="text-xs text-warning">
+      <summary>Excluded impacted artifacts: {context.excludedImpactedArtifacts.length}</summary>
+      <ul className="mt-1 grid gap-1 font-mono">
+        {context.excludedImpactedArtifacts.map(item => <li key={item.artifactId}>
+          {item.artifactKey ?? item.artifactId} · {item.artifactType ?? 'missing'} · {item.reason}
+        </li>)}
+      </ul>
+    </details> : null}
     <p className="text-[11px] text-muted-foreground">{labels.limits}: {context.limits.maxCallDepth} {labels.calls} · {context.limits.maxImpactedArtifacts} {labels.artifacts} · {context.limits.maxEdges} {labels.edges} · {context.limits.maxTracesPerArtifact} {labels.cases}</p>
   </>;
 }
