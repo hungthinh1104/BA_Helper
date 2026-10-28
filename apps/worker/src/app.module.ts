@@ -4,8 +4,10 @@ import { ImpactAnalysisWorkerModule } from './impact-analysis/impact-analysis.wo
 import { ScanJobWorkerModule } from './scan-job/scan-job.worker.module';
 import { EmbeddingWorkerModule } from './embedding/embedding.worker.module';
 import { DocumentJobWorkerModule } from './document-job/document-job.worker.module';
-import { StaleJobRecoveryModule } from './shared/stale-job-recovery.module';
+import { StaleJobRecoveryService } from './shared/stale-job-recovery.service';
 import { AiModule } from '@ba-helper/backend-runtime';
+import { PrismaModule } from '@ba-helper/backend-runtime/prisma';
+import { QueueService } from '@ba-helper/backend-runtime/queue';
 import { requireEnv } from '@ba-helper/shared';
 
 @Module({
@@ -20,11 +22,12 @@ import { requireEnv } from '@ba-helper/shared';
     BullModule.registerQueue({ name: 'embedding' }),
     BullModule.registerQueue({ name: 'document-job' }),
     AiModule.forRoot(),
+    PrismaModule,
     ImpactAnalysisWorkerModule,
     ScanJobWorkerModule,
     EmbeddingWorkerModule,
     DocumentJobWorkerModule,
-    StaleJobRecoveryModule,
   ],
+  providers: [QueueService, StaleJobRecoveryService],
 })
 export class AppModule {}

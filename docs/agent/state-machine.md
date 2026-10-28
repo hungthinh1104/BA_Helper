@@ -287,6 +287,14 @@ Retry must not create a second job for same `snapshotId` + `documentType`.
 
 A FAILED job never mutates the `ReviewedReportSnapshot`. Re-enqueueing a job for the same snapshot and document type simply returns the existing job, unless explicitly requested as a retry.
 
+At worker startup, persisted `QUEUED` scan, impact-analysis, and document jobs
+are re-enqueued in bounded keyset pages through the shared queue adapter.
+PostgreSQL remains the source of command identity; deterministic BullMQ job IDs
+make repeated startup reconciliation idempotent. A queue delivery error leaves
+the product row `QUEUED` and fails worker startup so the deployment can retry
+reconciliation. Stale `RUNNING` rows still transition to `FAILED` and require
+an explicit product retry.
+
 
 ## Traceability Link Review
 

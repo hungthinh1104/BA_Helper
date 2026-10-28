@@ -384,6 +384,8 @@
     "somethingWentWrong": "Something went wrong."
   },
   "workspaceLists": {
+    "scanRetryDescription": "The repository is saved. Retry here to queue the same scan request.",
+    "retryScan": "Retry Scan",
     "repositoriesTitle": "Repositories",
     "repositoriesDescription": "Connect public GitHub repositories to scan their codebase for impact analysis.",
     "connectRepository": "Connect Repository",

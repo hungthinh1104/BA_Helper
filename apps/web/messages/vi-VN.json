@@ -384,6 +384,8 @@
     "somethingWentWrong": "Đã có lỗi xảy ra."
   },
   "workspaceLists": {
+    "scanRetryDescription": "Repository đã được lưu. Hãy thử lại tại đây để queue cùng scan request.",
+    "retryScan": "Thử queue scan lại",
     "repositoriesTitle": "Repository",
     "repositoriesDescription": "Kết nối public GitHub repository để scan codebase cho phân tích tác động.",
     "connectRepository": "Kết nối repository",

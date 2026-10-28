@@ -1,7 +1,7 @@
 import { CreateScanJobUseCase } from './create-scan-job.usecase';
 import type { ScanJobRepository, EventLogService } from '@ba-helper/backend-runtime';
 import { AppError } from '@ba-helper/shared';
-import { RepositoryRepository, QueueService } from "@ba-helper/backend-runtime";
+import type { RepositoryRepository, QueueService } from "@ba-helper/backend-runtime";
 import { ScanJobPolicy } from "@ba-helper/application/scanner";
 
 
@@ -50,7 +50,7 @@ describe('CreateScanJobUseCase', () => {
 
   it('should return existing job if requestedRef matches', async () => {
     repositoryRepository.findById.mockResolvedValue({ id: 'r1' } as any);
-    const existing = { id: 'j1', requestedRef: 'main' };
+    const existing = { id: 'j1', requestedRef: 'main', status: 'RUNNING' };
     scanJobRepository.findByRepositoryAndRequestKey.mockResolvedValue(existing as any);
 
     const result = await useCase.execute({
@@ -62,6 +62,32 @@ describe('CreateScanJobUseCase', () => {
     expect(result).toEqual(existing);
     expect(scanJobRepository.createQueued).not.toHaveBeenCalled();
     expect(queueService.enqueueScanJob).not.toHaveBeenCalled();
+  });
+
+  it('should restore queue delivery for an existing queued job', async () => {
+    repositoryRepository.findById.mockResolvedValue({ id: 'r1' } as any);
+    const existing = {
+      id: 'j1',
+      repositoryId: 'r1',
+      requestKey: 'k1',
+      requestedRef: 'main',
+      status: 'QUEUED',
+    };
+    scanJobRepository.findByRepositoryAndRequestKey.mockResolvedValue(existing as any);
+
+    const result = await useCase.execute({
+      repositoryId: 'r1',
+      requestKey: 'k1',
+      requestedRef: 'main',
+    });
+
+    expect(result).toEqual(existing);
+    expect(eventLog.recordEvent).toHaveBeenCalledWith({
+      eventType: 'SCAN_JOB_QUEUED',
+      idempotencyKey: 'scan:j1:queued',
+      payload: { repositoryId: 'r1', scanJobId: 'j1', requestKey: 'k1' },
+    });
+    expect(queueService.enqueueScanJob).toHaveBeenCalledWith('j1');
   });
 
   it('should throw if existing job has different requestedRef', async () => {

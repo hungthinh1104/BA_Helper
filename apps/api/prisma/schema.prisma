@@ -491,6 +491,8 @@ model MultiRepoAnalysisRun {
   requirementRevisionId     String
   createdByUserId           String                     @db.Uuid
   requestKey                String
+  requestPayloadHash        String?
+  requestPlan               Json?
   requestedDomainPackId     String?
   resolvedDomainPackId      String                     @default("general")
   resolvedDomainPackVersion String                     @default("0.0.0")

@@ -12,15 +12,18 @@
  * Runs against a throwaway database so it never touches dev/test data.
  */
 import { execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { Client } from 'pg';
+import type { Client as PgClient } from 'pg';
 import { config } from 'dotenv';
 import { seedLegacyTestTraceData, verifyLegacyTestTraceData } from '../tests/release/test-trace-migration.fixture';
 import { UPGRADE_MIGRATIONS } from './lib/migration-upgrade-plan';
 import { createMigrationWorkspace } from './lib/migration-upgrade-workspace';
 
 const root = process.cwd();
+const apiRequire = createRequire(path.join(root, 'apps/api/package.json'));
+const { Client } = apiRequire('pg') as { Client: typeof PgClient };
 config({ path: path.join(root, '.env.test'), quiet: true });
 
 const TEMP_DB = `ba_helper_upgrade_${process.pid}_${randomBytes(4).toString('hex')}`;
@@ -47,7 +50,7 @@ function adminConnectionString(): string {
   return url.toString();
 }
 
-async function withClient<T>(connectionString: string, fn: (c: Client) => Promise<T>): Promise<T> {
+async function withClient<T>(connectionString: string, fn: (c: PgClient) => Promise<T>): Promise<T> {
   const client = new Client({ connectionString });
   await client.connect();
   try {
@@ -121,6 +124,24 @@ async function main(): Promise<void> {
       );
       if (!requirementIndex.rows[0].idx) failures.push('requirement request-key index missing after upgrade');
 
+      const multiRepoHashColumn = await c.query(
+        `SELECT is_nullable FROM information_schema.columns
+         WHERE table_schema = 'public' AND table_name = 'MultiRepoAnalysisRun'
+           AND column_name = 'requestPayloadHash'`,
+      );
+      if (multiRepoHashColumn.rowCount !== 1 || multiRepoHashColumn.rows[0].is_nullable !== 'YES') {
+        failures.push('multi-repo request payload hash column missing or not nullable after upgrade');
+      }
+
+      const multiRepoPlanColumn = await c.query(
+        `SELECT is_nullable FROM information_schema.columns
+         WHERE table_schema = 'public' AND table_name = 'MultiRepoAnalysisRun'
+           AND column_name = 'requestPlan'`,
+      );
+      if (multiRepoPlanColumn.rowCount !== 1 || multiRepoPlanColumn.rows[0].is_nullable !== 'YES') {
+        failures.push('multi-repo request plan column missing or not nullable after upgrade');
+      }
+
       const emailIndex = await c.query(`SELECT to_regclass('user_email_lower_key') AS idx`);
       if (!emailIndex.rows[0].idx) failures.push('case-insensitive email index missing after upgrade');
 
@@ -138,7 +159,7 @@ async function main(): Promise<void> {
       throw new Error(`Migration upgrade verification failed (${failures.length} issue(s)).`);
     }
 
-    console.log('Migration upgrade verified: legacy data survived and upgrades applied.');
+    process.stdout.write('Migration upgrade verified: legacy data survived and upgrades applied.\n');
   } finally {
     workspace.cleanup();
     if (databaseCreated) await withClient(adminConnectionString(), async c => {

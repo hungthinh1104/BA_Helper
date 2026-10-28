@@ -186,6 +186,7 @@ export class CreateImpactAnalysisUseCase {
 
     const existing = await this.impactRepo.findByComposite(params);
     if (existing) {
+      if (existing.status === 'QUEUED') await this.ensureQueued(existing);
       return existing;
     }
 
@@ -229,6 +230,9 @@ export class CreateImpactAnalysisUseCase {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         const existingAfterRace = await this.impactRepo.findByComposite(params)
         if (existingAfterRace) {
+          if (existingAfterRace.status === 'QUEUED') {
+            await this.ensureQueued(existingAfterRace);
+          }
           return existingAfterRace
         }
       }
@@ -237,6 +241,16 @@ export class CreateImpactAnalysisUseCase {
       throw error
     }
 
+    await this.ensureQueued(analysis);
+
+    return analysis;
+  }
+
+  private async ensureQueued(analysis: {
+    id: string;
+    requirementRevisionId: string;
+    snapshotId: string;
+  }) {
     await this.eventLog.recordEvent({
       eventType: 'IMPACT_ANALYSIS_QUEUED',
       idempotencyKey: `impact:${analysis.id}:queued`,
@@ -263,7 +277,5 @@ export class CreateImpactAnalysisUseCase {
       this.logger.error(`Failed to enqueue analysis ${analysis.id}: ${(error as Error)?.message ?? error}`)
       throw error
     }
-
-    return analysis;
   }
 }

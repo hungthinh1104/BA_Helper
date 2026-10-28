@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -30,6 +30,13 @@ export function ConnectRepoDialog({ children }: ConnectRepoDialogProps) {
   const [url, setUrl] = useState("")
   const [ref, setRef] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [connectedRepositoryId, setConnectedRepositoryId] = useState<string | null>(null)
+  const [scanFailed, setScanFailed] = useState(false)
+  const pendingScanRef = useRef<{
+    repositoryId: string
+    requestKey: string
+    ref?: string
+  } | null>(null)
   const router = useRouter()
 
   const parsedRepository = parseGithubRepositoryUrl(url)
@@ -39,6 +46,9 @@ export function ConnectRepoDialog({ children }: ConnectRepoDialogProps) {
   const reset = () => {
     setUrl("")
     setRef("")
+    setConnectedRepositoryId(null)
+    setScanFailed(false)
+    pendingScanRef.current = null
   }
 
   const applyTestedDemoRepo = () => {
@@ -46,50 +56,60 @@ export function ConnectRepoDialog({ children }: ConnectRepoDialogProps) {
     setRef(TESTED_DEMO_REPO_REF)
   }
 
-  const handleScanQueueFailure = (repositoryId: string, err: unknown) => {
+  const handleScanQueueFailure = (err: unknown) => {
     const code = err instanceof ApiError ? err.code : "SCAN_QUEUE_FAILED"
     const message = err instanceof Error ? err.message : t("scanJobCouldNotQueue")
 
+    setScanFailed(true)
     toast.warning(t("repositoryConnectedScanFailed"), {
       description: `${code}: ${message}`,
     })
-
-    setOpen(false)
-    reset()
-    router.push(`/repositories/${repositoryId}`)
   }
 
   const handleSubmit = async () => {
     const repository = parseGithubRepositoryUrl(url)
     if (!repository) return
+    const isScanRetry = Boolean(connectedRepositoryId)
 
     const parseResult = repositoryCreateRequestSchema.safeParse({ url: repository.canonicalUrl })
     if (!parseResult.success) return
 
     setIsSubmitting(true)
+    setScanFailed(false)
     try {
-      const repo = await connectRepo({
-        url: repository.canonicalUrl,
-      })
+      let pendingScan = pendingScanRef.current
+      if (!pendingScan) {
+        const repo = await connectRepo({ url: repository.canonicalUrl })
+        pendingScan = {
+          repositoryId: repo.repositoryId,
+          requestKey: crypto.randomUUID(),
+          ref: ref.trim() ? ref.trim() : undefined,
+        }
+        pendingScanRef.current = pendingScan
+        setConnectedRepositoryId(repo.repositoryId)
+      }
 
       const scanInput = scanJobCreateRequestSchema.parse({
-        requestKey: crypto.randomUUID(),
-        ref: ref.trim() ? ref.trim() : undefined,
+        requestKey: pendingScan.requestKey,
+        ref: pendingScan.ref,
       })
 
       try {
-        await createScanJob({ repositoryId: repo.repositoryId, ...scanInput })
+        await createScanJob({ repositoryId: pendingScan.repositoryId, ...scanInput })
       } catch (err) {
-        handleScanQueueFailure(repo.repositoryId, err)
+        handleScanQueueFailure(err)
         return
       }
 
-      toast.success(t("repositoryConnected"), {
-        description: t("scanJobQueuedFor", { repo: repository.fullName }),
+      pendingScanRef.current = null
+      toast.success(t(isScanRetry ? "scanQueued" : "repositoryConnected"), {
+        description: isScanRetry
+          ? t("scanQueuedDescription")
+          : t("scanJobQueuedFor", { repo: repository.fullName }),
       })
       setOpen(false)
       reset()
-      router.push(`/repositories/${repo.repositoryId}`)
+      router.push(`/repositories/${pendingScan.repositoryId}`)
     } catch (err: unknown) {
       toast.error(t("failedConnectRepository"), {
         description: err instanceof Error ? err.message : t("pleaseTryAgain"),
@@ -98,6 +118,9 @@ export function ConnectRepoDialog({ children }: ConnectRepoDialogProps) {
       setIsSubmitting(false)
     }
   }
+
+  const submitLabel = connectedRepositoryId ? t("retryScan") : t("connectAndScan")
+  const busyLabel = connectedRepositoryId ? t("queuing") : t("connecting")
 
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset() }}>
@@ -129,6 +152,7 @@ export function ConnectRepoDialog({ children }: ConnectRepoDialogProps) {
               className="bg-surface"
               placeholder="https://github.com/org/repo"
               value={url}
+              disabled={Boolean(connectedRepositoryId)}
               onChange={e => setUrl(e.target.value)}
             />
             {urlError && (
@@ -166,9 +190,17 @@ export function ConnectRepoDialog({ children }: ConnectRepoDialogProps) {
               className="bg-surface"
               placeholder="main"
               value={ref}
+              disabled={Boolean(connectedRepositoryId)}
               onChange={e => setRef(e.target.value)}
             />
           </div>
+
+          {scanFailed && (
+            <div role="status" className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-[12px] text-foreground">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+              <span>{t("scanRetryDescription")}</span>
+            </div>
+          )}
 
           <div className="grid gap-3 md:grid-cols-2">
             <div className="rounded-lg border border-border/60 bg-surface-muted/50 p-3">
@@ -225,7 +257,7 @@ export function ConnectRepoDialog({ children }: ConnectRepoDialogProps) {
             <DialogClose render={<Button variant="outline" size="sm" className="h-8 shadow-none">{t("cancel")}</Button>} />
             <Button size="sm" className="h-8 shadow-none" disabled={!canSubmit} onClick={handleSubmit}>
               {(loading || isSubmitting) && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
-              {loading || isSubmitting ? t("connecting") : t("connectAndScan")}
+              {loading || isSubmitting ? busyLabel : submitLabel}
             </Button>
           </div>
         </div>

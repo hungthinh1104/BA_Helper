@@ -7,4 +7,6 @@ export const UPGRADE_MIGRATIONS = [
   '20261020000000_reviewed_report_test_trace',
   '20261024130000_comprehension_projection_indexes',
   '20261028150000_requirement_create_idempotency',
+  '20261029120000_multi_repo_request_payload_hash',
+  '20261029130000_multi_repo_request_plan',
 ] as const;

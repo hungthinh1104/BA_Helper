@@ -145,6 +145,10 @@ describe('CreateMultiRepoImpactAnalysesUseCase domain pack selection', () => {
         resolvedDomainPackStatus: 'partial',
         domainPackSelectedBy: 'manual_config',
         domainPackResolvedAt: new Date('2026-06-27T00:00:00.000Z'),
+        requestPlan: [
+          { repositoryId: 'repo-a', repositoryDisplayName: 'repo-a', snapshotId: 'snapshot-repo-a', sourceTargetId: 'target-repo-a' },
+          { repositoryId: 'repo-b', repositoryDisplayName: 'repo-b', snapshotId: 'snapshot-repo-b', sourceTargetId: 'target-repo-b' },
+        ],
         analyses: [
           { snapshot: { repositoryId: 'repo-a' }, metadata: null },
           { snapshot: { repositoryId: 'repo-b' }, metadata: null },
@@ -195,6 +199,33 @@ describe('CreateMultiRepoImpactAnalysesUseCase domain pack selection', () => {
     })).rejects.toMatchObject({ code: 'REQUEST_KEY_MISMATCH' });
 
     expect(context.createImpactAnalysis.execute).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when a legacy run has no complete child snapshot provenance', async () => {
+    const context = createUseCaseContext({
+      existingRun: {
+        id: 'run-legacy',
+        requirementRevisionId: 'rev-1',
+        requestPlan: null,
+        requestPayloadHash: null,
+        analyses: [
+          { snapshot: { repositoryId: 'repo-a' } },
+          { snapshot: { repositoryId: 'repo-b' } },
+        ],
+      },
+    });
+
+    await expect(context.useCase.execute({
+      actorId: 'user-1',
+      projectId: 'project-1',
+      requirementRevisionId: 'rev-1',
+      repositoryIds: ['repo-a', 'repo-b'],
+      requestKey: '00000000-0000-4000-8000-000000000005',
+      allowPartialSnapshot: false,
+    })).rejects.toMatchObject({ code: 'MULTI_REPO_RUN_NOT_READY' });
+
+    expect(context.createImpactAnalysis.execute).not.toHaveBeenCalled();
+    expect(context.runs.create).not.toHaveBeenCalled();
   });
 });
 

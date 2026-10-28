@@ -149,6 +149,16 @@ run-level selection. In v1, child analyses receive the run-level selection and
 cannot override it. Merged-report provenance prefers explicit run-level fields
 and falls back to homogeneous child analysis provenance for legacy runs.
 
+The run also stores a nullable `requestPayloadHash` over the immutable command
+inputs (requirement revision, sorted repository IDs, partial-snapshot consent,
+and canonical explicit domain-pack selection) and a nullable `requestPlan` with
+the selected repository, source-target, and snapshot IDs. A same-key concurrent
+create that loses the unique-key race reloads the winning run and proceeds only
+when the hash matches. Retries use the saved plan, so a newer branch observation
+cannot silently mix another snapshot into a partially created run. `NULL` values
+are reserved for pre-migration runs; those retain the legacy child-set and
+domain-pack comparison and legacy planning behavior.
+
 `domainPackManifestDigest` and `domainPackRegistryVersion` are nullable until
 the canonical manifest source is fully versioned. Do not synthesize fake digest
 values; absence means the manifest digest was not captured for that record.

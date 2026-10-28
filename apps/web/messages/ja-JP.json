@@ -384,6 +384,8 @@
     "somethingWentWrong": "問題が発生しました。"
   },
   "workspaceLists": {
+    "scanRetryDescription": "Repository は保存済みです。ここで再試行すると同じ scan request を queue します。",
+    "retryScan": "Scan を再試行",
     "repositoriesTitle": "リポジトリ",
     "repositoriesDescription": "Public GitHub repository を接続し、影響分析のために codebase を scan します。",
     "connectRepository": "リポジトリを接続",

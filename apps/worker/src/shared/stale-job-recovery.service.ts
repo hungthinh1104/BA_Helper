@@ -1,7 +1,9 @@
 import { Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common';
 import { PrismaService } from '@ba-helper/backend-runtime/prisma';
+import { QueueService } from '@ba-helper/backend-runtime/queue';
 
 const DEFAULT_LEASE_MS = 15 * 60 * 1000;
+const DEFAULT_QUEUE_RECOVERY_BATCH_SIZE = 250;
 
 /**
  * How long a job may sit in RUNNING with no progress before it is considered
@@ -19,28 +21,79 @@ export interface StaleJobRecoverySummary {
   documentJobs: number;
 }
 
+export interface QueuedJobRecoverySummary {
+  scanJobs: number;
+  impactAnalyses: number;
+  documentJobs: number;
+}
+
 /**
  * Domain-state recovery for jobs orphaned by a worker crash.
  *
- * BullMQ recovers stalled *queue* jobs on its own, but the product rows
- * (`ScanJob`, `ImpactAnalysis`, `DocumentJob`) can be left stuck in RUNNING with
- * nothing to move them. On worker start we fail those stale-RUNNING rows so they
- * stop blocking the pipeline and become visible/retryable.
+ * BullMQ recovers stalled queue jobs on its own. This worker also re-enqueues
+ * persisted QUEUED product rows that have no Redis job, and fails stale RUNNING
+ * rows left behind by a worker crash so they become visible and retryable.
  */
 @Injectable()
 export class StaleJobRecoveryService implements OnApplicationBootstrap {
   private readonly logger = new Logger(StaleJobRecoveryService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly queue: QueueService,
+  ) {}
 
   async onApplicationBootstrap(): Promise<void> {
-    const summary = await this.recoverStaleRunningJobs();
-    const total = summary.scanJobs + summary.impactAnalyses + summary.documentJobs;
+    const stale = await this.recoverStaleRunningJobs();
+    const queued = await this.recoverQueuedJobs();
+    const total = Object.values(stale).reduce((sum, count) => sum + count, 0) +
+      Object.values(queued).reduce((sum, count) => sum + count, 0);
     if (total > 0) {
       this.logger.warn(
-        JSON.stringify({ event: 'STALE_JOB_RECOVERY', ...summary }),
+        JSON.stringify({ event: 'WORKER_JOB_RECOVERY', stale, requeued: queued }),
       );
     }
+  }
+
+  async recoverQueuedJobs(params?: { batchSize?: number }): Promise<QueuedJobRecoverySummary> {
+    const batchSize = resolveQueueRecoveryBatchSize(params?.batchSize);
+    const [scanJobs, impactAnalyses, documentJobs] = await Promise.all([
+      enqueueQueuedRows(
+        (cursor) => this.prisma.scanJob.findMany({
+          where: { status: 'QUEUED' },
+          select: { id: true },
+          orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+          take: batchSize,
+          ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        }),
+        (id) => this.queue.enqueueScanJob(id),
+        batchSize,
+      ),
+      enqueueQueuedRows(
+        (cursor) => this.prisma.impactAnalysis.findMany({
+          where: { status: 'QUEUED' },
+          select: { id: true },
+          orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+          take: batchSize,
+          ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        }),
+        (id) => this.queue.enqueueImpactAnalysis(id),
+        batchSize,
+      ),
+      enqueueQueuedRows(
+        (cursor) => this.prisma.documentJob.findMany({
+          where: { status: 'QUEUED' },
+          select: { id: true },
+          orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+          take: batchSize,
+          ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        }),
+        (id) => this.queue.enqueueDocumentJob(id),
+        batchSize,
+      ),
+    ]);
+
+    return { scanJobs, impactAnalyses, documentJobs };
   }
 
   async recoverStaleRunningJobs(params?: {
@@ -72,5 +125,28 @@ export class StaleJobRecoveryService implements OnApplicationBootstrap {
       impactAnalyses: impactAnalyses.count,
       documentJobs: documentJobs.count,
     };
+  }
+}
+
+function resolveQueueRecoveryBatchSize(value?: number): number {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0
+    ? value
+    : DEFAULT_QUEUE_RECOVERY_BATCH_SIZE;
+}
+
+async function enqueueQueuedRows(
+  findPage: (cursor?: string) => Promise<Array<{ id: string }>>,
+  enqueue: (id: string) => Promise<void>,
+  batchSize: number,
+): Promise<number> {
+  let total = 0;
+  let cursor: string | undefined;
+
+  while (true) {
+    const rows = await findPage(cursor);
+    for (const row of rows) await enqueue(row.id);
+    total += rows.length;
+    if (rows.length < batchSize) return total;
+    cursor = rows[rows.length - 1].id;
   }
 }

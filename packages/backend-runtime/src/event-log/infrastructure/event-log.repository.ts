@@ -12,16 +12,13 @@ export class EventLogRepository {
     payload: Record<string, unknown>;
   }, transaction?: EventLogTransactionClient): Promise<void> {
     const client = transaction ?? this.prisma;
-    await client.domainEvent.upsert({
-      where: {
-        idempotencyKey: params.idempotencyKey,
-      },
-      create: {
+    await client.domainEvent.createMany({
+      data: {
         eventType: params.eventType,
         idempotencyKey: params.idempotencyKey,
         payload: params.payload as Prisma.InputJsonValue,
       },
-      update: {},
+      skipDuplicates: true,
     });
   }
 

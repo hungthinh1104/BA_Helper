@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { ResolvedDomainPackSelection } from '@ba-helper/contracts';
 
@@ -80,6 +81,8 @@ export class MultiRepoAnalysisRunRepository {
     requirementRevisionId: string;
     createdByUserId: string;
     requestKey: string;
+    requestPayloadHash: string;
+    requestPlan: Prisma.InputJsonValue;
     selectedDomainPack?: ResolvedDomainPackSelection | null;
   }) {
     return this.prisma.multiRepoAnalysisRun.create({
@@ -88,6 +91,8 @@ export class MultiRepoAnalysisRunRepository {
         requirementRevisionId: params.requirementRevisionId,
         createdByUserId: params.createdByUserId,
         requestKey: params.requestKey,
+        requestPayloadHash: params.requestPayloadHash,
+        requestPlan: params.requestPlan,
         ...(params.selectedDomainPack
           ? {
               requestedDomainPackId: params.selectedDomainPack.requestedDomainPackId,
@@ -102,6 +107,20 @@ export class MultiRepoAnalysisRunRepository {
           : {}),
       },
       include: MULTI_REPO_RUN_INCLUDE,
+    });
+  }
+
+  async backfillRequestPlan(params: {
+    id: string;
+    requestPayloadHash: string;
+    requestPlan: Prisma.InputJsonValue;
+  }) {
+    return this.prisma.multiRepoAnalysisRun.updateMany({
+      where: { id: params.id, requestPlan: { equals: Prisma.DbNull } },
+      data: {
+        requestPayloadHash: params.requestPayloadHash,
+        requestPlan: params.requestPlan,
+      },
     });
   }
 }

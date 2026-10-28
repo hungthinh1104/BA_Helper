@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useState, useEffect, useMemo } from "react"
+import { useCallback, useState, useEffect, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { useCurrentWorkspace } from "@/lib/project-context"
@@ -50,6 +50,7 @@ export function NewAnalysisDialog({
   const [acknowledgePartial, setAcknowledgePartial] = useState(false)
   const [batchSuccess, setBatchSuccess] = useState<MultiRepoImpactAnalysisCreateResponse | null>(null)
   const [batchError, setBatchError] = useState<string | null>(null)
+  const requestKeyRef = useRef<{ fingerprint: string; requestKey: string } | null>(null)
   const workspace = useCurrentWorkspace()
   const canRun = workspace ? canRunAnalysis(workspace.membershipRole) : false
 
@@ -113,6 +114,18 @@ export function NewAnalysisDialog({
     setSelectedDomainPackId(null)
     setBatchSuccess(null)
     setBatchError(null)
+    requestKeyRef.current = null
+  }
+
+  const getRequestKey = (payload: unknown) => {
+    const fingerprint = JSON.stringify(payload)
+    if (requestKeyRef.current?.fingerprint !== fingerprint) {
+      requestKeyRef.current = {
+        fingerprint,
+        requestKey: crypto.randomUUID(),
+      }
+    }
+    return requestKeyRef.current.requestKey
   }
 
   const toggleRepository = useCallback((repo: RepositoryListItemResponse) => {
@@ -153,18 +166,29 @@ export function NewAnalysisDialog({
           return
         }
 
+        const requestData = {
+          snapshotId: repo.latestSnapshot!.id,
+          sourceTargetId,
+          allowPartialSnapshot: acknowledgePartial,
+          ...(selectedDomainPackId ? { domainPackId: selectedDomainPackId } : {}),
+          derivedFromAnalysisId,
+          sourceClarificationId,
+        }
         const newAnalysis = await createAnalysis({
           revisionId: effectiveRevisionId,
           data: {
-            snapshotId: repo.latestSnapshot!.id,
-            sourceTargetId,
-            requestKey: crypto.randomUUID(),
-            allowPartialSnapshot: acknowledgePartial,
-            ...(selectedDomainPackId ? { domainPackId: selectedDomainPackId } : {}),
-            derivedFromAnalysisId,
-            sourceClarificationId,
+            ...requestData,
+            requestKey: getRequestKey({ revisionId: effectiveRevisionId, ...requestData }),
           },
         })
+
+        if (newAnalysis.status === "FAILED" || newAnalysis.status === "CANCELLED") {
+          const description = newAnalysis.error?.message ?? t("failedToStartAnalyses")
+          requestKeyRef.current = null
+          setBatchError(description)
+          toast.error(t("failedToStartAnalyses"), { description })
+          return
+        }
 
         toast.success(t("analysisStarted"))
         setOpen(false)
@@ -173,12 +197,15 @@ export function NewAnalysisDialog({
         return
       }
 
-      const result = await createMultiRepoAnalyses({
+      const requestData = {
         requirementRevisionId: effectiveRevisionId,
         repositoryIds: selectedRepos.map((repo) => repo.id),
         allowPartialSnapshot: acknowledgePartial,
-        requestKey: crypto.randomUUID(),
         ...(selectedDomainPackId ? { domainPackId: selectedDomainPackId } : {}),
+      }
+      const result = await createMultiRepoAnalyses({
+        ...requestData,
+        requestKey: getRequestKey(requestData),
       })
 
       setBatchSuccess(result)

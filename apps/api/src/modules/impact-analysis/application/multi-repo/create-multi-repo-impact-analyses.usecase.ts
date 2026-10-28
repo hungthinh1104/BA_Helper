@@ -4,18 +4,14 @@ import { AppError } from '@ba-helper/shared';
 import { CreateImpactAnalysisUseCase } from '../lifecycle/create-impact-analysis.usecase';
 import { RequirementRepository } from '../../../requirement/infrastructure/requirement.repository';
 import { DomainPackRegistry, PrismaService, ImpactAnalysisRepository, MultiRepoAnalysisRunRepository } from '@ba-helper/backend-runtime';
-import type { ResolvedDomainPackSelection } from '@ba-helper/contracts';
 import {
-  readResolvedDomainPackSelection,
-  sameResolvedDomainPackSelection,
-} from '@ba-helper/application';
-
-type PlannedRepositoryAnalysis = {
-  repositoryId: string;
-  repositoryDisplayName: string;
-  snapshotId: string;
-  sourceTargetId: string;
-};
+  assertRunRequestMatches,
+  hashMultiRepoRequestPayload,
+  isUniqueConstraintError,
+  reconstructMultiRepoRequestPlan,
+  readMultiRepoRequestPlan,
+  type MultiRepoRequestPlanEntry,
+} from './multi-repo-request-payload';
 
 @Injectable()
 export class CreateMultiRepoImpactAnalysesUseCase {
@@ -63,14 +59,15 @@ export class CreateMultiRepoImpactAnalysesUseCase {
       );
     }
 
-    const plans = await Promise.all(
-      params.repositoryIds.map((repositoryId) =>
-        this.planRepositoryAnalysis(params.projectId, repositoryId),
-      ),
-    );
     const explicitDomainPack = params.domainPackId
       ? this.domainPacks.selectPack({ manualPackId: params.domainPackId }).resolved
       : null;
+    const requestPayloadHash = hashMultiRepoRequestPayload({
+      requirementRevisionId: params.requirementRevisionId,
+      repositoryIds: params.repositoryIds,
+      allowPartialSnapshot: params.allowPartialSnapshot,
+      explicitDomainPack,
+    });
 
     const existingRun = await this.runs.findByProjectRequestKey(
       params.projectId,
@@ -78,35 +75,46 @@ export class CreateMultiRepoImpactAnalysesUseCase {
     );
 
     if (existingRun) {
-      const existingRepositoryIds = existingRun.analyses
-        .map((analysis) => analysis.snapshot.repositoryId)
-        .sort();
-      const requestedRepositoryIds = [...params.repositoryIds].sort();
-
-      if (
-        existingRun.requirementRevisionId !== params.requirementRevisionId ||
-        existingRepositoryIds.length !== requestedRepositoryIds.length ||
-        existingRepositoryIds.some(
-          (repositoryId, index) => repositoryId !== requestedRepositoryIds[index],
-        ) ||
-        !existingRunMatchesDomainPack(existingRun, explicitDomainPack)
-      ) {
-        throw new AppError(
-          'REQUEST_KEY_MISMATCH',
-          'Request key reuse with different multi-repo payload.',
-        );
-      }
+      assertRunRequestMatches(existingRun, {
+        requirementRevisionId: params.requirementRevisionId,
+        repositoryIds: params.repositoryIds,
+        explicitDomainPack,
+        requestPayloadHash,
+      });
     }
 
-    const run =
-      existingRun ??
-      (await this.runs.create({
-        projectId: params.projectId,
-        requirementRevisionId: params.requirementRevisionId,
-        createdByUserId: params.actorId,
-        requestKey: params.requestKey,
-        selectedDomainPack: explicitDomainPack,
-      }));
+    let plans = existingRun
+      ? await this.resolveExistingRequestPlan(existingRun, params.repositoryIds, requestPayloadHash)
+      : await this.planRepositories(params.projectId, params.repositoryIds);
+
+    let run = existingRun;
+    if (!run) {
+      try {
+        run = await this.runs.create({
+          projectId: params.projectId,
+          requirementRevisionId: params.requirementRevisionId,
+          createdByUserId: params.actorId,
+          requestKey: params.requestKey,
+          requestPayloadHash,
+          requestPlan: plans,
+          selectedDomainPack: explicitDomainPack,
+        });
+      } catch (error) {
+        if (!isUniqueConstraintError(error)) throw error;
+        run = await this.runs.findByProjectRequestKey(
+          params.projectId,
+          params.requestKey,
+        );
+        if (!run) throw error;
+        assertRunRequestMatches(run, {
+          requirementRevisionId: params.requirementRevisionId,
+          repositoryIds: params.repositoryIds,
+          explicitDomainPack,
+          requestPayloadHash,
+        });
+        plans = await this.resolveExistingRequestPlan(run, params.repositoryIds, requestPayloadHash);
+      }
+    }
 
     const analyses = await Promise.all(
       plans.map(async (plan) => {
@@ -143,10 +151,34 @@ export class CreateMultiRepoImpactAnalysesUseCase {
     };
   }
 
+  private async resolveExistingRequestPlan(
+    run: NonNullable<Awaited<ReturnType<MultiRepoAnalysisRunRepository['findByProjectRequestKey']>>>,
+    repositoryIds: string[],
+    requestPayloadHash: string,
+  ): Promise<MultiRepoRequestPlanEntry[]> {
+    const persisted = readMultiRepoRequestPlan(run.requestPlan, repositoryIds);
+    if (persisted) return persisted;
+
+    const reconstructed = reconstructMultiRepoRequestPlan(run, repositoryIds);
+    if (!reconstructed) {
+      throw new AppError(
+        'MULTI_REPO_RUN_NOT_READY',
+        'This legacy multi-repo run has no complete snapshot plan and cannot be resumed safely. Start a new run with a new request key.',
+      );
+    }
+
+    await this.runs.backfillRequestPlan({
+      id: run.id,
+      requestPayloadHash,
+      requestPlan: reconstructed,
+    });
+    return reconstructed;
+  }
+
   private async planRepositoryAnalysis(
     projectId: string,
     repositoryId: string,
-  ): Promise<PlannedRepositoryAnalysis> {
+  ): Promise<MultiRepoRequestPlanEntry> {
     const repository = await this.prisma.repository.findUnique({
       where: { id: repositoryId },
       include: {
@@ -192,33 +224,12 @@ export class CreateMultiRepoImpactAnalysesUseCase {
       sourceTargetId: sourceTarget.id,
     };
   }
-}
 
-function existingRunMatchesDomainPack(
-  run: {
-    requestedDomainPackId?: string | null;
-    resolvedDomainPackId?: string | null;
-    resolvedDomainPackVersion?: string | null;
-    resolvedDomainPackStatus?: string | null;
-    domainPackSelectedBy?: string | null;
-    domainPackResolvedAt?: Date | string | null;
-    analyses: Array<{ metadata?: unknown }>;
-  },
-  explicitDomainPack: ResolvedDomainPackSelection | null,
-) {
-  if (!explicitDomainPack) {
-    return true;
+  private async planRepositories(projectId: string, repositoryIds: string[]) {
+    return Promise.all(repositoryIds.map((repositoryId) =>
+      this.planRepositoryAnalysis(projectId, repositoryId),
+    ));
   }
-
-  const runSelection = readResolvedDomainPackSelection(run);
-  if (runSelection) {
-    return sameResolvedDomainPackSelection(runSelection, explicitDomainPack);
-  }
-
-  return run.analyses.every((analysis) => {
-    const selected = readResolvedDomainPackSelection(analysis);
-    return sameResolvedDomainPackSelection(selected, explicitDomainPack);
-  });
 }
 
 function deriveChildRequestKey(batchRequestKey: string, repositoryId: string): string {

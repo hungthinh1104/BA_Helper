@@ -9,8 +9,10 @@ describe('migration upgrade workspace', () => {
   const initial = '20260101000000_initial';
   const upgrade = '20260201000000_upgrade';
 
-  it('withholds requirement idempotency until legacy rows have been seeded', () => {
+  it('withholds idempotency upgrades until legacy rows have been seeded', () => {
     expect(UPGRADE_MIGRATIONS).toContain('20261028150000_requirement_create_idempotency');
+    expect(UPGRADE_MIGRATIONS).toContain('20261029120000_multi_repo_request_payload_hash');
+    expect(UPGRADE_MIGRATIONS).toContain('20261029130000_multi_repo_request_plan');
   });
 
   beforeEach(() => {

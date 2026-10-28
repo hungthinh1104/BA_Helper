@@ -3,13 +3,13 @@ import type { EventLogTransactionClient } from './event-log.repository';
 
 describe('EventLogRepository', () => {
   it('writes through the provided transaction client', async () => {
-    const prismaUpsert = jest.fn();
-    const transactionUpsert = jest.fn();
+    const prismaCreateMany = jest.fn();
+    const transactionCreateMany = jest.fn();
     const repository = new EventLogRepository({
-      domainEvent: { upsert: prismaUpsert },
+      domainEvent: { createMany: prismaCreateMany },
     } as any);
     const transaction = {
-      domainEvent: { upsert: transactionUpsert },
+      domainEvent: { createMany: transactionCreateMany },
     } as unknown as EventLogTransactionClient;
     const params = {
       eventType: 'REVIEWED_REPORT_SNAPSHOT_CREATED',
@@ -19,14 +19,14 @@ describe('EventLogRepository', () => {
 
     await repository.createEvent(params, transaction);
 
-    expect(transactionUpsert).toHaveBeenCalledWith(expect.objectContaining({
-      where: { idempotencyKey: params.idempotencyKey },
-      create: expect.objectContaining({
+    expect(transactionCreateMany).toHaveBeenCalledWith({
+      data: expect.objectContaining({
         eventType: params.eventType,
         idempotencyKey: params.idempotencyKey,
         payload: params.payload,
       }),
-    }));
-    expect(prismaUpsert).not.toHaveBeenCalled();
+      skipDuplicates: true,
+    });
+    expect(prismaCreateMany).not.toHaveBeenCalled();
   });
 });
