@@ -58,7 +58,7 @@ export const queryKeys = {
     insights: (analysisId: string) => ["impact-analyses", "insights", analysisId] as const,
   },
   documents: {
-    finalReviewedReport: (analysisId: string, locale = "en") => ["documents", analysisId, "final-reviewed-report", locale] as const,
+    finalReviewedReport: (analysisId: string, locale = "en") => ["impact-analyses", "approved-report", analysisId, "final-reviewed", locale] as const,
     documentJobs: (analysisId: string) => ["documents", analysisId, "document-jobs"] as const,
     reviewedReportSnapshot: (analysisId: string) => ["documents", analysisId, "reviewed-report-snapshot"] as const,
   },
