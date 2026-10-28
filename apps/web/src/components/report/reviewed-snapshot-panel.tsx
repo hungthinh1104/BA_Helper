@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button"
 import { Lock, Loader2, FileText } from "lucide-react"
 import { LockedSnapshotViewer } from "./locked-snapshot-viewer"
 import { useLocale, useTranslations } from "next-intl"
+import { ApiError } from "@/lib/api-error"
 
 export function ReviewedSnapshotPanel({ analysisId }: { analysisId: string }) {
   const t = useTranslations("reports")
   const locale = useLocale()
-  const { data: snapshot, isLoading: isLoadingSnapshot } = useLatestReviewedReportSnapshot(analysisId)
+  const { data: snapshot, isLoading: isLoadingSnapshot, error, refetch } = useLatestReviewedReportSnapshot(analysisId)
   
   const [viewerOpen, setViewerOpen] = useState(false)
 
@@ -18,6 +19,18 @@ export function ReviewedSnapshotPanel({ analysisId }: { analysisId: string }) {
         <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
       </div>
     )
+  }
+
+  // A 404 means no reviewed snapshot exists. Contract/permission/network failures
+  // must never be presented as a successful empty snapshot response.
+  const isMissing = error instanceof ApiError && error.status === 404
+  if (error && !isMissing) {
+    return <div className="mt-12 rounded-lg border border-destructive/30 p-5 text-sm" role="alert">
+      <p>{t("failedLoadFinalReport")}</p>
+      <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => { void refetch() }}>
+        {t("retrySnapshot")}
+      </Button>
+    </div>
   }
 
   const hasSnapshot = !!snapshot
