@@ -17,20 +17,11 @@ import { randomBytes } from 'node:crypto';
 import { Client } from 'pg';
 import { config } from 'dotenv';
 import { seedLegacyTestTraceData, verifyLegacyTestTraceData } from '../tests/release/test-trace-migration.fixture';
+import { UPGRADE_MIGRATIONS } from './lib/migration-upgrade-plan';
 import { createMigrationWorkspace } from './lib/migration-upgrade-workspace';
 
 const root = process.cwd();
 config({ path: path.join(root, '.env.test'), quiet: true });
-
-// Migrations added on this branch — treated as "the upgrade" under test.
-const UPGRADE_MIGRATIONS = [
-  '20260726000000_normalize_user_email',
-  '20260726010000_index_domain_event_type',
-  '20261019000000_dependency_edge_provenance',
-  '20261019010000_code_artifact_test_metadata',
-  '20261020000000_reviewed_report_test_trace',
-  '20261024130000_comprehension_projection_indexes',
-];
 
 const TEMP_DB = `ba_helper_upgrade_${process.pid}_${randomBytes(4).toString('hex')}`;
 const SEED_USER_ID = '00000000-0000-4000-8000-0000000abcde';
@@ -116,6 +107,19 @@ async function main(): Promise<void> {
 
       const event = await c.query('SELECT 1 FROM "DomainEvent" WHERE "idempotencyKey" = $1', [SEED_EVENT_KEY]);
       if (event.rowCount !== 1) failures.push('seeded domain event was lost');
+
+      const requirement = await c.query(
+        'SELECT "requestKey", "requestPayloadHash" FROM "Requirement" WHERE id = $1',
+        ['upgrade-requirement'],
+      );
+      if (requirement.rowCount !== 1 || !requirement.rows[0].requestKey ||
+          requirement.rows[0].requestPayloadHash !== '') {
+        failures.push('legacy requirement was not preserved and assigned an idempotency key');
+      }
+      const requirementIndex = await c.query(
+        `SELECT to_regclass('"Requirement_projectId_requestKey_key"') AS idx`,
+      );
+      if (!requirementIndex.rows[0].idx) failures.push('requirement request-key index missing after upgrade');
 
       const emailIndex = await c.query(`SELECT to_regclass('user_email_lower_key') AS idx`);
       if (!emailIndex.rows[0].idx) failures.push('case-insensitive email index missing after upgrade');

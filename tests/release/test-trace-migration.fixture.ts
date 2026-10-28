@@ -10,6 +10,11 @@ export async function seedLegacyTestTraceData(client: Client): Promise<void> {
       OR (table_name = 'CodeArtifact' AND column_name = 'metadata')
       OR (table_name = 'reviewed_report_snapshot' AND column_name = 'test_trace_snapshot'))`);
   if (columns.rowCount !== 0) throw new Error('Legacy schema already contains test-trace columns.');
+  const requestKeyColumn = await client.query(`SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'Requirement' AND column_name = 'requestKey'`);
+  if (requestKeyColumn.rowCount !== 0) {
+    throw new Error('Legacy schema already contains the requirement idempotency column.');
+  }
 
   await client.query(`INSERT INTO "Project" (id, name, "updatedAt") VALUES ('upgrade-project', 'Upgrade fixture', now())`);
   await client.query(`INSERT INTO "Repository" (id, "projectId", "canonicalUrl", "updatedAt")

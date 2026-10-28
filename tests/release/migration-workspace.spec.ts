@@ -2,11 +2,16 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createMigrationWorkspace } from '../../scripts/lib/migration-upgrade-workspace';
+import { UPGRADE_MIGRATIONS } from '../../scripts/lib/migration-upgrade-plan';
 
 describe('migration upgrade workspace', () => {
   let root: string;
   const initial = '20260101000000_initial';
   const upgrade = '20260201000000_upgrade';
+
+  it('withholds requirement idempotency until legacy rows have been seeded', () => {
+    expect(UPGRADE_MIGRATIONS).toContain('20261028150000_requirement_create_idempotency');
+  });
 
   beforeEach(() => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), 'ba-migration-workspace-'));
