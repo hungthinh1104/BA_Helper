@@ -16,6 +16,15 @@ export function EvidenceTab({
   evidenceCards: EvidenceCard[]
   labels: AnalysisWorkspaceLabels["evidence"]
 }) {
+  const copyExcerpt = async (excerpt: string) => {
+    try {
+      await navigator.clipboard.writeText(excerpt)
+      toast.success(labels.copied)
+    } catch {
+      toast.error(labels.copyFailed)
+    }
+  }
+
   if (evidenceCards.length === 0) {
     return (
       <DenseCard className="p-8 text-center text-sm text-muted-foreground">
@@ -55,10 +64,7 @@ export function EvidenceTab({
                       size="icon" 
                       variant="outline" 
                       className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity bg-surface hover:bg-surface-muted"
-                      onClick={() => {
-                        navigator.clipboard.writeText(card.excerpt)
-                        toast.success(labels.copied)
-                      }}
+                      onClick={() => { void copyExcerpt(card.excerpt) }}
                       title={labels.copyExcerpt}
                     >
                       <Copy className="h-3 w-3 text-muted-foreground" />

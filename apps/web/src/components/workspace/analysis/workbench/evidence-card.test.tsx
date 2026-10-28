@@ -1,10 +1,11 @@
-import { render, screen } from "@testing-library/react"
-import { describe, expect, it, jest } from "@jest/globals"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { beforeEach, describe, expect, it, jest } from "@jest/globals"
 import type { AnalysisWorkspaceResponse } from "@ba-helper/contracts"
 import { analysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
 import { EvidenceCard, buildSourceUrl } from "./evidence-card"
 
 jest.mock("sonner", () => ({ toast: { success: jest.fn(), error: jest.fn() } }))
+const toast = (jest.requireMock("sonner") as { toast: { success: jest.Mock; error: jest.Mock } }).toast
 
 const labels = analysisWorkspaceLabels.en.reviewWorkbench
 
@@ -44,11 +45,37 @@ describe("buildSourceUrl", () => {
     ).toBe("https://github.com/acme/booking/blob/sha/src/x.ts#L5")
   })
 
+  it("encodes reserved characters in source path segments", () => {
+    expect(buildSourceUrl("https://github.com/acme/booking", "sha", "src/file #1?.ts", lines)).toBe(
+      "https://github.com/acme/booking/blob/sha/src/file%20%231%3F.ts#L10-L22",
+    )
+  })
+
   it("returns null for a missing url / commit / path or a non-GitHub host", () => {
     expect(buildSourceUrl(null, "sha", "src/x.ts", lines)).toBeNull()
     expect(buildSourceUrl("https://github.com/acme/booking", null, "src/x.ts", lines)).toBeNull()
     expect(buildSourceUrl("https://github.com/acme/booking", "sha", null, lines)).toBeNull()
     expect(buildSourceUrl("https://gitlab.com/acme/booking", "sha", "src/x.ts", lines)).toBeNull()
+  })
+})
+
+describe("EvidenceCard clipboard feedback", () => {
+  beforeEach(() => {
+    toast.success.mockClear()
+    toast.error.mockClear()
+  })
+
+  it("shows an error instead of success when the browser rejects clipboard access", async () => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: jest.fn(async () => { throw new Error("permission denied") }) },
+    })
+    render(<EvidenceCard evidence={evidence()} labels={labels} />)
+
+    fireEvent.click(screen.getByRole("button", { name: labels.copyExcerpt }))
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith(labels.copyFailed))
+    expect(toast.success).not.toHaveBeenCalled()
   })
 })
 

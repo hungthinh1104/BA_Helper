@@ -4,10 +4,11 @@ import type { AnalysisWorkspaceResponse } from "@ba-helper/contracts"
 import { analysisWorkspaceLabels } from "@/lib/i18n/analysis-labels"
 
 const push = jest.fn()
+let mockSearchParams = new URLSearchParams("view=review")
 jest.mock("next/navigation", () => ({
   usePathname: () => "/analyses/a1",
   useRouter: () => ({ push }),
-  useSearchParams: () => new URLSearchParams("view=review"),
+  useSearchParams: () => new URLSearchParams(mockSearchParams.toString()),
 }))
 
 jest.mock("@/hooks/api/use-analyses", () => ({
@@ -106,6 +107,7 @@ describe("AnalysisReviewWorkbench decision loop", () => {
     push.mockClear()
     decide.mockClear()
     pending = false
+    mockSearchParams = new URLSearchParams("view=review")
   })
 
   it("accepts the item and auto-advances to the next", () => {
@@ -159,6 +161,35 @@ describe("AnalysisReviewWorkbench decision loop", () => {
     const textarea = screen.getByLabelText(labels.reviewWorkbench.decision.rationaleLabel)
     fireEvent.keyDown(textarea, { key: "a" })
     expect(decide).not.toHaveBeenCalled()
+  })
+
+  it("does not fire decision shortcuts while another interactive control has focus", () => {
+    renderWorkbench()
+    const button = document.createElement("button")
+    document.body.append(button)
+
+    fireEvent.keyDown(button, { key: "a" })
+
+    expect(decide).not.toHaveBeenCalled()
+    button.remove()
+  })
+
+  it("keeps Next enabled when the URL item is hidden by the active filter", () => {
+    mockSearchParams = new URLSearchParams("view=review&filter=pending&item=done")
+    const filteredWorkspace = {
+      ...workspace,
+      reviewQueue: [
+        ...workspace.reviewQueue,
+        { ...queueItem("done"), currentDecision: "accepted", blockingFinalize: false },
+      ],
+    } as AnalysisWorkspaceResponse
+
+    renderWorkbench(filteredWorkspace, "done")
+
+    const next = panel().getByRole("button", { name: "Next" })
+    expect(next).toBeEnabled()
+    fireEvent.click(next)
+    expect(push).toHaveBeenCalledWith(expect.stringContaining("item=second"), { scroll: false })
   })
 
   it("disables actions while a mutation is in flight (no double submit)", () => {

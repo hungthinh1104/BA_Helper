@@ -46,8 +46,9 @@ export function AnalysisReviewWorkbench({
     () => filterReviewItems(viewModel.orderedReviewItems, urlState.filter),
     [urlState.filter, viewModel.orderedReviewItems],
   )
-  const selectedIndex = visibleItems.findIndex((item) => item.itemId === viewModel.selectedItemId)
-  const selectedItem = selectedIndex >= 0 ? visibleItems[selectedIndex] : visibleItems[0] ?? null
+  const requestedSelectedIndex = visibleItems.findIndex((item) => item.itemId === viewModel.selectedItemId)
+  const selectedIndex = requestedSelectedIndex >= 0 ? requestedSelectedIndex : visibleItems.length > 0 ? 0 : -1
+  const selectedItem = selectedIndex >= 0 ? visibleItems[selectedIndex] ?? null : null
 
   const decision = useReviewItemDecision(workspace.overview.analysisId)
   const [rationale, setRationale] = useState("")
@@ -121,10 +122,9 @@ export function AnalysisReviewWorkbench({
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null
-      if (
-        target &&
-        (target.tagName === "TEXTAREA" || target.tagName === "INPUT" || target.isContentEditable || target.closest('[role="dialog"]'))
-      ) {
+      if (target?.closest(
+        'input, textarea, select, button, a[href], [role="button"], [role="link"], [role="menu"], [role="menuitem"], [role="option"], [role="combobox"], [role="listbox"], [role="tab"], [role="checkbox"], [role="radio"], [role="switch"], [role="dialog"], [role="alertdialog"], [contenteditable]:not([contenteditable="false"])',
+      )) {
         return
       }
       if (event.metaKey || event.ctrlKey || event.altKey) return

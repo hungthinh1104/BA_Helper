@@ -87,7 +87,7 @@ export function NewAnalysisDialog({
       const req = readyReqs.find((item) => item.id === preselectedReqId)
       if (req) {
         setSelectedReq(req)
-        setStep(2)
+        setStep(preselectedRepoId ? 3 : 2)
       }
     }
   }, [open, preselectedRepoId, preselectedReqId, readyRepos, readyReqs, selectedRepos.length, selectedReq])

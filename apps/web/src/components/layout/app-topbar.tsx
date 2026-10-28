@@ -92,7 +92,7 @@ export function AppTopbar({ isMobile }: { isMobile?: boolean }) {
   return (
     <header className="app-topbar gap-2 sm:gap-4">
       {isMobile && (
-        <Sheet>
+        <Sheet key={pathname}>
           <SheetTrigger
             render={<Button variant="ghost" size="icon" className="size-8 shrink-0" />}
           >

@@ -27,6 +27,14 @@ export function EvidenceCard({
   // With a source URL the copy action yields a shareable permalink; otherwise it
   // falls back to the copyable path:line @ commit reference.
   const copyTarget = sourceUrl ?? location
+  const copyText = async (text: string, successMessage: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      toast.success(successMessage)
+    } catch {
+      toast.error(labels.copyFailed)
+    }
+  }
 
   return (
     <article className="rounded-lg border border-border/50 bg-background p-3">
@@ -65,10 +73,7 @@ export function EvidenceCard({
               size="icon-xs"
               aria-label={sourceUrl ? labels.copyPermalink : labels.copyLocation}
               title={sourceUrl ? labels.copyPermalink : labels.copyLocation}
-              onClick={() => {
-                void navigator.clipboard.writeText(copyTarget)
-                toast.success(sourceUrl ? labels.copiedPermalink : labels.copiedLocation)
-              }}
+              onClick={() => { void copyText(copyTarget, sourceUrl ? labels.copiedPermalink : labels.copiedLocation) }}
             >
               <Link2 aria-hidden="true" />
             </Button>
@@ -79,10 +84,7 @@ export function EvidenceCard({
             size="icon-xs"
             aria-label={labels.copyExcerpt}
             title={labels.copyExcerpt}
-            onClick={() => {
-              void navigator.clipboard.writeText(evidence.excerpt)
-              toast.success(labels.copied)
-            }}
+            onClick={() => { void copyText(evidence.excerpt, labels.copied) }}
           >
             <Copy aria-hidden="true" />
           </Button>
@@ -145,8 +147,9 @@ export function buildSourceUrl(
   const base = repositoryUrl.trim().replace(/\/+$/, "").replace(/\.git$/i, "")
   // Controlled beta supports public GitHub repositories only.
   if (!/^https?:\/\/github\.com\/[^/]+\/[^/]+/i.test(base)) return null
-  const path = filePath.replace(/^\/+/, "")
-  return `${base}/blob/${commitSha}/${path}${lineAnchor(lineRange)}`
+  const path = filePath.replace(/\\/g, "/").replace(/^\/+/, "")
+  const encodedPath = path.split("/").map((segment) => encodeURIComponent(segment)).join("/")
+  return `${base}/blob/${commitSha}/${encodedPath}${lineAnchor(lineRange)}`
 }
 
 function lineAnchor(lineRange: { startLine: number | null; endLine: number | null }): string {
