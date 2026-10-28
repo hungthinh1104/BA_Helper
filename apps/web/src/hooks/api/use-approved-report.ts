@@ -17,7 +17,7 @@ export function useApprovedReport(analysisId: string, analysisStatus?: string) {
 export function useFinalReviewedReport(analysisId: string, locale?: ReportLocale | string) {
   const normalizedLocale = normalizeAppLocale(locale)
   return useQuery({
-    queryKey: [...queryKeys.analyses.report(analysisId), "final-reviewed", normalizedLocale],
+    queryKey: queryKeys.documents.finalReviewedReport(analysisId, normalizedLocale),
     queryFn: async () => {
       const qs = normalizedLocale !== 'en' ? `?locale=${normalizedLocale}` : ''
       return apiGet<FinalReviewedReportResponse>(`/api/v1/impact-analyses/${analysisId}/final-reviewed-report${qs}`, finalReviewedReportResponseSchema as unknown as z.ZodType<FinalReviewedReportResponse>)

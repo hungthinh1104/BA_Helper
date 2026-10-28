@@ -2,3 +2,5 @@
 tests/fixtures/public-test-trace/** text eol=lf
 tests/evaluation/public-test-trace*.json text eol=lf
 tests/evaluation/application-test-trace*.json text eol=lf
+# Fixture offsets are measured against LF source bytes, not checkout-dependent CRLF.
+tests/fixtures/nestjs-booking-with-payment/** text eol=lf

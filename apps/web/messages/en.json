@@ -146,6 +146,7 @@
     "completeReviewsUnlock": "Complete all reviews and take a snapshot to unlock final report",
     "loadingFinalAuditedReport": "Loading final audited report...",
     "failedLoadFinalReport": "Failed to load final report.",
+    "retrySnapshot": "Retry loading snapshot",
     "ensureReviewsComplete": "Ensure all reviews are complete.",
     "finalReviewDecisions": "Final Review Decisions",
     "lockedReviewDecisions": "Locked Review Decisions",

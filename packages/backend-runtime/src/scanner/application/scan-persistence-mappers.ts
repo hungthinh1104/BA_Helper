@@ -52,8 +52,10 @@ export function addScanHealthDiagnostic(params: {
 
   params.collector.add({
     code: 'SCAN_HEALTH',
-    severity: 'INFO',
-    message: 'Scan health summary generated',
+    severity: scanHealth.coverageStatus === 'FULL' ? 'INFO' : 'WARN',
+    message: scanHealth.coverageStatus === 'FULL'
+      ? 'File inventory completed within configured scope; semantic completeness is not certified'
+      : 'File inventory incomplete; inspect skipped files before relying on impact analysis',
     category: 'SCANNER',
     payload: scanHealth as unknown as Record<string, unknown>,
   });

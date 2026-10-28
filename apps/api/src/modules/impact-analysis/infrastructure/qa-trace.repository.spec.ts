@@ -24,7 +24,7 @@ describe('QaTraceRepository', () => {
     const result = await repository.read('analysis');
     expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), { isolationLevel: 'RepeatableRead' });
     expect(tx.codeArtifact.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: {
-      snapshotId: 'snapshot', traceabilityLinks: { some: { impactAnalysisId: 'analysis' } },
+      traceabilityLinks: { some: { impactAnalysisId: 'analysis' } },
     }, take: 1001 }));
     expect(tx.dependencyEdge.findMany).toHaveBeenNthCalledWith(1, expect.objectContaining({ where: {
       snapshotId: 'snapshot', fromArtifact: { snapshotId: 'snapshot' }, toArtifact: { snapshotId: 'snapshot' },
@@ -40,6 +40,21 @@ describe('QaTraceRepository', () => {
     expect(result?.impactedArtifactIds).toEqual(['refund']);
     expect(result?.artifacts.map(a => a.id).sort()).toEqual(['cancel', 'refund', 'test']);
     expect(result?.edges).toHaveLength(2);
+  });
+
+  it('reports cross-snapshot links but never traverses foreign source graphs', async () => {
+    const { repository, tx, target } = setup();
+    const foreign = artifact('foreign', { snapshotId: 'other-snapshot', artifactType: 'CONTROLLER_METHOD',
+      universalKind: 'UNKNOWN' });
+    tx.codeArtifact.findMany.mockResolvedValue([target, foreign]);
+    const result = await repository.read('analysis');
+    expect(result?.impactedArtifactIds).toContain('foreign');
+    expect(result?.artifacts.find(a => a.id === 'foreign')?.snapshotId).toBe('other-snapshot');
+    expect(tx.dependencyEdge.findMany).toHaveBeenNthCalledWith(1,
+      expect.objectContaining({ where: expect.objectContaining({ toArtifactId: { in: ['refund'] } }) }));
+    expect(tx.dependencyEdge.findMany).not.toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ toArtifactId: { in: ['foreign'] } }),
+    }));
   });
 
   it('does not query snapshot data when the analysis is absent', async () => {

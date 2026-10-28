@@ -18,8 +18,29 @@ test.describe('decision-to-report journey', () => {
   test('accept all review items, finalize, and reach the approved report', async ({ page }) => {
     test.setTimeout(180_000)
     const trace = await seedTestTrace(seed.analysisId, { parameterized: true })
-    await page.goto(`/analyses/${seed.analysisId}?view=review&locale=en-US`)
-
+    // Verify the real DB -> QA projection path before asserting the visible UI.
+    // A 200 response can still omit a TESTS edge when its canonical identity is invalid.
+    const coverageWire = page.waitForResponse(response =>
+      response.request().method() === 'GET' &&
+      response.url().includes(`/api/v1/impact-analyses/${seed.analysisId}/qa-coverage`));
+    await page.goto(`/analyses/${seed.analysisId}?view=review&locale=en-US`);
+    const coverageResponse = await coverageWire;
+    expect(coverageResponse.ok()).toBe(true)
+    const coverage = await coverageResponse.json() as {
+      items: Array<{ artifactKey?: string; status: string;
+        testArtifacts: Array<{ testCase?: { title: string; parameterized?: boolean } }> }>
+      traceContext?: { limitations: string[] }
+    }
+    const booking = coverage.items.find(item => item.artifactKey === 'api:booking.service.cancelBooking')
+    expect(booking).toMatchObject({ status: 'COVERED',
+      testArtifacts: [{ testCase: { title: traceCaseTitle, parameterized: true } }] })
+    expect(coverage.traceContext?.limitations).not.toContain('UNSUPPORTED_SOURCE_RELATIONSHIP')
+    expect(coverage.traceContext?.limitations).not.toContain('UNSUPPORTED_IMPACT_ARTIFACT')
+    expect(coverage.items.map(item => item.artifactKey).sort()).toEqual([
+      'api:booking.service.cancelBooking',
+      'api:inventory.service.releaseRoom',
+      'api:refund.controller.processRefund',
+    ])
     const workbench = page.locator('[data-review-workbench]')
     await expect(workbench).toBeVisible()
     await expect(page.locator('[data-stale-notice]')).toHaveCount(0)
@@ -64,9 +85,15 @@ test.describe('decision-to-report journey', () => {
     await expect(page.getByRole('heading', { name: traceCaseTitle, exact: true })).toBeVisible()
     await removeLiveTestTrace(trace)
     await page.reload()
-    await expect(page.getByRole('heading', { name: traceCaseTitle, exact: true })).toBeVisible()
-    await expect(page.getByLabel('Saved test references', { exact: true })
-      .getByText('Parameterized source declaration; data rows are not expanded.', { exact: true })).toBeVisible()
+    const savedReferences = page.getByLabel('Saved test references', { exact: true })
+    await expect(savedReferences.getByRole('heading', { name: traceCaseTitle, exact: true })).toBeVisible()
+    // The saved, read-only projection must retain every reviewed impacted artifact
+    // even after its live TESTS edge and source evidence have been removed.
+    for (const artifactLabel of ['BookingService.cancelBooking',
+      'InventoryService.releaseRoom', 'RefundController.processRefund']) {
+      await expect(savedReferences.getByRole('heading', { name: artifactLabel, exact: true })).toBeVisible()
+    }
+    await expect(savedReferences.getByText('Parameterized source declaration; data rows are not expanded.', { exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Inspect source reference', exact: true })).toHaveCount(0)
     const diagram = page.locator('.report-mermaid-preview').first()
     await expect(diagram.locator('svg')).toBeVisible({ timeout: 60_000 })

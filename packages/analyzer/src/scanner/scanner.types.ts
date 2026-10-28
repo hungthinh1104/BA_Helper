@@ -1,6 +1,6 @@
 import type { GraphProvenance } from '../graph/graph.types';
 
-export const SCANNER_VERSION = 'scanner@0.7.0';
+export const SCANNER_VERSION = 'scanner@0.7.1';
 export const ANALYZER_VERSION = 'analyzer@0.16.0';
 
 export type TestModifier = 'NORMAL' | 'SKIP' | 'TODO' | 'ONLY';

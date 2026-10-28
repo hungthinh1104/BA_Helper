@@ -82,6 +82,14 @@ jobs:
       - name: Domain pack governance
         run: pnpm verify:domain-packs
 
+      - name: Scan source-omission regression
+        run: |
+          pnpm exec jest --config jest.analyzer.config.ts --runInBand packages/analyzer/tests/scanner/core/safe-file-enumerator.spec.ts
+          pnpm exec jest --config jest.unit.config.ts --runInBand packages/backend-runtime/src/scanner/application/scan-health-diagnostics.spec.ts
+
+      - name: Runtime config isolation regression
+        run: pnpm exec jest --config jest.ci.config.ts --runInBand apps/api/src/bootstrap/runtime-config.spec.ts
+
       - name: Analyzer quality gate
         run: pnpm verify:analyzer-quality
 
@@ -118,6 +126,13 @@ jobs:
 
       - name: Backend-runtime HTTP and guard boundary check
         run: pnpm verify:backend-runtime-http-boundary
+
+      - name: Backend-runtime boundary check (no api decorators)
+        run: |
+          if grep -rE --include='*.ts' --exclude='*.spec.ts' --exclude='*.test.ts' '@Controller|@UseGuards|@CurrentUser|@Req|@Get|@Post|@Put|@Delete|@Patch|JwtAuthGuard|RolesGuard' packages/backend-runtime/src/; then
+            echo "BOUNDARY VIOLATION: backend-runtime must not contain HTTP controllers or guards"
+            exit 1
+          fi
 
       - name: Backend-runtime duplication boundary check
         run: pnpm verify:architecture-boundaries

@@ -22,13 +22,14 @@ describe('runtime-config', () => {
   });
 
   it('fails fast for production-like env without configured CORS allowlist', () => {
-    const config = getRuntimeConfig({
+    const env = {
       NODE_ENV: 'production',
       PORT: '3001',
       WORKSPACE_MODE: 'dev-single-user',
-    });
+    };
+    const config = getRuntimeConfig(env);
 
-    expect(() => validateRuntimeConfig(config)).toThrow(
+    expect(() => validateRuntimeConfig(config, env)).toThrow(
       'CORS_ALLOWED_ORIGINS must be configured',
     );
   });
@@ -43,6 +44,8 @@ describe('runtime-config', () => {
     };
     const config = getRuntimeConfig(env);
 
+    // CI enables dev-login globally for its development services. Production
+    // validation must use the same explicit input as config construction.
     expect(() => validateRuntimeConfig(config, env)).not.toThrow();
     expect(config.corsAllowedOrigins).toEqual(['https://web.example.com']);
   });

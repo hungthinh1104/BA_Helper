@@ -523,6 +523,48 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
     });
   });
 
+  it('snapshot remains immutable after review decision changes', async () => {
+    const { analysisId, link1Id, link2Id, docId } = await setupBasicAnalysisWithLinks();
+    for (const linkId of [link1Id, link2Id]) {
+      await request(app.getHttpServer())
+        .put(`/api/v1/traceability-links/${linkId}/review-decision`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ decision: 'ACCEPTED' })
+        .expect(200);
+    }
+
+    await markAnalysisCompleted(analysisId);
+    const snapshotResponse = await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${analysisId}/reviewed-report-snapshot`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send()
+      .expect(201);
+    await prisma.reviewedReportSnapshot.update({
+      where: { id: snapshotResponse.body.id },
+      data: { approvedDocumentId: docId },
+    });
+
+    await prisma.traceabilityReviewDecision.updateMany({
+      where: { traceabilityLinkId: link2Id },
+      data: { decision: 'REJECTED' },
+    });
+
+    const frozenSnapshot = await prisma.reviewedReportSnapshot.findUniqueOrThrow({
+      where: { id: snapshotResponse.body.id },
+    });
+    const decisions = frozenSnapshot.reviewDecisionsSnapshot as Array<{
+      reviewDecision?: { decision?: string };
+    }>;
+    expect(decisions).toHaveLength(2);
+    expect(decisions.every(item => item.reviewDecision?.decision === 'ACCEPTED')).toBe(true);
+
+    const finalResponse = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/final-reviewed-report`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(409);
+    expect(finalResponse.body.code).toBe('REPORT_PROVENANCE_MISMATCH');
+  });
+
   it('GeneratedDocument markdown reflects the snapshot payload, not the live mutated state', async () => {
     const { analysisId, link1Id, link2Id } = await setupBasicAnalysisWithLinks();
     const runDocumentJob = app.get(RunDocumentJobUseCase);
@@ -661,43 +703,53 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
         .expect(200);
     }
     const finalizer = app.get(FinalizeImpactAnalysisUseCase);
-    const traceabilityRepo = (finalizer as unknown as {
-      traceabilityRepo: { listByAnalysis: (...args: any[]) => Promise<any[]> };
-    }).traceabilityRepo;
-    const originalListByAnalysis = traceabilityRepo.listByAnalysis.bind(traceabilityRepo);
+    const finalizerWithPreflight = finalizer as unknown as {
+      assertFinalizableState: (analysisId: string, acknowledgeUnreviewed: boolean) => Promise<unknown>;
+    };
+    const originalPreflight = finalizerWithPreflight.assertFinalizableState.bind(finalizer);
+    // Pause both requests before preflight reads so the database row lock selects the winner.
     const bothPreflightReads = createDeferred();
     const releaseTransactions = createDeferred();
     let preflightReads = 0;
-    const preflightSpy = jest.spyOn(traceabilityRepo, 'listByAnalysis').mockImplementation(async (id) => {
-      const links = await originalListByAnalysis(id);
-      if (preflightReads < 2) {
-        preflightReads += 1;
-        if (preflightReads === 2) bothPreflightReads.resolve();
-        await releaseTransactions.promise;
-      }
-      return links;
-    });
+    const preflightSpy = jest.spyOn(finalizer as any, 'assertFinalizableState')
+      .mockImplementation(async (...args: unknown[]) => {
+        const [analysisId, acknowledgeUnreviewed] = args as [string, boolean];
+        if (preflightReads < 2) {
+          preflightReads += 1;
+          if (preflightReads === 2) bothPreflightReads.resolve();
+          await releaseTransactions.promise;
+        }
+        return originalPreflight(analysisId, acknowledgeUnreviewed);
+      });
 
+    let responsesPromise: Promise<unknown> | undefined;
     try {
       const finalizeRequest = () => request(app.getHttpServer())
         .post(`/api/v1/impact-analyses/${analysisId}/finalize`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ acknowledgeUnreviewed: false });
-      const responsesPromise = Promise.all([finalizeRequest(), finalizeRequest()]);
+      const concurrentResponses = Promise.all([finalizeRequest(), finalizeRequest()]);
+      responsesPromise = concurrentResponses;
 
       await withDeadline(Promise.race([
         bothPreflightReads.promise,
-        responsesPromise.then((responses) => {
+        concurrentResponses.then((responses) => {
           throw new Error(`Finalize requests ended before the preflight barrier: ${responses.map((response) => response.status).join(',')}`);
         }),
       ]), 'both finalize requests to read review state before locking');
       releaseTransactions.resolve();
-      const responses = await withDeadline(responsesPromise, 'concurrent finalize responses');
+      const responses = await withDeadline(concurrentResponses, 'concurrent finalize responses');
       const snapshots = await prisma.reviewedReportSnapshot.findMany({
         where: { analysisId },
         select: { id: true },
       });
       const rejectedResponse = responses.find((response) => response.status === 409);
+      const documentJobCount = await prisma.documentJob.count({
+        where: { analysisId, documentType: 'IMPACT_REPORT' },
+      });
+      const finalStatus = (await prisma.impactAnalysis.findUniqueOrThrow({
+        where: { id: analysisId },
+      })).status;
       const auditEventCount = snapshots.length === 1
         ? await prisma.domainEvent.count({
             where: { idempotencyKey: `reviewed-report-snapshot:${snapshots[0].id}:created` },
@@ -708,17 +760,27 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
         responseErrors: responses.map((response) => response.body.message ?? response.body.error).filter(Boolean),
         rejectedCode: rejectedResponse?.body.code,
         snapshotCount: snapshots.length,
+        documentJobCount,
+        finalStatus,
         auditEventCount,
       }).toEqual({
         statuses: [201, 409],
         responseErrors: ['Impact analysis is no longer waiting for review.'],
         rejectedCode: 'INVALID_STATE_TRANSITION',
         snapshotCount: 1,
+        documentJobCount: 1,
+        finalStatus: 'COMPLETED',
         auditEventCount: 1,
       });
     } finally {
       releaseTransactions.resolve();
       preflightSpy.mockRestore();
+      if (responsesPromise) {
+        await withDeadline(
+          Promise.allSettled([responsesPromise]),
+          'both finalize requests to settle after releasing the barrier',
+        );
+      }
     }
   }, 30_000);
 

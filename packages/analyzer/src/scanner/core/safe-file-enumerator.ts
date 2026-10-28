@@ -97,12 +97,16 @@ const INITIAL_SKIPPED_SUMMARY: Record<ScanSkipReason, number> = {
   UNSUPPORTED_LANGUAGE: 0,
 };
 
+// Source-like files excluded for safety or resource limits must not silently produce FULL coverage.
+const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.java', '.go', '.py', '.cs', '.php', '.rb']);
+
 const BINARY_SNIFF_BYTES = 8192;
 const BINARY_CONTROL_BYTE_RATIO = 0.3;
 
 export class SafeFileEnumerator {
   private skippedFiles: Array<{ path: string; reason: ScanSkipReason }> = [];
   private skippedSummary: Record<ScanSkipReason, number> = { ...INITIAL_SKIPPED_SUMMARY };
+  private hasUnscannedSource = false;
 
   constructor(
     private readonly rootDir: string,
@@ -111,6 +115,14 @@ export class SafeFileEnumerator {
 
   private recordSkip(filePath: string, reason: ScanSkipReason) {
     this.skippedSummary[reason]++;
+    const sourceLike = SOURCE_EXTENSIONS.has(path.extname(filePath).toLowerCase());
+    if (
+      reason === 'READ_ERROR' || // Unknown file or subtree: cannot prove that source is absent.
+      (sourceLike && ['FILE_TOO_LARGE', 'BINARY_FILE', 'SYMLINK_OUTSIDE_ROOT'].includes(reason)) ||
+      (reason === 'SYMLINK_OUTSIDE_ROOT' && path.extname(filePath) === '') // Could be a source directory.
+    ) {
+      this.hasUnscannedSource = true;
+    }
     if (this.skippedFiles.length < 100) {
       // Normalize path separator to '/' to ensure determinism across OSes
       const normalizedPath = filePath.split(path.sep).join('/');
@@ -119,6 +131,10 @@ export class SafeFileEnumerator {
   }
 
   async enumerate(): Promise<EnumeratorResult> {
+    // A reused enumerator must report this attempt, not stale omissions from a previous one.
+    this.skippedFiles = [];
+    this.skippedSummary = { ...INITIAL_SKIPPED_SUMMARY };
+    this.hasUnscannedSource = false;
     const tsFiles: string[] = [];
     const javaFiles: string[] = [];
     const goFiles: string[] = [];
@@ -296,7 +312,7 @@ export class SafeFileEnumerator {
       rbFiles,
       allFiles,
       diagnostics,
-      isPartial,
+      isPartial: isPartial || this.hasUnscannedSource,
       skippedFiles: this.skippedFiles,
       skippedSummary: this.skippedSummary,
       limits: {

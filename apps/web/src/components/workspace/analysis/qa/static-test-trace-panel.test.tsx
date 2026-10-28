@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { StaticTestTracePanel } from './static-test-trace-panel';
 import { TestTraceView } from './test-trace-view';
 import { staticTestTraceFixture, traceIds } from '../../../../../../../tests/fixtures/static-test-trace.fixture';
+import { qaCoverageResponseSchema } from '@ba-helper/contracts';
 
 let coverage: Record<string, unknown>;
 const refetch = jest.fn();
@@ -163,6 +164,56 @@ describe('selected item static test trace', () => {
     panel();
     expect(screen.getByRole('alert')).toHaveTextContent(/another snapshot/i);
     expect(screen.queryByText('refunds once')).not.toBeInTheDocument();
+  });
+
+  it('matches an excluded selected artifact to its typed API reason without showing other artifacts', () => {
+    const response = staticTestTraceFixture();
+    response.items = [];
+    response.traceContext!.limitations = ['UNSUPPORTED_IMPACT_ARTIFACT'];
+    response.traceContext!.excludedImpactedArtifacts = [
+      { artifactId: 'selected', artifactKey: 'service:refund', artifactType: 'LEGACY_METHOD',
+        universalKind: 'UNKNOWN', reason: 'UNSUPPORTED_TYPE' },
+      { artifactId: 'unrelated', artifactKey: 'service:unrelated',
+        reason: 'MISSING_ARTIFACT' },
+    ];
+    coverage = { data: qaCoverageResponseSchema.parse(response), isLoading: false, error: null, refetch };
+    panel();
+    expect(screen.getByText('This impacted artifact was excluded from static test references.')).toBeInTheDocument();
+    expect(screen.getByText('Excluded impacted artifacts: 1')).toBeInTheDocument();
+    expect(screen.getByText(/service:refund/)).toHaveTextContent('Artifact type is not supported by static test references.');
+    expect(screen.queryByText(/service:unrelated/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/not included in the inspected results/i)).not.toBeInTheDocument();
+  });
+
+  it('does not misattribute a different artifact exclusion to the selected review item', () => {
+    const response = staticTestTraceFixture();
+    response.items = [];
+    response.traceContext!.limitations = ['UNSUPPORTED_IMPACT_ARTIFACT'];
+    response.traceContext!.excludedImpactedArtifacts = [
+      { artifactId: 'unrelated', artifactKey: 'service:other', reason: 'UNSUPPORTED_TYPE' },
+    ];
+    coverage = { data: qaCoverageResponseSchema.parse(response), isLoading: false, error: null, refetch };
+    panel();
+    expect(screen.getByText(/not included in the inspected results/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Excluded impacted artifacts:/i)).not.toBeInTheDocument();
+    expect(screen.getByText('Some impacted artifacts were excluded from test coverage.')).toBeInTheDocument();
+  });
+
+  it('renders all stored exclusion reasons in a frozen Vietnamese report', () => {
+    const response = staticTestTraceFixture();
+    response.items = [];
+    response.traceContext!.limitations = ['UNSUPPORTED_IMPACT_ARTIFACT'];
+    response.traceContext!.excludedImpactedArtifacts = [
+      { artifactId: 'legacy', artifactKey: 'service:refund', reason: 'UNSUPPORTED_TYPE' },
+      { artifactId: 'foreign', reason: 'FOREIGN_SNAPSHOT' },
+      { artifactId: 'missing', reason: 'MISSING_ARTIFACT' },
+    ];
+    render(<TestTraceView coverage={qaCoverageResponseSchema.parse(response)} locale="vi-VN" saved />);
+    expect(screen.getByText('Artifact bị tác động không được xét: 3')).toBeInTheDocument();
+    expect(screen.getByText('Artifact này bị loại khỏi kết quả tham chiếu test tĩnh.')).toBeInTheDocument();
+    expect(screen.getByText(/Loại artifact chưa được hỗ trợ trong tham chiếu test tĩnh/)).toBeInTheDocument();
+    expect(screen.getByText(/Artifact thuộc snapshot khác/)).toBeInTheDocument();
+    expect(screen.getByText(/Không tìm thấy artifact trong snapshot đã quét/)).toBeInTheDocument();
   });
 
   it('renders frozen report data with no live evidence action', () => {

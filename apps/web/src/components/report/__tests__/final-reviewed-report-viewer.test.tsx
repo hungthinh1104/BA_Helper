@@ -7,8 +7,10 @@ import { rest } from 'msw';
 import messages from '../../../../messages/en.json';
 import { staticTestTraceFixture } from '../../../../../../tests/fixtures/static-test-trace.fixture';
 
+let mockReportLocale = 'en';
+
 jest.mock('next-intl', () => ({
-  useLocale: () => 'en',
+  useLocale: () => mockReportLocale,
   useTranslations: (namespace: keyof typeof messages) => (key: string, values?: Record<string, string>) => {
     let text = (messages[namespace] as Record<string, string>)[key] ?? key;
     for (const [name, value] of Object.entries(values ?? {})) text = text.replace(`{${name}}`, value);
@@ -30,6 +32,7 @@ describe('FinalReviewedReportViewer', () => {
 
   beforeEach(() => {
     queryClient = createTestQueryClient();
+    mockReportLocale = 'en';
     jest.clearAllMocks();
   });
 
@@ -62,6 +65,32 @@ describe('FinalReviewedReportViewer', () => {
   it('renders loading state initially when open', () => {
     renderComponent('test-id', true);
     expect(screen.getByText('Loading final audited report...')).toBeInTheDocument();
+  });
+
+  it('fetches the localized reviewed snapshot when the dialog locale is Vietnamese', async () => {
+    mockReportLocale = 'vi-VN';
+    let requestedLocale: string | null = null;
+    server.use(
+      rest.get('http://localhost:3000/api/v1/impact-analyses/:analysisId/final-reviewed-report', (req, res, ctx) => {
+        requestedLocale = req.url.searchParams.get('locale');
+        return res(ctx.json({
+          analysisId: 'test-id', snapshotId: 'snapshot-id',
+          locale: 'vi-VN', markdown: '# Báo cáo đã duyệt',
+          testTraceSnapshot: null,
+          createdAt: '2026-10-28T00:00:00Z',
+          reviewCompletion: { analysisId: 'test-id', isComplete: true,
+            totalLinks: 0, accepted: 0, rejected: 0, needsReview: 0,
+            needsMoreEvidence: 0, unreviewed: 0, hasReviewedSnapshot: true,
+            blockingReasons: [] },
+          reviewDecisionsSnapshot: [], evidenceQualitySummarySnapshot: {},
+          evaluationContextSnapshot: null, createdByUserId: null,
+        }));
+      }),
+    );
+
+    renderComponent('test-id', true);
+    expect(await screen.findByText(/Báo cáo đã duyệt/)).toBeInTheDocument();
+    expect(requestedLocale).toBe('vi-VN');
   });
 
   it('fetches and renders report when opened', async () => {

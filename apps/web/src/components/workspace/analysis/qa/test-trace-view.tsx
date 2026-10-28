@@ -27,7 +27,8 @@ export function TestTraceView({ coverage, locale, saved = false, requirementTitl
     <p className="text-xs leading-relaxed text-muted-foreground">{labels.notice}</p>
     {!context ? <p className="text-xs text-muted-foreground">{labels.unavailable}</p> : <>
       <TraceContext coverage={coverage} labels={labels} />
-      {coverage.items.length === 0 ? <p className="text-xs text-muted-foreground">{labels.notInspected}</p> : null}
+      {coverage.items.length === 0 ? <p className="text-xs text-muted-foreground">{context.excludedImpactedArtifacts?.length
+        ? labels.excludedFromTrace : labels.notInspected}</p> : null}
       {visibleItems.map(item => <TestTraceItem key={item.artifactId} item={item} commitSha={context.commitSha} labels={labels} locale={locale}
         visualPathId={visualPathId} onToggleVisualPath={setVisualPath} requirementTitle={requirementTitle}
         requirementSummary={requirementSummary} onInspectEvidence={onInspectEvidence} />)}
@@ -43,6 +44,14 @@ function TraceContext({ coverage, labels }: { coverage: QaCoverageResponse; labe
     <ul className="grid gap-1 text-xs text-warning" aria-label={labels.limits}>
       {context.limitations.map(code => <li key={code}>{labels.limitations[code]}</li>)}
     </ul>
+    {context.excludedImpactedArtifacts?.length ? <details className="text-xs text-warning">
+      <summary>{labels.excludedArtifacts.replace('{count}', String(context.excludedImpactedArtifacts.length))}</summary>
+      <ul className="mt-1 grid gap-1 font-mono">
+        {context.excludedImpactedArtifacts.map(item => <li key={item.artifactId}>
+          {item.artifactKey ?? item.artifactId} · {labels.exclusionReasons[item.reason]}
+        </li>)}
+      </ul>
+    </details> : null}
     <p className="text-[11px] text-muted-foreground">{labels.limits}: {context.limits.maxCallDepth} {labels.calls} · {context.limits.maxImpactedArtifacts} {labels.artifacts} · {context.limits.maxEdges} {labels.edges} · {context.limits.maxTracesPerArtifact} {labels.cases}</p>
   </>;
 }

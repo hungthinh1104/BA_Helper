@@ -32,6 +32,8 @@ export async function seedTestTrace(analysisId: string, options: { parameterized
         AND c."artifactKey" = 'api:booking.service.cancelBooking'`, [analysisId]);
     if (result.rowCount !== 1) throw new Error('Expected the isolated demo booking artifact.');
     const { snapshotId, artifactId } = result.rows[0];
+    // Keep fixture identities identical to scanner output; otherwise activeJestCase()
+    // rejects the TESTS edge and the API silently reports NO_TEST_FOUND.
     const fileKey = createArtifactIdentity('test', sourcePath, 'file');
     const caseKey = `test-case:${sourcePath}::${hash(JSON.stringify([
       suitePath, traceCaseTitle, ...(options.parameterized ? ['PARAMETERIZED'] : []),

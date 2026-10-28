@@ -64,6 +64,15 @@ Snapshots are published immutable outputs, not lifecycle workflows. `PARTIAL`
 is usable only when coverage and skipped supported inputs are exposed to
 consumers.
 
+File inventory coverage is PARTIAL if a source-like file is excluded by size,
+binary detection, or symlink policy; an untraversable directory or unreadable
+file is also conservatively PARTIAL. Resource-limit hits remain PARTIAL.
+Deliberately ignored build/vendor directories and non-source files do not by
+themselves downgrade coverage. File inventory FULL is **not** proof that AST
+extraction, dependency resolution, Jest patterns, or business semantics are
+complete. Those require independent quality evaluation and unresolved-pattern
+diagnostics; a successful scan must never be described as 100% code coverage.
+
 Snapshot eligibility for analysis:
 
 ```text

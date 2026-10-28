@@ -39,6 +39,32 @@ describe('snapshot-scoped static test trace projection', () => {
     expect(JSON.stringify(result)).not.toContain('Redacted persisted source excerpt');
   });
 
+  it('returns explicit exclusions for unsupported and missing impacted artifacts', () => {
+    const known = artifact('booking');
+    const legacy = artifact('refund-controller', { artifactType: 'CONTROLLER_METHOD', universalKind: 'UNKNOWN' });
+    const lost = artifact('missing');
+    const source = input([known, legacy, lost]);
+    source.artifacts = source.artifacts.filter(a => a.id !== lost.id);
+    const result = qaCoverageResponseSchema.parse(deriver.derive(source));
+    expect(result.items.map(item => item.artifactId)).toEqual(['booking']);
+    expect(result.traceContext?.limitations).toContain('UNSUPPORTED_IMPACT_ARTIFACT');
+    expect(result.traceContext?.excludedImpactedArtifacts).toEqual([
+      { artifactId: legacy.id, artifactKey: legacy.artifactKey, artifactType: 'CONTROLLER_METHOD',
+        universalKind: 'UNKNOWN', reason: 'UNSUPPORTED_TYPE' },
+      { artifactId: lost.id, reason: 'MISSING_ARTIFACT' },
+    ]);
+    expect(result.summary.noTestFound).toBe(1);
+  });
+
+  it('does not count an artifact from a different snapshot', () => {
+    const foreign = artifact('foreign', { snapshotId: 'another-snapshot' });
+    const result = qaCoverageResponseSchema.parse(deriver.derive(input([foreign])));
+    expect(result.items).toHaveLength(0);
+    expect(result.traceContext?.excludedImpactedArtifacts?.[0]).toMatchObject({
+      artifactId: 'foreign', reason: 'FOREIGN_SNAPSHOT',
+    });
+  });
+
   it('handles more than 50 impacted nodes and preserves unlinked intermediate callers', () => {
     const impacted = Array.from({ length: 75 }, (_, i) => artifact(`impact-${i}`));
     const caller = artifact('unlinked-caller');

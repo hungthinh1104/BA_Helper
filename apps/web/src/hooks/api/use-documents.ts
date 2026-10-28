@@ -23,10 +23,14 @@ export function useLatestReviewedReportSnapshot(analysisId: string | undefined) 
     queryKey: queryKeys.documents.reviewedReportSnapshot(analysisId || ""),
     queryFn: async () => {
       if (!analysisId) throw new Error("Analysis ID is required")
-      return apiGet(
+      const snapshot = await apiGet(
         `/api/v1/impact-analyses/${analysisId}/reviewed-report-snapshot/latest`,
         reviewedReportSnapshotSchema,
       )
+      if (snapshot.analysisId !== analysisId) {
+        throw new Error("Reviewed snapshot belongs to a different analysis")
+      }
+      return snapshot
     },
     enabled: !!analysisId,
     retry: false, // Don't retry if 404 (no snapshot yet)

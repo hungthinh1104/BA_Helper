@@ -60,6 +60,8 @@ export class FinalizeImpactAnalysisUseCase {
       const finalizeResult = await tx.impactAnalysis.updateMany({
         where: {
           id: analysis.id,
+          // Compare-and-set: a competing finalize must not transition COMPLETED -> COMPLETED.
+          // PostgreSQL re-evaluates this predicate after waiting on the row lock.
           status: 'WAITING_FOR_REVIEW',
           snapshot: {
             commitSha: analysis.snapshot.commitSha,
