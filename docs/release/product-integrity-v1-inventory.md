@@ -45,11 +45,14 @@ Route source cross-check (2026-10-28): the App Router contains 18 `page.tsx` rou
 - Red/green verification: the focused browser test failed before the guard and passed after it (1/1) against the running API and Next.js servers. The regular Playwright web-server startup separately failed twice in worker stale-job recovery with Prisma `P2028`; the focused route test does not require the worker. The worker failure is a reproducible release gate, separate from the route fix.
 - FE/BE parity check: comprehension permission is checked for the requested snapshot, `snapshotContext.repositoryId` is mapped from the persisted snapshot, and the controller parses the shared schema. Artifact list DTO mapping and pagination also match the FE consumer schema; the focused artifact API/use-case/repository/mapper suites passed 5/5 suites, 35/35 tests.
 
-### Worker Startup Transaction Failure (2026-10-28)
+### Worker Startup and Playwright Teardown (2026-10-28 to 2026-10-29)
 
-- Standard focused Playwright invocation failed twice before test execution while starting `apps/worker`; `StaleJobRecoveryService` failed at its first `scanJob.updateMany()` with Prisma `P2028: Unable to start a transaction in the given time`. `pnpm db:migrate` completed and reported no pending migrations.
-- Isolation probes against `ba_helper_test` passed: the same three-model batch transaction returned `0,0,0`, and the real `StaleJobRecoveryService` with `PrismaService` returned zero recovered rows. The DB had no `RUNNING` scan jobs, impact analyses, or document jobs at inspection.
-- Root cause remains unresolved and appears specific to full worker bootstrap or its Playwright process environment; do not count standard Playwright startup as passing. The code-comprehension route regression passed only with its already-running API and Next.js servers because it does not need the worker.
+- Standard focused Playwright startup failed twice before test execution while starting `apps/worker`; `StaleJobRecoveryService` failed at its first `scanJob.updateMany()` with Prisma `P2028: Unable to start a transaction in the given time`.
+- Isolation probes against `ba_helper_test` passed: the same three-model batch transaction returned `0,0,0`, and the real `StaleJobRecoveryService` with `PrismaService` returned zero recovered rows. The DB had no `RUNNING` scan jobs, impact analyses, or document jobs at inspection. During full bootstrap, `$connect()` left the `pg.Pool` lazy; the first recovery transaction timed out while the initial pool client was still connecting. Running `SELECT 1` first completed that connection and made the same recovery transaction pass.
+- Fix: `PrismaService.onModuleInit()` now checks out and releases one pool client after Prisma connects, so worker startup waits for PostgreSQL readiness before stale-job recovery runs. Pool connection establishment has a 10-second timeout. Lifecycle tests cover connection acquisition/release and failure propagation; focused Jest suite passed 2/2.
+- Two regular Playwright runs completed migrations, started the configured worker, and reported the repository-identity route regression passed 1/1 (26.9s and 27.7s). Neither parent process returned a clean exit after the assertion; both were interrupted after more than two minutes, so neither counts as a completed Playwright pass. A `PW_PRESTARTED_SERVERS=1` control completed the same test cleanly (1 passed, exit 0).
+- `DEBUG=pw:webserver` confirmed teardown begins after the worker is started, but waits at worker-process termination on Windows. That debug run also failed during `seedDemo()` with Prisma `P1017` (`Server has closed the connection`) before reaching the route assertion. A subsequent read-only migration-status check against `ba_helper_test` succeeded and reported the schema up to date; the transient connection close still needs reproduction.
+- The original startup `P2028` did not recur in either run that reached the assertion. Treat that startup fix as locally verified, while keeping the configured Playwright lifecycle gate open until the worker process shuts down cleanly and the test exits 0.
 
 ## Frontend API Consumer Inventory
 
@@ -58,7 +61,7 @@ Success JSON calls through `apps/web/src/lib/api-client.ts` now require a Zod re
 | Consumer | Endpoint family | Current contract status |
 | --- | --- | --- |
 | `use-analyses.ts` | analysis list/detail/create, workspace, lineage, drift, graph, review queue, diff | Schema passed at every JSON callsite; endpoint-by-endpoint backend parity audit pending |
-| `use-approved-report.ts` | approved and final-reviewed report | Schema passed; backend parity audit pending |
+| `use-approved-report.ts` | approved and final-reviewed report | Backend controller parses the same shared schemas consumed by FE; successful final-report and approved-report GETs plus provenance rejection are E2E-covered. Approved `snapshotId` is the source `RepositorySnapshot.id`; final-reviewed `snapshotId` is the immutable `ReviewedReportSnapshot.id`, and FE does not compare them. |
 | `use-clarifications.ts` | clarification CRUD/revision and review clarification lifecycle | Runtime schemas passed at transport boundary; backend parity audit pending |
 | `use-code-comprehension.ts` | snapshot artifact list and artifact comprehension | Runtime schema and backend parity confirmed: list maps fields through `mapArtifactResponse` with bounded pagination, and comprehension authorizes by snapshot then returns persisted `snapshot.repositoryId`; both controller paths parse the shared contracts |
 | `use-documents.ts` | final-reviewed report and latest reviewed snapshot | Latest snapshot now validates with `reviewedReportSnapshotSchema`; parity audit pending |
@@ -89,6 +92,12 @@ Success JSON calls through `apps/web/src/lib/api-client.ts` now require a Zod re
 | `apiGetFile` callsites | Markdown/PDF downloads | Binary exception; content disposition and response status are checked, payload integrity coverage pending |
 
 The schema requirement is now enforced at the shared consumer boundary. It prevents a future callsite from compiling without a response contract and makes JavaScript/runtime omissions fail before network access. Success JSON payloads from all current typed callsites are runtime parsed. Non-2xx JSON bodies remain a documented exception: the client reads `code`, `message` and `details` only to shape an error, never treats the body as successful application data, and falls back to a generic error when the body is absent or malformed. This error-envelope behavior still needs focused verification against API exception filters.
+
+### Approved and Final-Reviewed Report Contract Identity (2026-10-29)
+
+- FE hooks validate both responses with shared Zod schemas; both API controller routes parse those same schemas before responding.
+- The success flow asserts the approved report response against `approvedImpactReportResponseSchema` and checks its identity/content. `approved-report.snapshotId` identifies the source `RepositorySnapshot`. `final-reviewed-report.snapshotId` identifies the immutable `ReviewedReportSnapshot` row; the two values intentionally differ. Contract comments now record this distinction.
+- The first assertion incorrectly compared these two IDs and failed. Correcting it to compare each response with its persisted source passed; this was a test expectation error, not an API data mismatch. Existing cross-analysis provenance rejection coverage remains in place.
 
 ### API Method/Path and Scope Cross-Check (2026-10-28)
 
@@ -269,7 +278,7 @@ Before the fix, a successful JSON response without a schema returned its unvalid
 - Complete manual keyboard, focus-return, screen-reader and visual contrast checks on the audited screens.
 - Cover all designated critical journeys: scan, requirement revision, analysis, QA evidence, review, finalization, reports, multi-repo, settings; include negative/retry/duplicate/stale/concurrent paths.
 - Run authorization matrix for cross-project access, full affected suites, full CI on the exact release candidate commit, and document residual P2/P3 issues.
-- Resolve the reproducible worker startup `P2028` and rerun Playwright with the configured API/worker/web startup path.
+- Complete the configured Windows Playwright lifecycle: investigate why the worker web-server teardown does not return, reproduce or explain the `P1017` during the debug seed, and obtain a clean exit-0 run with API/worker/web startup enabled.
 
 ## External State To Refresh Before Release
 

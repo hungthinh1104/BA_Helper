@@ -148,6 +148,7 @@ export const approvedImpactReportResponseSchema = z.object({
 	id: z.string().uuid(),
 	impactAnalysisId: z.string().uuid(),
 	requirementRevisionId: z.string().uuid(),
+	// RepositorySnapshot.id; this is not the immutable reviewed-report snapshot ID.
 	snapshotId: z.string().uuid(),
 	sourceTargetId: z.string().uuid().optional(),
 	type: z.literal('IMPACT_REPORT'),
@@ -167,6 +168,7 @@ export const approvedImpactReportResponseSchema = z.object({
 		repositoryId: z.string().uuid(),
 		targetRef: z.string(),
 		commitSha: z.string(),
+		// RepositorySnapshot.id; this is not the immutable reviewed-report snapshot ID.
 		snapshotId: z.string().uuid(),
 		analyzerVersion: z.string(),
 		generatedDocumentId: z.string().uuid(),

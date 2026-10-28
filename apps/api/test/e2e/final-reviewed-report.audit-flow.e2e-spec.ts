@@ -1,5 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import { approvedImpactReportResponseSchema } from '@ba-helper/contracts';
 import { createTestApp } from './helpers/test-app';
 import { resetDatabase } from './helpers/reset-db';
 import * as crypto from 'crypto';
@@ -309,6 +310,24 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
     expect(finalRes.body.locale).toBe('en');
     expect(finalRes.body.snapshotId).toBeDefined();
     expect(finalRes.body.reviewCompletion.isComplete).toBe(true);
+
+    const approvedRes = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/approved-report`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    const repositorySnapshotId = (await prisma.impactAnalysis.findUniqueOrThrow({
+      where: { id: analysisId },
+      select: { snapshotId: true },
+    })).snapshotId;
+    expect(finalRes.body.snapshotId).toBe(snapRes.body.id);
+    expect(approvedImpactReportResponseSchema.parse(approvedRes.body)).toMatchObject({
+      id: docId,
+      impactAnalysisId: analysisId,
+      snapshotId: repositorySnapshotId,
+      markdown: '# Live Generated Report',
+      status: 'APPROVED',
+      provenance: { snapshotId: repositorySnapshotId },
+    });
 
     const contextReader = app.get(ApprovedReportContextReader);
     const context = await contextReader.readContext(analysisId);

@@ -38,6 +38,7 @@ export type LocaleAwareReportQuery = z.infer<typeof localeAwareReportQuerySchema
 export const finalReviewedReportResponseSchema = z.object({
   testTraceSnapshot: reportTestTraceSnapshotSchema.nullable().optional(),
   analysisId: z.string().min(1),
+  // ReviewedReportSnapshot.id, not RepositorySnapshot.id.
   snapshotId: z.string().min(1),
   locale: reportLocaleSchema.default('en'),
   markdown: z.string().nullable().optional(),
