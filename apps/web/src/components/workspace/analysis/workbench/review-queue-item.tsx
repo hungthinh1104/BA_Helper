@@ -25,13 +25,6 @@ export function ReviewQueueItem({
   const evidenceCount = labels.evidenceCount.replace("{count}", String(item.evidenceCount))
   const artifactCount = labels.artifactCount.replace("{count}", String(item.linkedArtifactKeys.length))
   const impactBasis = basis ? getLocalizedLabel(evidenceBasisLabels, basis, locale) : null
-  const itemAriaLabel = labels.itemAriaLabel
-    .replace("{title}", item.title)
-    .replace("{type}", itemType)
-    .replace("{decision}", decision)
-    .replace("{evidenceCount}", evidenceCount)
-    .replace("{artifactCount}", artifactCount)
-    .replace("{blocker}", item.blockingFinalize ? labels.blocking : labels.notBlocking)
 
   return (
     <button
@@ -43,7 +36,6 @@ export function ReviewQueueItem({
           : "border-transparent hover:bg-surface-muted/50",
       )}
       aria-current={isSelected ? "true" : undefined}
-      aria-label={impactBasis ? `${itemAriaLabel} ${impactBasis}.` : itemAriaLabel}
       onClick={onSelect}
     >
       <div className="flex items-start justify-between gap-3">
@@ -55,8 +47,8 @@ export function ReviewQueueItem({
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <Badge variant="outline">{decision}</Badge>
-        <Badge variant="outline">{labels.evidenceCount.replace("{count}", String(item.evidenceCount))}</Badge>
-        <Badge variant="outline">{labels.artifactCount.replace("{count}", String(item.linkedArtifactKeys.length))}</Badge>
+        <Badge variant="outline">{evidenceCount}</Badge>
+        <Badge variant="outline">{artifactCount}</Badge>
         {impactBasis ? <Badge variant="outline">{impactBasis}</Badge> : null}
       </div>
     </button>

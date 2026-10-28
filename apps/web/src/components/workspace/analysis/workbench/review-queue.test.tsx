@@ -23,7 +23,6 @@ const labels = {
   notBlocking: "Not blocking",
   evidenceCount: "{count} evidence",
   artifactCount: "{count} linked artifacts",
-  itemAriaLabel: "{title}. {type}. {decision}. {evidenceCount}. {artifactCount}. {blocker}.",
   emptyTitle: "No review items",
   emptyDescription: "No backend review items are available for this analysis.",
   emptyFilteredTitle: "No matching review items",
@@ -60,9 +59,10 @@ describe("ReviewQueue", () => {
   it("makes the backend-prioritized blocker selected and readable", () => {
     render(<ReviewQueue viewModel={viewModel} locale="en" labels={labels} />)
     const blocker = screen.getByRole("button", {
-      name: /cancel booking.*impacted artifact.*needs review.*1 evidence.*1 linked artifacts.*blocking.*evidenced/i,
+      name: /cancel booking.*impacted artifact.*blocking.*needs review.*1 evidence.*1 linked artifacts.*evidenced/i,
     })
     expect(blocker.getAttribute("aria-current")).toBe("true")
+    expect(blocker).not.toHaveAttribute("aria-label")
     expect(screen.queryByText("1 linked artifacts")).not.toBeNull()
   })
 
