@@ -8,6 +8,7 @@ jest.mock("@/hooks/api/use-code-comprehension", () => ({
   useCodeComprehension: jest.fn(),
 }))
 jest.mock("@/i18n/navigation", () => ({ useLocalizedHref: () => (path: string) => path }))
+jest.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }))
 jest.mock("@/components/workspace/shared/back-button", () => ({
   BackButton: ({ href, label }: { href: string; label: string }) => <a href={href}>{label}</a>,
 }))
@@ -17,6 +18,8 @@ jest.mock("@/components/workspace/shared/page-header", () => ({
 
 const methodId = "00000000-0000-4000-8000-000000000001"
 const scenarioId = "00000000-0000-4000-8000-000000000002"
+const repositoryId = "00000000-0000-4000-8000-000000000010"
+const snapshotId = "00000000-0000-4000-8000-000000000011"
 const commitSha = "a".repeat(40)
 function behaviorClaim(kind: TestStaticBehaviorClaim["kind"], sourceText: string, line: number, startOffset: number,
   assertionKind?: TestStaticBehaviorClaim["assertionKind"]): TestStaticBehaviorClaim {
@@ -64,7 +67,7 @@ const response = {
   scenarioPagination: { limit: 50, offset: 0, hasMore: false },
   limitations: [{ code: "STATIC_ONLY", severity: "INFO", message: "Runtime behavior was not observed." }],
   snapshotContext: {
-    repositoryId: "00000000-0000-4000-8000-000000000010", snapshotId: "00000000-0000-4000-8000-000000000011",
+    repositoryId, snapshotId,
     commitSha, analyzerVersion: "0.15.0", coverageStatus: "READY", basis: "STATIC_SOURCE_REFERENCE",
     runtimeObservations: "NOT_IMPORTED",
   },
@@ -85,7 +88,7 @@ async function renderCondition(condition?: string) {
   let view!: ReturnType<typeof render>
   await act(async () => {
     view = render(<CodeComprehensionPage
-      params={Promise.resolve({ repositoryId: "repo-1", snapshotId: "snapshot-1", artifactId: methodId })}
+      params={Promise.resolve({ repositoryId, snapshotId, artifactId: methodId })}
       searchParams={Promise.resolve(condition === undefined ? {} : { studyCondition: condition })}
     />)
   })
@@ -121,7 +124,7 @@ describe("code comprehension study conditions", () => {
     expect(screen.queryByRole("link", { name: "Back to repository" })).not.toBeInTheDocument()
     expect(visual.evidenceText).toBe(textual.evidenceText)
     expect(visual.queryArgs).toEqual(textual.queryArgs)
-    expect(visual.queryArgs).toEqual(["snapshot-1", methodId, true])
+    expect(visual.queryArgs).toEqual([snapshotId, methodId, true])
     expect(visual.projection.selectedCode).toEqual(textual.projection.selectedCode)
     expect(visual.projection.codeEvidence).toEqual(textual.projection.codeEvidence)
     expect(visual.projection.snapshotContext).toEqual(textual.projection.snapshotContext)
@@ -155,7 +158,7 @@ describe("code comprehension study conditions", () => {
     } as never)
 
     await act(async () => render(<CodeComprehensionPage
-      params={Promise.resolve({ repositoryId: "repo-1", snapshotId: "snapshot-1", artifactId: methodId })}
+      params={Promise.resolve({ repositoryId, snapshotId, artifactId: methodId })}
       searchParams={Promise.resolve({})}
     />))
 
@@ -167,33 +170,33 @@ describe("code comprehension study conditions", () => {
 
   it("keeps the existing-workflow condition outside BA Helper evidence", async () => {
     await act(async () => render(<CodeComprehensionPage
-      params={Promise.resolve({ repositoryId: "repo-1", snapshotId: "snapshot-1", artifactId: methodId })}
+      params={Promise.resolve({ repositoryId, snapshotId, artifactId: methodId })}
       searchParams={Promise.resolve({ studyCondition: "EXISTING_WORKFLOW" })}
     />))
 
     expect(await screen.findByRole("heading", { name: "Use the existing workflow" })).toBeInTheDocument()
-    expect(useCodeComprehension).toHaveBeenCalledWith("snapshot-1", methodId, false)
+    expect(useCodeComprehension).toHaveBeenCalledWith(snapshotId, methodId, false)
   })
 
   it("fails closed on an unsupported study condition instead of exposing normal Explorer mode", async () => {
     await act(async () => render(<CodeComprehensionPage
-      params={Promise.resolve({ repositoryId: "repo-1", snapshotId: "snapshot-1", artifactId: methodId })}
+      params={Promise.resolve({ repositoryId, snapshotId, artifactId: methodId })}
       searchParams={Promise.resolve({ studyCondition: "TYPOGRAPHICAL_ERROR" })}
     />))
 
     expect(await screen.findByRole("heading", { name: "Unsupported study condition" })).toBeInTheDocument()
     expect(screen.queryByRole("heading", { name: "refundBooking" })).not.toBeInTheDocument()
-    expect(useCodeComprehension).toHaveBeenCalledWith("snapshot-1", methodId, false)
+    expect(useCodeComprehension).toHaveBeenCalledWith(snapshotId, methodId, false)
   })
 
   it("fails closed when duplicate study condition parameters make the assignment ambiguous", async () => {
     await act(async () => render(<CodeComprehensionPage
-      params={Promise.resolve({ repositoryId: "repo-1", snapshotId: "snapshot-1", artifactId: methodId })}
+      params={Promise.resolve({ repositoryId, snapshotId, artifactId: methodId })}
       searchParams={Promise.resolve({ studyCondition: ["TEXTUAL_EVIDENCE", "VISUAL_TEST_TRACE"] })}
     />))
 
     expect(await screen.findByRole("heading", { name: "Unsupported study condition" })).toBeInTheDocument()
-    expect(useCodeComprehension).toHaveBeenCalledWith("snapshot-1", methodId, false)
+    expect(useCodeComprehension).toHaveBeenCalledWith(snapshotId, methodId, false)
   })
 
   it("keeps normal Explorer navigation available without a study condition", async () => {
@@ -201,6 +204,6 @@ describe("code comprehension study conditions", () => {
 
     expect(normal.graphControl).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Back to repository" })).toBeInTheDocument()
-    expect(normal.queryArgs).toEqual(["snapshot-1", methodId, true])
+    expect(normal.queryArgs).toEqual([snapshotId, methodId, true])
   })
 })
