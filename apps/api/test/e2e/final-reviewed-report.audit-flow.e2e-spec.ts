@@ -8,6 +8,7 @@ import { grantProjectMembership } from './helpers/grant-project-membership';
 import { PrismaService } from '@ba-helper/backend-runtime';
 import { RunDocumentJobUseCase } from '@ba-helper/application';
 import { ApprovedReportContextReader } from '../../src/modules/document/application/queries/approved-report-context.reader';
+import { CreateReviewedReportSnapshotUseCase } from '../../src/modules/document/application/commands/create-reviewed-report-snapshot.usecase';
 
 describe('Final Reviewed Report Audit Flow (e2e)', () => {
   let app: INestApplication;
@@ -281,6 +282,55 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       markdown: '# Báo cáo đã duyệt\n\n## Phụ lục bằng chứng',
     });
     expect(vietnameseRes.body.snapshotId).toBe(finalRes.body.snapshotId);
+  });
+
+  it('allows exactly one finalize when two requests pass the same preflight state', async () => {
+    const { analysisId, link1Id, link2Id } = await setupBasicAnalysisWithLinks();
+
+    for (const linkId of [link1Id, link2Id]) {
+      await request(app.getHttpServer())
+        .put(`/api/v1/traceability-links/${linkId}/review-decision`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ decision: 'ACCEPTED', note: 'Verified' })
+        .expect(200);
+    }
+
+    // Both API calls must read the original WAITING_FOR_REVIEW state and finish
+    // preparing their frozen content before either is allowed to commit.
+    const builder = app.get(CreateReviewedReportSnapshotUseCase);
+    const original = builder.buildSnapshotCreateData.bind(builder);
+    let arrived = 0;
+    let release!: () => void;
+    const rendezvous = new Promise<void>(resolve => { release = resolve; });
+    const spy = jest.spyOn(builder, 'buildSnapshotCreateData').mockImplementation(async params => {
+      const data = await original(params);
+      arrived += 1;
+      if (arrived === 2) release();
+      await Promise.race([
+        rendezvous,
+        new Promise<void>((_resolve, reject) => setTimeout(
+          () => reject(new Error('Two finalize requests did not reach the concurrency gate')),
+          10000,
+        )),
+      ]);
+      return data;
+    });
+    try {
+      const send = () => request(app.getHttpServer())
+        .post(`/api/v1/impact-analyses/${analysisId}/finalize`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ acknowledgeUnreviewed: true });
+      const responses = await Promise.all([send(), send()]);
+      expect(arrived).toBe(2);
+      expect(responses.filter(response => response.status === 201)).toHaveLength(1);
+      expect(responses.filter(response => response.status >= 400)).toHaveLength(1);
+      expect(await prisma.reviewedReportSnapshot.count({ where: { analysisId } })).toBe(1);
+      expect(await prisma.documentJob.count({ where: { analysisId, documentType: 'IMPACT_REPORT' } })).toBe(1);
+      expect((await prisma.impactAnalysis.findUniqueOrThrow({ where: { id: analysisId } })).status)
+        .toBe('COMPLETED');
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it('unreviewed link blocks final report', async () => {
