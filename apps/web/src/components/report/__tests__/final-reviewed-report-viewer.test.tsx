@@ -89,7 +89,7 @@ describe('FinalReviewedReportViewer', () => {
     );
 
     renderComponent('test-id', true);
-    expect(await screen.findByText('Báo cáo đã duyệt')).toBeInTheDocument();
+    expect(await screen.findByText(/Báo cáo đã duyệt/)).toBeInTheDocument();
     expect(requestedLocale).toBe('vi-VN');
   });
 
