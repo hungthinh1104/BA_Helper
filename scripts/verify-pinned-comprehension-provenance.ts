@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { dependencyEdgeProvenanceSchema } from '../packages/contracts/src/dependency-provenance.contract';
 import type { PrismaService } from '../packages/backend-runtime/src/index';
+import { SecretRedactor } from '../packages/analyzer/src/scanner/core/secret-redactor';
 
 type EvidenceView = {
   id: string | null; sourceType: string; artifactId: string | null; provenanceKey: string | null;
@@ -142,8 +143,7 @@ function verifyEvidence(view: EvidenceView, artifactId: string, sourceType: stri
   const record = evidenceByKey.get(view.provenanceKey);
   if (!record || record.id !== view.id || record.snapshotId !== input.snapshotId ||
     record.artifactId !== artifactId || record.sourceType !== sourceType || record.sourcePath !== view.filePath ||
-    record.startLine !== view.startLine || record.endLine !== view.endLine || record.excerpt !== view.excerpt ||
-    record.isRedacted) {
+    record.startLine !== view.startLine || record.endLine !== view.endLine || record.excerpt !== view.excerpt) {
     throw new Error('Displayed evidence does not match its persisted snapshot provenance record.');
   }
   const artifact = artifactById.get(artifactId);
@@ -169,7 +169,9 @@ function verifyEvidence(view: EvidenceView, artifactId: string, sourceType: stri
   }
   const sourceRange = sourceLines.slice(view.startLine - 1, view.endLine).join('\n');
   const excerpt = view.excerpt.replace(/\r\n?/g, '\n');
-  if (!excerpt || !sourceRange.includes(excerpt)) {
+  const redaction = SecretRedactor.redact(sourceRange);
+  const safeSourceRange = redaction.redactedContent.replace(/\r\n?/g, '\n');
+  if (record.isRedacted !== redaction.foundSecrets || !excerpt || !safeSourceRange.includes(excerpt)) {
     throw new Error('Evidence excerpt does not match source text at its pinned location.');
   }
 }

@@ -1,208 +1,181 @@
 {
   "schemaVersion": 1,
-  "datasetId": "suites-unit-comprehension-candidate-v1",
+  "datasetId": "mutoe-nestjs-realworld-comprehension-candidate-v1",
   "authoredAt": "2026-10-27",
-  "groundTruthMethod": "SOURCE_AUDITED_CANDIDATE_LABELS_WITHOUT_ANALYZER_OUTPUT",
+  "groundTruthMethod": "SOURCE_AUDITED_CANDIDATE_LABELS_PENDING_BLINDED_REVIEW",
   "independentHumanReview": false,
   "heldOutFromResolverDevelopment": true,
-  "heldOutBasis": "The repository does not occur in local fixtures, ground-truth manifests, or evaluation scripts at the audited BA_Helper HEAD. No analyzer output was generated for this candidate. A separate reviewer must still confirm holdout suitability before approval.",
+  "heldOutBasis": "The pinned repository is absent from analyzer development fixtures, resolver tests, pinned regression labels, and evaluator inputs. A compatibility scan was generated during this audit before finalizing this source-authored candidate package; no resolver changes were made from its output and no candidate predictions are used as truth. This establishes only resolver-development separation, not independent annotation.",
   "labelReviewStatus": "PENDING_INDEPENDENT_REVIEW",
-  "annotationNote": "These are candidate labels written from pinned source. They are not independent human ground truth and must not be used to claim accuracy until a separate reviewer completes the blinded packet.",
+  "annotationNote": "Candidate relationships were checked against pinned source. The author had access to compatibility scan output, so these labels are not independent. A separate blinded reviewer must approve or correct every relationship before accuracy analysis.",
   "repository": {
-    "repositoryId": "suites-unit",
-    "repository": "suites-dev/suites-unit",
-    "url": "https://github.com/suites-dev/suites-unit",
-    "commitSha": "8fdabcbdd12cb5144199ad3ba7b93eaed0a20275",
+    "repositoryId": "mutoe-nestjs-realworld",
+    "repository": "mutoe/nestjs-realworld-example-app",
+    "url": "https://github.com/mutoe/nestjs-realworld-example-app",
+    "commitSha": "0c30a1828af52cf6528d0b3e9ddf86fc459723f6",
     "defaultBranchAtSelection": "master",
-    "licenseId": "Apache-2.0",
+    "licenseId": "MIT",
     "licenseEvidence": [
       {
         "path": "LICENSE",
-        "blobSha": "f77caa97266cc1cc8dc37a2309dbc83bf000fda4",
-        "url": "https://github.com/suites-dev/suites-unit/blob/8fdabcbdd12cb5144199ad3ba7b93eaed0a20275/LICENSE"
+        "blobSha": "ef9e0b1615ab15036e122d2b3550560e16baf455",
+        "url": "https://github.com/mutoe/nestjs-realworld-example-app/blob/0c30a1828af52cf6528d0b3e9ddf86fc459723f6/LICENSE"
       },
       {
         "path": "package.json",
-        "blobSha": "954886a78fcada6310168d0bd549b1ee06bdc3d8",
-        "url": "https://github.com/suites-dev/suites-unit/blob/8fdabcbdd12cb5144199ad3ba7b93eaed0a20275/package.json"
+        "blobSha": "91e4d2e372284dddde3e31a67b1fefadd9ed2a65",
+        "url": "https://github.com/mutoe/nestjs-realworld-example-app/blob/0c30a1828af52cf6528d0b3e9ddf86fc459723f6/package.json"
       }
     ],
     "suitability": {
       "typescript": true,
       "nestjs": true,
       "jest": true,
-      "evidence": "The pinned tree contains a NestJS dependency-injection adapter and its integration tests, Jest configuration files, and TypeScript unit tests using Jest declarations. The selected unit is a NestJS testing library, not a booking/payment application.",
+      "evidence": "The pinned package declares NestJS 9, Jest 27, and TypeScript 4.9 development dependencies, with Jest configured for src TypeScript tests. AuthService and AuthController contain decorated production methods with matching Jest declarations.",
       "limitations": [
-        "One repository and three target classes do not establish generalization to NestJS business applications.",
-        "The annotation package covers static declarations only and makes no claim that tests ran or passed.",
-        "The sample is small and requires an independent reviewer to approve each relationship."
+        "This is one small public application and does not establish generalization to other NestJS repositories.",
+        "Candidate labels are not independently reviewed and must not be used as accuracy results.",
+        "Static Jest declarations do not establish that tests ran or passed.",
+        "The task cases are in one authentication subsystem; independent reviewers must assess difficulty matching before participant recruitment.",
+        "A password-like test fixture is correctly secret-redacted in persisted evidence; reviewers must confirm the task remains answerable from the available evidence."
       ]
     }
   },
   "sourceFiles": [
-    { "path": "LICENSE", "blobSha": "f77caa97266cc1cc8dc37a2309dbc83bf000fda4", "role": "license" },
-    { "path": "package.json", "blobSha": "954886a78fcada6310168d0bd549b1ee06bdc3d8", "role": "test-and-license-metadata" },
-    { "path": "packages/core/package.json", "blobSha": "73fd8e6093af309bd16e5403410a451e9e747712", "role": "Jest-package-configuration" },
-    { "path": "packages/core/jest.config.ts", "blobSha": "0af3c142c036def10ea830e74dc030d30a03ac7d", "role": "Jest-configuration" },
-    { "path": "packages/core/src/services/dependency-container.spec.ts", "blobSha": "fc141ba79a694d75cb786ae6b77f572977ad8451", "role": "test-source" },
-    { "path": "packages/core/src/services/dependency-container.ts", "blobSha": "e91ffcba2d7204e0e04f91fa7f63827bd8a3a275", "role": "production-source" },
-    { "path": "packages/core/src/services/unit-mocker.spec.ts", "blobSha": "e4ea919af2848681c31cee29d09e83166aa109c1", "role": "test-source" },
-    { "path": "packages/core/src/services/unit-mocker.ts", "blobSha": "3427be5fe04b525bb6eb2e6fc9e49b3e0ee8aa61", "role": "production-source" },
-    { "path": "packages/core/src/services/unit-reference.spec.ts", "blobSha": "4ad40b3827e8ce97e3a8e273ef0e1ec83aaf5f94", "role": "test-source" },
-    { "path": "packages/core/src/services/unit-reference.ts", "blobSha": "33986e350adb2855176a8bc7af72de1f5ddc6682", "role": "production-source" },
-    { "path": "packages/di/nestjs/__test__/nestjs-adapter.integration.test.ts", "blobSha": "1a20500788897a283e6ddff4b01e1e720b6578b3", "role": "NestJS-Jest-suitability-evidence" }
+    { "path": "LICENSE", "blobSha": "ef9e0b1615ab15036e122d2b3550560e16baf455", "role": "license" },
+    { "path": "package.json", "blobSha": "91e4d2e372284dddde3e31a67b1fefadd9ed2a65", "role": "framework-test-and-license-metadata" },
+    { "path": "src/auth/auth.service.ts", "blobSha": "fe0d9a0920514da5bd29f25a327e7dde6f392849", "role": "production-source" },
+    { "path": "src/auth/auth.service.spec.ts", "blobSha": "654d02ef7e929117298256edf0051d07bcd4086d", "role": "test-source" },
+    { "path": "src/auth/auth.controller.ts", "blobSha": "88874f077cd7bd977f344bc3170f676e78f66c9b", "role": "production-source" },
+    { "path": "src/auth/auth.controller.spec.ts", "blobSha": "4635d5b93869bef6d6651fbc5e9ef6fd2a9683c4", "role": "test-source" }
   ],
   "annotations": [
     {
-      "annotationId": "DC-01",
-      "testIdentity": {
-        "path": "packages/core/src/services/dependency-container.spec.ts",
-        "suitePath": ["Dependency Container Unit Spec"],
-        "title": "should return the corresponding value when the identifier matches a single identifier and metadata is not provided",
-        "lineRange": { "start": 8, "end": 18 }
-      },
-      "targetIdentity": {
-        "path": "packages/core/src/services/dependency-container.ts",
-        "qualifiedSymbol": "DependencyContainer.resolve",
-        "definitionRange": { "start": 31, "end": 56 }
-      },
+      "annotationId": "AUTH-01",
+      "testIdentity": { "path": "src/auth/auth.service.spec.ts", "suitePath": ["AuthService", "validate user"], "title": "should return user info without password when validate successful", "lineRange": { "start": 86, "end": 94 } },
+      "targetIdentity": { "path": "src/auth/auth.service.ts", "qualifiedSymbol": "AuthService.validateUser", "definitionRange": { "start": 39, "end": 48 } },
       "expectedRelationship": "DIRECT",
       "sourceSupport": [
-        { "path": "packages/core/src/services/dependency-container.spec.ts", "startLine": 15, "endLine": 17, "purpose": "direct invocation and returned-value assertion" },
-        { "path": "packages/core/src/services/dependency-container.ts", "startLine": 35, "endLine": 46, "purpose": "single-identifier resolution branch" }
+        { "path": "src/auth/auth.service.spec.ts", "startLine": 86, "endLine": 94, "purpose": "direct method invocation and returned user assertions" },
+        { "path": "src/auth/auth.service.ts", "startLine": 39, "endLine": 48, "purpose": "user lookup, password comparison, and password omission" }
       ],
-      "mockBoundary": { "status": "PRESENT", "detail": "The container is initialized with test-controlled mock values." },
-      "assertionToInvocation": "DIRECT",
-      "rationale": "The test body calls resolve on the constructed dependency container and asserts its returned value.",
+      "mockBoundary": { "status": "PRESENT", "detail": "UserService.findUser is a Jest spy returning a test-controlled user record." },
+      "assertionToInvocation": "DIRECT_RESULT",
+      "rationale": "The test body invokes validateUser and asserts properties of the returned value; no execution result is claimed.",
       "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
     },
     {
-      "annotationId": "DC-02",
-      "testIdentity": {
-        "path": "packages/core/src/services/dependency-container.spec.ts",
-        "suitePath": ["Dependency Container Unit Spec"],
-        "title": "should return undefined when the identifier matches a single identifier but metadata does not match",
-        "lineRange": { "start": 44, "end": 53 }
-      },
-      "targetIdentity": {
-        "path": "packages/core/src/services/dependency-container.ts",
-        "qualifiedSymbol": "DependencyContainer.resolve",
-        "definitionRange": { "start": 31, "end": 56 }
-      },
+      "annotationId": "AUTH-02",
+      "testIdentity": { "path": "src/auth/auth.service.spec.ts", "suitePath": ["AuthService", "validate user"], "title": "should throw bad request exception when invalid user", "lineRange": { "start": 96, "end": 101 } },
+      "targetIdentity": { "path": "src/auth/auth.service.ts", "qualifiedSymbol": "AuthService.validateUser", "definitionRange": { "start": 39, "end": 48 } },
       "expectedRelationship": "DIRECT",
       "sourceSupport": [
-        { "path": "packages/core/src/services/dependency-container.spec.ts", "startLine": 49, "endLine": 52, "purpose": "direct invocation with mismatching metadata and undefined assertion" },
-        { "path": "packages/core/src/services/dependency-container.ts", "startLine": 48, "endLine": 56, "purpose": "metadata matching branch" }
+        { "path": "src/auth/auth.service.spec.ts", "startLine": 96, "endLine": 101, "purpose": "direct async invocation and rejection assertion" },
+        { "path": "src/auth/auth.service.ts", "startLine": 40, "endLine": 43, "purpose": "missing-user exception branch" }
       ],
-      "mockBoundary": { "status": "PRESENT", "detail": "The registered value is test-controlled." },
-      "assertionToInvocation": "DIRECT",
-      "rationale": "The test directly calls resolve with a mismatching metadata object and asserts that the result is undefined.",
+      "mockBoundary": { "status": "PRESENT", "detail": "UserService.findUser is stubbed to resolve undefined." },
+      "assertionToInvocation": "DIRECT_REJECTION",
+      "rationale": "The declaration directly invokes validateUser with a test-controlled missing-user result and declares a rejection assertion.",
       "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
     },
     {
-      "annotationId": "UR-01",
-      "testIdentity": {
-        "path": "packages/core/src/services/unit-reference.spec.ts",
-        "suitePath": ["Unit Reference Unit Spec"],
-        "title": "should return the corresponding class or value impl unique identifier with no metadata",
-        "lineRange": { "start": 63, "end": 74 }
-      },
-      "targetIdentity": {
-        "path": "packages/core/src/services/unit-reference.ts",
-        "qualifiedSymbol": "UnitReference.get",
-        "definitionRange": { "start": 165, "end": 203 }
-      },
+      "annotationId": "AUTH-03",
+      "testIdentity": { "path": "src/auth/auth.service.spec.ts", "suitePath": ["AuthService", "validate user"], "title": "should throw bad request exception when invalid password", "lineRange": { "start": 103, "end": 109 } },
+      "targetIdentity": { "path": "src/auth/auth.service.ts", "qualifiedSymbol": "AuthService.validateUser", "definitionRange": { "start": 39, "end": 48 } },
       "expectedRelationship": "DIRECT",
       "sourceSupport": [
-        { "path": "packages/core/src/services/unit-reference.spec.ts", "startLine": 63, "endLine": 73, "purpose": "parameterized callback invocation and equality assertion" },
-        { "path": "packages/core/src/services/unit-reference.ts", "startLine": 165, "endLine": 202, "purpose": "overloaded public method implementation" }
+        { "path": "src/auth/auth.service.spec.ts", "startLine": 103, "endLine": 109, "purpose": "direct async invocation with controlled user and rejection assertion" },
+        { "path": "src/auth/auth.service.ts", "startLine": 44, "endLine": 46, "purpose": "password mismatch branch" }
       ],
-      "mockBoundary": { "status": "PRESENT", "detail": "The unit reference resolves configured mocked values from a dependency container." },
-      "assertionToInvocation": "DIRECT",
-      "parameterizedRows": "Static table entries are visible in source; no row is labeled as executed by this annotation.",
-      "rationale": "The callback directly calls get(identifier) and compares the result to the paired value for each declared table row.",
+      "mockBoundary": { "status": "PRESENT", "detail": "UserService.findUser is stubbed to return a test-controlled user password." },
+      "assertionToInvocation": "DIRECT_REJECTION",
+      "rationale": "The test declaration supplies a user record and invokes validateUser with a different password.",
       "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
     },
     {
-      "annotationId": "UM-01",
-      "testIdentity": {
-        "path": "packages/core/src/services/unit-mocker.spec.ts",
-        "suitePath": [
-          "Unit Mocker Unit Spec",
-          "given that the adapter returns container with the following dependencies",
-          "and given there are some already mocked injectables from advanced in the mocks container",
-          "when applying all the mocks on the target unit, including the already mocked"
-        ],
-        "title": "should stay mocked",
-        "lineRange": { "start": 106, "end": 141 }
-      },
-      "targetIdentity": {
-        "path": "packages/core/src/services/unit-mocker.ts",
-        "qualifiedSymbol": "UnitMocker.constructUnit",
-        "definitionRange": { "start": 24, "end": 46 }
-      },
+      "annotationId": "AUTH-04",
+      "testIdentity": { "path": "src/auth/auth.service.spec.ts", "suitePath": ["AuthService", "login"], "title": "should return user profile when login successful", "lineRange": { "start": 72, "end": 82 } },
+      "targetIdentity": { "path": "src/auth/auth.service.ts", "qualifiedSymbol": "AuthService.login", "definitionRange": { "start": 33, "end": 37 } },
+      "expectedRelationship": "DIRECT",
+      "sourceSupport": [
+        { "path": "src/auth/auth.service.spec.ts", "startLine": 72, "endLine": 82, "purpose": "direct invocation and returned profile assertions" },
+        { "path": "src/auth/auth.service.ts", "startLine": 33, "endLine": 37, "purpose": "validation call, token generation, and returned auth data" }
+      ],
+      "mockBoundary": { "status": "PRESENT", "detail": "validateUser and generateToken are both spied and return test-controlled values." },
+      "assertionToInvocation": "DIRECT_RESULT",
+      "rationale": "The test invokes login but stubs its validation and token-generation methods, so it does not establish their implementations.",
+      "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "annotationId": "AUTH-05",
+      "testIdentity": { "path": "src/auth/auth.controller.spec.ts", "suitePath": ["Auth Controller", "login"], "title": "should call login service when call login controller", "lineRange": { "start": 64, "end": 74 } },
+      "targetIdentity": { "path": "src/auth/auth.controller.ts", "qualifiedSymbol": "AuthController.login", "definitionRange": { "start": 25, "end": 29 } },
+      "expectedRelationship": "DIRECT",
+      "sourceSupport": [
+        { "path": "src/auth/auth.controller.spec.ts", "startLine": 64, "endLine": 74, "purpose": "direct controller invocation and response assertions" },
+        { "path": "src/auth/auth.controller.ts", "startLine": 25, "endLine": 29, "purpose": "service call and response wrapping" }
+      ],
+      "mockBoundary": { "status": "PRESENT", "detail": "AuthService.login is stubbed to resolve a fixed profile." },
+      "assertionToInvocation": "DIRECT_RESULT",
+      "rationale": "The test invokes AuthController.login directly; the service behavior is supplied by a spy.",
+      "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "annotationId": "AUTH-06",
+      "testIdentity": { "path": "src/auth/auth.controller.spec.ts", "suitePath": ["Auth Controller", "login"], "title": "should call login service when call login controller", "lineRange": { "start": 64, "end": 74 } },
+      "targetIdentity": { "path": "src/auth/auth.service.ts", "qualifiedSymbol": "AuthService.login", "definitionRange": { "start": 33, "end": 37 } },
       "expectedRelationship": "INDIRECT",
       "sourceSupport": [
-        { "path": "packages/core/src/services/unit-mocker.spec.ts", "startLine": 100, "endLine": 104, "purpose": "preconfigured mock boundary" },
-        { "path": "packages/core/src/services/unit-mocker.spec.ts", "startLine": 107, "endLine": 109, "purpose": "shared beforeAll invocation" },
-        { "path": "packages/core/src/services/unit-mocker.spec.ts", "startLine": 137, "endLine": 140, "purpose": "assertions against the shared result" },
-        { "path": "packages/core/src/services/unit-mocker.ts", "startLine": 24, "endLine": 46, "purpose": "target implementation" }
+        { "path": "src/auth/auth.controller.ts", "startLine": 25, "endLine": 29, "purpose": "controller statically calls AuthService.login" },
+        { "path": "src/auth/auth.controller.spec.ts", "startLine": 64, "endLine": 74, "purpose": "the test replaces AuthService.login with a resolving spy" },
+        { "path": "src/auth/auth.service.ts", "startLine": 33, "endLine": 37, "purpose": "service method identity" }
       ],
-      "mockBoundary": { "status": "PRESENT", "detail": "Advanced mocks are supplied through mocksContainer and checked in the result." },
-      "assertionToInvocation": "INDIRECT_SHARED_SETUP",
-      "rationale": "The test case reads a value produced by a constructUnit call in its enclosing beforeAll hook; the relationship is static and setup-mediated.",
+      "mockBoundary": { "status": "PRESENT", "detail": "AuthService.login is mocked; the test does not execute this service implementation through the controller call." },
+      "assertionToInvocation": "STATIC_PATH_CROSSES_MOCK",
+      "rationale": "A production static call path exists from controller to service, but this declaration mocks the called method; static reachability must not be reported as observed execution.",
       "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
     },
     {
-      "annotationId": "UM-02",
-      "testIdentity": {
-        "path": "packages/core/src/services/unit-mocker.spec.ts",
-        "suitePath": [
-          "Unit Mocker Unit Spec",
-          "given that the adapter returns container with the following dependencies",
-          "and given there are some already mocked injectables from advanced in the mocks container",
-          "when applying all the mocks on the target unit, including the already mocked"
-        ],
-        "title": "should apply the mocks to the class properties as well",
-        "lineRange": { "start": 106, "end": 149 }
-      },
-      "targetIdentity": {
-        "path": "packages/core/src/services/unit-mocker.ts",
-        "qualifiedSymbol": "UnitMocker.constructUnit",
-        "definitionRange": { "start": 24, "end": 46 }
-      },
-      "expectedRelationship": "INDIRECT",
+      "annotationId": "AUTH-07",
+      "testIdentity": { "path": "src/auth/auth.service.spec.ts", "suitePath": ["AuthService", "register"], "title": "should throw error when email is exist", "lineRange": { "start": 62, "end": 69 } },
+      "targetIdentity": { "path": "src/auth/auth.service.ts", "qualifiedSymbol": "AuthService.register", "definitionRange": { "start": 18, "end": 30 } },
+      "expectedRelationship": "DIRECT",
       "sourceSupport": [
-        { "path": "packages/core/src/services/unit-mocker.spec.ts", "startLine": 107, "endLine": 109, "purpose": "shared setup invocation" },
-        { "path": "packages/core/src/services/unit-mocker.spec.ts", "startLine": 143, "endLine": 149, "purpose": "property mock assertions" },
-        { "path": "packages/core/src/services/unit-mocker.ts", "startLine": 29, "endLine": 46, "purpose": "dependency resolution and result construction" }
+        { "path": "src/auth/auth.service.spec.ts", "startLine": 62, "endLine": 69, "purpose": "direct registration invocation with an asserted duplicate-email exception" },
+        { "path": "src/auth/auth.service.ts", "startLine": 18, "endLine": 30, "purpose": "duplicate username/email checks and subsequent create/token calls" }
       ],
-      "mockBoundary": { "status": "PRESENT", "detail": "The assertions compare injected properties with test-controlled mock values." },
-      "assertionToInvocation": "UNRESOLVED_SHARED_SETUP_DATAFLOW",
-      "rationale": "The enclosing hook creates the value under test, but the exact invocation-to-assertion association crosses a shared setup boundary and is intentionally flagged for independent adjudication.",
+      "mockBoundary": { "status": "PRESENT", "detail": "UserService.findUser is stubbed to return undefined once and then a matching email record." },
+      "assertionToInvocation": "DIRECT_REJECTION",
+      "rationale": "The declaration checks the exception path; it does not assert that createUser or generateToken was not called.",
       "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
     },
     {
-      "annotationId": "NC-01",
-      "testIdentity": {
-        "path": "packages/core/src/services/dependency-container.spec.ts",
-        "suitePath": ["Dependency Container Unit Spec"],
-        "title": "should return undefined when the identifier does not match any identifier",
-        "lineRange": { "start": 32, "end": 42 }
-      },
-      "targetIdentity": {
-        "path": "packages/core/src/services/unit-mocker.ts",
-        "qualifiedSymbol": "UnitMocker.constructUnit",
-        "definitionRange": { "start": 24, "end": 46 }
-      },
+      "annotationId": "AUTH-08",
+      "testIdentity": { "path": "src/auth/auth.service.spec.ts", "suitePath": ["AuthService", "generateToken"], "title": "should return JWT", "lineRange": { "start": 113, "end": 117 } },
+      "targetIdentity": { "path": "src/auth/auth.service.ts", "qualifiedSymbol": "AuthService.generateToken", "definitionRange": { "start": 50, "end": 52 } },
+      "expectedRelationship": "DIRECT",
+      "sourceSupport": [
+        { "path": "src/auth/auth.service.spec.ts", "startLine": 26, "endLine": 31, "purpose": "testing module provides a JwtService mock whose sign method returns token" },
+        { "path": "src/auth/auth.service.spec.ts", "startLine": 113, "endLine": 117, "purpose": "direct invocation and equality assertion" },
+        { "path": "src/auth/auth.service.ts", "startLine": 50, "endLine": 52, "purpose": "delegation to JwtService.sign" }
+      ],
+      "mockBoundary": { "status": "PRESENT", "detail": "JwtService.sign is configured as a Jest mock returning the literal token." },
+      "assertionToInvocation": "DIRECT_RESULT",
+      "rationale": "The source and declaration support returning the mocked sign result, not that the test executes or that the result is a valid signed JWT.",
+      "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "annotationId": "NEG-01",
+      "testIdentity": { "path": "src/auth/auth.controller.spec.ts", "suitePath": ["Auth Controller"], "title": "should be defined", "lineRange": { "start": 46, "end": 48 } },
+      "targetIdentity": { "path": "src/auth/auth.controller.ts", "qualifiedSymbol": "AuthController.login", "definitionRange": { "start": 25, "end": 29 } },
       "expectedRelationship": "ABSENT",
       "sourceSupport": [
-        { "path": "packages/core/src/services/dependency-container.spec.ts", "startLine": 32, "endLine": 42, "purpose": "negative-control test declaration and assertions" },
-        { "path": "packages/core/src/services/unit-mocker.ts", "startLine": 24, "endLine": 46, "purpose": "target symbol identity" }
+        { "path": "src/auth/auth.controller.spec.ts", "startLine": 46, "endLine": 48, "purpose": "controller existence assertion with no login invocation" },
+        { "path": "src/auth/auth.controller.ts", "startLine": 25, "endLine": 29, "purpose": "target method identity" }
       ],
-      "mockBoundary": { "status": "PRESENT", "detail": "The test uses a dependency container with test values, but does not reference UnitMocker." },
+      "mockBoundary": { "status": "PRESENT", "detail": "The module creates a controller and test providers, but the selected declaration does not invoke login." },
       "assertionToInvocation": "NOT_APPLICABLE",
-      "rationale": "This target/test pair is a negative control: the test references DependencyContainer.resolve and contains no supported reference to UnitMocker.constructUnit.",
+      "rationale": "Candidate negative pair: the declaration asserts that the controller object exists and contains no supported reference to login.",
       "reviewStatus": "PENDING_INDEPENDENT_REVIEW"
     }
   ]

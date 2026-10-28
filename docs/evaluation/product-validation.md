@@ -8,16 +8,15 @@ The separate developer code-comprehension study (G2A) uses a different task
 schema and protocol: [developer-comprehension-study.md](developer-comprehension-study.md).
 It does not use BA analysis/report IDs and does not share the BA/QA scorecard.
 
-The optional `studyObservations` array in the dataset template records the
-three-condition comprehension study without storing participant identity:
-`EXISTING_WORKFLOW`, `TEXTUAL_EVIDENCE`, and `VISUAL_TEST_TRACE`. Each row is
-pinned to a case repository commit, tool commit, task, reviewer session code,
-and timestamp. It records task correctness, confidence, elapsed time,
-navigation actions, unsupported conclusions, usefulness, and voluntary reuse.
-The scorecard reports `NOT_COLLECTED` when no observations exist and
-`INCOMPLETE` until every one of the five tasks is represented in each of the
-three conditions. It never converts missing participant observations into a
-product success result.
+The optional `studyObservations` field in this BA/QA dataset is a legacy,
+compact three-condition comparison attached to BA/QA cases. Its rows must
+reference a case with persisted analysis and reviewed-report provenance, and it
+does not capture submitted task answers, exact evidence locations,
+unsupported-claim details, or abandoned tasks. Do not use it for the standalone
+G2A developer-comprehension study. G2A uses
+[its own pinned task dataset and scorecard](developer-comprehension-study.md),
+which keeps developer observations separate from BA/QA product-validation
+results.
 
 ## Case protocol
 
@@ -74,7 +73,8 @@ A denominator of zero produces `null`, never an invented zero or perfect score.
 Counts are validated so accepted/found/useful values cannot exceed their
 reviewed/expected totals.
 
-For `studyObservations`, the scorecard reports per-condition task correctness,
+For the legacy embedded `studyObservations`, the scorecard reports
+per-condition task correctness,
 behavior explanation, tested-behavior understanding, unseen-scenario
 prediction, source-evidence identification, unsupported-conclusion rate,
 confidence calibration gap, time to correct understanding, navigation actions,

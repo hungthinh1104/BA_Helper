@@ -7,23 +7,24 @@ the additional value, if any, of Visual Test Trace. Both product hypotheses
 remain unproven. This document, the task dataset, and automated scorecards are
 engineering materials; none are participant observations.
 
-The held-out candidate is suites-dev/suites-unit at commit
-8fdabcbdd12cb5144199ad3ba7b93eaed0a20275. Its pinned LICENSE and package
-metadata identify Apache-2.0. The repository is TypeScript, includes a NestJS
-dependency-injection adapter, and uses Jest configuration and Jest tests. It is
-a NestJS testing library rather than a booking/payment application, so results
-must remain scoped to this codebase and must not be presented as application
-generalization.
+The current candidate is mutoe/nestjs-realworld-example-app at commit
+0c30a1828af52cf6528d0b3e9ddf86fc459723f6. Its pinned LICENSE and package
+metadata identify MIT; its package declares NestJS and Jest. The selected tasks
+cover authentication service and controller methods in one small TypeScript
+application. Results must remain scoped to this repository and must not be
+presented as generalization across NestJS applications.
 
 The audit and current readiness decision are recorded in
 [g2a-completion-report.md](g2a-completion-report.md).
 
 Candidate relationship labels are stored separately in
 tests/evaluation/developer-comprehension/candidate-ground-truth.json and remain
-PENDING_INDEPENDENT_REVIEW. A separate reviewer must approve or correct them
-from the pinned source before this task pool is treated as study-ready. The
-current dataset template has NOT_STARTED status and contains no participant
-data.
+PENDING_INDEPENDENT_REVIEW. The label author had access to analyzer compatibility
+output, so these labels are candidate material only. A blinded reviewer must
+approve or correct them from pinned source before the dataset can enter READY.
+The prior suites-unit candidate is archived separately because its selected
+methods were not extracted as production artifacts. The current dataset
+template has NOT_STARTED status and contains no participant data.
 
 ## Conditions
 
@@ -52,6 +53,11 @@ The B/C Explorer routes hide the in-app back link, and duplicate or unsupported
 studyCondition values fail closed. The condition is still URL-based: removing
 the parameter opens the ordinary Explorer, so the operator must keep the
 assigned URL fixed for the duration of the task.
+
+The pinned corpus contains a password-like test fixture that is secret-redacted
+in persisted evidence. Reviewers must confirm the assigned tasks remain
+answerable from the source evidence available to participants; do not copy the
+redacted literal into study notes or answer materials.
 
 Use the same AI assistant and prompt policy in the existing-workflow condition
 for all participants. Do not weaken normal IDE search or source navigation.
@@ -92,10 +98,11 @@ task-family coverage and task-order balance. The six-slot schedule is a pilot
 plan, not a simulated dataset.
 
 Before recruitment, have reviewers who did not author the candidate labels
-inspect task difficulty and expected answers. Match task complexity, number of
-relevant methods, relationship depth, scenario count, mocks, and reasoning
-steps. If reviewers cannot make the tasks sufficiently comparable, revise the
-pool before running the study.
+inspect task difficulty and expected answers. The current tasks are all in one
+authentication subsystem and may not be equally difficult; this needs explicit
+review. Match task complexity, number of relevant methods, relationship depth,
+scenario count, mocks, and reasoning steps. If reviewers cannot make the tasks
+sufficiently comparable, revise the pool before running the study.
 
 ## Scoring
 

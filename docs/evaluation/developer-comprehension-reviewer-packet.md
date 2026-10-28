@@ -1,60 +1,45 @@
 # Blinded Ground-Truth Review Packet
 
-## Reviewer instruction
+## Reviewer instructions
 
-Review the source at commit
-8fdabcbdd12cb5144199ad3ba7b93eaed0a20275 in
-suites-dev/suites-unit. Do not open candidate-ground-truth.json or view any
-BA_Helper analyzer output before returning your completed annotation template.
-The candidate author did not certify these labels. Do not execute the external
-repository.
+Review source at commit
+`0c30a1828af52cf6528d0b3e9ddf86fc459723f6` in
+`mutoe/nestjs-realworld-example-app`. Do not open
+`candidate-ground-truth.json`, the candidate answer key, or BA_Helper analyzer
+output before returning the completed annotation template. Do not execute the
+external repository.
 
-For every test/target pair, independently classify the relationship as DIRECT,
-INDIRECT, ABSENT, or UNRESOLVED. Record exact supporting source ranges,
-assertion/invocation association, mock boundary, rationale, reviewer status,
-and a pseudonymous reviewer code. “Unresolved” is appropriate when the source
-does not support a more specific relationship. Do not infer execution,
-coverage, or pass status.
+For every test/target pair in
+`tests/evaluation/developer-comprehension/annotation-template.csv`, independently
+classify the source relationship as DIRECT, INDIRECT, ABSENT, or UNRESOLVED.
+Record exact source support, whether the relation is direct or setup/static-path
+mediated, mock boundaries, assertion-to-invocation association, rationale, and
+a random reviewer code. Do not infer test execution, passing status, runtime
+coverage, or behavior hidden behind a mock.
 
-Complete the blank file
-tests/evaluation/developer-comprehension/annotation-template.csv. Return
-corrections with the source evidence and rationale; preserve the original
-candidate labels separately.
+Return the completed template and any disagreements with the source lines that
+support your conclusion. The coordinator may reconcile labels after all
+independent reviews are returned. Until approval is recorded, the dataset stays
+`PENDING_INDEPENDENT_REVIEW` and cannot be used as accuracy ground truth.
 
-## Pinned source material
+## Pinned source
 
-Repository: https://github.com/suites-dev/suites-unit
+Repository: <https://github.com/mutoe/nestjs-realworld-example-app>
 
-Commit: 8fdabcbdd12cb5144199ad3ba7b93eaed0a20275
+Commit: `0c30a1828af52cf6528d0b3e9ddf86fc459723f6`
 
-License: Apache-2.0, verified from LICENSE and package.json at this commit.
+License: MIT, verified from `LICENSE` and `package.json` at the pinned commit.
 
-Inspect these files directly at the pinned commit:
+Inspect these files directly at that commit:
 
-- DependencyContainer test:
-  https://github.com/suites-dev/suites-unit/blob/8fdabcbdd12cb5144199ad3ba7b93eaed0a20275/packages/core/src/services/dependency-container.spec.ts
-- DependencyContainer source:
-  https://github.com/suites-dev/suites-unit/blob/8fdabcbdd12cb5144199ad3ba7b93eaed0a20275/packages/core/src/services/dependency-container.ts
-- UnitMocker test:
-  https://github.com/suites-dev/suites-unit/blob/8fdabcbdd12cb5144199ad3ba7b93eaed0a20275/packages/core/src/services/unit-mocker.spec.ts
-- UnitMocker source:
-  https://github.com/suites-dev/suites-unit/blob/8fdabcbdd12cb5144199ad3ba7b93eaed0a20275/packages/core/src/services/unit-mocker.ts
-- UnitReference test:
-  https://github.com/suites-dev/suites-unit/blob/8fdabcbdd12cb5144199ad3ba7b93eaed0a20275/packages/core/src/services/unit-reference.spec.ts
-- UnitReference source:
-  https://github.com/suites-dev/suites-unit/blob/8fdabcbdd12cb5144199ad3ba7b93eaed0a20275/packages/core/src/services/unit-reference.ts
-- NestJS adapter Jest integration test:
-  https://github.com/suites-dev/suites-unit/blob/8fdabcbdd12cb5144199ad3ba7b93eaed0a20275/packages/di/nestjs/__test__/nestjs-adapter.integration.test.ts
+- AuthService production source: [auth.service.ts](https://github.com/mutoe/nestjs-realworld-example-app/blob/0c30a1828af52cf6528d0b3e9ddf86fc459723f6/src/auth/auth.service.ts)
+- AuthService Jest source: [auth.service.spec.ts](https://github.com/mutoe/nestjs-realworld-example-app/blob/0c30a1828af52cf6528d0b3e9ddf86fc459723f6/src/auth/auth.service.spec.ts)
+- AuthController production source: [auth.controller.ts](https://github.com/mutoe/nestjs-realworld-example-app/blob/0c30a1828af52cf6528d0b3e9ddf86fc459723f6/src/auth/auth.controller.ts)
+- AuthController Jest source: [auth.controller.spec.ts](https://github.com/mutoe/nestjs-realworld-example-app/blob/0c30a1828af52cf6528d0b3e9ddf86fc459723f6/src/auth/auth.controller.spec.ts)
+- Jest and package metadata: [package.json](https://github.com/mutoe/nestjs-realworld-example-app/blob/0c30a1828af52cf6528d0b3e9ddf86fc459723f6/package.json)
 
-The packet covers direct method references, setup-mediated relationships,
-parameterized declarations, test-controlled mocks, returned-value assertions,
-an absent target/test pair, and an assertion-to-invocation association that
-needs explicit adjudication.
-
-## Review independence and disposition
-
-The reviewer must not have authored the candidate labels or seen analyzer
-predictions. Record reviewer identity only as a random code. A study coordinator
-may reconcile disagreements after independent reviews are returned. Until
-reviewers approve the labels, the data remains
-PENDING_INDEPENDENT_REVIEW and cannot be used as accuracy ground truth.
+The sample includes direct method references, a static path through a mocked
+service, multiple validation scenarios, assertions, mocked dependencies, a
+negative control, and claims whose runtime/test status cannot be established
+from source alone. Assess whether the selected tasks are sufficiently similar
+in difficulty before any participant recruitment.

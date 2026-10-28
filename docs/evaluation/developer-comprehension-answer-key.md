@@ -1,110 +1,107 @@
 # Developer Comprehension Candidate Answer Key
 
-This document is for human rubric reviewers only. Do not show it to
-participants before their task is complete. It is a source-authored candidate
-key, not independent human adjudication. Use the exact repository commit in the
-dataset and recheck every line after any source change.
+For rubric reviewers only. Do not show this file during a participant task or to
+the blinded ground-truth reviewer before they return the annotation template.
+This is a candidate key based on pinned source, not independent adjudication.
 
-## T1: Explain DependencyContainer.resolve
+Repository: `mutoe/nestjs-realworld-example-app`
+Commit: `0c30a1828af52cf6528d0b3e9ddf86fc459723f6`
 
-Expected findings:
-
-- The implementation filters registrations by strict identifier equality
-  (dependency-container.ts lines 35-38).
-- No matching registration returns undefined (lines 40-42).
-- One matching registration with omitted metadata returns its value (lines
-  44-46); this branch does not compare the registered metadata.
-- When metadata is supplied, the method searches using deep strict equality
-  (lines 48-56).
-- Duplicate registrations without matching metadata do not select an arbitrary
-  matching value; the method returns undefined after the metadata search.
-- Relevant declarations include the duplicate-token, absent-token, mismatched
-  metadata, matched metadata, and missing-metadata test cases in
-  dependency-container.spec.ts lines 20-89.
-
-Required rubric dimensions: behavior accuracy and source evidence.
-
-## T2: Verify UnitMocker test evidence
+## T1: Explain AuthService.validateUser
 
 Expected findings:
 
-- The test setup creates a UnitMocker with a factory returning a test marker and
-  an adapter exposing an injectable registry (unit-mocker.spec.ts lines 90-95).
-- An advanced mocks container is configured at lines 100-104.
-- constructUnit is invoked in the nested beforeAll at lines 106-109, outside
-  the body of the test titled “should stay mocked”.
-- That test asserts resolved values at lines 137-140. The property-mock test
-  asserts injected properties at lines 143-149.
-- The production method delegates dependency resolution to DependencyResolver,
-  instantiates the target class, and returns a container, instance, and
-  resolution summary (unit-mocker.ts lines 24-46).
-- These are static declarations. Source and declarations alone do not show
-  that Jest ran or that the assertions passed.
-
-Required rubric dimensions: source evidence, test semantics, and uncertainty
-recognition. Full credit identifies the configured mock boundary.
-
-## T3: Predict UnitReference.get without metadata
-
-Expected findings:
-
-- UnitReference.get normalizes the identifier, checks fake and exposed
-  dependencies, then calls mocksContainer.resolve with the identifier and
-  optional metadata (unit-reference.ts lines 173-195).
-- The setup registers DEPENDENCY_TWO once with metadata dependency=two
-  (unit-reference.spec.ts lines 31-34).
-- DependencyContainer.resolve returns the sole registration when the caller
-  omits metadata (dependency-container.ts lines 35-46). Therefore the
-  candidate source prediction is DependencyTwoStubbed.
-- The declared parameterized tests cover other single identifiers without
-  metadata; the metadata-specific test supplies metadata at
-  unit-reference.spec.ts lines 76-86. The exact DEPENDENCY_TWO call with
-  omitted metadata is not declared as a test case.
-- The prediction is source-supported, but it is not an observed runtime result.
+- It asks `UserService.findUser` for the email and requests the password-bearing
+  record (auth.service.ts lines 39-40).
+- Missing user throws `BadRequestException('user is not exist')` (lines 41-43).
+- A password mismatch after `cryptoPassword(password)` throws
+  `BadRequestException('password is invalid')` (lines 44-46).
+- Otherwise it returns the user with `password` omitted (line 47).
+- Jest declarations cover a valid result, absent user, and invalid password
+  (auth.service.spec.ts lines 86-109). `findUser` is stubbed in each case.
+- The declarations are source; they do not establish that Jest ran or passed.
 
 Required rubric dimensions: behavior accuracy, source evidence, and uncertainty
 recognition.
 
-## T4: Prepare a safe narrow change
+## T2: Verify AuthService.login test evidence
 
 Expected findings:
 
-- Identify UnitMocker.constructUnit and the DependencyResolver path it creates
-  (unit-mocker.ts lines 24-46).
-- Existing advanced mocks are prepared in unit-mocker.spec.ts lines 100-104.
-- Existing declarations check preserved constructor/container resolutions at
-  lines 137-140 and property injections at lines 143-149.
-- A safe test plan should preserve exact token and metadata identity and cover
-  both constructor and property injection. It should include a case where an
-  explicit value conflicts with the generated mock and assert both the returned
-  container and injected instance.
-- Do not claim an uncovered scenario is a production defect until the reviewer
-  confirms the intended precedence rule. Do not implement code during this task.
+- The test spies on `validateUser` and `generateToken`, then calls
+  `authService.login` (auth.service.spec.ts lines 72-79).
+- It checks that the returned object omits `password` and includes the supplied
+  profile marker and token (lines 80-82).
+- The production method awaits validation, generates a token from user id and
+  email, and returns both (auth.service.ts lines 33-37).
+- The test-controlled spies mean this declaration does not establish the
+  implementation of password validation or JWT signing.
+- It does not establish test execution or pass status.
+
+Required rubric dimensions: source evidence, test semantics, and uncertainty
+recognition.
+
+## T3: Predict AuthController.login when the service rejects
+
+Expected findings:
+
+- The controller awaits `authService.login` and wraps a resolved profile under
+  `user` (auth.controller.ts lines 25-29).
+- There is no local catch/translation in this method. From the async source, a
+  rejected service promise rejects the controller promise; HTTP adapter behavior
+  is not established by this method alone.
+- The controller test spies on `authService.login` with `mockResolvedValue`,
+  calls the controller, and checks the response shape
+  (auth.controller.spec.ts lines 64-74).
+- That declaration does not exercise rejection. Its service call is a mock
+  boundary, despite the static source call path.
+- Do not state that the rejection case was executed or that Jest passed.
+
+Required rubric dimensions: behavior accuracy, source evidence, and uncertainty
+recognition.
+
+## T4: Prepare a safe registration change
+
+Expected findings:
+
+- `register` checks username first, then email, before calling `createUser` and
+  generating a token (auth.service.ts lines 18-30).
+- Existing declarations cover a successful registration, duplicate username,
+  and duplicate email (auth.service.spec.ts lines 42-69).
+- The duplicate-email test stubs `findUser` to return no username match and then
+  an existing email match (lines 62-68); it asserts the exception, but does not
+  assert that `createUser` or `generateToken` was not called.
+- A safe plan adds explicit no-side-effect assertions for both duplicate paths,
+  while preserving the successful path and verifying the ordered lookups.
+- Treat the requested behavior as the task requirement, not as proof of an
+  existing production defect.
 
 Required rubric dimensions: source evidence, test semantics, and change safety.
 
-## T5: Verify the claim
+## T5: Verify the token claim
 
-Claim: “The missing-identifier test proves UnitReference.get throws in a
-passing test.”
+Claim: “The generateToken Jest test proves the service returns a valid signed
+JWT.”
 
 Expected findings:
 
-- The test declaration calls get with a missing string identifier and declares
-  a toThrowError assertion (unit-reference.spec.ts lines 88-92).
-- The implementation throws DependencyResolutionError when the dependency
-  container returns no value (unit-reference.ts lines 195-200).
-- The source supports the expected behavior and the test's declared assertion.
-- The word “passing” is unsupported without a recorded execution result. Static
-  source cannot establish that the test ran or passed.
+- The method delegates to `jwtService.sign({ userId, email })`
+  (auth.service.ts lines 50-52).
+- The testing module provides a `JwtService` mock whose `sign` returns the
+  literal `token` (auth.service.spec.ts lines 26-31).
+- The declaration invokes `generateToken` and asserts that its result is the
+  literal `token` (lines 113-117).
+- The source and declaration support the static delegation and declared return
+  value. They do not establish a cryptographically valid JWT, a test execution,
+  or a passing run.
 
 Required rubric dimensions: source evidence, test semantics, and uncertainty
 recognition.
 
 ## Shared scoring guidance
 
-For each required dimension, award 2 only when the response is correct and
-gives exact supporting source paths and line ranges. Award 1 for a correct but
-materially incomplete response. Award 0 for a false or unsupported conclusion.
-An incorrect claim that a test passed is an uncertainty-recognition error even
-when its asserted behavior matches the source.
+Score each applicable dimension from 0 to 2. Give 2 only for a correct answer
+with exact source references; give 1 for a partly correct answer missing a
+material branch or limit; give 0 for an incorrect or unsupported conclusion.
+Treat a claim that a test passed without execution evidence as an uncertainty
+recognition error. Keep correctness, confidence, time, and usefulness separate.

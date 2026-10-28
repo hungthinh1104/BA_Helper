@@ -1,140 +1,116 @@
 # G2A Completion Report
 
 **Audit date:** 2026-10-27
-**Decision:** PARTIAL
-**Scope:** developer comprehension study preparation and study-mode controls
+**Decision:** `PARTIAL`
+**Scope:** study preparation and local engineering verification; no product-value claim
 
 ## 1. Baseline
 
-- Starting tool HEAD and live branch tip: 72c37a6f892793fab2a4269de689574b46e94ae8 on codex/fix-backend-runtime-ci-boundary.
-- Final worktree commit SHA is still 72c37a6f892793fab2a4269de689574b46e94ae8; no commit was created. The dirty worktree contains the G2A route/test/report edits and a separate G2B analyzer/verification delta.
-- Live main: 27b388adc25638e0c9737578872baf71e9aa0d2a. The branch is 10 commits ahead and 0 behind.
-- A fetch was attempted first, but Git could not write .git/FETCH_HEAD. GitHub API refs and compare results confirmed the branch heads and divergence.
-- No open pull request exists. The branch is not integrated. At G2A audit start the worktree was clean; this review adds an uncommitted route fix, tests, and report update. The current worktree also contains a separate G2B analyzer/verification delta, excluded from G2A scope. No commit, push, merge, PR, or deployment was made.
-- GitHub Actions run [#121](https://github.com/hungthinh1104/BA_Helper/actions/runs/40429982126) passed at the exact starting SHA, including analyzer gates, typecheck, lint, tests, pinned API proof, and browser proof.
-- The separate Vercel check on that SHA is failing: [commit status](https://github.com/hungthinh1104/BA_Helper/commit/72c37a6f892793fab2a4269de689574b46e94ae8). Its deployment logs were not available here.
-- Integration recommendation: HOLD until the Vercel failure is diagnosed and the final local delta receives hosted checks.
+- Branch: `codex/fix-backend-runtime-ci-boundary`.
+- Local HEAD and final worktree base commit: `7750d45e7ea43ab4e219c731c746744ff94f395e`. No commit was created; G2A changes remain in the worktree.
+- GitHub's branch endpoint reports the same remote SHA. Compared with `main` (`27b388adc25638e0c9737578872baf71e9aa0d2a`), the branch is 11 commits ahead and 0 behind. No open PR was found.
+- GitHub Actions run [#122 / run 40516487044](https://github.com/hungthinh1104/BA_Helper/actions/runs/40516487044) passed on that exact SHA. It includes lint, typecheck, build, unit, web, E2E, pinned API proof, and pinned browser proof. The combined commit status also has a failing Vercel check; it was not investigated because no deployment work is in scope.
+- The hosted browser proof uses the existing G1 pinned corpus, not this G2A candidate. It does not certify local G2A changes.
+- No push, merge, deployment, policy change, or external repository code execution occurred.
 
-Remote branches compared with main:
+### Capability baseline
 
-- No unique commits relative to main: chore/v0.1-debt-closure, feature/p3-async-document-pipeline, feature/product-updates-from-research, pr5/demo-proof-pack-refresh, refactor/auth-mode-cleanup, refactor/backend-runtime-deduplicate-repositories, release/phase4-async-pipeline.
-- Unmerged: codex/fix-backend-runtime-ci-boundary (10 ahead, 0 behind), refactor/decision-first-analysis-ui (1 ahead, 9 behind), research/reqimpact-eval-v0 (88 ahead, 206 behind).
-
-| Capability | Implemented | Verification | G2A gap |
+| Capability | Implemented? | Verified? | G2A gap? |
 | --- | --- | --- | --- |
-| Code-first artifact discovery | Yes | VERIFIED by pinned API and browser proof | None identified |
-| Source conditions and dependencies | Yes | VERIFIED by persisted comprehension projection and source provenance checks | None identified |
-| Related Jest scenario discovery | Yes | VERIFIED by public/application trace gates and pinned proof | Static references do not prove execution |
-| Assertion and invocation associations | Yes | PARTIALLY VERIFIED by analyzer fixtures, projection, and UI | Some associations remain explicitly unresolved |
-| Mock boundaries and uncertainty | Yes | VERIFIED as static claims and limitations | Requires independent study scoring |
-| Evidence provenance validation | Yes | VERIFIED by pinned source/commit checks | None identified in the checked slice |
-| Scenario pagination UI | Yes | VERIFIED by API E2E, pagination tests, and hosted run #121 | None identified |
-| Textual evidence mode | Yes | VERIFIED by route parity test | No participant validation |
-| Interactive visual mode | Yes | PARTIALLY VERIFIED by browser proof and route tests | Study-route graph not exercised in a hosted browser session |
-| Independent ground truth | Candidate package prepared | NOT APPROVED | Independent reviewer must adjudicate all labels |
-| Human study instrumentation | Schema, validator, scorecard | VERIFIED with tests and empty-template validation | No participant observations exist |
+| Code-first artifact discovery | Yes; Explorer selects production methods | Yes; five candidate methods extracted, persisted, and projected | No API-selection gap found |
+| Source conditions and dependencies | Yes; structured source evidence and static relationships | Yes; candidate projections carry pinned source evidence | No |
+| Related Jest scenario discovery | Yes; direct and bounded static paths | Yes; selected declarations and actual API scenarios inspected | Some unresolved static links remain explicit |
+| Assertion/invocation associations | Yes; AST claims and association status | Yes; candidate projections include claims; provenance checked | Unresolved associations stay unresolved |
+| Mock boundaries and uncertainty | Yes; mocks and limitations are represented | Yes; mocked calls and `NOT_IMPORTED` runtime status observed | Task difficulty still needs human review |
+| Evidence provenance validation | Yes | Yes; five source records and 18 displayed relationships match persisted pinned evidence | No mismatch found |
+| Scenario pagination UI | Yes; keyboard-accessible Load More and explicit cap state | Yes; scenario-list suite passed | Candidate-specific browser navigation timing not measured |
+| Textual evidence mode | Yes; study-only route hides graph controls | Yes; B/C parity and condition tests passed | Fixed assigned URL remains operator-controlled |
+| Interactive visual mode | Yes; existing lazy graph and evidence navigation | Yes; flow tests and G1 hosted browser proof passed | Candidate-specific graph timing not measured |
+| Independent ground truth | Candidate package and blinded template prepared | Not yet; all labels are pending | Independent reviewer must adjudicate labels and task difficulty |
+| Human study instrumentation | Standalone schema, validator, and scorecard exist | Yes; empty dataset reports `NOT_COLLECTED`, zero observations | No participants or human measurements exist |
 
 ## 2. Implemented Changes
 
-The branch already contains the study protocol, task pool, answer key, blinded reviewer packet, blank annotation template, candidate source labels, strict observation schema, scorecard, and scenario pagination.
-
-This review found two study-mode leaks and closed them in the Explorer:
-
-- B/C no longer show the Back to repository link, which could return participants to the normal workspace during a timed task.
-- Duplicate or unsupported studyCondition values fail closed. The page displays an unsupported-condition state and disables the comprehension query instead of silently opening normal Explorer mode.
-- The normal route remains unchanged when no study condition is supplied.
-- A route-level test compares B/C selected artifact and source evidence, scenario identity, setup/input/invocation/assertion/mock/outcome/association claims, limitations, rendered evidence text, and query arguments. It verifies that only visual graph availability changes, A leaves the query disabled, and normal Explorer navigation remains available.
-
-The G2A-specific changes in this review are the comprehension page, its study-condition test, the study protocol note, and this report. Separate G2B analyzer/CI edits are present in the worktree and are not part of this report's G2A implementation scope.
+- Replaced the active study corpus with the public MIT repository `mutoe/nestjs-realworld-example-app` pinned at `0c30a1828af52cf6528d0b3e9ddf86fc459723f6`. The package declares NestJS and Jest. The task pool covers five methods and all five required task families.
+- Added nine source-authored candidate test/target annotations and a blank CSV for blinded review. The labels distinguish direct links, a static path crossing a mocked service, and an absent negative pair. They remain `PENDING_INDEPENDENT_REVIEW` because the author had access to analyzer compatibility output.
+- Archived the original `suites-dev/suites-unit` candidate and its annotation rows without changing the individual labels. Its plain TypeScript targets were not emitted as selectable production artifacts, so it is no longer the active task corpus.
+- Added a reproducible candidate proof runner and a focused corpus-validation helper. They verify the clean pinned checkout, license/framework metadata, exact Git blobs, production scan, persisted graph/evidence, selected Explorer projections, repeatability, and cache timings. The runner does not install dependencies or execute the public repository.
+- Extended the pinned-provenance proof to verify persisted redacted excerpts against redacted source text. The candidate has a password-like test fixture that the existing redactor correctly masks; the verifier now confirms redaction without exposing the literal.
+- Updated the candidate answer key, blinded reviewer packet, study protocol, and the BA/QA documentation boundary. The existing A/B/C Explorer, pagination, and scorecard behavior were reused; no product UI, API, schema, or analyzer behavior changed.
 
 ## 3. Evidence Reliability
 
-- The existing pinned 18-link evaluation for leosuncin/nest-api-example at b49ae92a6c0b0db39b6542338a2ffea3eda15717 is a curated analyzer regression slice. Its labels are not held out from resolver development and have not received independent human review.
-- The G2A candidate is suites-dev/suites-unit at 8fdabcbdd12cb5144199ad3ba7b93eaed0a20275. The pinned LICENSE and package metadata identify Apache-2.0; the pinned TypeScript/Jest source includes a NestJS adapter. The repository is a NestJS testing library, not a booking/payment application.
-- Six candidate test/target annotations include direct, setup-mediated, and absent relationships. I checked the pinned source ranges and repository suitability material; this is not independent human adjudication. The packet tells a separate reviewer not to open candidate labels or analyzer output before annotating.
-- candidate-ground-truth.json remains PENDING_INDEPENDENT_REVIEW. The repository is absent from tests/fixtures, packages/analyzer, and scripts, and no analyzer output was generated for it. Do not report candidate labels as accuracy.
-- Static source and Jest declarations do not establish test execution, pass status, runtime coverage, or business behavior. Missing and ambiguous links remain unresolved.
+The active task dataset is `tests/evaluation/developer-comprehension/dataset.template.json`. Tasks target `AuthService.validateUser`, `AuthService.login`, `AuthController.login`, `AuthService.register`, and `AuthService.generateToken`. The annotation template contains nine test/target pairs, including a direct target, an indirect static path through a mocked service, multiple scenarios, test-controlled mocks, assertions, and a negative control.
+
+The candidate proof verified six source/metadata files against pinned Git blobs, scanned 26 TypeScript files with full coverage, and produced 39 artifacts and 29 graph edges. One warm-up plus five same-process scans produced the same digest on every pass: `5c174c7c0f239f9fb9b21f5e45deed815e3c12cf37ccc6b4d0280f04ff7508b2`.
+
+The real persistence step saved 39 artifacts, 29 edges, and 39 evidence rows to a `READY` snapshot at the candidate SHA, with zero dropped edges and zero evidence-provenance mismatches. The actual `GetCodeComprehensionUseCase` projected all five selected methods. The pinned provenance verifier checked five production-source records and 18 displayed relationships against the persisted snapshot and source locations.
+
+Direct projected test relationship counts by task were T1 3, T2 1, T3 1, T4 3, and T5 1. Related scenario counts were 5, 2, 1, 4, and 7. T5's seven includes indirect caller scenarios; only one is a direct test relationship to `generateToken`. The study material keeps that distinction. All projections report `runtimeObservations=NOT_IMPORTED`; declarations are not represented as executed or passing tests.
+
+The scanner reported `JEST_BEHAVIOR_UNRESOLVED` (9), `TEST_TARGET_UNRESOLVED` (5), and `UNRESOLVED_INJECTION_TOKEN` (1). These remain diagnostics; no edge or runtime behavior was invented. A password-like source fixture is redacted in persisted evidence. The independent reviewer must confirm that task answers remain discoverable from the remaining evidence.
+
+The original pinned 18-link G1 benchmark remains unchanged and is not independent ground truth. The G2A labels are source-authored candidates only; the author saw compatibility output. There are no approved labels, accuracy metrics, or participant observations.
 
 ## 4. Experiment Readiness
 
-The study package defines five task families: explain behavior, verify test evidence, predict an unseen case, prepare a safe change, and verify a claim. Its six-slot schedule covers all 15 condition/task-family cells without repeating a task for one participant across conditions.
+- **A — Existing workflow:** participant's normal IDE, source, tests, search, and the same AI assistant policy; BA Helper is unavailable.
+- **B — Textual evidence:** the selected method and static evidence projection with graph controls hidden.
+- **C — Visual Test Trace:** the same projection and evidence plus the existing graph and evidence navigation.
 
-- A: normal IDE, repository search, source/tests, and a consistent AI assistant; BA Helper is unavailable.
-- B: the same underlying comprehension projection as C, with graph controls hidden.
-- C: that same projection with the existing lazy graph and evidence navigation.
-- The route test verifies identical B/C projection text and identical snapshot/artifact query arguments.
-- The dataset records pseudonymous session code, condition, task, repository/tool SHAs, timing, answers, rubric scores, evidence references, unsupported claims, completion, confidence, usefulness, and voluntary reuse. The validator rejects identity fields and inconsistent provenance.
-- Empty observations report NOT_COLLECTED with null metrics. The template is NOT_STARTED with zero observations. COMPLETED requires approved labels and the declared task/case/session coverage; it does not mean the product hypothesis passed.
-- Raw answers are limited to public study source and the protocol sets a 90-day deletion period for raw answers and evidence details.
+Existing condition tests verify A does not request comprehension data, B and C use the same projection, and unsupported or duplicate condition values fail closed. The ordinary Explorer remains unchanged without a study condition. Pagination exposes additional scenarios, errors, loading, and the retrieval cap. No new study condition is stored in evidence identity.
 
-Study condition is supplied by an assigned URL. In-app navigation out of B/C is removed and duplicate or unsupported values fail closed. Without a studyCondition parameter, the ordinary Explorer remains active. The operator must distribute fixed URLs and prevent manual URL edits; condition is not bound to a participant session in the backend.
+The six-slot counterbalanced plan covers all 15 condition/task-family cells without repeating a task under multiple conditions for one participant. The scorecard rubric keeps correctness, source support, test/mock understanding, uncertainty, change safety, time, confidence, unsupported claims, usefulness, and voluntary reuse separate.
+
+The standalone observation schema stores a pseudonymous session code, condition, task, repository/tool SHAs, timing, answer, rubric, evidence references, unsupported claims, and completion status. It rejects identity fields and inconsistent provenance. Raw answers and evidence details have a 90-day retention limit. The current dataset remains `NOT_STARTED`; validation reports `NOT_COLLECTED`, zero observations, and null empty metrics.
+
+Before recruitment, an independent reviewer must adjudicate each candidate relationship and assess whether these five tasks are sufficiently matched. All tasks are in one authentication subsystem and may differ in difficulty. The reviewer should also confirm that redaction has not made a task materially harder. The condition is URL-controlled rather than bound to a server-side participant session, so the operator must preserve each assigned URL.
 
 ## 5. Performance
 
-The ignored local artifact `artifacts/evaluation/pinned-code-comprehension-proof.json` records Windows, Node v22.23.3, Intel Core 5 120U, 12 logical cores, and 16.86 GB reported memory. It identifies toolCommitSha `72c37a6f892793fab2a4269de689574b46e94ae8`, `toolWorkingTreeDirty=true`, and analyzer `0.16.0`. The dirty worktree includes the separate G2B analyzer/verification delta, so these are measurements of the combined local tree rather than a clean G2A-only change.
+Measurements ran on Windows, Node v22.23.3, Intel Core 5 120U, 12 logical CPUs, and about 16.86 GB reported system memory. They are small-sample local measurements, not an SLA or controlled before/after comparison.
 
-The previous G2A report recorded a local reference at tool SHA `0130f16e042271bde29a47d414d67f0622d21ba4`: cold projection 204/231 ms, warm cache miss 18/21 ms, cache hit 4.4/7.9 ms, and browser time-to-usable median 2.66 s with a slowest sample of 13.67 s. Its exact artifact and sample counts are not available in this checkout, so use it as historical context only. The comparison also crosses tool revisions and analyzer versions; it is not a controlled before/after result.
+| Measurement | Condition and samples | p50 / p95 | Other evidence |
+| --- | --- | ---: | --- |
+| Source enumeration | Same process; 1 warm-up + 5 measured scans | 103.6 / 142.2 ms | 26 TypeScript files |
+| Scanner extraction | Same process; 1 warm-up + 5 measured scans | 664.2 / 721.2 ms | Digest stable across all passes |
+| Graph construction | Same process; 1 warm-up + 5 measured scans | 648.9 / 728.2 ms | 29 edges |
+| Full scan pipeline | Same process; 1 warm-up + 5 measured scans | 1,449.4 / 1,527.6 ms | Filesystem/runtime caches warm after first pass |
+| Projection cache miss | Warm process/database; new use-case instance; 25 samples, 5 per target | 45.25 / 118.29 ms | Query count p50 13; response bytes p50 101,560 |
+| Projection cache hit | Same warm process; 25 samples, 5 per target | 5.34 / 8.11 ms | Query count p50 2; snapshot and artifact identity still read |
 
-| Current combined-tree measurement | Samples | p50 / p95 | Additional evidence |
-| --- | ---: | ---: | --- |
-| Projection in fresh Node processes; module/DB initialization excluded | 5 | 313 / 356 ms | 12 queries, 16 rows, 22,457-byte response |
-| First projection after scan in shared process | 1 | 244 / 244 ms | 12 queries, 16 rows |
-| Warm infrastructure, projection cache miss | 10 | 29.8 / 35.3 ms | 12 queries, 16 rows |
-| Populated projection cache hit | 10 | 6.9 / 8.4 ms | 2 queries, 2 rows |
-| Browser time to usable | 5 | 4.13 / 17.82 s | p95 includes a cold development-server sample |
-| Scenario expansion / graph readiness / evidence inspection | 5 each | 143 / 170 ms; 570 / 698 ms; 143 / 173 ms | Pinned proof route |
-| Method switch / scenario switch | 5 each | 3.63 / 4.36 s; 599 / 610 ms | Five browser samples |
-
-The same proof records process memory snapshots: RSS/heap before projection was 581/468 MB, after the first projection 256/144 MB, after cache misses 263/151 MB, and at end 288/161 MB. These are noisy process-level snapshots, not incremental endpoint memory. The pinned API proof passed 18/18 declared tests and 21/21 direct test-to-method cases for the pinned corpus. Those source labels are not held out from resolver development and remain pending independent review, so the exact match is a regression result rather than an accuracy estimate. The pinned browser proof passed all five repeated runs. These local samples are descriptive, not production latency or capacity estimates. Some current projection medians are more than 20% above the historical figures, but the underlying revisions and run conditions are not controlled; no performance regression can be attributed or ruled out from this comparison. A same-environment, interleaved baseline/candidate run is still needed before making a no-regression claim for the study-mode change.
+Fresh-process projection, process memory, candidate browser readiness, scenario navigation, evidence interaction, and visual graph readiness are `NOT_RUN`. The G1 hosted browser results are not substituted for candidate-specific timings. No performance regression comparison was made.
 
 ## 6. Tests and Checks
 
-Current local checks:
-
 | Command/check | Result |
 | --- | --- |
-| `pnpm test:web` | PASS: 28 suites, 137 tests, including B/C parity with populated evidence claims |
-| `pnpm --dir apps/web exec jest --config jest.config.ts --runInBand --runTestsByPath 'src/app/(app)/repositories/[repositoryId]/snapshots/[snapshotId]/artifacts/[artifactId]/study-conditions.test.tsx'` | PASS after final parity assertion: 1 suite, 5 tests |
-| `pnpm test:ci` | PASS: 231 suites, 1,348 tests, 1 snapshot |
-| `pnpm test:integration` | PASS: 1 suite, 1 test |
-| Developer-study schema/scorecard test | PASS: 1 suite, 5 tests |
-| pnpm validate:developer-study -- tests/evaluation/developer-comprehension/dataset.template.json | PASS: NOT_STARTED, NOT_COLLECTED, 0 observations |
-| `pnpm typecheck` | PASS across backend, web, and scripts |
-| Focused ESLint on the changed web page and study-condition test | PASS |
-| `pnpm lint` | PASS: 61 existing type-only-import warnings, 0 errors |
-| GitHub Actions run #121 at 72c37a6 | PASS: full hosted workflow, including builds, tests, pinned API/browser proof |
-| git diff --check | PASS; Git reported only expected CRLF conversion notices |
-| Focused comprehension API E2E | PASS: 1 suite, 11 tests, isolated PostgreSQL and Redis |
-| `pnpm test:e2e` | PASS: 22 suites, 132 tests, isolated PostgreSQL and Redis |
-| `pnpm prove:pinned-comprehension` | PASS: 18/18 declared tests and 21/21 cases; independent review remains pending |
-| `pnpm verify:pinned-comprehension-browser` | PASS: 5/5 repeated browser runs against the persisted pinned snapshot |
-| `pnpm test:pw` | INCOMPLETE: six browser specs passed and the dedicated pinned spec was skipped; the runner did not exit after the final spec and was interrupted during cleanup |
+| `pnpm prove:g2a-study-corpus` | Could not launch locally: `pnpm` is not on PATH. |
+| `tmp/tooling/node-v22.23.3-win-x64/node.exe node_modules/ts-node/dist/bin.js --transpile-only scripts/prove-g2a-study-corpus.ts` with the local `os.userInfo` shim | PASS; full scan, persistence, five API projections, 18 displayed provenance links, and 25 miss/25 hit measurements. |
+| `tmp/tooling/node-v22.23.3-win-x64/node.exe node_modules/tsx/dist/cli.mjs scripts/validate-developer-study.ts tests/evaluation/developer-comprehension/dataset.template.json` with the shim | PASS; `NOT_STARTED`, `NOT_COLLECTED`, zero observations. |
+| `tmp/tooling/node-v22.23.3-win-x64/node.exe node_modules/typescript/bin/tsc --noEmit --project tsconfig.scripts.json` | PASS. |
+| `tmp/tooling/node-v22.23.3-win-x64/node.exe node_modules/jest/bin/jest.js --config jest.config.ts --runInBand --runTestsByPath tests/evaluation/developer-comprehension/developer-study.scorecard.spec.ts scripts/verify-pinned-comprehension-provenance.spec.ts` | PASS; 2 suites, 12 tests. |
+| From `apps/web`: `..\..\tmp\tooling\node-v22.23.3-win-x64\node.exe ..\..\node_modules\jest\bin\jest.js --config jest.config.ts --runInBand --runTestsByPath src/app/(app)/repositories/[repositoryId]/snapshots/[snapshotId]/artifacts/[artifactId]/page.test.tsx src/app/(app)/repositories/[repositoryId]/snapshots/[snapshotId]/artifacts/[artifactId]/study-conditions.test.tsx src/app/(app)/repositories/[repositoryId]/snapshots/[snapshotId]/artifacts/[artifactId]/_components/scenario-list.test.tsx src/app/(app)/repositories/[repositoryId]/snapshots/[snapshotId]/artifacts/[artifactId]/_components/code-comprehension-trace-flow.test.tsx` | PASS; 4 suites, 14 tests. |
+| `tmp/tooling/node-v22.23.3-win-x64/node.exe node_modules/eslint/bin/eslint.js scripts/prove-g2a-study-corpus.ts scripts/g2a-study-corpus-support.ts --max-warnings 0` | PASS; zero errors or warnings after changing the support import to type-only. |
+| `git diff --check` | PASS; Git printed line-ending conversion notices. |
+| Hosted GitHub Actions #122 on exact base SHA `7750d45e7ea43ab4e219c731c746744ff94f395e` | PASS; not a run on this dirty worktree. |
 
-The route tests first reproduced the Back-link and unsupported-condition leaks, then passed after the fix. The parity fixture now contains non-empty setup, input, invocation, assertion, mock, expected-outcome, and association claims; the test checks both their rendered text and full structured equality across B/C, including snapshot context and related scenarios. The final focused rerun passed after that full-projection assertion was added. Two rerun attempts failed before Jest started because Windows NODE_OPTIONS path parsing did not resolve the temporary shim; the successful run used a quoted forward-slash shim path. The shell has no global pnpm; checks used the repository-local Node/pnpm tooling. Node 22.23.3 raises ENOMEM from os.userInfo() in this Windows environment, so the developer-study validator and final focused rerun used a temporary process-local shim. The shim was removed after verification.
-
-An initial focused Jest invocation forwarded an extra `--` into Jest and matched no tests. The strengthened fixture's first run also exposed that jsdom lacked `structuredClone`; replacing it with a JSON clone fixed the test setup. The final full web suite passed. These were test invocation/setup issues, not product failures.
-
-The local API E2E rerun and pinned proofs used disposable PostgreSQL/Redis resources. An earlier E2E attempt accidentally configured the test app to use the persistent development Redis at `localhost:6379/0`; assertions passed, but the command later exited with an unhandled BullMQ `Connection is closed` error. The Redis state was not inspected or cleaned. The successful rerun used isolated test Redis. A later Playwright run used isolated Redis databases; its six completed browser specs passed, but the aggregate runner did not exit cleanly and was interrupted after cleanup stalled.
-
-The hosted run certifies the starting commit, not the uncommitted route fix or the current combined dirty tree. No hosted CI result is claimed for the final local delta.
+The first candidate proof attempt exposed that the provenance checker rejected a deliberately redacted excerpt. The checker was updated to validate the persisted redacted excerpt against the redacted pinned source, and its dedicated regression test passes. The external candidate's Jest suite was not executed.
 
 ## 7. Risks and Limits
 
-- Independent review of candidate labels is pending.
-- No developer has participated; the study status remains NOT_STARTED and product value is unvalidated.
-- The task pool uses one NestJS testing-library repository and does not establish generalization to NestJS business applications.
-- Task difficulty matching and answer-key validity still need review by someone other than the candidate author.
-- Operators must control assigned condition URLs; removing the query parameter returns to ordinary Explorer, and there is no server-side condition/session lock.
-- The current local UI change has focused tests and typecheck, but no hosted run. The separate Vercel check on the starting commit is failing and its cause is unknown.
-- Browser timings include local development compilation, have five samples, and do not establish production latency or capacity.
+- Independent label review and task difficulty matching are pending; candidate annotations are not accuracy results.
+- One repository and one authentication subsystem do not establish generalization to NestJS business applications.
+- Secret redaction affects a password-like fixture; the reviewer must confirm the relevant task remains answerable.
+- The candidate-specific UI was not opened in a browser, so A/B/C route timing and graph readiness for these exact methods remain unmeasured.
+- Study conditions use fixed operator-supplied URLs, not a server-side assignment lock.
+- No participant data exists and neither the code-comprehension nor visualization hypothesis is proven.
+- The combined GitHub status includes an unresolved Vercel failure. No deployment work was performed.
 
 ## 8. Product Decision
 
-PARTIAL. Engineering materials, scorecard validation, scenario paging, and B/C evidence parity are prepared. G2A_READY is not supported because independent ground truth and real participant observations are missing, the final local delta has not received hosted CI, and the Vercel failure remains unexplained. This work makes no product-value or causal-effect claim.
+**`PARTIAL`.** The task/reviewer package, existing condition parity and pagination, empty-data scorecard, candidate scan, persisted evidence checks, and local API timing are prepared and verified. An independent reviewer still needs to approve/correct labels and assess task matching. Candidate-specific browser measurements and human study data are absent. The report makes no claim that BA Helper or Visual Test Trace improves developer outcomes.
 
 ## 9. Next Human Action
 
-1. A reviewer who did not author the candidate labels should use the blinded packet and pinned source to complete annotation-template.csv, record a pseudonymous reviewer code, reconcile disagreements, and approve or correct each label. Keep the status pending until that work is complete.
-2. Diagnose the Vercel failure and run hosted checks on a clean commit containing the local route fix before integration.
-3. Freeze the app/tool SHA and assigned URLs, recruit 6–8 TypeScript/NestJS developers unfamiliar with the study repository, and run the counterbalanced pilot. Record real observations only; report correctness, evidence support, uncertainty, timing, abandonment, confidence, usefulness, and reuse by condition and task family.
-4. Do not claim that BA Helper or Visual Test Trace improves developer performance until independently reviewed labels and human study results support that conclusion.
+An independent reviewer who has not seen candidate labels or analyzer output should use the pinned-source packet and blank CSV, assign a random reviewer code, annotate all nine pairs, and assess task difficulty and the effect of secret redaction. Reconcile disagreements before changing the dataset review status. Then freeze the tool/corpus SHAs and condition URLs, recruit 6–8 relevant developers unfamiliar with the code, and run the counterbalanced pilot. Only collected human observations and approved labels can support an outcome claim.

@@ -1,14 +1,19 @@
+import { mkdtempSync, readFileSync, rmdirSync, unlinkSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { SecretRedactor } from '../packages/analyzer/src/scanner/core/secret-redactor';
 import { verifyPinnedProjectionProvenance } from './verify-pinned-comprehension-provenance';
 
 const filePath = 'scripts/verify-pinned-comprehension-provenance.spec.ts';
-const location = { sourcePath: filePath, startLine: 1, endLine: 1 };
 const sourceLine = "import { verifyPinnedProjectionProvenance } from './verify-pinned-comprehension-provenance';";
+const sourceLineNumber = readFileSync(filePath, 'utf8').split(/\r\n?|\n/).findIndex(line => line === sourceLine) + 1;
+const location = { sourcePath: filePath, startLine: sourceLineNumber, endLine: sourceLineNumber };
 
 function fixture() {
   const source = { id: 'source-evidence', sourceType: 'CODE', artifactId: 'code', provenanceKey: 'source-key',
-    filePath, startLine: 1, endLine: 1, excerpt: sourceLine, commitSha: 'pinned-sha' };
+    filePath, startLine: sourceLineNumber, endLine: sourceLineNumber, excerpt: sourceLine, commitSha: 'pinned-sha' };
   const edgeEvidence = { id: 'test-evidence', sourceType: 'TEST', artifactId: 'test', provenanceKey: 'test-key',
-    filePath, startLine: 1, endLine: 1, excerpt: sourceLine, commitSha: 'pinned-sha' };
+    filePath, startLine: sourceLineNumber, endLine: sourceLineNumber, excerpt: sourceLine, commitSha: 'pinned-sha' };
   const provenance = { kind: 'STATIC_SOURCE_REFERENCE', resolver: 'TS_AST_DIRECT_CALL',
     evidenceProvenanceKey: 'test-key', locations: [location] };
   return {
@@ -16,8 +21,8 @@ function fixture() {
     projections: [{ selectedCode: { id: 'code', filePath }, codeEvidence: { source, staticCalls: [] },
       relatedScenarios: [{ trace: { relationships: [{ edgeId: 'edge', type: 'TESTS',
         sourceArtifactId: 'test', targetArtifactId: 'code', provenance, evidence: edgeEvidence }] } }] }],
-    artifacts: [{ id: 'code', snapshotId: 'snapshot', filePath, startLine: 1, endLine: 1 },
-      { id: 'test', snapshotId: 'snapshot', filePath, startLine: 1, endLine: 1 }],
+    artifacts: [{ id: 'code', snapshotId: 'snapshot', filePath, startLine: sourceLineNumber, endLine: sourceLineNumber },
+      { id: 'test', snapshotId: 'snapshot', filePath, startLine: sourceLineNumber, endLine: sourceLineNumber }],
     evidences: [{ ...source, isRedacted: false, snapshotId: 'snapshot', sourcePath: filePath, sourceType: 'CODE' },
       { ...edgeEvidence, isRedacted: false, snapshotId: 'snapshot', sourcePath: filePath, sourceType: 'TEST' }],
     edges: [{ id: 'edge', snapshotId: 'snapshot', fromArtifactId: 'test', toArtifactId: 'code',
@@ -67,5 +72,50 @@ describe('pinned comprehension provenance verification', () => {
     input.projections[0].codeEvidence.source.excerpt = 'unrelated source text';
     input.evidences[0].excerpt = 'unrelated source text';
     expect(() => verifyPinnedProjectionProvenance(input)).toThrow(/excerpt does not match source text/);
+  });
+
+  it('validates secret-redacted excerpts against redacted pinned source', () => {
+    const temporaryDirectory = mkdtempSync(path.join(os.tmpdir(), 'g2a-provenance-'));
+    const temporarySourcePath = path.join(temporaryDirectory, 'source.ts');
+    try {
+      const relativeSourcePath = 'source.ts';
+      const source = "const PASSWORD = 'abcdefghijklmnopqrstuvwx';";
+      const excerpt = SecretRedactor.redact(source).redactedContent;
+      writeFileSync(temporarySourcePath, source);
+      const input = fixture();
+      input.root = temporaryDirectory;
+      input.projections[0].selectedCode.filePath = relativeSourcePath;
+      input.projections[0].codeEvidence.source.filePath = relativeSourcePath;
+      input.projections[0].codeEvidence.source.startLine = 1;
+      input.projections[0].codeEvidence.source.endLine = 1;
+      input.projections[0].codeEvidence.source.excerpt = excerpt;
+      const relationshipEvidence = input.projections[0].relatedScenarios[0].trace.relationships[0].evidence!;
+      relationshipEvidence.filePath = relativeSourcePath;
+      relationshipEvidence.startLine = 1;
+      relationshipEvidence.endLine = 1;
+      relationshipEvidence.excerpt = excerpt;
+      input.projections[0].relatedScenarios[0].trace.relationships[0].provenance!.locations[0].sourcePath = relativeSourcePath;
+      input.projections[0].relatedScenarios[0].trace.relationships[0].provenance!.locations[0].startLine = 1;
+      input.projections[0].relatedScenarios[0].trace.relationships[0].provenance!.locations[0].endLine = 1;
+      input.artifacts.forEach(artifact => { artifact.filePath = relativeSourcePath; });
+      input.evidences.forEach(evidence => {
+        evidence.filePath = relativeSourcePath;
+        evidence.sourcePath = relativeSourcePath;
+        evidence.excerpt = excerpt;
+        evidence.isRedacted = true;
+      });
+      input.edges[0].metadata.locations[0].sourcePath = relativeSourcePath;
+      input.edges[0].metadata.locations[0].startLine = 1;
+      input.edges[0].metadata.locations[0].endLine = 1;
+      input.artifacts.forEach(artifact => { artifact.startLine = 1; artifact.endLine = 1; });
+      input.evidences.forEach(evidence => { evidence.startLine = 1; evidence.endLine = 1; });
+
+      expect(verifyPinnedProjectionProvenance(input)).toEqual({
+        sourceEvidenceCount: 1, relationshipCount: 1, sourceFileCount: 1,
+      });
+    } finally {
+      unlinkSync(temporarySourcePath);
+      rmdirSync(temporaryDirectory);
+    }
   });
 });

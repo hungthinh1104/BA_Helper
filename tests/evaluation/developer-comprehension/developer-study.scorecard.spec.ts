@@ -100,7 +100,7 @@ describe('developer comprehension study scorecard', () => {
       groundTruthReviewStatus: 'APPROVED',
       collectionStatus: 'COLLECTED',
       observationCount: 18,
-      caseCount: 3,
+      caseCount: 5,
       sessionCount: 6,
       conditionTaskCellCount: 15,
       missingConditionTaskCells: [],

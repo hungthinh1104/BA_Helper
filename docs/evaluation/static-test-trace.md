@@ -150,9 +150,11 @@ results and uncertainty; a small pilot is not proof of product effectiveness.
    accuracy, elapsed seconds, decision, and a 1–5 confidence rating.
 5. Compare per-task accuracy and time by condition, show paired differences,
    confidence calibration, navigation effort, unsupported conclusions, and the
-   number of reviewers/tasks. Retain disagreements and exclusions. Store each
-   observation in `studyObservations` with a non-identifying reviewer session
-   code; no participant identity is required.
+   number of reviewers/tasks. Retain disagreements and exclusions. For this
+   BA/QC requirement-impact study, store each observation in the legacy
+   `studyObservations` field with a non-identifying reviewer session code. The
+   separate G2A developer-comprehension study uses its own dataset and
+   scorecard; do not mix its observations into this BA/QA dataset.
    Do not combine this human result with analyzer precision/recall or present a
    small pilot as causal proof.
 
