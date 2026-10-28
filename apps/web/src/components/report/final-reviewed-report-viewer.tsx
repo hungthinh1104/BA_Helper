@@ -24,7 +24,11 @@ interface FinalReviewedReportViewerProps {
 export function FinalReviewedReportViewer({ analysisId, open, onOpenChange }: FinalReviewedReportViewerProps) {
   const t = useTranslations("reports")
   const locale = useLocale()
-  const { data: finalReport, isLoading, error } = useFinalReviewedReport(analysisId, { enabled: open })
+  const reportLocale = normalizeAppLocale(locale)
+  const { data: finalReport, isLoading, error } = useFinalReviewedReport(analysisId, {
+    enabled: open,
+    locale: reportLocale,
+  })
 
   const renderContent = () => {
     if (isLoading) {
@@ -54,7 +58,7 @@ export function FinalReviewedReportViewer({ analysisId, open, onOpenChange }: Fi
       <div className="flex-1 overflow-y-auto bg-background p-6 md:p-8 space-y-12">
         <ReportMarkdown markdown={finalReport.markdown || ""} className="opacity-95" />
         {finalReport.testTraceSnapshot ? <TestTraceView coverage={finalReport.testTraceSnapshot.coverage}
-          locale={normalizeAppLocale(locale)} saved /> : <p className="text-xs text-muted-foreground">{testTraceLabels[normalizeAppLocale(locale)].unavailable}</p>}
+          locale={reportLocale} saved /> : <p className="text-xs text-muted-foreground">{testTraceLabels[normalizeAppLocale(locale)].unavailable}</p>}
 
         {/* Decisions Table */}
         {decisions.length > 0 && (
