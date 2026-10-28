@@ -27,7 +27,8 @@ export function TestTraceView({ coverage, locale, saved = false, requirementTitl
     <p className="text-xs leading-relaxed text-muted-foreground">{labels.notice}</p>
     {!context ? <p className="text-xs text-muted-foreground">{labels.unavailable}</p> : <>
       <TraceContext coverage={coverage} labels={labels} />
-      {coverage.items.length === 0 ? <p className="text-xs text-muted-foreground">{labels.notInspected}</p> : null}
+      {coverage.items.length === 0 ? <p className="text-xs text-muted-foreground">{context.excludedImpactedArtifacts?.length
+        ? labels.excludedFromTrace : labels.notInspected}</p> : null}
       {visibleItems.map(item => <TestTraceItem key={item.artifactId} item={item} commitSha={context.commitSha} labels={labels} locale={locale}
         visualPathId={visualPathId} onToggleVisualPath={setVisualPath} requirementTitle={requirementTitle}
         requirementSummary={requirementSummary} onInspectEvidence={onInspectEvidence} />)}
@@ -44,10 +45,10 @@ function TraceContext({ coverage, labels }: { coverage: QaCoverageResponse; labe
       {context.limitations.map(code => <li key={code}>{labels.limitations[code]}</li>)}
     </ul>
     {context.excludedImpactedArtifacts?.length ? <details className="text-xs text-warning">
-      <summary>Excluded impacted artifacts: {context.excludedImpactedArtifacts.length}</summary>
+      <summary>{labels.excludedArtifacts.replace('{count}', String(context.excludedImpactedArtifacts.length))}</summary>
       <ul className="mt-1 grid gap-1 font-mono">
         {context.excludedImpactedArtifacts.map(item => <li key={item.artifactId}>
-          {item.artifactKey ?? item.artifactId} · {item.artifactType ?? 'missing'} · {item.reason}
+          {item.artifactKey ?? item.artifactId} · {labels.exclusionReasons[item.reason]}
         </li>)}
       </ul>
     </details> : null}
