@@ -145,6 +145,7 @@
     "completeReviewsUnlock": "すべての review を完了し snapshot を作成すると final report が unlock されます",
     "loadingFinalAuditedReport": "Final audited report を読み込み中...",
     "failedLoadFinalReport": "Final report を読み込めません。",
+    "retrySnapshot": "スナップショットを再読み込み",
     "ensureReviewsComplete": "すべての review が完了していることを確認してください。",
     "finalReviewDecisions": "Final Review Decisions",
     "lockedReviewDecisions": "Locked Review Decisions",
