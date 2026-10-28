@@ -9,6 +9,13 @@ const en = {
   inspect: 'Inspect source reference', evidence: 'Source evidence', noEvidence: 'Source evidence is unavailable.',
   more: 'Show more artifacts', omitted: 'Additional case paths were omitted.', limits: 'Search limits',
   omittedLocations: 'Additional source locations omitted: {count}',
+  excludedArtifacts: 'Excluded impacted artifacts: {count}',
+  excludedFromTrace: 'This impacted artifact was excluded from static test references.',
+  exclusionReasons: {
+    MISSING_ARTIFACT: 'Artifact is missing from the scanned snapshot.',
+    FOREIGN_SNAPSHOT: 'Artifact belongs to a different snapshot.',
+    UNSUPPORTED_TYPE: 'Artifact type is not supported by static test references.',
+  },
   parameterized: 'Parameterized source declaration; data rows are not expanded.',
   requirement: 'Requirement context', impactTarget: 'Impacted code', analysisImpact: 'Selected impact in this analysis',
   showVisualPath: 'Show visual path', hideVisualPath: 'Hide visual path', visualPath: 'Requirement and source path',
@@ -56,6 +63,13 @@ const vi: typeof en = {
   inspect: 'Xem bằng chứng tham chiếu', evidence: 'Bằng chứng mã nguồn', noEvidence: 'Chưa có bằng chứng mã nguồn.',
   more: 'Xem thêm artifact', omitted: 'Các đường test bổ sung đã được lược bớt.', limits: 'Giới hạn tìm kiếm',
   omittedLocations: 'Số vị trí nguồn bổ sung đã lược bớt: {count}',
+  excludedArtifacts: 'Artifact bị tác động không được xét: {count}',
+  excludedFromTrace: 'Artifact này bị loại khỏi kết quả tham chiếu test tĩnh.',
+  exclusionReasons: {
+    MISSING_ARTIFACT: 'Không tìm thấy artifact trong snapshot đã quét.',
+    FOREIGN_SNAPSHOT: 'Artifact thuộc snapshot khác.',
+    UNSUPPORTED_TYPE: 'Loại artifact chưa được hỗ trợ trong tham chiếu test tĩnh.',
+  },
   parameterized: 'Khai báo test theo bảng; chưa bung các dòng dữ liệu.',
   calls: 'lời gọi', testReference: 'tham chiếu test', cases: 'case mỗi artifact', artifacts: 'artifact tác động', edges: 'quan hệ',
   limitations: {
@@ -91,6 +105,13 @@ const ja: typeof en = {
   inspect: '参照元の証拠を表示', evidence: 'ソースの証拠', noEvidence: 'ソースの証拠を取得できません。',
   more: 'コードをさらに表示', omitted: '追加のテスト経路は省略されています。', limits: '検索範囲',
   omittedLocations: '省略された追加のソース位置: {count}',
+  excludedArtifacts: '対象外となった影響アーティファクト: {count}',
+  excludedFromTrace: 'この影響アーティファクトは静的テスト参照の対象外です。',
+  exclusionReasons: {
+    MISSING_ARTIFACT: 'スキャン済みスナップショットにアーティファクトがありません。',
+    FOREIGN_SNAPSHOT: 'アーティファクトが別のスナップショットに属しています。',
+    UNSUPPORTED_TYPE: 'このアーティファクト種別は静的テスト参照で未対応です。',
+  },
   parameterized: 'パラメータ化されたソース宣言です。データ行は展開していません。',
   calls: '呼び出し', testReference: 'テスト参照', cases: 'コードごとのテスト数', artifacts: '影響を受けるコード', edges: '関係',
   limitations: {
