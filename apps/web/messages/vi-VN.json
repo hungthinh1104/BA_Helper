@@ -145,6 +145,7 @@
     "completeReviewsUnlock": "Hoàn tất mọi review và tạo snapshot để mở khóa final report",
     "loadingFinalAuditedReport": "Đang tải final audited report...",
     "failedLoadFinalReport": "Không tải được final report.",
+    "retrySnapshot": "Thử tải lại snapshot",
     "ensureReviewsComplete": "Hãy đảm bảo mọi review đã hoàn tất.",
     "finalReviewDecisions": "Quyết định review cuối",
     "lockedReviewDecisions": "Quyết định review đã khóa",
