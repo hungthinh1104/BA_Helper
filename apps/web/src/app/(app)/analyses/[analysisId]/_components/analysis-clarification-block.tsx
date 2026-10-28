@@ -48,9 +48,8 @@ export function AnalysisClarificationBlock({ analysisId, latestDecision }: { ana
       })
       toast.success(t("clarificationRequestSent"))
       setQuestion("")
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      toast.error(e?.response?.data?.message || t("failedCreateClarification"))
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : t("failedCreateClarification"))
     }
   }
 
@@ -62,9 +61,8 @@ export function AnalysisClarificationBlock({ analysisId, latestDecision }: { ana
       })
       toast.success(t("clarificationAnsweredToast"))
       setAnswer("")
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      toast.error(e?.response?.data?.message || t("failedAnswerClarification"))
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : t("failedAnswerClarification"))
     }
   }
 
@@ -72,9 +70,8 @@ export function AnalysisClarificationBlock({ analysisId, latestDecision }: { ana
     try {
       await createDerivedAnalysis.mutateAsync(clarificationId)
       toast.success(t("derivedAnalysisCreated"))
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      toast.error(e?.response?.data?.message || t("failedCreateDerivedAnalysis"))
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : t("failedCreateDerivedAnalysis"))
     }
   }
 

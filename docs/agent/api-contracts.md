@@ -895,7 +895,15 @@ ANALYSIS_STALE
 UNREVIEWED_ACK_REQUIRED
 INVALID_STATE_TRANSITION
 TERMINAL_ANALYSIS
+REPORT_PROVENANCE_MISMATCH
 ```
+
+Final reviewed report reads, approved report reads, and report exports must not
+combine a mutable generated document with review metadata or test traces from a
+different reviewed snapshot. Report generation freezes its Markdown on the
+reviewed snapshot; when a legacy document cannot be tied unambiguously to the
+latest reviewed snapshot, the API returns `REPORT_PROVENANCE_MISMATCH` (HTTP
+409) instead of serving mixed-generation content.
 
 Validation failures do not create downstream job/analysis records unless a use
 case explicitly stores a rejected requirement revision for clarification.

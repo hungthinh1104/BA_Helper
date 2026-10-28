@@ -6,9 +6,10 @@ import { useTranslations } from "next-intl";
 interface EvidenceQualityTableProps {
   analysisId: string;
   items: ApprovedImpactReportResponse["evidenceQualityItems"];
+  isReadOnly?: boolean;
 }
 
-export function EvidenceQualityTable({ analysisId, items }: EvidenceQualityTableProps) {
+export function EvidenceQualityTable({ analysisId, items, isReadOnly = false }: EvidenceQualityTableProps) {
   const t = useTranslations("reports");
   if (!items || items.length === 0) return null;
 
@@ -41,6 +42,7 @@ export function EvidenceQualityTable({ analysisId, items }: EvidenceQualityTable
                         analysisId={analysisId}
                         linkId={item.linkId}
                         currentDecision={item.reviewDecision}
+                        isReadOnly={isReadOnly}
                       />
                     ) : (
                       <span className="text-[12px] text-muted-foreground">

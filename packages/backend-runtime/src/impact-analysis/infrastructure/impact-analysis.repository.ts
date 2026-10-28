@@ -208,6 +208,7 @@ export class ImpactAnalysisRepository {
     return this.prisma.impactAnalysis.updateMany({
       where: {
         id: params.analysisId,
+        status: 'WAITING_FOR_REVIEW',
         snapshot: {
           commitSha: params.expectedCommitSha,
         },

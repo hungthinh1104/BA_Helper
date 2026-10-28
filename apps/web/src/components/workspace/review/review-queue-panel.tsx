@@ -7,6 +7,7 @@ import { AlertCircle, CheckCircle } from "lucide-react"
 import { useReviewInsight, useReviewTraceabilityLink } from "@/hooks/api/use-analyses"
 import { ReviewQueueSidebar } from "./review-queue-sidebar"
 import { ReviewQueueDetail } from "./review-queue-detail"
+import { toast } from "sonner"
 
 interface ReviewQueuePanelProps {
   queueData: ReviewQueueResponse
@@ -80,19 +81,23 @@ export function ReviewQueuePanel({
 
   const handleConfirm = () => {
     if (!activeItem?.requiresDecision || !canReview) return
+    const onError = (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : t("reviewFailed"))
     if (activeItem.type === "INSIGHT" || activeItem.type === "UNKNOWN") {
-      reviewInsight.mutate({ insightId: activeItem.id, data: { reviewStatus: "CONFIRMED" } }, { onSuccess: handleNext })
+      reviewInsight.mutate({ insightId: activeItem.id, data: { reviewStatus: "CONFIRMED" } }, { onSuccess: handleNext, onError })
     } else if (activeItem.type === "TRACEABILITY_LINK" && activeItem.linkedTraceabilityLinkId) {
-      reviewLink.mutate({ traceabilityLinkId: activeItem.linkedTraceabilityLinkId, data: { reviewStatus: "CONFIRMED" } }, { onSuccess: handleNext })
+      reviewLink.mutate({ traceabilityLinkId: activeItem.linkedTraceabilityLinkId, data: { reviewStatus: "CONFIRMED" } }, { onSuccess: handleNext, onError })
     }
   }
 
   const handleReject = () => {
     if (!activeItem?.requiresDecision || !canReview) return
+    const onError = (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : t("reviewFailed"))
     if (activeItem.type === "INSIGHT" || activeItem.type === "UNKNOWN") {
-      reviewInsight.mutate({ insightId: activeItem.id, data: { reviewStatus: "REJECTED" } }, { onSuccess: handleNext })
+      reviewInsight.mutate({ insightId: activeItem.id, data: { reviewStatus: "REJECTED" } }, { onSuccess: handleNext, onError })
     } else if (activeItem.type === "TRACEABILITY_LINK" && activeItem.linkedTraceabilityLinkId) {
-      reviewLink.mutate({ traceabilityLinkId: activeItem.linkedTraceabilityLinkId, data: { reviewStatus: "REJECTED" } }, { onSuccess: handleNext })
+      reviewLink.mutate({ traceabilityLinkId: activeItem.linkedTraceabilityLinkId, data: { reviewStatus: "REJECTED" } }, { onSuccess: handleNext, onError })
     }
   }
 

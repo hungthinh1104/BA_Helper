@@ -6,8 +6,30 @@ import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { grantProjectMembership } from './helpers/grant-project-membership';
 import { PrismaService } from '@ba-helper/backend-runtime';
+import type { ReviewNoteRepository } from '@ba-helper/backend-runtime';
 import { RunDocumentJobUseCase } from '@ba-helper/application';
 import { ApprovedReportContextReader } from '../../src/modules/document/application/queries/approved-report-context.reader';
+import type { CreateReviewedReportSnapshotUseCase } from '../../src/modules/document/application/commands/create-reviewed-report-snapshot.usecase';
+import { FinalizeImpactAnalysisUseCase } from '../../src/modules/impact-analysis/application/lifecycle/finalize-impact-analysis.usecase';
+import { SaveReviewNoteUseCase } from '../../src/modules/impact-analysis/application/review/save-review-note.usecase';
+
+function createDeferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
+function withDeadline<T>(promise: Promise<T>, label: string): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timeout = setTimeout(() => reject(new Error(`Timed out waiting for ${label}`)), 10_000);
+  });
+  return Promise.race([promise, deadline]).finally(() => {
+    if (timeout) clearTimeout(timeout);
+  });
+}
 
 describe('Final Reviewed Report Audit Flow (e2e)', () => {
   let app: INestApplication;
@@ -442,9 +464,221 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
 
     const markdown = exportRes.text;
 
+    const reviewedSnapshot = await prisma.reviewedReportSnapshot.findFirst({
+      where: { analysisId },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(reviewedSnapshot?.markdown).toBe(markdown);
+
     // The markdown should contain the original ACCEPTED decisions from the snapshot
     expect(markdown).toContain('Confirmed'); // Corresponds to ACCEPTED in traceability section
     expect(markdown).not.toContain('REJECTED'); // Should not reflect the live mutation
     expect(markdown).not.toContain('Actually no'); // Should not reflect the live mutated note
   });
+
+  it('rejects mixed-generation report reads and exports when a mutable document is shared across snapshots', async () => {
+    const { analysisId, link1Id, link2Id, docId } = await setupBasicAnalysisWithLinks();
+    for (const linkId of [link1Id, link2Id]) {
+      await request(app.getHttpServer())
+        .put(`/api/v1/traceability-links/${linkId}/review-decision`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ decision: 'ACCEPTED' })
+        .expect(200);
+    }
+    await markAnalysisCompleted(analysisId);
+
+    const now = Date.now();
+    const olderSnapshotId = crypto.randomUUID();
+    const latestSnapshotId = crypto.randomUUID();
+    for (const [id, createdAt] of [
+      [olderSnapshotId, new Date(now - 1_000)],
+      [latestSnapshotId, new Date(now + 1_000)],
+    ] as const) {
+      await prisma.reviewedReportSnapshot.create({
+        data: {
+          id,
+          analysisId,
+          approvedDocumentId: docId,
+          markdown: null,
+          reviewDecisionsSnapshot: [],
+          evidenceQualitySummarySnapshot: {
+            missingEvidence: 0,
+            reviewRequired: 0,
+            evidenced: 0,
+            inferred: 0,
+            weakEvidence: 0,
+          },
+          createdAt,
+        },
+      });
+      await prisma.documentJob.create({
+        data: {
+          analysisId,
+          snapshotId: id,
+          documentType: 'IMPACT_REPORT',
+          status: 'COMPLETED',
+          progress: 100,
+          attemptCount: 1,
+          generatedDocumentId: docId,
+          completedAt: createdAt,
+        },
+      });
+    }
+
+    const finalResponse = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/final-reviewed-report`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(409);
+    expect(finalResponse.body.code).toBe('REPORT_PROVENANCE_MISMATCH');
+
+    const approvedResponse = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/approved-report`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(409);
+    expect(approvedResponse.body.code).toBe('REPORT_PROVENANCE_MISMATCH');
+
+    const exportResponse = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/approved-report/export.md`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(409);
+    expect(exportResponse.body.code).toBe('REPORT_PROVENANCE_MISMATCH');
+  });
+
+  it('allows only one concurrent finalize to create a reviewed snapshot', async () => {
+    const { analysisId, link1Id, link2Id } = await setupBasicAnalysisWithLinks();
+    for (const linkId of [link1Id, link2Id]) {
+      await request(app.getHttpServer())
+        .put(`/api/v1/traceability-links/${linkId}/review-decision`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ decision: 'ACCEPTED', note: 'Ready to finalize' })
+        .expect(200);
+    }
+    const finalizer = app.get(FinalizeImpactAnalysisUseCase);
+    const snapshotBuilder = (finalizer as unknown as {
+      createSnapshot: CreateReviewedReportSnapshotUseCase;
+    }).createSnapshot;
+    const originalBuildSnapshot = snapshotBuilder.buildSnapshotCreateData.bind(snapshotBuilder);
+    const bothBuiltReviewSnapshots = createDeferred();
+    const releaseTransactions = createDeferred();
+    let snapshotBuilds = 0;
+    const snapshotSpy = jest.spyOn(snapshotBuilder, 'buildSnapshotCreateData').mockImplementation(async (params) => {
+      const data = await originalBuildSnapshot(params);
+      if (snapshotBuilds < 2) {
+        snapshotBuilds += 1;
+        if (snapshotBuilds === 2) bothBuiltReviewSnapshots.resolve();
+        await releaseTransactions.promise;
+      }
+      return data;
+    });
+
+    try {
+      const finalizeRequest = () => request(app.getHttpServer())
+        .post(`/api/v1/impact-analyses/${analysisId}/finalize`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ acknowledgeUnreviewed: false });
+      const responsesPromise = Promise.all([finalizeRequest(), finalizeRequest()]);
+
+      await withDeadline(Promise.race([
+        bothBuiltReviewSnapshots.promise,
+        responsesPromise.then((responses) => {
+          throw new Error(`Finalize requests ended before the snapshot barrier: ${responses.map((response) => response.status).join(',')}`);
+        }),
+      ]), 'both finalize requests to build their review snapshots');
+      releaseTransactions.resolve();
+      const responses = await withDeadline(responsesPromise, 'concurrent finalize responses');
+      const snapshotCount = await prisma.reviewedReportSnapshot.count({ where: { analysisId } });
+      const rejectedResponse = responses.find((response) => response.status === 409);
+      expect({
+        statuses: responses.map((response) => response.status).sort(),
+        rejectedCode: rejectedResponse?.body.code,
+        snapshotCount,
+      }).toEqual({
+        statuses: [201, 409],
+        rejectedCode: 'INVALID_STATE_TRANSITION',
+        snapshotCount: 1,
+      });
+    } finally {
+      releaseTransactions.resolve();
+      snapshotSpy.mockRestore();
+    }
+  }, 30_000);
+
+  it('rejects a review note whose stale status read resumes after finalization', async () => {
+    const { analysisId, link1Id, link2Id } = await setupBasicAnalysisWithLinks();
+    for (const linkId of [link1Id, link2Id]) {
+      await request(app.getHttpServer())
+        .put(`/api/v1/traceability-links/${linkId}/review-decision`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ decision: 'ACCEPTED', note: 'Ready to finalize' })
+        .expect(200);
+    }
+    await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${analysisId}/review-notes`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ traceabilityLinkId: link1Id, body: 'Saved before finalization.' })
+      .expect(200);
+    const saveNoteUseCase = app.get(SaveReviewNoteUseCase);
+    const reviewNoteRepository = (saveNoteUseCase as unknown as {
+      reviewNoteRepo: ReviewNoteRepository;
+    }).reviewNoteRepo;
+    const originalUpsert = reviewNoteRepository.upsert.bind(reviewNoteRepository);
+    const noteReachedPersistence = createDeferred();
+    const releaseNoteWrite = createDeferred();
+    let blockedNoteWrite = false;
+    const noteSpy = jest.spyOn(reviewNoteRepository, 'upsert').mockImplementation(async (data) => {
+      if (!blockedNoteWrite) {
+        blockedNoteWrite = true;
+        noteReachedPersistence.resolve();
+        await releaseNoteWrite.promise;
+      }
+      return originalUpsert(data);
+    });
+
+    try {
+      const noteResponsePromise = request(app.getHttpServer())
+        .post(`/api/v1/impact-analyses/${analysisId}/review-notes`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ traceabilityLinkId: link1Id, body: 'Must be part of the finalized review.' })
+        .then((response) => response);
+
+      await withDeadline(Promise.race([
+        noteReachedPersistence.promise,
+        noteResponsePromise.then((response) => {
+          throw new Error(`Review note request ended before persistence: ${response.status}`);
+        }),
+      ]), 'review note to reach persistence after its status check');
+      const finalizeResponse = await request(app.getHttpServer())
+        .post(`/api/v1/impact-analyses/${analysisId}/finalize`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ acknowledgeUnreviewed: false });
+
+      expect(finalizeResponse.status).toBe(201);
+      releaseNoteWrite.resolve();
+      const noteResponse = await withDeadline(noteResponsePromise, 'review note response');
+      const clearResult = await reviewNoteRepository.clear({
+        impactAnalysisId: analysisId,
+        traceabilityLinkId: link1Id,
+      });
+      const noteCount = await prisma.reviewNote.count({ where: { impactAnalysisId: analysisId } });
+      const persistedNote = await prisma.reviewNote.findFirst({
+        where: { impactAnalysisId: analysisId, traceabilityLinkId: link1Id },
+      });
+      expect({
+        status: noteResponse.status,
+        code: noteResponse.body.code,
+        clearResult,
+        noteCount,
+        persistedBody: persistedNote?.body,
+      }).toEqual({
+        status: 409,
+        code: 'INVALID_STATE_TRANSITION',
+        clearResult: null,
+        noteCount: 1,
+        persistedBody: 'Saved before finalization.',
+      });
+    } finally {
+      releaseNoteWrite.resolve();
+      noteSpy.mockRestore();
+    }
+  }, 30_000);
 });

@@ -99,9 +99,8 @@ export function useConvertClarification(analysisId: string) {
     },
     onSuccess: () => {
       toast.success('Clarification answer has been converted to a requirement revision.');
-      // Invalidate both clarifications and requirements related queries
       queryClient.invalidateQueries({ queryKey: clarificationKeys.list(analysisId) });
-      // Might want to invalidate requirements list/detail here if they exist in UI state
+      queryClient.invalidateQueries({ queryKey: queryKeys.requirements.all });
     },
     onError: (error) => {
       toast.error('Failed to convert clarification to requirement revision', {

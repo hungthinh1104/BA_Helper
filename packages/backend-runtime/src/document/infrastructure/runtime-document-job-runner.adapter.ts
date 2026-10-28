@@ -72,7 +72,7 @@ export class RuntimeDocumentJobRunnerAdapter extends DocumentJobRunnerPort {
 
         await tx.reviewedReportSnapshot.update({
           where: { id: snapshot.id },
-          data: { approvedDocumentId: persistedReport.id },
+          data: { approvedDocumentId: persistedReport.id, markdown },
         });
       });
 

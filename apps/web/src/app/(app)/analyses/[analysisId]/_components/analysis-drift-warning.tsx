@@ -107,7 +107,7 @@ export function AnalysisDriftWarning({ projectId, analysisId, analysis }: Analys
           projectId={projectId}
           repositoryId={analysis.snapshot.repositoryId}
           baseSnapshotId={analysis.snapshot.id}
-          targetCommitSha={repoDetail?.latestSnapshot?.commitSha}
+          targetSnapshotId={repoDetail?.latestSnapshot?.id}
         />
       </DenseAlert>
     )
@@ -175,7 +175,7 @@ export function AnalysisDriftWarning({ projectId, analysisId, analysis }: Analys
         projectId={projectId}
         repositoryId={analysis.snapshot.repositoryId}
         baseSnapshotId={analysis.snapshot.id}
-        targetCommitSha={repoDetail?.latestSnapshot?.commitSha}
+        targetSnapshotId={repoDetail?.latestSnapshot?.id}
       />
     </>
   )

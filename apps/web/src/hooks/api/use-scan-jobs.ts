@@ -29,10 +29,11 @@ export function useCreateScanJob(projectId: string | undefined, repositoryId?: s
         scanJobResponseSchema
       )
     },
-    onSuccess: () => {
-      if (repositoryId) {
+    onSuccess: (_scanJob, input) => {
+      const targetRepositoryId = input.repositoryId ?? repositoryId
+      if (targetRepositoryId) {
         queryClient.invalidateQueries({
-          queryKey: queryKeys.repositories.detail(repositoryId),
+          queryKey: queryKeys.repositories.detail(targetRepositoryId),
         })
       }
       queryClient.invalidateQueries({

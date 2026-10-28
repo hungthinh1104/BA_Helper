@@ -19,9 +19,15 @@ beforeEach(() => {
 
 it('renders frozen test references in the English report route without live source controls', () => {
   jest.mocked(useFinalReviewedReport).mockReturnValue({ isLoading: false, data: {
+    snapshotId: 'reviewed-snapshot-current',
+    markdown: '# Frozen snapshot markdown',
     testTraceSnapshot: { version: 1, coverage: staticTestTraceFixture() },
   } } as ReturnType<typeof useFinalReviewedReport>);
   render(<ReportViewer analysisId="analysis-1" />);
+  expect(screen.getByText('# Frozen snapshot markdown')).toBeInTheDocument();
+  expect(screen.queryByText('# Approved markdown')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'exportMarkdown' })).toBeDisabled();
+  expect(screen.getByRole('status')).toHaveTextContent('reportSnapshotMismatch');
   expect(screen.getByRole('heading', { name: 'refunds once' })).toBeInTheDocument();
   expect(screen.getByText('Saved test references')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Inspect source reference' })).not.toBeInTheDocument();
@@ -29,6 +35,7 @@ it('renders frozen test references in the English report route without live sour
 
 it('keeps legacy reports readable and explains absent frozen metadata', () => {
   jest.mocked(useFinalReviewedReport).mockReturnValue({ isLoading: false, data: {
+    markdown: '# Approved markdown',
     testTraceSnapshot: null,
   } } as ReturnType<typeof useFinalReviewedReport>);
   render(<ReportViewer analysisId="analysis-1" />);
@@ -40,6 +47,7 @@ it('distinguishes failed snapshot loading from absent legacy metadata', () => {
   jest.mocked(useFinalReviewedReport).mockReturnValue({ isLoading: false, error: new Error('request failed'),
   } as ReturnType<typeof useFinalReviewedReport>);
   render(<ReportViewer analysisId="analysis-1" />);
-  expect(screen.getByRole('alert')).toHaveTextContent(testTraceLabels.en.error);
+  expect(screen.getByRole('alert')).toHaveTextContent('failedToLoadApprovedReport');
+  expect(screen.queryByText('# Approved markdown')).not.toBeInTheDocument();
   expect(screen.queryByText(testTraceLabels.en.unavailable)).not.toBeInTheDocument();
 });

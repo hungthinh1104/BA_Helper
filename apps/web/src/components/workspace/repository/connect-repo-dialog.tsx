@@ -5,12 +5,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { repositoryCreateRequestSchema, scanJobCreateRequestSchema, scanJobResponseSchema } from "@ba-helper/contracts"
+import { repositoryCreateRequestSchema, scanJobCreateRequestSchema } from "@ba-helper/contracts"
 import { useCreateRepository } from "@/hooks/api/use-repositories"
+import { useCreateScanJob } from "@/hooks/api/use-scan-jobs"
 import { X, AlertCircle, Loader2, GitBranch, LockKeyhole, ShieldCheck } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
-import { apiPost } from "@/lib/api-client"
 import { ApiError } from "@/lib/api-error"
 import { useTranslations } from "next-intl"
 import { parseGithubRepositoryUrl } from "@/lib/github-repository-url"
@@ -25,6 +25,7 @@ const TESTED_DEMO_REPO_REF = "main"
 export function ConnectRepoDialog({ children }: ConnectRepoDialogProps) {
   const t = useTranslations("workspaceLists")
   const { mutateAsync: connectRepo, isPending: loading } = useCreateRepository()
+  const { mutateAsync: createScanJob } = useCreateScanJob(undefined)
   const [open, setOpen] = useState(false)
   const [url, setUrl] = useState("")
   const [ref, setRef] = useState("")
@@ -77,11 +78,7 @@ export function ConnectRepoDialog({ children }: ConnectRepoDialogProps) {
       })
 
       try {
-        await apiPost(
-          `/api/v1/repositories/${repo.repositoryId}/scan-jobs`,
-          scanInput,
-          scanJobResponseSchema,
-        )
+        await createScanJob({ repositoryId: repo.repositoryId, ...scanInput })
       } catch (err) {
         handleScanQueueFailure(repo.repositoryId, err)
         return

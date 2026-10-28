@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
+import { AppError } from '@ba-helper/shared';
 import { buildEvidenceQualityProjection } from './evidence-quality.projection';
-import { PrismaService, TraceabilityRepository, InsightRepository, EvaluationContextAdapter, ApprovedReportMetadata, buildReportReviewCoverageSummary } from "@ba-helper/backend-runtime";
+import { PrismaService, TraceabilityRepository, InsightRepository, EvaluationContextAdapter, ApprovedReportMetadata, buildReportReviewCoverageSummary, buildReportReviewCoverageSummaryFromSnapshot } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class ApprovedReportProjectionService {
@@ -22,6 +23,36 @@ export class ApprovedReportProjectionService {
     reviewCoverageSummary?: any;
   }> {
     const analysis = report.impactAnalysis;
+    const reviewedSnapshot = await this.prisma.reviewedReportSnapshot.findFirst({
+      where: { analysisId: analysis.id },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (reviewedSnapshot && reviewedSnapshot.approvedDocumentId !== report.id) {
+      throw new AppError(
+        'REPORT_PROVENANCE_MISMATCH',
+        'The approved document is not linked to the latest reviewed snapshot.',
+        { reportSnapshotId: reviewedSnapshot.id, approvedDocumentId: report.id },
+      );
+    }
+
+    if (reviewedSnapshot && reviewedSnapshot.markdown === null) {
+      const completedJobs = await this.prisma.documentJob.findMany({
+        where: { generatedDocumentId: report.id, status: 'COMPLETED' },
+        select: { snapshotId: true },
+      });
+      if (completedJobs.some((job: { snapshotId: string }) => job.snapshotId !== reviewedSnapshot.id)) {
+        throw new AppError(
+          'REPORT_PROVENANCE_MISMATCH',
+          'The approved document has been generated from multiple reviewed snapshots without frozen report content.',
+          { reportSnapshotId: reviewedSnapshot.id, approvedDocumentId: report.id },
+        );
+      }
+    }
+
+    const projectedReport = reviewedSnapshot?.markdown !== null && reviewedSnapshot?.markdown !== undefined
+      ? { ...report, content: reviewedSnapshot.markdown }
+      : report;
     const isPinnedCommit = analysis.sourceTarget.resolvedRefType === 'COMMIT';
 
     let staleReason: string | undefined;
@@ -51,18 +82,31 @@ export class ApprovedReportProjectionService {
       traceabilityLinks,
       insights: insights as any[],
     });
-    const reviewCoverageSummary = buildReportReviewCoverageSummary({
+    const liveReviewCoverageSummary = buildReportReviewCoverageSummary({
       items: qualityProjection.items,
       evidenceQualitySummary: qualityProjection.summary,
     });
+    const evidenceQualitySummary = reviewedSnapshot?.evidenceQualitySummarySnapshot ?? qualityProjection.summary;
+    const evidenceQualityItems = Array.isArray(reviewedSnapshot?.reviewDecisionsSnapshot)
+      ? reviewedSnapshot.reviewDecisionsSnapshot
+      : qualityProjection.items;
+    const reviewCoverageSummary = reviewedSnapshot
+      ? buildReportReviewCoverageSummaryFromSnapshot({
+          reviewDecisionsSnapshot: reviewedSnapshot.reviewDecisionsSnapshot,
+          evidenceQualitySummarySnapshot: reviewedSnapshot.evidenceQualitySummarySnapshot,
+        })
+      : liveReviewCoverageSummary;
+    const projectedEvaluationContext = reviewedSnapshot
+      ? reviewedSnapshot.evaluationContextSnapshot
+      : evaluationContext;
 
     return {
-      report,
+      report: projectedReport,
       isStale,
       staleReason,
-      evaluationContext,
-      evidenceQualitySummary: qualityProjection.summary,
-      evidenceQualityItems: qualityProjection.items,
+      evaluationContext: projectedEvaluationContext,
+      evidenceQualitySummary,
+      evidenceQualityItems,
       reviewCoverageSummary,
       metadata: {
         analysisId: analysis.id,
@@ -74,10 +118,10 @@ export class ApprovedReportProjectionService {
         snapshotId: analysis.snapshot.id,
         analyzerVersion: analysis.snapshot.analyzerVersion,
         generatedDocumentId: report.id,
-        generatedAt: report.updatedAt.toISOString(),
+        generatedAt: (reviewedSnapshot?.createdAt ?? report.updatedAt).toISOString(),
         finalizedAt: analysis.updatedAt.toISOString(),
         approvedDocumentCreatedAt: report.createdAt.toISOString(),
-        approvedDocumentUpdatedAt: report.updatedAt.toISOString(),
+        approvedDocumentUpdatedAt: (reviewedSnapshot?.createdAt ?? report.updatedAt).toISOString(),
         staleStatusAtReadTime: isStale,
         staleReason,
         domainPack: readDomainPackProvenance(analysis),

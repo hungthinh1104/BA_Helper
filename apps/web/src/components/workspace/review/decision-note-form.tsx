@@ -6,6 +6,7 @@ import { useReviewNotes, useSaveReviewNote } from "@/hooks/api/use-review-notes"
 import { Button } from "@/components/ui/button"
 import { useCurrentWorkspace } from "@/lib/project-context"
 import { canReview } from "@/lib/permissions"
+import { toast } from "sonner"
 
 interface DecisionNoteFormProps {
   analysisId: string
@@ -37,11 +38,17 @@ export function DecisionNoteForm({ analysisId, insightId, traceabilityLinkId }: 
 
   const handleSave = () => {
     if (!body.trim() || !canRev) return
-    saveNoteMutation.mutate({
-      insightId: insightId || undefined,
-      traceabilityLinkId: traceabilityLinkId || undefined,
-      body,
-    })
+    saveNoteMutation.mutate(
+      {
+        insightId: insightId || undefined,
+        traceabilityLinkId: traceabilityLinkId || undefined,
+        body,
+      },
+      {
+        onSuccess: () => toast.success(t("saved")),
+        onError: (error) => toast.error(error instanceof Error ? error.message : t("reviewFailed")),
+      },
+    )
   }
 
   if (isLoading) {

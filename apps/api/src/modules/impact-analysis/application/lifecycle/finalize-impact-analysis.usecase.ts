@@ -80,6 +80,7 @@ export class FinalizeImpactAnalysisUseCase {
       const finalizeResult = await tx.impactAnalysis.updateMany({
         where: {
           id: analysis.id,
+          status: 'WAITING_FOR_REVIEW',
           snapshot: {
             commitSha: analysis.snapshot.commitSha,
           },
@@ -96,6 +97,19 @@ export class FinalizeImpactAnalysisUseCase {
       });
 
       if (finalizeResult.count === 0) {
+        const currentAnalysis = await tx.impactAnalysis.findUnique({
+          where: { id: analysis.id },
+          select: { status: true },
+        });
+        if (!currentAnalysis) {
+          throw new AppError('IMPACT_ANALYSIS_NOT_FOUND', 'Impact analysis not found.');
+        }
+        if (currentAnalysis.status !== 'WAITING_FOR_REVIEW') {
+          throw new AppError(
+            'INVALID_STATE_TRANSITION',
+            'Impact analysis is no longer waiting for review.',
+          );
+        }
         throw new AppError(
           'ANALYSIS_STALE',
           'Analysis became stale during finalization.',

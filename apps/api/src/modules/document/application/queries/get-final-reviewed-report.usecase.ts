@@ -39,6 +39,14 @@ export class GetFinalReviewedReportUseCase {
       );
     }
 
+    if (completion.latestSnapshotId && completion.latestSnapshotId !== snapshot.id) {
+      throw new AppError(
+        'REPORT_PROVENANCE_MISMATCH',
+        'Review completion and final report refer to different reviewed snapshots.',
+        { completionSnapshotId: completion.latestSnapshotId, reportSnapshotId: snapshot.id },
+      );
+    }
+
     const markdown = await this.resolveSnapshotMarkdown(snapshot, locale);
     const reviewCoverageSummary = buildReportReviewCoverageSummaryFromSnapshot({
       reviewDecisionsSnapshot: snapshot.reviewDecisionsSnapshot,
@@ -99,7 +107,7 @@ export class GetFinalReviewedReportUseCase {
       throw new AppError('LOCALIZED_REPORT_NOT_READY', `Localization for ${locale} is still in progress.`);
     }
 
-    const { sourceContentHash: currentHash } = await this.contextReader.readContext(snapshot.analysisId);
+    const { sourceContentHash: currentHash } = await this.contextReader.readContext(snapshot.analysisId, snapshot.id);
     if (localized.sourceContentHash !== currentHash) {
       throw new AppError('LOCALIZED_REPORT_OUT_OF_SYNC', `Localized report for ${locale} is out of sync. Please regenerate.`);
     }
@@ -109,10 +117,31 @@ export class GetFinalReviewedReportUseCase {
 
   private async resolveDefaultSnapshotMarkdown(snapshot: {
     id: string;
+    analysisId: string;
     approvedDocumentId: string | null;
     markdown: string | null;
   }) {
+    if (snapshot.markdown !== null) {
+      return snapshot.markdown;
+    }
+
     if (snapshot.approvedDocumentId) {
+      const completedJobs = await this.prisma.documentJob.findMany({
+        where: {
+          analysisId: snapshot.analysisId,
+          generatedDocumentId: snapshot.approvedDocumentId,
+          status: DocumentJobStatus.COMPLETED,
+        },
+        select: { snapshotId: true },
+      });
+      if (completedJobs.some((job: { snapshotId: string }) => job.snapshotId !== snapshot.id)) {
+        throw new AppError(
+          'REPORT_PROVENANCE_MISMATCH',
+          'The approved document was generated from a different reviewed snapshot.',
+          { reportSnapshotId: snapshot.id, approvedDocumentId: snapshot.approvedDocumentId },
+        );
+      }
+
       const document = await this.prisma.generatedDocument.findUnique({
         where: { id: snapshot.approvedDocumentId },
       });
@@ -132,10 +161,6 @@ export class GetFinalReviewedReportUseCase {
 
     if (job?.status === DocumentJobStatus.COMPLETED && job.generatedDocument) {
       return job.generatedDocument.content;
-    }
-
-    if (!job && snapshot.markdown) {
-      return snapshot.markdown;
     }
 
     if (job) {

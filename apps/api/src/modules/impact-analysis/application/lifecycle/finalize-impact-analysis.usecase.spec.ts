@@ -1,7 +1,7 @@
 import { FinalizeImpactAnalysisUseCase } from './finalize-impact-analysis.usecase';
 import type { CreateReviewedReportSnapshotUseCase } from '../../../document/application/commands/create-reviewed-report-snapshot.usecase';
 import type { EnqueueDocumentJobUseCase } from '../../../document/application/commands/enqueue-document-job.usecase';
-import { PrismaService, ImpactAnalysisRepository, TraceabilityRepository, InsightRepository } from "@ba-helper/backend-runtime";
+import type { PrismaService, ImpactAnalysisRepository, TraceabilityRepository, InsightRepository } from "@ba-helper/backend-runtime";
 
 describe('FinalizeImpactAnalysisUseCase', () => {
   let useCase: FinalizeImpactAnalysisUseCase;
@@ -12,6 +12,7 @@ describe('FinalizeImpactAnalysisUseCase', () => {
   let createSnapshot: jest.Mocked<CreateReviewedReportSnapshotUseCase>;
   let enqueueJob: jest.Mocked<EnqueueDocumentJobUseCase>;
   let txImpactUpdateMany: jest.Mock;
+  let txImpactFindUnique: jest.Mock;
   let txSnapshotCreate: jest.Mock;
   let txDocumentJobFindUnique: jest.Mock;
   let txDocumentJobCreate: jest.Mock;
@@ -29,6 +30,7 @@ describe('FinalizeImpactAnalysisUseCase', () => {
     } as unknown as jest.Mocked<InsightRepository>;
 
     txImpactUpdateMany = jest.fn().mockResolvedValue({ count: 1 });
+    txImpactFindUnique = jest.fn().mockResolvedValue({ status: 'WAITING_FOR_REVIEW' });
     txSnapshotCreate = jest.fn().mockResolvedValue({
       id: 'reviewed-snapshot-1',
       analysisId: 'analysis-1',
@@ -47,7 +49,10 @@ describe('FinalizeImpactAnalysisUseCase', () => {
     prisma = {
       $transaction: jest.fn(async (callback: (tx: any) => unknown) =>
         callback({
-          impactAnalysis: { updateMany: txImpactUpdateMany },
+          impactAnalysis: {
+            updateMany: txImpactUpdateMany,
+            findUnique: txImpactFindUnique,
+          },
           reviewedReportSnapshot: { create: txSnapshotCreate },
           documentJob: {
             findUnique: txDocumentJobFindUnique,
@@ -187,6 +192,12 @@ describe('FinalizeImpactAnalysisUseCase', () => {
     expect(result.id).toBe('analysis-1');
     expect(prisma.$transaction).toHaveBeenCalled();
     expect(txImpactUpdateMany).toHaveBeenCalled();
+    expect(txImpactUpdateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        id: 'analysis-1',
+        status: 'WAITING_FOR_REVIEW',
+      }),
+    }));
     expect(createSnapshot.buildSnapshotCreateData).toHaveBeenCalledWith({
       analysisId: 'analysis-1',
       createdByUserId: 'user-1',
@@ -279,6 +290,17 @@ describe('FinalizeImpactAnalysisUseCase', () => {
       code: 'INVALID_STATE_TRANSITION',
     });
     expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('rejects a finalize that loses the conditional status transition race', async () => {
+    mockValidState();
+    txImpactUpdateMany.mockResolvedValueOnce({ count: 0 });
+    txImpactFindUnique.mockResolvedValueOnce({ status: 'COMPLETED' });
+
+    await expect(useCase.execute(validParams)).rejects.toMatchObject({
+      code: 'INVALID_STATE_TRANSITION',
+    });
+    expect(txSnapshotCreate).not.toHaveBeenCalled();
   });
 
   it('UC07-D: Finalize unreviewed with ack success, unreviewed items remain labeled', async () => {

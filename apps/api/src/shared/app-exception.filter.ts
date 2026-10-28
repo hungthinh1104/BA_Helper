@@ -82,6 +82,7 @@ export class AppExceptionFilter implements ExceptionFilter {
       case 'ANALYSIS_STALE':
       case 'MERGED_REPORT_EXPORT_BLOCKED_STALE':
       case 'REPORT_EXPORT_BLOCKED_STALE':
+      case 'REPORT_PROVENANCE_MISMATCH':
         return HttpStatus.CONFLICT;
       case 'PDF_RENDER_FAILED':
         return HttpStatus.BAD_GATEWAY;

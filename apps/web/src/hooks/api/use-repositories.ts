@@ -73,7 +73,7 @@ export function useSnapshotDrift(
   projectId: string | undefined,
   repositoryId: string | undefined,
   baseSnapshotId: string | undefined,
-  targetCommitSha?: string,
+  targetSnapshotId?: string,
   options?: { enabled?: boolean }
 ) {
   const activeProjectId = useOptionalProjectId()
@@ -87,14 +87,14 @@ export function useSnapshotDrift(
   )
 
   return useQuery({
-    queryKey: queryKeys.repositories.snapshotDrift(repositoryId || "", baseSnapshotId || "", targetCommitSha),
+    queryKey: queryKeys.repositories.snapshotDrift(repositoryId || "", baseSnapshotId || "", targetSnapshotId),
     queryFn: async () => {
       const url = new URL(
         `/api/v1/projects/${effectiveProjectId}/repositories/${repositoryId}/snapshots/${baseSnapshotId}/drift`,
         window.location.origin
       )
-      if (targetCommitSha) {
-        url.searchParams.set('targetCommitSha', targetCommitSha)
+      if (targetSnapshotId) {
+        url.searchParams.set('targetSnapshotId', targetSnapshotId)
       }
 
       const { repositorySnapshotDriftResponseSchema } = await import("@ba-helper/contracts")

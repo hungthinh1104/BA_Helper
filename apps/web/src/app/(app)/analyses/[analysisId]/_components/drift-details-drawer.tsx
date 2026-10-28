@@ -19,7 +19,7 @@ interface DriftDetailsDrawerProps {
   projectId: string | undefined
   repositoryId: string | undefined
   baseSnapshotId: string | undefined
-  targetCommitSha?: string
+  targetSnapshotId?: string
 }
 
 export function DriftDetailsDrawer({
@@ -28,7 +28,7 @@ export function DriftDetailsDrawer({
   projectId,
   repositoryId,
   baseSnapshotId,
-  targetCommitSha,
+  targetSnapshotId,
 }: DriftDetailsDrawerProps) {
   const t = useTranslations("workspace")
   // We only enable the query when the drawer is open to fetch lazily
@@ -36,7 +36,7 @@ export function DriftDetailsDrawer({
     projectId,
     repositoryId,
     baseSnapshotId,
-    targetCommitSha,
+    targetSnapshotId,
     { enabled: open }
   )
 

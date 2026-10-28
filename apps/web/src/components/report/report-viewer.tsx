@@ -2,7 +2,7 @@
 
 import { useApprovedReport, useFinalReviewedReport } from "@/hooks/api/use-approved-report"
 import { useAnalysisDetail } from "@/hooks/api/use-analyses"
-import { ApprovedImpactReportResponse } from "@ba-helper/contracts"
+import { evidenceQualityItemSchema, evidenceQualitySummarySchema, evaluationContextSchema } from "@ba-helper/contracts"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AlertCircle, FileWarning, Copy, Download, CheckCircle2, Loader2, Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -35,20 +35,31 @@ export function ReportViewer({ analysisId, printMode = false, locale = "en" }: R
   const isEnglish = reportLocale === "en"
   
   // Conditionally fetch approved report only if it's english
-  const { data: approvedReport, isLoading: approvedLoading, error: approvedError } = useApprovedReport(analysisId, isEnglish ? analysis?.status : undefined)
+  const { data: approvedReport, isLoading: approvedLoading } = useApprovedReport(analysisId, isEnglish ? analysis?.status : undefined)
   
   // Use the new localized final reviewed report if locale is provided
   const { data: localizedReport, isLoading: localizedLoading, error: localizedError } = useFinalReviewedReport(analysisId, reportLocale)
   
-  const reportLoading = isEnglish ? approvedLoading : localizedLoading
-  const error = isEnglish ? approvedError : localizedError
-  const hasReport = isEnglish ? !!approvedReport : !!localizedReport
-  const markdown = isEnglish ? approvedReport?.markdown : localizedReport?.markdown
+  const reportLoading = localizedLoading || (isEnglish && approvedLoading)
+  const error = localizedError
+  const hasReport = !!localizedReport
+  const markdown = localizedReport?.markdown
   const isStale = isEnglish ? !!approvedReport?.isStale : false // localized report implicitly not stale if served, but we lack full status
   const staleReason = isEnglish ? approvedReport?.staleReason : undefined
+  const exportMatchesSnapshot = Boolean(
+    isEnglish && approvedReport && typeof localizedReport?.markdown === "string" &&
+    approvedReport.markdown === localizedReport.markdown,
+  )
+  const frozenEvidenceItems = evidenceQualityItemSchema.array().safeParse(localizedReport?.reviewDecisionsSnapshot).data
+  const frozenEvidenceSummary = evidenceQualitySummarySchema.nullable().safeParse(
+    localizedReport?.evidenceQualitySummarySnapshot,
+  ).data
+  const frozenEvaluationContext = evaluationContextSchema.nullable().safeParse(
+    localizedReport?.evaluationContextSnapshot,
+  ).data
   
-  const commitSha = isEnglish ? approvedReport?.provenance.commitSha : analysis?.snapshot.commitSha
-  const generatedAt = isEnglish ? approvedReport?.provenance.generatedAt : localizedReport?.createdAt
+  const commitSha = analysis?.snapshot.commitSha
+  const generatedAt = localizedReport?.createdAt
 
   const [copied, setCopied] = useState(false)
   const [exportingFormat, setExportingFormat] = useState<"md" | "pdf" | null>(null)
@@ -68,7 +79,7 @@ export function ReportViewer({ analysisId, printMode = false, locale = "en" }: R
   }
 
   const handleDownload = async (format: "md" | "pdf") => {
-    if (!hasReport || isStale || !isEnglish) return;
+    if (!hasReport || isStale || !exportMatchesSnapshot) return;
     setExportingFormat(format);
     try {
       const file = await apiGetFile(`/api/v1/impact-analyses/${analysisId}/approved-report/export.${format}`);
@@ -128,13 +139,15 @@ export function ReportViewer({ analysisId, printMode = false, locale = "en" }: R
   if (error || !hasReport) {
     const isFinalizedWithoutApprovedReport = analysis?.status === "COMPLETED"
     return (
-      <div className="m-8 flex flex-col items-center justify-center rounded-xl border border-border/60 bg-surface px-8 py-12 text-muted-foreground">
+      <div role="alert" className="m-8 flex flex-col items-center justify-center rounded-xl border border-border/60 bg-surface px-8 py-12 text-muted-foreground">
         <AlertCircle className="w-8 h-8 text-destructive mb-3" />
         <p className="font-medium text-foreground">
-          {isFinalizedWithoutApprovedReport ? t("approvedSnapshotMissing") : t("approvedReportUnavailable")}
+          {error ? t("failedToLoadApprovedReport") : isFinalizedWithoutApprovedReport ? t("approvedSnapshotMissing") : t("approvedReportUnavailable")}
         </p>
         <p className="max-w-md text-center text-[13px]">
-          {isFinalizedWithoutApprovedReport
+          {error
+            ? t("approvedReportUnavailable")
+            : isFinalizedWithoutApprovedReport
             ? t("finalizedMissingSnapshot")
             : t("finalizeToGenerate")}
         </p>
@@ -177,8 +190,8 @@ export function ReportViewer({ analysisId, printMode = false, locale = "en" }: R
                   variant="outline"
                   className="h-8 gap-1.5 shadow-none"
                   onClick={() => handleDownload("md")}
-                  disabled={isStale || exportingFormat !== null || !isEnglish}
-                  title={!isEnglish ? t("englishExportOnly") : isStale ? t("staleExportBlocked") : undefined}
+                  disabled={isStale || exportingFormat !== null || !isEnglish || !exportMatchesSnapshot}
+                  title={!isEnglish ? t("englishExportOnly") : !approvedReport ? t("approvedReportUnavailable") : !exportMatchesSnapshot ? t("reportSnapshotMismatch") : isStale ? t("staleExportBlocked") : undefined}
                 >
                   {exportingFormat === "md" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
                   {t("exportMarkdown")}
@@ -188,8 +201,8 @@ export function ReportViewer({ analysisId, printMode = false, locale = "en" }: R
                   variant="outline"
                   className="h-8 gap-1.5 shadow-none"
                   onClick={() => handleDownload("pdf")}
-                  disabled={isStale || exportingFormat !== null || !isEnglish}
-                  title={!isEnglish ? t("englishExportOnly") : isStale ? t("staleExportBlocked") : undefined}
+                  disabled={isStale || exportingFormat !== null || !isEnglish || !exportMatchesSnapshot}
+                  title={!isEnglish ? t("englishExportOnly") : !approvedReport ? t("approvedReportUnavailable") : !exportMatchesSnapshot ? t("reportSnapshotMismatch") : isStale ? t("staleExportBlocked") : undefined}
                 >
                   {exportingFormat === "pdf" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
                   {t("exportPdf")}
@@ -198,6 +211,12 @@ export function ReportViewer({ analysisId, printMode = false, locale = "en" }: R
             )}
           </div>
         </div>
+
+        {isEnglish && localizedReport && approvedReport && !exportMatchesSnapshot && (
+          <p role="status" className="mb-4 text-xs text-warning">
+            {t("reportSnapshotMismatch")}
+          </p>
+        )}
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <AnalysisStatusBadge status={isStale ? "STALE" : "COMPLETED"} />
@@ -247,12 +266,12 @@ export function ReportViewer({ analysisId, printMode = false, locale = "en" }: R
       {!printMode && (
         <>
           <div className="mt-12 space-y-8 border-t border-border/50 pt-8 print:hidden">
-            {Boolean(isEnglish ? approvedReport?.reviewCoverageSummary : localizedReport?.reviewCoverageSummary) && <ReviewCoverageSummary summary={isEnglish ? approvedReport!.reviewCoverageSummary! : localizedReport!.reviewCoverageSummary!} />}
-            {Boolean(isEnglish ? approvedReport?.evidenceQualitySummary : localizedReport?.evidenceQualitySummarySnapshot) && <EvidenceQualitySummary summary={isEnglish ? approvedReport!.evidenceQualitySummary! : localizedReport!.evidenceQualitySummarySnapshot as NonNullable<ApprovedImpactReportResponse["evidenceQualitySummary"]>} />}
-            {isEnglish && Boolean(approvedReport?.evidenceQualityItems?.length) && (
-              <EvidenceQualityTable analysisId={analysisId} items={approvedReport!.evidenceQualityItems!} />
+            {localizedReport?.reviewCoverageSummary && <ReviewCoverageSummary summary={localizedReport.reviewCoverageSummary} />}
+            {frozenEvidenceSummary && <EvidenceQualitySummary summary={frozenEvidenceSummary} />}
+            {isEnglish && Boolean(frozenEvidenceItems?.length) && (
+              <EvidenceQualityTable analysisId={analysisId} items={frozenEvidenceItems} isReadOnly />
             )}
-            {isEnglish && approvedReport?.evaluationContext && <EvaluationContextCard context={approvedReport.evaluationContext} />}
+            {frozenEvaluationContext && <EvaluationContextCard context={frozenEvaluationContext} />}
           </div>
 
           {isEnglish && (

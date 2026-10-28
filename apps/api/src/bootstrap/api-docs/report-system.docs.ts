@@ -4,12 +4,12 @@ import { operation as op, type ControllerDocs } from './operation-doc';
 export const reportSystemDocs: Record<string, ControllerDocs> = {
   DocumentController: { tag: 'Reviewed reports & exports', operations: {
     list: op('List generated analysis documents', c.documentListResponseSchema),
-    getApprovedReportEndpoint: op('Read the approved impact report', c.approvedImpactReportResponseSchema),
-    exportApprovedReportEndpoint: op('Download the approved impact report as Markdown', 'markdown', { permission: 'report:export' }),
-    exportApprovedReportPdfEndpoint: op('Download the approved impact report as PDF', 'pdf', { permission: 'report:export' }),
+    getApprovedReportEndpoint: op('Read the approved impact report', c.approvedImpactReportResponseSchema, { errors: { 409: 'Approved document does not match the latest reviewed snapshot.' } }),
+    exportApprovedReportEndpoint: op('Download the approved impact report as Markdown', 'markdown', { permission: 'report:export', errors: { 409: 'Approved document does not match the latest reviewed snapshot or the report is stale.' } }),
+    exportApprovedReportPdfEndpoint: op('Download the approved impact report as PDF', 'pdf', { permission: 'report:export', errors: { 409: 'Approved document does not match the latest reviewed snapshot or the report is stale.' } }),
     createSnapshot: op('Save an immutable reviewed report snapshot', c.reviewedReportSnapshotSchema, { permission: 'analysis:finalize', description: 'Freezes persisted review content and provenance, including the static trace appendix. Requires applicable state, review and freshness gates.' }),
     getLatestSnapshot: op('Read the latest immutable reviewed report snapshot', c.reviewedReportSnapshotSchema),
-    getFinalReviewedReportGate: op('Read final report availability and saved content', c.finalReviewedReportResponseSchema, { query: c.localeAwareReportQuerySchema, description: 'Use backend capabilities and blocking reasons to determine available actions. Historical saved content retains its original immutable provenance.' }),
+    getFinalReviewedReportGate: op('Read final report availability and saved content', c.finalReviewedReportResponseSchema, { query: c.localeAwareReportQuerySchema, description: 'Markdown, review metadata, and test trace are read from one immutable reviewed snapshot. A mismatched document/snapshot generation returns 409.', errors: { 409: 'Report document and reviewed snapshot provenance do not match.' } }),
     enqueueJob: op('Queue or reuse reviewed report generation', c.documentJobSchema, { body: c.documentJobCreateRequestSchema, optionalBody: true, permission: 'report:export', description: 'Requires a completed, non-stale analysis with a saved reviewed report snapshot. retry=true requeues a failed job; otherwise the existing job is reused. documentType is fixed to IMPACT_REPORT.' }),
   } },
   LocalizationController: { tag: 'Report localization', operations: {

@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { useCreateReviewDecision } from "@/hooks/api/use-analyses"
 import { ImpactAnalysisDetailResponse, ProjectRole } from "@ba-helper/contracts"
 import { canReview as canReviewPermission } from "@/lib/permissions"
+import { toast } from "sonner"
 
 interface ReviewDecisionFormProps {
   analysisId: string
@@ -94,7 +95,13 @@ export function ReviewDecisionForm({ analysisId, analysis }: ReviewDecisionFormP
 
         <div className="flex justify-end pt-2 border-t border-border/40">
           <Button
-            onClick={() => submitDecision({ data: { decision, note } })}
+            onClick={() => submitDecision(
+              { data: { decision, note } },
+              {
+                onSuccess: () => toast.success(t("diffReviewSubmitted")),
+                onError: (error) => toast.error(error instanceof Error ? error.message : t("reviewFailed")),
+              },
+            )}
             disabled={submitting}
             className={`h-9 shadow-none text-[13px] px-6 ${
               decision === "ACCEPTED" ? "bg-success hover:bg-success/90 text-white" :

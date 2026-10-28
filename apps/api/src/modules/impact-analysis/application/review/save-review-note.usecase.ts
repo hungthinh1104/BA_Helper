@@ -18,10 +18,10 @@ export class SaveReviewNoteUseCase {
       throw new AppError('IMPACT_ANALYSIS_NOT_FOUND', 'Analysis not found');
     }
 
-    if (analysis.status === 'COMPLETED') {
+    if (analysis.status !== 'WAITING_FOR_REVIEW') {
       throw new AppError(
         'INVALID_STATE_TRANSITION',
-        'Cannot edit review notes after analysis is finalized',
+        'Cannot edit review notes unless the analysis is waiting for review',
       );
     }
 
@@ -60,11 +60,18 @@ export class SaveReviewNoteUseCase {
       }
     }
 
-    return this.reviewNoteRepo.upsert({
+    const note = await this.reviewNoteRepo.upsert({
       impactAnalysisId: analysisId,
       insightId: request.insightId ?? undefined,
       traceabilityLinkId: request.traceabilityLinkId ?? undefined,
       body: request.body,
     });
+    if (!note) {
+      throw new AppError(
+        'INVALID_STATE_TRANSITION',
+        'Analysis was finalized before the review note could be saved',
+      );
+    }
+    return note;
   }
 }

@@ -1,6 +1,6 @@
 import { SaveReviewNoteUseCase } from './save-review-note.usecase';
 import { AppError } from '@ba-helper/shared';
-import { ReviewNoteRepository, ImpactAnalysisRepository, InsightRepository, TraceabilityRepository } from "@ba-helper/backend-runtime";
+import type { ReviewNoteRepository, ImpactAnalysisRepository, InsightRepository, TraceabilityRepository } from "@ba-helper/backend-runtime";
 
 describe('SaveReviewNoteUseCase', () => {
   let useCase: SaveReviewNoteUseCase;
@@ -50,6 +50,14 @@ describe('SaveReviewNoteUseCase', () => {
     ).rejects.toThrow(AppError);
   });
 
+  it('rejects if the analysis is not in WAITING_FOR_REVIEW', async () => {
+    impactAnalysisRepo.findById.mockResolvedValue({ status: 'FAILED' } as any);
+    await expect(
+      useCase.execute(analysisId, { insightId: 'i1', body: 'test' }),
+    ).rejects.toMatchObject({ code: 'INVALID_STATE_TRANSITION' });
+    expect(reviewNoteRepo.upsert).not.toHaveBeenCalled();
+  });
+
   it('rejects if insight belongs to a different analysis', async () => {
     impactAnalysisRepo.findById.mockResolvedValue({ status: 'WAITING_FOR_REVIEW' } as any);
     insightRepo.findById.mockResolvedValue({ impactAnalysisId: 'analysis-2' } as any);
@@ -72,5 +80,15 @@ describe('SaveReviewNoteUseCase', () => {
       traceabilityLinkId: undefined,
       body: 'test',
     });
+  });
+
+  it('rejects when finalization wins after the initial status read', async () => {
+    impactAnalysisRepo.findById.mockResolvedValue({ status: 'WAITING_FOR_REVIEW' } as any);
+    insightRepo.findById.mockResolvedValue({ impactAnalysisId: analysisId } as any);
+    reviewNoteRepo.upsert.mockResolvedValue(null as any);
+
+    await expect(
+      useCase.execute(analysisId, { insightId: 'i1', body: 'test' }),
+    ).rejects.toMatchObject({ code: 'INVALID_STATE_TRANSITION' });
   });
 });

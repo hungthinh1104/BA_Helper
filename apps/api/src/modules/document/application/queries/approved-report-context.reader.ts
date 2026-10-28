@@ -13,7 +13,7 @@ export interface ApprovedReportContextResult {
 export class ApprovedReportContextReader {
   constructor(private readonly prisma: PrismaService) {}
 
-  async readContext(analysisId: string): Promise<ApprovedReportContextResult> {
+  async readContext(analysisId: string, reviewedSnapshotId?: string): Promise<ApprovedReportContextResult> {
     const analysis = await this.prisma.impactAnalysis.findUnique({
       where: { id: analysisId },
       include: {
@@ -27,23 +27,40 @@ export class ApprovedReportContextReader {
       throw new NotFoundException('Analysis not found');
     }
 
-    const document = await this.prisma.generatedDocument.findUnique({
-      where: {
-        impactAnalysisId_type_status: {
-          impactAnalysisId: analysisId,
-          type: 'IMPACT_REPORT',
-          status: 'APPROVED',
-        },
-      },
-      select: { id: true },
-    });
+    const requestedSnapshot = reviewedSnapshotId
+      ? await this.prisma.reviewedReportSnapshot.findFirst({
+          where: { id: reviewedSnapshotId, analysisId },
+        })
+      : null;
+    if (reviewedSnapshotId && !requestedSnapshot) {
+      throw new NotFoundException('Reviewed snapshot not found for localization context');
+    }
+
+    const document = requestedSnapshot?.approvedDocumentId
+      ? await this.prisma.generatedDocument.findUnique({
+          where: { id: requestedSnapshot.approvedDocumentId },
+          select: { id: true },
+        })
+      : reviewedSnapshotId
+        ? null
+        : await this.prisma.generatedDocument.findUnique({
+            where: {
+              impactAnalysisId_type_status: {
+                impactAnalysisId: analysisId,
+                type: 'IMPACT_REPORT',
+                status: 'APPROVED',
+              },
+            },
+            select: { id: true },
+          });
 
     if (!document) {
       throw new NotFoundException('Approved impact report not found for localization context');
     }
 
-    const reviewedSnapshot = await this.prisma.reviewedReportSnapshot.findFirst({
-      where: { approvedDocumentId: document.id }
+    const reviewedSnapshot = requestedSnapshot ?? await this.prisma.reviewedReportSnapshot.findFirst({
+      where: { analysisId, approvedDocumentId: document.id },
+      orderBy: { createdAt: 'desc' },
     });
 
     if (!reviewedSnapshot) {

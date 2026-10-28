@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { Prisma } from '@prisma/client';;
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ReviewNoteRepository {
@@ -32,17 +32,23 @@ export class ReviewNoteRepository {
       throw new Error('Must provide either insightId or traceabilityLinkId');
     }
 
-    return this.prisma.reviewNote.upsert({
-      where,
-      create: {
-        impactAnalysisId: data.impactAnalysisId,
-        insightId: data.insightId,
-        traceabilityLinkId: data.traceabilityLinkId,
-        body: data.body,
-      },
-      update: {
-        body: data.body,
-      },
+    return this.prisma.$transaction(async (tx) => {
+      if (!(await this.lockAnalysisWhileReviewable(tx, data.impactAnalysisId))) {
+        return null;
+      }
+
+      return tx.reviewNote.upsert({
+        where,
+        create: {
+          impactAnalysisId: data.impactAnalysisId,
+          insightId: data.insightId,
+          traceabilityLinkId: data.traceabilityLinkId,
+          body: data.body,
+        },
+        update: {
+          body: data.body,
+        },
+      });
     });
   }
 
@@ -65,12 +71,30 @@ export class ReviewNoteRepository {
     if (!data.insightId && !data.traceabilityLinkId) {
       throw new Error('Must provide either insightId or traceabilityLinkId');
     }
-    return this.prisma.reviewNote.deleteMany({
-      where: {
-        impactAnalysisId: data.impactAnalysisId,
-        insightId: data.insightId,
-        traceabilityLinkId: data.traceabilityLinkId,
-      },
+    return this.prisma.$transaction(async (tx) => {
+      if (!(await this.lockAnalysisWhileReviewable(tx, data.impactAnalysisId))) {
+        return null;
+      }
+      return tx.reviewNote.deleteMany({
+        where: {
+          impactAnalysisId: data.impactAnalysisId,
+          insightId: data.insightId,
+          traceabilityLinkId: data.traceabilityLinkId,
+        },
+      });
     });
+  }
+
+  private async lockAnalysisWhileReviewable(
+    tx: Prisma.TransactionClient,
+    analysisId: string,
+  ): Promise<boolean> {
+    const analyses = await tx.$queryRaw<Array<{ status: string }>>`
+      SELECT status
+      FROM "ImpactAnalysis"
+      WHERE id = ${analysisId}
+      FOR UPDATE
+    `;
+    return analyses[0]?.status === 'WAITING_FOR_REVIEW';
   }
 }

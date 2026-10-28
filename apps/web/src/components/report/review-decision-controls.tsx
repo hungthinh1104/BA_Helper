@@ -16,6 +16,9 @@ import { traceabilityReviewDecisionValueSchema } from "@ba-helper/contracts"
 import { z } from "zod"
 import { Loader2 } from "lucide-react"
 import { useTranslations } from "next-intl"
+import { toast } from "sonner"
+import { useCurrentWorkspace } from "@/lib/project-context"
+import { canReview as canReviewPermission } from "@/lib/permissions"
 
 type DecisionValue = z.infer<typeof traceabilityReviewDecisionValueSchema>
 
@@ -26,10 +29,13 @@ interface ReviewDecisionControlsProps {
     decision: DecisionValue
     note?: string | null
   } | null
+  isReadOnly?: boolean
 }
 
-export function ReviewDecisionControls({ analysisId, linkId, currentDecision }: ReviewDecisionControlsProps) {
+export function ReviewDecisionControls({ analysisId, linkId, currentDecision, isReadOnly = false }: ReviewDecisionControlsProps) {
   const t = useTranslations("reports")
+  const workspace = useCurrentWorkspace()
+  const canEditDecision = canReviewPermission(workspace.membershipRole) && !isReadOnly
   const [open, setOpen] = useState(false)
   const [selectedDecision, setSelectedDecision] = useState<DecisionValue | null>(currentDecision?.decision || null)
   const [note, setNote] = useState(currentDecision?.note || "")
@@ -39,15 +45,27 @@ export function ReviewDecisionControls({ analysisId, linkId, currentDecision }: 
 
   const handleSave = async () => {
     if (!selectedDecision) return
-    await updateMutation.mutateAsync({ decision: selectedDecision, note })
-    setOpen(false)
+    try {
+      await updateMutation.mutateAsync({ decision: selectedDecision, note })
+      setOpen(false)
+    } catch (error) {
+      toast.error(t("reviewDecisionSaveFailed"), {
+        description: error instanceof Error ? error.message : undefined,
+      })
+    }
   }
 
   const handleClear = async () => {
-    await deleteMutation.mutateAsync()
-    setSelectedDecision(null)
-    setNote("")
-    setOpen(false)
+    try {
+      await deleteMutation.mutateAsync()
+      setSelectedDecision(null)
+      setNote("")
+      setOpen(false)
+    } catch (error) {
+      toast.error(t("reviewDecisionSaveFailed"), {
+        description: error instanceof Error ? error.message : undefined,
+      })
+    }
   }
 
   const getDecisionBadgeProps = (decision: DecisionValue | null) => {
@@ -80,6 +98,14 @@ export function ReviewDecisionControls({ analysisId, linkId, currentDecision }: 
   }
 
   const isLoading = updateMutation.isPending || deleteMutation.isPending
+
+  if (!canEditDecision) {
+    return (
+      <Badge {...getDecisionBadgeProps(currentDecision?.decision || null)} className={`rounded-sm px-2 py-0.5 text-[11px] font-mono tracking-wide ${getDecisionBadgeProps(currentDecision?.decision || null).className}`}>
+        {formatDecisionLabel(currentDecision?.decision || null)}
+      </Badge>
+    )
+  }
 
   return (
     <Dialog open={open} onOpenChange={(val) => {

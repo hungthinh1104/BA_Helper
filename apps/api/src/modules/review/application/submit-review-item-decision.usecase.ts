@@ -4,7 +4,7 @@ import type {
   SubmitReviewItemDecisionResponse,
 } from '@ba-helper/contracts';
 import { ReviewPolicy } from '../../review/domain/review.policy';
-import {
+import type {
   TraceabilityRepository,
   InsightRepository,
   ReviewNoteRepository,
@@ -168,16 +168,28 @@ export class SubmitReviewItemDecisionUseCase {
     }
 
     if (targetNote === null) {
-      await this.reviewNoteRepo.clear({
+      const clearResult = await this.reviewNoteRepo.clear({
         impactAnalysisId: analysis.id,
         insightId: params.itemId,
       });
+      if (!clearResult) {
+        throw new AppError(
+          'REVIEW_NOT_ALLOWED',
+          'Analysis was finalized before the review note could be cleared.',
+        );
+      }
     } else {
-      await this.reviewNoteRepo.upsert({
+      const reviewNote = await this.reviewNoteRepo.upsert({
         impactAnalysisId: analysis.id,
         insightId: params.itemId,
         body: targetNote,
       });
+      if (!reviewNote) {
+        throw new AppError(
+          'REVIEW_NOT_ALLOWED',
+          'Analysis was finalized before the review note could be saved.',
+        );
+      }
     }
 
     await this.audit({
