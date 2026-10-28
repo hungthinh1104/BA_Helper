@@ -186,7 +186,12 @@ describe('FinalizeImpactAnalysisUseCase', () => {
 
     expect(result.id).toBe('analysis-1');
     expect(prisma.$transaction).toHaveBeenCalled();
-    expect(txImpactUpdateMany).toHaveBeenCalled();
+    expect(txImpactUpdateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        id: 'analysis-1',
+        status: 'WAITING_FOR_REVIEW',
+      }),
+    }));
     expect(createSnapshot.buildSnapshotCreateData).toHaveBeenCalledWith({
       analysisId: 'analysis-1',
       createdByUserId: 'user-1',
