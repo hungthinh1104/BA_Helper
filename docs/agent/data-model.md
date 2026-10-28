@@ -35,6 +35,12 @@ and revision count. The supporting indexes are ordered for project listing
 (`requirementId`, newest `createdAt`, stable `id`); list queries should not
 load every historical revision just to select the newest one.
 
+Requirement creation accepts a client-generated UUID `requestKey`, unique
+within its project, and stores a hash of the normalized request payload. A
+retry with the same key and payload returns the existing requirement; reuse
+with a different payload returns `REQUEST_KEY_MISMATCH`. The requirement,
+initial revision, and both creation events commit atomically.
+
 ## Ownership
 
 ```text

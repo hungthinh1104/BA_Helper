@@ -21,8 +21,11 @@ export function useClarifications(analysisId: string) {
   return useQuery({
     queryKey: clarificationKeys.list(analysisId),
     queryFn: async () => {
-      const data = await apiGet(`/api/v1/impact-analyses/${analysisId}/clarifications`);
-      return ClarificationListResponseSchema.parse(data).items;
+      const data = await apiGet(
+        `/api/v1/impact-analyses/${analysisId}/clarifications`,
+        ClarificationListResponseSchema,
+      );
+      return data.items;
     },
     enabled: !!analysisId,
   });
@@ -33,8 +36,11 @@ export function useEnsureClarification(analysisId: string) {
 
   return useMutation({
     mutationFn: async (req: CreateClarificationRequest) => {
-      const data = await apiPost(`/api/v1/impact-analyses/${analysisId}/clarifications`, req);
-      return ClarificationItemDtoSchema.parse(data);
+      return apiPost(
+        `/api/v1/impact-analyses/${analysisId}/clarifications`,
+        req,
+        ClarificationItemDtoSchema,
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: clarificationKeys.list(analysisId) });
@@ -53,8 +59,11 @@ export function useAnswerClarification(analysisId: string) {
   return useMutation({
     mutationFn: async (params: { id: string; answer: string }) => {
       const req: AnswerClarificationRequest = { answer: params.answer };
-      const data = await apiPatch(`/api/v1/clarifications/${params.id}/answer`, req);
-      return ClarificationItemDtoSchema.parse(data);
+      return apiPatch(
+        `/api/v1/clarifications/${params.id}/answer`,
+        req,
+        ClarificationItemDtoSchema,
+      );
     },
     onSuccess: () => {
       toast.success('Clarification item has been answered successfully.');
@@ -74,8 +83,11 @@ export function useDismissClarification(analysisId: string) {
   return useMutation({
     mutationFn: async (params: { id: string; reason?: string }) => {
       const req: DismissClarificationRequest = { reason: params.reason };
-      const data = await apiPatch(`/api/v1/clarifications/${params.id}/dismiss`, req);
-      return ClarificationItemDtoSchema.parse(data);
+      return apiPatch(
+        `/api/v1/clarifications/${params.id}/dismiss`,
+        req,
+        ClarificationItemDtoSchema,
+      );
     },
     onSuccess: () => {
       toast.success('Clarification item has been dismissed.');
@@ -94,8 +106,11 @@ export function useConvertClarification(analysisId: string) {
 
   return useMutation({
     mutationFn: async (clarificationId: string) => {
-      const data = await apiPost(`/api/v1/clarifications/${clarificationId}/convert-to-revision`, {});
-      return ConvertClarificationResponseSchema.parse(data);
+      return apiPost(
+        `/api/v1/clarifications/${clarificationId}/convert-to-revision`,
+        {},
+        ConvertClarificationResponseSchema,
+      );
     },
     onSuccess: () => {
       toast.success('Clarification answer has been converted to a requirement revision.');

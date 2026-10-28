@@ -41,6 +41,7 @@ const createPrismaStub = (hooks?: {
 }) => ({
   $transaction: async (callback: (tx: any) => Promise<unknown>) =>
     callback({
+      $queryRaw: async () => [{ status: 'WAITING_FOR_REVIEW' }],
       impactAnalysis: {
         updateMany: async () => ({ count: 1 }),
       },

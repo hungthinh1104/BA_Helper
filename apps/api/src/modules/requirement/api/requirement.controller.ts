@@ -45,6 +45,7 @@ export class RequirementController {
     const input = parseApiInput(requirementCreateRequestSchema, body);
     const result = await this.createRequirement.execute({
       projectId,
+      requestKey: input.requestKey,
       title: input.title,
       rawText: input.rawText,
       submitForReadinessCheck: input.submitForReadinessCheck,

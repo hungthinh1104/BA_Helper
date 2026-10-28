@@ -1,6 +1,8 @@
 import type { Prisma } from '@prisma/client';
 import type { PrismaService } from '../../prisma/prisma.service';
 
+export type EventLogTransactionClient = Pick<Prisma.TransactionClient, 'domainEvent'>;
+
 export class EventLogRepository {
   constructor(private readonly prisma: PrismaService) {}
 
@@ -8,8 +10,9 @@ export class EventLogRepository {
     eventType: string;
     idempotencyKey: string;
     payload: Record<string, unknown>;
-  }): Promise<void> {
-    await this.prisma.domainEvent.upsert({
+  }, transaction?: EventLogTransactionClient): Promise<void> {
+    const client = transaction ?? this.prisma;
+    await client.domainEvent.upsert({
       where: {
         idempotencyKey: params.idempotencyKey,
       },

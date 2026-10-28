@@ -388,6 +388,9 @@
     "connectRepository": "Kết nối repository",
     "maintainerRequiredConnect": "Cần role Maintainer để kết nối repository.",
     "repository": "Repository",
+    "artifactRepositoryMismatchTitle": "Artifact này thuộc một repository khác",
+    "artifactRepositoryMismatchDescription": "Snapshot được chọn thuộc repository khác. Hãy mở repository đó để tiếp tục.",
+    "artifactRepositoryMismatchOpenRepository": "Mở repository của snapshot",
     "url": "URL",
     "ref": "Ref",
     "scanStatus": "Trạng thái scan",
@@ -695,6 +698,7 @@
     "submitReview": "Gửi review"
   },
   "workspace": {
+    "reviewCoverage": "Coverage review",
     "analysisNavigation": "Các chế độ của không gian phân tích",
     "summary": "Tổng quan",
     "review": "Xem xét",

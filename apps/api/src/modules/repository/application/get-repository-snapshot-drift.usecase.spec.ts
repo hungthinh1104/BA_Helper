@@ -39,6 +39,38 @@ describe('GetRepositorySnapshotDriftUseCase', () => {
     await expect(useCase.execute({ projectId: 'proj-1', repositoryId: 'repo-1', baseSnapshotId: 'base' })).rejects.toThrow('Base snapshot not found');
   });
 
+  it('rejects a base snapshot from another project or repository', async () => {
+    (prisma.repositorySnapshot.findUnique as jest.Mock).mockResolvedValueOnce({
+      ...baseSnapshot,
+      repository: { projectId: 'proj-2' },
+    } as any);
+
+    await expect(useCase.execute({
+      projectId: 'proj-1',
+      repositoryId: 'repo-1',
+      baseSnapshotId: 'base-snap-id',
+    })).rejects.toThrow('Base snapshot not found in this repository.');
+    expect(prisma.codeArtifact.findMany).not.toHaveBeenCalled();
+  });
+
+  it('rejects an explicit target snapshot from another project or repository', async () => {
+    (prisma.repositorySnapshot.findUnique as jest.Mock)
+      .mockResolvedValueOnce(baseSnapshot as any)
+      .mockResolvedValueOnce({
+        ...targetSnapshot,
+        repositoryId: 'repo-2',
+        repository: { projectId: 'proj-2' },
+      } as any);
+
+    await expect(useCase.execute({
+      projectId: 'proj-1',
+      repositoryId: 'repo-1',
+      baseSnapshotId: 'base-snap-id',
+      targetSnapshotId: 'target-snap-id',
+    })).rejects.toThrow('Target snapshot not found in this repository.');
+    expect(prisma.codeArtifact.findMany).not.toHaveBeenCalled();
+  });
+
   it('returns NO_DRIFT when base equals target', async () => {
     (prisma.repositorySnapshot.findUnique as jest.Mock)
       .mockResolvedValueOnce(baseSnapshot as any)

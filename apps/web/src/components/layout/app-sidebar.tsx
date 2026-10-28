@@ -15,7 +15,14 @@ export function AppSidebar({ isCollapsed, onToggle }: AppSidebarProps) {
   const pathname = usePathname()
   const t = useTranslations("app.sidebar")
   const href = useLocalizedHref()
-  const active = (prefix: string) => pathname?.startsWith(prefix) ? "true" : undefined
+  const active = (prefix: string, excludedPrefix?: string) => {
+    if (!pathname) return undefined
+    const matchesPrefix = pathname === prefix || pathname.startsWith(`${prefix}/`)
+    const matchesExcludedPrefix = excludedPrefix && (
+      pathname === excludedPrefix || pathname.startsWith(`${excludedPrefix}/`)
+    )
+    return matchesPrefix && !matchesExcludedPrefix ? "true" : undefined
+  }
 
   return (
     <aside className="app-sidebar flex h-full flex-col overflow-hidden">
@@ -51,7 +58,7 @@ export function AppSidebar({ isCollapsed, onToggle }: AppSidebarProps) {
           <FileText className="w-4 h-4 shrink-0" />
           {!isCollapsed && <span>{t("requirements")}</span>}
         </Link>
-        <Link href={href("/analyses")} className={`app-nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/analyses")} title={t("impactAnalyses")}>
+        <Link href={href("/analyses")} className={`app-nav-item ${isCollapsed ? "justify-center px-0 w-8" : ""}`} data-active={active("/analyses", "/analyses/runs")} title={t("impactAnalyses")}>
           <Activity className="w-4 h-4 shrink-0" />
           {!isCollapsed && <span>{t("impactAnalyses")}</span>}
         </Link>

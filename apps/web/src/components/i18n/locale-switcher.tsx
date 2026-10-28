@@ -23,6 +23,7 @@ export function LocaleSwitcher() {
   const router = useRouter()
   const pathname = usePathname() ?? "/"
   const searchParams = useSearchParams()
+  const visibleLocale = locale === DEFAULT_APP_LOCALE ? "EN" : locale
 
   const updateLocale = (nextLocale: AppLocale) => {
     const params = new URLSearchParams(searchParams?.toString() ?? "")
@@ -39,12 +40,12 @@ export function LocaleSwitcher() {
             variant="outline"
             size="sm"
             className="h-8 gap-1.5 shadow-none"
-            aria-label={t("label")}
+            aria-label={`${t("label")}: ${visibleLocale}`}
           />
         }
       >
         <Languages className="size-3.5" />
-        <span className="hidden sm:inline">{locale === DEFAULT_APP_LOCALE ? "EN" : locale}</span>
+        <span className="hidden sm:inline">{visibleLocale}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-44">
         <DropdownMenuRadioGroup value={locale}>

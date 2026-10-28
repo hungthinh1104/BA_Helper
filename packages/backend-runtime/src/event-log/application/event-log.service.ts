@@ -1,4 +1,5 @@
 import type { EventLogRepository } from '../infrastructure/event-log.repository';
+import type { EventLogTransactionClient } from '../infrastructure/event-log.repository';
 import { EventLogPolicy } from '@ba-helper/application';
 import type { EventLogDto } from '@ba-helper/contracts';
 
@@ -10,7 +11,7 @@ export class EventLogService {
     idempotencyKey: string;
     payload: Record<string, unknown>;
     actorUserId?: string;
-  }): Promise<void> {
+  }, transaction?: EventLogTransactionClient): Promise<void> {
     const actorUserId = params.actorUserId || 'SYSTEM';
 
     EventLogPolicy.validateEventPayload({
@@ -20,11 +21,11 @@ export class EventLogService {
       isRetryable: false, // Or derive from context
       metadata: params.payload,
     });
-    
+
     await this.repository.createEvent({
       ...params,
-      payload: { ...params.payload, actorUserId }
-    });
+      payload: { ...params.payload, actorUserId },
+    }, transaction);
   }
 
   async getScanJobEvents(jobId: string): Promise<EventLogDto[]> {
@@ -45,7 +46,7 @@ export class EventLogService {
 
   private mapToDto(event: any): EventLogDto {
     const payload = event.payload || {};
-    
+
     // Extract actor fields
     let actorType: 'SYSTEM' | 'USER' = 'SYSTEM';
     if (payload.actorType === 'USER' || payload.actorUserId !== 'system') {
@@ -53,7 +54,7 @@ export class EventLogService {
         actorType = 'USER';
       }
     }
-    
+
     const actorName = typeof payload.actorName === 'string' ? payload.actorName : null;
     const triggeredByUserId = typeof payload.triggeredByUserId === 'string' ? payload.triggeredByUserId : null;
 

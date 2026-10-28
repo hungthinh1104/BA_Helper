@@ -9,7 +9,13 @@ import {
   buildReportApprovalGateItems,
   ReportApprovalGatePolicy,
 } from '../../../document/application/report-approval-gate.policy';
-import { PrismaService, ImpactAnalysisRepository, TraceabilityRepository, InsightRepository } from "@ba-helper/backend-runtime";
+import {
+  PrismaService,
+  ImpactAnalysisRepository,
+  TraceabilityRepository,
+  InsightRepository,
+  lockReviewAnalysisState,
+} from '@ba-helper/backend-runtime';
 
 @Injectable()
 export class FinalizeImpactAnalysisUseCase {
@@ -23,60 +29,34 @@ export class FinalizeImpactAnalysisUseCase {
   ) {}
 
   async execute(params: { analysisId: string; acknowledgeUnreviewed: boolean; userId: string }) {
-    const analysis = await this.impactRepo.findById(params.analysisId);
-    if (!analysis) {
-      throw new AppError(
-        'IMPACT_ANALYSIS_NOT_FOUND',
-        'Impact analysis not found.',
+    await this.assertFinalizableState(params.analysisId, params.acknowledgeUnreviewed);
+
+    const { documentJob } = await this.prisma.$transaction(async (tx) => {
+      const lockState = await lockReviewAnalysisState(tx, params.analysisId);
+      if (lockState === 'MISSING') {
+        throw new AppError('IMPACT_ANALYSIS_NOT_FOUND', 'Impact analysis not found.');
+      }
+      if (lockState === 'NOT_REVIEWABLE') {
+        throw new AppError(
+          'INVALID_STATE_TRANSITION',
+          'Impact analysis is no longer waiting for review.',
+        );
+      }
+      if (lockState === 'STALE') {
+        throw new AppError(
+          'ANALYSIS_STALE',
+          'Cannot finalize because the underlying repository state has changed.',
+        );
+      }
+
+      const analysis = await this.assertFinalizableState(
+        params.analysisId,
+        params.acknowledgeUnreviewed,
       );
-    }
-
-    const traceabilityLinks = await this.traceabilityRepo.listByAnalysis(analysis.id);
-    const insights = await this.insightRepo.listByAnalysis(analysis.id);
-
-    const unreviewedInsightsCount = insights.filter(
-      (insight: { reviewStatus: string }) => insight.reviewStatus === 'NEEDS_REVIEW'
-    ).length;
-
-    const unreviewedTraceabilityLinksCount = traceabilityLinks.filter(
-      (link: { reviewStatus: string }) => link.reviewStatus === 'NEEDS_REVIEW'
-    ).length;
-
-    const unreviewedItemsCount = unreviewedInsightsCount + unreviewedTraceabilityLinksCount;
-
-    ReviewPolicy.assertCanFinalize(analysis, 0, true);
-    const qualityProjection = buildEvidenceQualityProjection({
-      traceabilityLinks,
-      insights: insights as any[],
-    });
-    const gate = ReportApprovalGatePolicy.evaluate(buildReportApprovalGateItems({
-      items: qualityProjection.items,
-      insights,
-      traceabilityLinks,
-    }));
-    if (!gate.canApprove) {
-      throw new AppError(
-        'REVIEW_APPROVAL_BLOCKED',
-        'Critical review coverage issues must be resolved before approval.',
-        {
-          blockingReasons: gate.blockingReasons,
-          blockingItems: gate.blockingItems,
-        },
-      );
-    }
-
-    ReviewPolicy.assertCanFinalize(
-      analysis,
-      unreviewedItemsCount,
-      params.acknowledgeUnreviewed
-    );
-
-    const snapshotData = await this.createSnapshot.buildSnapshotCreateData({
-      analysisId: analysis.id,
-      createdByUserId: params.userId,
-    });
-
-    const { snapshot, documentJob } = await this.prisma.$transaction(async (tx) => {
+      const snapshotData = await this.createSnapshot.buildSnapshotCreateData({
+        analysisId: analysis.id,
+        createdByUserId: params.userId,
+      });
       const finalizeResult = await tx.impactAnalysis.updateMany({
         where: {
           id: analysis.id,
@@ -86,7 +66,9 @@ export class FinalizeImpactAnalysisUseCase {
           },
           sourceTarget: {
             resolvedRefType: analysis.sourceTarget.resolvedRefType,
-            latestObservedCommitSha: analysis.sourceTarget.latestObservedCommitSha,
+            ...(analysis.sourceTarget.resolvedRefType === 'COMMIT'
+              ? {}
+              : { latestObservedCommitSha: analysis.sourceTarget.latestObservedCommitSha }),
           },
         },
         data: {
@@ -119,6 +101,7 @@ export class FinalizeImpactAnalysisUseCase {
       const snapshot = await tx.reviewedReportSnapshot.create({
         data: snapshotData,
       });
+      await this.createSnapshot.recordCreatedEvent(snapshot, tx);
 
       const { job } = await this.enqueueJob.createOrReuseQueuedJobForSnapshot(tx, {
         analysisId: analysis.id,
@@ -126,10 +109,9 @@ export class FinalizeImpactAnalysisUseCase {
         documentType: 'IMPACT_REPORT',
       });
 
-      return { snapshot, documentJob: job };
+      return { documentJob: job };
     });
 
-    await this.createSnapshot.recordCreatedEvent(snapshot);
     try {
       await this.enqueueJob.enqueueExistingJob(documentJob.id);
     } catch (error) {
@@ -144,7 +126,46 @@ export class FinalizeImpactAnalysisUseCase {
       });
     }
 
-    const finalizedAnalysis = await this.impactRepo.findById(analysis.id);
+    const finalizedAnalysis = await this.impactRepo.findById(params.analysisId);
     return finalizedAnalysis!;
+  }
+
+  private async assertFinalizableState(analysisId: string, acknowledgeUnreviewed: boolean) {
+    const analysis = await this.impactRepo.findById(analysisId);
+    if (!analysis) {
+      throw new AppError('IMPACT_ANALYSIS_NOT_FOUND', 'Impact analysis not found.');
+    }
+
+    const [traceabilityLinks, insights] = await Promise.all([
+      this.traceabilityRepo.listByAnalysis(analysis.id),
+      this.insightRepo.listByAnalysis(analysis.id),
+    ]);
+    const unreviewedItemsCount =
+      insights.filter((insight) => insight.reviewStatus === 'NEEDS_REVIEW').length +
+      traceabilityLinks.filter((link) => link.reviewStatus === 'NEEDS_REVIEW').length;
+
+    ReviewPolicy.assertCanFinalize(analysis, 0, true);
+    const qualityProjection = buildEvidenceQualityProjection({
+      traceabilityLinks,
+      insights: insights as any[],
+    });
+    const gate = ReportApprovalGatePolicy.evaluate(buildReportApprovalGateItems({
+      items: qualityProjection.items,
+      insights,
+      traceabilityLinks,
+    }));
+    if (!gate.canApprove) {
+      throw new AppError(
+        'REVIEW_APPROVAL_BLOCKED',
+        'Critical review coverage issues must be resolved before approval.',
+        {
+          blockingReasons: gate.blockingReasons,
+          blockingItems: gate.blockingItems,
+        },
+      );
+    }
+
+    ReviewPolicy.assertCanFinalize(analysis, unreviewedItemsCount, acknowledgeUnreviewed);
+    return analysis;
   }
 }

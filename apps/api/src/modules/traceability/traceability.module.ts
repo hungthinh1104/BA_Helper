@@ -26,21 +26,21 @@ import { PrismaModule, PrismaService, TraceabilityRepository, InsightRepository,
     },
     {
       provide: ReviewTraceabilityUseCase,
-      useFactory: (repo: TraceabilityRepository, eventLog: EventLogService) =>
-        new ReviewTraceabilityUseCase(repo, eventLog),
-      inject: [TraceabilityRepository, EventLogService],
+      useFactory: (repo: TraceabilityRepository, eventLog: EventLogService, prisma: PrismaService) =>
+        new ReviewTraceabilityUseCase(repo, eventLog, prisma),
+      inject: [TraceabilityRepository, EventLogService, PrismaService],
     },
     {
       provide: UpdateTraceabilityReviewDecisionUseCase,
-      useFactory: (repo: TraceabilityRepository, eventLog: EventLogService) =>
-        new UpdateTraceabilityReviewDecisionUseCase(repo, eventLog),
-      inject: [TraceabilityRepository, EventLogService],
+      useFactory: (repo: TraceabilityRepository, eventLog: EventLogService, prisma: PrismaService) =>
+        new UpdateTraceabilityReviewDecisionUseCase(repo, eventLog, prisma),
+      inject: [TraceabilityRepository, EventLogService, PrismaService],
     },
     {
       provide: DeleteTraceabilityReviewDecisionUseCase,
-      useFactory: (repo: TraceabilityRepository, eventLog: EventLogService) =>
-        new DeleteTraceabilityReviewDecisionUseCase(repo, eventLog),
-      inject: [TraceabilityRepository, EventLogService],
+      useFactory: (repo: TraceabilityRepository, eventLog: EventLogService, prisma: PrismaService) =>
+        new DeleteTraceabilityReviewDecisionUseCase(repo, eventLog, prisma),
+      inject: [TraceabilityRepository, EventLogService, PrismaService],
     },
     {
       provide: GetReviewCompletionUseCase,

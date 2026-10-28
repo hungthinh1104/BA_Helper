@@ -259,6 +259,12 @@ POST /api/v1/analyses/:analysisId/localization
 GET  /api/v1/analyses/:analysisId/localization/:locale/status
 ```
 
+Requirement creation requires a UUID `requestKey`. It is unique within the
+project: retrying the same key and payload returns the original requirement
+and first revision, while reusing the key with a different payload returns
+HTTP 409 `REQUEST_KEY_MISMATCH`. The browser keeps the key for retries of the
+same submission and clears it after a successful result or explicit reset.
+
 Generating a localized report requires Global `ADMIN` or `REVIEWER` and the
 project-scoped `report:export` permission. The operation is rate limited. The
 placeholder provider is development/test-only; production localization remains
@@ -904,6 +910,12 @@ different reviewed snapshot. Report generation freezes its Markdown on the
 reviewed snapshot; when a legacy document cannot be tied unambiguously to the
 latest reviewed snapshot, the API returns `REPORT_PROVENANCE_MISMATCH` (HTTP
 409) instead of serving mixed-generation content.
+When a reviewed snapshot has no frozen Markdown and resolves its approved
+document by ID, that document must belong to the same impact analysis and be an
+approved impact report. A cross-analysis or wrong-type/status reference returns
+`REPORT_PROVENANCE_MISMATCH`; the endpoint never serves that document's text.
+The localization context reader enforces the same document-to-analysis identity
+before generating or validating localized report artifacts.
 
 Validation failures do not create downstream job/analysis records unless a use
 case explicitly stores a rejected requirement revision for clarification.

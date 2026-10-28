@@ -64,7 +64,7 @@ describe('request and session boundaries', () => {
     ['post', '/api/v1/projects', {}],
     ['post', '/api/v1/workspace/select-project', { projectId: 'not-a-uuid' }],
     ['post', '/api/v1/auth/accounts', { email: 'invalid', password: 'not-a-secret-test-marker' }],
-    ['post', '/api/v1/projects/PROJECT/requirements', { title: '', rawText: 'not-a-secret-test-marker' }],
+    ['post', '/api/v1/projects/PROJECT/requirements', { requestKey: randomUUID(), title: '', rawText: 'not-a-secret-test-marker' }],
     ['get', '/api/v1/projects/PROJECT/repositories?limit=101', undefined],
   ])('maps invalid %s %s input to a safe 400 without persistence', async (method, path, body) => {
     const endpoint = path.replace('PROJECT', projectId);

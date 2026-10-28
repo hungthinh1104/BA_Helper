@@ -26,7 +26,7 @@ function setup(overrides: {
       },
     ),
     upsertReviewDecision: jest.fn().mockResolvedValue({ id: 'dec-1' }),
-    deleteReviewDecision: jest.fn().mockResolvedValue(undefined),
+    deleteReviewDecision: jest.fn().mockResolvedValue({ id: 'dec-1' }),
   };
   const insightRepo = {
     findById: jest.fn().mockResolvedValue(
@@ -46,19 +46,24 @@ function setup(overrides: {
     clear: jest.fn().mockResolvedValue({ count: 1 }),
   };
   const eventLog = { recordEvent: jest.fn().mockResolvedValue(undefined) };
+  const transaction = { id: 'review-transaction' };
+  const prisma = {
+    $transaction: jest.fn(async (work: (tx: typeof transaction) => unknown) => work(transaction)),
+  };
   const useCase = new SubmitReviewItemDecisionUseCase(
     traceabilityRepo as any,
     insightRepo as any,
     reviewNoteRepo as any,
     eventLog as any,
+    prisma as any,
   );
-  return { useCase, traceabilityRepo, insightRepo, reviewNoteRepo, eventLog };
+  return { useCase, traceabilityRepo, insightRepo, reviewNoteRepo, eventLog, prisma, transaction };
 }
 
 describe('SubmitReviewItemDecisionUseCase', () => {
   describe('impact (traceability) items', () => {
     it('persists an accept decision with rationale and attribution, and audits it', async () => {
-      const { useCase, traceabilityRepo, eventLog } = setup();
+      const { useCase, traceabilityRepo, eventLog, prisma, transaction } = setup();
 
       const result = await useCase.execute({
         analysisId,
@@ -75,14 +80,16 @@ describe('SubmitReviewItemDecisionUseCase', () => {
         decision: 'ACCEPTED',
         note: 'looks correct',
         reviewedByUserId: 'user-1',
-      });
+      }, transaction);
       expect(eventLog.recordEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           eventType: 'TRACEABILITY_REVIEW_DECISION_UPDATED',
           idempotencyKey: 'impact:analysis-1:review-item:link-1:ACCEPTED',
           actorUserId: 'user-1',
         }),
+        transaction,
       );
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
       expect(result).toEqual({
         itemId: 'link-1',
         target: 'impact',
@@ -93,7 +100,7 @@ describe('SubmitReviewItemDecisionUseCase', () => {
     });
 
     it('maps needs_more_evidence to the traceability decision value', async () => {
-      const { useCase, traceabilityRepo } = setup();
+      const { useCase, traceabilityRepo, transaction } = setup();
       const result = await useCase.execute({
         analysisId,
         itemId: 'link-1',
@@ -103,6 +110,7 @@ describe('SubmitReviewItemDecisionUseCase', () => {
       });
       expect(traceabilityRepo.upsertReviewDecision).toHaveBeenCalledWith(
         expect.objectContaining({ decision: 'NEEDS_MORE_EVIDENCE' }),
+        transaction,
       );
       expect(result.currentDecision).toBe('needs_more_evidence');
     });
@@ -131,7 +139,7 @@ describe('SubmitReviewItemDecisionUseCase', () => {
     });
 
     it('undo deletes the decision and audits the removal', async () => {
-      const { useCase, traceabilityRepo, eventLog } = setup({
+      const { useCase, traceabilityRepo, eventLog, transaction } = setup({
         link: {
           id: 'link-1',
           impactAnalysis: buildAnalysis(),
@@ -147,11 +155,12 @@ describe('SubmitReviewItemDecisionUseCase', () => {
         actorId: 'user-1',
       });
 
-      expect(traceabilityRepo.deleteReviewDecision).toHaveBeenCalledWith('link-1');
+      expect(traceabilityRepo.deleteReviewDecision).toHaveBeenCalledWith('link-1', analysisId, transaction);
       expect(eventLog.recordEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           eventType: 'TRACEABILITY_REVIEW_DECISION_DELETED',
         }),
+        transaction,
       );
       expect(result).toEqual({
         itemId: 'link-1',
@@ -179,7 +188,7 @@ describe('SubmitReviewItemDecisionUseCase', () => {
 
   describe('insight items', () => {
     it('persists an accept status and the rationale as a review note', async () => {
-      const { useCase, insightRepo, reviewNoteRepo, eventLog } = setup();
+      const { useCase, insightRepo, reviewNoteRepo, eventLog, transaction } = setup();
 
       const result = await useCase.execute({
         analysisId,
@@ -192,14 +201,16 @@ describe('SubmitReviewItemDecisionUseCase', () => {
 
       expect(insightRepo.updateReviewStatusIfCurrent).toHaveBeenCalledWith(
         expect.objectContaining({ insightId: 'insight-1', reviewStatus: 'REJECTED' }),
+        transaction,
       );
       expect(reviewNoteRepo.upsert).toHaveBeenCalledWith({
         impactAnalysisId: analysisId,
         insightId: 'insight-1',
         body: 'not relevant',
-      });
+      }, transaction);
       expect(eventLog.recordEvent).toHaveBeenCalledWith(
         expect.objectContaining({ eventType: 'INSIGHT_REVIEWED', actorUserId: 'user-1' }),
+        transaction,
       );
       expect(result).toEqual({
         itemId: 'insight-1',
@@ -224,7 +235,7 @@ describe('SubmitReviewItemDecisionUseCase', () => {
     });
 
     it('undo resets the status to NEEDS_REVIEW and clears the note', async () => {
-      const { useCase, insightRepo, reviewNoteRepo } = setup({
+      const { useCase, insightRepo, reviewNoteRepo, transaction } = setup({
         insight: {
           id: 'insight-1',
           reviewStatus: 'CONFIRMED',
@@ -243,11 +254,12 @@ describe('SubmitReviewItemDecisionUseCase', () => {
 
       expect(insightRepo.updateReviewStatusIfCurrent).toHaveBeenCalledWith(
         expect.objectContaining({ reviewStatus: 'NEEDS_REVIEW' }),
+        transaction,
       );
       expect(reviewNoteRepo.clear).toHaveBeenCalledWith({
         impactAnalysisId: analysisId,
         insightId: 'insight-1',
-      });
+      }, transaction);
       expect(result.currentDecision).toBe('needs_review');
       expect(result.reviewNote).toBeNull();
     });

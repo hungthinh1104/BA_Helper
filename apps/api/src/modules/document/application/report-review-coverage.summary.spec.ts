@@ -1,4 +1,5 @@
-import { buildReportReviewCoverageSummary, buildReportReviewCoverageSummaryFromSnapshot, EvidenceQualityItem, EvidenceQualitySummary } from "@ba-helper/backend-runtime";
+import { buildReportReviewCoverageSummary, buildReportReviewCoverageSummaryFromSnapshot } from "@ba-helper/backend-runtime";
+import type { EvidenceQualityItem, EvidenceQualitySummary } from "@ba-helper/backend-runtime";
 
 describe('buildReportReviewCoverageSummary', () => {
   it('counts reviewed and unreviewed insights, traceability decisions, and evidence quality buckets', () => {
@@ -33,20 +34,20 @@ describe('buildReportReviewCoverageSummary', () => {
     });
     expect(summary.traceabilityLinks).toEqual({
       total: 4,
-      reviewed: 3,
-      unreviewed: 1,
+      reviewed: 4,
+      unreviewed: 0,
       accepted: 1,
       rejected: 1,
-      needsReview: 0,
+      needsReview: 1,
       needsMoreEvidence: 1,
     });
     expect(summary.decisions).toEqual({
       accepted: 2,
       rejected: 2,
-      needsReview: 1,
+      needsReview: 2,
       needsMoreEvidence: 1,
       needsClarification: 4,
-      unreviewed: 2,
+      unreviewed: 1,
     });
     expect(summary.evidence).toEqual({
       strong: 2,
@@ -77,6 +78,24 @@ describe('buildReportReviewCoverageSummary', () => {
     expect(summary.evidence.weak).toBe(2);
     expect(summary.evidence.missing).toBe(3);
     expect(summary.evidence.reviewRequired).toBe(4);
+  });
+
+  it('uses the legacy review status when a snapshot decision is absent', () => {
+    const legacyLink = link('legacy-link', null, 'STRONG_SOURCE_EVIDENCE');
+    legacyLink.reviewStatus = 'CONFIRMED';
+
+    const summary = buildReportReviewCoverageSummary({
+      items: [legacyLink],
+      evidenceQualitySummary: qualitySummary({}),
+    });
+
+    expect(summary.traceabilityLinks).toMatchObject({
+      total: 1,
+      reviewed: 1,
+      unreviewed: 0,
+      accepted: 1,
+      rejected: 0,
+    });
   });
 });
 

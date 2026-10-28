@@ -1,5 +1,6 @@
 import { EventLogService } from './event-log.service';
 import type { EventLogRepository } from '../infrastructure/event-log.repository';
+import type { EventLogTransactionClient } from '../infrastructure/event-log.repository';
 import { EventLogDto } from '@ba-helper/contracts';
 
 describe('EventLogService', () => {
@@ -12,6 +13,22 @@ describe('EventLogService', () => {
       findEventsByPrefixes: jest.fn(),
     } as unknown as jest.Mocked<EventLogRepository>;
     service = new EventLogService(repository);
+  });
+
+  it('passes a supplied transaction through when recording an event', async () => {
+    const transaction = { domainEvent: {} } as unknown as EventLogTransactionClient;
+    const params = {
+      eventType: 'REVIEWED_REPORT_SNAPSHOT_CREATED',
+      idempotencyKey: 'reviewed-report-snapshot:snapshot-1:created',
+      payload: { snapshotId: 'snapshot-1' },
+    };
+
+    await service.recordEvent(params, transaction);
+
+    expect(repository.createEvent).toHaveBeenCalledWith({
+      ...params,
+      payload: { ...params.payload, actorUserId: 'SYSTEM' },
+    }, transaction);
   });
 
   describe('getScanJobEvents', () => {

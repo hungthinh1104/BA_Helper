@@ -34,6 +34,8 @@ class StubDocumentRepo {
 
 describe('FinalizeImpactAnalysisUseCase staleness guard', () => {
   it('fails when target observation changes during finalization', async () => {
+    const updateMany = jest.fn().mockResolvedValue({ count: 0 });
+    const findUnique = jest.fn().mockResolvedValue({ status: 'WAITING_FOR_REVIEW' });
     const useCase = new FinalizeImpactAnalysisUseCase(
       new StubImpactRepo() as any,
       { listByAnalysis: async () => [] } as any,
@@ -41,8 +43,10 @@ describe('FinalizeImpactAnalysisUseCase staleness guard', () => {
       {
         $transaction: async (callback: (tx: any) => Promise<unknown>) =>
           callback({
+            $queryRaw: async () => [{ status: 'WAITING_FOR_REVIEW' }],
             impactAnalysis: {
-              updateMany: async () => ({ count: 0 }),
+              updateMany,
+              findUnique,
             },
           }),
       } as any,
@@ -54,6 +58,20 @@ describe('FinalizeImpactAnalysisUseCase staleness guard', () => {
       useCase.execute({ analysisId: 'analysis-1', acknowledgeUnreviewed: true, userId: 'b0e6a1e4-3993-47cb-b0bb-26477e8a9462' }),
     ).rejects.toMatchObject({
       code: 'ANALYSIS_STALE',
+    });
+
+    expect(updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: 'WAITING_FOR_REVIEW',
+          snapshot: { commitSha: 'abc' },
+          sourceTarget: expect.objectContaining({ latestObservedCommitSha: 'abc' }),
+        }),
+      }),
+    );
+    expect(findUnique).toHaveBeenCalledWith({
+      where: { id: 'analysis-1' },
+      select: { status: true },
     });
   });
 });

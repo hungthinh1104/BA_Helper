@@ -1,11 +1,12 @@
 import { AppError } from '@ba-helper/shared';
 import { ReviewPolicy } from '../../review/domain/review.policy';
-import { TraceabilityRepository, EventLogService } from "@ba-helper/backend-runtime";
+import type { PrismaService, TraceabilityRepository, EventLogService } from "@ba-helper/backend-runtime";
 
 export class DeleteTraceabilityReviewDecisionUseCase {
   constructor(
     private readonly repository: TraceabilityRepository,
     private readonly eventLog: EventLogService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async execute(params: { linkId: string }) {
@@ -18,15 +19,27 @@ export class DeleteTraceabilityReviewDecisionUseCase {
     ReviewPolicy.assertCanReview(analysis);
 
     try {
-      await this.repository.deleteReviewDecision(params.linkId);
+      await this.prisma.$transaction(async (transaction) => {
+        const deleted = await this.repository.deleteReviewDecision(
+          params.linkId,
+          analysis.id,
+          transaction,
+        );
+        if (!deleted) {
+          throw new AppError(
+            'INVALID_STATE_TRANSITION',
+            'Analysis was finalized before the review decision could be cleared.',
+          );
+        }
 
-      await this.eventLog.recordEvent({
-        eventType: 'TRACEABILITY_REVIEW_DECISION_DELETED',
-        idempotencyKey: `traceability:${params.linkId}:review-decision:delete:${Date.now()}`,
-        payload: {
-          linkId: params.linkId,
-          analysisId: analysis.id,
-        },
+        await this.eventLog.recordEvent({
+          eventType: 'TRACEABILITY_REVIEW_DECISION_DELETED',
+          idempotencyKey: `traceability:${params.linkId}:review-decision:delete:${Date.now()}`,
+          payload: {
+            linkId: params.linkId,
+            analysisId: analysis.id,
+          },
+        }, transaction);
       });
     } catch (error: any) {
       if (error.code === 'P2025') {

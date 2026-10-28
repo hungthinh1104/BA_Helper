@@ -73,6 +73,7 @@ moving-ref output becomes stale after a later safe source-resolution observation
 change request fixture text becomes READY_FOR_ANALYSIS
 "fix it" becomes NEEDS_CLARIFICATION and cannot create analysis
 requirement text containing a likely secret is rejected before revision persistence
+same requirement-create requestKey and payload, including concurrent retries, return one requirement/revision; key reuse with a changed payload returns REQUEST_KEY_MISMATCH
 stored DRAFT revision can be qualified without mutating its title/raw text
 edited requirement title/text that qualifies READY archives the superseded ready revision for new analyses, while a DRAFT/NEEDS_CLARIFICATION replacement does not; old analysis still references old title/text
 cross-project requirement revision and snapshot are rejected
@@ -442,6 +443,7 @@ same commit with a different analyzerVersion does not mutate old extracted evide
 same commit reached from different targets does not overwrite target provenance
 stale WAITING_FOR_REVIEW analysis cannot be reviewed or finalized as current output
 concurrent target observation update racing review/finalization causes the stale mutation to reject or fail its conditional commit
+review-note upsert or clear racing finalization waits on the PostgreSQL `ImpactAnalysis` row lock; a late mutation fails after finalization commits and cannot alter the frozen review snapshot
 rerun creates a new ImpactAnalysis instead of overwriting history
 processor completion is not acknowledged before required state/event writes complete
 ```

@@ -9,7 +9,13 @@ import type {
   InsightRepository,
   ReviewNoteRepository,
   EventLogService,
+  PrismaService,
 } from '@ba-helper/backend-runtime';
+import {
+  persistInsightReviewDecision,
+  persistTraceabilityReviewDecision,
+  removeTraceabilityReviewDecision,
+} from './review-item-decision.transaction';
 
 type ReviewAction = 'accept' | 'reject' | 'needs_more_evidence' | 'undo';
 
@@ -40,6 +46,7 @@ export class SubmitReviewItemDecisionUseCase {
     private readonly insightRepo: InsightRepository,
     private readonly reviewNoteRepo: ReviewNoteRepository,
     private readonly eventLog: EventLogService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async execute(params: {
@@ -78,14 +85,13 @@ export class SubmitReviewItemDecisionUseCase {
       if (!existing) {
         return this.impactResult(params.itemId, 'NEEDS_REVIEW', null, true);
       }
-      await this.traceabilityRepo.deleteReviewDecision(params.itemId);
-      await this.audit({
-        eventType: 'TRACEABILITY_REVIEW_DECISION_DELETED',
+      await removeTraceabilityReviewDecision({
+        traceabilityRepo: this.traceabilityRepo,
+        eventLog: this.eventLog,
+        prisma: this.prisma,
         analysisId: analysis.id,
         itemId: params.itemId,
-        state: 'undo',
         actorId: params.actorId,
-        payload: { target: 'impact', action: 'undo' },
       });
       return this.impactResult(params.itemId, 'NEEDS_REVIEW', null, false);
     }
@@ -99,20 +105,15 @@ export class SubmitReviewItemDecisionUseCase {
       return this.impactResult(params.itemId, decision, params.note, true);
     }
 
-    await this.traceabilityRepo.upsertReviewDecision({
-      linkId: params.itemId,
-      analysisId: analysis.id,
-      decision,
-      note: params.note,
-      reviewedByUserId: params.actorId,
-    });
-    await this.audit({
-      eventType: 'TRACEABILITY_REVIEW_DECISION_UPDATED',
+    await persistTraceabilityReviewDecision({
+      traceabilityRepo: this.traceabilityRepo,
+      eventLog: this.eventLog,
+      prisma: this.prisma,
       analysisId: analysis.id,
       itemId: params.itemId,
-      state: decision,
+      decision,
+      note: params.note,
       actorId: params.actorId,
-      payload: { target: 'impact', action: params.action, decision },
     });
     return this.impactResult(params.itemId, decision, params.note, false);
   }
@@ -148,61 +149,25 @@ export class SubmitReviewItemDecisionUseCase {
       return this.insightResult(params.itemId, targetStatus, targetNote, true);
     }
 
-    if (insight.reviewStatus !== targetStatus) {
-      const result = await this.insightRepo.updateReviewStatusIfCurrent({
-        insightId: params.itemId,
-        reviewStatus: targetStatus,
-        expectedCommitSha: analysis.snapshot.commitSha,
-        expectedTargetCommitSha: analysis.sourceTarget.latestObservedCommitSha,
-        expectedResolvedRefType: analysis.sourceTarget.resolvedRefType as
-          | 'BRANCH'
-          | 'TAG'
-          | 'COMMIT',
-      });
-      if (result.count === 0) {
-        throw new AppError(
-          'REVIEW_NOT_ALLOWED',
-          'Review became stale during update.',
-        );
-      }
-    }
-
-    if (targetNote === null) {
-      const clearResult = await this.reviewNoteRepo.clear({
-        impactAnalysisId: analysis.id,
-        insightId: params.itemId,
-      });
-      if (!clearResult) {
-        throw new AppError(
-          'REVIEW_NOT_ALLOWED',
-          'Analysis was finalized before the review note could be cleared.',
-        );
-      }
-    } else {
-      const reviewNote = await this.reviewNoteRepo.upsert({
-        impactAnalysisId: analysis.id,
-        insightId: params.itemId,
-        body: targetNote,
-      });
-      if (!reviewNote) {
-        throw new AppError(
-          'REVIEW_NOT_ALLOWED',
-          'Analysis was finalized before the review note could be saved.',
-        );
-      }
-    }
-
-    await this.audit({
-      eventType: 'INSIGHT_REVIEWED',
+    await persistInsightReviewDecision({
+      traceabilityRepo: this.traceabilityRepo,
+      insightRepo: this.insightRepo,
+      reviewNoteRepo: this.reviewNoteRepo,
+      eventLog: this.eventLog,
+      prisma: this.prisma,
       analysisId: analysis.id,
       itemId: params.itemId,
-      state: params.action === 'undo' ? 'undo' : targetStatus,
+      currentStatus: insight.reviewStatus,
+      targetStatus,
+      targetNote,
+      expectedCommitSha: analysis.snapshot.commitSha,
+      expectedTargetCommitSha: analysis.sourceTarget.latestObservedCommitSha,
+      expectedResolvedRefType: analysis.sourceTarget.resolvedRefType as
+        | 'BRANCH'
+        | 'TAG'
+        | 'COMMIT',
+      action: params.action,
       actorId: params.actorId,
-      payload: {
-        target: 'insight',
-        action: params.action,
-        reviewStatus: targetStatus,
-      },
     });
     return this.insightResult(params.itemId, targetStatus, targetNote, false);
   }
@@ -214,22 +179,6 @@ export class SubmitReviewItemDecisionUseCase {
         'Review item does not belong to the requested analysis.',
       );
     }
-  }
-
-  private async audit(params: {
-    eventType: string;
-    analysisId: string;
-    itemId: string;
-    state: string;
-    actorId: string;
-    payload: Record<string, unknown>;
-  }) {
-    await this.eventLog.recordEvent({
-      eventType: params.eventType,
-      idempotencyKey: `impact:${params.analysisId}:review-item:${params.itemId}:${params.state}`,
-      payload: { ...params.payload, analysisId: params.analysisId, itemId: params.itemId },
-      actorUserId: params.actorId,
-    });
   }
 
   private impactResult(

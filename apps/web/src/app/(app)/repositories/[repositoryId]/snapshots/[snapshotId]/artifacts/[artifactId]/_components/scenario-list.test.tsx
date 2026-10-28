@@ -47,13 +47,33 @@ function renderList(overrides: Partial<Parameters<typeof ScenarioList>[0]> = {})
 }
 
 describe("ScenarioList pagination", () => {
+  it("summarizes loaded scenarios with readable static relationship labels", () => {
+    const direct = {
+      ...scenario,
+      testArtifact: { ...scenario.testArtifact, id: "00000000-0000-4000-8000-000000000002", name: "direct" },
+      trace: { relation: "DIRECT_REFERENCE", artifacts: [], relationships: [] },
+    } as unknown as ComprehensionScenario
+    const indirect = {
+      ...scenario,
+      testArtifact: { ...scenario.testArtifact, id: "00000000-0000-4000-8000-000000000003", name: "indirect" },
+      trace: { relation: "CALL_PATH", artifacts: [], relationships: [] },
+    } as unknown as ComprehensionScenario
+
+    renderList({ scenarios: [direct, indirect, scenario] })
+
+    expect(screen.getByRole("status")).toHaveTextContent("Showing 3 currently loaded related scenarios.")
+    expect(screen.getByText("Direct static test reference")).toBeInTheDocument()
+    expect(screen.getByText("Indirect static call path")).toBeInTheDocument()
+    expect(screen.getByText("No supported trace path recorded")).toBeInTheDocument()
+  })
+
   it("shows a working load-more control when another API page is available", () => {
     const onLoadMore = renderList()
 
     fireEvent.click(screen.getByRole("button", { name: "Load more scenarios" }))
 
     expect(onLoadMore).toHaveBeenCalledTimes(1)
-    expect(screen.getByText("Showing 1 related scenario(s). Declarations do not establish execution or test results.")).toBeInTheDocument()
+    expect(screen.getByRole("status")).toHaveTextContent("Showing 1 currently loaded related scenario.")
   })
 
   it("offers a retry after loading another page fails", () => {
@@ -66,6 +86,13 @@ describe("ScenarioList pagination", () => {
     expect(onLoadMore).toHaveBeenCalledTimes(1)
   })
 
+  it("disables the retry control and announces progress while a failed page is retried", () => {
+    renderList({ isFetchNextPageError: true, isFetchingNextPage: true })
+
+    expect(screen.getByRole("button", { name: "Retrying scenarios..." })).toBeDisabled()
+    expect(screen.getByRole("button", { name: "Retrying scenarios..." })).toHaveAttribute("aria-busy", "true")
+  })
+
   it("shows the retrieval cap when no further API page is available", () => {
     renderList({
       hasNextPage: false,
@@ -74,6 +101,6 @@ describe("ScenarioList pagination", () => {
     })
 
     expect(screen.queryByRole("button", { name: "Load more scenarios" })).not.toBeInTheDocument()
-    expect(screen.getByRole("status")).toHaveTextContent("API retrieval limit was reached")
+    expect(screen.getByText(/API retrieval limit was reached/)).toHaveTextContent("More source-linked scenarios exist beyond the available pages")
   })
 })

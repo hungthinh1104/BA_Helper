@@ -1,5 +1,10 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { GenerateLocalizedReportRequest, LocalizedReportArtifact } from '@ba-helper/contracts';
+import {
+  GenerateLocalizedReportRequest,
+  LocalizedReportArtifact,
+  localizedReportArtifactSchema,
+  localizationStatusResponseSchema,
+} from '@ba-helper/contracts';
 import { apiGet, apiPost } from '@/lib/api-client';
 
 export const localizationKeys = {
@@ -13,7 +18,8 @@ export function useGenerateLocalizedReport(analysisId: string) {
     mutationFn: async (data: GenerateLocalizedReportRequest) => {
       const response = await apiPost<LocalizedReportArtifact>(
         `/api/v1/analyses/${analysisId}/localization`,
-        data
+        data,
+        localizedReportArtifactSchema,
       );
       return response;
     },
@@ -24,8 +30,9 @@ export function useLocalizationStatus(analysisId: string, locale: string) {
   return useQuery({
     queryKey: localizationKeys.status(analysisId, locale),
     queryFn: async () => {
-      const response = await apiGet<{ status: 'READY' | 'NOT_TRANSLATED' | 'QUEUED' | 'FAILED' | 'OUT_OF_SYNC' | 'SOURCE_NOT_READY' }>(
-        `/api/v1/analyses/${analysisId}/localization/${locale}/status`
+      const response = await apiGet(
+        `/api/v1/analyses/${analysisId}/localization/${locale}/status`,
+        localizationStatusResponseSchema,
       );
       return response;
     },

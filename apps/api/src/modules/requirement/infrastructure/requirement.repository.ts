@@ -1,13 +1,39 @@
 import { Injectable } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class RequirementRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createRequirement(projectId: string) {
-    return this.prisma.requirement.create({
-      data: { projectId },
+  async createRequirement(params: {
+    projectId: string;
+    requestKey: string;
+    requestPayloadHash: string;
+  }, transaction?: Prisma.TransactionClient) {
+    const client = transaction ?? this.prisma;
+    return client.requirement.create({
+      data: params,
+    });
+  }
+
+  async findByProjectAndRequestKey(params: {
+    projectId: string;
+    requestKey: string;
+  }) {
+    return this.prisma.requirement.findUnique({
+      where: {
+        projectId_requestKey: {
+          projectId: params.projectId,
+          requestKey: params.requestKey,
+        },
+      },
+      include: {
+        revisions: {
+          orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+          take: 1,
+        },
+      },
     });
   }
 
@@ -52,8 +78,8 @@ export class RequirementRepository {
     normalizedText: string;
     readinessStatus: 'DRAFT' | 'READY_FOR_ANALYSIS' | 'NEEDS_CLARIFICATION';
     validationIssues: string[];
-  }) {
-    return this.prisma.$transaction(async (tx) => {
+  }, transaction?: Prisma.TransactionClient) {
+    const createRevision = async (tx: Prisma.TransactionClient) => {
       const revision = await tx.requirementRevision.create({
         data: {
           requirementId: params.requirementId,
@@ -87,7 +113,11 @@ export class RequirementRepository {
       });
 
       return revision;
-    });
+    };
+
+    return transaction
+      ? createRevision(transaction)
+      : this.prisma.$transaction(createRevision);
   }
 
   async qualifyRevisionWithReadinessTransition(params: {

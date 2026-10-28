@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import type { Prisma } from '@prisma/client';
+import { lockReviewableAnalysisWhileCurrent } from '../../impact-analysis/infrastructure/review-analysis-lock';
 
 @Injectable()
 export class InsightRepository {
@@ -47,8 +49,9 @@ export class InsightRepository {
     }));
   }
 
-  async findById(insightId: string) {
-    return this.prisma.baInsight.findUnique({
+  async findById(insightId: string, transaction?: Prisma.TransactionClient) {
+    const client = transaction ?? this.prisma;
+    return client.baInsight.findUnique({
       where: { id: insightId },
       include: {
         impactAnalysis: {
@@ -65,11 +68,21 @@ export class InsightRepository {
   async updateReviewStatus(params: {
     insightId: string;
     reviewStatus: 'CONFIRMED' | 'REJECTED';
-  }) {
-    return this.prisma.baInsight.update({
-      where: { id: params.insightId },
-      data: { reviewStatus: params.reviewStatus },
-    });
+  }, transaction?: Prisma.TransactionClient) {
+    const update = async (tx: Prisma.TransactionClient) => {
+      const insight = await tx.baInsight.findUnique({
+        where: { id: params.insightId },
+        select: { impactAnalysisId: true },
+      });
+      if (!insight || !(await lockReviewableAnalysisWhileCurrent(tx, insight.impactAnalysisId))) {
+        return null;
+      }
+      return tx.baInsight.update({
+        where: { id: params.insightId },
+        data: { reviewStatus: params.reviewStatus },
+      });
+    };
+    return transaction ? update(transaction) : this.prisma.$transaction(update);
   }
 
   async updateReviewStatusIfCurrent(params: {
@@ -78,22 +91,35 @@ export class InsightRepository {
     expectedCommitSha: string;
     expectedTargetCommitSha: string;
     expectedResolvedRefType: 'BRANCH' | 'TAG' | 'COMMIT';
-  }) {
-    return this.prisma.baInsight.updateMany({
-      where: {
-        id: params.insightId,
-        impactAnalysis: {
-          snapshot: {
-            commitSha: params.expectedCommitSha,
-          },
-          sourceTarget: {
-            resolvedRefType: params.expectedResolvedRefType,
-            latestObservedCommitSha: params.expectedTargetCommitSha,
+  }, transaction?: Prisma.TransactionClient) {
+    const update = async (tx: Prisma.TransactionClient) => {
+      const insight = await tx.baInsight.findUnique({
+        where: { id: params.insightId },
+        select: { impactAnalysisId: true },
+      });
+      if (!insight || !(await lockReviewableAnalysisWhileCurrent(tx, insight.impactAnalysisId))) {
+        return { count: 0 };
+      }
+      return tx.baInsight.updateMany({
+        where: {
+          id: params.insightId,
+          impactAnalysis: {
+            status: 'WAITING_FOR_REVIEW',
+            snapshot: {
+              commitSha: params.expectedCommitSha,
+            },
+            sourceTarget: {
+              resolvedRefType: params.expectedResolvedRefType,
+              ...(params.expectedResolvedRefType === 'COMMIT'
+                ? {}
+                : { latestObservedCommitSha: params.expectedTargetCommitSha }),
+            },
           },
         },
-      },
-      data: { reviewStatus: params.reviewStatus },
-    });
+        data: { reviewStatus: params.reviewStatus },
+      });
+    };
+    return transaction ? update(transaction) : this.prisma.$transaction(update);
   }
 
   async upsertMany(

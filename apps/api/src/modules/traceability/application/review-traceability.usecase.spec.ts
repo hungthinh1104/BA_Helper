@@ -1,11 +1,13 @@
 import { ReviewTraceabilityUseCase } from './review-traceability.usecase';
 import { AppError } from '@ba-helper/shared';
-import { TraceabilityRepository, EventLogService } from "@ba-helper/backend-runtime";
+import type { TraceabilityRepository, EventLogService } from "@ba-helper/backend-runtime";
 
 describe('ReviewTraceabilityUseCase', () => {
   let useCase: ReviewTraceabilityUseCase;
   let repository: jest.Mocked<TraceabilityRepository>;
   let eventLog: jest.Mocked<EventLogService>;
+  let transaction: { id: string };
+  let prisma: { $transaction: jest.Mock };
 
   beforeEach(() => {
     repository = {
@@ -17,7 +19,11 @@ describe('ReviewTraceabilityUseCase', () => {
       recordEvent: jest.fn(),
     } as unknown as jest.Mocked<EventLogService>;
 
-    useCase = new ReviewTraceabilityUseCase(repository, eventLog);
+    transaction = { id: 'review-transaction' };
+    prisma = {
+      $transaction: jest.fn(async (work: (tx: typeof transaction) => unknown) => work(transaction)),
+    };
+    useCase = new ReviewTraceabilityUseCase(repository, eventLog, prisma as any);
   });
 
   const validParams = {
@@ -72,9 +78,10 @@ describe('ReviewTraceabilityUseCase', () => {
       expectedCommitSha: 'abc1234',
       expectedTargetCommitSha: 'abc1234',
       expectedResolvedRefType: 'BRANCH',
-    });
+    }, transaction);
     expect(eventLog.recordEvent).toHaveBeenCalledWith(
       expect.objectContaining({ eventType: 'TRACEABILITY_REVIEWED' }),
+      transaction,
     );
   });
 

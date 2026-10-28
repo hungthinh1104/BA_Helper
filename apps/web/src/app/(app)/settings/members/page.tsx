@@ -226,6 +226,7 @@ export default function ProjectMembersPage() {
                 value={role}
                 onChange={(event) => setRole(event.target.value as ProjectRole)}
                 disabled={!canManage || addMember.isPending}
+                aria-label={t("role")}
                 className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50"
               >
                 {ROLE_OPTIONS.map((option) => (
@@ -346,6 +347,7 @@ export default function ProjectMembersPage() {
                             )
                           }
                           disabled={!canManage || updateMember.isPending}
+                          aria-label={`${t("role")}: ${member.name ?? member.email}`}
                           className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50"
                         >
                           {ROLE_OPTIONS.map((option) => (

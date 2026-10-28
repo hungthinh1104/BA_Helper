@@ -47,11 +47,23 @@ export class GetFinalReviewedReportUseCase {
       );
     }
 
-    const markdown = await this.resolveSnapshotMarkdown(snapshot, locale);
     const reviewCoverageSummary = buildReportReviewCoverageSummaryFromSnapshot({
       reviewDecisionsSnapshot: snapshot.reviewDecisionsSnapshot,
       evidenceQualitySummarySnapshot: snapshot.evidenceQualitySummarySnapshot,
     });
+    const mismatchedCompletionFields = findReviewCompletionMismatches(
+      completion,
+      reviewCoverageSummary.traceabilityLinks,
+    );
+    if (mismatchedCompletionFields.length > 0) {
+      throw new AppError(
+        'REPORT_PROVENANCE_MISMATCH',
+        'Live review counts no longer match the frozen reviewed report snapshot.',
+        { reportSnapshotId: snapshot.id, mismatchedCompletionFields },
+      );
+    }
+
+    const markdown = await this.resolveSnapshotMarkdown(snapshot, locale);
 
     return {
       analysisId,
@@ -144,8 +156,20 @@ export class GetFinalReviewedReportUseCase {
 
       const document = await this.prisma.generatedDocument.findUnique({
         where: { id: snapshot.approvedDocumentId },
+        select: { id: true, impactAnalysisId: true, type: true, status: true, content: true },
       });
       if (document) {
+        if (
+          document.impactAnalysisId !== snapshot.analysisId ||
+          document.type !== 'IMPACT_REPORT' ||
+          document.status !== 'APPROVED'
+        ) {
+          throw new AppError(
+            'REPORT_PROVENANCE_MISMATCH',
+            'The reviewed snapshot points to a document outside its approved analysis report.',
+            { reportSnapshotId: snapshot.id, approvedDocumentId: document.id },
+          );
+        }
         return document.content;
       }
     }
@@ -183,4 +207,35 @@ export class GetFinalReviewedReportUseCase {
     );
   }
 
+}
+
+function findReviewCompletionMismatches(
+  completion: {
+    totalLinks: number;
+    accepted: number;
+    rejected: number;
+    needsReview: number;
+    needsMoreEvidence: number;
+    unreviewed: number;
+  },
+  snapshot: {
+    total: number;
+    accepted: number;
+    rejected: number;
+    needsReview: number;
+    needsMoreEvidence: number;
+    unreviewed: number;
+  },
+): string[] {
+  const fields = [
+    ['totalLinks', completion.totalLinks, snapshot.total],
+    ['accepted', completion.accepted, snapshot.accepted],
+    ['rejected', completion.rejected, snapshot.rejected],
+    ['needsReview', completion.needsReview, snapshot.needsReview],
+    ['needsMoreEvidence', completion.needsMoreEvidence, snapshot.needsMoreEvidence],
+    ['unreviewed', completion.unreviewed, snapshot.unreviewed],
+  ] as const;
+  return fields
+    .filter(([, liveCount, snapshotCount]) => liveCount !== snapshotCount)
+    .map(([field]) => field);
 }

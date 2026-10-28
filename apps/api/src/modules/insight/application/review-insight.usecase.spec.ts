@@ -1,11 +1,13 @@
 import { ReviewInsightUseCase } from './review-insight.usecase';
 import { AppError } from '@ba-helper/shared';
-import { InsightRepository, EventLogService } from "@ba-helper/backend-runtime";
+import type { InsightRepository, EventLogService } from "@ba-helper/backend-runtime";
 
 describe('ReviewInsightUseCase', () => {
   let useCase: ReviewInsightUseCase;
   let repository: jest.Mocked<InsightRepository>;
   let eventLog: jest.Mocked<EventLogService>;
+  let transaction: { id: string };
+  let prisma: { $transaction: jest.Mock };
 
   beforeEach(() => {
     repository = {
@@ -17,7 +19,11 @@ describe('ReviewInsightUseCase', () => {
       recordEvent: jest.fn(),
     } as unknown as jest.Mocked<EventLogService>;
 
-    useCase = new ReviewInsightUseCase(repository, eventLog);
+    transaction = { id: 'review-transaction' };
+    prisma = {
+      $transaction: jest.fn(async (work: (tx: typeof transaction) => unknown) => work(transaction)),
+    };
+    useCase = new ReviewInsightUseCase(repository, eventLog, prisma as any);
   });
 
   const validParams = {
@@ -73,9 +79,10 @@ describe('ReviewInsightUseCase', () => {
       expectedCommitSha: 'abc1234',
       expectedTargetCommitSha: 'abc1234',
       expectedResolvedRefType: 'BRANCH',
-    });
+    }, transaction);
     expect(eventLog.recordEvent).toHaveBeenCalledWith(
       expect.objectContaining({ eventType: 'INSIGHT_REVIEWED' }),
+      transaction,
     );
   });
 

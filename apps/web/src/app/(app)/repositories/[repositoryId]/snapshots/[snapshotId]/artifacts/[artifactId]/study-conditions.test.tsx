@@ -58,6 +58,7 @@ const response = {
       associationId: "test/refund.spec.ts:5:6", invocation: invocationClaim, assertion: assertionClaim,
       expectedOutcomes: [outcomeClaim], mockedBoundaries: [mockClaim], basis: "AST_SUBJECT_REFERENCE", unresolved: [],
     }],
+    trace: { relation: "DIRECT_REFERENCE", artifacts: [], relationships: [] },
     mockedBoundaries: [mockClaim], expectedOutcomes: [outcomeClaim], unresolved: [],
   }],
   scenarioPagination: { limit: 50, offset: 0, hasMore: false },
@@ -73,7 +74,7 @@ const response = {
 
 const query = {
   data: { pages: [response] }, isLoading: false, isError: false, error: null, hasNextPage: false,
-  isFetchingNextPage: false, isFetchNextPageError: false, fetchNextPage: jest.fn(),
+  isFetchingNextPage: false, isFetchNextPageError: false, fetchNextPage: jest.fn(), refetch: jest.fn(),
 }
 
 async function renderCondition(condition?: string) {
@@ -109,6 +110,10 @@ describe("code comprehension study conditions", () => {
     for (const claim of [setupClaim, inputClaim, invocationClaim, assertionClaim, mockClaim, outcomeClaim]) {
       expect(textual.evidenceText).toContain(claim.sourceText)
     }
+    expect(screen.getByText("Direct static test reference")).toBeInTheDocument()
+    expect(screen.getByText("Declared assertions")).toBeInTheDocument()
+    expect(screen.getByText("Mock declarations")).toBeInTheDocument()
+    expect(screen.getByText("Source relationships only; they do not establish a passing result.")).toBeInTheDocument()
     textual.view.unmount()
 
     const visual = await renderCondition("VISUAL_TEST_TRACE")
@@ -127,6 +132,37 @@ describe("code comprehension study conditions", () => {
       mockedBoundaries: [mockClaim], expectedOutcomes: [outcomeClaim],
     })
     expect(visual.projection.limitations).toEqual(textual.projection.limitations)
+  })
+
+  it("shows a compact evidence overview without presenting loaded scenarios as the full total", async () => {
+    await renderCondition("TEXTUAL_EVIDENCE")
+
+    const overview = screen.getByRole("region", { name: "Evidence overview" })
+    expect(overview).toHaveTextContent("Production source")
+    expect(overview).toHaveTextContent("Excerpt available")
+    expect(overview).toHaveTextContent("Source facts")
+    expect(overview).toHaveTextContent("Related scenarios")
+    expect(overview).toHaveTextContent("1 currently loaded")
+    expect(overview).toHaveTextContent("1 direct static test reference")
+    expect(overview).toHaveTextContent("Uncertainty")
+    expect(overview).toHaveTextContent("Runtime not imported")
+  })
+
+  it("offers a retry when the first comprehension request fails", async () => {
+    const refetch = jest.fn()
+    jest.mocked(useCodeComprehension).mockReturnValue({
+      ...query, data: undefined, isError: true, error: new Error("Connection failed"), refetch,
+    } as never)
+
+    await act(async () => render(<CodeComprehensionPage
+      params={Promise.resolve({ repositoryId: "repo-1", snapshotId: "snapshot-1", artifactId: methodId })}
+      searchParams={Promise.resolve({})}
+    />))
+
+    expect(screen.getByRole("heading", { name: "Code evidence unavailable" })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: "Retry loading code evidence" }))
+
+    expect(refetch).toHaveBeenCalledTimes(1)
   })
 
   it("keeps the existing-workflow condition outside BA Helper evidence", async () => {

@@ -9,6 +9,7 @@ import {
   TraceabilityReviewRequest,
   insightListResponseSchema,
   traceabilityLinkListResponseSchema,
+  okResponseSchema,
 } from "@ba-helper/contracts"
 
 export function useAnalysisInsights(analysisId: string) {
@@ -39,7 +40,7 @@ export function useReviewInsight(projectId: string | undefined, analysisId: stri
 
   return useMutation({
     mutationFn: async ({ insightId, data }: { insightId: string, data: InsightReviewRequest }) => {
-      return apiPost(`/api/v1/insights/${insightId}/review`, data)
+      return apiPost(`/api/v1/insights/${insightId}/review`, data, okResponseSchema)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -84,7 +85,7 @@ export function useReviewTraceabilityLink(projectId: string | undefined, analysi
 
   return useMutation({
     mutationFn: async ({ traceabilityLinkId, data }: { traceabilityLinkId: string, data: TraceabilityReviewRequest }) => {
-      return apiPost(`/api/v1/traceability-links/${traceabilityLinkId}/review`, data)
+      return apiPost(`/api/v1/traceability-links/${traceabilityLinkId}/review`, data, okResponseSchema)
     },
     onSuccess: () => {
       for (const queryKey of traceabilityReviewInvalidationKeys(projectQueryKey, analysisId)) {

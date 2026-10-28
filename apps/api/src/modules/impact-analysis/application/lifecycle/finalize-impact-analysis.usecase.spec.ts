@@ -31,6 +31,7 @@ describe('FinalizeImpactAnalysisUseCase', () => {
 
     txImpactUpdateMany = jest.fn().mockResolvedValue({ count: 1 });
     txImpactFindUnique = jest.fn().mockResolvedValue({ status: 'WAITING_FOR_REVIEW' });
+    const txQueryRaw = jest.fn().mockResolvedValue([{ status: 'WAITING_FOR_REVIEW' }]);
     txSnapshotCreate = jest.fn().mockResolvedValue({
       id: 'reviewed-snapshot-1',
       analysisId: 'analysis-1',
@@ -49,6 +50,7 @@ describe('FinalizeImpactAnalysisUseCase', () => {
     prisma = {
       $transaction: jest.fn(async (callback: (tx: any) => unknown) =>
         callback({
+          $queryRaw: txQueryRaw,
           impactAnalysis: {
             updateMany: txImpactUpdateMany,
             findUnique: txImpactFindUnique,

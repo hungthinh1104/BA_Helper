@@ -7,6 +7,7 @@ import {
   MultiRepoApprovedReportResponse,
   multiRepoMergedReportDraftResponseSchema,
   multiRepoApprovedReportResponseSchema,
+  impactAnalysisResponseSchema,
 } from "@ba-helper/contracts"
 
 export function useMultiRepoMergedReportDraft(runId: string) {
@@ -67,7 +68,11 @@ export function useFinalizeAnalysis(projectId: string | undefined, analysisId: s
 
   return useMutation({
     mutationFn: async (data: { acknowledgeUnreviewed?: boolean }) => {
-      return apiPost(`/api/v1/impact-analyses/${analysisId}/finalize`, data)
+      return apiPost(
+        `/api/v1/impact-analyses/${analysisId}/finalize`,
+        data,
+        impactAnalysisResponseSchema,
+      )
     },
     onSuccess: () => {
       queryClient.invalidateQueries({

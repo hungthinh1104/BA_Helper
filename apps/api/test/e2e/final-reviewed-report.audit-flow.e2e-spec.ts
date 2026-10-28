@@ -5,13 +5,14 @@ import { resetDatabase } from './helpers/reset-db';
 import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { grantProjectMembership } from './helpers/grant-project-membership';
-import { PrismaService } from '@ba-helper/backend-runtime';
+import { EventLogService, PrismaService } from '@ba-helper/backend-runtime';
 import type { ReviewNoteRepository } from '@ba-helper/backend-runtime';
 import { RunDocumentJobUseCase } from '@ba-helper/application';
 import { ApprovedReportContextReader } from '../../src/modules/document/application/queries/approved-report-context.reader';
 import type { CreateReviewedReportSnapshotUseCase } from '../../src/modules/document/application/commands/create-reviewed-report-snapshot.usecase';
 import { FinalizeImpactAnalysisUseCase } from '../../src/modules/impact-analysis/application/lifecycle/finalize-impact-analysis.usecase';
 import { SaveReviewNoteUseCase } from '../../src/modules/impact-analysis/application/review/save-review-note.usecase';
+import { SubmitReviewItemDecisionUseCase } from '../../src/modules/review/application/submit-review-item-decision.usecase';
 
 function createDeferred() {
   let resolve!: () => void;
@@ -29,6 +30,39 @@ function withDeadline<T>(promise: Promise<T>, label: string): Promise<T> {
   return Promise.race([promise, deadline]).finally(() => {
     if (timeout) clearTimeout(timeout);
   });
+}
+
+async function waitForRepositoryTargetUpdateLock(prisma: PrismaService): Promise<void> {
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    const waiting = await prisma.$queryRaw<Array<{ count: number }>>`
+      SELECT count(*)::int AS count
+      FROM pg_stat_activity
+      WHERE pid <> pg_backend_pid()
+        AND wait_event_type = 'Lock'
+        AND query ILIKE '%RepositoryTarget%'
+    `;
+    if ((waiting[0]?.count ?? 0) > 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error('Timed out waiting for RepositoryTarget update to block on finalization.');
+}
+
+async function waitForReviewNoteAnalysisLock(prisma: PrismaService): Promise<void> {
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    const waiting = await prisma.$queryRaw<Array<{ count: number }>>`
+      SELECT count(*)::int AS count
+      FROM pg_stat_activity
+      WHERE pid <> pg_backend_pid()
+        AND wait_event_type = 'Lock'
+        AND query ILIKE '%FROM "ImpactAnalysis" AS analysis%'
+        AND query ILIKE '%FOR UPDATE OF analysis%'
+    `;
+    if ((waiting[0]?.count ?? 0) > 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error('Timed out waiting for the review note transaction to block on the finalization lock.');
 }
 
 describe('Final Reviewed Report Audit Flow (e2e)', () => {
@@ -209,7 +243,7 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       ],
     });
 
-    return { analysisId, link1Id, link2Id, docId };
+    return { analysisId, link1Id, link2Id, docId, targetId };
   }
 
   async function markAnalysisCompleted(analysisId: string) {
@@ -364,7 +398,7 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
     expect(res.body.details?.blockingReasons || res.body.metadata?.blockingReasons).toContain('REVIEWED_SNAPSHOT_MISSING');
   });
 
-  it('snapshot remains immutable after review decision changes', async () => {
+  it('rejects a final report when live review counts contradict its frozen snapshot', async () => {
     const { analysisId, link1Id, link2Id, docId } = await setupBasicAnalysisWithLinks();
 
     // 1. Assign ACCEPTED to both links
@@ -403,17 +437,71 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
     // Note: Mutating the decision does not clear the snapshot, and because all links still have a decision, isComplete remains true.
     const finalRes = await request(app.getHttpServer())
       .get(`/api/v1/impact-analyses/${analysisId}/final-reviewed-report`)
-      .set('Authorization', `Bearer ${adminToken}`)
-      .expect(200);
+      .set('Authorization', `Bearer ${adminToken}`);
 
-    // 4. Assert the snapshot data still shows the old ACCEPTED state
-    const decisionsSnapshot = finalRes.body.reviewDecisionsSnapshot;
-    expect(decisionsSnapshot).toBeDefined();
-    
-    // We expect both to be ACCEPTED in the snapshot, even though one is now REJECTED in live db.
-    const decisionsArray = decisionsSnapshot as any[];
+    expect(finalRes.status).toBe(409);
+    expect(finalRes.body.code).toBe('REPORT_PROVENANCE_MISMATCH');
+
+    const persistedSnapshot = await prisma.reviewedReportSnapshot.findUnique({
+      where: { id: snapshotRes.body.id },
+    });
+    const decisionsArray = persistedSnapshot?.reviewDecisionsSnapshot as any[];
     expect(decisionsArray).toHaveLength(2);
     expect(decisionsArray.every(d => d.reviewDecision?.decision === 'ACCEPTED')).toBe(true);
+  });
+
+  it('rejects a snapshot linked to an approved document from another analysis', async () => {
+    const { analysisId, link1Id, link2Id } = await setupBasicAnalysisWithLinks();
+    for (const linkId of [link1Id, link2Id]) {
+      await request(app.getHttpServer())
+        .put(`/api/v1/traceability-links/${linkId}/review-decision`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ decision: 'ACCEPTED' })
+        .expect(200);
+    }
+    await markAnalysisCompleted(analysisId);
+    const snapshotResponse = await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${analysisId}/reviewed-report-snapshot`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send()
+      .expect(201);
+
+    const sourceAnalysis = await prisma.impactAnalysis.findUniqueOrThrow({ where: { id: analysisId } });
+    const otherAnalysisId = crypto.randomUUID();
+    await prisma.impactAnalysis.create({
+      data: {
+        id: otherAnalysisId,
+        requirementRevisionId: sourceAnalysis.requirementRevisionId,
+        snapshotId: sourceAnalysis.snapshotId,
+        sourceTargetId: sourceAnalysis.sourceTargetId,
+        requestKey: crypto.randomUUID(),
+        status: 'COMPLETED',
+        stage: 'DONE',
+      },
+    });
+    const otherDocument = await prisma.generatedDocument.create({
+      data: {
+        impactAnalysisId: otherAnalysisId,
+        type: 'IMPACT_REPORT',
+        status: 'APPROVED',
+        content: '# Report from a different analysis',
+      },
+    });
+    await prisma.reviewedReportSnapshot.update({
+      where: { id: snapshotResponse.body.id },
+      data: { approvedDocumentId: otherDocument.id },
+    });
+
+    const reportResponse = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/final-reviewed-report`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(reportResponse.status).toBe(409);
+    expect(reportResponse.body.code).toBe('REPORT_PROVENANCE_MISMATCH');
+    const contextReader = app.get(ApprovedReportContextReader);
+    await expect(contextReader.readContext(analysisId, snapshotResponse.body.id)).rejects.toMatchObject({
+      code: 'REPORT_PROVENANCE_MISMATCH',
+    });
   });
 
   it('GeneratedDocument markdown reflects the snapshot payload, not the live mutated state', async () => {
@@ -554,21 +642,21 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
         .expect(200);
     }
     const finalizer = app.get(FinalizeImpactAnalysisUseCase);
-    const snapshotBuilder = (finalizer as unknown as {
-      createSnapshot: CreateReviewedReportSnapshotUseCase;
-    }).createSnapshot;
-    const originalBuildSnapshot = snapshotBuilder.buildSnapshotCreateData.bind(snapshotBuilder);
-    const bothBuiltReviewSnapshots = createDeferred();
+    const traceabilityRepo = (finalizer as unknown as {
+      traceabilityRepo: { listByAnalysis: (...args: any[]) => Promise<any[]> };
+    }).traceabilityRepo;
+    const originalListByAnalysis = traceabilityRepo.listByAnalysis.bind(traceabilityRepo);
+    const bothPreflightReads = createDeferred();
     const releaseTransactions = createDeferred();
-    let snapshotBuilds = 0;
-    const snapshotSpy = jest.spyOn(snapshotBuilder, 'buildSnapshotCreateData').mockImplementation(async (params) => {
-      const data = await originalBuildSnapshot(params);
-      if (snapshotBuilds < 2) {
-        snapshotBuilds += 1;
-        if (snapshotBuilds === 2) bothBuiltReviewSnapshots.resolve();
+    let preflightReads = 0;
+    const preflightSpy = jest.spyOn(traceabilityRepo, 'listByAnalysis').mockImplementation(async (id) => {
+      const links = await originalListByAnalysis(id);
+      if (preflightReads < 2) {
+        preflightReads += 1;
+        if (preflightReads === 2) bothPreflightReads.resolve();
         await releaseTransactions.promise;
       }
-      return data;
+      return links;
     });
 
     try {
@@ -579,27 +667,394 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       const responsesPromise = Promise.all([finalizeRequest(), finalizeRequest()]);
 
       await withDeadline(Promise.race([
-        bothBuiltReviewSnapshots.promise,
+        bothPreflightReads.promise,
         responsesPromise.then((responses) => {
-          throw new Error(`Finalize requests ended before the snapshot barrier: ${responses.map((response) => response.status).join(',')}`);
+          throw new Error(`Finalize requests ended before the preflight barrier: ${responses.map((response) => response.status).join(',')}`);
         }),
-      ]), 'both finalize requests to build their review snapshots');
+      ]), 'both finalize requests to read review state before locking');
       releaseTransactions.resolve();
       const responses = await withDeadline(responsesPromise, 'concurrent finalize responses');
-      const snapshotCount = await prisma.reviewedReportSnapshot.count({ where: { analysisId } });
+      const snapshots = await prisma.reviewedReportSnapshot.findMany({
+        where: { analysisId },
+        select: { id: true },
+      });
       const rejectedResponse = responses.find((response) => response.status === 409);
+      const auditEventCount = snapshots.length === 1
+        ? await prisma.domainEvent.count({
+            where: { idempotencyKey: `reviewed-report-snapshot:${snapshots[0].id}:created` },
+          })
+        : 0;
       expect({
         statuses: responses.map((response) => response.status).sort(),
+        responseErrors: responses.map((response) => response.body.message ?? response.body.error).filter(Boolean),
         rejectedCode: rejectedResponse?.body.code,
-        snapshotCount,
+        snapshotCount: snapshots.length,
+        auditEventCount,
       }).toEqual({
         statuses: [201, 409],
+        responseErrors: ['Impact analysis is no longer waiting for review.'],
         rejectedCode: 'INVALID_STATE_TRANSITION',
         snapshotCount: 1,
+        auditEventCount: 1,
       });
     } finally {
       releaseTransactions.resolve();
-      snapshotSpy.mockRestore();
+      preflightSpy.mockRestore();
+    }
+  }, 30_000);
+
+  it('rolls back finalization when the reviewed-snapshot audit event cannot be recorded', async () => {
+    const { analysisId, link1Id, link2Id } = await setupBasicAnalysisWithLinks();
+    for (const linkId of [link1Id, link2Id]) {
+      await request(app.getHttpServer())
+        .put(`/api/v1/traceability-links/${linkId}/review-decision`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ decision: 'ACCEPTED', note: 'Ready to finalize' })
+        .expect(200);
+    }
+
+    const finalizer = app.get(FinalizeImpactAnalysisUseCase);
+    const snapshotBuilder = (finalizer as unknown as {
+      createSnapshot: CreateReviewedReportSnapshotUseCase;
+    }).createSnapshot;
+    const eventSpy = jest.spyOn(snapshotBuilder, 'recordCreatedEvent')
+      .mockRejectedValueOnce(new Error('event storage unavailable'));
+
+    try {
+      const response = await request(app.getHttpServer())
+        .post(`/api/v1/impact-analyses/${analysisId}/finalize`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ acknowledgeUnreviewed: false });
+
+      expect(response.status).toBe(500);
+      const persistedAnalysis = await prisma.impactAnalysis.findUnique({
+        where: { id: analysisId },
+        select: { status: true },
+      });
+      expect(persistedAnalysis?.status).toBe('WAITING_FOR_REVIEW');
+      expect(await prisma.reviewedReportSnapshot.count({ where: { analysisId } })).toBe(0);
+      expect(await prisma.documentJob.count({ where: { analysisId } })).toBe(0);
+    } finally {
+      eventSpy.mockRestore();
+    }
+  });
+
+  it('serializes target observation after finalization once the finalizer holds the target lock', async () => {
+    const { analysisId, link1Id, link2Id, targetId } = await setupBasicAnalysisWithLinks();
+    for (const linkId of [link1Id, link2Id]) {
+      await request(app.getHttpServer())
+        .put(`/api/v1/traceability-links/${linkId}/review-decision`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ decision: 'ACCEPTED', note: 'Ready to finalize' })
+        .expect(200);
+    }
+
+    const finalizer = app.get(FinalizeImpactAnalysisUseCase);
+    const snapshotBuilder = (finalizer as unknown as {
+      createSnapshot: CreateReviewedReportSnapshotUseCase;
+    }).createSnapshot;
+    const originalRecordEvent = snapshotBuilder.recordCreatedEvent.bind(snapshotBuilder);
+    const finalizationReachedCommit = createDeferred();
+    const releaseFinalization = createDeferred();
+    const eventSpy = jest.spyOn(snapshotBuilder, 'recordCreatedEvent').mockImplementation(async (...args) => {
+      finalizationReachedCommit.resolve();
+      await releaseFinalization.promise;
+      return originalRecordEvent(...args);
+    });
+    let targetUpdateResolved = false;
+
+    try {
+      const finalizePromise = request(app.getHttpServer())
+        .post(`/api/v1/impact-analyses/${analysisId}/finalize`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ acknowledgeUnreviewed: false })
+        .then((response) => response);
+      await withDeadline(finalizationReachedCommit.promise, 'finalization to reach its in-transaction audit write');
+
+      const targetUpdatePromise = prisma.repositoryTarget.update({
+        where: { id: targetId },
+        data: { latestObservedCommitSha: 'newer-after-finalize-sha' },
+      }).then((target) => {
+        targetUpdateResolved = true;
+        return target;
+      });
+      await waitForRepositoryTargetUpdateLock(prisma);
+      expect(targetUpdateResolved).toBe(false);
+
+      releaseFinalization.resolve();
+      const [finalizeResponse] = await Promise.all([
+        withDeadline(finalizePromise, 'finalization response'),
+        withDeadline(targetUpdatePromise, 'target update after finalization'),
+      ]);
+      const persistedAnalysis = await prisma.impactAnalysis.findUnique({
+        where: { id: analysisId },
+        select: { status: true, snapshot: { select: { commitSha: true } } },
+      });
+
+      expect({
+        responseStatus: finalizeResponse.status,
+        persistedStatus: persistedAnalysis?.status,
+        snapshotCommitSha: persistedAnalysis?.snapshot.commitSha,
+        latestObservedCommitSha: (await prisma.repositoryTarget.findUnique({
+          where: { id: targetId },
+          select: { latestObservedCommitSha: true },
+        }))?.latestObservedCommitSha,
+      }).toEqual({
+        responseStatus: 201,
+        persistedStatus: 'COMPLETED',
+        snapshotCommitSha: 'abc',
+        latestObservedCommitSha: 'newer-after-finalize-sha',
+      });
+    } finally {
+      releaseFinalization.resolve();
+      eventSpy.mockRestore();
+    }
+  }, 30_000);
+
+  it('finalizes a pinned snapshot without comparing it to moving-ref observations', async () => {
+    const { analysisId, link1Id, link2Id, targetId } = await setupBasicAnalysisWithLinks();
+    for (const linkId of [link1Id, link2Id]) {
+      await request(app.getHttpServer())
+        .put(`/api/v1/traceability-links/${linkId}/review-decision`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ decision: 'ACCEPTED', note: 'Ready to finalize' })
+        .expect(200);
+    }
+    await prisma.repositoryTarget.update({
+      where: { id: targetId },
+      data: {
+        resolvedRefType: 'COMMIT',
+        latestObservedCommitSha: 'later-moving-ref-observation',
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${analysisId}/finalize`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ acknowledgeUnreviewed: false });
+
+    expect(response.status).toBe(201);
+    expect(await prisma.impactAnalysis.findUnique({
+      where: { id: analysisId },
+      select: { status: true },
+    })).toEqual({ status: 'COMPLETED' });
+    expect(await prisma.reviewedReportSnapshot.count({ where: { analysisId } })).toBe(1);
+  }, 30_000);
+
+  it('rejects a review decision whose stale status read resumes after finalization', async () => {
+    const { analysisId, link1Id, link2Id } = await setupBasicAnalysisWithLinks();
+    for (const linkId of [link1Id, link2Id]) {
+      await request(app.getHttpServer())
+        .put(`/api/v1/traceability-links/${linkId}/review-decision`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ decision: 'ACCEPTED', note: 'Ready to finalize' })
+        .expect(200);
+    }
+
+    const submitDecision = app.get(SubmitReviewItemDecisionUseCase);
+    const traceabilityRepo = (submitDecision as unknown as {
+      traceabilityRepo: { upsertReviewDecision: (...args: any[]) => Promise<any> };
+    }).traceabilityRepo;
+    const originalUpsert = traceabilityRepo.upsertReviewDecision.bind(traceabilityRepo);
+    const decisionReachedPersistence = createDeferred();
+    const releaseDecisionWrite = createDeferred();
+    let blockedDecisionWrite = false;
+    const decisionSpy = jest.spyOn(traceabilityRepo, 'upsertReviewDecision').mockImplementation(async (params) => {
+      if (!blockedDecisionWrite) {
+        blockedDecisionWrite = true;
+        decisionReachedPersistence.resolve();
+        await releaseDecisionWrite.promise;
+      }
+      return originalUpsert(params);
+    });
+
+    try {
+      const decisionResponsePromise = request(app.getHttpServer())
+        .put(`/api/v1/impact-analyses/${analysisId}/review-items/${link2Id}/decision`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ target: 'impact', action: 'reject', rationale: 'Changed after review' })
+        .then((response) => response);
+
+      await withDeadline(Promise.race([
+        decisionReachedPersistence.promise,
+        decisionResponsePromise.then((response) => {
+          throw new Error(`Review decision request ended before persistence: ${response.status}`);
+        }),
+      ]), 'review decision to reach persistence after its status check');
+
+      const finalizeResponse = await request(app.getHttpServer())
+        .post(`/api/v1/impact-analyses/${analysisId}/finalize`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ acknowledgeUnreviewed: false });
+      releaseDecisionWrite.resolve();
+      const decisionResponse = await withDeadline(decisionResponsePromise, 'review decision response');
+      const persistedDecision = await prisma.traceabilityReviewDecision.findUnique({
+        where: { traceabilityLinkId: link2Id },
+      });
+
+      expect({
+        finalizeStatus: finalizeResponse.status,
+        decisionStatus: decisionResponse.status,
+        decisionCode: decisionResponse.body.code,
+        persistedDecision: persistedDecision?.decision,
+      }).toEqual({
+        finalizeStatus: 201,
+        decisionStatus: 409,
+        decisionCode: 'INVALID_STATE_TRANSITION',
+        persistedDecision: 'ACCEPTED',
+      });
+    } finally {
+      releaseDecisionWrite.resolve();
+      decisionSpy.mockRestore();
+    }
+  }, 30_000);
+
+  it('finalizes from the latest decision when it commits during finalization preflight', async () => {
+    const { analysisId, link1Id, link2Id } = await setupBasicAnalysisWithLinks();
+    for (const linkId of [link1Id, link2Id]) {
+      await request(app.getHttpServer())
+        .put(`/api/v1/traceability-links/${linkId}/review-decision`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ decision: 'ACCEPTED', note: 'Ready to finalize' })
+        .expect(200);
+    }
+
+    const finalizer = app.get(FinalizeImpactAnalysisUseCase);
+    const traceabilityRepo = (finalizer as unknown as {
+      traceabilityRepo: { listByAnalysis: (...args: any[]) => Promise<any[]> };
+    }).traceabilityRepo;
+    const originalListByAnalysis = traceabilityRepo.listByAnalysis.bind(traceabilityRepo);
+    const preflightReadReached = createDeferred();
+    const releaseFinalization = createDeferred();
+    let paused = false;
+    const preflightSpy = jest.spyOn(traceabilityRepo, 'listByAnalysis').mockImplementation(async (analysisId) => {
+      const links = await originalListByAnalysis(analysisId);
+      if (!paused) {
+        paused = true;
+        preflightReadReached.resolve();
+        await releaseFinalization.promise;
+      }
+      return links;
+    });
+
+    try {
+      const finalizePromise = request(app.getHttpServer())
+        .post(`/api/v1/impact-analyses/${analysisId}/finalize`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ acknowledgeUnreviewed: false })
+        .then((response) => response);
+      await withDeadline(preflightReadReached.promise, 'finalizer to read review state during preflight');
+
+      const decisionResponse = await request(app.getHttpServer())
+        .put(`/api/v1/impact-analyses/${analysisId}/review-items/${link2Id}/decision`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ target: 'impact', action: 'reject', rationale: 'Changed before finalization' });
+
+      releaseFinalization.resolve();
+      const finalizeResponse = await withDeadline(finalizePromise, 'finalize after the decision commits');
+      const persistedSnapshot = await prisma.reviewedReportSnapshot.findFirst({
+        where: { analysisId },
+        orderBy: { createdAt: 'desc' },
+      });
+      const decisions = persistedSnapshot?.reviewDecisionsSnapshot as any[];
+      const snapshotDecision = decisions.find((decision) => decision.linkId === link2Id)?.reviewDecision?.decision;
+      const liveDecision = await prisma.traceabilityReviewDecision.findUnique({
+        where: { traceabilityLinkId: link2Id },
+      });
+
+      expect({
+        decisionStatus: decisionResponse.status,
+        finalizeStatus: finalizeResponse.status,
+        snapshotDecision,
+        liveDecision: liveDecision?.decision,
+      }).toEqual({
+        decisionStatus: 200,
+        finalizeStatus: 201,
+        snapshotDecision: 'REJECTED',
+        liveDecision: 'REJECTED',
+      });
+    } finally {
+      releaseFinalization.resolve();
+      preflightSpy.mockRestore();
+    }
+  }, 30_000);
+
+  it('rejects an insight decision whose stale status read resumes after finalization', async () => {
+    const { analysisId, link1Id, link2Id } = await setupBasicAnalysisWithLinks();
+    for (const linkId of [link1Id, link2Id]) {
+      await request(app.getHttpServer())
+        .put(`/api/v1/traceability-links/${linkId}/review-decision`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ decision: 'ACCEPTED', note: 'Ready to finalize' })
+        .expect(200);
+    }
+    const insightId = crypto.randomUUID();
+    await prisma.baInsight.create({
+      data: {
+        id: insightId,
+        impactAnalysisId: analysisId,
+        insightKey: `audit-race:${insightId}`,
+        insightType: 'QA_SCENARIO',
+        certainty: 'INFERRED',
+        reviewStatus: 'CONFIRMED',
+        title: 'Reviewed QA scenario',
+        description: 'Given a paid booking, when cancelled, then a refund is issued.',
+      },
+    });
+
+    const submitDecision = app.get(SubmitReviewItemDecisionUseCase);
+    const insightRepo = (submitDecision as unknown as {
+      insightRepo: { updateReviewStatusIfCurrent: (...args: any[]) => Promise<any> };
+    }).insightRepo;
+    const originalUpdate = insightRepo.updateReviewStatusIfCurrent.bind(insightRepo);
+    const decisionReachedPersistence = createDeferred();
+    const releaseDecisionWrite = createDeferred();
+    let blockedDecisionWrite = false;
+    const decisionSpy = jest.spyOn(insightRepo, 'updateReviewStatusIfCurrent').mockImplementation(async (params) => {
+      if (!blockedDecisionWrite) {
+        blockedDecisionWrite = true;
+        decisionReachedPersistence.resolve();
+        await releaseDecisionWrite.promise;
+      }
+      return originalUpdate(params);
+    });
+
+    try {
+      const decisionResponsePromise = request(app.getHttpServer())
+        .put(`/api/v1/impact-analyses/${analysisId}/review-items/${insightId}/decision`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ target: 'insight', action: 'reject' })
+        .then((response) => response);
+
+      await withDeadline(Promise.race([
+        decisionReachedPersistence.promise,
+        decisionResponsePromise.then((response) => {
+          throw new Error(`Insight decision request ended before persistence: ${response.status}`);
+        }),
+      ]), 'insight decision to reach persistence after its status check');
+
+      const finalizeResponse = await request(app.getHttpServer())
+        .post(`/api/v1/impact-analyses/${analysisId}/finalize`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ acknowledgeUnreviewed: false });
+      releaseDecisionWrite.resolve();
+      const decisionResponse = await withDeadline(decisionResponsePromise, 'insight decision response');
+      const persistedInsight = await prisma.baInsight.findUnique({ where: { id: insightId } });
+
+      expect({
+        finalizeStatus: finalizeResponse.status,
+        decisionStatus: decisionResponse.status,
+        decisionCode: decisionResponse.body.code,
+        persistedStatus: persistedInsight?.reviewStatus,
+      }).toEqual({
+        finalizeStatus: 201,
+        decisionStatus: 409,
+        decisionCode: 'INVALID_STATE_TRANSITION',
+        persistedStatus: 'CONFIRMED',
+      });
+    } finally {
+      releaseDecisionWrite.resolve();
+      decisionSpy.mockRestore();
     }
   }, 30_000);
 
@@ -679,6 +1134,88 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
     } finally {
       releaseNoteWrite.resolve();
       noteSpy.mockRestore();
+    }
+  }, 30_000);
+
+  it('serializes a PostgreSQL review-note write behind finalization before snapshot commit', async () => {
+    const { analysisId, link1Id, link2Id } = await setupBasicAnalysisWithLinks();
+    for (const linkId of [link1Id, link2Id]) {
+      await request(app.getHttpServer())
+        .put(`/api/v1/traceability-links/${linkId}/review-decision`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ decision: 'ACCEPTED', note: 'Ready to finalize' })
+        .expect(200);
+    }
+    await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${analysisId}/review-notes`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ traceabilityLinkId: link1Id, body: 'Persisted before finalization.' })
+      .expect(200);
+
+    const finalize = app.get(FinalizeImpactAnalysisUseCase);
+    const createSnapshot = (finalize as unknown as {
+      createSnapshot: CreateReviewedReportSnapshotUseCase;
+    }).createSnapshot;
+    const originalBuildSnapshotData = createSnapshot.buildSnapshotCreateData.bind(createSnapshot);
+    const snapshotDataReady = createDeferred();
+    const releaseFinalization = createDeferred();
+    const snapshotSpy = jest.spyOn(createSnapshot, 'buildSnapshotCreateData').mockImplementation(async (params) => {
+      const data = await originalBuildSnapshotData(params);
+      snapshotDataReady.resolve();
+      await releaseFinalization.promise;
+      return data;
+    });
+    let noteResponseResolved = false;
+
+    try {
+      const finalizeResponsePromise = request(app.getHttpServer())
+        .post(`/api/v1/impact-analyses/${analysisId}/finalize`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ acknowledgeUnreviewed: false })
+        .then((response) => response);
+      await withDeadline(snapshotDataReady.promise, 'finalizer to build its frozen snapshot data under the row lock');
+
+      const noteResponsePromise = request(app.getHttpServer())
+        .post(`/api/v1/impact-analyses/${analysisId}/review-notes`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ traceabilityLinkId: link1Id, body: 'Must not be saved after snapshot creation.' })
+        .then((response) => {
+          noteResponseResolved = true;
+          return response;
+        });
+
+      await withDeadline(Promise.race([
+        waitForReviewNoteAnalysisLock(prisma),
+        noteResponsePromise.then((response) => {
+          throw new Error(`Review note returned ${response.status} before PostgreSQL reported its row-lock wait.`);
+        }),
+      ]), 'PostgreSQL to show the review-note row-lock wait');
+      expect(noteResponseResolved).toBe(false);
+
+      releaseFinalization.resolve();
+      const [finalizeResponse, noteResponse] = await Promise.all([
+        withDeadline(finalizeResponsePromise, 'finalize response'),
+        withDeadline(noteResponsePromise, 'review-note response after finalization commits'),
+      ]);
+      const persistedNote = await prisma.reviewNote.findUnique({ where: { traceabilityLinkId: link1Id } });
+      const snapshotCount = await prisma.reviewedReportSnapshot.count({ where: { analysisId } });
+
+      expect({
+        finalizeStatus: finalizeResponse.status,
+        noteStatus: noteResponse.status,
+        noteCode: noteResponse.body.code,
+        noteBody: persistedNote?.body,
+        snapshotCount,
+      }).toEqual({
+        finalizeStatus: 201,
+        noteStatus: 409,
+        noteCode: 'INVALID_STATE_TRANSITION',
+        noteBody: 'Persisted before finalization.',
+        snapshotCount: 1,
+      });
+    } finally {
+      releaseFinalization.resolve();
+      snapshotSpy.mockRestore();
     }
   }, 30_000);
 });

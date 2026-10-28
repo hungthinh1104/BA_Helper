@@ -38,18 +38,21 @@ import { ProjectModule } from '../project/project.module';
         insightRepo: InsightRepository,
         reviewNoteRepo: ReviewNoteRepository,
         eventLog: EventLogService,
+        prisma: PrismaService,
       ) =>
         new SubmitReviewItemDecisionUseCase(
           traceabilityRepo,
           insightRepo,
           reviewNoteRepo,
           eventLog,
+          prisma,
         ),
       inject: [
         TraceabilityRepository,
         InsightRepository,
         ReviewNoteRepository,
         EventLogService,
+        PrismaService,
       ],
     },
   ],

@@ -22,9 +22,9 @@ import { PrismaModule, PrismaService, InsightRepository, EventLogService } from 
     },
     {
       provide: ReviewInsightUseCase,
-      useFactory: (repo: InsightRepository, eventLog: EventLogService) =>
-        new ReviewInsightUseCase(repo, eventLog),
-      inject: [InsightRepository, EventLogService],
+      useFactory: (repo: InsightRepository, eventLog: EventLogService, prisma: PrismaService) =>
+        new ReviewInsightUseCase(repo, eventLog, prisma),
+      inject: [InsightRepository, EventLogService, PrismaService],
     },
   ],
   exports: [InsightRepository],

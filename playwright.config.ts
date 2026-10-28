@@ -79,7 +79,7 @@ export default defineConfig({
     {
       name: 'desktop',
       use: { viewport: { width: 1440, height: 900 } },
-      testMatch: /(decision-to-report|decision-keyboard|auth-headers|api-documentation|code-comprehension-trace|pinned-real-comprehension)\.pw\.ts/,
+      testMatch: /(decision-to-report|decision-keyboard|auth-headers|api-documentation|code-comprehension-trace|pinned-real-comprehension|route-smoke|responsive-sweep)\.pw\.ts/,
     },
     {
       name: 'mobile',

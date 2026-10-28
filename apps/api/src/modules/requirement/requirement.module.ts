@@ -31,8 +31,9 @@ import { PrismaModule, PrismaService, EventLogService } from "@ba-helper/backend
         repo: RequirementRepository,
         projectRepo: ProjectRepository,
         eventLog: EventLogService,
-      ) => new CreateRequirementUseCase(repo, projectRepo, eventLog),
-      inject: [RequirementRepository, ProjectRepository, EventLogService],
+        prisma: PrismaService,
+      ) => new CreateRequirementUseCase(repo, projectRepo, eventLog, prisma),
+      inject: [RequirementRepository, ProjectRepository, EventLogService, PrismaService],
     },
     {
       provide: CreateRequirementRevisionUseCase,

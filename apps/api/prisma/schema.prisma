@@ -454,13 +454,16 @@ model Evidence {
 }
 
 model Requirement {
-  id        String                @id @default(uuid())
-  projectId String
-  revisions RequirementRevision[]
-  project   Project               @relation(fields: [projectId], references: [id])
-  createdAt DateTime              @default(now())
-  updatedAt DateTime              @updatedAt
+  id                 String                @id @default(uuid())
+  projectId          String
+  requestKey         String                @default(uuid())
+  requestPayloadHash String                @default("")
+  revisions          RequirementRevision[]
+  project            Project               @relation(fields: [projectId], references: [id])
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
 
+  @@unique([projectId, requestKey])
   @@index([projectId, createdAt(sort: Desc), id(sort: Desc)])
 }
 

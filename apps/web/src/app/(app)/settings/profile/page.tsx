@@ -50,8 +50,10 @@ function ProfileSettingsContent() {
             <WorkspaceProperty
               label={t("workspaceMode")}
               description={t("workspaceModeDescription")}
+              htmlFor="workspace-mode"
             >
               <Input
+                id="workspace-mode"
                 value={workspace.mode}
                 readOnly
                 className="max-w-sm h-8 text-[13px] bg-surface-muted/50 border-border/50 shadow-none focus-visible:ring-0"
@@ -61,8 +63,10 @@ function ProfileSettingsContent() {
             <WorkspaceProperty
               label={t("projectName")}
               description={t("projectNameDescription")}
+              htmlFor="project-name"
             >
               <Input
+                id="project-name"
                 value={workspace.name}
                 readOnly
                 className="max-w-sm h-8 text-[13px] bg-surface-muted/50 border-border/50 shadow-none focus-visible:ring-0"
@@ -72,8 +76,10 @@ function ProfileSettingsContent() {
             <WorkspaceProperty
               label={t("projectRole")}
               description={t("projectRoleDescription")}
+              htmlFor="project-role"
             >
               <Input
+                id="project-role"
                 value={workspace.membershipRole ?? t("noMembershipResolved")}
                 readOnly
                 className="max-w-sm h-8 text-[13px] bg-surface-muted/50 border-border/50 shadow-none focus-visible:ring-0"
@@ -83,8 +89,10 @@ function ProfileSettingsContent() {
             <WorkspaceProperty
               label={t("projectId")}
               description={t("projectIdDescription")}
+              htmlFor="project-id"
             >
               <Input
+                id="project-id"
                 value={workspace.projectId}
                 readOnly
                 className="max-w-lg h-8 text-[13px] bg-surface-muted/50 border-border/50 shadow-none focus-visible:ring-0"
@@ -94,8 +102,10 @@ function ProfileSettingsContent() {
             <WorkspaceProperty
               label={t("apiBaseUrl")}
               description={t("apiBaseUrlDescription")}
+              htmlFor="api-base-url"
             >
               <Input
+                id="api-base-url"
                 value={workspaceRuntime.apiBaseUrl}
                 readOnly
                 className="max-w-lg h-8 text-[13px] bg-surface-muted/50 border-border/50 shadow-none focus-visible:ring-0"
@@ -105,8 +115,10 @@ function ProfileSettingsContent() {
             <WorkspaceProperty
               label={t("apiHealth")}
               description={t("apiHealthDescription")}
+              htmlFor="api-health"
             >
               <Input
+                id="api-health"
                 value={
                   health.isLoading
                     ? t("checkingApiHealth")
@@ -122,8 +134,10 @@ function ProfileSettingsContent() {
             <WorkspaceProperty
               label={t("backendServerTime")}
               description={t("backendServerTimeDescription")}
+              htmlFor="backend-server-time"
             >
               <Input
+                id="backend-server-time"
                 value={health.data?.serverTime ?? t("unavailable")}
                 readOnly
                 className="max-w-lg h-8 text-[13px] bg-surface-muted/50 border-border/50 shadow-none focus-visible:ring-0"

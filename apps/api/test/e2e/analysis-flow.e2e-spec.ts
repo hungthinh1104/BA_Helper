@@ -98,6 +98,7 @@ describe('Analysis Flow (E2E)', () => {
       .post(`/api/v1/projects/${projectId}/requirements`)
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
+        requestKey: crypto.randomUUID(),
         title: 'Refund API',
         rawText: 'Allow users to cancel and refund bookings.',
       })

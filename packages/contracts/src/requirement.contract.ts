@@ -7,10 +7,14 @@ export const requirementReadinessStatusSchema = z.enum([
 	'ARCHIVED',
 ]);
 
-export const requirementCreateRequestSchema = z.object({
+export const requirementCreateFieldsSchema = z.object({
 	title: z.string().trim().min(1).max(200),
 	rawText: z.string().trim().min(1).max(5000),
 	submitForReadinessCheck: z.boolean().default(true),
+});
+
+export const requirementCreateRequestSchema = requirementCreateFieldsSchema.extend({
+	requestKey: z.string().uuid(),
 });
 
 export const requirementCreateResponseSchema = z.object({
@@ -61,6 +65,7 @@ export const requirementDetailResponseSchema = z.object({
 });
 
 export type RequirementCreateRequest = z.infer<typeof requirementCreateRequestSchema>;
+export type RequirementCreateFields = z.infer<typeof requirementCreateFieldsSchema>;
 export type RequirementCreateResponse = z.infer<typeof requirementCreateResponseSchema>;
 export type RequirementRevisionCreateRequest = z.infer<typeof requirementRevisionCreateRequestSchema>;
 export type RequirementRevisionCreateResponse = z.infer<typeof requirementRevisionCreateResponseSchema>;

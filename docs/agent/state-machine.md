@@ -203,7 +203,11 @@ REJECTED     -> CONFIRMED
 Review status describes the current user decision and may be revised before a
 new final output is generated. Reviews are accepted only while the analysis is
 `WAITING_FOR_REVIEW`; after finalization, a new analysis run is required for
-new reviewed output. A review event is written for every change.
+new reviewed output. A review event is written for every change. The decision
+or status mutation and its `DomainEvent` must commit in the same database
+transaction. For an insight review action, its rationale `ReviewNote` is part
+of that transaction too. If event persistence fails, all related review writes
+roll back and the API must not report a successful mutation.
 
 If an analysis becomes known stale before finalization, new review/finalization
 actions are blocked by default. The user requests a current scan and reruns
@@ -211,10 +215,22 @@ analysis against its snapshot; stale machine output remains readable as
 history.
 
 Review and finalization must guard against a concurrent target observation.
-Inside the mutation transaction, use a row lock, serializable isolation, or an
-optimistic comparison against the target observation version/timestamp. A
-review/finalization operation must not commit as current after a newer observed
-commit has won the race.
+Inside the mutation transaction, lock `ImpactAnalysis` first and its
+`RepositoryTarget` row second (`FOR SHARE`), then compare the observed commit
+with the snapshot commit. Scanner target updates take an incompatible row lock,
+so a review/finalization commit and a target observation serialize. A newer
+observation that commits first blocks stale review/finalization; if finalization
+holds the target lock first, that observation commits afterward and the completed
+history becomes stale through the normal freshness projection. Pinned `COMMIT`
+targets remain non-stale regardless of later moving-ref observations.
+
+Review-note upserts and clears use the same `ImpactAnalysis` row lock in their
+database transaction. A note write that reaches its lock after finalization
+commits must observe the terminal status and fail; it cannot update the live
+review data after the approved snapshot was captured. Keep this ordering in a
+PostgreSQL concurrency test that observes the waiting database session, since
+pausing application code before persistence alone does not verify row-lock
+serialization.
 
 ## Generated Outputs
 

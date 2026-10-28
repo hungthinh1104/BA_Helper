@@ -37,10 +37,19 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 async function requestJson<T>(
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
   path: string,
-  body?: unknown,
-  schema?: z.ZodType<T>,
+  body: unknown,
+  schema: z.ZodType<T>,
   headers?: Record<string, string>,
 ): Promise<T> {
+  if (!schema) {
+    throw new ApiError({
+      status: 500,
+      code: "API_CONTRACT_MISSING",
+      message: `No response contract was provided for ${method} ${path}.`,
+      details: { method, path },
+    })
+  }
+
   const apiBaseUrl = getApiBaseUrl()
   let res: Response
   
@@ -113,47 +122,47 @@ async function requestJson<T>(
     })
   }
 
-  if (schema) {
-    const parsed = schema.safeParse(data)
-    if (!parsed.success) {
-      const respondedWithHtml =
-        contentType.includes("text/html") ||
-        text?.trim().toLowerCase().startsWith("<!doctype html") ||
-        text?.trim().toLowerCase().startsWith("<html")
+  if (!isJsonResponse) {
+    const respondedWithHtml =
+      contentType.includes("text/html") ||
+      text?.trim().toLowerCase().startsWith("<!doctype html") ||
+      text?.trim().toLowerCase().startsWith("<html")
 
-      if (respondedWithHtml) {
-        throw new ApiError({
-          status: 500,
-          code: "API_WRONG_SERVER",
-          message: `Configured API URL responded with HTML for ${path}.`,
-          details: { apiBaseUrl, contentType, path }
-        })
-      }
-      throw new ApiContractError(parsed.error)
-    }
-    return parsed.data
+    throw new ApiError({
+      status: 500,
+      code: respondedWithHtml ? "API_WRONG_SERVER" : "API_INVALID_RESPONSE",
+      message: respondedWithHtml
+        ? `Configured API URL responded with HTML for ${path}.`
+        : `Configured API URL returned a non-JSON response for ${path}.`,
+      details: { apiBaseUrl, contentType, path },
+    })
   }
 
-  return data as T
+  const parsed = schema.safeParse(data)
+  if (!parsed.success) {
+    throw new ApiContractError(parsed.error)
+  }
+
+  return parsed.data
 }
 
-export async function apiGet<T>(path: string, schema?: z.ZodType<T>, headers?: Record<string, string>): Promise<T> {
+export async function apiGet<T>(path: string, schema: z.ZodType<T>, headers?: Record<string, string>): Promise<T> {
   return requestJson("GET", path, undefined, schema, headers)
 }
 
-export async function apiPost<T>(path: string, body: unknown, schema?: z.ZodType<T>, headers?: Record<string, string>): Promise<T> {
+export async function apiPost<T>(path: string, body: unknown, schema: z.ZodType<T>, headers?: Record<string, string>): Promise<T> {
   return requestJson("POST", path, body, schema, headers)
 }
 
-export async function apiPut<T>(path: string, body: unknown, schema?: z.ZodType<T>, headers?: Record<string, string>): Promise<T> {
+export async function apiPut<T>(path: string, body: unknown, schema: z.ZodType<T>, headers?: Record<string, string>): Promise<T> {
   return requestJson("PUT", path, body, schema, headers)
 }
 
-export async function apiPatch<T>(path: string, body: unknown, schema?: z.ZodType<T>, headers?: Record<string, string>): Promise<T> {
+export async function apiPatch<T>(path: string, body: unknown, schema: z.ZodType<T>, headers?: Record<string, string>): Promise<T> {
   return requestJson("PATCH", path, body, schema, headers)
 }
 
-export async function apiDelete<T>(path: string, schema?: z.ZodType<T>, headers?: Record<string, string>): Promise<T> {
+export async function apiDelete<T>(path: string, schema: z.ZodType<T>, headers?: Record<string, string>): Promise<T> {
   return requestJson("DELETE", path, undefined, schema, headers)
 }
 

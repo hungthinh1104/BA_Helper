@@ -41,11 +41,16 @@ class StubEventLog {
   recordEvent = async () => undefined;
 }
 
+class StubPrisma {
+  $transaction = async (work: (transaction: object) => unknown) => work({});
+}
+
 describe('Review staleness guard', () => {
   it('rejects insight review when target observation changes', async () => {
     const useCase = new ReviewInsightUseCase(
       new StubInsightRepo() as any,
       new StubEventLog() as any,
+      new StubPrisma() as any,
     );
 
     await expect(
@@ -57,6 +62,7 @@ describe('Review staleness guard', () => {
     const useCase = new ReviewTraceabilityUseCase(
       new StubTraceabilityRepo() as any,
       new StubEventLog() as any,
+      new StubPrisma() as any,
     );
 
     await expect(

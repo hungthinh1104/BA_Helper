@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { apiPut } from "@/lib/api-client"
 import { queryKeys } from "@/lib/api/query-keys"
 import { useOptionalProjectId } from "@/lib/project-context"
+import { submitReviewItemDecisionResponseSchema } from "@ba-helper/contracts"
 import type {
   AnalysisWorkspaceResponse,
   AnalysisWorkspaceReviewQueueItem,
@@ -79,6 +80,7 @@ export function useReviewItemDecision(analysisId: string) {
           action,
           rationale: rationale?.trim() ? rationale.trim() : null,
         },
+        submitReviewItemDecisionResponseSchema,
       )
     },
     onMutate: async ({ item, action }: ReviewDecisionInput) => {

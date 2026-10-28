@@ -91,7 +91,7 @@
 .app-nav-label {
   padding: 0 8px;
   margin-bottom: 4px;
-  color: var(--text-disabled);
+  color: var(--text-tertiary);
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.04em;

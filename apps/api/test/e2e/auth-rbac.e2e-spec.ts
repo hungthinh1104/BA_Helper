@@ -5,8 +5,15 @@ import { JwtService } from '@nestjs/jwt';
 import { createTestApp } from './helpers/test-app';
 import { resetDatabase } from './helpers/reset-db';
 import { grantProjectMembership } from './helpers/grant-project-membership';
-import { artifactListResponseSchema } from '@ba-helper/contracts';
-import { PrismaService } from "@ba-helper/backend-runtime";
+import {
+  artifactListResponseSchema,
+  requirementCreateResponseSchema,
+  requirementDetailResponseSchema,
+  requirementListResponseSchema,
+  requirementRevisionCreateResponseSchema,
+  requirementRevisionQualifyResponseSchema,
+} from '@ba-helper/contracts';
+import { EventLogService, PrismaService } from "@ba-helper/backend-runtime";
 import { PasswordHashService } from '../../src/modules/auth/application/password-hash.service';
 
 describe('Auth and RBAC (e2e)', () => {
@@ -760,7 +767,7 @@ describe('Auth and RBAC (e2e)', () => {
     await request(app.getHttpServer())
       .post(`/api/v1/projects/${project.id}/requirements`)
       .set('Authorization', `Bearer ${reviewerToken}`)
-      .send({ title: 'Reviewer requirement', rawText: 'text' })
+      .send({ requestKey: crypto.randomUUID(), title: 'Reviewer requirement', rawText: 'text' })
       .expect(403);
 
     await request(app.getHttpServer())
@@ -945,6 +952,241 @@ describe('Auth and RBAC (e2e)', () => {
 
     expect(pdfExport.headers['content-type']).toContain('application/pdf');
     expect(pdfExport.headers['content-disposition']).toContain('.pdf');
+  });
+
+  it('keeps requirement reads and writes in project scope and matches shared response contracts', async () => {
+    const projectId = crypto.randomUUID();
+    const peerProjectId = crypto.randomUUID();
+    const hiddenProjectId = crypto.randomUUID();
+
+    await Promise.all([
+      prisma.project.create({ data: { id: projectId, name: 'Requirements Project' } }),
+      prisma.project.create({ data: { id: peerProjectId, name: 'Peer Requirements Project' } }),
+      prisma.project.create({ data: { id: hiddenProjectId, name: 'Hidden Requirements Project' } }),
+    ]);
+    await Promise.all([
+      ...[projectId, peerProjectId, hiddenProjectId].map((id) =>
+        grantProjectMembership(prisma, {
+          projectId: id,
+          userId: adminUserId,
+          role: 'OWNER',
+        }),
+      ),
+      ...[projectId, peerProjectId].map((id) =>
+        grantProjectMembership(prisma, {
+          projectId: id,
+          userId: viewerUserId,
+          role: 'VIEWER',
+        }),
+      ),
+    ]);
+
+    const seedRequirement = async (scopeProjectId: string, title: string) => {
+      const requirementId = crypto.randomUUID();
+      const revisionId = crypto.randomUUID();
+      await prisma.requirement.create({ data: { id: requirementId, projectId: scopeProjectId } });
+      await prisma.requirementRevision.create({
+        data: {
+          id: revisionId,
+          requirementId,
+          title,
+          rawText: 'Allow users to cancel paid bookings and receive a refund.',
+          normalizedText: 'Allow users to cancel paid bookings and receive a refund.',
+          readinessStatus: 'READY_FOR_ANALYSIS',
+        },
+      });
+      return { requirementId, revisionId };
+    };
+
+    const peerRequirement = await seedRequirement(peerProjectId, 'Peer requirement');
+    const hiddenRequirement = await seedRequirement(hiddenProjectId, 'Hidden requirement');
+
+    const createResponse = await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/requirements`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requestKey: crypto.randomUUID(),
+        title: 'Cancel paid booking',
+        rawText: 'Allow users to cancel paid bookings and receive a refund.',
+        submitForReadinessCheck: false,
+      })
+      .expect(201);
+    const created = requirementCreateResponseSchema.parse(createResponse.body);
+    expect(created.readinessStatus).toBe('DRAFT');
+
+    const revisionResponse = await request(app.getHttpServer())
+      .post(`/api/v1/requirements/${created.requirementId}/revisions`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        title: 'Cancel paid booking and issue a refund',
+        rawText: 'Allow users to cancel paid bookings and receive a refund.',
+        submitForReadinessCheck: true,
+      })
+      .expect(201);
+    const revision = requirementRevisionCreateResponseSchema.parse(revisionResponse.body);
+
+    const qualifyResponse = await request(app.getHttpServer())
+      .post(`/api/v1/requirement-revisions/${revision.revisionId}/qualify`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(201);
+    expect(requirementRevisionQualifyResponseSchema.parse(qualifyResponse.body).readinessStatus)
+      .toBe('READY_FOR_ANALYSIS');
+
+    const listResponse = await request(app.getHttpServer())
+      .get(`/api/v1/projects/${projectId}/requirements`)
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .expect(200);
+    const list = requirementListResponseSchema.parse(listResponse.body);
+    const createdItem = list.items.find((item) => item.id === created.requirementId);
+    expect(createdItem?.latestRevision).toMatchObject({
+      id: revision.revisionId,
+      versionNumber: 2,
+      title: 'Cancel paid booking and issue a refund',
+      readinessStatus: 'READY_FOR_ANALYSIS',
+    });
+    expect(createdItem?.canStartAnalysis).toBe(true);
+
+    const detailResponse = await request(app.getHttpServer())
+      .get(`/api/v1/projects/${projectId}/requirements/${created.requirementId}`)
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .expect(200);
+    expect(requirementDetailResponseSchema.parse(detailResponse.body).revisions)
+      .toHaveLength(2);
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/projects/${projectId}/requirements/${peerRequirement.requirementId}`)
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/v1/projects/${hiddenProjectId}/requirements`)
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/v1/projects/${hiddenProjectId}/requirements`)
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .send({ requestKey: crypto.randomUUID(), title: 'Hidden write', rawText: 'Allow paid booking cancellation with a refund.' })
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/v1/requirements/${hiddenRequirement.requirementId}/revisions`)
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .send({ title: 'Hidden revision', rawText: 'Allow paid booking cancellation with a refund.' })
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/v1/requirement-revisions/${hiddenRequirement.revisionId}/qualify`)
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/requirements`)
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .send({ requestKey: crypto.randomUUID(), title: 'Read only write', rawText: 'Allow paid booking cancellation with a refund.' })
+      .expect(403);
+  });
+
+  it('does not persist a requirement when its creation audit event fails', async () => {
+    const projectId = crypto.randomUUID();
+    await prisma.project.create({ data: { id: projectId, name: 'Atomic Requirement Project' } });
+    await grantProjectMembership(prisma, {
+      projectId,
+      userId: adminUserId,
+      role: 'OWNER',
+    });
+
+    const eventSpy = jest.spyOn(EventLogService.prototype, 'recordEvent')
+      .mockRejectedValue(new Error('event storage unavailable'));
+    try {
+      await request(app.getHttpServer())
+        .post(`/api/v1/projects/${projectId}/requirements`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          requestKey: crypto.randomUUID(),
+          title: 'Cancel paid booking',
+          rawText: 'Allow users to cancel paid bookings and receive a refund.',
+          submitForReadinessCheck: true,
+        })
+        .expect(500);
+
+      const listResponse = await request(app.getHttpServer())
+        .get(`/api/v1/projects/${projectId}/requirements`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+      expect({
+        requirements: requirementListResponseSchema.parse(listResponse.body).items.length,
+        domainEvents: await prisma.domainEvent.count(),
+      }).toEqual({ requirements: 0, domainEvents: 0 });
+      expect(eventSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      eventSpy.mockRestore();
+    }
+  });
+
+  it('reuses one requirement when the same create request is retried concurrently', async () => {
+    const projectId = crypto.randomUUID();
+    await prisma.project.create({ data: { id: projectId, name: 'Idempotent Requirements Project' } });
+    await grantProjectMembership(prisma, {
+      projectId,
+      userId: adminUserId,
+      role: 'OWNER',
+    });
+    const payload = {
+      requestKey: crypto.randomUUID(),
+      title: 'Cancel paid booking',
+      rawText: 'Allow users to cancel paid bookings and receive a refund.',
+      submitForReadinessCheck: true,
+    };
+
+    const [firstResponse, retryResponse] = await Promise.all([
+      request(app.getHttpServer())
+        .post(`/api/v1/projects/${projectId}/requirements`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send(payload),
+      request(app.getHttpServer())
+        .post(`/api/v1/projects/${projectId}/requirements`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send(payload),
+    ]);
+
+    expect(firstResponse.status).toBe(201);
+    expect(retryResponse.status).toBe(201);
+    const first = requirementCreateResponseSchema.parse(firstResponse.body);
+    const retry = requirementCreateResponseSchema.parse(retryResponse.body);
+    expect(retry).toEqual(first);
+    expect(await prisma.requirement.count({ where: { projectId } })).toBe(1);
+  });
+
+  it('rejects reusing a requirement request key with a different payload', async () => {
+    const projectId = crypto.randomUUID();
+    await prisma.project.create({ data: { id: projectId, name: 'Requirement Request Key Project' } });
+    await grantProjectMembership(prisma, {
+      projectId,
+      userId: adminUserId,
+      role: 'OWNER',
+    });
+    const requestKey = crypto.randomUUID();
+    const path = `/api/v1/projects/${projectId}/requirements`;
+
+    await request(app.getHttpServer())
+      .post(path)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requestKey,
+        title: 'Cancel paid booking',
+        rawText: 'Allow users to cancel paid bookings and receive a refund.',
+        submitForReadinessCheck: true,
+      })
+      .expect(201);
+
+    const mismatch = await request(app.getHttpServer())
+      .post(path)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requestKey,
+        title: 'Cancel an unpaid booking',
+        rawText: 'Allow users to cancel paid bookings and receive a refund.',
+        submitForReadinessCheck: true,
+      })
+      .expect(409);
+    expect(mismatch.body.code).toBe('REQUEST_KEY_MISMATCH');
+    expect(await prisma.requirement.count({ where: { projectId } })).toBe(1);
   });
 
   it('returns 404 for cross-project analysis reads and exports outside membership scope', async () => {

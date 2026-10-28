@@ -1,11 +1,12 @@
 import { AppError } from '@ba-helper/shared';
 import { ReviewPolicy } from '../../review/domain/review.policy';
-import { TraceabilityRepository, EventLogService } from "@ba-helper/backend-runtime";
+import type { PrismaService, TraceabilityRepository, EventLogService } from "@ba-helper/backend-runtime";
 
 export class UpdateTraceabilityReviewDecisionUseCase {
   constructor(
     private readonly repository: TraceabilityRepository,
     private readonly eventLog: EventLogService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async execute(params: {
@@ -22,24 +23,31 @@ export class UpdateTraceabilityReviewDecisionUseCase {
     const analysis = link.impactAnalysis;
     ReviewPolicy.assertCanReview(analysis);
 
-    const result = await this.repository.upsertReviewDecision({
-      linkId: params.linkId,
-      analysisId: analysis.id,
-      decision: params.decision,
-      note: params.note,
-      reviewedByUserId: params.reviewedByUserId,
-    });
-
-    await this.eventLog.recordEvent({
-      eventType: 'TRACEABILITY_REVIEW_DECISION_UPDATED',
-      idempotencyKey: `traceability:${result.id}:review-decision:update:${Date.now()}`,
-      payload: {
+    return this.prisma.$transaction(async (transaction) => {
+      const result = await this.repository.upsertReviewDecision({
         linkId: params.linkId,
         analysisId: analysis.id,
-        decision: result.decision,
-      },
-    });
+        decision: params.decision,
+        note: params.note,
+        reviewedByUserId: params.reviewedByUserId,
+      }, transaction);
+      if (!result) {
+        throw new AppError(
+          'INVALID_STATE_TRANSITION',
+          'Analysis was finalized before the review decision could be saved.',
+        );
+      }
 
-    return result;
+      await this.eventLog.recordEvent({
+        eventType: 'TRACEABILITY_REVIEW_DECISION_UPDATED',
+        idempotencyKey: `traceability:${result.id}:review-decision:update:${Date.now()}`,
+        payload: {
+          linkId: params.linkId,
+          analysisId: analysis.id,
+          decision: result.decision,
+        },
+      }, transaction);
+      return result;
+    });
   }
 }

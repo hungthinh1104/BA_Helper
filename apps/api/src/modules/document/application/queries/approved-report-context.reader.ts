@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { AppError } from '@ba-helper/shared';
 import { MarkdownReportRenderContext, computeCanonicalReportHash, PrismaService } from '@ba-helper/backend-runtime';
 import { GeneratedDocument } from '@prisma/client';
 
@@ -39,7 +40,7 @@ export class ApprovedReportContextReader {
     const document = requestedSnapshot?.approvedDocumentId
       ? await this.prisma.generatedDocument.findUnique({
           where: { id: requestedSnapshot.approvedDocumentId },
-          select: { id: true },
+          select: { id: true, impactAnalysisId: true, type: true, status: true },
         })
       : reviewedSnapshotId
         ? null
@@ -51,11 +52,22 @@ export class ApprovedReportContextReader {
                 status: 'APPROVED',
               },
             },
-            select: { id: true },
+            select: { id: true, impactAnalysisId: true, type: true, status: true },
           });
 
     if (!document) {
       throw new NotFoundException('Approved impact report not found for localization context');
+    }
+    if (
+      document.impactAnalysisId !== analysisId ||
+      document.type !== 'IMPACT_REPORT' ||
+      document.status !== 'APPROVED'
+    ) {
+      throw new AppError(
+        'REPORT_PROVENANCE_MISMATCH',
+        'The reviewed snapshot points to a document outside its approved analysis report.',
+        { analysisId, approvedDocumentId: document.id },
+      );
     }
 
     const reviewedSnapshot = requestedSnapshot ?? await this.prisma.reviewedReportSnapshot.findFirst({

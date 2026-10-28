@@ -24,8 +24,20 @@ const scenario: ComprehensionScenario = {
   setup: [], inputs: [], invocations: [claim], assertions: [], mockedBoundaries: [], expectedOutcomes: [],
   behaviorAssociations: [], unresolved: [],
 }
+const directScenario = {
+  ...scenario,
+  trace: { relation: "DIRECT_REFERENCE", artifacts: [], relationships: [] },
+} as unknown as ComprehensionScenario
 
 describe("Scenario static claim inspector", () => {
+  it("does not offer an empty visual trace for a scenario without a supported path", () => {
+    render(<Scenario scenario={scenario} />)
+    fireEvent.click(screen.getByText("refunds"))
+
+    expect(screen.getByText("No supported trace path recorded")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Show visual trace" })).not.toBeInTheDocument()
+  })
+
   it("reveals exact source provenance when a claim is selected", () => {
     render(<Scenario scenario={scenario} />)
     fireEvent.click(screen.getByRole("button", { name: /service\.refund/ }))
@@ -33,7 +45,7 @@ describe("Scenario static claim inspector", () => {
     expect(screen.getByRole("region", { name: "Selected static claim evidence" })).toHaveTextContent(
       "test/refund.spec.ts:5:3-5:19",
     )
-    expect(screen.getByText(/STATIC_DECLARATION · claim commit/)).toBeInTheDocument()
+    expect(screen.getByText(/Source declaration · claim commit/)).toBeInTheDocument()
   })
 
   it("shows exact claim differences when comparing extracted scenarios", () => {
@@ -50,7 +62,7 @@ describe("Scenario static claim inspector", () => {
   })
 
   it("hides graph interactions in textual study mode while preserving the same source evidence", () => {
-    render(<Scenario scenario={scenario} tracePresentation="TEXTUAL_EVIDENCE" />)
+    render(<Scenario scenario={directScenario} tracePresentation="TEXTUAL_EVIDENCE" />)
     fireEvent.click(screen.getByText("refunds"))
 
     expect(screen.queryByRole("button", { name: "Show visual trace" })).not.toBeInTheDocument()
@@ -59,7 +71,7 @@ describe("Scenario static claim inspector", () => {
   })
 
   it("enables the visual trace on the same scenario evidence in visual study mode", () => {
-    render(<Scenario scenario={scenario} tracePresentation="VISUAL_TEST_TRACE" />)
+    render(<Scenario scenario={directScenario} tracePresentation="VISUAL_TEST_TRACE" />)
     fireEvent.click(screen.getByText("refunds"))
 
     expect(screen.getByRole("button", { name: "Show visual trace" })).toBeInTheDocument()

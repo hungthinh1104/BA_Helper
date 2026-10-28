@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '@prisma/client';;
+import { lockReviewableAnalysisWhileCurrent } from '../../impact-analysis/infrastructure/review-analysis-lock';
 
 export type TraceabilityLinkWithArtifactAndReviewDecision = Prisma.TraceabilityLinkGetPayload<{
   include: {
@@ -41,8 +42,9 @@ export class TraceabilityRepository {
     });
   }
 
-  async findById(linkId: string) {
-    return this.prisma.traceabilityLink.findUnique({
+  async findById(linkId: string, transaction?: Prisma.TransactionClient) {
+    const client = transaction ?? this.prisma;
+    return client.traceabilityLink.findUnique({
       where: { id: linkId },
       include: {
         impactAnalysis: {
@@ -59,11 +61,21 @@ export class TraceabilityRepository {
   async updateReviewStatus(params: {
     linkId: string;
     reviewStatus: 'CONFIRMED' | 'REJECTED';
-  }) {
-    return this.prisma.traceabilityLink.update({
-      where: { id: params.linkId },
-      data: { reviewStatus: params.reviewStatus },
-    });
+  }, transaction?: Prisma.TransactionClient) {
+    const update = async (tx: Prisma.TransactionClient) => {
+      const link = await tx.traceabilityLink.findUnique({
+        where: { id: params.linkId },
+        select: { impactAnalysisId: true },
+      });
+      if (!link || !(await lockReviewableAnalysisWhileCurrent(tx, link.impactAnalysisId))) {
+        return null;
+      }
+      return tx.traceabilityLink.update({
+        where: { id: params.linkId },
+        data: { reviewStatus: params.reviewStatus },
+      });
+    };
+    return transaction ? update(transaction) : this.prisma.$transaction(update);
   }
 
   async updateReviewStatusIfCurrent(params: {
@@ -72,22 +84,35 @@ export class TraceabilityRepository {
     expectedCommitSha: string;
     expectedTargetCommitSha: string;
     expectedResolvedRefType: 'BRANCH' | 'TAG' | 'COMMIT';
-  }) {
-    return this.prisma.traceabilityLink.updateMany({
-      where: {
-        id: params.linkId,
-        impactAnalysis: {
-          snapshot: {
-            commitSha: params.expectedCommitSha,
-          },
-          sourceTarget: {
-            resolvedRefType: params.expectedResolvedRefType,
-            latestObservedCommitSha: params.expectedTargetCommitSha,
+  }, transaction?: Prisma.TransactionClient) {
+    const update = async (tx: Prisma.TransactionClient) => {
+      const link = await tx.traceabilityLink.findUnique({
+        where: { id: params.linkId },
+        select: { impactAnalysisId: true },
+      });
+      if (!link || !(await lockReviewableAnalysisWhileCurrent(tx, link.impactAnalysisId))) {
+        return { count: 0 };
+      }
+      return tx.traceabilityLink.updateMany({
+        where: {
+          id: params.linkId,
+          impactAnalysis: {
+            status: 'WAITING_FOR_REVIEW',
+            snapshot: {
+              commitSha: params.expectedCommitSha,
+            },
+            sourceTarget: {
+              resolvedRefType: params.expectedResolvedRefType,
+              ...(params.expectedResolvedRefType === 'COMMIT'
+                ? {}
+                : { latestObservedCommitSha: params.expectedTargetCommitSha }),
+            },
           },
         },
-      },
-      data: { reviewStatus: params.reviewStatus },
-    });
+        data: { reviewStatus: params.reviewStatus },
+      });
+    };
+    return transaction ? update(transaction) : this.prisma.$transaction(update);
   }
 
   async upsertMany(
@@ -144,8 +169,15 @@ export class TraceabilityRepository {
       where: { traceabilityLinkId: params.linkId },
     });
   }
-  async deleteReviewDecision(linkId: string) {
-    return this.prisma.$transaction(async (tx) => {
+  async deleteReviewDecision(
+    linkId: string,
+    analysisId: string,
+    transaction?: Prisma.TransactionClient,
+  ) {
+    const remove = async (tx: Prisma.TransactionClient) => {
+      if (!(await lockReviewableAnalysisWhileCurrent(tx, analysisId))) {
+        return null;
+      }
       const deleted = await tx.traceabilityReviewDecision.delete({
         where: { traceabilityLinkId: linkId },
       });
@@ -154,7 +186,8 @@ export class TraceabilityRepository {
         data: { reviewStatus: 'NEEDS_REVIEW' },
       });
       return deleted;
-    });
+    };
+    return transaction ? remove(transaction) : this.prisma.$transaction(remove);
   }
 
   async upsertReviewDecision(params: {
@@ -163,9 +196,12 @@ export class TraceabilityRepository {
     decision: 'ACCEPTED' | 'REJECTED' | 'NEEDS_REVIEW' | 'NEEDS_MORE_EVIDENCE';
     note?: string | null;
     reviewedByUserId?: string | null;
-  }) {
+  }, transaction?: Prisma.TransactionClient) {
     const reviewStatus = toTraceabilityReviewStatus(params.decision);
-    return this.prisma.$transaction(async (tx) => {
+    const upsert = async (tx: Prisma.TransactionClient) => {
+      if (!(await lockReviewableAnalysisWhileCurrent(tx, params.analysisId))) {
+        return null;
+      }
       await tx.traceabilityLink.update({
         where: { id: params.linkId },
         data: { reviewStatus },
@@ -187,7 +223,8 @@ export class TraceabilityRepository {
           reviewedAt: new Date(),
         },
       });
-    });
+    };
+    return transaction ? upsert(transaction) : this.prisma.$transaction(upsert);
   }
 }
 

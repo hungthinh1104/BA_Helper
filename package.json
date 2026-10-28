@@ -68,6 +68,7 @@
     "@types/node": "^22",
     "@types/pg": "^8.23.1",
     "@types/supertest": "^7.2.1",
+    "axe-core": "4.14.0",
     "@typescript-eslint/eslint-plugin": "^8.72.0",
     "@typescript-eslint/parser": "^8.72.0",
     "dotenv": "^17.4.2",

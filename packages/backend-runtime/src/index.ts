@@ -28,6 +28,7 @@ export * from './scanner/application/scan-workspace-cleanup.policy';
 export * from './repository/infrastructure/repository.repository';
 export * from './impact-analysis/infrastructure/impact-analysis.repository';
 export * from './impact-analysis/infrastructure/review-note.repository';
+export * from './impact-analysis/infrastructure/review-analysis-lock';
 export * from './impact-analysis/infrastructure/review-clarification.repository';
 export * from './impact-analysis/infrastructure/review-decision.repository';
 export * from './impact-analysis/infrastructure/multi-repo-analysis-run.repository';

@@ -500,6 +500,10 @@ async function main() {
   console.log(`  Password : ${DEMO_USER_PASSWORD}`);
   console.log(`\nProject   : ${DEMO_PROJECT_NAME}`);
   console.log(`Project ID: ${project.id}`);
+  console.log(`Requirement ID: ${requirement.id}`);
+  console.log(`Repository ID: ${repository.id}`);
+  console.log(`Snapshot ID: ${snapshot.id}`);
+  console.log(`Artifact ID: ${bookingSvc.id}`);
   console.log(`\nScenario A (open review): ${analysisA.id}`);
   console.log(`Scenario B (finalized)  : ${analysisB.id}`);
   console.log(`${divider}\n`);

@@ -1,7 +1,7 @@
 import { queryKeys } from "@/lib/api/query-keys"
 import { useQuery } from "@tanstack/react-query"
 import { apiGet } from "@/lib/api-client"
-import { finalReviewedReportResponseSchema, ReviewedReportSnapshotResponse, type ReportLocale } from "@ba-helper/contracts"
+import { finalReviewedReportResponseSchema, reviewedReportSnapshotSchema, type ReportLocale } from "@ba-helper/contracts"
 
 export function useFinalReviewedReport(analysisId: string, options?: { enabled?: boolean; locale?: ReportLocale }) {
   const locale = options?.locale ?? "en"
@@ -23,8 +23,10 @@ export function useLatestReviewedReportSnapshot(analysisId: string | undefined) 
     queryKey: queryKeys.documents.reviewedReportSnapshot(analysisId || ""),
     queryFn: async () => {
       if (!analysisId) throw new Error("Analysis ID is required")
-      const result = await apiGet(`/api/v1/impact-analyses/${analysisId}/reviewed-report-snapshot/latest`)
-      return result as ReviewedReportSnapshotResponse
+      return apiGet(
+        `/api/v1/impact-analyses/${analysisId}/reviewed-report-snapshot/latest`,
+        reviewedReportSnapshotSchema,
+      )
     },
     enabled: !!analysisId,
     retry: false, // Don't retry if 404 (no snapshot yet)

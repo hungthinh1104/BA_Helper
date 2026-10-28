@@ -3,6 +3,7 @@
 import { use } from "react"
 import type { ReactNode } from "react"
 import { AlertTriangle, CheckCircle2, FileCode2, GitBranch, Loader2 } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
 import { BackButton } from "@/components/workspace/shared/back-button"
 import { useLocalizedHref } from "@/i18n/navigation"
@@ -31,6 +32,7 @@ export default function CodeComprehensionPage({ params, searchParams }: PageProp
   const studyModeEnabled = hasStudyCondition && isValidStudyCondition
   const isExistingWorkflow = studyCondition === "EXISTING_WORKFLOW"
   const href = useLocalizedHref()
+  const t = useTranslations("workspaceLists")
   const query = useCodeComprehension(snapshotId, artifactId, !isExistingWorkflow && isValidStudyCondition)
   const data = mergeComprehensionPages(query.data?.pages ?? [])
 
@@ -46,7 +48,34 @@ export default function CodeComprehensionPage({ params, searchParams }: PageProp
     return <StateCard icon={<Loader2 className="h-5 w-5 animate-spin" />} title="Loading code evidence" detail="Reading the bounded projection for this immutable snapshot." />
   }
   if ((query.isError && !data) || !data) {
-    return <StateCard icon={<AlertTriangle className="h-5 w-5" />} title="Code evidence unavailable" detail={query.error instanceof Error ? query.error.message : "The snapshot or artifact could not be read."} />
+    return <StateCard
+      icon={<AlertTriangle className="h-5 w-5" />}
+      title="Code evidence unavailable"
+      detail={query.error instanceof Error ? query.error.message : "The snapshot or artifact could not be read."}
+      action={<button
+        type="button"
+        disabled={query.isFetching}
+        aria-busy={query.isFetching}
+        onClick={() => { void query.refetch() }}
+        className="rounded border border-border/50 px-3 py-2 text-[12px] font-medium hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-wait disabled:opacity-60"
+      >
+        {query.isFetching ? "Retrying code evidence..." : "Retry loading code evidence"}
+      </button>}
+    />
+  }
+
+  if (data.snapshotContext.repositoryId !== repositoryId) {
+    return <StateCard
+      icon={<AlertTriangle className="h-5 w-5" />}
+      title={t("artifactRepositoryMismatchTitle")}
+      detail={t("artifactRepositoryMismatchDescription")}
+      action={<a
+        href={href(`/repositories/${data.snapshotContext.repositoryId}`)}
+        className="rounded border border-border/50 px-3 py-2 text-[12px] font-medium hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+      >
+        {t("artifactRepositoryMismatchOpenRepository")}
+      </a>}
+    />
   }
 
   const tracePresentation = studyCondition === "TEXTUAL_EVIDENCE"
@@ -68,6 +97,8 @@ export default function CodeComprehensionPage({ params, searchParams }: PageProp
           <span className="rounded-full border border-warning/30 bg-warning/5 px-2 py-1 text-warning">Static evidence only</span>
           <span className="font-mono">commit {data.snapshotContext.commitSha.slice(0, 12)}</span>
         </div>
+
+        <EvidenceOverview data={data} />
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,.8fr)]">
           <div className="flex min-w-0 flex-col gap-6">
@@ -102,6 +133,58 @@ function ArtifactLocation({ filePath, startLine }: { filePath: string; startLine
   return <span className="flex items-center gap-1.5 font-mono text-[12px] text-muted-foreground"><FileCode2 className="h-3.5 w-3.5" />{filePath}:{startLine ?? "?"}</span>
 }
 
+function EvidenceOverview({ data }: { data: CodeComprehensionResponse }) {
+  const sourceFactCount = data.codeEvidence.parameters.length + Number(Boolean(data.codeEvidence.returnType)) +
+    data.codeEvidence.conditions.length + data.codeEvidence.exceptionHandlers.length
+  const relationshipCounts = data.relatedScenarios.reduce((counts, scenario) => {
+    if (scenario.trace?.relation === "DIRECT_REFERENCE") counts.direct += 1
+    else if (scenario.trace?.relation === "CALL_PATH") counts.indirect += 1
+    else counts.unresolved += 1
+    return counts
+  }, { direct: 0, indirect: 0, unresolved: 0 })
+  const sourceExcerptAvailable = Boolean(data.codeEvidence.source.excerpt.trim())
+  const noTracePathSummary = `${relationshipCounts.unresolved} scenario${relationshipCounts.unresolved === 1 ? "" : "s"} without a supported trace path`
+
+  return (
+    <section aria-label="Evidence overview" className="grid grid-cols-2 gap-2 xl:grid-cols-4">
+      <OverviewItem label="Production source" value={sourceExcerptAvailable ? "Excerpt available" : "No source excerpt"} />
+      <OverviewItem
+        label="Source facts"
+        value={sourceFactCount > 0 ? `${sourceFactCount} AST facts` : "No AST facts recorded"}
+        detail={`${formatEvidenceCount(data.codeEvidence.dependencies.length, "graph dependency", "graph dependencies")} · ${formatEvidenceCount(data.codeEvidence.staticCalls.length, "direct static call")}`}
+      />
+      <OverviewItem
+        label="Related scenarios"
+        value={`${data.relatedScenarios.length} currently loaded`}
+        detail={[
+          formatEvidenceCount(relationshipCounts.direct, "direct static test reference"),
+          formatEvidenceCount(relationshipCounts.indirect, "indirect static call path"),
+          noTracePathSummary,
+        ].join(" · ")}
+      />
+      <OverviewItem
+        label="Uncertainty"
+        value={`${data.limitations.length} reported limitation${data.limitations.length === 1 ? "" : "s"}`}
+        detail="Runtime not imported"
+      />
+    </section>
+  )
+}
+
+function OverviewItem({ label, value, detail }: { label: string; value: string; detail?: string }) {
+  return (
+    <dl className="min-w-0 rounded-lg border border-border/40 bg-surface/40 px-3 py-2">
+      <dt className="text-[10px] font-medium text-muted-foreground">{label}</dt>
+      <dd className="mt-1 break-words text-[12px] font-semibold">{value}</dd>
+      {detail && <dd className="mt-0.5 break-words text-[10px] text-muted-foreground">{detail}</dd>}
+    </dl>
+  )
+}
+
+function formatEvidenceCount(count: number, singular: string, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`
+}
+
 function SourceEvidence({ evidence, highlights = [] }: { evidence: { filePath: string; startLine: number | null; endLine: number | null; excerpt: string; commitSha: string }; highlights?: Array<{ startLine: number | null; endLine: number | null }> }) {
   const lines = evidence.excerpt ? evidence.excerpt.split("\n") : []
   return (
@@ -111,7 +194,7 @@ function SourceEvidence({ evidence, highlights = [] }: { evidence: { filePath: s
         <CheckCircle2 className="h-4 w-4 text-success" aria-label="Persisted source evidence" />
       </div>
       {lines.length > 0 ? (
-        <pre className="max-h-[480px] overflow-auto bg-background/60 p-4 text-[12px] leading-5"><code>{lines.map((line, index) => { const lineNumber = (evidence.startLine ?? 1) + index; const highlighted = highlights.some(item => item.startLine !== null && item.endLine !== null && lineNumber >= item.startLine && lineNumber <= item.endLine); return <span key={`${index}-${line}`} className={`block ${highlighted ? "bg-primary/10" : ""}`}><span className="mr-4 inline-block w-8 select-none text-right text-muted-foreground/60">{lineNumber}</span>{line}</span> })}</code></pre>
+        <pre tabIndex={0} className="max-h-[480px] overflow-auto bg-background/60 p-4 text-[12px] leading-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><code>{lines.map((line, index) => { const lineNumber = (evidence.startLine ?? 1) + index; const highlighted = highlights.some(item => item.startLine !== null && item.endLine !== null && lineNumber >= item.startLine && lineNumber <= item.endLine); return <span key={`${index}-${line}`} className={`block ${highlighted ? "bg-primary/10" : ""}`}><span className="mr-4 inline-block w-8 select-none text-right text-muted-foreground">{lineNumber}</span>{line}</span> })}</code></pre>
       ) : (
         <p className="p-4 text-[12px] text-warning">No excerpt was persisted for this artifact. The location remains explicit, but source review is incomplete.</p>
       )}
@@ -149,16 +232,16 @@ function StaticDependencies({ data }: { data: CodeComprehensionResponse }) {
   )
 }
 
-function Limitations({ data }: { data: { limitations: Array<{ code: string; message: string; severity: string }>; snapshotContext: { runtimeObservations: string }; truncated: boolean } }) {
+function Limitations({ data }: { data: { limitations: Array<{ code: string; message: string; severity: string }>; truncated: boolean } }) {
   return (
     <section className="rounded-xl border border-border/40 bg-surface/50 p-4 shadow-sm" aria-labelledby="uncertainty-title">
       <div className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-warning" /><h2 id="uncertainty-title" className="text-[14px] font-semibold">Uncertainty and limits</h2></div>
-      <p className="mt-1 text-[12px] text-muted-foreground">Runtime observations: {data.snapshotContext.runtimeObservations}. {data.truncated ? "The result was bounded and may be incomplete." : "No projection bound was reached."}</p>
+      <p className="mt-1 text-[12px] text-muted-foreground">Runtime evidence was not imported. {data.truncated ? "The result was bounded and may be incomplete." : "No projection bound was reached."}</p>
       <ul className="mt-3 space-y-2">{data.limitations.map((item) => <li key={`${item.code}-${item.message}`} className="rounded-lg border border-border/40 px-3 py-2"><span className={`mr-2 text-[10px] font-semibold ${item.severity === "WARN" ? "text-warning" : "text-muted-foreground"}`}>{item.severity}</span><span className="font-mono text-[10px]">{item.code}</span><p className="mt-1 text-[11px] text-muted-foreground">{item.message}</p></li>)}</ul>
     </section>
   )
 }
 
-function StateCard({ icon, title, detail }: { icon: ReactNode; title: string; detail: string }) {
-  return <div className="app-page-scroll"><div className="mx-auto flex max-w-2xl flex-col items-center gap-3 px-4 py-20 text-center"><span className="text-warning">{icon}</span><h1 className="text-lg font-semibold">{title}</h1><p className="text-sm text-muted-foreground">{detail}</p></div></div>
+function StateCard({ icon, title, detail, action }: { icon: ReactNode; title: string; detail: string; action?: ReactNode }) {
+  return <div className="app-page-scroll"><div className="mx-auto flex max-w-2xl flex-col items-center gap-3 px-4 py-20 text-center"><span className="text-warning">{icon}</span><h1 className="text-lg font-semibold">{title}</h1><p className="text-sm text-muted-foreground">{detail}</p>{action}</div></div>
 }

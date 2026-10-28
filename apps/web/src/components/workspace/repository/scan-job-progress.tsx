@@ -21,7 +21,7 @@ export function ScanJobProgress({ job, snapshot }: ScanJobProgressProps) {
       <div className="flex items-center gap-2">
         <ScanJobStatus job={job} />
         {snapshot?.commitSha && (
-          <span className="font-mono text-[11px] text-muted-foreground/60">@ {snapshot.commitSha.substring(0, 7)}</span>
+          <span className="font-mono text-[11px] text-muted-foreground">@ {snapshot.commitSha.substring(0, 7)}</span>
         )}
         {snapshot?.coverageStatus === "PARTIAL" && (
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-warning/10 text-warning border border-warning/25 font-medium uppercase">Partial</span>
@@ -35,7 +35,7 @@ export function ScanJobProgress({ job, snapshot }: ScanJobProgressProps) {
     <div className="flex flex-col gap-1.5 min-w-[120px]">
       <div className="flex items-center justify-between">
         <ScanJobStatus job={job} />
-        <span className="text-[10px] text-muted-foreground/60 font-medium font-mono">{job.progress}%</span>
+        <span className="text-[10px] text-muted-foreground font-medium font-mono">{job.progress}%</span>
       </div>
       <div className="h-1.5 w-full bg-border rounded-full overflow-hidden">
         <div 

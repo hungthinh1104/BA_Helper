@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import { lockReviewableAnalysisWhileCurrent } from './review-analysis-lock';
 
 @Injectable()
 export class ReviewNoteRepository {
@@ -11,7 +12,7 @@ export class ReviewNoteRepository {
     insightId?: string;
     traceabilityLinkId?: string;
     body: string;
-  }) {
+  }, transaction?: Prisma.TransactionClient) {
     // Determine the unique constraint to use for upsert
     let where: Prisma.ReviewNoteWhereUniqueInput;
     if (data.insightId) {
@@ -32,8 +33,8 @@ export class ReviewNoteRepository {
       throw new Error('Must provide either insightId or traceabilityLinkId');
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      if (!(await this.lockAnalysisWhileReviewable(tx, data.impactAnalysisId))) {
+    const save = async (tx: Prisma.TransactionClient) => {
+      if (!(await lockReviewableAnalysisWhileCurrent(tx, data.impactAnalysisId))) {
         return null;
       }
 
@@ -49,7 +50,8 @@ export class ReviewNoteRepository {
           body: data.body,
         },
       });
-    });
+    };
+    return transaction ? save(transaction) : this.prisma.$transaction(save);
   }
 
   async findByAnalysisId(analysisId: string) {
@@ -67,12 +69,12 @@ export class ReviewNoteRepository {
     impactAnalysisId: string;
     insightId?: string;
     traceabilityLinkId?: string;
-  }) {
+  }, transaction?: Prisma.TransactionClient) {
     if (!data.insightId && !data.traceabilityLinkId) {
       throw new Error('Must provide either insightId or traceabilityLinkId');
     }
-    return this.prisma.$transaction(async (tx) => {
-      if (!(await this.lockAnalysisWhileReviewable(tx, data.impactAnalysisId))) {
+    const remove = async (tx: Prisma.TransactionClient) => {
+      if (!(await lockReviewableAnalysisWhileCurrent(tx, data.impactAnalysisId))) {
         return null;
       }
       return tx.reviewNote.deleteMany({
@@ -82,19 +84,7 @@ export class ReviewNoteRepository {
           traceabilityLinkId: data.traceabilityLinkId,
         },
       });
-    });
-  }
-
-  private async lockAnalysisWhileReviewable(
-    tx: Prisma.TransactionClient,
-    analysisId: string,
-  ): Promise<boolean> {
-    const analyses = await tx.$queryRaw<Array<{ status: string }>>`
-      SELECT status
-      FROM "ImpactAnalysis"
-      WHERE id = ${analysisId}
-      FOR UPDATE
-    `;
-    return analyses[0]?.status === 'WAITING_FOR_REVIEW';
+    };
+    return transaction ? remove(transaction) : this.prisma.$transaction(remove);
   }
 }

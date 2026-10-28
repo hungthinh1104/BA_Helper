@@ -1,10 +1,10 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
-import { requirementCreateRequestSchema, RequirementCreateResponse, RequirementDetailResponse } from "@ba-helper/contracts"
+import { requirementCreateFieldsSchema, RequirementCreateResponse, RequirementDetailResponse } from "@ba-helper/contracts"
 import { useCreateRequirement } from "@/hooks/api/use-requirements"
 import { X, AlertCircle, CheckCircle2, FileText } from "lucide-react"
 import { toast } from "sonner"
@@ -39,6 +39,7 @@ export function NewRequirementDialog({ children, existingRequirement }: NewRequi
   const [rawText, setRawText] = useState(latestRev?.rawText ?? "")
   const [submitForCheck, setSubmitForCheck] = useState(true)
   const [result, setResult] = useState<RequirementCreateResponse | null>(null)
+  const requestKeyRef = useRef<string | null>(null)
 
   const reset = () => {
     setState("form")
@@ -46,11 +47,15 @@ export function NewRequirementDialog({ children, existingRequirement }: NewRequi
     setRawText(latestRev?.rawText ?? "")
     setSubmitForCheck(true)
     setResult(null)
+    requestKeyRef.current = null
   }
 
   const handleSubmit = async () => {
     try {
+      const requestKey = requestKeyRef.current ?? crypto.randomUUID()
+      requestKeyRef.current = requestKey
       const req = await createReq({
+        requestKey,
         title: title.trim(),
         rawText: rawText.trim(),
         submitForReadinessCheck: submitForCheck,
@@ -72,12 +77,12 @@ export function NewRequirementDialog({ children, existingRequirement }: NewRequi
 
   const handleClose = (v: boolean) => {
     setOpen(v)
-    if (!v) reset()
+    if (!v && state === "result") reset()
   }
 
   const parseResult = useMemo(
     () =>
-      requirementCreateRequestSchema.safeParse({
+      requirementCreateFieldsSchema.safeParse({
         title: title.trim(),
         rawText: rawText.trim(),
         submitForReadinessCheck: submitForCheck,
@@ -122,7 +127,11 @@ export function NewRequirementDialog({ children, existingRequirement }: NewRequi
                 }`}
                 placeholder={t("titlePlaceholder")}
                 value={title}
-                onChange={e => setTitle(e.target.value.slice(0, 200))}
+                onChange={e => {
+                  const nextTitle = e.target.value.slice(0, 200)
+                  if (requestKeyRef.current && nextTitle.trim() !== title.trim()) requestKeyRef.current = null
+                  setTitle(nextTitle)
+                }}
               />
               <div className="flex items-center justify-between">
                 {fieldErrors.title ? (
@@ -152,7 +161,11 @@ export function NewRequirementDialog({ children, existingRequirement }: NewRequi
                 placeholder={t("rawTextPlaceholder")}
                 rows={5}
                 value={rawText}
-                onChange={e => setRawText(e.target.value.slice(0, 5000))}
+                onChange={e => {
+                  const nextRawText = e.target.value.slice(0, 5000)
+                  if (requestKeyRef.current && nextRawText.trim() !== rawText.trim()) requestKeyRef.current = null
+                  setRawText(nextRawText)
+                }}
               />
               {fieldErrors.rawText && (
                 <p className="text-[11px] text-destructive flex items-center gap-1">
@@ -163,12 +176,18 @@ export function NewRequirementDialog({ children, existingRequirement }: NewRequi
             </div>
 
             <label className="flex items-center gap-3 cursor-pointer">
-              <Switch checked={submitForCheck} onCheckedChange={setSubmitForCheck} />
+              <Switch
+                checked={submitForCheck}
+                onCheckedChange={(checked) => {
+                  if (requestKeyRef.current && checked !== submitForCheck) requestKeyRef.current = null
+                  setSubmitForCheck(checked)
+                }}
+              />
               <span className="text-[13px] text-foreground/80">{t("submitForReadinessCheck")}</span>
             </label>
 
             <div className="-mx-6 px-6 py-4 border-t border-border/60 bg-surface-muted/30 flex justify-end gap-2">
-              <DialogClose render={<Button variant="outline" size="sm" className="h-8 shadow-none">{t("cancel")}</Button>} />
+              <DialogClose render={<Button variant="outline" size="sm" className="h-8 shadow-none" onClick={reset}>{t("cancel")}</Button>} />
               <Button size="sm" className="h-8 shadow-none" disabled={!canSubmit || loading} onClick={handleSubmit}>
                 {loading ? t("checking") : submitForCheck ? t("submitCheckReadiness") : t("saveAsDraft")}
               </Button>

@@ -388,6 +388,9 @@
     "connectRepository": "Connect Repository",
     "maintainerRequiredConnect": "Maintainer role required to connect repositories.",
     "repository": "Repository",
+    "artifactRepositoryMismatchTitle": "This artifact belongs to a different repository",
+    "artifactRepositoryMismatchDescription": "The selected snapshot is owned by a different repository. Open its repository to continue.",
+    "artifactRepositoryMismatchOpenRepository": "Open snapshot repository",
     "url": "URL",
     "ref": "Ref",
     "scanStatus": "Scan Status",
@@ -695,6 +698,7 @@
     "submitReview": "Submit review"
   },
   "workspace": {
+    "reviewCoverage": "Review Coverage",
     "analysisNavigation": "Analysis workspace views",
     "summary": "Summary",
     "review": "Review",

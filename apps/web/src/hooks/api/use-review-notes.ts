@@ -1,14 +1,21 @@
 import { queryKeys } from "@/lib/api/query-keys"
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CreateReviewNoteRequest, ReviewNoteResponse } from '@ba-helper/contracts';
+import {
+  CreateReviewNoteRequest,
+  ReviewNoteResponse,
+  reviewNoteListResponseSchema,
+  reviewNoteSchema,
+} from '@ba-helper/contracts';
 import { apiGet, apiPost } from '@/lib/api-client';
 
 export function useReviewNotes(analysisId: string) {
   return useQuery({
     queryKey: queryKeys.analyses.reviewNotes(analysisId),
     queryFn: async (): Promise<{ items: ReviewNoteResponse[] }> => {
-      // Assuming apiGet returns the payload directly and handles errors
-      return apiGet<{ items: ReviewNoteResponse[] }>(`/api/v1/impact-analyses/${analysisId}/review-notes`);
+      return apiGet<{ items: ReviewNoteResponse[] }>(
+        `/api/v1/impact-analyses/${analysisId}/review-notes`,
+        reviewNoteListResponseSchema,
+      );
     },
     enabled: Boolean(analysisId),
   });
@@ -19,7 +26,11 @@ export function useSaveReviewNote(analysisId: string) {
 
   return useMutation({
     mutationFn: async (req: CreateReviewNoteRequest): Promise<ReviewNoteResponse> => {
-      return apiPost<ReviewNoteResponse>(`/api/v1/impact-analyses/${analysisId}/review-notes`, req);
+      return apiPost<ReviewNoteResponse>(
+        `/api/v1/impact-analyses/${analysisId}/review-notes`,
+        req,
+        reviewNoteSchema,
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.analyses.reviewNotes(analysisId) });

@@ -3,7 +3,7 @@ import { apiDelete, apiPut } from "@/lib/api-client"
 import { queryKeys } from "@/lib/api/query-keys"
 import { useOptionalProjectId } from "@/lib/project-context"
 import { z } from "zod"
-import { traceabilityReviewDecisionValueSchema } from "@ba-helper/contracts"
+import { okResponseSchema, traceabilityReviewDecisionValueSchema, successResponseSchema } from "@ba-helper/contracts"
 
 export function useUpdateTraceabilityReviewDecision(analysisId: string, linkId: string) {
   const queryClient = useQueryClient()
@@ -19,7 +19,8 @@ export function useUpdateTraceabilityReviewDecision(analysisId: string, linkId: 
     }) => {
       return apiPut(
         `/api/v1/traceability-links/${linkId}/review-decision`,
-        { decision, note }
+        { decision, note },
+        okResponseSchema,
       )
     },
     onSuccess: () => {
@@ -48,7 +49,8 @@ export function useDeleteTraceabilityReviewDecision(analysisId: string, linkId: 
   return useMutation({
     mutationFn: async () => {
       return apiDelete(
-        `/api/v1/traceability-links/${linkId}/review-decision`
+        `/api/v1/traceability-links/${linkId}/review-decision`,
+        successResponseSchema,
       )
     },
     onSuccess: () => {

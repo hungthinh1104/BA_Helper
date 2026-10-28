@@ -1,12 +1,13 @@
 import { AppError } from '@ba-helper/shared';
 
 import { ReviewPolicy } from '../../review/domain/review.policy';
-import { TraceabilityRepository, EventLogService } from "@ba-helper/backend-runtime";
+import type { PrismaService, TraceabilityRepository, EventLogService } from "@ba-helper/backend-runtime";
 
 export class ReviewTraceabilityUseCase {
   constructor(
     private readonly repository: TraceabilityRepository,
     private readonly eventLog: EventLogService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async execute(params: {
@@ -25,31 +26,28 @@ export class ReviewTraceabilityUseCase {
       return link;
     }
 
-    const updateResult = await this.repository.updateReviewStatusIfCurrent({
-      linkId: params.linkId,
-      reviewStatus: params.reviewStatus,
-      expectedCommitSha: analysis.snapshot.commitSha,
-      expectedTargetCommitSha: analysis.sourceTarget.latestObservedCommitSha,
-      expectedResolvedRefType: analysis.sourceTarget.resolvedRefType,
+    return this.prisma.$transaction(async (transaction) => {
+      const updateResult = await this.repository.updateReviewStatusIfCurrent({
+        linkId: params.linkId,
+        reviewStatus: params.reviewStatus,
+        expectedCommitSha: analysis.snapshot.commitSha,
+        expectedTargetCommitSha: analysis.sourceTarget.latestObservedCommitSha,
+        expectedResolvedRefType: analysis.sourceTarget.resolvedRefType,
+      }, transaction);
+      if (updateResult.count === 0) {
+        throw new AppError('REVIEW_NOT_ALLOWED', 'Review became stale during update.');
+      }
+
+      const updated = await this.repository.findById(params.linkId, transaction);
+      if (!updated) {
+        throw new AppError('REVIEW_NOT_ALLOWED', 'Traceability link not found.');
+      }
+      await this.eventLog.recordEvent({
+        eventType: 'TRACEABILITY_REVIEWED',
+        idempotencyKey: `traceability:${updated.id}:review:${updated.reviewStatus}`,
+        payload: { linkId: updated.id, reviewStatus: updated.reviewStatus },
+      }, transaction);
+      return updated;
     });
-
-    if (updateResult.count === 0) {
-      throw new AppError(
-        'REVIEW_NOT_ALLOWED',
-        'Review became stale during update.',
-      );
-    }
-
-    const updated = await this.repository.findById(params.linkId);
-    if (!updated) {
-      throw new AppError('REVIEW_NOT_ALLOWED', 'Traceability link not found.');
-    }
-    await this.eventLog.recordEvent({
-      eventType: 'TRACEABILITY_REVIEWED',
-      idempotencyKey: `traceability:${updated.id}:review:${updated.reviewStatus}`,
-      payload: { linkId: updated.id, reviewStatus: updated.reviewStatus },
-    });
-
-    return updated;
   }
 }

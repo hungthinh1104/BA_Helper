@@ -51,7 +51,10 @@ export function buildReportReviewCoverageSummary(params: {
   const insightReviewed = insightConfirmed + insightRejected;
   const insightUnreviewed = Math.max(0, insightItems.length - insightReviewed);
 
-  const linkAccepted = linkItems.filter((item) => readDecision(item) === 'ACCEPTED').length;
+  const linkAccepted = linkItems.filter((item) => {
+    const decision = readDecision(item);
+    return decision === 'ACCEPTED' || decision === 'CONFIRMED';
+  }).length;
   const linkRejected = linkItems.filter((item) => readDecision(item) === 'REJECTED').length;
   const linkNeedsReview = linkItems.filter((item) => readDecision(item) === 'NEEDS_REVIEW').length;
   const linkNeedsMoreEvidence = linkItems
@@ -117,10 +120,10 @@ export function buildReportReviewCoverageSummaryFromSnapshot(params: {
 
 function readDecision(item: EvidenceQualityItem): string | null {
   const decision = item.reviewDecision;
-  if (!isRecord(decision)) {
-    return null;
+  if (isRecord(decision) && typeof decision.decision === 'string') {
+    return decision.decision;
   }
-  return typeof decision.decision === 'string' ? decision.decision : null;
+  return typeof item.reviewStatus === 'string' ? item.reviewStatus : null;
 }
 
 function readQualityCount(

@@ -5,6 +5,7 @@ import {
   projectMemberUpsertRequestSchema,
   projectMemberUpdateRequestSchema,
   projectListResponseSchema,
+  memberRemovalResponseSchema,
   selectProjectRequestSchema,
   type CurrentWorkspaceResponse,
   type ProjectMemberListResponse,
@@ -105,7 +106,7 @@ export function useRemoveProjectMember(projectId: string | undefined) {
 
   return useMutation({
     mutationFn: async (userId: string) =>
-      apiDelete(`/api/v1/projects/${projectId}/members/${userId}`),
+      apiDelete(`/api/v1/projects/${projectId}/members/${userId}`, memberRemovalResponseSchema),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.workspace.members(projectId ?? "__workspace-pending__"),
