@@ -85,9 +85,15 @@ test.describe('decision-to-report journey', () => {
     await expect(page.getByRole('heading', { name: traceCaseTitle, exact: true })).toBeVisible()
     await removeLiveTestTrace(trace)
     await page.reload()
-    await expect(page.getByRole('heading', { name: traceCaseTitle, exact: true })).toBeVisible()
-    await expect(page.getByLabel('Saved test references', { exact: true })
-      .getByText('Parameterized source declaration; data rows are not expanded.', { exact: true })).toBeVisible()
+    const savedReferences = page.getByLabel('Saved test references', { exact: true })
+    await expect(savedReferences.getByRole('heading', { name: traceCaseTitle, exact: true })).toBeVisible()
+    // The saved, read-only projection must retain every reviewed impacted artifact
+    // even after its live TESTS edge and source evidence have been removed.
+    for (const artifactLabel of ['BookingService.cancelBooking',
+      'InventoryService.releaseRoom', 'RefundController.processRefund']) {
+      await expect(savedReferences.getByRole('heading', { name: artifactLabel, exact: true })).toBeVisible()
+    }
+    await expect(savedReferences.getByText('Parameterized source declaration; data rows are not expanded.', { exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Inspect source reference', exact: true })).toHaveCount(0)
     const diagram = page.locator('.report-mermaid-preview').first()
     await expect(diagram.locator('svg')).toBeVisible({ timeout: 60_000 })
