@@ -7,7 +7,7 @@ import {
   GraphEdgeType,
   retrievalMetadataSchema,
 } from '@ba-helper/contracts';
-import { PrismaService } from "@ba-helper/backend-runtime";
+import { isEvidenceScopedToAnalysis, PrismaService } from "@ba-helper/backend-runtime";
 import { mapDependencyGraphEdge } from './impact-dependency-graph.mapper';
 import { mapArtifactGraphNodeType } from './impact-artifact-graph.mapper';
 import { readTestCaseMetadata } from '../../../artifact/application/artifact-response.mapper';
@@ -32,7 +32,7 @@ export class ImpactGraphReadModelBuilder {
         insights: {
           include: {
             evidenceLinks: {
-              include: { evidence: true }
+              include: { evidence: { include: { artifact: { select: { snapshotId: true } } } } }
             }
           }
         }
@@ -81,11 +81,13 @@ export class ImpactGraphReadModelBuilder {
     const affectedArtifactIds = new Set<string>();
     
     // Sort traceability links by retrieval score for truncation priority
-    const sortedTraceabilityLinks = [...analysis.traceabilityLinks].sort((a, b) => {
+    const sortedTraceabilityLinks = analysis.traceabilityLinks
+      .filter((link) => link.artifact.snapshotId === analysis.snapshotId)
+      .sort((a, b) => {
       const scoreA = (a.retrievalMetadata as any)?.hybridScore || 0;
       const scoreB = (b.retrievalMetadata as any)?.hybridScore || 0;
       return scoreB - scoreA;
-    });
+      });
 
     for (const link of sortedTraceabilityLinks) {
       if (nodes.length >= maxNodes) break;
@@ -128,6 +130,8 @@ export class ImpactGraphReadModelBuilder {
       const deps = await this.prisma.dependencyEdge.findMany({
         where: {
           snapshotId: analysis.snapshotId,
+          fromArtifact: { snapshotId: analysis.snapshotId },
+          toArtifact: { snapshotId: analysis.snapshotId },
           OR: [
             { fromArtifactId: { in: Array.from(affectedArtifactIds) } },
             { toArtifactId: { in: Array.from(affectedArtifactIds) } },
@@ -207,7 +211,8 @@ export class ImpactGraphReadModelBuilder {
       let endLine: number | undefined;
 
       for (const evLink of insight.evidenceLinks) {
-        if (evLink.evidence.artifactId && affectedArtifactIds.has(evLink.evidence.artifactId)) {
+        if (isEvidenceScopedToAnalysis(evLink.evidence, analysis) &&
+          evLink.evidence.artifactId && affectedArtifactIds.has(evLink.evidence.artifactId)) {
           mappedArtifactId = evLink.evidence.artifactId;
           evidenceSummary = evLink.evidence.excerpt.substring(0, 200) + (evLink.evidence.excerpt.length > 200 ? '...' : '');
           if (evLink.evidence.startLine !== null) startLine = evLink.evidence.startLine;

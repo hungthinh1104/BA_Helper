@@ -83,12 +83,25 @@ export class ImpactAnalysisLifecycleController {
     @Body() body: unknown,
     @CurrentUser() actor: RequestUser,
   ) {
+    const input = parseApiInput(impactAnalysisCreateRequestSchema, body);
     await this.permissions.assertPermissionForRequirementRevision(
       actor,
       revisionId,
-      'analysis:create',
+      input.derivedFromAnalysisId || input.sourceClarificationId
+        ? 'analysis:create-derived'
+        : 'analysis:create',
     );
-    const input = parseApiInput(impactAnalysisCreateRequestSchema, body);
+    await this.permissions.assertCanReadSnapshot(actor, input.snapshotId);
+    if (input.derivedFromAnalysisId) {
+      await this.permissions.assertCanReadAnalysis(actor, input.derivedFromAnalysisId);
+    }
+    if (input.sourceClarificationId) {
+      await this.permissions.assertPermissionForClarification(
+        actor,
+        input.sourceClarificationId,
+        'project:read',
+      );
+    }
     const analysis = await this.createAnalysis.execute({
       requirementRevisionId: revisionId,
       snapshotId: input.snapshotId,
@@ -96,6 +109,8 @@ export class ImpactAnalysisLifecycleController {
       allowPartialSnapshot: input.allowPartialSnapshot,
       requestKey: input.requestKey,
       domainPackId: input.domainPackId,
+      derivedFromAnalysisId: input.derivedFromAnalysisId,
+      sourceClarificationId: input.sourceClarificationId,
     });
 
     const response = impactAnalysisResponseSchema.parse(

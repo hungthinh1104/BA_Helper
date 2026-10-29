@@ -125,14 +125,12 @@ export class ImpactEvidenceCollectionStep {
       confidence: linkBasisMap.get(link.artifactId)?.confidence ?? 0.3,
     }));
 
-    await Promise.all(
-      persistedLinks.map((link) => {
+    await this.traceabilityRepo.linkEvidenceMany(
+      persistedLinks.flatMap((link) => {
         const evidenceRecord = evidenceById.get(link.artifactId);
-        if (!evidenceRecord) return Promise.resolve([]);
-        return this.traceabilityRepo.linkEvidence({
-          linkId: link.id,
-          evidenceIds: [evidenceRecord.id],
-        });
+        return evidenceRecord
+          ? [{ linkId: link.id, evidenceIds: [evidenceRecord.id] }]
+          : [];
       }),
     );
 

@@ -1,8 +1,9 @@
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import * as crypto from 'crypto';
 import { diagnosticItemSchema } from '@ba-helper/contracts';
+import { buildEvidenceQualityProjection } from '../src/modules/document/application/evidence-quality.projection';
 
 const databaseUrl = process.env.DATABASE_URL?.trim();
 if (!databaseUrl) {
@@ -440,7 +441,7 @@ async function main() {
     },
   });
 
-  await Promise.all([
+  const scenarioBLinks = await Promise.all([
     prisma.traceabilityLink.create({
       data: {
         impactAnalysisId: analysisB.id,
@@ -473,16 +474,44 @@ async function main() {
     }),
   ]);
 
+  await prisma.traceabilityEvidence.createMany({
+    data: [
+      { traceabilityLinkId: scenarioBLinks[0].id, evidenceId: evBooking.id },
+      { traceabilityLinkId: scenarioBLinks[1].id, evidenceId: evRefund.id },
+      { traceabilityLinkId: scenarioBLinks[2].id, evidenceId: evInventory.id },
+    ],
+  });
+  await Promise.all(
+    scenarioBLinks.map((link, index) =>
+      prisma.traceabilityReviewDecision.create({
+        data: {
+          analysisId: analysisB.id,
+          traceabilityLinkId: link.id,
+          decision: index === 2 ? 'REJECTED' : 'ACCEPTED',
+          reviewedByUserId: demoUser.id,
+        },
+      }),
+    ),
+  );
+
+  const scenarioBQualityLinks = await prisma.traceabilityLink.findMany({
+    where: { impactAnalysisId: analysisB.id },
+    include: {
+      artifact: true,
+      evidenceLinks: { include: { evidence: true } },
+      reviewDecision: true,
+    },
+  });
+  const scenarioBQuality = buildEvidenceQualityProjection({
+    traceabilityLinks: scenarioBQualityLinks,
+  });
+
   await prisma.reviewedReportSnapshot.create({
     data: {
       analysisId: analysisB.id,
       markdown: '# BA Helper Final Report\n\nSynthetic deterministic export for Scenario B.',
-      reviewDecisionsSnapshot: [
-        { artifactKey: 'api:booking.service.cancelBooking', decision: 'ACCEPTED' },
-        { artifactKey: 'api:refund.controller.processRefund', decision: 'ACCEPTED' },
-        { artifactKey: 'api:inventory.service.releaseRoom', decision: 'REJECTED' },
-      ],
-      evidenceQualitySummarySnapshot: { EVIDENCED: 3 },
+      reviewDecisionsSnapshot: scenarioBQuality.items as Prisma.InputJsonValue,
+      evidenceQualitySummarySnapshot: scenarioBQuality.summary as Prisma.InputJsonValue,
       createdByUserId: demoUser.id,
     },
   });

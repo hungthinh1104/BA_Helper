@@ -5,7 +5,7 @@ import { describe, expect, it, jest, beforeEach, afterEach } from "@jest/globals
 import { queryKeys } from "@/lib/api/query-keys"
 import type { AnalysisWorkspaceResponse } from "@ba-helper/contracts"
 
-const mockApiPut = jest.fn()
+const mockApiPut = jest.fn<(...args: unknown[]) => Promise<unknown>>()
 jest.mock("@/lib/api-client", () => ({ apiPut: (...args: unknown[]) => mockApiPut(...args) }))
 jest.mock("@/lib/project-context", () => ({ useOptionalProjectId: () => undefined }))
 
@@ -85,5 +85,40 @@ describe("useReviewItemDecision", () => {
     expect(queryClient.getQueryData<AnalysisWorkspaceResponse>(key)?.reviewQueue[0].currentDecision).toBe("accepted")
     expect(queryClient.getQueryData<AnalysisWorkspaceResponse>(key)?.reviewSummary.reviewed).toBe(1)
     expect(queryClient.getQueryData<AnalysisWorkspaceResponse>(key)?.reportStatus.canFinalize).toBe(true)
+  })
+
+  it("reuses a review command key after a failed request and rotates it after success", async () => {
+    mockApiPut.mockRejectedValueOnce(new Error("network timeout"))
+    const wrapper = ({ children }: { children: React.ReactNode }) =>
+      React.createElement(QueryClientProvider, { client: queryClient }, children)
+    const { result } = renderHook(() => useReviewItemDecision("analysis-1"), { wrapper })
+    const input = {
+      item: { itemId: "link-1", itemType: "impact" as const },
+      action: "accept" as const,
+      rationale: "Reviewed source evidence",
+    }
+
+    act(() => result.current.decide(input))
+    await waitFor(() => expect(mockApiPut).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(result.current.isPending).toBe(false))
+    const firstRequestKey = (mockApiPut.mock.calls[0]?.[1] as { requestKey: string }).requestKey
+
+    mockApiPut.mockResolvedValue({
+      itemId: "link-1",
+      target: "impact",
+      currentDecision: "accepted",
+      reviewNote: "Reviewed source evidence",
+      idempotent: true,
+    })
+    act(() => result.current.decide(input))
+    await waitFor(() => expect(mockApiPut).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(result.current.isPending).toBe(false))
+    const retryRequestKey = (mockApiPut.mock.calls[1]?.[1] as { requestKey: string }).requestKey
+    expect(retryRequestKey).toBe(firstRequestKey)
+
+    act(() => result.current.decide(input))
+    await waitFor(() => expect(mockApiPut).toHaveBeenCalledTimes(3))
+    const nextCommandKey = (mockApiPut.mock.calls[2]?.[1] as { requestKey: string }).requestKey
+    expect(nextCommandKey).not.toBe(firstRequestKey)
   })
 })

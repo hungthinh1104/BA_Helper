@@ -6,9 +6,9 @@ const staticTrace = 'This is a persisted static source-reference projection, not
 export const analysisDocs: Record<string, ControllerDocs> = {
   ImpactAnalysisLifecycleController: { tag: 'Impact analyses', operations: {
     create: op('Start an analysis for an immutable requirement revision', c.impactAnalysisResponseSchema, {
-      body: c.impactAnalysisCreateRequestSchema, permission: 'analysis:create',
-      errors: { 400: 'Requirement, snapshot or project/target preconditions are not satisfied.', 409: 'Request key conflicts or analysis source is stale.' },
-      description: 'Requires an analysis-ready revision and a snapshot belonging to the selected source target. PARTIAL snapshots require explicit acknowledgement. Reuse requestKey for the same submitted command. Poll status and backend capabilities; progress 100 alone does not authorize review or finalization. This base endpoint does not apply the optional derivedFromAnalysisId/sourceClarificationId fields; use the review-clarification derived-analyses endpoint for that workflow.',
+      body: c.impactAnalysisCreateRequestSchema, permission: 'analysis:create; analysis:create-derived when lineage is supplied',
+      errors: { 400: 'Requirement, snapshot, project/target, or lineage preconditions are not satisfied.', 404: 'A referenced snapshot, parent analysis, or source clarification is outside the actor project membership.', 409: 'Request key conflicts or analysis source is stale.' },
+      description: 'Requires an analysis-ready revision and a snapshot belonging to the selected source target. PARTIAL snapshots require explicit acknowledgement. Optional derivedFromAnalysisId and sourceClarificationId preserve rerun/clarification lineage; those references must be readable in the same project and derived commands also require analysis:create-derived. Reuse requestKey for the same submitted command, including its lineage. Poll status and backend capabilities; progress 100 alone does not authorize review or finalization.',
     }),
     get: op('Read analysis state, freshness and capabilities', c.impactAnalysisResponseSchema),
     getEvents: op('Read analysis audit events', c.eventLogListResponseSchema),

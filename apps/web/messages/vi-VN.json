@@ -537,6 +537,8 @@
     "requirement": "Yêu cầu",
     "status": "Trạng thái",
     "failedToLoadAnalyses": "Không tải được phân tích",
+    "retryAnalyses": "Thử lại",
+    "retryingAnalyses": "Đang thử lại...",
     "noAnalyses": "Chưa có phân tích",
     "noAnalysesDescription": "Chạy phân tích tác động đầu tiên để xem kết quả tại đây.",
     "startAnalysis": "Bắt đầu phân tích",

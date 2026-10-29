@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useRef } from "react"
 import { apiPut } from "@/lib/api-client"
 import { queryKeys } from "@/lib/api/query-keys"
 import { useOptionalProjectId } from "@/lib/project-context"
@@ -32,6 +33,15 @@ export interface ReviewDecisionInput {
   rationale?: string | null
 }
 
+type ReviewDecisionMutationInput = ReviewDecisionInput & {
+  requestKey: string
+  commandSignature: string
+}
+
+type ReviewDecisionCallbacks = {
+  onSuccess?: () => void
+}
+
 /**
  * The single mutation surface for review decisions. The review workbench is the
  * only place that mutates a decision, so this hook centralises endpoint routing
@@ -41,9 +51,10 @@ export interface ReviewDecisionInput {
 export function useReviewItemDecision(analysisId: string) {
   const queryClient = useQueryClient()
   const projectId = useOptionalProjectId()
+  const requestKeysByCommand = useRef(new Map<string, string>())
 
   const mutation = useMutation({
-    mutationFn: async ({ item, action, rationale }: ReviewDecisionInput) => {
+    mutationFn: async ({ item, action, rationale, requestKey }: ReviewDecisionMutationInput) => {
       const target = item.itemType === "impact" ? "impact" : "insight"
       return apiPut(
         `/api/v1/impact-analyses/${analysisId}/review-items/${item.itemId}/decision`,
@@ -51,9 +62,15 @@ export function useReviewItemDecision(analysisId: string) {
           target,
           action,
           rationale: rationale?.trim() ? rationale.trim() : null,
+          requestKey,
         },
         submitReviewItemDecisionResponseSchema,
       )
+    },
+    onSuccess: (_result, input) => {
+      if (requestKeysByCommand.current.get(input.commandSignature) === input.requestKey) {
+        requestKeysByCommand.current.delete(input.commandSignature)
+      }
     },
     onSettled: async () => {
       // Reconcile with the server on both success and rollback.
@@ -74,11 +91,30 @@ export function useReviewItemDecision(analysisId: string) {
     },
   })
 
+  const decide = (input: ReviewDecisionInput, callbacks?: ReviewDecisionCallbacks) => {
+    const commandSignature = reviewDecisionCommandSignature(input)
+    const requestKey = requestKeysByCommand.current.get(commandSignature) ?? crypto.randomUUID()
+    requestKeysByCommand.current.set(commandSignature, requestKey)
+    mutation.mutate(
+      { ...input, requestKey, commandSignature },
+      { onSuccess: () => callbacks?.onSuccess?.() },
+    )
+  }
+
   return {
-    decide: mutation.mutate,
+    decide,
     isPending: mutation.isPending,
     error: mutation.error as Error | null,
     pendingItemId: mutation.isPending ? mutation.variables?.item.itemId ?? null : null,
     reset: mutation.reset,
   }
+}
+
+function reviewDecisionCommandSignature(input: ReviewDecisionInput): string {
+  return JSON.stringify([
+    input.item.itemId,
+    input.item.itemType,
+    input.action,
+    input.rationale?.trim() || null,
+  ])
 }

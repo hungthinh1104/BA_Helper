@@ -4,7 +4,7 @@ export const eventLogDtoSchema = z.object({
   id: z.string(),
   eventType: z.string(),
   idempotencyKey: z.string(),
-  actorType: z.enum(['SYSTEM', 'USER']).catch('SYSTEM'),
+  actorType: z.enum(['SYSTEM', 'USER']),
   actorName: z.string().nullable().optional(),
   triggeredByUserId: z.string().nullable().optional(),
   metadata: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])),

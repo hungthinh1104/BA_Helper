@@ -3,6 +3,14 @@ import type { CreateReviewedReportSnapshotUseCase } from '../../../document/appl
 import type { EnqueueDocumentJobUseCase } from '../../../document/application/commands/enqueue-document-job.usecase';
 import type { PrismaService, ImpactAnalysisRepository, TraceabilityRepository, InsightRepository } from "@ba-helper/backend-runtime";
 
+const emptyEvidenceQualitySummary = {
+  missingEvidence: 0,
+  reviewRequired: 0,
+  evidenced: 0,
+  inferred: 0,
+  weakEvidence: 0,
+};
+
 describe('FinalizeImpactAnalysisUseCase', () => {
   let useCase: FinalizeImpactAnalysisUseCase;
   let impactRepo: jest.Mocked<ImpactAnalysisRepository>;
@@ -73,7 +81,7 @@ describe('FinalizeImpactAnalysisUseCase', () => {
         approvedDocumentId: null,
         markdown: null,
         reviewDecisionsSnapshot: [],
-        evidenceQualitySummarySnapshot: {},
+        evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary,
         evaluationContextSnapshot: null,
         createdByUserId: 'user-1',
       }),
@@ -192,7 +200,7 @@ describe('FinalizeImpactAnalysisUseCase', () => {
     const result = await useCase.execute(validParams);
 
     expect(result.id).toBe('analysis-1');
-    expect(prisma.$transaction).toHaveBeenCalled();
+    expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), { timeout: 20_000 });
     expect(txImpactUpdateMany).toHaveBeenCalled();
     expect(txImpactUpdateMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({
@@ -244,7 +252,7 @@ describe('FinalizeImpactAnalysisUseCase', () => {
         approvedDocumentId: null,
         markdown: null,
         reviewDecisionsSnapshot: [],
-        evidenceQualitySummarySnapshot: {},
+        evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary,
         evaluationContextSnapshot: null,
         createdByUserId: 'user-1',
       },

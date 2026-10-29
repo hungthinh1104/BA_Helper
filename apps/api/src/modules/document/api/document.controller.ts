@@ -1,4 +1,5 @@
 import { Controller, Get, Param, Post, Body, Query, Res } from '@nestjs/common';
+import { AppError } from '@ba-helper/shared';
 import { parseApiInput } from '../../../shared/parse-api-input';
 import { documentListResponseSchema } from '@ba-helper/contracts';
 import { ListDocumentsUseCase } from '../application/queries/list-documents.usecase';
@@ -136,7 +137,7 @@ export class DocumentController {
     });
 
     const mapped = DocumentMapper.toReviewedReportSnapshotResponse(snapshot);
-    return reviewedReportSnapshotSchema.parse(mapped);
+    return parseReviewedReportSnapshot(mapped, snapshot.id);
   }
 
   @Get('/impact-analyses/:analysisId/reviewed-report-snapshot/latest')
@@ -149,7 +150,7 @@ export class DocumentController {
     const snapshot = await this.getLatestReviewedReportSnapshot.execute(analysisId);
 
     const mapped = DocumentMapper.toReviewedReportSnapshotResponse(snapshot);
-    return reviewedReportSnapshotSchema.parse(mapped);
+    return parseReviewedReportSnapshot(mapped, snapshot.id);
   }
 
   @Get('/impact-analyses/:analysisId/final-reviewed-report')
@@ -201,4 +202,16 @@ export class DocumentController {
       updatedAt: job.updatedAt.toISOString(),
     });
   }
+}
+
+function parseReviewedReportSnapshot(mapped: unknown, snapshotId: string) {
+  const result = reviewedReportSnapshotSchema.safeParse(mapped);
+  if (!result.success) {
+    throw new AppError(
+      'REPORT_PROVENANCE_MISMATCH',
+      'The frozen report snapshot contains data outside its response contract.',
+      { reportSnapshotId: snapshotId },
+    );
+  }
+  return result.data;
 }

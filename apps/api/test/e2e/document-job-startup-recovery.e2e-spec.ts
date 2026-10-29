@@ -176,7 +176,13 @@ describe('Document job startup recovery (E2E)', () => {
         analysisId,
         markdown: '# Approved report',
         reviewDecisionsSnapshot: [],
-        evidenceQualitySummarySnapshot: {},
+        evidenceQualitySummarySnapshot: {
+          missingEvidence: 0,
+          reviewRequired: 0,
+          evidenced: 0,
+          inferred: 0,
+          weakEvidence: 0,
+        },
         createdByUserId: adminUserId,
       },
     });

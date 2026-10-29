@@ -74,7 +74,17 @@ describe('ApprovedReportProjectionService', () => {
         inferred: 0,
         weakEvidence: 0,
       },
-      evaluationContextSnapshot: { datasetVersion: 'frozen-eval' },
+      evaluationContextSnapshot: {
+        datasetVersion: 'frozen-eval',
+        subsetId: 'frozen-subset',
+        subsetSize: '1',
+        interpretation: 'ILLUSTRATIVE_ONLY',
+        knownLimits: [],
+        evidenceQualityNotes: [],
+        datasetExpansionRecommendations: [],
+        researchFindingsArtifact: 'research.json',
+        sameSubsetComparisonArtifact: 'comparison.json',
+      },
       createdAt: new Date('2026-06-02T00:00:00.000Z'),
     };
     const prismaMock = {

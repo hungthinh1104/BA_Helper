@@ -77,4 +77,32 @@ describe('TraceabilityRepository', () => {
       },
     ]);
   });
+
+  it('bulk links evidence for traceability records in one idempotent write', async () => {
+    const createMany = jest.fn().mockResolvedValue({ count: 3 });
+    const findMany = jest.fn();
+    const prisma = {
+      traceabilityLink: {
+        createMany: async () => ({ count: 0 }),
+        findMany: async () => [],
+      },
+      traceabilityEvidence: { createMany, findMany },
+    };
+    const repo = new TraceabilityRepository(prisma as any);
+
+    await repo.linkEvidenceMany([
+      { linkId: 'link-1', evidenceIds: ['ev-1', 'ev-2'] },
+      { linkId: 'link-2', evidenceIds: ['ev-3'] },
+    ]);
+
+    expect(createMany).toHaveBeenCalledWith({
+      data: [
+        { traceabilityLinkId: 'link-1', evidenceId: 'ev-1' },
+        { traceabilityLinkId: 'link-1', evidenceId: 'ev-2' },
+        { traceabilityLinkId: 'link-2', evidenceId: 'ev-3' },
+      ],
+      skipDuplicates: true,
+    });
+    expect(findMany).not.toHaveBeenCalled();
+  });
 });

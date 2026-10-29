@@ -10,7 +10,7 @@ import { EventLogService, PrismaService } from '@ba-helper/backend-runtime';
 import type { ReviewNoteRepository } from '@ba-helper/backend-runtime';
 import { RunDocumentJobUseCase } from '@ba-helper/application';
 import { ApprovedReportContextReader } from '../../src/modules/document/application/queries/approved-report-context.reader';
-import type { CreateReviewedReportSnapshotUseCase } from '../../src/modules/document/application/commands/create-reviewed-report-snapshot.usecase';
+import { CreateReviewedReportSnapshotUseCase } from '../../src/modules/document/application/commands/create-reviewed-report-snapshot.usecase';
 import { FinalizeImpactAnalysisUseCase } from '../../src/modules/impact-analysis/application/lifecycle/finalize-impact-analysis.usecase';
 import { SaveReviewNoteUseCase } from '../../src/modules/impact-analysis/application/review/save-review-note.usecase';
 import { SubmitReviewItemDecisionUseCase } from '../../src/modules/review/application/submit-review-item-decision.usecase';
@@ -23,10 +23,10 @@ function createDeferred() {
   return { promise, resolve };
 }
 
-function withDeadline<T>(promise: Promise<T>, label: string): Promise<T> {
+function withDeadline<T>(promise: Promise<T>, label: string, timeoutMs = 10_000): Promise<T> {
   let timeout: ReturnType<typeof setTimeout> | undefined;
   const deadline = new Promise<never>((_, reject) => {
-    timeout = setTimeout(() => reject(new Error(`Timed out waiting for ${label}`)), 10_000);
+    timeout = setTimeout(() => reject(new Error(`Timed out waiting for ${label}`)), timeoutMs);
   });
   return Promise.race([promise, deadline]).finally(() => {
     if (timeout) clearTimeout(timeout);
@@ -358,6 +358,68 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
     expect(vietnameseRes.body.snapshotId).toBe(finalRes.body.snapshotId);
   });
 
+  it('scopes approved-report context to its repository snapshot and requirement revision', async () => {
+    const { analysisId, link1Id, link2Id, docId } = await setupBasicAnalysisWithLinks();
+    for (const linkId of [link1Id, link2Id]) {
+      await request(app.getHttpServer())
+        .put(`/api/v1/traceability-links/${linkId}/review-decision`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ decision: 'ACCEPTED' })
+        .expect(200);
+    }
+    await markAnalysisCompleted(analysisId);
+    const snapshot = await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${analysisId}/reviewed-report-snapshot`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send()
+      .expect(201);
+    await prisma.reviewedReportSnapshot.update({
+      where: { id: snapshot.body.id }, data: { approvedDocumentId: docId },
+    });
+
+    const analysis = await prisma.impactAnalysis.findUniqueOrThrow({
+      where: { id: analysisId }, select: { snapshotId: true, requirementRevisionId: true },
+    });
+    const localLink = await prisma.traceabilityLink.findUniqueOrThrow({
+      where: { id: link1Id }, select: { artifactId: true },
+    });
+    const foreignProject = await prisma.project.create({ data: { name: 'Foreign report-context project' } });
+    const foreignRepository = await prisma.repository.create({
+      data: { projectId: foreignProject.id, canonicalUrl: 'https://github.com/mock/foreign-report-context' },
+    });
+    const foreignSnapshot = await prisma.repositorySnapshot.create({
+      data: { repositoryId: foreignRepository.id, commitSha: 'foreign-report-context-commit',
+        analyzerVersion: 'analyzer@1.0.0', coverageStatus: 'READY' },
+    });
+    const foreignArtifact = await prisma.codeArtifact.create({
+      data: { snapshotId: foreignSnapshot.id, artifactKey: 'private:report-refund',
+        name: 'ForeignReportRefund', artifactType: 'SERVICE', filePath: 'src/private/report-refund.ts' },
+    });
+    const foreignEvidence = await prisma.evidence.create({
+      data: { provenanceKey: 'foreign-report-context-evidence', sourceType: 'CODE',
+        snapshotId: foreignSnapshot.id, artifactId: localLink.artifactId,
+        requirementRevisionId: analysis.requirementRevisionId, sourcePath: 'src/private/report-refund.ts',
+        excerpt: 'FOREIGN REPORT CONTEXT SOURCE', contentHash: 'foreign-report-context-hash' },
+    });
+    await prisma.traceabilityEvidence.create({ data: { traceabilityLinkId: link1Id, evidenceId: foreignEvidence.id } });
+    const insight = await prisma.baInsight.create({
+      data: { impactAnalysisId: analysisId, insightKey: 'report-context-check', insightType: 'UNKNOWN',
+        certainty: 'UNKNOWN', reviewStatus: 'NEEDS_REVIEW', title: 'Report context check',
+        description: 'Scoped report evidence check.' },
+    });
+    await prisma.insightEvidence.create({ data: { insightId: insight.id, evidenceId: foreignEvidence.id } });
+    await prisma.traceabilityLink.create({
+      data: { impactAnalysisId: analysisId, artifactId: foreignArtifact.id,
+        linkType: 'AFFECTED', linkBasis: 'INFERRED', reviewStatus: 'NEEDS_REVIEW' },
+    });
+
+    const context = await app.get(ApprovedReportContextReader).readContext(analysisId, snapshot.body.id);
+    const serializedContext = JSON.stringify(context.canonicalContext);
+    expect(serializedContext).not.toContain('FOREIGN REPORT CONTEXT SOURCE');
+    expect(serializedContext).not.toContain('ForeignReportRefund');
+    expect(serializedContext).not.toContain('src/private/report-refund.ts');
+  });
+
   it('unreviewed link blocks final report', async () => {
     const { analysisId, link1Id } = await setupBasicAnalysisWithLinks();
 
@@ -467,6 +529,40 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
     const decisionsArray = persistedSnapshot?.reviewDecisionsSnapshot as any[];
     expect(decisionsArray).toHaveLength(2);
     expect(decisionsArray.every(d => d.reviewDecision?.decision === 'ACCEPTED')).toBe(true);
+  });
+
+  it('rejects malformed frozen review data on snapshot and final report APIs', async () => {
+    const { analysisId, link1Id, link2Id } = await setupBasicAnalysisWithLinks();
+    for (const linkId of [link1Id, link2Id]) {
+      await request(app.getHttpServer())
+        .put(`/api/v1/traceability-links/${linkId}/review-decision`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ decision: 'ACCEPTED' })
+        .expect(200);
+    }
+    await markAnalysisCompleted(analysisId);
+    const snapshotResponse = await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${analysisId}/reviewed-report-snapshot`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send()
+      .expect(201);
+
+    await prisma.reviewedReportSnapshot.update({
+      where: { id: snapshotResponse.body.id },
+      data: { reviewDecisionsSnapshot: { silentlyOmitted: true } },
+    });
+
+    const latestSnapshotResponse = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/reviewed-report-snapshot/latest`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(409);
+    expect(latestSnapshotResponse.body.code).toBe('REPORT_PROVENANCE_MISMATCH');
+
+    const finalReportResponse = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/final-reviewed-report`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(409);
+    expect(finalReportResponse.body.code).toBe('REPORT_PROVENANCE_MISMATCH');
   });
 
   it('rejects a snapshot linked to an approved document from another analysis', async () => {
@@ -710,7 +806,12 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
     // Pause both requests before preflight reads so the database row lock selects the winner.
     const bothPreflightReads = createDeferred();
     const releaseTransactions = createDeferred();
+    const snapshotBuildStarted = createDeferred();
+    const releaseSnapshotBuild = createDeferred();
     let preflightReads = 0;
+    let delayedSnapshotBuild = false;
+    const snapshotBuilder = app.get(CreateReviewedReportSnapshotUseCase);
+    const originalSnapshotBuild = snapshotBuilder.buildSnapshotCreateData.bind(snapshotBuilder);
     const preflightSpy = jest.spyOn(finalizer as any, 'assertFinalizableState')
       .mockImplementation(async (...args: unknown[]) => {
         const [analysisId, acknowledgeUnreviewed] = args as [string, boolean];
@@ -720,6 +821,15 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
           await releaseTransactions.promise;
         }
         return originalPreflight(analysisId, acknowledgeUnreviewed);
+      });
+    const snapshotBuildSpy = jest.spyOn(snapshotBuilder, 'buildSnapshotCreateData')
+      .mockImplementation(async (params) => {
+        if (!delayedSnapshotBuild) {
+          delayedSnapshotBuild = true;
+          snapshotBuildStarted.resolve();
+          await releaseSnapshotBuild.promise;
+        }
+        return originalSnapshotBuild(params);
       });
 
     let responsesPromise: Promise<unknown> | undefined;
@@ -738,7 +848,12 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
         }),
       ]), 'both finalize requests to read review state before locking');
       releaseTransactions.resolve();
-      const responses = await withDeadline(concurrentResponses, 'concurrent finalize responses');
+      await withDeadline(snapshotBuildStarted.promise, 'winning finalize to acquire the row lock');
+      // Hold the first transaction beyond Prisma's 5-second default. The second
+      // request must wait, then return the state conflict after the winner commits.
+      await new Promise((resolve) => setTimeout(resolve, 6_000));
+      releaseSnapshotBuild.resolve();
+      const responses = await withDeadline(concurrentResponses, 'concurrent finalize responses', 20_000);
       const snapshots = await prisma.reviewedReportSnapshot.findMany({
         where: { analysisId },
         select: { id: true },
@@ -774,7 +889,9 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       });
     } finally {
       releaseTransactions.resolve();
+      releaseSnapshotBuild.resolve();
       preflightSpy.mockRestore();
+      snapshotBuildSpy.mockRestore();
       if (responsesPromise) {
         await withDeadline(
           Promise.allSettled([responsesPromise]),
@@ -934,40 +1051,41 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
 
     const submitDecision = app.get(SubmitReviewItemDecisionUseCase);
     const traceabilityRepo = (submitDecision as unknown as {
-      traceabilityRepo: { upsertReviewDecision: (...args: any[]) => Promise<any> };
+      traceabilityRepo: { findById: (...args: any[]) => Promise<any> };
     }).traceabilityRepo;
-    const originalUpsert = traceabilityRepo.upsertReviewDecision.bind(traceabilityRepo);
-    const decisionReachedPersistence = createDeferred();
-    const releaseDecisionWrite = createDeferred();
-    let blockedDecisionWrite = false;
-    const decisionSpy = jest.spyOn(traceabilityRepo, 'upsertReviewDecision').mockImplementation(async (params) => {
-      if (!blockedDecisionWrite) {
-        blockedDecisionWrite = true;
-        decisionReachedPersistence.resolve();
-        await releaseDecisionWrite.promise;
+    const originalFindById = traceabilityRepo.findById.bind(traceabilityRepo);
+    const statusReadCompleted = createDeferred();
+    const releaseStatusRead = createDeferred();
+    let blockedStatusRead = false;
+    const decisionSpy = jest.spyOn(traceabilityRepo, 'findById').mockImplementation(async (itemId, transaction) => {
+      const link = await originalFindById(itemId, transaction);
+      if (!transaction && !blockedStatusRead) {
+        blockedStatusRead = true;
+        statusReadCompleted.resolve();
+        await releaseStatusRead.promise;
       }
-      return originalUpsert(params);
+      return link;
     });
 
     try {
       const decisionResponsePromise = request(app.getHttpServer())
         .put(`/api/v1/impact-analyses/${analysisId}/review-items/${link2Id}/decision`)
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ target: 'impact', action: 'reject', rationale: 'Changed after review' })
+        .send({ target: 'impact', action: 'reject', rationale: 'Changed after review', requestKey: crypto.randomUUID() })
         .then((response) => response);
 
       await withDeadline(Promise.race([
-        decisionReachedPersistence.promise,
+        statusReadCompleted.promise,
         decisionResponsePromise.then((response) => {
-          throw new Error(`Review decision request ended before persistence: ${response.status}`);
+          throw new Error(`Review decision request ended before its status read: ${response.status}`);
         }),
-      ]), 'review decision to reach persistence after its status check');
+      ]), 'review decision preflight read');
 
       const finalizeResponse = await request(app.getHttpServer())
         .post(`/api/v1/impact-analyses/${analysisId}/finalize`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ acknowledgeUnreviewed: false });
-      releaseDecisionWrite.resolve();
+      releaseStatusRead.resolve();
       const decisionResponse = await withDeadline(decisionResponsePromise, 'review decision response');
       const persistedDecision = await prisma.traceabilityReviewDecision.findUnique({
         where: { traceabilityLinkId: link2Id },
@@ -985,7 +1103,7 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
         persistedDecision: 'ACCEPTED',
       });
     } finally {
-      releaseDecisionWrite.resolve();
+      releaseStatusRead.resolve();
       decisionSpy.mockRestore();
     }
   }, 30_000);
@@ -1029,7 +1147,7 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       const decisionResponse = await request(app.getHttpServer())
         .put(`/api/v1/impact-analyses/${analysisId}/review-items/${link2Id}/decision`)
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ target: 'impact', action: 'reject', rationale: 'Changed before finalization' });
+        .send({ target: 'impact', action: 'reject', rationale: 'Changed before finalization', requestKey: crypto.randomUUID() });
 
       releaseFinalization.resolve();
       const finalizeResponse = await withDeadline(finalizePromise, 'finalize after the decision commits');
@@ -1085,40 +1203,41 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
 
     const submitDecision = app.get(SubmitReviewItemDecisionUseCase);
     const insightRepo = (submitDecision as unknown as {
-      insightRepo: { updateReviewStatusIfCurrent: (...args: any[]) => Promise<any> };
+      insightRepo: { findById: (...args: any[]) => Promise<any> };
     }).insightRepo;
-    const originalUpdate = insightRepo.updateReviewStatusIfCurrent.bind(insightRepo);
-    const decisionReachedPersistence = createDeferred();
-    const releaseDecisionWrite = createDeferred();
-    let blockedDecisionWrite = false;
-    const decisionSpy = jest.spyOn(insightRepo, 'updateReviewStatusIfCurrent').mockImplementation(async (params) => {
-      if (!blockedDecisionWrite) {
-        blockedDecisionWrite = true;
-        decisionReachedPersistence.resolve();
-        await releaseDecisionWrite.promise;
+    const originalFindById = insightRepo.findById.bind(insightRepo);
+    const statusReadCompleted = createDeferred();
+    const releaseStatusRead = createDeferred();
+    let blockedStatusRead = false;
+    const decisionSpy = jest.spyOn(insightRepo, 'findById').mockImplementation(async (itemId, transaction) => {
+      const insight = await originalFindById(itemId, transaction);
+      if (!transaction && !blockedStatusRead) {
+        blockedStatusRead = true;
+        statusReadCompleted.resolve();
+        await releaseStatusRead.promise;
       }
-      return originalUpdate(params);
+      return insight;
     });
 
     try {
       const decisionResponsePromise = request(app.getHttpServer())
         .put(`/api/v1/impact-analyses/${analysisId}/review-items/${insightId}/decision`)
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ target: 'insight', action: 'reject' })
+        .send({ target: 'insight', action: 'reject', requestKey: crypto.randomUUID() })
         .then((response) => response);
 
       await withDeadline(Promise.race([
-        decisionReachedPersistence.promise,
+        statusReadCompleted.promise,
         decisionResponsePromise.then((response) => {
-          throw new Error(`Insight decision request ended before persistence: ${response.status}`);
+          throw new Error(`Insight decision request ended before its status read: ${response.status}`);
         }),
-      ]), 'insight decision to reach persistence after its status check');
+      ]), 'insight decision preflight read');
 
       const finalizeResponse = await request(app.getHttpServer())
         .post(`/api/v1/impact-analyses/${analysisId}/finalize`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ acknowledgeUnreviewed: false });
-      releaseDecisionWrite.resolve();
+      releaseStatusRead.resolve();
       const decisionResponse = await withDeadline(decisionResponsePromise, 'insight decision response');
       const persistedInsight = await prisma.baInsight.findUnique({ where: { id: insightId } });
 
@@ -1134,7 +1253,7 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
         persistedStatus: 'CONFIRMED',
       });
     } finally {
-      releaseDecisionWrite.resolve();
+      releaseStatusRead.resolve();
       decisionSpy.mockRestore();
     }
   }, 30_000);

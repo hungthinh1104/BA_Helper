@@ -50,7 +50,7 @@ describe('Review audit atomicity (e2e)', () => {
       await request(app.getHttpServer())
         .put(`/api/v1/impact-analyses/${analysisId}/review-items/${traceabilityLinkId}/decision`)
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ target: 'impact', action: 'accept', rationale: 'Looks correct' })
+        .send({ target: 'impact', action: 'accept', rationale: 'Looks correct', requestKey: crypto.randomUUID() })
         .expect(500);
 
       expect(await prisma.traceabilityLink.findUnique({
@@ -73,7 +73,7 @@ describe('Review audit atomicity (e2e)', () => {
       await request(app.getHttpServer())
         .put(`/api/v1/impact-analyses/${analysisId}/review-items/${insightId}/decision`)
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ target: 'insight', action: 'accept', rationale: 'Reviewed carefully' })
+        .send({ target: 'insight', action: 'accept', rationale: 'Reviewed carefully', requestKey: crypto.randomUUID() })
         .expect(500);
 
       expect(await prisma.baInsight.findUnique({

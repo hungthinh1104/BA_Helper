@@ -8,6 +8,14 @@ import { useFinalReviewedReport as useDialogReport } from './use-documents';
 
 jest.mock('next-auth/react', () => ({ getSession: jest.fn().mockResolvedValue(null) }));
 
+const emptyEvidenceQualitySummary = {
+  missingEvidence: 0,
+  reviewRequired: 0,
+  evidenced: 0,
+  inferred: 0,
+  weakEvidence: 0,
+};
+
 describe('final-reviewed report data consistency across UI surfaces', () => {
   it('uses one validated API response and query cache for the page and dialog', async () => {
     let calls = 0;
@@ -20,7 +28,7 @@ describe('final-reviewed report data consistency across UI surfaces', () => {
           reviewCompletion: { analysisId: 'analysis-1', totalLinks: 1, accepted: 1, rejected: 0,
             needsReview: 0, needsMoreEvidence: 0, unreviewed: 0, isComplete: true,
             hasReviewedSnapshot: true, blockingReasons: [] },
-          reviewDecisionsSnapshot: [], evidenceQualitySummarySnapshot: {},
+          reviewDecisionsSnapshot: [], evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary,
           evaluationContextSnapshot: null,
         }));
       }));
@@ -57,7 +65,7 @@ describe('final-reviewed report data consistency across UI surfaces', () => {
           reviewCompletion: { analysisId: 'analysis-1', totalLinks: 1, accepted: 1, rejected: 0,
             needsReview: 0, needsMoreEvidence: 0, unreviewed: 0, isComplete: true,
             hasReviewedSnapshot: true, blockingReasons: [] },
-          reviewDecisionsSnapshot: [], evidenceQualitySummarySnapshot: {},
+          reviewDecisionsSnapshot: [], evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary,
           evaluationContextSnapshot: null,
         }));
       }));

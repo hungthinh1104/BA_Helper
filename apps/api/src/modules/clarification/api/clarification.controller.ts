@@ -53,6 +53,11 @@ export class ClarificationController {
       'clarification:write',
     );
     const input = parseApiInput(CreateClarificationRequestSchema, body);
+    await this.permissions.assertPermissionForInsight(
+      actor,
+      input.sourceInsightId,
+      'clarification:write',
+    );
     const item = await this.ensureUseCase.execute(analysisId, input.sourceInsightId);
     return ClarificationItemDtoSchema.parse(ClarificationMapper.toDto(item));
   }

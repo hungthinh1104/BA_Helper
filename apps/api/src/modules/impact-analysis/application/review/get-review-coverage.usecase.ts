@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ProjectPermissionService } from '../../../project/application/project-permission.service';
 import { RequestUser, ReviewCoverageResponse, ReviewCoverageGate, ReviewCoverageStatus } from '@ba-helper/contracts';
-import { PrismaService } from "@ba-helper/backend-runtime";
+import { isEvidenceScopedToAnalysis, PrismaService } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class GetReviewCoverageUseCase {
@@ -31,12 +31,16 @@ export class GetReviewCoverageUseCase {
             traceabilityLinks: {
               include: {
                 artifact: true,
-                evidenceLinks: true,
+                evidenceLinks: {
+                  include: { evidence: { include: { artifact: { select: { snapshotId: true } } } } },
+                },
               },
             },
             insights: {
               include: {
-                evidenceLinks: true,
+                evidenceLinks: {
+                  include: { evidence: { include: { artifact: { select: { snapshotId: true } } } } },
+                },
               },
             },
           },
@@ -131,16 +135,24 @@ export class GetReviewCoverageUseCase {
     const gate5AffectedAnalyses = new Set<string>();
 
     for (const analysis of run.analyses) {
+      const analysisIdentity = {
+        snapshotId: analysis.snapshotId,
+        requirementRevisionId: analysis.requirementRevisionId,
+      };
+      const snapshotLinks = analysis.traceabilityLinks.filter(
+        (link) => link.artifact.snapshotId === analysis.snapshotId,
+      );
       const uniqueArtifacts = new Map<string, { hasEvidence: boolean }>();
       const riskInsights = new Map<string, Set<string>>(); // insightId -> Set of evidenceIds
       const qaInsights = new Map<string, Set<string>>(); // insightId -> Set of evidenceIds
 
       // 1. Artifacts
-      for (const link of analysis.traceabilityLinks) {
+      for (const link of snapshotLinks) {
         if (!uniqueArtifacts.has(link.artifactId)) {
           uniqueArtifacts.set(link.artifactId, { hasEvidence: false });
         }
-        if (link.evidenceLinks.length > 0) {
+        if (link.evidenceLinks.some((item) =>
+          isEvidenceScopedToAnalysis(item.evidence, analysisIdentity))) {
           uniqueArtifacts.get(link.artifactId)!.hasEvidence = true;
         }
       }
@@ -168,14 +180,18 @@ export class GetReviewCoverageUseCase {
         if (isRisk) {
           analysisRiskCount++;
           summary.risks++;
-          const evidenceSet = new Set(insight.evidenceLinks.map(e => e.evidenceId));
+          const evidenceSet = new Set(insight.evidenceLinks
+            .filter((item) => isEvidenceScopedToAnalysis(item.evidence, analysisIdentity))
+            .map(e => e.evidenceId));
           riskInsights.set(insight.id, evidenceSet);
         }
 
         if (isQa) {
           analysisQaCount++;
           summary.qaScenarios++;
-          const evidenceSet = new Set(insight.evidenceLinks.map(e => e.evidenceId));
+          const evidenceSet = new Set(insight.evidenceLinks
+            .filter((item) => isEvidenceScopedToAnalysis(item.evidence, analysisIdentity))
+            .map(e => e.evidenceId));
           qaInsights.set(insight.id, evidenceSet);
         }
       }

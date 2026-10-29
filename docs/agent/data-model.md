@@ -76,6 +76,13 @@ static source-reference kind, resolver, repository-relative line locations
 unique(snapshotId, fromArtifactId, toArtifactId, type) constraint deduplicates
 relationships; repeated call sites are aggregated into their provenance.
 
+Every dependency edge endpoint must belong to the edge's `snapshotId`. Scanner
+ingestion resolves both endpoint IDs from that snapshot's persisted artifact
+set. Graph projections must also filter by the edge snapshot and both endpoint
+artifact snapshots, so malformed or legacy cross-snapshot rows cannot enter
+graph, comprehension, retrieval, QA, workspace, diff, multi-repo review, or
+reviewed-report output.
+
 `ReviewedReportSnapshot.testTraceSnapshot` is nullable JSON with the versioned
 `reportTestTraceSnapshotSchema` payload: `{ version: 1, coverage }`. It freezes
 the static QA projection, immutable repository snapshot/commit/analyzer
@@ -115,6 +122,10 @@ DocumentJob        -> ImpactAnalysis + ReviewedReportSnapshot + GeneratedDocumen
 `TraceabilityLink` must be scoped to `ImpactAnalysis`; its requirement revision
 is determined by that analysis. A requirement can be analyzed repeatedly across
 revisions and snapshots.
+
+The linked `CodeArtifact` must belong to the analysis's `RepositorySnapshot`.
+Traceability, workspace, diff, multi-repo review, and graph projections exclude
+links whose artifact snapshot does not match the analysis snapshot.
 
 For an analysis explicitly accepted from a `PARTIAL` snapshot, persist its
 known limitation:
@@ -269,6 +280,7 @@ Rules:
 CODE/TEST/STATIC_ANALYSIS evidence must identify its snapshot and may identify an artifact.
 REQUIREMENT_INPUT evidence must identify its immutable RequirementRevision.
 COVERAGE evidence must identify the snapshot whose gaps it describes.
+When `artifactId` is present, its artifact must belong to the evidence `snapshotId`; when repository evidence is read for an analysis, its snapshot and any referenced requirement revision must match that analysis. Requirement-only evidence with no snapshot is scoped to the exact immutable revision.
 Evidence linked to an EVIDENCED code-impact fact must come from the same snapshot as its ImpactAnalysis.
 Evidence linked to a requirement interpretation must come from its referenced revision.
 Persisted evidence text must not contain detected secret literals; redact the

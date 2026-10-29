@@ -8,7 +8,10 @@ describe('GraphRepository bounded reads', () => {
     await repository.listIncomingBySnapshotAndTargets('snapshot-1', ['target-2', 'target-1'], ['CALLS'], 81);
 
     expect(findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { snapshotId: 'snapshot-1', toArtifactId: { in: ['target-2', 'target-1'] }, type: { in: ['CALLS'] } },
+      where: {
+        snapshotId: 'snapshot-1', fromArtifact: { snapshotId: 'snapshot-1' }, toArtifact: { snapshotId: 'snapshot-1' },
+        toArtifactId: { in: ['target-2', 'target-1'] }, type: { in: ['CALLS'] },
+      },
       orderBy: [{ toArtifactId: 'asc' }, { fromArtifactId: 'asc' }, { id: 'asc' }], take: 81,
     }));
   });
@@ -22,14 +25,16 @@ describe('GraphRepository bounded reads', () => {
       .toEqual(['test-2', 'test-3']);
     expect(groupBy).toHaveBeenCalledWith({
       by: ['fromArtifactId'],
-      where: { snapshotId: 'snapshot-1', type: 'TESTS', toArtifactId: { in: ['target-2', 'target-1'] },
+      where: { snapshotId: 'snapshot-1', fromArtifact: { snapshotId: 'snapshot-1' }, toArtifact: { snapshotId: 'snapshot-1' },
+        type: 'TESTS', toArtifactId: { in: ['target-2', 'target-1'] },
         fromArtifactId: { gt: 'test-1' } },
       orderBy: { fromArtifactId: 'asc' }, take: 2,
     });
 
     await repository.listTestEdgesBySourcesAndTargets('snapshot-1', ['test-2', 'test-3'], ['target-1', 'target-2']);
     expect(findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { snapshotId: 'snapshot-1', type: 'TESTS', fromArtifactId: { in: ['test-2', 'test-3'] },
+      where: { snapshotId: 'snapshot-1', fromArtifact: { snapshotId: 'snapshot-1' }, toArtifact: { snapshotId: 'snapshot-1' },
+        type: 'TESTS', fromArtifactId: { in: ['test-2', 'test-3'] },
         toArtifactId: { in: ['target-1', 'target-2'] } },
       orderBy: [{ fromArtifactId: 'asc' }, { toArtifactId: 'asc' }, { id: 'asc' }], take: 4,
     }));

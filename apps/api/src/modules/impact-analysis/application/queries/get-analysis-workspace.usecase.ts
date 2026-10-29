@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AppError } from '@ba-helper/shared';
 import { mapAnalysisWorkspace } from '../mappers/analysis-workspace.mapper';
-import { PrismaService } from "@ba-helper/backend-runtime";
+import { isEvidenceScopedToAnalysis, PrismaService } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class GetAnalysisWorkspaceUseCase {
@@ -72,6 +72,20 @@ export class GetAnalysisWorkspaceUseCase {
 			);
 		}
 
-		return mapAnalysisWorkspace(analysis);
+    return mapAnalysisWorkspace({
+      ...analysis,
+      insights: analysis.insights.map((insight) => ({
+        ...insight,
+        evidenceLinks: insight.evidenceLinks.filter((link) =>
+          isEvidenceScopedToAnalysis(link.evidence, analysis)),
+      })),
+      traceabilityLinks: analysis.traceabilityLinks
+        .filter((link) => link.artifact.snapshotId === analysis.snapshotId)
+        .map((link) => ({
+          ...link,
+          evidenceLinks: link.evidenceLinks.filter((evidenceLink) =>
+            isEvidenceScopedToAnalysis(evidenceLink.evidence, analysis)),
+        })),
+    });
 	}
 }

@@ -80,7 +80,12 @@ import { DomainPackRegistry } from '@ba-helper/backend-runtime';
     MultiRepoMergedReportRepository,
     MergedMultiRepoReportReviewDecisionRepository,
     RequirementRepository,
-    CreateRequirementRevisionUseCase,
+    {
+      provide: CreateRequirementRevisionUseCase,
+      useFactory: (repository: RequirementRepository) =>
+        new CreateRequirementRevisionUseCase(repository),
+      inject: [RequirementRepository],
+    },
     ArtifactRepository,
     EvidenceRepository,
     InsightRepository,

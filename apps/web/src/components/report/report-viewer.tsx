@@ -91,7 +91,10 @@ export function ReportViewer({ analysisId, printMode = false, locale = "en" }: R
     if (!hasReport || isStale || !exportMatchesSnapshot) return;
     setExportingFormat(format);
     try {
-      const file = await apiGetFile(`/api/v1/impact-analyses/${analysisId}/approved-report/export.${format}`);
+      const file = await apiGetFile(
+        `/api/v1/impact-analyses/${analysisId}/approved-report/export.${format}`,
+        format === "pdf" ? "application/pdf" : "text/markdown",
+      );
       const url = URL.createObjectURL(file.blob);
       const a = document.createElement('a');
       a.href = url;

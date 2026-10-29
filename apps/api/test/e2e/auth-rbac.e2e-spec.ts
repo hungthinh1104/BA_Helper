@@ -7,6 +7,9 @@ import { resetDatabase } from './helpers/reset-db';
 import { grantProjectMembership } from './helpers/grant-project-membership';
 import {
   artifactListResponseSchema,
+  evidenceListResponseSchema,
+  eventLogListResponseSchema,
+  impactGraphResponseSchema,
   requirementCreateResponseSchema,
   requirementDetailResponseSchema,
   requirementListResponseSchema,
@@ -30,8 +33,11 @@ describe('Auth and RBAC (e2e)', () => {
   let viewerUserId: string;
   let originalEnableDevLogin: string | undefined;
   let originalWorkspaceMode: string | undefined;
+  let originalCorsAllowedOrigins: string | undefined;
 
   beforeAll(async () => {
+    originalCorsAllowedOrigins = process.env.CORS_ALLOWED_ORIGINS;
+    process.env.CORS_ALLOWED_ORIGINS = 'https://web.example.test';
     app = await createTestApp();
     prisma = app.get(PrismaService);
     jwtService = app.get(JwtService);
@@ -40,6 +46,11 @@ describe('Auth and RBAC (e2e)', () => {
 
   afterAll(async () => {
     await app.close();
+    if (originalCorsAllowedOrigins === undefined) {
+      delete process.env.CORS_ALLOWED_ORIGINS;
+    } else {
+      process.env.CORS_ALLOWED_ORIGINS = originalCorsAllowedOrigins;
+    }
   });
 
   beforeEach(async () => {
@@ -222,6 +233,8 @@ describe('Auth and RBAC (e2e)', () => {
 
     return {
       projectId,
+      repositoryId,
+      targetId,
       snapshotId,
       requirementId,
       revisionId,
@@ -948,10 +961,13 @@ describe('Auth and RBAC (e2e)', () => {
     const pdfExport = await request(app.getHttpServer())
       .get(`/api/v1/impact-analyses/${analysisId}/approved-report/export.pdf`)
       .set('Authorization', `Bearer ${viewerToken}`)
+      .set('Origin', 'https://web.example.test')
       .expect(200);
 
     expect(pdfExport.headers['content-type']).toContain('application/pdf');
     expect(pdfExport.headers['content-disposition']).toContain('.pdf');
+    expect(pdfExport.headers['access-control-allow-origin']).toBe('https://web.example.test');
+    expect(pdfExport.headers['access-control-expose-headers']).toContain('Content-Disposition');
   });
 
   it('keeps requirement reads and writes in project scope and matches shared response contracts', async () => {
@@ -1119,6 +1135,37 @@ describe('Auth and RBAC (e2e)', () => {
     }
   });
 
+  it('projects persisted event identity through the strict event-log response contract', async () => {
+    const scoped = await seedAnalysisGraph();
+    await prisma.domainEvent.create({
+      data: {
+        eventType: 'ANALYSIS_FINALIZED',
+        idempotencyKey: `analysis:${scoped.analysisId}:actor-contract-probe`,
+        payload: {
+          actorType: 'LEGACY_INVALID',
+          actorUserId: adminUserId,
+          actorName: 'Admin',
+          triggeredByUserId: adminUserId,
+        },
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${scoped.analysisId}/events`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    const events = eventLogListResponseSchema.parse(response.body);
+
+    expect(events.items).toEqual([
+      expect.objectContaining({
+        eventType: 'ANALYSIS_FINALIZED',
+        actorType: 'USER',
+        actorName: 'Admin',
+        triggeredByUserId: adminUserId,
+      }),
+    ]);
+  });
+
   it('reuses one requirement when the same create request is retried concurrently', async () => {
     const projectId = crypto.randomUUID();
     await prisma.project.create({ data: { id: projectId, name: 'Idempotent Requirements Project' } });
@@ -1274,9 +1321,96 @@ describe('Auth and RBAC (e2e)', () => {
       .expect(404);
 
     await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/documents`)
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/approved-report`)
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .expect(404);
+    await request(app.getHttpServer())
       .get(`/api/v1/impact-analyses/${analysisId}/approved-report/export.md`)
       .set('Authorization', `Bearer ${viewerToken}`)
       .expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/approved-report/export.pdf`)
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/reviewed-report-snapshot/latest`)
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/final-reviewed-report?locale=vi-VN`)
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/review-notes`)
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/v1/analyses/${analysisId}/localization/vi-VN/status`)
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .expect(404);
+  });
+
+  it('blocks cross-project report, note, and localization mutations before persistence', async () => {
+    const scoped = await seedAnalysisGraph();
+    const outsiderProjectId = crypto.randomUUID();
+    const outsider = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        email: 'report-scope-outsider@ba-helper.local',
+        name: 'Report Scope Outsider',
+        role: 'ADMIN',
+      },
+    });
+    await prisma.project.create({
+      data: { id: outsiderProjectId, name: 'Report Outsider Project' },
+    });
+    await grantProjectMembership(prisma, {
+      projectId: outsiderProjectId,
+      userId: outsider.id,
+      role: 'OWNER',
+    });
+    const auth = {
+      Authorization: `Bearer ${jwtService.sign({
+        sub: outsider.id,
+        email: outsider.email,
+        role: outsider.role,
+      })}`,
+    };
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${scoped.analysisId}/reviewed-report-snapshot`)
+      .set(auth)
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${scoped.analysisId}/document-jobs`)
+      .set(auth)
+      .send({ requestKey: crypto.randomUUID() })
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${scoped.analysisId}/review-notes`)
+      .set(auth)
+      .send({ insightId: scoped.insightId, body: 'Cross-project note.' })
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/v1/analyses/${scoped.analysisId}/localization`)
+      .set(auth)
+      .send({ locale: 'vi-VN' })
+      .expect(404);
+
+    expect(await prisma.reviewedReportSnapshot.count({
+      where: { analysisId: scoped.analysisId },
+    })).toBe(0);
+    expect(await prisma.documentJob.count({
+      where: { analysisId: scoped.analysisId },
+    })).toBe(0);
+    expect(await prisma.reviewNote.count({
+      where: { impactAnalysisId: scoped.analysisId },
+    })).toBe(0);
+    expect(await prisma.localizedReportArtifact.count()).toBe(0);
   });
 
   it('returns 404 for cross-project review mutation even when global reviewer role matches', async () => {
@@ -1373,6 +1507,445 @@ describe('Auth and RBAC (e2e)', () => {
       .post(`/api/v1/impact-analyses/${hiddenAnalysisId}/review-decisions`)
       .set('Authorization', `Bearer ${reviewerToken}`)
       .send({ decision: 'REJECTED' })
+      .expect(404);
+  });
+
+  it('denies cross-project insight and traceability reads and review mutations', async () => {
+    const scoped = await seedAnalysisGraph('WAITING_FOR_REVIEW');
+    const outsiderProjectId = crypto.randomUUID();
+    const outsider = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        email: 'cross-project-outsider@ba-helper.local',
+        name: 'Cross Project Outsider',
+        role: 'ADMIN',
+      },
+    });
+    await prisma.project.create({
+      data: { id: outsiderProjectId, name: 'Outsider Project' },
+    });
+    await grantProjectMembership(prisma, {
+      projectId: outsiderProjectId,
+      userId: outsider.id,
+      role: 'OWNER',
+    });
+    const outsiderToken = jwtService.sign({
+      sub: outsider.id,
+      email: outsider.email,
+      role: outsider.role,
+    });
+    const auth = { Authorization: `Bearer ${outsiderToken}` };
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${scoped.analysisId}/insights`)
+      .set(auth)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${scoped.analysisId}/traceability`)
+      .set(auth)
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/v1/insights/${scoped.insightId}/confirm`)
+      .set(auth)
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/v1/insights/${scoped.insightId}/reject`)
+      .set(auth)
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/v1/insights/${scoped.insightId}/review`)
+      .set(auth)
+      .send({ reviewStatus: 'CONFIRMED' })
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/v1/traceability-links/${scoped.linkId}/confirm`)
+      .set(auth)
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/v1/traceability-links/${scoped.linkId}/reject`)
+      .set(auth)
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/v1/traceability-links/${scoped.linkId}/review`)
+      .set(auth)
+      .send({ reviewStatus: 'CONFIRMED' })
+      .expect(404);
+    await request(app.getHttpServer())
+      .put(`/api/v1/traceability-links/${scoped.linkId}/review-decision`)
+      .set(auth)
+      .send({ decision: 'ACCEPTED', note: 'Cross-project attempt.' })
+      .expect(404);
+    await request(app.getHttpServer())
+      .delete(`/api/v1/traceability-links/${scoped.linkId}/review-decision`)
+      .set(auth)
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${scoped.analysisId}/review-decisions`)
+      .set(auth)
+      .send({ decision: 'ACCEPTED' })
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${scoped.analysisId}/finalize`)
+      .set(auth)
+      .send({ acknowledgeUnreviewed: true })
+      .expect(404);
+    await request(app.getHttpServer())
+      .put(`/api/v1/impact-analyses/${scoped.analysisId}/review-items/${scoped.insightId}/decision`)
+      .set(auth)
+      .send({ target: 'insight', action: 'accept', rationale: 'Cross-project attempt.', requestKey: crypto.randomUUID() })
+      .expect(404);
+    await request(app.getHttpServer())
+      .put(`/api/v1/impact-analyses/${scoped.analysisId}/review-items/${scoped.linkId}/decision`)
+      .set(auth)
+      .send({ target: 'impact', action: 'accept', rationale: 'Cross-project attempt.', requestKey: crypto.randomUUID() })
+      .expect(404);
+
+    expect(await prisma.baInsight.findUnique({
+      where: { id: scoped.insightId },
+      select: { reviewStatus: true },
+    })).toEqual({ reviewStatus: 'NEEDS_REVIEW' });
+    expect(await prisma.traceabilityLink.findUnique({
+      where: { id: scoped.linkId },
+      select: { reviewStatus: true },
+    })).toEqual({ reviewStatus: 'NEEDS_REVIEW' });
+    expect(await prisma.traceabilityReviewDecision.findUnique({
+      where: { traceabilityLinkId: scoped.linkId },
+    })).toBeNull();
+    expect(await prisma.analysisReviewDecision.count({
+      where: { analysisId: scoped.analysisId },
+    })).toBe(0);
+    expect(await prisma.impactAnalysis.findUniqueOrThrow({
+      where: { id: scoped.analysisId },
+      select: { status: true },
+    })).toEqual({ status: 'WAITING_FOR_REVIEW' });
+  });
+
+  it('rejects cross-project repository IDs in repository, snapshot, and scan-job routes', async () => {
+    const scoped = await seedAnalysisGraph();
+    const snapshot = await prisma.repositorySnapshot.findUniqueOrThrow({
+      where: { id: scoped.snapshotId },
+      select: { repositoryId: true },
+    });
+    const scanJob = await prisma.scanJob.create({
+      data: {
+        id: crypto.randomUUID(),
+        repositoryId: snapshot.repositoryId,
+        requestKey: crypto.randomUUID(),
+        requestedRef: 'main',
+        status: 'QUEUED',
+        stage: 'WAITING',
+      },
+    });
+    const outsiderProjectId = crypto.randomUUID();
+    const outsider = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        email: 'repository-scope-outsider@ba-helper.local',
+        name: 'Repository Scope Outsider',
+        role: 'ADMIN',
+      },
+    });
+    await prisma.project.create({
+      data: { id: outsiderProjectId, name: 'Repository Outsider Project' },
+    });
+    await grantProjectMembership(prisma, {
+      projectId: outsiderProjectId,
+      userId: outsider.id,
+      role: 'OWNER',
+    });
+    const auth = {
+      Authorization: `Bearer ${jwtService.sign({
+        sub: outsider.id,
+        email: outsider.email,
+        role: outsider.role,
+      })}`,
+    };
+    const repositoryPath = `/api/v1/projects/${outsiderProjectId}/repositories/${snapshot.repositoryId}`;
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/projects/${scoped.projectId}/repositories`)
+      .set(auth)
+      .expect(404);
+    const repositoryCountBefore = await prisma.repository.count();
+    await request(app.getHttpServer())
+      .post(`/api/v1/projects/${scoped.projectId}/repositories`)
+      .set(auth)
+      .send({ url: 'https://github.com/example/unauthorized-repository' })
+      .expect(404);
+    expect(await prisma.repository.count()).toBe(repositoryCountBefore);
+    await request(app.getHttpServer())
+      .get(repositoryPath)
+      .set(auth)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`${repositoryPath}/snapshots`)
+      .set(auth)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`${repositoryPath}/snapshots/${scoped.snapshotId}/drift`)
+      .set(auth)
+      .expect(404);
+    const scanJobPath = `/api/v1/repositories/${snapshot.repositoryId}/scan-jobs/${scanJob.id}`;
+    await request(app.getHttpServer())
+      .get(scanJobPath)
+      .set(auth)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`${scanJobPath}/events`)
+      .set(auth)
+      .expect(404);
+    const scanJobCountBefore = await prisma.scanJob.count();
+    await request(app.getHttpServer())
+      .post(`/api/v1/repositories/${snapshot.repositoryId}/scan-jobs`)
+      .set(auth)
+      .send({ requestKey: crypto.randomUUID(), ref: 'main' })
+      .expect(404);
+    expect(await prisma.scanJob.count()).toBe(scanJobCountBefore);
+  });
+
+  it('denies cross-project access to analysis and review clarification IDs', async () => {
+    const scoped = await seedAnalysisGraph();
+    const clarification = await prisma.clarificationItem.create({
+      data: {
+        id: crypto.randomUUID(),
+        impactAnalysisId: scoped.analysisId,
+        sourceInsightId: scoped.insightId,
+        question: 'Which refund path applies?',
+      },
+    });
+    const reviewDecision = await prisma.analysisReviewDecision.create({
+      data: {
+        id: crypto.randomUUID(),
+        analysisId: scoped.analysisId,
+        decision: 'ACCEPTED',
+        reviewedByUserId: adminUserId,
+      },
+    });
+    const reviewClarification = await prisma.reviewClarificationRequest.create({
+      data: {
+        id: crypto.randomUUID(),
+        analysisId: scoped.analysisId,
+        reviewDecisionId: reviewDecision.id,
+        question: 'Confirm the refund boundary.',
+        createdByUserId: adminUserId,
+      },
+    });
+    const outsiderProjectId = crypto.randomUUID();
+    const outsider = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        email: 'clarification-outsider@ba-helper.local',
+        name: 'Clarification Outsider',
+        role: 'ADMIN',
+      },
+    });
+    await prisma.project.create({
+      data: { id: outsiderProjectId, name: 'Clarification Outsider Project' },
+    });
+    await grantProjectMembership(prisma, {
+      projectId: outsiderProjectId,
+      userId: outsider.id,
+      role: 'OWNER',
+    });
+    const auth = {
+      Authorization: `Bearer ${jwtService.sign({
+        sub: outsider.id,
+        email: outsider.email,
+        role: outsider.role,
+      })}`,
+    };
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${scoped.analysisId}/clarifications`)
+      .set(auth)
+      .expect(404);
+    const clarificationCountBefore = await prisma.clarificationItem.count();
+    const analysisCountBefore = await prisma.impactAnalysis.count();
+    const reviewClarificationCountBefore = await prisma.reviewClarificationRequest.count();
+    await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${scoped.analysisId}/clarifications`)
+      .set(auth)
+      .send({ sourceInsightId: scoped.insightId })
+      .expect(404);
+    await request(app.getHttpServer())
+      .patch(`/api/v1/clarifications/${clarification.id}/answer`)
+      .set(auth)
+      .send({ answer: 'Use the payment service.' })
+      .expect(404);
+    await request(app.getHttpServer())
+      .patch(`/api/v1/clarifications/${clarification.id}/dismiss`)
+      .set(auth)
+      .send({ reason: 'Cross-project attempt.' })
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/v1/clarifications/${clarification.id}/convert-to-revision`)
+      .set(auth)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${scoped.analysisId}/review-clarifications`)
+      .set(auth)
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${scoped.analysisId}/review-clarifications`)
+      .set(auth)
+      .send({ reviewDecisionId: reviewDecision.id, question: 'Cross-project attempt.' })
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/v1/review-clarifications/${reviewClarification.id}/answer`)
+      .set(auth)
+      .send({ answer: 'Use the payment service.' })
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/v1/review-clarifications/${reviewClarification.id}/derived-analyses`)
+      .set(auth)
+      .expect(404);
+
+    expect(await prisma.clarificationItem.findUnique({
+      where: { id: clarification.id },
+      select: { answer: true, status: true },
+    })).toEqual({ answer: null, status: 'OPEN' });
+    expect(await prisma.reviewClarificationRequest.findUnique({
+      where: { id: reviewClarification.id },
+      select: { answer: true, status: true },
+    })).toEqual({ answer: null, status: 'OPEN' });
+    expect(await prisma.clarificationItem.count()).toBe(clarificationCountBefore);
+    expect(await prisma.reviewClarificationRequest.count()).toBe(reviewClarificationCountBefore);
+    expect(await prisma.impactAnalysis.count()).toBe(analysisCountBefore);
+  });
+
+  it('denies cross-project multi-repository run and review coverage reads', async () => {
+    const scoped = await seedAnalysisGraph();
+    const run = await prisma.multiRepoAnalysisRun.create({
+      data: {
+        id: crypto.randomUUID(),
+        projectId: scoped.projectId,
+        requirementRevisionId: scoped.revisionId,
+        createdByUserId: adminUserId,
+        requestKey: crypto.randomUUID(),
+      },
+    });
+    const outsiderProjectId = crypto.randomUUID();
+    const outsider = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        email: 'multi-repo-outsider@ba-helper.local',
+        name: 'Multi Repo Outsider',
+        role: 'ADMIN',
+      },
+    });
+    await prisma.project.create({
+      data: { id: outsiderProjectId, name: 'Multi Repo Outsider Project' },
+    });
+    await grantProjectMembership(prisma, {
+      projectId: outsiderProjectId,
+      userId: outsider.id,
+      role: 'OWNER',
+    });
+    const auth = {
+      Authorization: `Bearer ${jwtService.sign({
+        sub: outsider.id,
+        email: outsider.email,
+        role: outsider.role,
+      })}`,
+    };
+    const multiRepoCreateCountBefore = await prisma.multiRepoAnalysisRun.count();
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/projects/${scoped.projectId}/multi-repo-analyses`)
+      .set(auth)
+      .send({
+        requirementRevisionId: scoped.revisionId,
+        repositoryIds: [
+          (await prisma.repositorySnapshot.findUniqueOrThrow({
+            where: { id: scoped.snapshotId },
+            select: { repositoryId: true },
+          })).repositoryId,
+        ],
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+      })
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${run.id}`)
+      .set(auth)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${run.id}/review-coverage`)
+      .set(auth)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${run.id}/impact-matrix`)
+      .set(auth)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${run.id}/merged-report-draft`)
+      .set(auth)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${run.id}/merged-report`)
+      .set(auth)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${run.id}/merged-report/review-decisions`)
+      .set(auth)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${run.id}/merged-report/review-decisions/latest`)
+      .set(auth)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${run.id}/merged-report/export.md`)
+      .set(auth)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${run.id}/merged-report/export.pdf`)
+      .set(auth)
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/v1/multi-repo-runs/${run.id}/merged-report/finalize`)
+      .set(auth)
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/v1/multi-repo-runs/${run.id}/merged-report/review-decisions`)
+      .set(auth)
+      .send({ decision: 'ACCEPTED', note: 'Cross-project attempt.' })
+      .expect(404);
+
+    expect(await prisma.mergedMultiRepoReport.count({
+      where: { runId: run.id },
+    })).toBe(0);
+    expect(await prisma.mergedMultiRepoReportReviewDecision.count()).toBe(0);
+    expect(await prisma.multiRepoAnalysisRun.count()).toBe(multiRepoCreateCountBefore);
+  });
+
+  it('hides a foreign analysis from a run-scoped matrix drilldown', async () => {
+    const scoped = await seedAnalysisGraph();
+    const foreign = await seedAnalysisGraph();
+    await prisma.projectMember.delete({
+      where: {
+        projectId_userId: {
+          projectId: foreign.projectId,
+          userId: viewerUserId,
+        },
+      },
+    });
+    const run = await prisma.multiRepoAnalysisRun.create({
+      data: {
+        projectId: scoped.projectId,
+        requirementRevisionId: scoped.revisionId,
+        createdByUserId: adminUserId,
+        requestKey: crypto.randomUUID(),
+      },
+    });
+    await prisma.impactAnalysis.update({
+      where: { id: scoped.analysisId },
+      data: { multiRepoRunId: run.id },
+    });
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${run.id}/impact-matrix/analyses/${foreign.analysisId}/details`)
+      .set('Authorization', `Bearer ${viewerToken}`)
       .expect(404);
   });
 
@@ -1503,6 +2076,444 @@ describe('Auth and RBAC (e2e)', () => {
       .expect(404);
   });
 
+  it('returns 404 on the remaining analysis-scoped read surfaces for an unrelated project owner', async () => {
+    const scoped = await seedAnalysisGraph();
+    const outsider = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        email: 'analysis-read-scope-outsider@ba-helper.local',
+        role: 'ADMIN',
+      },
+    });
+    const outsiderProjectId = crypto.randomUUID();
+    await prisma.project.create({
+      data: { id: outsiderProjectId, name: 'Analysis Read Outsider Project' },
+    });
+    await grantProjectMembership(prisma, {
+      projectId: outsiderProjectId,
+      userId: outsider.id,
+      role: 'OWNER',
+    });
+    const auth = {
+      Authorization: `Bearer ${jwtService.sign({
+        sub: outsider.id,
+        email: outsider.email,
+        role: outsider.role,
+      })}`,
+    };
+    const analysisPath = `/api/v1/impact-analyses/${scoped.analysisId}`;
+    const projectPath = `/api/v1/projects/${scoped.projectId}`;
+    const hiddenReadPaths = [
+      `${projectPath}/requirements`,
+      `${projectPath}/requirements/${scoped.requirementId}`,
+      `${projectPath}/analyses`,
+      `${projectPath}/analyses/${scoped.analysisId}/drift-freshness`,
+      `${projectPath}/multi-repo-runs`,
+      analysisPath,
+      `${analysisPath}/events`,
+      `${analysisPath}/lineage`,
+      `${analysisPath}/graph`,
+      `${analysisPath}/workspace`,
+      `${analysisPath}/qa-coverage`,
+      `${analysisPath}/qa-coverage/evidence/${crypto.randomUUID()}`,
+      `${analysisPath}/review-queue`,
+      `${analysisPath}/diff`,
+      `${analysisPath}/review-decisions`,
+      `${analysisPath}/review-decisions/latest`,
+      `${analysisPath}/review-completion`,
+      `${analysisPath}/evidence`,
+      `${analysisPath}/insights`,
+      `${analysisPath}/traceability`,
+      `${analysisPath}/clarifications`,
+      `${analysisPath}/review-clarifications`,
+      `${analysisPath}/documents`,
+      `${analysisPath}/approved-report`,
+      `${analysisPath}/approved-report/export.md`,
+      `${analysisPath}/approved-report/export.pdf`,
+      `${analysisPath}/reviewed-report-snapshot/latest`,
+      `${analysisPath}/final-reviewed-report?locale=vi-VN`,
+      `${analysisPath}/review-notes`,
+      `/api/v1/analyses/${scoped.analysisId}/localization/vi-VN/status`,
+    ];
+
+    for (const path of hiddenReadPaths) {
+      const response = await request(app.getHttpServer())
+        .get(path)
+        .set(auth)
+        .expect(404);
+      expect(JSON.stringify(response.body)).not.toContain('Refund paid bookings');
+      expect(JSON.stringify(response.body)).not.toContain('Refund path needs clarification');
+    }
+  });
+
+  it('hides a foreign snapshot ID supplied to an authorized analysis-create route', async () => {
+    const scoped = await seedAnalysisGraph();
+    const foreignProjectId = crypto.randomUUID();
+    const foreignRepositoryId = crypto.randomUUID();
+    const foreignTargetId = crypto.randomUUID();
+    const foreignSnapshotId = crypto.randomUUID();
+
+    await prisma.project.create({
+      data: { id: foreignProjectId, name: 'Hidden Snapshot Project' },
+    });
+    await prisma.repository.create({
+      data: {
+        id: foreignRepositoryId,
+        projectId: foreignProjectId,
+        canonicalUrl: 'https://github.com/example/hidden-snapshot',
+      },
+    });
+    await prisma.repositoryTarget.create({
+      data: {
+        id: foreignTargetId,
+        repositoryId: foreignRepositoryId,
+        targetKey: 'main',
+        requestedRef: 'main',
+        resolvedRefType: 'BRANCH',
+        latestObservedCommitSha: 'foreign-commit',
+        lastObservedAt: new Date(),
+      },
+    });
+    await prisma.repositorySnapshot.create({
+      data: {
+        id: foreignSnapshotId,
+        repositoryId: foreignRepositoryId,
+        commitSha: 'foreign-commit',
+        analyzerVersion: '1.0.0',
+        coverageStatus: 'READY',
+      },
+    });
+
+    const analysisCountBefore = await prisma.impactAnalysis.count();
+    const analysisEventCountBefore = await prisma.domainEvent.count({
+      where: { eventType: 'ANALYSIS_STARTED' },
+    });
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/requirement-revisions/${scoped.revisionId}/impact-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        snapshotId: foreignSnapshotId,
+        sourceTargetId: foreignTargetId,
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+      })
+      .expect(404);
+
+    expect(await prisma.impactAnalysis.count()).toBe(analysisCountBefore);
+    expect(await prisma.domainEvent.count({
+      where: { eventType: 'ANALYSIS_STARTED' },
+    })).toBe(analysisEventCountBefore);
+  });
+
+  it('hides a foreign requirement revision supplied to an analysis-create route', async () => {
+    const scoped = await seedAnalysisGraph();
+    const foreign = await seedAnalysisGraph();
+    await prisma.projectMember.delete({
+      where: {
+        projectId_userId: {
+          projectId: foreign.projectId,
+          userId: adminUserId,
+        },
+      },
+    });
+    const analysisCountBefore = await prisma.impactAnalysis.count();
+    const eventCountBefore = await prisma.domainEvent.count();
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/requirement-revisions/${foreign.revisionId}/impact-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        snapshotId: scoped.snapshotId,
+        sourceTargetId: scoped.targetId,
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+      })
+      .expect(404);
+
+    expect(await prisma.impactAnalysis.count()).toBe(analysisCountBefore);
+    expect(await prisma.domainEvent.count()).toBe(eventCountBefore);
+  });
+
+  it('hides a foreign insight ID supplied to a clarification mutation', async () => {
+    const scoped = await seedAnalysisGraph();
+    const foreign = await seedAnalysisGraph();
+    await prisma.projectMember.delete({
+      where: {
+        projectId_userId: {
+          projectId: foreign.projectId,
+          userId: adminUserId,
+        },
+      },
+    });
+    const clarificationCountBefore = await prisma.clarificationItem.count();
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${scoped.analysisId}/clarifications`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ sourceInsightId: foreign.insightId })
+      .expect(404);
+
+    expect(await prisma.clarificationItem.count()).toBe(clarificationCountBefore);
+  });
+
+  it('hides foreign review-note target IDs in a project-scoped mutation', async () => {
+    const scoped = await seedAnalysisGraph();
+    const foreign = await seedAnalysisGraph();
+    await prisma.projectMember.delete({
+      where: {
+        projectId_userId: {
+          projectId: foreign.projectId,
+          userId: adminUserId,
+        },
+      },
+    });
+    const noteCountBefore = await prisma.reviewNote.count();
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${scoped.analysisId}/review-notes`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ insightId: foreign.insightId, body: 'Hidden target note.' })
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${scoped.analysisId}/review-notes`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ traceabilityLinkId: foreign.linkId, body: 'Hidden target note.' })
+      .expect(404);
+
+    expect(await prisma.reviewNote.count()).toBe(noteCountBefore);
+  });
+
+  it('hides a foreign review-decision ID in a clarification request', async () => {
+    const scoped = await seedAnalysisGraph();
+    const foreign = await seedAnalysisGraph();
+    await prisma.projectMember.delete({
+      where: {
+        projectId_userId: {
+          projectId: foreign.projectId,
+          userId: adminUserId,
+        },
+      },
+    });
+    const foreignDecision = await prisma.analysisReviewDecision.create({
+      data: {
+        id: crypto.randomUUID(),
+        analysisId: foreign.analysisId,
+        decision: 'NEEDS_MORE_CLARIFICATION',
+        reviewedByUserId: adminUserId,
+      },
+    });
+    const clarificationCountBefore = await prisma.reviewClarificationRequest.count();
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${scoped.analysisId}/review-clarifications`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        reviewDecisionId: foreignDecision.id,
+        question: 'Does the hidden payment path issue a refund?',
+      })
+      .expect(404);
+
+    expect(await prisma.reviewClarificationRequest.count()).toBe(clarificationCountBefore);
+  });
+
+  it('hides a foreign parent analysis ID supplied to analysis creation', async () => {
+    const scoped = await seedAnalysisGraph();
+    const foreign = await seedAnalysisGraph();
+    await prisma.projectMember.delete({
+      where: {
+        projectId_userId: {
+          projectId: foreign.projectId,
+          userId: adminUserId,
+        },
+      },
+    });
+    const analysisCountBefore = await prisma.impactAnalysis.count();
+    const eventCountBefore = await prisma.domainEvent.count();
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/requirement-revisions/${scoped.revisionId}/impact-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        snapshotId: scoped.snapshotId,
+        sourceTargetId: scoped.targetId,
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+        derivedFromAnalysisId: foreign.analysisId,
+      })
+      .expect(404);
+
+    expect(await prisma.impactAnalysis.count()).toBe(analysisCountBefore);
+    expect(await prisma.domainEvent.count()).toBe(eventCountBefore);
+  });
+
+  it('rejects unknown analysis-create fields instead of silently dropping them', async () => {
+    const scoped = await seedAnalysisGraph();
+    const analysisCountBefore = await prisma.impactAnalysis.count();
+    const eventCountBefore = await prisma.domainEvent.count();
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/requirement-revisions/${scoped.revisionId}/impact-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        snapshotId: scoped.snapshotId,
+        sourceTargetId: scoped.targetId,
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+        derivedFromAnalysysId: scoped.analysisId,
+      })
+      .expect(400);
+
+    expect(await prisma.impactAnalysis.count()).toBe(analysisCountBefore);
+    expect(await prisma.domainEvent.count()).toBe(eventCountBefore);
+  });
+
+  it('hides a foreign source clarification ID supplied to analysis creation', async () => {
+    const scoped = await seedAnalysisGraph();
+    const foreign = await seedAnalysisGraph();
+    await prisma.projectMember.delete({
+      where: {
+        projectId_userId: {
+          projectId: foreign.projectId,
+          userId: adminUserId,
+        },
+      },
+    });
+    const sourceClarification = await prisma.clarificationItem.create({
+      data: {
+        impactAnalysisId: foreign.analysisId,
+        sourceInsightId: foreign.insightId,
+        status: 'CONVERTED_TO_REVISION',
+        question: 'Foreign source clarification',
+        convertedRequirementRevisionId: foreign.revisionId,
+      },
+    });
+    const analysisCountBefore = await prisma.impactAnalysis.count();
+    const eventCountBefore = await prisma.domainEvent.count();
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/requirement-revisions/${scoped.revisionId}/impact-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        snapshotId: scoped.snapshotId,
+        sourceTargetId: scoped.targetId,
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+        derivedFromAnalysisId: scoped.analysisId,
+        sourceClarificationId: sourceClarification.id,
+      })
+      .expect(404);
+
+    expect(await prisma.impactAnalysis.count()).toBe(analysisCountBefore);
+    expect(await prisma.domainEvent.count()).toBe(eventCountBefore);
+  });
+
+  it('persists valid clarification lineage and binds lineage to the idempotency key', async () => {
+    const scoped = await seedAnalysisGraph();
+    const nextRevision = await prisma.requirementRevision.create({
+      data: {
+        requirementId: scoped.requirementId,
+        title: 'Refund paid bookings with clarification',
+        rawText: 'Clarified refund behavior.',
+        normalizedText: 'Clarified refund behavior.',
+        readinessStatus: 'READY_FOR_ANALYSIS',
+      },
+    });
+    const clarification = await prisma.clarificationItem.create({
+      data: {
+        impactAnalysisId: scoped.analysisId,
+        sourceInsightId: scoped.insightId,
+        status: 'CONVERTED_TO_REVISION',
+        question: 'Clarified refund behavior',
+        convertedRequirementRevisionId: nextRevision.id,
+      },
+    });
+    const competingParent = await prisma.impactAnalysis.create({
+      data: {
+        requirementRevisionId: scoped.revisionId,
+        snapshotId: scoped.snapshotId,
+        sourceTargetId: scoped.targetId,
+        requestKey: crypto.randomUUID(),
+        status: 'COMPLETED',
+        stage: 'DONE',
+      },
+    });
+    const requestKey = crypto.randomUUID();
+    const endpoint = `/api/v1/requirement-revisions/${nextRevision.id}/impact-analyses`;
+    const basePayload = {
+      snapshotId: scoped.snapshotId,
+      sourceTargetId: scoped.targetId,
+      allowPartialSnapshot: false,
+      requestKey,
+    };
+    const analysisCountBeforeDeniedRequest = await prisma.impactAnalysis.count();
+
+    await request(app.getHttpServer())
+      .post(endpoint)
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .send({
+        ...basePayload,
+        derivedFromAnalysisId: scoped.analysisId,
+        sourceClarificationId: clarification.id,
+      })
+      .expect(403);
+
+    expect(await prisma.impactAnalysis.count()).toBe(analysisCountBeforeDeniedRequest);
+
+    const created = await request(app.getHttpServer())
+      .post(endpoint)
+      .set('Authorization', `Bearer ${reviewerToken}`)
+      .send({
+        ...basePayload,
+        derivedFromAnalysisId: scoped.analysisId,
+        sourceClarificationId: clarification.id,
+      })
+      .expect(201);
+
+    expect(await prisma.impactAnalysis.findUniqueOrThrow({
+      where: { id: created.body.id },
+      select: {
+        derivedFromAnalysisId: true,
+        sourceClarificationId: true,
+      },
+    })).toEqual({
+      derivedFromAnalysisId: scoped.analysisId,
+      sourceClarificationId: clarification.id,
+    });
+
+    const rerunKey = crypto.randomUUID();
+    const rerun = await request(app.getHttpServer())
+      .post(endpoint)
+      .set('Authorization', `Bearer ${reviewerToken}`)
+      .send({
+        ...basePayload,
+        requestKey: rerunKey,
+        derivedFromAnalysisId: scoped.analysisId,
+      })
+      .expect(201);
+    expect(await prisma.impactAnalysis.findUniqueOrThrow({
+      where: { id: rerun.body.id },
+      select: {
+        derivedFromAnalysisId: true,
+        sourceClarificationId: true,
+      },
+    })).toEqual({
+      derivedFromAnalysisId: scoped.analysisId,
+      sourceClarificationId: null,
+    });
+
+    await request(app.getHttpServer())
+      .post(endpoint)
+      .set('Authorization', `Bearer ${reviewerToken}`)
+      .send({
+        ...basePayload,
+        derivedFromAnalysisId: competingParent.id,
+      })
+      .expect(409);
+
+    expect(await prisma.impactAnalysis.count({ where: { requestKey } })).toBe(1);
+  });
+
   it('returns universalKind for same-project snapshot artifact reads', async () => {
     const seeded = await seedAnalysisGraph('WAITING_FOR_REVIEW');
 
@@ -1520,5 +2531,212 @@ describe('Auth and RBAC (e2e)', () => {
         }),
       ]),
     );
+  });
+
+  it('does not include a foreign snapshot artifact through a mismatched dependency edge', async () => {
+    const scoped = await seedAnalysisGraph();
+    const foreignProject = await prisma.project.create({
+      data: { id: crypto.randomUUID(), name: 'Hidden edge project' },
+    });
+    const foreignRepository = await prisma.repository.create({
+      data: {
+        id: crypto.randomUUID(),
+        projectId: foreignProject.id,
+        canonicalUrl: 'https://github.com/example/hidden-edge',
+      },
+    });
+    const foreignSnapshot = await prisma.repositorySnapshot.create({
+      data: {
+        id: crypto.randomUUID(),
+        repositoryId: foreignRepository.id,
+        commitSha: 'hidden-edge-commit',
+        analyzerVersion: '1.0.0',
+        coverageStatus: 'READY',
+      },
+    });
+    const foreignArtifact = await prisma.codeArtifact.create({
+      data: {
+        id: crypto.randomUUID(),
+        snapshotId: foreignSnapshot.id,
+        artifactKey: 'hidden:PaymentSecrets.refundCustomer',
+        name: 'PaymentSecrets.refundCustomer',
+        artifactType: 'SERVICE_METHOD',
+        filePath: 'src/private/payment-secrets.ts',
+      },
+    });
+    const selectedArtifact = await prisma.traceabilityLink.findFirstOrThrow({
+      where: { impactAnalysisId: scoped.analysisId },
+      select: { artifactId: true },
+    });
+
+    // Simulate a corrupted persisted edge: its snapshot is project A's, but its source artifact is project B's.
+    await prisma.dependencyEdge.create({
+      data: {
+        snapshotId: scoped.snapshotId,
+        fromArtifactId: foreignArtifact.id,
+        toArtifactId: selectedArtifact.artifactId,
+        type: 'CALLS',
+      },
+    });
+    await prisma.dependencyEdge.create({
+      data: {
+        snapshotId: scoped.snapshotId,
+        fromArtifactId: selectedArtifact.artifactId,
+        toArtifactId: foreignArtifact.id,
+        type: 'REFERENCES',
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${scoped.analysisId}/graph`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    const graph = impactGraphResponseSchema.parse(response.body);
+    expect(graph.nodes.some((node) => node.id === `artifact-${foreignArtifact.id}`)).toBe(false);
+    expect(JSON.stringify(graph)).not.toContain('PaymentSecrets.refundCustomer');
+    expect(JSON.stringify(graph)).not.toContain('src/private/payment-secrets.ts');
+  });
+
+  it('does not list evidence whose snapshot conflicts with the analysis revision', async () => {
+    const scoped = await seedAnalysisGraph();
+    const foreignProject = await prisma.project.create({
+      data: { id: crypto.randomUUID(), name: 'Foreign evidence project' },
+    });
+    const foreignRepository = await prisma.repository.create({
+      data: { projectId: foreignProject.id, canonicalUrl: 'https://github.com/example/foreign-evidence' },
+    });
+    const foreignSnapshot = await prisma.repositorySnapshot.create({
+      data: { repositoryId: foreignRepository.id, commitSha: 'foreign-evidence-commit',
+        analyzerVersion: '1.0.0', coverageStatus: 'READY' },
+    });
+    const foreignArtifact = await prisma.codeArtifact.create({
+      data: { snapshotId: foreignSnapshot.id, artifactKey: 'private:payment-refund',
+        name: 'PrivatePaymentRefund', artifactType: 'SERVICE', filePath: 'src/private/payment-refund.ts' },
+    });
+    const localLink = await prisma.traceabilityLink.findUniqueOrThrow({
+      where: { id: scoped.linkId }, select: { artifactId: true },
+    });
+    await prisma.evidence.createMany({ data: [
+      { provenanceKey: 'local-snapshot-evidence', sourceType: 'CODE', snapshotId: scoped.snapshotId,
+        artifactId: localLink.artifactId, sourcePath: 'src/orders/orders.service.ts',
+        excerpt: 'LOCAL SNAPSHOT EVIDENCE', contentHash: 'local-snapshot-evidence-hash' },
+      { provenanceKey: 'local-requirement-evidence', sourceType: 'REQUIREMENT_INPUT',
+        requirementRevisionId: scoped.revisionId, sourcePath: 'requirement',
+        excerpt: 'LOCAL REQUIREMENT EVIDENCE', contentHash: 'local-requirement-evidence-hash' },
+      { provenanceKey: 'foreign-snapshot-for-local-revision', sourceType: 'CODE',
+        snapshotId: foreignSnapshot.id, artifactId: foreignArtifact.id, requirementRevisionId: scoped.revisionId,
+        sourcePath: 'src/private/payment-refund.ts', excerpt: 'FOREIGN PAYMENT REFUND SOURCE',
+        contentHash: 'foreign-evidence-hash' },
+      { provenanceKey: 'local-snapshot-for-foreign-artifact', sourceType: 'CODE',
+        snapshotId: scoped.snapshotId, artifactId: foreignArtifact.id,
+        sourcePath: 'src/private/payment-refund.ts', excerpt: 'FOREIGN ARTIFACT EVIDENCE',
+        contentHash: 'foreign-artifact-evidence-hash' },
+    ] });
+
+    const response = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${scoped.analysisId}/evidence`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    const evidence = evidenceListResponseSchema.parse(response.body);
+
+    expect(evidence.items.some((item) => item.excerpt.includes('FOREIGN PAYMENT REFUND SOURCE'))).toBe(false);
+    expect(evidence.items.some((item) => item.excerpt.includes('FOREIGN ARTIFACT EVIDENCE'))).toBe(false);
+    expect(evidence.items.some((item) => item.excerpt.includes('LOCAL SNAPSHOT EVIDENCE'))).toBe(true);
+    expect(evidence.items.some((item) => item.excerpt.includes('LOCAL REQUIREMENT EVIDENCE'))).toBe(true);
+    expect(JSON.stringify(evidence)).not.toContain('src/private/payment-refund.ts');
+  });
+
+  it('does not expose cross-snapshot artifacts or evidence in analysis projections', async () => {
+    const scoped = await seedAnalysisGraph();
+    const foreignProject = await prisma.project.create({
+      data: { id: crypto.randomUUID(), name: 'Foreign linked evidence project' },
+    });
+    const foreignRepository = await prisma.repository.create({
+      data: { projectId: foreignProject.id, canonicalUrl: 'https://github.com/example/foreign-linked-evidence' },
+    });
+    const foreignSnapshot = await prisma.repositorySnapshot.create({
+      data: { repositoryId: foreignRepository.id, commitSha: 'foreign-linked-evidence-commit',
+        analyzerVersion: '1.0.0', coverageStatus: 'READY' },
+    });
+    const foreignArtifact = await prisma.codeArtifact.create({
+      data: { snapshotId: foreignSnapshot.id, artifactKey: 'private:foreign-refund',
+        name: 'ForeignRefund', artifactType: 'SERVICE', filePath: 'src/private/foreign-refund.ts' },
+    });
+    const localLink = await prisma.traceabilityLink.findUniqueOrThrow({
+      where: { id: scoped.linkId }, select: { artifactId: true },
+    });
+    await prisma.traceabilityLink.create({
+      data: { impactAnalysisId: scoped.analysisId, artifactId: foreignArtifact.id,
+        linkType: 'AFFECTED', linkBasis: 'INFERRED', reviewStatus: 'NEEDS_REVIEW' },
+    });
+    const foreignEvidence = await prisma.evidence.create({
+      data: { provenanceKey: 'foreign-snapshot-linked-to-local-artifact', sourceType: 'CODE',
+        snapshotId: foreignSnapshot.id, artifactId: localLink.artifactId,
+        requirementRevisionId: scoped.revisionId, sourcePath: 'src/private/payment-refund.ts',
+        excerpt: 'FOREIGN SNAPSHOT LINKED EVIDENCE', contentHash: 'foreign-linked-evidence-hash' },
+    });
+    const foreignArtifactEvidence = await prisma.evidence.create({
+      data: { provenanceKey: 'local-snapshot-linked-to-foreign-artifact', sourceType: 'CODE',
+        snapshotId: scoped.snapshotId, artifactId: foreignArtifact.id,
+        sourcePath: 'src/private/foreign-refund.ts', excerpt: 'FOREIGN ARTIFACT LINKED EVIDENCE',
+        contentHash: 'foreign-artifact-linked-evidence-hash' },
+    });
+    await prisma.insightEvidence.createMany({ data: [
+      { insightId: scoped.insightId, evidenceId: foreignEvidence.id },
+      { insightId: scoped.insightId, evidenceId: foreignArtifactEvidence.id },
+    ] });
+    await prisma.traceabilityEvidence.createMany({ data: [
+      { traceabilityLinkId: scoped.linkId, evidenceId: foreignEvidence.id },
+      { traceabilityLinkId: scoped.linkId, evidenceId: foreignArtifactEvidence.id },
+    ] });
+    const baseline = await prisma.impactAnalysis.create({
+      data: { requirementRevisionId: scoped.revisionId, snapshotId: scoped.snapshotId,
+        sourceTargetId: scoped.targetId, requestKey: crypto.randomUUID(), status: 'COMPLETED', stage: 'DONE' },
+    });
+    await prisma.impactAnalysis.update({
+      where: { id: scoped.analysisId }, data: { derivedFromAnalysisId: baseline.id },
+    });
+    const run = await prisma.multiRepoAnalysisRun.create({
+      data: { projectId: scoped.projectId, requirementRevisionId: scoped.revisionId,
+        createdByUserId: adminUserId, requestKey: crypto.randomUUID() },
+    });
+    await prisma.impactAnalysis.update({
+      where: { id: scoped.analysisId }, data: { multiRepoRunId: run.id },
+    });
+
+    const paths = [
+      `/api/v1/impact-analyses/${scoped.analysisId}/evidence`,
+      `/api/v1/impact-analyses/${scoped.analysisId}/insights`,
+      `/api/v1/impact-analyses/${scoped.analysisId}/traceability`,
+      `/api/v1/impact-analyses/${scoped.analysisId}/graph`,
+      `/api/v1/impact-analyses/${scoped.analysisId}/workspace`,
+      `/api/v1/impact-analyses/${scoped.analysisId}/diff`,
+      `/api/v1/multi-repo-runs/${run.id}/impact-matrix`,
+      `/api/v1/multi-repo-runs/${run.id}/review-coverage`,
+      `/api/v1/multi-repo-runs/${run.id}/impact-matrix/analyses/${scoped.analysisId}/details`,
+    ];
+    for (const path of paths) {
+      const response = await request(app.getHttpServer())
+        .get(path)
+        .set('Authorization', `Bearer ${adminToken}`);
+      if (response.status !== 200) {
+        throw new Error(`${path}: ${response.status} ${JSON.stringify(response.body)}`);
+      }
+      expect(JSON.stringify(response.body)).not.toContain('FOREIGN SNAPSHOT LINKED EVIDENCE');
+      expect(JSON.stringify(response.body)).not.toContain('FOREIGN ARTIFACT LINKED EVIDENCE');
+      expect(JSON.stringify(response.body)).not.toContain('src/private/payment-refund.ts');
+      expect(JSON.stringify(response.body)).not.toContain('src/private/foreign-refund.ts');
+      expect(JSON.stringify(response.body)).not.toContain('ForeignRefund');
+    }
+    const matrix = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${run.id}/impact-matrix`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(matrix.body.summary.totalArtifacts).toBe(1);
+    const coverage = await request(app.getHttpServer())
+      .get(`/api/v1/multi-repo-runs/${run.id}/review-coverage`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(coverage.body.summary.impactedArtifacts).toBe(1);
   });
 });

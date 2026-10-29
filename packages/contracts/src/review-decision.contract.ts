@@ -14,6 +14,7 @@ export const submitReviewItemDecisionRequestSchema = z.object({
 	target: reviewItemDecisionTargetSchema,
 	action: analysisWorkspaceReviewActionSchema,
 	rationale: z.string().trim().max(2000).nullish(),
+	requestKey: z.string().uuid(),
 });
 
 export const submitReviewItemDecisionResponseSchema = z.object({
@@ -21,7 +22,7 @@ export const submitReviewItemDecisionResponseSchema = z.object({
 	target: reviewItemDecisionTargetSchema,
 	currentDecision: analysisWorkspaceReviewDecisionSchema,
 	reviewNote: z.string().nullable(),
-	/** True when the request matched the persisted state and no write occurred. */
+	/** True when no decision-state mutation occurred, including exact command replays. */
 	idempotent: z.boolean(),
 });
 

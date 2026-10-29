@@ -50,6 +50,7 @@ export class ReviewDecisionController {
       target: input.target,
       action: input.action,
       rationale: input.rationale ?? null,
+      requestKey: input.requestKey,
       actorId: actor.id,
     });
 

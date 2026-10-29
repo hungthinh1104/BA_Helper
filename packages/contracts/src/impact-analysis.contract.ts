@@ -12,7 +12,7 @@ export const impactAnalysisCreateRequestSchema = z.object({
 	domainPackId: z.string().min(1).optional(),
 	derivedFromAnalysisId: z.string().uuid().optional(),
 	sourceClarificationId: z.string().uuid().optional(),
-});
+}).strict();
 
 export const multiRepoImpactAnalysisCreateRequestSchema = z.object({
 	requirementRevisionId: z.string().uuid(),

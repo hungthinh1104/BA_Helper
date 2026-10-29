@@ -83,4 +83,32 @@ describe('InsightRepository', () => {
       },
     ]);
   });
+
+  it('bulk links insight evidence in one idempotent write', async () => {
+    const createMany = jest.fn().mockResolvedValue({ count: 3 });
+    const findMany = jest.fn();
+    const prisma = {
+      baInsight: {
+        createMany: async () => ({ count: 0 }),
+        findMany: async () => [],
+      },
+      insightEvidence: { createMany, findMany },
+    };
+    const repo = new InsightRepository(prisma as any);
+
+    await repo.linkEvidenceMany([
+      { insightId: 'ins-1', evidenceIds: ['ev-1', 'ev-2'] },
+      { insightId: 'ins-2', evidenceIds: ['ev-3'] },
+    ]);
+
+    expect(createMany).toHaveBeenCalledWith({
+      data: [
+        { insightId: 'ins-1', evidenceId: 'ev-1' },
+        { insightId: 'ins-1', evidenceId: 'ev-2' },
+        { insightId: 'ins-2', evidenceId: 'ev-3' },
+      ],
+      skipDuplicates: true,
+    });
+    expect(findMany).not.toHaveBeenCalled();
+  });
 });

@@ -18,7 +18,7 @@ export class GraphRepository {
 
   async listBySnapshot(snapshotId: string) {
     return this.prisma.dependencyEdge.findMany({
-      where: { snapshotId },
+      where: snapshotScopedEdgeWhere(snapshotId),
     });
   }
 
@@ -32,7 +32,7 @@ export class GraphRepository {
     const boundedTake = normalizeTake(take);
     return this.prisma.dependencyEdge.findMany({
       where: {
-        snapshotId,
+        ...snapshotScopedEdgeWhere(snapshotId),
         toArtifactId: { in: [...new Set(targetArtifactIds)] },
         type: { in: types },
       },
@@ -51,7 +51,7 @@ export class GraphRepository {
     const boundedTake = normalizeTake(take);
     return this.prisma.dependencyEdge.findMany({
       where: {
-        snapshotId,
+        ...snapshotScopedEdgeWhere(snapshotId),
         fromArtifactId: { in: [...new Set(sourceArtifactIds)] },
         ...(types ? { type: { in: types } } : {}),
       },
@@ -64,7 +64,7 @@ export class GraphRepository {
     if (targetArtifactIds.length === 0) return [];
     const rows = await this.prisma.dependencyEdge.groupBy({
       by: ['fromArtifactId'],
-      where: { snapshotId, type: 'TESTS', toArtifactId: { in: [...new Set(targetArtifactIds)] },
+      where: { ...snapshotScopedEdgeWhere(snapshotId), type: 'TESTS', toArtifactId: { in: [...new Set(targetArtifactIds)] },
         ...(afterId ? { fromArtifactId: { gt: afterId } } : {}) },
       orderBy: { fromArtifactId: 'asc' },
       take: normalizeTake(take) ?? 1,
@@ -77,7 +77,7 @@ export class GraphRepository {
     const sources = [...new Set(sourceArtifactIds)];
     const targets = [...new Set(targetArtifactIds)];
     return this.prisma.dependencyEdge.findMany({
-      where: { snapshotId, type: 'TESTS', fromArtifactId: { in: sources }, toArtifactId: { in: targets } },
+      where: { ...snapshotScopedEdgeWhere(snapshotId), type: 'TESTS', fromArtifactId: { in: sources }, toArtifactId: { in: targets } },
       orderBy: [{ fromArtifactId: 'asc' }, { toArtifactId: 'asc' }, { id: 'asc' }],
       take: sources.length * targets.length,
     });
@@ -88,7 +88,7 @@ export class GraphRepository {
 
     const edges = await this.prisma.dependencyEdge.findMany({
       where: {
-        snapshotId,
+        ...snapshotScopedEdgeWhere(snapshotId),
         OR: [
           { fromArtifactId: { in: seedArtifactIds } },
           { toArtifactId: { in: seedArtifactIds } },
@@ -123,4 +123,12 @@ function normalizeTake(value: number | undefined): number | undefined {
   if (value === undefined || !Number.isFinite(value)) return undefined;
   const take = Math.trunc(value);
   return take > 0 ? take : undefined;
+}
+
+function snapshotScopedEdgeWhere(snapshotId: string) {
+  return {
+    snapshotId,
+    fromArtifact: { snapshotId },
+    toArtifact: { snapshotId },
+  };
 }

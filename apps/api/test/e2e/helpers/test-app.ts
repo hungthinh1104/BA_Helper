@@ -22,7 +22,21 @@ export async function createTestApp(beforeInitialize?: (moduleFixture: TestingMo
   beforeInitialize?.(moduleFixture);
 
   const app = moduleFixture.createNestApplication();
-  app.useLogger(false);
+  const logServerErrors = process.env.E2E_LOG_SERVER_ERRORS === 'true';
+  app.useLogger(logServerErrors ? ['error'] : false);
+  if (logServerErrors) {
+    app.use((request: { method: string; originalUrl?: string; url: string }, response: {
+      statusCode: number;
+      once(event: 'finish', listener: () => void): void;
+    }, next: () => void) => {
+      response.once('finish', () => {
+        if (response.statusCode >= 500) {
+          process.stderr.write(`[E2E_HTTP_5XX] ${request.method} ${request.originalUrl ?? request.url} ${response.statusCode}\n`);
+        }
+      });
+      next();
+    });
+  }
   configureApp(app, getRuntimeConfig());
   await app.init();
   return app;

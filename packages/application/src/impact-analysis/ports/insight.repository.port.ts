@@ -19,5 +19,6 @@ export type InsightRecord = {
 
 export interface InsightRepositoryPort {
   upsertMany(inputs: InsightInputParams[]): Promise<InsightRecord[]>;
+  linkEvidenceMany(items: Array<{ insightId: string; evidenceIds: string[] }>): Promise<void>;
   linkEvidence(params: { insightId: string; evidenceIds: string[] }): Promise<unknown>;
 }

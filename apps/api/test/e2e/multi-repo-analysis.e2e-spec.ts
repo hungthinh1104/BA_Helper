@@ -381,6 +381,10 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
       },
     });
     const outsider = await seedRepository(outsiderProjectId, 'other-service');
+    const runCountBefore = await prisma.multiRepoAnalysisRun.count({
+      where: { projectId },
+    });
+    const analysisCountBefore = await prisma.impactAnalysis.count();
 
     await request(app.getHttpServer())
       .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
@@ -392,6 +396,54 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
         requestKey: crypto.randomUUID(),
       })
       .expect(404);
+
+    expect(await prisma.multiRepoAnalysisRun.count({ where: { projectId } }))
+      .toBe(runCountBefore);
+    expect(await prisma.impactAnalysis.count()).toBe(analysisCountBefore);
+  });
+
+  it('hides a foreign requirement revision in a multi-repository create request', async () => {
+    const { projectId } = await seedProjectWithReadyRequirement();
+    const inProject = await seedRepository(projectId, 'booking-service');
+    const secondInProject = await seedRepository(projectId, 'payment-service');
+    const foreignProjectId = crypto.randomUUID();
+    const foreignRequirementId = crypto.randomUUID();
+    const foreignRevisionId = crypto.randomUUID();
+
+    await prisma.project.create({
+      data: { id: foreignProjectId, name: 'Hidden Requirement Project' },
+    });
+    await prisma.requirement.create({
+      data: { id: foreignRequirementId, projectId: foreignProjectId },
+    });
+    await prisma.requirementRevision.create({
+      data: {
+        id: foreignRevisionId,
+        requirementId: foreignRequirementId,
+        title: 'Hidden requirement title',
+        rawText: 'Hidden requirement text.',
+        normalizedText: 'Hidden requirement text.',
+        readinessStatus: 'READY_FOR_ANALYSIS',
+      },
+    });
+
+    const runCountBefore = await prisma.multiRepoAnalysisRun.count();
+    const analysisCountBefore = await prisma.impactAnalysis.count();
+
+    const response = await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requirementRevisionId: foreignRevisionId,
+        repositoryIds: [inProject.repositoryId, secondInProject.repositoryId],
+        allowPartialSnapshot: false,
+        requestKey: crypto.randomUUID(),
+      });
+
+    expect(response.status).toBe(404);
+
+    expect(await prisma.multiRepoAnalysisRun.count()).toBe(runCountBefore);
+    expect(await prisma.impactAnalysis.count()).toBe(analysisCountBefore);
   });
 
   it('returns 409 when a repository has no analyzable observed snapshot', async () => {

@@ -161,8 +161,51 @@ describe('Project switching and membership (e2e)', () => {
     expect(user?.selectedProjectId).toBe(firstProjectId);
   });
 
+  it('rejects a protected mutation after the actor loses project membership but keeps the JWT', async () => {
+    const { secondProjectId } = await seedProjects();
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/projects/${secondProjectId}/members`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    await prisma.projectMember.delete({
+      where: {
+        projectId_userId: {
+          projectId: secondProjectId,
+          userId: adminUserId,
+        },
+      },
+    });
+    const requirementCountBefore = await prisma.requirement.count();
+    const requirementEventCountBefore = await prisma.domainEvent.count({
+      where: { eventType: 'REQUIREMENT_CREATED' },
+    });
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/projects/${secondProjectId}/requirements`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        requestKey: crypto.randomUUID(),
+        title: 'Must remain inaccessible after membership revocation',
+        rawText: 'Allow users to cancel paid bookings and receive a refund.',
+      })
+      .expect(404);
+
+    expect(await prisma.requirement.count()).toBe(requirementCountBefore);
+    expect(await prisma.domainEvent.count({
+      where: { eventType: 'REQUIREMENT_CREATED' },
+    })).toBe(requirementEventCountBefore);
+  });
+
   it('lists accessible projects and marks the selected one', async () => {
     const { firstProjectId, secondProjectId } = await seedProjects();
+    const hiddenProject = await prisma.project.create({
+      data: {
+        id: crypto.randomUUID(),
+        name: 'Project without reviewer membership',
+      },
+    });
     await prisma.user.update({
       where: { id: reviewerUserId },
       data: { selectedProjectId: secondProjectId },
@@ -185,6 +228,11 @@ describe('Project switching and membership (e2e)', () => {
           membershipRole: 'REVIEWER',
           isSelected: true,
         }),
+      ]),
+    );
+    expect(response.body.items).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ projectId: hiddenProject.id }),
       ]),
     );
   });

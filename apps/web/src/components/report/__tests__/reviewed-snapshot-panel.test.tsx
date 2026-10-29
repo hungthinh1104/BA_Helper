@@ -15,12 +15,20 @@ jest.mock('../locked-snapshot-viewer', () => ({
 
 const id = '00000000-0000-4000-8000-000000000001';
 const otherId = '00000000-0000-4000-8000-000000000002';
+const emptyEvidenceQualitySummary = {
+  missingEvidence: 0,
+  reviewRequired: 0,
+  evidenced: 0,
+  inferred: 0,
+  weakEvidence: 0,
+};
 const snapshot = {
   id: '00000000-0000-4000-8000-000000000003',
   analysisId: id,
   markdown: '# Frozen',
   reviewDecisionsSnapshot: [],
-  evidenceQualitySummarySnapshot: {},
+  evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary,
+  evaluationContextSnapshot: null,
   createdAt: '2026-10-28T00:00:00Z',
 };
 const route = 'http://localhost:3000/api/v1/impact-analyses/:analysisId/reviewed-report-snapshot/latest';

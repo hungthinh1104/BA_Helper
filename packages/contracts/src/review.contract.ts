@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import { reportTestTraceSnapshotSchema } from './report-test-trace.contract';
-import { reportReviewCoverageSummarySchema } from './document.contract';
+import {
+  evidenceQualitySummarySnapshotSchema,
+  reportReviewCoverageSummarySchema,
+  reviewDecisionsSnapshotSchema,
+  evaluationContextSnapshotSchema,
+} from './document.contract';
 import { supportedAppLocales } from './locale.contract';
 
 export const reportLocaleSchema = z.enum(supportedAppLocales);
@@ -45,9 +50,9 @@ export const finalReviewedReportResponseSchema = z.object({
   createdAt: z.string(),
   reviewCompletion: reviewCompletionResponseSchema,
   reviewCoverageSummary: reportReviewCoverageSummarySchema.nullable().optional(),
-  reviewDecisionsSnapshot: z.unknown(),
-  evidenceQualitySummarySnapshot: z.unknown(),
-  evaluationContextSnapshot: z.unknown().nullable(),
+  reviewDecisionsSnapshot: reviewDecisionsSnapshotSchema,
+  evidenceQualitySummarySnapshot: evidenceQualitySummarySnapshotSchema,
+  evaluationContextSnapshot: evaluationContextSnapshotSchema,
   createdByUserId: z.string().min(1).nullable().optional(),
 });
 

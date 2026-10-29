@@ -89,6 +89,10 @@ class StubInsightRepo {
     this.evidenceLinks.push(params);
     return [];
   };
+
+  linkEvidenceMany = async (items: Array<{ insightId: string; evidenceIds: string[] }>) => {
+    this.evidenceLinks.push(...items);
+  };
 }
 
 class StubTraceabilityRepo {
@@ -106,6 +110,10 @@ class StubTraceabilityRepo {
   linkEvidence = async (params: { linkId: string; evidenceIds: string[] }) => {
     this.evidenceLinks.push(params);
     return [];
+  };
+
+  linkEvidenceMany = async (items: Array<{ linkId: string; evidenceIds: string[] }>) => {
+    this.evidenceLinks.push(...items);
   };
 }
 

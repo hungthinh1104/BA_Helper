@@ -10,6 +10,7 @@ describe('EventLogService', () => {
   beforeEach(() => {
     repository = {
       createEvent: jest.fn(),
+      findEventByIdempotencyKey: jest.fn(),
       findEventsByPrefixes: jest.fn(),
     } as unknown as jest.Mocked<EventLogRepository>;
     service = new EventLogService(repository);
@@ -118,6 +119,22 @@ describe('EventLogService', () => {
         unknownCount: 0,
       });
       expect(result[0].metadata).not.toHaveProperty('secretField');
+    });
+
+    it('keeps the default uppercase SYSTEM actor classified as SYSTEM', async () => {
+      repository.findEventsByPrefixes.mockResolvedValue([
+        {
+          id: 'ev-default-system',
+          eventType: 'REPORT_SNAPSHOT_CREATED',
+          idempotencyKey: 'reviewed-report-snapshot:snapshot-1:created',
+          createdAt: new Date('2023-01-01T00:00:00.000Z'),
+          payload: { actorUserId: 'SYSTEM' },
+        },
+      ]);
+
+      const [event] = await service.getAnalysisEvents('snapshot-1');
+
+      expect(event.actorType).toBe('SYSTEM');
     });
 
     it('should flatten nested llm token usage', async () => {

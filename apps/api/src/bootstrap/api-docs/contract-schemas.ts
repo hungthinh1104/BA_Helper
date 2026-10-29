@@ -10,14 +10,6 @@ extendZodWithOpenApi(z);
 // it after the adapter has patched the shared Zod prototype.
 const contracts = require('@ba-helper/contracts') as typeof Contracts;
 
-// The v3-compatible generator does not support ZodCatch. Catch affects parsing,
-// not the valid actorType output enum; retain every other field from the contract.
-const eventList = contracts.eventLogListResponseSchema.extend({
-  items: z.array(contracts.eventLogDtoSchema.extend({
-    actorType: contracts.eventLogDtoSchema.shape.actorType.removeCatch(),
-  })),
-});
-
 export class ContractSchemas {
   private readonly registry = new OpenAPIRegistry();
   private readonly registered = new Map<ZodTypeAny, string>();
@@ -33,8 +25,7 @@ export class ContractSchemas {
     let name = this.registered.get(schema);
     if (!name) {
       name = this.names.get(schema) ?? fallback;
-      const openApiSchema = schema === contracts.eventLogListResponseSchema ? eventList : schema;
-      this.registry.register(name, ensureOpenApiSchema(openApiSchema));
+      this.registry.register(name, ensureOpenApiSchema(schema));
       this.registered.set(schema, name);
     }
     return { $ref: `#/components/schemas/${name}` };

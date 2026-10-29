@@ -6,6 +6,13 @@ import type { EventLogDto } from '@ba-helper/contracts';
 export class EventLogService {
   constructor(private readonly repository: EventLogRepository) {}
 
+  async findEventByIdempotencyKey(
+    idempotencyKey: string,
+    transaction?: EventLogTransactionClient,
+  ): Promise<{ payload: unknown } | null> {
+    return this.repository.findEventByIdempotencyKey(idempotencyKey, transaction);
+  }
+
   async recordEvent(params: {
     eventType: string;
     idempotencyKey: string;
@@ -47,13 +54,14 @@ export class EventLogService {
   private mapToDto(event: any): EventLogDto {
     const payload = event.payload || {};
 
-    // Extract actor fields
-    let actorType: 'SYSTEM' | 'USER' = 'SYSTEM';
-    if (payload.actorType === 'USER' || payload.actorUserId !== 'system') {
-      if (payload.actorUserId && payload.actorUserId !== 'system') {
-        actorType = 'USER';
-      }
-    }
+    const actorType: 'SYSTEM' | 'USER' =
+      payload.actorType === 'USER'
+        ? 'USER'
+        : payload.actorType === 'SYSTEM'
+          ? 'SYSTEM'
+          : isSystemActor(payload.actorUserId)
+            ? 'SYSTEM'
+            : 'USER';
 
     const actorName = typeof payload.actorName === 'string' ? payload.actorName : null;
     const triggeredByUserId = typeof payload.triggeredByUserId === 'string' ? payload.triggeredByUserId : null;
@@ -99,4 +107,8 @@ export class EventLogService {
       createdAt: event.createdAt.toISOString(),
     };
   }
+}
+
+function isSystemActor(actorUserId: unknown): boolean {
+  return typeof actorUserId !== 'string' || actorUserId.trim().toUpperCase() === 'SYSTEM';
 }

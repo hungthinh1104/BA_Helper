@@ -206,6 +206,19 @@ export class ProjectPermissionService {
     );
   }
 
+  async assertPermissionForReviewDecision(
+    actor: RequestUser,
+    decisionId: string,
+    permission: ProjectPermission,
+  ): Promise<void> {
+    await this.assertPermissionForScopedResource(
+      actor,
+      () => this.scope.findReviewDecisionProjectId(decisionId),
+      permission,
+      'Review decision',
+    );
+  }
+
   async assertPermissionForInsight(
     actor: RequestUser,
     insightId: string,

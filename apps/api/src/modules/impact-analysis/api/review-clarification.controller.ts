@@ -45,6 +45,11 @@ export class ReviewClarificationController {
       'clarification:write',
     );
     const input = parseApiInput(reviewClarificationCreateRequestSchema, body);
+    await this.permissions.assertPermissionForReviewDecision(
+      actor,
+      input.reviewDecisionId,
+      'clarification:write',
+    );
 
     const result = await this.createClarification.execute(analysisId, input, actor);
 

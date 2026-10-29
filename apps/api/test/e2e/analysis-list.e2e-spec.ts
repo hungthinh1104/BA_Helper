@@ -70,7 +70,7 @@ describe('Analysis List (E2E)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
         requestKey: crypto.randomUUID(),
-        requestedRef: 'main',
+        ref: 'main',
       })
       .expect(201);
     const scanJob = scanJobResponseSchema.parse(createScanJobRes.body);

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '@prisma/client';;
 import { lockReviewableAnalysisWhileCurrent } from '../../impact-analysis/infrastructure/review-analysis-lock';
+import { analysisEvidenceScopeWhere } from '../../evidence/infrastructure/analysis-evidence-scope';
 
 export type TraceabilityLinkWithArtifactAndReviewDecision = Prisma.TraceabilityLinkGetPayload<{
   include: {
@@ -24,10 +25,17 @@ export class TraceabilityRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async listByAnalysis(impactAnalysisId: string): Promise<TraceabilityLinkWithArtifactAndReviewDecision[]> {
+    const analysis = await this.prisma.impactAnalysis.findUnique({
+      where: { id: impactAnalysisId },
+      select: { snapshotId: true, requirementRevisionId: true },
+    });
+    if (!analysis) return [];
+
     return this.prisma.traceabilityLink.findMany({
-      where: { impactAnalysisId },
+      where: { impactAnalysisId, artifact: { snapshotId: analysis.snapshotId } },
       include: {
         evidenceLinks: {
+          where: { evidence: analysisEvidenceScopeWhere(analysis.snapshotId, analysis.requirementRevisionId) },
           include: {
             evidence: {
               include: {
@@ -169,6 +177,16 @@ export class TraceabilityRepository {
       where: { traceabilityLinkId: params.linkId },
     });
   }
+
+  async linkEvidenceMany(items: Array<{ linkId: string; evidenceIds: string[] }>): Promise<void> {
+    const data = items.flatMap(({ linkId, evidenceIds }) =>
+      evidenceIds.map((evidenceId) => ({ traceabilityLinkId: linkId, evidenceId })),
+    );
+    if (data.length === 0) return;
+
+    await this.prisma.traceabilityEvidence.createMany({ data, skipDuplicates: true });
+  }
+
   async deleteReviewDecision(
     linkId: string,
     analysisId: string,

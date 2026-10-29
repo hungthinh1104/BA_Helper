@@ -15,7 +15,7 @@ Routes are derived from `apps/web/src/app/**/page.tsx`, with route groups remove
 | Route | Current browser coverage | Route-state coverage still needed |
 | --- | --- | --- |
 | `/` | `route-smoke.pw.ts` | refresh, dashboard empty/error states, navigation |
-| `/analyses` | `route-smoke.pw.ts`; `app-sidebar.test.tsx` | pagination/query state, empty/error/forbidden |
+| `/analyses` | `route-smoke.pw.ts`; `app-sidebar.test.tsx`; `analysis-list-retry.pw.ts` | pagination/query state and forbidden; empty/error/retry covered on desktop/mobile |
 | `/analyses/:analysisId` | `route-smoke.pw.ts`; `app-sidebar.test.tsx`; `responsive-sweep.pw.ts`; `decision-to-report.pw.ts`, `decision-mobile.pw.ts`, `decision-keyboard.pw.ts` | invalid/missing/stale/forbidden states, locale/query preservation across all browser actions |
 | `/analyses/runs` | `route-smoke.pw.ts`; `app-sidebar.test.tsx`; `responsive-sweep.pw.ts` | empty/error/forbidden |
 | `/analyses/runs/:runId` | `route-smoke.pw.ts` (missing-run not-found) | valid run, stale/error states |
@@ -37,6 +37,16 @@ Playwright directly visits all 18 inventoried routes. The route smoke uses seede
 
 Route source cross-check (2026-10-28): the App Router contains 18 `page.tsx` routes, and all 18 map to the direct-navigation entries above; there are no unlisted user-facing page files.
 
+Analysis list route-state check (2026-10-29): a browser test intercepted a 502
+from the project analyses endpoint after authenticating against the real API.
+Before the UI fix, desktop and mobile showed the failure message but exposed no
+retry action. The page now keeps a retry-progress status visible while retrying,
+marks the failure as an alert, supports Enter-key activation, disables the
+retry button until the request settles, and renders the empty state plus Start
+Analysis CTA after a valid `{ items: [] }` response. Both desktop and Pixel 7
+mobile passed. This closes the analysis-list empty/error/retry states;
+pagination and forbidden access remain open for this route.
+
 ### Repository Identity Mismatch (2026-10-28)
 
 - Red browser reproduction: `route-smoke.pw.ts` opened a valid snapshot/artifact under a different `repositoryId`. The page rendered `BookingService.cancelBooking` and its persisted source excerpt while the Back link pointed to the unrelated URL repository.
@@ -56,13 +66,15 @@ Route source cross-check (2026-10-28): the App Router contains 18 `page.tsx` rou
 
 ## Frontend API Consumer Inventory
 
-Success JSON calls through `apps/web/src/lib/api-client.ts` now require a Zod response schema in TypeScript and reject calls without one at runtime. All current typed callsites are checked by `pnpm --filter web typecheck`. The direct credentials login request uses `loginResponseSchema`. `apiGetFile` is a deliberate binary response path for Markdown/PDF exports and is not JSON-schema validated.
+Success JSON calls through `apps/web/src/lib/api-client.ts` require a Zod response schema in TypeScript and reject calls without one at runtime. All current typed callsites are checked by the web typecheck. The direct credentials login request uses `loginResponseSchema`. `apiGetFile` is the deliberate binary response exception for Markdown/PDF exports; it validates the expected `Content-Type` plus a safe attachment filename with the matching extension before creating a download. The API CORS config exposes `Content-Disposition` to allowed web origins; a real API E2E verifies the header on a cross-origin PDF export.
+
+A repeat source scan on 2026-10-29 found browser `fetch()` only in the shared API client and NextAuth credential login. The login path parses `loginResponseSchema`; all other JSON consumers continue through schema-required `apiGet`/mutation helpers. This confirms transport routing and runtime schema enforcement, not field-by-field parity for every mapper.
 
 | Consumer | Endpoint family | Current contract status |
 | --- | --- | --- |
 | `use-analyses.ts` | analysis list/detail/create, workspace, lineage, drift, graph, review queue, diff | Schema passed at every JSON callsite; endpoint-by-endpoint backend parity audit pending |
 | `use-approved-report.ts` | approved and final-reviewed report | Backend controller parses the same shared schemas consumed by FE; successful final-report and approved-report GETs plus provenance rejection are E2E-covered. Approved `snapshotId` is the source `RepositorySnapshot.id`; final-reviewed `snapshotId` is the immutable `ReviewedReportSnapshot.id`, and FE does not compare them. |
-| `use-clarifications.ts` | clarification CRUD/revision and review clarification lifecycle | Runtime schemas passed at transport boundary; backend parity audit pending |
+| `use-clarifications.ts` | clarification CRUD/revision and review clarification lifecycle | Runtime schemas passed at transport boundary; backend parity audit pending. `reviewClarificationRequestSchema` is named like a request but is the full response DTO used by the controller. |
 | `use-code-comprehension.ts` | snapshot artifact list and artifact comprehension | Runtime schema and backend parity confirmed: list maps fields through `mapArtifactResponse` with bounded pagination, and comprehension authorizes by snapshot then returns persisted `snapshot.repositoryId`; both controller paths parse the shared contracts |
 | `use-documents.ts` | final-reviewed report and latest reviewed snapshot | Latest snapshot now validates with `reviewedReportSnapshotSchema`; parity audit pending |
 | `use-domain-packs.ts` | domain-pack registry | Schema passed; backend parity audit pending |
@@ -85,13 +97,22 @@ Success JSON calls through `apps/web/src/lib/api-client.ts` now require a Zod re
 | `use-scan-jobs.ts` | scan-job creation | Schema passed; backend parity audit pending |
 | `use-snapshot-drift.ts` | snapshot drift | Schema passed; backend parity audit pending |
 | `use-system.ts` | readiness and operations | Schema passed; backend parity audit pending |
-| `use-test-trace-evidence.ts` | QA test-trace evidence | Schema passed; backend parity audit pending |
+| `use-test-trace-evidence.ts` | QA test-trace evidence | Shared schema is parsed by both the backend controller and the FE client; PostgreSQL E2E verifies valid static evidence for all five project roles and cross-project 404 for the same persisted evidence ID |
 | `use-traceability.ts` | traceability review-decision update/delete | Now validates `{ ok: true }` / `{ success: true }`; backend parity confirmed in this iteration |
 | `project-context.tsx` | current workspace, project list, project switch | Schema passed; backend parity audit pending |
 | `auth-options.ts` | credentials login | Validates `loginResponseSchema` |
-| `apiGetFile` callsites | Markdown/PDF downloads | Binary exception; content disposition and response status are checked, payload integrity coverage pending |
+| `apiGetFile` callsites | Markdown/PDF downloads | Binary exception; expected MIME type, CORS-exposed attachment disposition, safe basename, and matching `.md`/`.pdf` extension are runtime-validated |
 
-The schema requirement is now enforced at the shared consumer boundary. It prevents a future callsite from compiling without a response contract and makes JavaScript/runtime omissions fail before network access. Success JSON payloads from all current typed callsites are runtime parsed. Non-2xx JSON bodies remain a documented exception: the client reads `code`, `message` and `details` only to shape an error, never treats the body as successful application data, and falls back to a generic error when the body is absent or malformed. This error-envelope behavior still needs focused verification against API exception filters.
+### File Export Response Exception (2026-10-29)
+
+- Red reproduction in `apps/web/src/lib/api-client.test.ts`: `apiGetFile` accepted a successful `text/html` response for an `.pdf` export and returned it as `report.pdf`.
+- Fix: callers now declare `application/pdf` or `text/markdown`; the API client normalizes the `Content-Type` and fails with `API_WRONG_SERVER` for HTML or `API_INVALID_RESPONSE` for any other unexpected type.
+- A second red reproduction returned `download.bin` when a successful PDF response omitted `Content-Disposition`; another accepted a `.md` filename for a PDF response. The client now requires an attachment filename with a safe basename and the matching extension before reading the blob.
+- Browser CORS hid `Content-Disposition` on cross-origin responses. API E2E reproduced a PDF export with no `Access-Control-Expose-Headers`; the API now exposes the header to configured origins, and the real export route verifies it.
+- All three report download call sites declare the correct expected MIME type. Regression tests accept valid PDF/Markdown responses and reject HTML, absent filenames, and format-mismatched extensions.
+- The API contract guide documents this binary exception; the JSON hooks remain on shared Zod response contracts.
+
+The schema requirement is now enforced at the shared consumer boundary. It prevents a future callsite from compiling without a response contract and makes JavaScript/runtime omissions fail before network access. Success JSON payloads from all current typed callsites are runtime parsed. Non-2xx JSON bodies now validate against `apiErrorResponseSchema` for AppError, NestJS, and legacy localization shapes before becoming `ApiError`; malformed JSON payloads fall back to a generic status-based error. Contract/client tests cover valid and malformed envelopes, and API+PostgreSQL E2E verifies the actual NestJS forbidden shape.
 
 ### Approved and Final-Reviewed Report Contract Identity (2026-10-29)
 
@@ -105,7 +126,26 @@ The schema requirement is now enforced at the shared consumer boundary. It preve
 - Five calls build paths through `new URL(...)`; source inspection confirmed project analysis list, repository list, snapshot list, repository drift, and snapshot drift paths match their backend controllers. The remaining callsites, including the binary `apiGetFile` paths, had a method/path match. This confirms route parity for current consumers; it does not replace field-by-field comparison of every response mapper.
 - Scope checks inspected for repository detail/list, snapshot list/drift, artifact/comprehension, graph, analysis list/drift-freshness, approved/final-reviewed report reads, and report exports. Repository and analysis reads use project-scoped permissions. Drift use cases also verify that base and target snapshots belong to the requested repository and project; analysis drift-freshness rejects a project ID that does not match the analysis snapshot. Report reads require analysis read access, while downloads require `report:export`.
 - Added explicit negative regression cases for base and target snapshots from another project/repository. They assert rejection occurs before artifact reads. Focused result: `get-repository-snapshot-drift.usecase.spec.ts`, 1 suite / 10 tests passed.
-- Full response mapper parity and the complete cross-project authorization matrix remain open. Binary downloads remain outside JSON Zod validation and need payload/disposition integrity coverage.
+- Full response mapper parity and the complete cross-project authorization matrix remain open. Binary downloads remain outside JSON Zod validation; expected MIME and attachment filename properties are now checked at runtime.
+
+### Event Log Actor Identity Contract (2026-10-29)
+
+- `eventLogDtoSchema` previously converted a missing or unsupported `actorType` to `SYSTEM`, allowing malformed wire data to display a false actor identity.
+- The contract now requires explicit `SYSTEM` or `USER`. `EventLogService` still resolves older persisted payloads before producing the DTO; no database migration is required.
+- Regression was red before the schema change and green after it. The event-log contract and service suites passed 2 suites / 8 tests.
+- A PostgreSQL API probe seeded a legacy event with an unsupported persisted `actorType`, then parsed the actual event endpoint response and verified that the service projected the actor from `actorUserId` as `USER`.
+
+### Project Role API+PostgreSQL Matrix (2026-10-29)
+
+- Added `project-role-permissions.e2e-spec.ts` against the real API, PostgreSQL, and Redis.
+- MAINTAINER is verified allowed for repository connect and scan enqueue, and denied for requirement/analysis creation and finalization. ANALYST is verified allowed for requirement/analysis creation and finalization, and denied for repository connect, scan enqueue, and review decisions. REVIEWER is verified allowed to submit a decision for a completed analysis. VIEWER can read project repositories but cannot submit review decisions or connect repositories.
+- Each denied mutation asserts no persisted write. An owner belonging only to project A receives 404 for project B repository listing and scan enqueue, and the scan table remains unchanged.
+- Focused role matrix passed 1 suite / 2 tests. The earlier adjacent auth/membership run passed 4 suites / 38 tests before the REVIEWER/VIEWER extension. Remaining resource-family combinations are still open; this is not the full authorization matrix.
+- Follow-up verification expanded that same API+PostgreSQL suite: all five roles can read project members; MAINTAINER, ANALYST, REVIEWER, and VIEWER cannot create, update, or delete memberships; OWNER can create, update, and delete; denied changes leave membership rows unchanged. `project-role-permissions.e2e-spec.ts` passed 1 suite / 10 tests.
+- The suite also persists a valid Jest `TESTS` edge and source evidence, checks that all five project roles can read the resulting test-trace evidence through the shared Zod response schema, and verifies an outsider receives 404 for that real evidence ID.
+- The role suite now verifies OWNER success across all 11 permissions. It also checks viewer denials for scan, requirement, base-analysis, and finalization, plus MAINTAINER denials for review and clarification; each denied mutation preserves database state. The OWNER scan assertion confirms PostgreSQL and Redis job identity match, and test-created queue jobs are removed in teardown. Per-route cross-project role combinations remain open.
+- `project-permission.service.spec.ts` now locks the complete 5-role × 11-permission policy matrix; the focused suite passed 1 suite / 13 tests. The central role matrix is verified, while method/path cross-project coverage for every scoped endpoint remains open.
+- Current cross-project route pass closes that method/path scope gap for the existing project-scoped API surface. The final instrumented `auth-rbac.e2e-spec.ts` run passes 45/45 on PostgreSQL after adding outsider-owner probes for repository list/connect/scan, all insight and traceability mutation methods, analysis review/finalize, clarification create/answer/dismiss/convert, multi-repo create, foreign requirement revision creation, and a real foreign analysis ID under an authorized run drilldown. Denied writes preserve repository, scan, analysis, decision, clarification, and multi-repo state. One earlier 44/45 run had an unexplained workspace 500; the focused test and instrumented full rerun passed. This closes API cross-project scope coverage for the inventoried routes, not all role/resource combinations or the remaining response-mapper, browser-state, accessibility, and CI gates.
 
 ### Requirement API Runtime and Project-Scope Verification (2026-10-28)
 
@@ -305,4 +345,4 @@ At initial repository/PR/CI audit, no open PR was returned for the inspected bra
 - Follow-up run `40747322529` on `74886d789b3eeb7b520e4de0c86fd8fe01e31b77` passed all non-browser steps, route smoke and report journeys. The responsive sweep completed all 90 route/theme/viewport overflow checks without page overflow, then failed its axe assertion: selected and traceability review-queue buttons still had serious `label-content-name-mismatch` violations at 375px and 1440px in both themes. The pinned real-repository proof was skipped after the browser step failed.
 - Root cause: the review queue supplied an `aria-label` override even though its visible title, type, decision, evidence count, artifact count, blocker state and impact basis are already rendered as button text. Axe found that custom name did not satisfy the visible-label inclusion rule for the selected item and impact-link items. Removed the override and the now-unused localized template; the accessible name is derived from the visible button content.
 - Red/green regression: the new component assertion that the visible queue name is not overridden by `aria-label` failed before the fix and passed after it. Focused ReviewQueue tests passed 2/2; full web Jest passed 42/42 suites and 177/177 tests; web typecheck, changed-file ESLint and `git diff --check` passed. Full browser sweep and exact-commit CI rerun are pending.
-- The integration branch remains short of release acceptance: route-state inventory, complete authorization matrix, cross-module negative/retry journeys, remaining responsive/a11y routes and states, manual keyboard/screen-reader checks, Windows worker teardown/P1017, and final exact-commit CI are open.
+- The integration branch remains short of release acceptance: route-state inventory, cross-module negative/retry journeys, remaining responsive/a11y routes and states, manual keyboard/screen-reader checks, Windows worker teardown/P1017, and final exact-commit CI are open. Current project-role policy and cross-project route-scope matrices are verified; full response-mapper parity remains open.

@@ -2,12 +2,33 @@ import { GetFinalReviewedReportUseCase } from './get-final-reviewed-report.useca
 import { AppError } from '@ba-helper/shared';
 import { staticTestTraceFixture, traceIds } from '../../../../../../../tests/fixtures/static-test-trace.fixture';
 
+const emptyEvidenceQualitySummary = {
+  missingEvidence: 0,
+  reviewRequired: 0,
+  evidenced: 0,
+  inferred: 0,
+  weakEvidence: 0,
+};
+
+const frozenEvaluationContext = {
+  datasetVersion: 'test-v1',
+  subsetId: 'test-subset',
+  subsetSize: '1',
+  interpretation: 'ILLUSTRATIVE_ONLY' as const,
+  knownLimits: [],
+  evidenceQualityNotes: [],
+  datasetExpansionRecommendations: [],
+  researchFindingsArtifact: 'research.json',
+  sameSubsetComparisonArtifact: 'comparison.json',
+};
+
 describe('GetFinalReviewedReportUseCase', () => {
   it('returns saved traces without rebuilding the current QA projection', async () => {
     const saved = { version: 1, coverage: staticTestTraceFixture() };
     getReviewCompletionMock.execute.mockResolvedValue(createCompleteReviewCompletion());
     getLatestSnapshotMock.execute.mockResolvedValue({ id: 'reviewed-id', analysisId: traceIds.analysis,
-      approvedDocumentId: 'doc', createdAt: new Date(), reviewDecisionsSnapshot: [], evidenceQualitySummarySnapshot: {},
+      approvedDocumentId: 'doc', createdAt: new Date(), reviewDecisionsSnapshot: [],
+      evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary, evaluationContextSnapshot: null,
       testTraceSnapshot: saved });
     prismaMock.generatedDocument.findUnique.mockResolvedValue({
       id: 'doc', impactAnalysisId: traceIds.analysis, type: 'IMPACT_REPORT', status: 'APPROVED', content: '# Frozen report',
@@ -109,8 +130,8 @@ describe('GetFinalReviewedReportUseCase', () => {
       markdown: null,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       reviewDecisionsSnapshot: decisionsSnapshot,
-      evidenceQualitySummarySnapshot: { some: 'evidence data' },
-      evaluationContextSnapshot: { some: 'eval context' },
+      evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary,
+      evaluationContextSnapshot: frozenEvaluationContext,
       createdByUserId: 'user-1',
     };
 
@@ -134,8 +155,8 @@ describe('GetFinalReviewedReportUseCase', () => {
       createdAt: '2026-01-01T00:00:00.000Z',
       reviewCompletion: mockCompletion,
       reviewDecisionsSnapshot: decisionsSnapshot,
-      evidenceQualitySummarySnapshot: { some: 'evidence data' },
-      evaluationContextSnapshot: { some: 'eval context' },
+      evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary,
+      evaluationContextSnapshot: frozenEvaluationContext,
       createdByUserId: 'user-1',
     }));
     expect(result.reviewCoverageSummary).toEqual(expect.objectContaining({
@@ -154,7 +175,7 @@ describe('GetFinalReviewedReportUseCase', () => {
       markdown: '# Snapshot generation',
       createdAt: new Date('2026-01-02T00:00:00.000Z'),
       reviewDecisionsSnapshot: [],
-      evidenceQualitySummarySnapshot: {},
+      evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary,
       evaluationContextSnapshot: null,
       testTraceSnapshot: null,
       createdByUserId: null,
@@ -183,7 +204,7 @@ describe('GetFinalReviewedReportUseCase', () => {
       markdown: null,
       createdAt: new Date(),
       reviewDecisionsSnapshot: [],
-      evidenceQualitySummarySnapshot: {},
+      evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary,
       evaluationContextSnapshot: null,
       testTraceSnapshot: null,
       createdByUserId: null,
@@ -204,7 +225,7 @@ describe('GetFinalReviewedReportUseCase', () => {
       markdown: null,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       reviewDecisionsSnapshot: [],
-      evidenceQualitySummarySnapshot: {},
+      evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary,
       evaluationContextSnapshot: null,
       createdByUserId: null,
     });
@@ -228,6 +249,9 @@ describe('GetFinalReviewedReportUseCase', () => {
       approvedDocumentId: 'doc-1',
       markdown: null,
       createdAt: new Date(),
+      reviewDecisionsSnapshot: [],
+      evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary,
+      evaluationContextSnapshot: null,
     });
     prismaMock.generatedDocument.findUnique.mockResolvedValue({
       id: 'doc-1',
@@ -253,6 +277,9 @@ describe('GetFinalReviewedReportUseCase', () => {
       approvedDocumentId: 'doc-1',
       markdown: null,
       createdAt: new Date(),
+      reviewDecisionsSnapshot: [],
+      evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary,
+      evaluationContextSnapshot: null,
     });
     prismaMock.generatedDocument.findUnique.mockResolvedValue({
       id: 'doc-1', impactAnalysisId: 'analysis-123', type: 'IMPACT_REPORT', status: 'APPROVED', content: '# English',
@@ -274,6 +301,9 @@ describe('GetFinalReviewedReportUseCase', () => {
       approvedDocumentId: 'doc-1',
       markdown: null,
       createdAt: new Date(),
+      reviewDecisionsSnapshot: [],
+      evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary,
+      evaluationContextSnapshot: null,
     });
     prismaMock.generatedDocument.findUnique.mockResolvedValue({
       id: 'doc-1', impactAnalysisId: 'analysis-123', type: 'IMPACT_REPORT', status: 'APPROVED', content: '# English',
@@ -302,6 +332,9 @@ describe('GetFinalReviewedReportUseCase', () => {
       approvedDocumentId: 'doc-1',
       markdown: null,
       createdAt: new Date(),
+      reviewDecisionsSnapshot: [],
+      evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary,
+      evaluationContextSnapshot: null,
     });
     prismaMock.generatedDocument.findUnique.mockResolvedValue({
       id: 'doc-1', impactAnalysisId: 'analysis-123', type: 'IMPACT_REPORT', status: 'APPROVED', content: '# English',
@@ -354,6 +387,14 @@ function traceabilityLinkSnapshot(id: string, decision: string) {
     quality: 'STRONG_SOURCE_EVIDENCE',
     reasons: [],
     reviewStatus: decision === 'ACCEPTED' ? 'CONFIRMED' : decision,
-    reviewDecision: { decision },
+    reviewDecision: {
+      id: '00000000-0000-4000-8000-000000000031',
+      analysisId: '00000000-0000-4000-8000-000000000032',
+      traceabilityLinkId: '00000000-0000-4000-8000-000000000033',
+      decision,
+      note: null,
+      reviewedByUserId: null,
+      reviewedAt: '2026-01-01T00:00:00.000Z',
+    },
   };
 }

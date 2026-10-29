@@ -21,6 +21,12 @@ interface ScanJobQueue {
   getJob(jobId: string): Promise<ScanQueueJob | undefined>;
 }
 
+type ScanCreateInput = {
+  requestKey: string;
+  ref?: string;
+  requestedRef?: string;
+};
+
 describe('Scan job enqueue recovery (E2E)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
@@ -82,18 +88,36 @@ describe('Scan job enqueue recovery (E2E)', () => {
     return repository.repositoryId;
   }
 
-  function submitScan(repositoryId: string, payload: { requestKey: string; requestedRef: string }) {
+  function submitScan(repositoryId: string, payload: ScanCreateInput) {
     return request(app.getHttpServer())
       .post(`/api/v1/repositories/${repositoryId}/scan-jobs`)
       .set('Authorization', `Bearer ${adminToken}`)
       .send(payload);
   }
 
+  it('rejects an unsupported branch field instead of queueing a default-ref scan', async () => {
+    const repositoryId = await createRepository();
+    const requestKey = crypto.randomUUID();
+
+    const response = await submitScan(repositoryId, {
+      requestKey,
+      requestedRef: 'release/candidate',
+    });
+    const persistedJob = await prisma.scanJob.findUnique({
+      where: { repositoryId_requestKey: { repositoryId, requestKey } },
+    });
+    if (persistedJob) queuedScanJobId = persistedJob.id;
+
+    expect(response.status).toBe(400);
+    expect(persistedJob).toBeNull();
+    expect(await prisma.scanJob.count({ where: { repositoryId, requestKey } })).toBe(0);
+  });
+
   it('re-enqueues the same persisted scan when the client retries the same key after Redis failure', async () => {
     const repositoryId = await createRepository();
 
     const requestKey = crypto.randomUUID();
-    const payload = { requestKey, requestedRef: 'main' };
+    const payload = { requestKey, ref: 'main' };
     const enqueue = jest
       .spyOn(queueService, 'enqueueScanJob')
       .mockRejectedValueOnce(new Error('injected transient Redis failure'));
@@ -109,7 +133,11 @@ describe('Scan job enqueue recovery (E2E)', () => {
       },
     });
     expect(persistedJob).not.toBeNull();
-    expect(persistedJob).toMatchObject({ status: 'QUEUED', stage: 'WAITING' });
+    expect(persistedJob).toMatchObject({
+      status: 'QUEUED',
+      stage: 'WAITING',
+      requestedRef: 'main',
+    });
     queuedScanJobId = persistedJob!.id;
     expect(await scanQueue.getJob(`scan-${persistedJob!.id}`)).toBeUndefined();
 
@@ -132,7 +160,7 @@ describe('Scan job enqueue recovery (E2E)', () => {
   it('re-enqueues a persisted scan on worker startup when the original Redis enqueue failed', async () => {
     const repositoryId = await createRepository();
     const requestKey = crypto.randomUUID();
-    const payload = { requestKey, requestedRef: 'main' };
+    const payload = { requestKey, ref: 'main' };
     jest.spyOn(queueService, 'enqueueScanJob')
       .mockRejectedValueOnce(new Error('injected transient Redis failure'));
 

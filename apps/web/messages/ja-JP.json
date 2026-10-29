@@ -534,6 +534,8 @@
     "requirement": "要件",
     "status": "状態",
     "failedToLoadAnalyses": "分析を読み込めません",
+    "retryAnalyses": "分析を再試行",
+    "retryingAnalyses": "再試行中...",
     "noAnalyses": "まだ分析はありません",
     "noAnalysesDescription": "最初の影響分析を実行すると、ここに結果が表示されます。",
     "startAnalysis": "分析を開始",

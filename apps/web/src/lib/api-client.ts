@@ -1,7 +1,7 @@
 import { ApiError, ApiContractError } from "./api-error"
 import { z } from "zod"
 import { getApiBaseUrl } from "./runtime-config"
-import type { UserRole } from "@ba-helper/contracts"
+import { apiErrorResponseSchema, type UserRole } from "@ba-helper/contracts"
 
 export { getApiBaseUrl } from "./runtime-config"
 
@@ -32,6 +32,31 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   }
 
   return {}
+}
+
+function parseApiErrorResponse(data: unknown): {
+  code: string | null | undefined
+  message: string
+  details?: unknown
+} | null {
+  const parsed = apiErrorResponseSchema.safeParse(data)
+  if (!parsed.success) return null
+
+  const response = parsed.data
+  const code = "code" in response
+    ? response.code
+    : "errorCode" in response
+      ? response.errorCode
+      : undefined
+  return {
+    code,
+    message: Array.isArray(response.message)
+      ? response.message.join("; ")
+      : response.message,
+    ...("details" in response && response.details !== undefined
+      ? { details: response.details }
+      : {}),
+  }
 }
 
 async function requestJson<T>(
@@ -80,7 +105,8 @@ async function requestJson<T>(
   const text = isJsonResponse ? null : await res.text().catch(() => "")
 
   if (!res.ok) {
-    if (!data) {
+    const errorBody = parseApiErrorResponse(data)
+    if (!errorBody) {
       const respondedWithHtml =
         contentType.includes("text/html") ||
         text?.trim().toLowerCase().startsWith("<!doctype html") ||
@@ -103,8 +129,8 @@ async function requestJson<T>(
       })
     }
 
-    let errorCode = data?.code ?? "UNKNOWN_ERROR"
-    let errorMessage = data?.message ?? "Request failed"
+    let errorCode = errorBody.code ?? "UNKNOWN_ERROR"
+    let errorMessage = errorBody.message || "Request failed"
 
     if (res.status === 401) {
       errorCode = "UNAUTHORIZED"
@@ -118,7 +144,7 @@ async function requestJson<T>(
       status: res.status,
       code: errorCode,
       message: errorMessage,
-      details: data?.details,
+      details: errorBody.details,
     })
   }
 
@@ -166,7 +192,9 @@ export async function apiDelete<T>(path: string, schema: z.ZodType<T>, headers?:
   return requestJson("DELETE", path, undefined, schema, headers)
 }
 
-export async function apiGetFile(path: string): Promise<{
+export type ApiFileContentType = "application/pdf" | "text/markdown"
+
+export async function apiGetFile(path: string, expectedContentType: ApiFileContentType): Promise<{
   blob: Blob
   filename: string
   contentType: string
@@ -194,17 +222,22 @@ export async function apiGetFile(path: string): Promise<{
   const data = isJsonResponse ? await res.json().catch(() => null) : null
 
   if (!res.ok) {
-    if (data) {
+    const errorBody = parseApiErrorResponse(data)
+    if (errorBody) {
       throw new ApiError({
         status: res.status,
-        code: data.code ?? "UNKNOWN_ERROR",
+        code: res.status === 401
+          ? "UNAUTHORIZED"
+          : res.status === 403
+            ? "FORBIDDEN"
+            : errorBody.code ?? "UNKNOWN_ERROR",
         message:
           res.status === 401
             ? "Your session expired. Please sign in again."
             : res.status === 403
               ? "You do not have permission to perform this action."
-              : data.message ?? `Request failed with status ${res.status}.`,
-        details: data.details,
+              : errorBody.message || `Request failed with status ${res.status}.`,
+        details: errorBody.details,
       })
     }
 
@@ -216,15 +249,38 @@ export async function apiGetFile(path: string): Promise<{
     })
   }
 
-  const blob = await res.blob()
-  const contentDisposition = res.headers.get("Content-Disposition")
-  let filename = "download.bin"
-  if (contentDisposition?.includes("filename=")) {
-    const match = contentDisposition.match(/filename="?([^"]+)"?/)
-    if (match?.[1]) {
-      filename = match[1]
-    }
+  const normalizedContentType = contentType.split(";", 1)[0].trim().toLowerCase()
+  if (normalizedContentType !== expectedContentType) {
+    const respondedWithHtml = normalizedContentType === "text/html"
+    throw new ApiError({
+      status: 500,
+      code: respondedWithHtml ? "API_WRONG_SERVER" : "API_INVALID_RESPONSE",
+      message: respondedWithHtml
+        ? `Configured API URL responded with HTML for ${path}.`
+        : `Configured API URL returned an unexpected content type for ${path}.`,
+      details: { apiBaseUrl, contentType, expectedContentType, path },
+    })
   }
+
+  const contentDisposition = res.headers.get("Content-Disposition") ?? ""
+  const filenameMatch = contentDisposition.match(/(?:^|;)\s*filename\s*=\s*(?:"([^"]*)"|([^;\s]*))/i)
+  const filename = filenameMatch?.[1] ?? filenameMatch?.[2] ?? ""
+  const requiredExtension = expectedContentType === "application/pdf" ? ".pdf" : ".md"
+  const isSafeBasename = /^[a-z0-9][a-z0-9._-]*$/i.test(filename)
+  if (
+    !/^attachment\s*;/i.test(contentDisposition) ||
+    !isSafeBasename ||
+    !filename.toLowerCase().endsWith(requiredExtension)
+  ) {
+    throw new ApiError({
+      status: 500,
+      code: "API_INVALID_RESPONSE",
+      message: `Configured API URL returned an invalid attachment filename for ${path}.`,
+      details: { apiBaseUrl, contentDisposition, expectedContentType, path },
+    })
+  }
+
+  const blob = await res.blob()
 
   return {
     blob,

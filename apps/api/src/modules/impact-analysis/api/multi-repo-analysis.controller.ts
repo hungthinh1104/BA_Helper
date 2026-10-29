@@ -98,6 +98,11 @@ export class MultiRepoAnalysisController {
       'Project',
     );
     const input = parseApiInput(multiRepoImpactAnalysisCreateRequestSchema, body);
+    await this.permissions.assertPermissionForRequirementRevision(
+      actor,
+      input.requirementRevisionId,
+      'analysis:create',
+    );
     const result = await this.createMultiRepoAnalyses.execute({
       actorId: actor.id,
       projectId,

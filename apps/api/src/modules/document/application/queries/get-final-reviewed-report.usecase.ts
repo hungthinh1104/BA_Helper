@@ -3,7 +3,12 @@ import { DocumentJobStatus } from '@prisma/client';
 import { AppError } from '@ba-helper/shared';
 import { GetReviewCompletionUseCase } from '../../../traceability/application/get-review-completion.usecase';
 import { GetLatestReviewedReportSnapshotUseCase } from './get-latest-reviewed-report-snapshot.usecase';
-import { FinalReviewedReportResponse } from '@ba-helper/contracts';
+import {
+  FinalReviewedReportResponse,
+  evidenceQualitySummarySnapshotSchema,
+  evaluationContextSnapshotSchema,
+  reviewDecisionsSnapshotSchema,
+} from '@ba-helper/contracts';
 import { ApprovedReportContextReader } from './approved-report-context.reader';
 import { PrismaService, DEFAULT_REPORT_LOCALE, ReportLocale, buildReportReviewCoverageSummaryFromSnapshot, readReportTestTrace } from "@ba-helper/backend-runtime";
 
@@ -47,9 +52,11 @@ export class GetFinalReviewedReportUseCase {
       );
     }
 
+    const frozenContent = parseFrozenReportContent(snapshot);
+
     const reviewCoverageSummary = buildReportReviewCoverageSummaryFromSnapshot({
-      reviewDecisionsSnapshot: snapshot.reviewDecisionsSnapshot,
-      evidenceQualitySummarySnapshot: snapshot.evidenceQualitySummarySnapshot,
+      reviewDecisionsSnapshot: frozenContent.reviewDecisionsSnapshot,
+      evidenceQualitySummarySnapshot: frozenContent.evidenceQualitySummarySnapshot,
     });
     const mismatchedCompletionFields = findReviewCompletionMismatches(
       completion,
@@ -74,9 +81,9 @@ export class GetFinalReviewedReportUseCase {
       createdAt: snapshot.createdAt.toISOString(),
       reviewCompletion: completion,
       reviewCoverageSummary,
-      reviewDecisionsSnapshot: snapshot.reviewDecisionsSnapshot,
-      evidenceQualitySummarySnapshot: snapshot.evidenceQualitySummarySnapshot,
-      evaluationContextSnapshot: snapshot.evaluationContextSnapshot,
+      reviewDecisionsSnapshot: frozenContent.reviewDecisionsSnapshot,
+      evidenceQualitySummarySnapshot: frozenContent.evidenceQualitySummarySnapshot,
+      evaluationContextSnapshot: frozenContent.evaluationContextSnapshot,
       createdByUserId: snapshot.createdByUserId,
     };
   }
@@ -207,6 +214,35 @@ export class GetFinalReviewedReportUseCase {
     );
   }
 
+}
+
+function parseFrozenReportContent(snapshot: {
+  id: string;
+  reviewDecisionsSnapshot: unknown;
+  evidenceQualitySummarySnapshot: unknown;
+  evaluationContextSnapshot: unknown;
+}) {
+  const reviewDecisions = reviewDecisionsSnapshotSchema.safeParse(
+    snapshot.reviewDecisionsSnapshot,
+  );
+  const evidenceSummary = evidenceQualitySummarySnapshotSchema.safeParse(
+    snapshot.evidenceQualitySummarySnapshot,
+  );
+  const evaluationContext = evaluationContextSnapshotSchema.safeParse(
+    snapshot.evaluationContextSnapshot,
+  );
+  if (!reviewDecisions.success || !evidenceSummary.success || !evaluationContext.success) {
+    throw new AppError(
+      'REPORT_PROVENANCE_MISMATCH',
+      'The frozen report snapshot contains data outside its response contract.',
+      { reportSnapshotId: snapshot.id },
+    );
+  }
+  return {
+    reviewDecisionsSnapshot: reviewDecisions.data,
+    evidenceQualitySummarySnapshot: evidenceSummary.data,
+    evaluationContextSnapshot: evaluationContext.data,
+  };
 }
 
 function findReviewCompletionMismatches(

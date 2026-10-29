@@ -39,6 +39,20 @@ export class ReviewNoteController {
       'review:write',
     );
     const input = parseApiInput(createReviewNoteRequestSchema, body);
+    if (input.insightId) {
+      await this.permissions.assertPermissionForInsight(
+        actor,
+        input.insightId,
+        'review:write',
+      );
+    }
+    if (input.traceabilityLinkId) {
+      await this.permissions.assertPermissionForTraceabilityLink(
+        actor,
+        input.traceabilityLinkId,
+        'review:write',
+      );
+    }
     const note = await this.saveNoteUseCase.execute(analysisId, input);
     return {
       id: note.id,

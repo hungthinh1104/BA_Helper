@@ -1,7 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@ba-helper/backend-runtime';
-import { codeComprehensionResponseSchema } from '@ba-helper/contracts';
+import { codeComprehensionResponseSchema, graphResponseSchema } from '@ba-helper/contracts';
 import crypto from 'node:crypto';
 import { installQueryMeter } from '../../../../scripts/pinned-comprehension-query-meter';
 import request from 'supertest';
@@ -103,6 +103,45 @@ describe('Code comprehension projection (E2E)', () => {
     });
     expect(projection.relatedScenarios[0].behaviorAssociations[0]).toMatchObject({ basis: 'AST_SUBJECT_REFERENCE' });
     expect(projection.snapshotContext).toMatchObject({ snapshotId, commitSha, runtimeObservations: 'NOT_IMPORTED' });
+  });
+
+  it('excludes cross-snapshot edge endpoints from graph and comprehension projections', async () => {
+    const foreignProject = await prisma.project.create({ data: { name: 'Foreign comprehension project' } });
+    const foreignRepository = await prisma.repository.create({
+      data: { projectId: foreignProject.id, canonicalUrl: 'https://github.com/mock/foreign-comprehension' },
+    });
+    const foreignSnapshot = await prisma.repositorySnapshot.create({
+      data: { repositoryId: foreignRepository.id, commitSha: 'foreign-comprehension-commit',
+        analyzerVersion: 'analyzer@0.14.0', coverageStatus: 'READY' },
+    });
+    const foreignArtifactId = crypto.randomUUID();
+    await prisma.codeArtifact.create({
+      data: { id: foreignArtifactId, snapshotId: foreignSnapshot.id,
+        artifactKey: 'private:src/payment-secrets.ts:PaymentSecrets.refundCustomer',
+        name: 'PaymentSecrets.refundCustomer', artifactType: 'SERVICE_METHOD',
+        universalKind: 'DOMAIN_SERVICE', filePath: 'src/payment-secrets.ts' },
+    });
+    await prisma.dependencyEdge.createMany({ data: [
+      { snapshotId, fromArtifactId: foreignArtifactId, toArtifactId: selectedArtifactId, type: 'CALLS' },
+      { snapshotId, fromArtifactId: selectedArtifactId, toArtifactId: foreignArtifactId, type: 'REFERENCES' },
+    ] });
+
+    const response = await request(app.getHttpServer())
+      .get(`/api/v1/snapshots/${snapshotId}/artifacts/${selectedArtifactId}/comprehension`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    const projection = codeComprehensionResponseSchema.parse(response.body);
+
+    expect(JSON.stringify(projection)).not.toContain('PaymentSecrets.refundCustomer');
+    expect(JSON.stringify(projection)).not.toContain('src/payment-secrets.ts');
+
+    const graphResponse = await request(app.getHttpServer())
+      .get(`/api/v1/snapshots/${snapshotId}/graph`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    const graph = graphResponseSchema.parse(graphResponse.body);
+    expect(graph.edges.some((edge) =>
+      edge.fromArtifactId === foreignArtifactId || edge.toArtifactId === foreignArtifactId)).toBe(false);
   });
 
   it('rejects a user without membership before reading the projection', async () => {

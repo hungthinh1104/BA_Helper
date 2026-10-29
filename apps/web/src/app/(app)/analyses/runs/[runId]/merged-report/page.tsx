@@ -71,6 +71,7 @@ export default function ApprovedMultiRepoReportPage({
     try {
       const file = await apiGetFile(
         `/api/v1/multi-repo-runs/${runId}/merged-report/export.${format}`,
+        format === "pdf" ? "application/pdf" : "text/markdown",
       )
       const url = URL.createObjectURL(file.blob)
       const anchor = document.createElement("a")

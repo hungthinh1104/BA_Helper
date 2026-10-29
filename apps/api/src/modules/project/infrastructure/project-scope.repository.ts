@@ -133,6 +133,29 @@ export class ProjectScopeRepository {
     return clarification?.analysis.requirementRevision.requirement.projectId ?? null;
   }
 
+  async findReviewDecisionProjectId(decisionId: string): Promise<string | null> {
+    const decision = await this.prisma.analysisReviewDecision.findUnique({
+      where: { id: decisionId },
+      select: {
+        analysis: {
+          select: {
+            requirementRevision: {
+              select: {
+                requirement: {
+                  select: {
+                    projectId: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return decision?.analysis.requirementRevision.requirement.projectId ?? null;
+  }
+
   async findInsightProjectId(insightId: string): Promise<string | null> {
     const insight = await this.prisma.baInsight.findUnique({
       where: { id: insightId },

@@ -22,6 +22,7 @@ describe('Diagnostic Risk Propagation', () => {
   beforeEach(() => {
     mockInsightRepo = {
       upsertMany: jest.fn().mockResolvedValue([]),
+      linkEvidenceMany: jest.fn().mockResolvedValue(undefined),
       deleteByAnalysisId: jest.fn().mockResolvedValue(undefined),
     } as any;
 
@@ -85,6 +86,7 @@ describe('Diagnostic Risk Propagation', () => {
     mockTraceabilityRepo = {
       findByAnalysisId: jest.fn().mockResolvedValue([]),
       upsertMany: jest.fn().mockResolvedValue([]),
+      linkEvidenceMany: jest.fn().mockResolvedValue(undefined),
     };
 
     mockArtifactRepo = {

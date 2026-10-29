@@ -29,5 +29,6 @@ export type TraceabilityRecord = {
 
 export interface TraceabilityRepositoryPort {
   upsertMany(inputs: TraceabilityUpsertInput[]): Promise<TraceabilityRecord[]>;
+  linkEvidenceMany(items: Array<{ linkId: string; evidenceIds: string[] }>): Promise<void>;
   linkEvidence(params: { linkId: string; evidenceIds: string[] }): Promise<unknown>;
 }

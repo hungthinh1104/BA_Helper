@@ -1,6 +1,7 @@
 import { SubmitReviewItemDecisionUseCase } from './submit-review-item-decision.usecase';
 
 const analysisId = 'analysis-1';
+const requestKey = '00000000-0000-4000-8000-000000000001';
 
 function buildAnalysis(overrides: Record<string, unknown> = {}) {
   return {
@@ -45,8 +46,20 @@ function setup(overrides: {
     upsert: jest.fn().mockResolvedValue({ id: 'note-1' }),
     clear: jest.fn().mockResolvedValue({ count: 1 }),
   };
-  const eventLog = { recordEvent: jest.fn().mockResolvedValue(undefined) };
-  const transaction = { id: 'review-transaction' };
+  const eventLog = {
+    findEventByIdempotencyKey: jest.fn().mockResolvedValue(null),
+    recordEvent: jest.fn().mockResolvedValue(undefined),
+  };
+  let lockQueryIndex = 0;
+  const transaction = {
+    id: 'review-transaction',
+    $queryRaw: jest.fn().mockImplementation(() => {
+      const isAnalysisLock = lockQueryIndex++ % 2 === 0;
+      return Promise.resolve(isAnalysisLock
+        ? [{ status: 'WAITING_FOR_REVIEW', sourceTargetId: 'target-1', snapshotCommitSha: 'sha1' }]
+        : [{ resolvedRefType: 'BRANCH', latestObservedCommitSha: 'sha1' }]);
+    }),
+  };
   const prisma = {
     $transaction: jest.fn(async (work: (tx: typeof transaction) => unknown) => work(transaction)),
   };
@@ -67,6 +80,7 @@ describe('SubmitReviewItemDecisionUseCase', () => {
 
       const result = await useCase.execute({
         analysisId,
+        requestKey,
         itemId: 'link-1',
         target: 'impact',
         action: 'accept',
@@ -84,7 +98,9 @@ describe('SubmitReviewItemDecisionUseCase', () => {
       expect(eventLog.recordEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           eventType: 'TRACEABILITY_REVIEW_DECISION_UPDATED',
-          idempotencyKey: 'impact:analysis-1:review-item:link-1:ACCEPTED',
+          idempotencyKey: expect.stringMatching(
+            /^impact:analysis-1:review-item:link-1:command:[0-9a-f-]{36}$/,
+          ),
           actorUserId: 'user-1',
         }),
         transaction,
@@ -103,6 +119,7 @@ describe('SubmitReviewItemDecisionUseCase', () => {
       const { useCase, traceabilityRepo, transaction } = setup();
       const result = await useCase.execute({
         analysisId,
+        requestKey,
         itemId: 'link-1',
         target: 'impact',
         action: 'needs_more_evidence',
@@ -126,6 +143,7 @@ describe('SubmitReviewItemDecisionUseCase', () => {
 
       const result = await useCase.execute({
         analysisId,
+        requestKey,
         itemId: 'link-1',
         target: 'impact',
         action: 'accept',
@@ -134,7 +152,10 @@ describe('SubmitReviewItemDecisionUseCase', () => {
       });
 
       expect(traceabilityRepo.upsertReviewDecision).not.toHaveBeenCalled();
-      expect(eventLog.recordEvent).not.toHaveBeenCalled();
+      expect(eventLog.recordEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ eventType: 'REVIEW_DECISION' }),
+        expect.anything(),
+      );
       expect(result.idempotent).toBe(true);
     });
 
@@ -149,6 +170,7 @@ describe('SubmitReviewItemDecisionUseCase', () => {
 
       const result = await useCase.execute({
         analysisId,
+        requestKey,
         itemId: 'link-1',
         target: 'impact',
         action: 'undo',
@@ -175,13 +197,17 @@ describe('SubmitReviewItemDecisionUseCase', () => {
       const { useCase, traceabilityRepo, eventLog } = setup();
       const result = await useCase.execute({
         analysisId,
+        requestKey,
         itemId: 'link-1',
         target: 'impact',
         action: 'undo',
         actorId: 'user-1',
       });
       expect(traceabilityRepo.deleteReviewDecision).not.toHaveBeenCalled();
-      expect(eventLog.recordEvent).not.toHaveBeenCalled();
+      expect(eventLog.recordEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ eventType: 'REVIEW_DECISION' }),
+        expect.anything(),
+      );
       expect(result.idempotent).toBe(true);
     });
   });
@@ -192,6 +218,7 @@ describe('SubmitReviewItemDecisionUseCase', () => {
 
       const result = await useCase.execute({
         analysisId,
+        requestKey,
         itemId: 'insight-1',
         target: 'insight',
         action: 'reject',
@@ -226,6 +253,7 @@ describe('SubmitReviewItemDecisionUseCase', () => {
       await expect(
         useCase.execute({
           analysisId,
+          requestKey,
           itemId: 'insight-1',
           target: 'insight',
           action: 'needs_more_evidence',
@@ -246,6 +274,7 @@ describe('SubmitReviewItemDecisionUseCase', () => {
 
       const result = await useCase.execute({
         analysisId,
+        requestKey,
         itemId: 'insight-1',
         target: 'insight',
         action: 'undo',
@@ -276,6 +305,7 @@ describe('SubmitReviewItemDecisionUseCase', () => {
 
       const result = await useCase.execute({
         analysisId,
+        requestKey,
         itemId: 'insight-1',
         target: 'insight',
         action: 'accept',
@@ -285,7 +315,10 @@ describe('SubmitReviewItemDecisionUseCase', () => {
 
       expect(insightRepo.updateReviewStatusIfCurrent).not.toHaveBeenCalled();
       expect(reviewNoteRepo.upsert).not.toHaveBeenCalled();
-      expect(eventLog.recordEvent).not.toHaveBeenCalled();
+      expect(eventLog.recordEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ eventType: 'REVIEW_DECISION' }),
+        expect.anything(),
+      );
       expect(result.idempotent).toBe(true);
     });
 
@@ -294,6 +327,7 @@ describe('SubmitReviewItemDecisionUseCase', () => {
       await expect(
         useCase.execute({
           analysisId,
+          requestKey,
           itemId: 'insight-1',
           target: 'insight',
           action: 'accept',
@@ -314,6 +348,7 @@ describe('SubmitReviewItemDecisionUseCase', () => {
     await expect(
       useCase.execute({
         analysisId,
+        requestKey,
         itemId: 'link-1',
         target: 'impact',
         action: 'accept',
@@ -333,6 +368,7 @@ describe('SubmitReviewItemDecisionUseCase', () => {
     await expect(
       useCase.execute({
         analysisId,
+        requestKey,
         itemId: 'link-1',
         target: 'impact',
         action: 'accept',

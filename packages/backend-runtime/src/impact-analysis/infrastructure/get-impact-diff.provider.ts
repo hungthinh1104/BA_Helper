@@ -32,11 +32,18 @@ class PrismaImpactDiffRepository implements ImpactDiffRepositoryPort {
   }
 
   async getAffectedArtifactLinks(analysisId: string): Promise<ImpactDiffArtifactLink[]> {
+    const analysis = await this.prisma.impactAnalysis.findUnique({
+      where: { id: analysisId },
+      select: { snapshotId: true },
+    });
+    if (!analysis) return [];
+
     const links = await this.prisma.traceabilityLink.findMany({
       where: {
         impactAnalysisId: analysisId,
         linkType: 'AFFECTED',
         reviewStatus: { not: 'REJECTED' },
+        artifact: { snapshotId: analysis.snapshotId },
       },
       include: { artifact: true },
     });

@@ -21,7 +21,10 @@ export function FinalReviewGatePanel({ analysisId }: FinalReviewGatePanelProps) 
   const handleDownloadMarkdown = async () => {
     try {
       setIsDownloading(true)
-      const file = await apiGetFile(`/api/v1/impact-analyses/${analysisId}/approved-report/export.md`)
+      const file = await apiGetFile(
+        `/api/v1/impact-analyses/${analysisId}/approved-report/export.md`,
+        "text/markdown",
+      )
       const url = URL.createObjectURL(file.blob)
       const a = document.createElement("a")
       a.href = url

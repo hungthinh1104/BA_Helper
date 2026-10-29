@@ -537,6 +537,8 @@
     "requirement": "Requirement",
     "status": "Status",
     "failedToLoadAnalyses": "Failed to load analyses",
+    "retryAnalyses": "Retry",
+    "retryingAnalyses": "Retrying...",
     "noAnalyses": "No analyses yet",
     "noAnalysesDescription": "Run your first impact analysis to see results here.",
     "startAnalysis": "Start Analysis",

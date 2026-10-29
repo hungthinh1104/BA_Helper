@@ -109,6 +109,11 @@ describe('Error Mapping (E2E)', () => {
       userId: adminUserId,
       role: 'OWNER',
     });
+    await grantProjectMembership(prisma, {
+      projectId: project2.id,
+      userId: adminUserId,
+      role: 'OWNER',
+    });
 
     const requirement = await prisma.requirement.create({
       data: { projectId: project1.id },

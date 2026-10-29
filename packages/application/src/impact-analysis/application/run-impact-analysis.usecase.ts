@@ -134,34 +134,18 @@ export class RunImpactAnalysisUseCase {
       const insights = (await this.insightRepo.upsertMany(insightInputs)) as InsightRecord[];
 
       // Link persisted evidence to every AI insight that returned resolvable evidence keys.
-      await Promise.all(
-        insights
-          .filter((insight) =>
-            aiResult.insightEvidenceMap.some((item) => item.insightKey === insight.insightKey),
-          )
-          .map((insight) => {
-            const mapping = aiResult.insightEvidenceMap.find(
-              (item) => item.insightKey === insight.insightKey,
-            );
+      const evidenceLinks = insights.flatMap((insight) => {
+        const mapping = aiResult.insightEvidenceMap.find(
+          (item) => item.insightKey === insight.insightKey,
+        );
+        if (!mapping || mapping.artifactKeys.length === 0) return [];
 
-            if (!mapping || mapping.artifactKeys.length === 0) {
-              return Promise.resolve([]);
-            }
-
-            const evidenceIds = mapping.artifactKeys
-              .map((key) => evidenceResult.evidenceByKey.get(key)?.id)
-              .filter((id): id is string => Boolean(id));
-
-            if (evidenceIds.length === 0) {
-              return Promise.resolve([]);
-            }
-
-            return this.insightRepo.linkEvidence({
-              insightId: insight.id,
-              evidenceIds,
-            });
-          }),
-      );
+        const evidenceIds = mapping.artifactKeys
+          .map((key) => evidenceResult.evidenceByKey.get(key)?.id)
+          .filter((id): id is string => Boolean(id));
+        return evidenceIds.length > 0 ? [{ insightId: insight.id, evidenceIds }] : [];
+      });
+      await this.insightRepo.linkEvidenceMany(evidenceLinks);
 
       await this.eventLog.recordEvent({
         eventType: 'ANALYSIS_AI_REASONING_COMPLETED',

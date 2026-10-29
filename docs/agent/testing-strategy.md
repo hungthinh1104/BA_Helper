@@ -437,7 +437,12 @@ retry does not duplicate evidences, insights, draft documents, or retry-scoped e
 same scan requestKey cannot create duplicate scan executions
 same impact-analysis requestKey cannot create duplicate analysis executions
 same requestKey with changed command payload is rejected
-repeated identical review decision does not append a duplicate change event
+repeated review command with the same requestKey does not append an event or reapply after a later decision
+reusing a review requestKey with a changed action, rationale, target, or actor returns REQUEST_KEY_MISMATCH
+new no-op review commands record one command receipt; replaying that requestKey does not add another receipt
+accept -> reject -> accept keeps three audit events for both insight and impact review items
+concurrent identical review commands serialize and persist one mutation/event
+frontend review retries retain their requestKey until success and rotate it for a later command
 later safe moving-ref resolution projects older completed output as isStale=true even when extraction fails
 same commit with a different analyzerVersion does not mutate old extracted evidence
 same commit reached from different targets does not overwrite target provenance

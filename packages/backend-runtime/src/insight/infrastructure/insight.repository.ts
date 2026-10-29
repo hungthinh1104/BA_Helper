@@ -2,16 +2,24 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { Prisma } from '@prisma/client';
 import { lockReviewableAnalysisWhileCurrent } from '../../impact-analysis/infrastructure/review-analysis-lock';
+import { analysisEvidenceScopeWhere } from '../../evidence/infrastructure/analysis-evidence-scope';
 
 @Injectable()
 export class InsightRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async listByAnalysis(impactAnalysisId: string) {
+    const analysis = await this.prisma.impactAnalysis.findUnique({
+      where: { id: impactAnalysisId },
+      select: { snapshotId: true, requirementRevisionId: true },
+    });
+    if (!analysis) return [];
+
     const insights = await this.prisma.baInsight.findMany({
       where: { impactAnalysisId },
       include: {
         evidenceLinks: {
+          where: { evidence: analysisEvidenceScopeWhere(analysis.snapshotId, analysis.requirementRevisionId) },
           include: {
             evidence: {
               include: {
@@ -180,5 +188,14 @@ export class InsightRepository {
     return this.prisma.insightEvidence.findMany({
       where: { insightId: params.insightId },
     });
+  }
+
+  async linkEvidenceMany(items: Array<{ insightId: string; evidenceIds: string[] }>): Promise<void> {
+    const data = items.flatMap(({ insightId, evidenceIds }) =>
+      evidenceIds.map((evidenceId) => ({ insightId, evidenceId })),
+    );
+    if (data.length === 0) return;
+
+    await this.prisma.insightEvidence.createMany({ data, skipDuplicates: true });
   }
 }

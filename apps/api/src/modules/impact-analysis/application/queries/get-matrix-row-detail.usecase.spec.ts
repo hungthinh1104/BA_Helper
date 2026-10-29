@@ -1,13 +1,27 @@
 import { GetMatrixRowDetailUseCase } from './get-matrix-row-detail.usecase';
 
+const evidenceLink = (evidenceId: string) => ({
+  evidenceId,
+  evidence: {
+    id: evidenceId,
+    snapshotId: 'snapshot-1',
+    artifactId: 'artifact-1',
+    requirementRevisionId: null,
+    artifact: { snapshotId: 'snapshot-1' },
+  },
+});
+
 describe('GetMatrixRowDetailUseCase', () => {
   it('maps metadata risk insights to matrix risk refs and artifact related risk ids', async () => {
     const prisma = {
       impactAnalysis: {
         findFirst: jest.fn().mockResolvedValue({
           id: 'analysis-1',
+          snapshotId: 'snapshot-1',
+          requirementRevisionId: 'revision-1',
           status: 'WAITING_FOR_REVIEW',
           snapshot: {
+            id: 'snapshot-1',
             profile: { domain: 'BOOKING' },
           },
           sourceTarget: {
@@ -20,6 +34,7 @@ describe('GetMatrixRowDetailUseCase', () => {
               linkBasis: 'EVIDENCED',
               artifact: {
                 id: 'artifact-1',
+                snapshotId: 'snapshot-1',
                 artifactKey: 'service-method:payment.service.refund',
                 name: 'PaymentService.refund',
                 universalKind: 'DOMAIN_SERVICE',
@@ -29,15 +44,7 @@ describe('GetMatrixRowDetailUseCase', () => {
                 endLine: 20,
               },
               evidenceLinks: [
-                {
-                  evidence: {
-                    id: 'evidence-1',
-                    excerpt: 'refund(command)',
-                    sourcePath: 'src/payment/payment.service.ts',
-                    startLine: 10,
-                    endLine: 20,
-                  },
-                },
+                evidenceLink('evidence-1'),
               ],
             },
           ],
@@ -49,7 +56,7 @@ describe('GetMatrixRowDetailUseCase', () => {
               metadata: { kind: 'RISK' },
               title: 'Duplicate refund risk',
               description: 'Duplicate cancellation may double refund.',
-              evidenceLinks: [{ evidenceId: 'evidence-1' }],
+              evidenceLinks: [evidenceLink('evidence-1')],
             },
             {
               id: 'insight-qa-1',
@@ -58,7 +65,7 @@ describe('GetMatrixRowDetailUseCase', () => {
               metadata: {},
               title: 'Duplicate cancel does not double refund',
               description: 'Given: cancelled\nWhen: cancelled again\nThen: one refund',
-              evidenceLinks: [{ evidenceId: 'evidence-1' }],
+              evidenceLinks: [evidenceLink('evidence-1')],
             },
           ],
         }),

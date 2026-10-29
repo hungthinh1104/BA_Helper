@@ -51,6 +51,7 @@ export function configureApp(
 
   app.enableCors({
     credentials: false,
+    exposedHeaders: ['Content-Disposition'],
     origin: (
       origin: string | undefined,
       callback: (error: Error | null, allow?: boolean) => void,

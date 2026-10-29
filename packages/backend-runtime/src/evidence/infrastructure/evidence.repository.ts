@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { EvidenceSourceType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { analysisEvidenceScopeWhere } from './analysis-evidence-scope';
 
 type EvidencePrismaClient = PrismaService | Prisma.TransactionClient;
 
@@ -10,12 +11,7 @@ export class EvidenceRepository {
 
   async listByAnalysis(params: { snapshotId: string; revisionId: string }) {
     return this.prisma.evidence.findMany({
-      where: {
-        OR: [
-          { snapshotId: params.snapshotId },
-          { requirementRevisionId: params.revisionId },
-        ],
-      },
+      where: analysisEvidenceScopeWhere(params.snapshotId, params.revisionId),
     });
   }
 

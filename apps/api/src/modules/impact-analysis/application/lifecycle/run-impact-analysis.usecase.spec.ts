@@ -37,11 +37,13 @@ describe('RunImpactAnalysisUseCase', () => {
     insightRepo = {
       upsertMany: jest.fn(),
       linkEvidence: jest.fn(),
+      linkEvidenceMany: jest.fn(),
     } as unknown as jest.Mocked<InsightRepository>;
 
     traceabilityRepo = {
       upsertMany: jest.fn(),
       linkEvidence: jest.fn(),
+      linkEvidenceMany: jest.fn(),
     } as unknown as jest.Mocked<TraceabilityRepository>;
 
     llmProvider = {

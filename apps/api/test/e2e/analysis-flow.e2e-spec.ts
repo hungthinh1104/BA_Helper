@@ -82,7 +82,7 @@ describe('Analysis Flow (E2E)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
         requestKey: scanRequestKey,
-        requestedRef: 'main',
+        ref: 'main',
       })
       .expect(201);
 

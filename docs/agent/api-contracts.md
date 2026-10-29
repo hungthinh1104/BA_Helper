@@ -9,6 +9,19 @@ Zod request/response contracts. Additions must update the catalogue: generation
 rejects undocumented or orphan operations, and tests compare controller inputs.
 The locally served, pinned Scalar bundle needs no external CDN or request proxy.
 See [API reference usage](../api/README.md) for authentication, workflow and checks.
+
+Event-log response identity is explicit: `actorType` must be `SYSTEM` or `USER`.
+The event-log service resolves legacy payloads to one of those values before
+mapping the DTO. The shared response contract rejects missing or unsupported
+values; consumers must not repair malformed identity by defaulting it to
+`SYSTEM`.
+
+Reviewed-report snapshot responses and final reviewed-report responses validate
+the frozen evidence-quality item array, summary counters, and nullable
+evaluation context against their shared schemas. A malformed persisted frozen
+payload fails with `REPORT_PROVENANCE_MISMATCH`; report readers must not replace
+malformed decision rows with an empty list or silently recalculate them from
+live review state.
 Existing acknowledgement shapes, report-job input, review-note lists and queue
 retry responses now have shared schemas as well. This documentation work adds
 no domain state or persisted fields and does not tighten endpoint validation.
@@ -249,6 +262,7 @@ POST /api/v1/insights/:insightId/confirm
 POST /api/v1/insights/:insightId/reject
 POST /api/v1/traceability-links/:linkId/confirm
 POST /api/v1/traceability-links/:linkId/reject
+PUT  /api/v1/impact-analyses/:analysisId/review-items/:itemId/decision
 
 GET  /api/v1/impact-analyses/:analysisId/documents
 GET  /api/v1/impact-analyses/:analysisId/approved-report
@@ -259,11 +273,25 @@ POST /api/v1/analyses/:analysisId/localization
 GET  /api/v1/analyses/:analysisId/localization/:locale/status
 ```
 
+`POST /api/v1/repositories/:repositoryId/scan-jobs` accepts `requestKey` and
+optional `ref`. This request schema rejects unknown fields: a misspelled branch
+field must fail validation instead of being stripped and silently scanning the
+default ref.
+
 Requirement creation requires a UUID `requestKey`. It is unique within the
 project: retrying the same key and payload returns the original requirement
 and first revision, while reusing the key with a different payload returns
 HTTP 409 `REQUEST_KEY_MISMATCH`. The browser keeps the key for retries of the
 same submission and clears it after a successful result or explicit reset.
+
+The unified review-item decision endpoint also requires a UUID `requestKey`.
+The browser reuses that key while retrying one failed command and rotates it
+after success. Replaying a key after a newer decision does not restore the old
+decision; the response reports the current persisted decision with
+`idempotent=true`. Reusing the key for a different target, action, rationale,
+or actor returns HTTP 409 `REQUEST_KEY_MISMATCH`. A new request that is already
+in the requested state records one no-op command receipt; retries of that key
+do not add further events.
 
 Generating a localized report requires Global `ADMIN` or `REVIEWER` and the
 project-scoped `report:export` permission. The operation is rate limited. The
@@ -584,6 +612,11 @@ The backend resolves the latest observed target plus matching latest snapshot
 for each repository in the same project, then creates or reuses one normal
 `ImpactAnalysis` per repository. The response includes a stable `runId`, and
 `GET /api/v1/multi-repo-runs/:runId` returns the grouped child analyses.
+The actor must have `analysis:create` permission for both the selected project
+and submitted requirement revision. A revision or repository outside the
+actor's project memberships returns 404 and creates no run or child analysis;
+if the actor can access both projects but submits a mixed project context, the
+request returns `INPUT_PROJECT_MISMATCH`.
 `GET /api/v1/projects/:projectId/multi-repo-runs` lists those runs for the
 current project with derived child status counts. Run detail also returns
 derived readiness and latest review-decision state per child analysis. This is
@@ -764,6 +797,21 @@ persistence. For a moving target, its latest observed commit must equal
 `snapshot.commitSha` at analysis creation; otherwise use the latest scanned
 snapshot or a pinned commit target.
 
+Optional `derivedFromAnalysisId` and `sourceClarificationId` carry rerun and
+converted-clarification lineage into the persisted analysis. The actor must be
+able to read each supplied source in the selected project; a source outside
+the actor's memberships returns 404 before writing an analysis, event, or job.
+Derived submissions also require `analysis:create-derived`. The parent
+analysis and converted clarification must match the new analysis project and
+requirement revision. Reusing a `requestKey` with different lineage returns
+`REQUEST_KEY_MISMATCH` rather than reusing the first command's analysis.
+
+Before use-case execution, the API also verifies that the actor can read the
+submitted snapshot. A snapshot outside the actor's project memberships returns
+404, without creating an analysis, job, or event. If the actor belongs to both
+projects but the revision and snapshot still form a mismatched context, the
+request returns `INPUT_PROJECT_MISMATCH`.
+
 Snapshot drift samples are deterministic projections, not complete artifact
 lists. The response sorts each category by canonical `artifactKey`, limits the
 combined sample to `sampleLimit` items, and sets `samplesTruncated` when the
@@ -865,6 +913,24 @@ form. `GET /approved-report` returns JSON metadata + Markdown snapshot; the
 `export.md` and `export.pdf` endpoints return file attachments. DOCX, Jira, and
 Confluence exports remain out of scope.
 
+These file attachments are the explicit non-JSON response exception to the
+frontend Zod response-schema rule. The frontend must call `apiGetFile` with the
+expected media type (`text/markdown` or `application/pdf`); it validates the
+response `Content-Type` and `Content-Disposition` before creating a download.
+The disposition must be an attachment with a safe basename and the extension
+that matches the requested format. HTML, an unexpected media type, a missing or
+unsafe filename, or a mismatched extension is a failed API response, never a
+successful export. The API CORS configuration exposes `Content-Disposition`
+to explicitly allowed web origins so the browser can validate the filename in
+split web/API deployments.
+
+Non-2xx JSON responses use `apiErrorResponseSchema`, which accepts the shared
+`AppError` envelope, NestJS framework exceptions, and the legacy localization
+error shape. The frontend validates the envelope before mapping it to
+`ApiError`; malformed payloads fall back to a generic status-based error. A
+401 or 403 is mapped to the corresponding stable client code and user-facing
+message regardless of which supported server envelope produced it.
+
 Before committing finalization, the backend must re-evaluate known freshness
 for moving refs. If the latest persisted successful source-resolution
 observation for the tracked ref already differs, finalization fails with
@@ -919,6 +985,12 @@ before generating or validating localized report artifacts.
 
 Validation failures do not create downstream job/analysis records unless a use
 case explicitly stores a rejected requirement revision for clarification.
+
+If a request combines a parent resource ID with a project-owned child ID in
+its body, the API checks the actor's permission for each referenced resource
+before application-level association validation. A child outside the actor's
+project memberships returns 404; a mismatched association within projects the
+actor can access returns the corresponding domain error.
 
 ## Change Discipline
 

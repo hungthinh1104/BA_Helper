@@ -60,7 +60,10 @@ export class BuildMultiRepoImpactMatrixReadModel {
 
       // Unique artifacts by kind
       const uniqueArtifacts = new Map<string, string>(); // artifactId -> universalKind
-      for (const link of analysis.traceabilityLinks) {
+      const snapshotLinks = analysis.traceabilityLinks.filter(
+        (link) => link.artifact.snapshotId === analysis.snapshotId,
+      );
+      for (const link of snapshotLinks) {
         uniqueArtifacts.set(link.artifactId, link.artifact.universalKind);
       }
 
@@ -83,7 +86,7 @@ export class BuildMultiRepoImpactMatrixReadModel {
         }
       }
 
-      const evidenceCount = analysis.traceabilityLinks.length;
+      const evidenceCount = snapshotLinks.length;
 
       let unknownCount = 0;
       let conflictingCount = 0;

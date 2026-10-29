@@ -20,20 +20,28 @@ describe('GetReviewCoverageUseCase', () => {
   const mockActor: any = { id: 'user-1', email: 'test@example.com', name: 'Test', role: 'ADMIN' };
   const runId = 'run-1';
 
+  const evidenceLink = (evidenceId: string) => ({
+    evidenceId,
+    evidence: { id: evidenceId, snapshotId: 'snapshot-1', artifactId: null, requirementRevisionId: null },
+  });
+
   it('PASS when all child analyses are accepted, artifacts have evidence, and risks have QA', async () => {
     prismaMock.multiRepoAnalysisRun.findUnique.mockResolvedValue({
       id: runId,
       analyses: [
         {
           id: 'analysis-1',
+          snapshotId: 'snapshot-1',
+          requirementRevisionId: 'revision-1',
+          snapshot: { id: 'snapshot-1', repository: { id: 'repo-1' } },
           sourceTarget: { repositoryId: 'repo-1' },
           reviewDecisions: [{ decision: 'ACCEPTED' }],
           traceabilityLinks: [
-            { artifactId: 'art-1', evidenceLinks: [{ evidenceId: 'ev-1' }] },
+            { artifactId: 'art-1', artifact: { snapshotId: 'snapshot-1' }, evidenceLinks: [evidenceLink('ev-1')] },
           ],
           insights: [
-            { id: 'risk-1', insightType: 'UNKNOWN', certainty: 'INFERRED', evidenceLinks: [{ evidenceId: 'ev-2' }] },
-            { id: 'qa-1', insightType: 'QA_SCENARIO', evidenceLinks: [{ evidenceId: 'ev-2' }] },
+            { id: 'risk-1', insightType: 'UNKNOWN', certainty: 'INFERRED', evidenceLinks: [evidenceLink('ev-2')] },
+            { id: 'qa-1', insightType: 'QA_SCENARIO', evidenceLinks: [evidenceLink('ev-2')] },
           ],
         },
       ],
@@ -52,10 +60,13 @@ describe('GetReviewCoverageUseCase', () => {
       analyses: [
         {
           id: 'analysis-1',
+          snapshotId: 'snapshot-1',
+          requirementRevisionId: 'revision-1',
+          snapshot: { id: 'snapshot-1', repository: { id: 'repo-1' } },
           sourceTarget: { repositoryId: 'repo-1' },
           reviewDecisions: [{ decision: 'ACCEPTED' }],
           traceabilityLinks: [
-            { artifactId: 'art-1', evidenceLinks: [{ evidenceId: 'ev-1' }] },
+            { artifactId: 'art-1', artifact: { snapshotId: 'snapshot-1' }, evidenceLinks: [evidenceLink('ev-1')] },
           ],
           insights: [
             {
@@ -63,9 +74,9 @@ describe('GetReviewCoverageUseCase', () => {
               insightType: 'CLAIM',
               certainty: 'INFERRED',
               metadata: { kind: 'RISK' },
-              evidenceLinks: [{ evidenceId: 'ev-2' }],
+              evidenceLinks: [evidenceLink('ev-2')],
             },
-            { id: 'qa-1', insightType: 'QA_SCENARIO', evidenceLinks: [{ evidenceId: 'ev-2' }] },
+            { id: 'qa-1', insightType: 'QA_SCENARIO', evidenceLinks: [evidenceLink('ev-2')] },
           ],
         },
       ],
@@ -85,6 +96,9 @@ describe('GetReviewCoverageUseCase', () => {
       analyses: [
         {
           id: 'analysis-1',
+          snapshotId: 'snapshot-1',
+          requirementRevisionId: 'revision-1',
+          snapshot: { id: 'snapshot-1', repository: { id: 'repo-1' } },
           sourceTarget: { repositoryId: 'repo-1' },
           reviewDecisions: [],
           traceabilityLinks: [],
@@ -105,6 +119,9 @@ describe('GetReviewCoverageUseCase', () => {
       analyses: [
         {
           id: 'analysis-1',
+          snapshotId: 'snapshot-1',
+          requirementRevisionId: 'revision-1',
+          snapshot: { id: 'snapshot-1', repository: { id: 'repo-1' } },
           sourceTarget: { repositoryId: 'repo-1' },
           reviewDecisions: [{ decision: 'REJECTED' }],
           traceabilityLinks: [],
@@ -125,6 +142,9 @@ describe('GetReviewCoverageUseCase', () => {
       analyses: [
         {
           id: 'analysis-1',
+          snapshotId: 'snapshot-1',
+          requirementRevisionId: 'revision-1',
+          snapshot: { id: 'snapshot-1', repository: { id: 'repo-1' } },
           sourceTarget: { repositoryId: 'repo-1' },
           reviewDecisions: [{ decision: 'NEEDS_MORE_CLARIFICATION' }],
           traceabilityLinks: [],
@@ -145,10 +165,13 @@ describe('GetReviewCoverageUseCase', () => {
       analyses: [
         {
           id: 'analysis-1',
+          snapshotId: 'snapshot-1',
+          requirementRevisionId: 'revision-1',
+          snapshot: { id: 'snapshot-1', repository: { id: 'repo-1' } },
           sourceTarget: { repositoryId: 'repo-1' },
           reviewDecisions: [{ decision: 'ACCEPTED' }],
           traceabilityLinks: [
-            { artifactId: 'art-1', evidenceLinks: [] },
+            { artifactId: 'art-1', artifact: { snapshotId: 'snapshot-1' }, evidenceLinks: [] },
           ],
           insights: [],
         },
@@ -168,14 +191,17 @@ describe('GetReviewCoverageUseCase', () => {
       analyses: [
         {
           id: 'analysis-1',
+          snapshotId: 'snapshot-1',
+          requirementRevisionId: 'revision-1',
+          snapshot: { id: 'snapshot-1', repository: { id: 'repo-1' } },
           sourceTarget: { repositoryId: 'repo-1' },
           reviewDecisions: [{ decision: 'ACCEPTED' }],
           traceabilityLinks: [
-            { artifactId: 'art-1', evidenceLinks: [{ evidenceId: 'ev-1' }] },
+            { artifactId: 'art-1', artifact: { snapshotId: 'snapshot-1' }, evidenceLinks: [evidenceLink('ev-1')] },
           ],
           insights: [
-            { id: 'risk-1', insightType: 'UNKNOWN', certainty: 'INFERRED', evidenceLinks: [{ evidenceId: 'ev-risk' }] },
-            { id: 'qa-1', insightType: 'QA_SCENARIO', evidenceLinks: [{ evidenceId: 'ev-qa' }] }, // Different evidence!
+            { id: 'risk-1', insightType: 'UNKNOWN', certainty: 'INFERRED', evidenceLinks: [evidenceLink('ev-risk')] },
+            { id: 'qa-1', insightType: 'QA_SCENARIO', evidenceLinks: [evidenceLink('ev-qa')] }, // Different evidence!
           ],
         },
       ],
@@ -194,13 +220,16 @@ describe('GetReviewCoverageUseCase', () => {
       analyses: [
         {
           id: 'analysis-1',
+          snapshotId: 'snapshot-1',
+          requirementRevisionId: 'revision-1',
+          snapshot: { id: 'snapshot-1', repository: { id: 'repo-1' } },
           sourceTarget: { repositoryId: 'repo-1' },
           reviewDecisions: [{ decision: 'ACCEPTED' }],
           traceabilityLinks: [
-            { artifactId: 'art-1', evidenceLinks: [{ evidenceId: 'ev-1' }] },
+            { artifactId: 'art-1', artifact: { snapshotId: 'snapshot-1' }, evidenceLinks: [evidenceLink('ev-1')] },
           ],
           insights: [
-            { id: 'risk-1', insightType: 'UNKNOWN', certainty: 'INFERRED', evidenceLinks: [{ evidenceId: 'ev-risk' }] },
+            { id: 'risk-1', insightType: 'UNKNOWN', certainty: 'INFERRED', evidenceLinks: [evidenceLink('ev-risk')] },
             // No QA scenarios at all
           ],
         },
@@ -220,6 +249,9 @@ describe('GetReviewCoverageUseCase', () => {
       analyses: [
         {
           id: 'analysis-1',
+          snapshotId: 'snapshot-1',
+          requirementRevisionId: 'revision-1',
+          snapshot: { id: 'snapshot-1', repository: { id: 'repo-1' } },
           sourceTarget: { repositoryId: 'repo-1' },
           reviewDecisions: [{ decision: 'ACCEPTED' }],
           traceabilityLinks: [], // Zero artifacts
@@ -241,15 +273,18 @@ describe('GetReviewCoverageUseCase', () => {
       analyses: [
         {
           id: 'analysis-1',
+          snapshotId: 'snapshot-1',
+          requirementRevisionId: 'revision-1',
+          snapshot: { id: 'snapshot-1', repository: { id: 'repo-1' } },
           sourceTarget: { repositoryId: 'repo-1' },
           reviewDecisions: [{ decision: 'ACCEPTED' }],
           traceabilityLinks: [
-             { artifactId: 'art-1', evidenceLinks: [{ evidenceId: 'ev-1' }] },
+             { artifactId: 'art-1', artifact: { snapshotId: 'snapshot-1' }, evidenceLinks: [evidenceLink('ev-1')] },
           ],
           insights: [
             // They share text but not evidenceId
-            { id: 'risk-1', insightType: 'UNKNOWN', title: 'DB Timeout', evidenceLinks: [{ evidenceId: 'ev-1' }] },
-            { id: 'qa-1', insightType: 'QA_SCENARIO', title: 'DB Timeout', evidenceLinks: [{ evidenceId: 'ev-2' }] },
+            { id: 'risk-1', insightType: 'UNKNOWN', title: 'DB Timeout', evidenceLinks: [evidenceLink('ev-1')] },
+            { id: 'qa-1', insightType: 'QA_SCENARIO', title: 'DB Timeout', evidenceLinks: [evidenceLink('ev-2')] },
           ],
         },
       ],

@@ -8,6 +8,13 @@ import messages from '../../../../messages/en.json';
 import { staticTestTraceFixture } from '../../../../../../tests/fixtures/static-test-trace.fixture';
 
 let mockReportLocale = 'en';
+const emptyEvidenceQualitySummary = {
+  missingEvidence: 0,
+  reviewRequired: 0,
+  evidenced: 0,
+  inferred: 0,
+  weakEvidence: 0,
+};
 
 jest.mock('next-intl', () => ({
   useLocale: () => mockReportLocale,
@@ -82,7 +89,7 @@ describe('FinalReviewedReportViewer', () => {
             totalLinks: 0, accepted: 0, rejected: 0, needsReview: 0,
             needsMoreEvidence: 0, unreviewed: 0, hasReviewedSnapshot: true,
             blockingReasons: [] },
-          reviewDecisionsSnapshot: [], evidenceQualitySummarySnapshot: {},
+          reviewDecisionsSnapshot: [], evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary,
           evaluationContextSnapshot: null, createdByUserId: null,
         }));
       }),
@@ -117,10 +124,13 @@ describe('FinalReviewedReportViewer', () => {
             },
             reviewDecisionsSnapshot: [
               {
-                linkId: 'link-1',
+                itemType: 'TRACEABILITY_LINK',
+                itemId: '00000000-0000-4000-8000-000000000003',
+                linkId: '00000000-0000-4000-8000-000000000003',
                 artifact: 'test-artifact.ts',
                 quality: 'EVIDENCED',
                 reasons: ['Persisted code evidence'],
+                reviewStatus: 'CONFIRMED',
                 reviewDecision: {
                   id: '00000000-0000-4000-8000-000000000001',
                   analysisId: '00000000-0000-4000-8000-000000000002',
@@ -131,7 +141,7 @@ describe('FinalReviewedReportViewer', () => {
                 }
               }
             ],
-            evidenceQualitySummarySnapshot: {},
+            evidenceQualitySummarySnapshot: { ...emptyEvidenceQualitySummary, evidenced: 1 },
             evaluationContextSnapshot: null,
             createdByUserId: null,
           })

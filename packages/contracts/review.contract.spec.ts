@@ -39,7 +39,13 @@ describe('review report locale contracts', () => {
         blockingReasons: [],
       },
       reviewDecisionsSnapshot: [],
-      evidenceQualitySummarySnapshot: {},
+      evidenceQualitySummarySnapshot: {
+        missingEvidence: 0,
+        reviewRequired: 0,
+        evidenced: 0,
+        inferred: 0,
+        weakEvidence: 0,
+      },
       evaluationContextSnapshot: null,
       createdByUserId: null,
     };

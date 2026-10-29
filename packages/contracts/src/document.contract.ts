@@ -109,6 +109,10 @@ export const evidenceQualityItemSchema = z.object({
 	reviewDecision: traceabilityReviewDecisionSchema.optional().nullable(),
 });
 
+export const reviewDecisionsSnapshotSchema = z.array(evidenceQualityItemSchema);
+export const evidenceQualitySummarySnapshotSchema = evidenceQualitySummarySchema;
+export const evaluationContextSnapshotSchema = evaluationContextSchema.nullable();
+
 export const reportReviewCoverageSummarySchema = z.object({
 	insights: z.object({
 		total: z.number().int().nonnegative(),
@@ -196,10 +200,10 @@ export const reviewedReportSnapshotSchema = z.object({
 	analysisId: z.string().uuid(),
 	approvedDocumentId: z.string().uuid().nullable().optional(),
 	markdown: z.string().nullable().optional(),
-	reviewDecisionsSnapshot: z.any(),
-	evidenceQualitySummarySnapshot: z.any(),
+	reviewDecisionsSnapshot: reviewDecisionsSnapshotSchema,
+	evidenceQualitySummarySnapshot: evidenceQualitySummarySnapshotSchema,
 	reviewCoverageSummary: reportReviewCoverageSummarySchema.nullable().optional(),
-	evaluationContextSnapshot: z.any().nullable().optional(),
+	evaluationContextSnapshot: evaluationContextSnapshotSchema,
 	createdByUserId: z.string().uuid().nullable().optional(),
 	createdAt: z.string(),
 });

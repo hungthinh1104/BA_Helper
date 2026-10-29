@@ -4,7 +4,7 @@ import { diagnosticItemSchema } from './diagnostic.contract';
 export const scanJobCreateRequestSchema = z.object({
 	ref: z.string().min(1).optional(),
 	requestKey: z.string().uuid(),
-});
+}).strict();
 
 export const scanJobStatusSchema = z.enum([
 	'QUEUED',

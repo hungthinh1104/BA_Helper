@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { AppError } from '@ba-helper/shared';
-import { MarkdownReportRenderContext, computeCanonicalReportHash, PrismaService } from '@ba-helper/backend-runtime';
+import { analysisEvidenceScopeWhere, MarkdownReportRenderContext, computeCanonicalReportHash, PrismaService } from '@ba-helper/backend-runtime';
 import { GeneratedDocument } from '@prisma/client';
 
 export interface ApprovedReportContextResult {
@@ -81,12 +81,18 @@ export class ApprovedReportContextReader {
 
     const insights = await this.prisma.baInsight.findMany({
       where: { impactAnalysisId: analysisId },
-      include: { evidenceLinks: { include: { evidence: true } } }
+      include: { evidenceLinks: {
+        where: { evidence: analysisEvidenceScopeWhere(analysis.snapshotId, analysis.requirementRevisionId) },
+        include: { evidence: true },
+      } }
     });
 
     const traceabilityLinks = await this.prisma.traceabilityLink.findMany({
-      where: { impactAnalysisId: analysisId },
-      include: { artifact: true, evidenceLinks: { include: { evidence: true } } }
+      where: { impactAnalysisId: analysisId, artifact: { snapshotId: analysis.snapshotId } },
+      include: { artifact: true, evidenceLinks: {
+        where: { evidence: analysisEvidenceScopeWhere(analysis.snapshotId, analysis.requirementRevisionId) },
+        include: { evidence: true },
+      } }
     });
 
     const reviewNotes = await this.prisma.reviewNote.findMany({

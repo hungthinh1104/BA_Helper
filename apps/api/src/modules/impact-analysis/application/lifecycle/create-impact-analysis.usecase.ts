@@ -74,6 +74,23 @@ export class CreateImpactAnalysisUseCase {
       );
     }
 
+    if (params.derivedFromAnalysisId) {
+      const sourceAnalysis = await this.prisma.impactAnalysis.findUnique({
+        where: { id: params.derivedFromAnalysisId },
+        select: {
+          requirementRevision: {
+            select: { requirement: { select: { projectId: true } } },
+          },
+        },
+      });
+      if (!sourceAnalysis) {
+        throw new AppError('ANALYSIS_NOT_FOUND', 'Source analysis not found.');
+      }
+      if (sourceAnalysis.requirementRevision.requirement.projectId !== snapshot.repository.projectId) {
+        throw new AppError('INVALID_LINEAGE', 'New analysis project does not match source analysis project.');
+      }
+    }
+
     if (params.derivedFromAnalysisId || params.sourceClarificationId || params.reviewClarificationRequestId) {
       if (!params.derivedFromAnalysisId) {
         throw new AppError('INVALID_LINEAGE', 'derivedFromAnalysisId must be provided.');
@@ -173,6 +190,10 @@ export class CreateImpactAnalysisUseCase {
       (existingByRequestKey.snapshotId !== params.snapshotId ||
         existingByRequestKey.sourceTargetId !== params.sourceTargetId ||
         existingByRequestKey.requirementRevisionId !== params.requirementRevisionId ||
+        existingByRequestKey.multiRepoRunId !== (params.multiRepoRunId ?? null) ||
+        existingByRequestKey.derivedFromAnalysisId !== (params.derivedFromAnalysisId ?? null) ||
+        existingByRequestKey.sourceClarificationId !== (params.sourceClarificationId ?? null) ||
+        existingByRequestKey.reviewClarificationRequestId !== (params.reviewClarificationRequestId ?? null) ||
         !sameResolvedDomainPackSelection(
           readResolvedDomainPackSelection(existingByRequestKey),
           selectedDomainPack,

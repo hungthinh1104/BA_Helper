@@ -1,5 +1,7 @@
 import { AppError } from '@ba-helper/shared';
 import type { Prisma } from '@prisma/client';
+import { lockReviewableAnalysisWhileCurrent } from '@ba-helper/backend-runtime';
+import { hasReviewCommand, recordReviewEvent } from './review-command-idempotency';
 import type {
   EventLogService,
   InsightRepository,
@@ -16,9 +18,44 @@ export async function persistTraceabilityReviewDecision(params: {
   itemId: string;
   decision: 'ACCEPTED' | 'REJECTED' | 'NEEDS_MORE_EVIDENCE';
   note: string | null;
+  requestKey: string;
+  commandFingerprint: string;
   actorId: string;
-}) {
-  await params.prisma.$transaction(async (transaction) => {
+}): Promise<boolean> {
+  return params.prisma.$transaction(async (transaction) => {
+    if (!(await lockReviewableAnalysisWhileCurrent(transaction, params.analysisId))) {
+      throw new AppError(
+        'INVALID_STATE_TRANSITION',
+        'Analysis was finalized before the review decision could be saved.',
+      );
+    }
+    const currentLink = await params.traceabilityRepo.findById(params.itemId, transaction);
+    if (!currentLink || currentLink.impactAnalysis.id !== params.analysisId) {
+      throw new AppError('REVIEW_NOT_ALLOWED', 'Traceability link not found.');
+    }
+    if (await hasReviewCommand(params.eventLog, transaction, params)) return false;
+    if (
+      currentLink.reviewDecision?.decision === params.decision &&
+      (currentLink.reviewDecision.note ?? null) === params.note
+    ) {
+      await recordReviewEvent(params.eventLog, transaction, {
+        eventType: 'REVIEW_DECISION',
+        analysisId: params.analysisId,
+        itemId: params.itemId,
+        state: 'no-op',
+        requestKey: params.requestKey,
+        commandFingerprint: params.commandFingerprint,
+        actorId: params.actorId,
+        payload: {
+          target: 'impact',
+          action: decisionAction(params.decision),
+          decision: params.decision,
+          outcome: 'NOOP',
+        },
+      });
+      return false;
+    }
+
     const updated = await params.traceabilityRepo.upsertReviewDecision({
       linkId: params.itemId,
       analysisId: params.analysisId,
@@ -37,9 +74,12 @@ export async function persistTraceabilityReviewDecision(params: {
       analysisId: params.analysisId,
       itemId: params.itemId,
       state: params.decision,
+      requestKey: params.requestKey,
+      commandFingerprint: params.commandFingerprint,
       actorId: params.actorId,
       payload: { target: 'impact', action: decisionAction(params.decision), decision: params.decision },
     });
+    return true;
   });
 }
 
@@ -49,9 +89,36 @@ export async function removeTraceabilityReviewDecision(params: {
   prisma: PrismaService;
   analysisId: string;
   itemId: string;
+  requestKey: string;
+  commandFingerprint: string;
   actorId: string;
-}) {
-  await params.prisma.$transaction(async (transaction) => {
+}): Promise<boolean> {
+  return params.prisma.$transaction(async (transaction) => {
+    if (!(await lockReviewableAnalysisWhileCurrent(transaction, params.analysisId))) {
+      throw new AppError(
+        'INVALID_STATE_TRANSITION',
+        'Analysis was finalized before the review decision could be cleared.',
+      );
+    }
+    const currentLink = await params.traceabilityRepo.findById(params.itemId, transaction);
+    if (!currentLink || currentLink.impactAnalysis.id !== params.analysisId) {
+      throw new AppError('REVIEW_NOT_ALLOWED', 'Traceability link not found.');
+    }
+    if (await hasReviewCommand(params.eventLog, transaction, params)) return false;
+    if (!currentLink.reviewDecision) {
+      await recordReviewEvent(params.eventLog, transaction, {
+        eventType: 'REVIEW_DECISION',
+        analysisId: params.analysisId,
+        itemId: params.itemId,
+        state: 'no-op',
+        requestKey: params.requestKey,
+        commandFingerprint: params.commandFingerprint,
+        actorId: params.actorId,
+        payload: { target: 'impact', action: 'undo', outcome: 'NOOP' },
+      });
+      return false;
+    }
+
     const deleted = await params.traceabilityRepo.deleteReviewDecision(
       params.itemId,
       params.analysisId,
@@ -68,9 +135,12 @@ export async function removeTraceabilityReviewDecision(params: {
       analysisId: params.analysisId,
       itemId: params.itemId,
       state: 'undo',
+      requestKey: params.requestKey,
+      commandFingerprint: params.commandFingerprint,
       actorId: params.actorId,
       payload: { target: 'impact', action: 'undo' },
     });
+    return true;
   });
 }
 
@@ -82,7 +152,8 @@ export async function persistInsightReviewDecision(params: {
   prisma: PrismaService;
   analysisId: string;
   itemId: string;
-  currentStatus: 'NEEDS_REVIEW' | 'CONFIRMED' | 'REJECTED';
+  requestKey: string;
+  commandFingerprint: string;
   targetStatus: 'NEEDS_REVIEW' | 'CONFIRMED' | 'REJECTED';
   targetNote: string | null;
   expectedCommitSha: string;
@@ -90,9 +161,42 @@ export async function persistInsightReviewDecision(params: {
   expectedResolvedRefType: 'BRANCH' | 'TAG' | 'COMMIT';
   action: 'accept' | 'reject' | 'undo';
   actorId: string;
-}) {
-  await params.prisma.$transaction(async (transaction) => {
-    if (params.currentStatus !== params.targetStatus) {
+}): Promise<boolean> {
+  return params.prisma.$transaction(async (transaction) => {
+    if (!(await lockReviewableAnalysisWhileCurrent(transaction, params.analysisId))) {
+      throw new AppError(
+        'INVALID_STATE_TRANSITION',
+        'Analysis was finalized before the review decision could be saved.',
+      );
+    }
+    const currentInsight = await params.insightRepo.findById(params.itemId, transaction);
+    if (!currentInsight || currentInsight.impactAnalysis.id !== params.analysisId) {
+      throw new AppError('REVIEW_NOT_ALLOWED', 'Insight not found.');
+    }
+    if (await hasReviewCommand(params.eventLog, transaction, params)) return false;
+    if (
+      currentInsight.reviewStatus === params.targetStatus &&
+      (currentInsight.reviewNote?.body ?? null) === params.targetNote
+    ) {
+      await recordReviewEvent(params.eventLog, transaction, {
+        eventType: 'REVIEW_DECISION',
+        analysisId: params.analysisId,
+        itemId: params.itemId,
+        state: 'no-op',
+        requestKey: params.requestKey,
+        commandFingerprint: params.commandFingerprint,
+        actorId: params.actorId,
+        payload: {
+          target: 'insight',
+          action: params.action,
+          reviewStatus: params.targetStatus,
+          outcome: 'NOOP',
+        },
+      });
+      return false;
+    }
+
+    if (currentInsight.reviewStatus !== params.targetStatus) {
       await updateInsightStatus(params, transaction);
     }
     await saveInsightReviewNote(params, transaction);
@@ -101,6 +205,8 @@ export async function persistInsightReviewDecision(params: {
       analysisId: params.analysisId,
       itemId: params.itemId,
       state: params.action === 'undo' ? 'undo' : params.targetStatus,
+      requestKey: params.requestKey,
+      commandFingerprint: params.commandFingerprint,
       actorId: params.actorId,
       payload: {
         target: 'insight',
@@ -108,6 +214,7 @@ export async function persistInsightReviewDecision(params: {
         reviewStatus: params.targetStatus,
       },
     });
+    return true;
   });
 }
 
@@ -163,26 +270,6 @@ async function saveInsightReviewNote(
       'Analysis was finalized before the review note could be saved.',
     );
   }
-}
-
-async function recordReviewEvent(
-  eventLog: EventLogService,
-  transaction: Prisma.TransactionClient,
-  params: {
-    eventType: string;
-    analysisId: string;
-    itemId: string;
-    state: string;
-    actorId: string;
-    payload: Record<string, unknown>;
-  },
-) {
-  await eventLog.recordEvent({
-    eventType: params.eventType,
-    idempotencyKey: `impact:${params.analysisId}:review-item:${params.itemId}:${params.state}`,
-    payload: { ...params.payload, analysisId: params.analysisId, itemId: params.itemId },
-    actorUserId: params.actorId,
-  }, transaction);
 }
 
 function decisionAction(decision: 'ACCEPTED' | 'REJECTED' | 'NEEDS_MORE_EVIDENCE') {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { WorkspacePageHeader } from "@/components/workspace/shared/page-header"
 import { AnalystSummaryBand } from "@/components/workspace/shared/analyst-summary-band"
@@ -24,7 +24,10 @@ export default function AnalysesPage() {
   const t = useTranslations("workspaceLists")
   const locale = useLocale()
   const href = useLocalizedHref()
-  const { data, isLoading, error } = useAnalyses()
+  const { data, isLoading, error, refetch, isFetching } = useAnalyses()
+  const [retrying, setRetrying] = useState(false)
+  const [retryError, setRetryError] = useState<Error | null>(null)
+  const displayedError = error ?? retryError
   const analyses = useMemo(() => data?.items ?? [], [data?.items])
   const summary = useMemo(() => {
     return analyses.reduce(
@@ -105,7 +108,7 @@ export default function AnalysesPage() {
             <DataListCell>{t("created")}</DataListCell>
           </DataListHeader>
 
-          {isLoading && (
+          {isLoading && !retrying && (
             <>
               {[1, 2, 3].map((i) => (
                 <DataListRow key={i} gridCols={gridCols}>
@@ -118,11 +121,33 @@ export default function AnalysesPage() {
             </>
           )}
 
-          {error && (
+          {(error || retrying) && (
             <div className="flex flex-col items-center py-16 text-muted-foreground">
               <AlertCircle className="w-6 h-6 text-destructive mb-4" />
-              <p className="text-[13px] font-medium text-foreground">{t("failedToLoadAnalyses")}</p>
-              <p className="text-[12px]">{error.message}</p>
+              <p
+                role={retrying ? "status" : "alert"}
+                className="text-[13px] font-medium text-foreground"
+              >
+                {retrying ? t("retryingAnalyses") : t("failedToLoadAnalyses")}
+              </p>
+              {!retrying && displayedError && <p className="text-[12px]">{displayedError.message}</p>}
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-4"
+                disabled={isFetching || retrying}
+                onClick={() => {
+                  setRetryError(error ?? null)
+                  setRetrying(true)
+                  void refetch()
+                    .then(result => {
+                      if (!result.isError) setRetryError(null)
+                    })
+                    .finally(() => setRetrying(false))
+                }}
+              >
+                {retrying ? t("retryingAnalyses") : t("retryAnalyses")}
+              </Button>
             </div>
           )}
 

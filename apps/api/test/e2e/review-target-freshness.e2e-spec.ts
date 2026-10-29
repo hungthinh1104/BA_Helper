@@ -95,28 +95,32 @@ describe('Review target freshness concurrency (e2e)', () => {
     const traceability = (submitDecision as unknown as {
       traceabilityRepo: TraceabilityRepository;
     }).traceabilityRepo;
-    const originalUpsert = traceability.upsertReviewDecision.bind(traceability);
-    const reachedPersistence = createDeferred();
-    const releaseWrite = createDeferred();
-    const spy = jest.spyOn(traceability, 'upsertReviewDecision').mockImplementation(async (params, transaction) => {
-      reachedPersistence.resolve();
-      await releaseWrite.promise;
-      return originalUpsert(params, transaction);
+    const originalFindById = traceability.findById.bind(traceability);
+    const reachedStatusRead = createDeferred();
+    const resumeReview = createDeferred();
+    const spy = jest.spyOn(traceability, 'findById').mockImplementation(async (linkId, transaction) => {
+      const result = await originalFindById(linkId, transaction);
+      if (!transaction) {
+        // Pause before the transaction lock; pausing in persistence would block this test's target update.
+        reachedStatusRead.resolve();
+        await resumeReview.promise;
+      }
+      return result;
     });
 
     try {
       const responsePromise = request(app.getHttpServer())
         .put(`/api/v1/impact-analyses/${analysisId}/review-items/${traceabilityLinkId}/decision`)
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ target: 'impact', action: 'accept', rationale: 'Should not review stale source.' })
+        .send({ target: 'impact', action: 'accept', rationale: 'Should not review stale source.', requestKey: crypto.randomUUID() })
         .then((response) => response);
 
-      await reachedPersistence.promise;
+      await reachedStatusRead.promise;
       await prisma.repositoryTarget.update({
         where: { id: targetId },
         data: { latestObservedCommitSha: 'newer-review-audit-sha' },
       });
-      releaseWrite.resolve();
+      resumeReview.resolve();
       const response = await responsePromise;
 
       expect(response.status).toBe(409);
@@ -129,7 +133,7 @@ describe('Review target freshness concurrency (e2e)', () => {
         where: { traceabilityLinkId },
       })).toBeNull();
     } finally {
-      releaseWrite.resolve();
+      resumeReview.resolve();
       spy.mockRestore();
     }
   }, 30_000);

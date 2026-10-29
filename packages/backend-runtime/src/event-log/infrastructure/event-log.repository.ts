@@ -6,6 +6,17 @@ export type EventLogTransactionClient = Pick<Prisma.TransactionClient, 'domainEv
 export class EventLogRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  async findEventByIdempotencyKey(
+    idempotencyKey: string,
+    transaction?: EventLogTransactionClient,
+  ): Promise<{ payload: unknown } | null> {
+    const client = transaction ?? this.prisma;
+    return client.domainEvent.findUnique({
+      where: { idempotencyKey },
+      select: { payload: true },
+    });
+  }
+
   async createEvent(params: {
     eventType: string;
     idempotencyKey: string;

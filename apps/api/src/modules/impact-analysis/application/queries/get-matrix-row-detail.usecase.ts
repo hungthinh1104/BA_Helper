@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { MatrixRowDetailResponse } from '@ba-helper/contracts';
-import { PrismaService } from "@ba-helper/backend-runtime";
+import { isEvidenceScopedToAnalysis, PrismaService } from "@ba-helper/backend-runtime";
 
 @Injectable()
 export class GetMatrixRowDetailUseCase {
@@ -28,7 +28,7 @@ export class GetMatrixRowDetailUseCase {
             artifact: true,
             evidenceLinks: {
               include: {
-                evidence: true,
+                evidence: { include: { artifact: { select: { snapshotId: true } } } },
               },
             },
           },
@@ -37,7 +37,7 @@ export class GetMatrixRowDetailUseCase {
           include: {
             evidenceLinks: {
               include: {
-                evidence: true,
+                evidence: { include: { artifact: { select: { snapshotId: true } } } },
               },
             },
           },
@@ -53,6 +53,23 @@ export class GetMatrixRowDetailUseCase {
       throw new NotFoundException('Impact analysis not found in this multi-repo run.');
     }
 
+    const analysisIdentity = {
+      snapshotId: analysis.snapshotId,
+      requirementRevisionId: analysis.requirementRevisionId,
+    };
+    const traceabilityLinks = analysis.traceabilityLinks
+      .filter((link) => link.artifact.snapshotId === analysis.snapshotId)
+      .map((link) => ({
+        ...link,
+        evidenceLinks: link.evidenceLinks.filter((item) =>
+          isEvidenceScopedToAnalysis(item.evidence, analysisIdentity)),
+      }));
+    const insights = analysis.insights.map((insight) => ({
+      ...insight,
+      evidenceLinks: insight.evidenceLinks.filter((item) =>
+        isEvidenceScopedToAnalysis(item.evidence, analysisIdentity)),
+    }));
+
     const domain = analysis.snapshot.profile?.domain ?? null;
     const repository = analysis.sourceTarget.repository.canonicalUrl.split('/').pop()?.replace('.git', '') ?? 'Unknown Repository';
     const latestDecision = analysis.reviewDecisions[0]?.decision ?? null;
@@ -66,7 +83,7 @@ export class GetMatrixRowDetailUseCase {
 
     // Prepare insights for quick matching by evidenceId
     const insightEvidenceMap = new Map<string, string[]>(); // evidenceId -> array of insightIds
-    for (const insight of analysis.insights) {
+    for (const insight of insights) {
       for (const ie of insight.evidenceLinks) {
         const list = insightEvidenceMap.get(ie.evidenceId) || [];
         list.push(insight.id);
@@ -101,7 +118,7 @@ export class GetMatrixRowDetailUseCase {
       }
     }
 
-    for (const link of analysis.traceabilityLinks) {
+    for (const link of traceabilityLinks) {
       const artifact = link.artifact;
       if (!artifactMap.has(artifact.id)) {
         artifactMap.set(artifact.id, {
@@ -147,7 +164,7 @@ export class GetMatrixRowDetailUseCase {
         // Add related risks/QA based on shared evidence ID
         const sharedInsightIds = insightEvidenceMap.get(evidence.id) || [];
         for (const insightId of sharedInsightIds) {
-          const insight = analysis.insights.find(i => i.id === insightId);
+          const insight = insights.find(i => i.id === insightId);
           if (!insight) continue;
           
           const isConflicting = insight.certainty === 'CONFLICTING';

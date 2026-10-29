@@ -12,6 +12,10 @@ describe('documented existing transport shapes', () => {
     expect(apiErrorResponseSchema.safeParse({ code: 'ANALYSIS_STALE', message: 'Rerun required.' }).success).toBe(true);
     expect(apiErrorResponseSchema.safeParse({ statusCode: 401, message: 'Authentication required', error: 'Unauthorized' }).success).toBe(true);
   });
+  it('rejects error envelopes with malformed field types or no identity', () => {
+    expect(apiErrorResponseSchema.safeParse({ code: { invalid: true }, message: ['bad', 2] }).success).toBe(false);
+    expect(apiErrorResponseSchema.safeParse({ message: 'No code or status.' }).success).toBe(false);
+  });
   it('describes document job retries and actual recoverable queue names', () => {
     expect(documentJobCreateRequestSchema.parse({})).toEqual({});
     expect(documentJobCreateRequestSchema.parse({ requestKey: 'reviewed-report-1', retry: true }).retry).toBe(true);

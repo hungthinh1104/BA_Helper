@@ -1,7 +1,48 @@
 import {
   approvedImpactReportResponseSchema,
+  finalReviewedReportResponseSchema,
   multiRepoApprovedReportResponseSchema,
+  reviewedReportSnapshotSchema,
 } from './src';
+
+const emptyEvidenceQualitySummary = {
+  missingEvidence: 0,
+  reviewRequired: 0,
+  evidenced: 0,
+  inferred: 0,
+  weakEvidence: 0,
+};
+
+const reportSnapshot = {
+  id: '00000000-0000-4000-8000-000000000021',
+  analysisId: '00000000-0000-4000-8000-000000000022',
+  reviewDecisionsSnapshot: [{
+    itemType: 'TRACEABILITY_LINK',
+    itemId: 'link-1',
+    linkId: 'link-1',
+    artifact: 'src/booking.service.ts:BookingService.cancel',
+    quality: 'STRONG_SOURCE_EVIDENCE',
+    reasons: ['persistedSourceEvidence'],
+    reviewStatus: 'CONFIRMED',
+    reviewDecision: null,
+  }],
+  evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary,
+  evaluationContextSnapshot: null,
+  createdAt: '2026-10-29T12:00:00.000Z',
+};
+
+const reviewCompletion = {
+  analysisId: reportSnapshot.analysisId,
+  totalLinks: 0,
+  accepted: 0,
+  rejected: 0,
+  needsReview: 0,
+  needsMoreEvidence: 0,
+  unreviewed: 0,
+  isComplete: true,
+  hasReviewedSnapshot: true,
+  blockingReasons: [],
+};
 
 describe('report domain pack provenance contracts', () => {
   it('accepts legacy single approved report domain provenance without digest fields', () => {
@@ -78,5 +119,48 @@ describe('report domain pack provenance contracts', () => {
     };
 
     expect(multiRepoApprovedReportResponseSchema.parse(payload)).toEqual(payload);
+  });
+});
+
+describe('reviewed report snapshot response contracts', () => {
+  it('accepts the persisted evidence-quality snapshot shape', () => {
+    expect(reviewedReportSnapshotSchema.parse(reportSnapshot)).toEqual(reportSnapshot);
+    expect(finalReviewedReportResponseSchema.safeParse({
+      analysisId: reportSnapshot.analysisId,
+      snapshotId: reportSnapshot.id,
+      locale: 'en',
+      markdown: '# Frozen report',
+      createdAt: reportSnapshot.createdAt,
+      reviewCompletion,
+      reviewDecisionsSnapshot: reportSnapshot.reviewDecisionsSnapshot,
+      evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary,
+      evaluationContextSnapshot: null,
+      createdByUserId: null,
+    }).success).toBe(true);
+  });
+
+  it('rejects malformed frozen decisions, quality summaries, and evaluation context', () => {
+    for (const malformed of [
+      { ...reportSnapshot, reviewDecisionsSnapshot: { silentlyOmitted: true } },
+      { ...reportSnapshot, reviewDecisionsSnapshot: [{ artifact: 'missing quality and reasons' }] },
+      { ...reportSnapshot, evidenceQualitySummarySnapshot: { EVIDENCED: 3 } },
+      { ...reportSnapshot, evaluationContextSnapshot: { unsupported: 'shape' } },
+    ]) {
+      expect(reviewedReportSnapshotSchema.safeParse(malformed).success).toBe(false);
+    }
+
+    const malformedFinalReport = finalReviewedReportResponseSchema.safeParse({
+      analysisId: reportSnapshot.analysisId,
+      snapshotId: reportSnapshot.id,
+      locale: 'en',
+      markdown: '# Frozen report',
+      createdAt: reportSnapshot.createdAt,
+      reviewCompletion,
+      reviewDecisionsSnapshot: [{ artifact: 'missing quality and reasons' }],
+      evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary,
+      evaluationContextSnapshot: null,
+      createdByUserId: null,
+    });
+    expect(malformedFinalReport.success).toBe(false);
   });
 });

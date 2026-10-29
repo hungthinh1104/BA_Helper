@@ -1,7 +1,50 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import type { ProjectRole } from '@ba-helper/contracts';
 import { ProjectPermissionService } from './project-permission.service';
 import type { ProjectRepository } from '../infrastructure/project.repository';
 import type { ProjectScopeRepository } from '../infrastructure/project-scope.repository';
+import {
+  projectRoleHasPermission,
+  type ProjectPermission,
+} from './project-permission.policy';
+
+const expectedPermissions: Record<ProjectRole, readonly ProjectPermission[]> = {
+  OWNER: [
+    'project:read', 'project:manage', 'repository:manage', 'scan:run',
+    'requirement:create', 'analysis:create', 'analysis:create-derived',
+    'analysis:finalize', 'review:write', 'clarification:write', 'report:export',
+  ],
+  MAINTAINER: ['project:read', 'repository:manage', 'scan:run', 'report:export'],
+  ANALYST: [
+    'project:read', 'requirement:create', 'analysis:create',
+    'analysis:create-derived', 'analysis:finalize', 'clarification:write',
+    'report:export',
+  ],
+  REVIEWER: [
+    'project:read', 'analysis:create-derived', 'review:write',
+    'clarification:write', 'report:export',
+  ],
+  VIEWER: ['project:read', 'report:export'],
+};
+
+const allPermissions: readonly ProjectPermission[] = [
+  'project:read', 'project:manage', 'repository:manage', 'scan:run',
+  'requirement:create', 'analysis:create', 'analysis:create-derived',
+  'analysis:finalize', 'review:write', 'clarification:write', 'report:export',
+];
+
+describe('project role permission matrix', () => {
+  it.each(Object.keys(expectedPermissions) as ProjectRole[])(
+    'matches the documented permission set for %s',
+    (role) => {
+      for (const permission of allPermissions) {
+        expect(projectRoleHasPermission(role, permission)).toBe(
+          expectedPermissions[role].includes(permission),
+        );
+      }
+    },
+  );
+});
 
 describe('ProjectPermissionService', () => {
   let projects: jest.Mocked<ProjectRepository>;
@@ -27,6 +70,7 @@ describe('ProjectPermissionService', () => {
       findScanJobProjectId: jest.fn(),
       findClarificationProjectId: jest.fn(),
       findReviewClarificationProjectId: jest.fn(),
+      findReviewDecisionProjectId: jest.fn(),
       findInsightProjectId: jest.fn(),
       findTraceabilityLinkProjectId: jest.fn(),
     } as unknown as jest.Mocked<ProjectScopeRepository>;
@@ -121,6 +165,19 @@ describe('ProjectPermissionService', () => {
 
     await expect(
       service.assertCanReadAnalysis(actor, 'analysis-1'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('returns 404 for a review decision outside actor membership scope', async () => {
+    scope.findReviewDecisionProjectId.mockResolvedValue('project-2');
+    projects.findProjectMember.mockResolvedValue(null);
+
+    await expect(
+      service.assertPermissionForReviewDecision(
+        actor,
+        'decision-1',
+        'clarification:write',
+      ),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

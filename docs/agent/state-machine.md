@@ -218,6 +218,17 @@ transaction. For an insight review action, its rationale `ReviewNote` is part
 of that transaction too. If event persistence fails, all related review writes
 roll back and the API must not report a successful mutation.
 
+Review mutations require a UUID `requestKey` that remains stable for one user
+command. They lock the analysis and re-read the item inside the transaction
+before deciding whether a write is needed. The audit event key is scoped by
+analysis, item, and request key; its command fingerprint binds the key to the
+target, action, rationale, and actor. Replaying that key never reapplies the
+command over a newer decision, while reusing it for a different command returns
+`REQUEST_KEY_MISMATCH`. A new command that matches the current decision records
+one `REVIEW_DECISION` no-op receipt; replaying that command adds no event.
+Distinct transitions, including returning to an earlier value, use distinct
+command keys and preserve their audit order.
+
 If an analysis becomes known stale before finalization, new review/finalization
 actions are blocked by default. The user requests a current scan and reruns
 analysis against its snapshot; stale machine output remains readable as

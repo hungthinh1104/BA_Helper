@@ -38,6 +38,8 @@ export * from './impact-analysis/infrastructure/get-impact-diff.provider';
 export * from './artifact/infrastructure/artifact.repository';
 export * from './document/domain/report-test-trace.snapshot';
 export * from './evidence/infrastructure/evidence.repository';
+export * from './evidence/infrastructure/analysis-evidence-scope';
+export * from './evidence/infrastructure/analysis-evidence-scope';
 export * from './clarification/infrastructure/clarification.repository';
 export * from './graph/infrastructure/graph.repository';
 export * from './traceability/infrastructure/traceability.repository';

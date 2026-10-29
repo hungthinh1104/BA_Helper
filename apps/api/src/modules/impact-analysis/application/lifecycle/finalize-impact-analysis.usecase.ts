@@ -112,7 +112,7 @@ export class FinalizeImpactAnalysisUseCase {
       });
 
       return { documentJob: job };
-    });
+    }, { timeout: 20_000 });
 
     try {
       await this.enqueueJob.enqueueExistingJob(documentJob.id);

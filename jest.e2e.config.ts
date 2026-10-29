@@ -17,6 +17,9 @@ const config: Config = {
     '^@ba-helper/application$': '<rootDir>/packages/application/src/index.ts',
   },
   testEnvironment: 'node',
+  // These tests exercise a real API plus PostgreSQL/Redis, so use a bounded
+  // integration-test window instead of Jest's 5-second unit-test default.
+  testTimeout: 30_000,
   testPathIgnorePatterns: ['/node_modules/', '/dist/', '/build/', '/tests/fixtures/'],
   // E2E tests will run sequentially since they interact with a real DB.
 };
