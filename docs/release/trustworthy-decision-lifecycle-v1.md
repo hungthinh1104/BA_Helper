@@ -2,7 +2,7 @@
 
 Status: **in progress; not a release certification**
 Baseline inspected: `18471a9b8bbcb6a878a6415e35dc9e33ad19fd9d` on `codex/integration-product-integrity-v1`
-Current iteration base: `a07b910469960160b149be0a607175ad58c2d997`
+Latest committed candidate: `0eab09fa3c1d01cad9f1a35cc22e9d3de55824bf` (`0eab09f`)
 Evidence updated: 2026-10-29
 
 This register tracks the lifecycle integrity objective from the user-provided
@@ -11,13 +11,15 @@ This register tracks the lifecycle integrity objective from the user-provided
 
 ## Integration Branch Evidence
 
-At the local refs inspected on 2026-10-29, `codex/integration-product-integrity-v1`
-at `18471a9` contains both source branch tips: backend-runtime
+At the cached local refs inspected on 2026-10-29, `codex/integration-product-integrity-v1`
+at `0eab09f` contains both source branch tips: backend-runtime
 `codex/fix-backend-runtime-ci-boundary` at `6899185` and scanner
 `origin/fix/scan-source-omission-health-v1` at `9e63721` are ancestors of the
 integration HEAD. Relative to `main`, the source branches touch 230 and 38
 files, with 16 shared paths. The integration history includes merge commit
-`1bd036b`; the current worktree adds follow-up changes and is not yet committed.
+`1bd036b`; follow-up commits `a07b910` and `0eab09f` are on top. The current
+worktree has an uncommitted E2E regression-test update and evidence-register
+update.
 
 `git fetch origin` could not refresh the remote refs because this environment
 denies writes to `.git/FETCH_HEAD`. Therefore these ancestry checks certify the
@@ -80,7 +82,7 @@ localized retry. It only navigates after the retry succeeds.
 | Check | Result |
 | --- | --- |
 | API unit: `CreateScanJobUseCase` | 5/5 passed |
-| API E2E: queue failure then same-key retry, real test PostgreSQL/Redis | 1/1 passed after fix; failed before fix because the BullMQ job was absent |
+| API E2E: queue failure then same-key retry and separate worker-startup recovery, real test PostgreSQL/Redis | 2/2 passed; same-key retry regression was red when the old early-return behavior was temporarily restored, failing because the BullMQ job was absent |
 | UI component: connect, transient queue failure, same-key retry | 1/1 passed after fix; failed before fix because the dialog closed |
 | Root TypeScript check (`tsc --noEmit`) | Passed |
 | Web TypeScript check | Passed |
@@ -370,14 +372,18 @@ Current local verification on this uncommitted worktree:
 | --- | --- |
 | CI Jest (`pnpm test:ci`) | 237 suites / 1,383 tests passed |
 | Focused web regression tests | 5 suites / 25 tests passed |
-| API E2E | 28 suites / 163 tests passed |
+| API E2E before latest test-only edit | 28 suites / 163 tests passed on candidate `0eab09f` |
+| Latest scan enqueue-recovery E2E | 1 suite / 2 tests passed after test-only edit; red against temporary old early-return behavior |
 | Golden path demos | Single-repository 1/1 and multi-repository 1/1 passed in their CI-equivalent isolated commands |
 | Full root Jest (extra local aggregate) | Two runs each had one 5-second initialization-hook timeout: first in vector-gap benchmark, second in golden-path demo. The vector-gap test and golden-path demo each pass alone; the CI test command and isolated demo commands pass. |
 | TypeScript: backend, web, scripts | Passed on this iteration's source |
 | Workspace lint (`pnpm -r lint`) | Passed; 44 existing API warnings and 5 backend-runtime warnings, no errors |
 | Migration upgrade / legacy data-survival verifier | Passed against isolated throwaway PostgreSQL DB |
-| Focused Playwright report journey | Earlier focused run failed after worker Prisma `Server has closed the connection`; it passed in the subsequent full run |
-| Full Playwright on this iteration | 9 passed / 1 failed / 1 skipped; only keyboard route failed on workspace API 500 during PostgreSQL pool timeout |
+| Focused Playwright report journey before the auth fix | 8/8 passed across two retry-free batches on default ports with test PostgreSQL and isolated Redis; no P1017 or pool timeout reproduced. The Windows server teardown still hung, so both runner exits were unclean. |
+| NextAuth login bootstrap regression | Red before fix: two `/api/auth/session` requests raced with CSRF setup. Green after fix: 1/1 Playwright test, clean exit with prestarted servers; actual credentials login returned `authenticated` in report-journey setup. |
+| Focused web tests and typecheck after auth fix | Login form: 2/2 passed; web `tsc --noEmit` passed. |
+| Report journey after auth fix | Not certified: first run timed out at the default 15-second `qa-coverage` wait; trace recorded a 15.3-second route load. The waiter is now 60 seconds; follow-up runs were stopped without a result. |
+| Full Playwright on this iteration | A prior run reported 9 passed / 1 failed / 1 skipped, with keyboard review failing on workspace API 500 during PostgreSQL pool timeout; report-only reruns do not certify the full route/responsive suite. |
 | Full CI on exact release-candidate commit | Not run; the current changes are uncommitted |
 
 ## Browser And Runtime Gate Results
@@ -423,6 +429,54 @@ readiness endpoint returned 200 in the same trace. Playwright printed all 11
 case outcomes (9 passed, 1 failed, 1 skipped), then hung during Windows server
 teardown and was stopped; treat the test failure as real and the runner exit as
 unclean.
+
+A later rerun on candidate `0eab09f` used isolated Redis DB 2 and `CI=1`. The
+report journey failed once while `seed.demo.ts` created a code artifact
+(`P1017 Server has closed the connection`), then passed on Playwright retry
+number 1. The isolated report journey also passed once. Both runs hung during
+Windows Playwright server teardown and required Ctrl+C, so neither provides a
+clean full-suite exit. Treat report generation as flaky and keep the browser
+release gate open until the DB connection close is explained and the full run
+exits cleanly.
+
+On 2026-10-29, the report journey was then repeated on the default 3000/3001
+ports with one worker, retries disabled, test PostgreSQL and isolated Redis DB
+6. Both batches printed all test outcomes as passing: 3/3 and 5/5. A read-only
+PostgreSQL sampler observed at most 16 idle sessions (including a long-lived
+diagnostic `psql` session) and no sustained active/waiting query; the container
+logs showed ordinary checkpoints and no connection-close error. This did not
+reproduce or explain the earlier `P1017`. The Windows Playwright server
+teardown hung after the five passing outcomes and the runner was stopped with
+Ctrl+C, so this is focused journey evidence, not a clean full-suite pass.
+
+Custom-port diagnostic runs were excluded from the 8/8 count. They had manual
+NextAuth/CORS/API URL wiring; one redirected to `?csrf=true`, one QA coverage
+request remained pending, and one report journey passed. They are not evidence
+of PostgreSQL failure.
+
+On 2026-10-29, the default-port login flow was isolated with a new Playwright
+route regression. Before the fix, `/login` issued two concurrent
+`GET /api/auth/session` requests. NextAuth 4.24.15 creates a CSRF cookie when a
+request has no valid cookie; the requests could therefore overwrite each
+other's token before `signIn` posted its token. The regression failed with two
+captured requests. The fix moved `SessionProvider` under the `(app)` route group
+and made the public login form call a standalone credentials helper, so `/login`
+does not bootstrap a session. The same test passed 1/1 with a clean runner exit
+when attaching to prestarted API, worker, and web servers.
+
+The credentials callback then returned successfully in a real report-journey
+setup. The first post-fix journey did not reach `qa-coverage` within the test's
+default 15-second response wait; the trace recorded 15.3 seconds for the
+analysis route load, showed `Initializing workspace…`, and ended with an
+unresolved session request as the test was aborted. The response wait is now 60
+seconds, preserving the same API and payload assertions. The demo seed's
+synchronous child process now has a 60-second cap so a DB stall cannot hold the
+Playwright worker indefinitely. Follow-up runs were manually stopped before a
+test result, so neither change has a clean report-journey verification yet. In
+an instrumented run, the demo seed and direct-PostgreSQL test-trace fixture
+connected and committed successfully; no `P1017` or `P2028` appeared in those
+steps. The end-to-end review/finalize/report gate remains open until the app
+route initializes and the report journey exits cleanly after this auth change.
 
 ## Limitations And Residual Risks
 
@@ -491,13 +545,14 @@ failure and exposes retry only when `canRetryReportGeneration` is true.
 | API E2E (`pnpm test:e2e`) | 28 suites / 163 tests passed |
 | TypeScript: backend, web, scripts | Passed |
 | Workspace lint (`pnpm -r lint`) | Passed; 44 API and 5 backend-runtime type-import warnings, no errors |
-| Browser report journey | Still fails on Prisma connection closed in the worker; report provenance journey is not verified end to end |
+| Browser report journey | Candidate repeats before auth fix passed 8/8 without retry; after fix, one new run timed out at workspace initialization and a repeated run was stopped without a result. Earlier `P1017` remains unexplained. |
 
 ## Next Highest-Priority Iteration
 
-Reproduce the intermittent PostgreSQL pool timeout with database-side logs and
-verify the worker and workspace route can recover without losing the job or
-review state. Then run the full Playwright route/responsive/report suite on the
-committed candidate. Keep the remaining authorization,
-accessibility-manual, mapper-parity, multi-repo fan-out and refresh-recovery
-gates open until each has direct evidence.
+Resolve the post-login workspace initialization stall with a focused trace of
+`/api/auth/session` and `workspace/current`, then run the report journey to a
+clean exit. If the PostgreSQL close recurs, capture the exact request and
+per-process pool state; the recent seed/fixture checks did not reproduce it.
+Keep the remaining authorization, accessibility-manual, mapper-parity,
+multi-repo fan-out and refresh-recovery gates open until each has direct
+evidence.

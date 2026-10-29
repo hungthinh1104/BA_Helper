@@ -9,12 +9,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { getAuthErrorMessage, normalizeAuthErrorCode } from "@/lib/auth-errors"
+import { loginWithCredentials } from "@/lib/auth-client"
 import { getSafeNext } from "@/lib/auth-routing"
-import { useAuth } from "@/hooks/use-auth"
 
 export function LoginForm() {
   const searchParams = useSearchParams()
-  const { login, isLoading } = useAuth()
   const [clientReady, setClientReady] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -42,7 +41,7 @@ export function LoginForm() {
     }
 
     setIsSubmitting(true)
-    const result = await login({ email: email.trim(), password }, safeNext)
+    const result = await loginWithCredentials({ email: email.trim(), password }, safeNext)
     if (!result.ok) {
       setErrorCode(result.errorCode)
     }
@@ -87,7 +86,7 @@ export function LoginForm() {
                   placeholder="analyst@ba-helper.dev"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  disabled={isSubmitting || isLoading}
+                  disabled={isSubmitting}
                 />
               </div>
 
@@ -101,7 +100,7 @@ export function LoginForm() {
                   autoComplete="current-password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  disabled={isSubmitting || isLoading}
+                  disabled={isSubmitting}
                 />
               </div>
 
@@ -115,7 +114,7 @@ export function LoginForm() {
                 Redirect after sign-in: <span className="font-mono">{safeNext}</span>
               </div>
 
-              <Button type="submit" disabled={isSubmitting || isLoading}>
+              <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? "Signing in..." : "Sign In"}
               </Button>
             </form>

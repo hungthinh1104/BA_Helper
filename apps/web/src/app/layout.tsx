@@ -4,7 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AppToaster } from "@/components/app-toaster";
 import { QueryProvider } from "@/components/query-provider";
-import { AuthProvider } from "@/components/auth/AuthProvider";
 import { AppI18nProvider } from "@/components/i18n/app-i18n-provider";
 import { Suspense } from "react";
 
@@ -31,18 +30,16 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AuthProvider>
-            <QueryProvider>
-              <Suspense fallback={null}>
-                <AppI18nProvider>
-                  <TooltipProvider>
-                    {children}
-                    <AppToaster />
-                  </TooltipProvider>
-                </AppI18nProvider>
-              </Suspense>
-            </QueryProvider>
-          </AuthProvider>
+          <QueryProvider>
+            <Suspense fallback={null}>
+              <AppI18nProvider>
+                <TooltipProvider>
+                  {children}
+                  <AppToaster />
+                </TooltipProvider>
+              </AppI18nProvider>
+            </Suspense>
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

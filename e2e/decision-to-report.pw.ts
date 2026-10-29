@@ -22,7 +22,8 @@ test.describe('decision-to-report journey', () => {
     // A 200 response can still omit a TESTS edge when its canonical identity is invalid.
     const coverageWire = page.waitForResponse(response =>
       response.request().method() === 'GET' &&
-      response.url().includes(`/api/v1/impact-analyses/${seed.analysisId}/qa-coverage`));
+      response.url().includes(`/api/v1/impact-analyses/${seed.analysisId}/qa-coverage`),
+      { timeout: 60_000 });
     await page.goto(`/analyses/${seed.analysisId}?view=review&locale=en-US`);
     const coverageResponse = await coverageWire;
     expect(coverageResponse.ok()).toBe(true)

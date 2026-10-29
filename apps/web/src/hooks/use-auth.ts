@@ -1,8 +1,7 @@
 'use client';
 
-import { useSession, signIn, signOut } from 'next-auth/react';
-import type { LoginRequest, UserRole } from '@ba-helper/contracts';
-import { normalizeAuthErrorCode, type AuthErrorCode } from '@/lib/auth-errors';
+import { useSession, signOut } from 'next-auth/react';
+import type { UserRole } from '@ba-helper/contracts';
 
 type SessionUser = {
   id?: string;
@@ -10,10 +9,6 @@ type SessionUser = {
   email?: string | null;
   role?: UserRole;
 };
-
-type LoginResult =
-  | { ok: true }
-  | { ok: false; errorCode: AuthErrorCode }
 
 export function useAuth() {
   const { data: session, status } = useSession();
@@ -26,36 +21,11 @@ export function useAuth() {
     role: sessionUser.role,
   } : null;
 
-  const login = async (credentials: LoginRequest, next = "/"): Promise<LoginResult> => {
-    const result = await signIn("credentials", {
-      email: credentials.email,
-      password: credentials.password,
-      redirect: false,
-      callbackUrl: next,
-    })
-
-    if (!result || result.error) {
-      return {
-        ok: false,
-        errorCode: normalizeAuthErrorCode(result?.error),
-      }
-    }
-
-    if (result.url) {
-      window.location.assign(result.url)
-      return { ok: true }
-    }
-
-    window.location.assign(next)
-    return { ok: true }
-  }
-
   return {
     user,
     role: user?.role ?? null,
     isAuthenticated: status === 'authenticated',
     isLoading: status === 'loading',
-    login,
     logout: () => signOut({ callbackUrl: '/login' }),
   };
 }

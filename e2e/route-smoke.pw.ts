@@ -2,6 +2,24 @@ import { test, expect } from '@playwright/test'
 import { seedDemo } from './fixtures/seed'
 import { login } from './fixtures/auth'
 
+test('login route does not bootstrap a NextAuth session', async ({ page }) => {
+  const sessionRequests: string[] = []
+  await page.route('**/api/auth/session', async route => {
+    sessionRequests.push(route.request().url())
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ user: null, expires: '2099-01-01T00:00:00.000Z' }),
+    })
+  })
+
+  await page.goto('/login', { waitUntil: 'domcontentloaded' })
+  await expect(page.locator('form[data-client-ready="true"]')).toBeVisible()
+  await expect(page.locator('#email')).toBeEditable()
+
+  expect(sessionRequests).toEqual([])
+})
+
 test('direct navigation resolves all inventoried user-facing routes', async ({ page }) => {
   test.setTimeout(600_000)
   const seed = seedDemo()

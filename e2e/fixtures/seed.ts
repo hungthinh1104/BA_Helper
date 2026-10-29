@@ -23,7 +23,10 @@ export function seedDemo(): DemoSeed {
   // uv_os_get_passwd on constrained CI/Windows workers and fail before the
   // seed process starts; this executes the same seed module without changing
   // production scripts or running target repository code.
-  const out = execSync('pnpm --dir apps/api exec ts-node -r tsconfig-paths/register --project tsconfig.json prisma/seed.demo.ts', { encoding: 'utf8' })
+  const out = execSync(
+    'pnpm --dir apps/api exec ts-node -r tsconfig-paths/register --project tsconfig.json prisma/seed.demo.ts',
+    { encoding: 'utf8', timeout: 60_000 },
+  )
   const match = /Scenario A \(open review\)\s*:\s*(\S+)/.exec(out)
   const completedAnalysisId = /Scenario B \(finalized\)\s*:\s*(\S+)/.exec(out)?.[1]
   const projectId = /^Project ID:\s*(\S+)/m.exec(out)?.[1]

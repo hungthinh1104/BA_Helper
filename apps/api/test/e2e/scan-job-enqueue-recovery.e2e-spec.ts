@@ -65,7 +65,7 @@ describe('Scan job enqueue recovery (E2E)', () => {
     }
   });
 
-  it('re-enqueues the same persisted scan after a transient Redis enqueue failure', async () => {
+  async function createRepository() {
     const projectResponse = await request(app.getHttpServer())
       .post('/api/v1/projects')
       .set('Authorization', `Bearer ${adminToken}`)
@@ -79,6 +79,18 @@ describe('Scan job enqueue recovery (E2E)', () => {
       .send({ url: 'https://github.com/mock/scan-recovery' })
       .expect(201);
     const repository = repositoryCreateResponseSchema.parse(repositoryResponse.body);
+    return repository.repositoryId;
+  }
+
+  function submitScan(repositoryId: string, payload: { requestKey: string; requestedRef: string }) {
+    return request(app.getHttpServer())
+      .post(`/api/v1/repositories/${repositoryId}/scan-jobs`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(payload);
+  }
+
+  it('re-enqueues the same persisted scan when the client retries the same key after Redis failure', async () => {
+    const repositoryId = await createRepository();
 
     const requestKey = crypto.randomUUID();
     const payload = { requestKey, requestedRef: 'main' };
@@ -86,42 +98,59 @@ describe('Scan job enqueue recovery (E2E)', () => {
       .spyOn(queueService, 'enqueueScanJob')
       .mockRejectedValueOnce(new Error('injected transient Redis failure'));
 
-    await request(app.getHttpServer())
-      .post(`/api/v1/repositories/${repository.repositoryId}/scan-jobs`)
-      .set('Authorization', `Bearer ${adminToken}`)
-      .send(payload)
-      .expect(500);
+    await submitScan(repositoryId, payload).expect(500);
 
     const persistedJob = await prisma.scanJob.findUnique({
       where: {
         repositoryId_requestKey: {
-          repositoryId: repository.repositoryId,
+          repositoryId,
           requestKey,
         },
       },
     });
-    expect(persistedJob).toMatchObject({ status: 'QUEUED', stage: 'WAITING' });
     expect(persistedJob).not.toBeNull();
+    expect(persistedJob).toMatchObject({ status: 'QUEUED', stage: 'WAITING' });
     queuedScanJobId = persistedJob!.id;
+    expect(await scanQueue.getJob(`scan-${persistedJob!.id}`)).toBeUndefined();
 
-    await new StaleJobRecoveryService(prisma, queueService).onApplicationBootstrap();
-    expect(await scanQueue.getJob(`scan-${queuedScanJobId}`)).toBeDefined();
-
-    const retryResponse = await request(app.getHttpServer())
-      .post(`/api/v1/repositories/${repository.repositoryId}/scan-jobs`)
-      .set('Authorization', `Bearer ${adminToken}`)
-      .send(payload)
-      .expect(201);
+    const retryResponse = await submitScan(repositoryId, payload).expect(201);
 
     const retryJob = scanJobResponseSchema.parse(retryResponse.body);
     expect(retryJob.id).toBe(persistedJob!.id);
     const bullJob = await scanQueue.getJob(`scan-${persistedJob!.id}`);
     expect(bullJob).toBeDefined();
     expect(bullJob?.data).toEqual({ jobId: persistedJob!.id });
-    expect(enqueue).toHaveBeenCalledTimes(3);
+    expect(enqueue).toHaveBeenCalledTimes(2);
     expect(await prisma.scanJob.count({
-      where: { repositoryId: repository.repositoryId, requestKey },
+      where: { repositoryId, requestKey },
     })).toBe(1);
+    expect(await prisma.domainEvent.count({
+      where: { idempotencyKey: `scan:${persistedJob!.id}:queued` },
+    })).toBe(1);
+  });
+
+  it('re-enqueues a persisted scan on worker startup when the original Redis enqueue failed', async () => {
+    const repositoryId = await createRepository();
+    const requestKey = crypto.randomUUID();
+    const payload = { requestKey, requestedRef: 'main' };
+    jest.spyOn(queueService, 'enqueueScanJob')
+      .mockRejectedValueOnce(new Error('injected transient Redis failure'));
+
+    await submitScan(repositoryId, payload).expect(500);
+    const persistedJob = await prisma.scanJob.findUnique({
+      where: { repositoryId_requestKey: { repositoryId, requestKey } },
+    });
+    expect(persistedJob).not.toBeNull();
+    expect(persistedJob).toMatchObject({ status: 'QUEUED', stage: 'WAITING' });
+    queuedScanJobId = persistedJob!.id;
+    expect(await scanQueue.getJob(`scan-${persistedJob!.id}`)).toBeUndefined();
+
+    await new StaleJobRecoveryService(prisma, queueService).onApplicationBootstrap();
+
+    const bullJob = await scanQueue.getJob(`scan-${persistedJob!.id}`);
+    expect(bullJob).toBeDefined();
+    expect(bullJob?.data).toEqual({ jobId: persistedJob!.id });
+    expect(await prisma.scanJob.count({ where: { repositoryId, requestKey } })).toBe(1);
     expect(await prisma.domainEvent.count({
       where: { idempotencyKey: `scan:${persistedJob!.id}:queued` },
     })).toBe(1);
