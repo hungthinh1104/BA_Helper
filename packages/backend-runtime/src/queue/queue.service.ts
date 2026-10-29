@@ -94,6 +94,20 @@ export class QueueService {
     // We use a deterministic BullMQ jobId so BullMQ can deduplicate if needed,
     // though Prisma DocumentJob is the true idempotency source of truth.
     const uniqueJobId = `doc-${documentJobId}`;
+    const existingJob = await this.documentJobQueue.getJob(uniqueJobId);
+    if (existingJob) {
+      if ((await existingJob.getState()) === 'failed') {
+        try {
+          await existingJob.retry('failed');
+        } catch (error) {
+          // Concurrent delivery may have already moved the failed job back to
+          // an active queue state. Treat that as successful idempotent enqueue.
+          if ((await existingJob.getState()) === 'failed') throw error;
+        }
+      }
+      return;
+    }
+
     await this.documentJobQueue.add(
       'generate',
       { documentJobId },

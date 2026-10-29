@@ -58,7 +58,7 @@ export function AnalysisReviewWorkbench({
   // rejected by the backend; disable mutation in the UI too (the reviewer is
   // steered to re-run instead).
   const isStale = workspace.driftStatus.isStale
-  const reviewComplete = viewModel.counts.total > 0 && viewModel.counts.pending === 0
+  const reviewComplete = viewModel.counts.total > 0 && viewModel.counts.pending === 0 && !decision.isPending
 
   // Mobile is a single-pane flow: the queue and the item detail are two screens,
   // not a stacked layout. Desktop (lg+) always shows both.

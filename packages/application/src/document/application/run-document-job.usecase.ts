@@ -8,6 +8,8 @@ export class RunDocumentJobUseCase {
 
   async execute(params: {
     documentJobId: string;
+    attemptNumber?: number;
+    maxAttempts?: number;
   }): Promise<DocumentJobRunResult> {
     return this.runner.run(params);
   }

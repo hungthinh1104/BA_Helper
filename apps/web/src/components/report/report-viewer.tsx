@@ -1,6 +1,6 @@
 "use client"
 
-import { useApprovedReport, useFinalReviewedReport } from "@/hooks/api/use-approved-report"
+import { isReportGenerationFailed, isReportGenerationPending, useApprovedReport, useFinalReviewedReport } from "@/hooks/api/use-approved-report"
 import { useAnalysisDetail } from "@/hooks/api/use-analyses"
 import { evidenceQualityItemSchema, evidenceQualitySummarySchema, evaluationContextSchema } from "@ba-helper/contracts"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -21,6 +21,8 @@ import { ReportMarkdown } from "./report-markdown"
 import { normalizeAppLocale, type AppLocale } from "@/i18n/app-locale"
 import { TestTraceView } from '@/components/workspace/analysis/qa/test-trace-view'
 import { testTraceLabels } from '@/lib/i18n/test-trace-labels'
+import { ReportGenerationFailure } from "./report-generation-failure"
+import { ReportGenerationState } from "./report-generation-state"
 
 interface ReportViewerProps {
   analysisId: string
@@ -33,15 +35,22 @@ export function ReportViewer({ analysisId, printMode = false, locale = "en" }: R
   const reportLocale = normalizeAppLocale(locale)
   const { data: analysis, isLoading: analysisLoading } = useAnalysisDetail(analysisId)
   const isEnglish = reportLocale === "en"
-  
-  // Conditionally fetch approved report only if it's english
-  const { data: approvedReport, isLoading: approvedLoading } = useApprovedReport(analysisId, isEnglish ? analysis?.status : undefined)
-  
+
   // Use the new localized final reviewed report if locale is provided
   const { data: localizedReport, isLoading: localizedLoading, error: localizedError } = useFinalReviewedReport(analysisId, reportLocale)
+
+  // The approved-document projection is only available after async generation
+  // finishes; wait for the snapshot-backed report before fetching its metadata.
+  const { data: approvedReport, isLoading: approvedLoading } = useApprovedReport(
+    analysisId,
+    isEnglish ? analysis?.status : undefined,
+    isEnglish && Boolean(localizedReport),
+  )
   
   const reportLoading = localizedLoading || (isEnglish && approvedLoading)
   const error = localizedError
+  const reportGenerationPending = isReportGenerationPending(error)
+  const reportGenerationFailed = isReportGenerationFailed(error)
   const hasReport = !!localizedReport
   const markdown = localizedReport?.markdown
   const isStale = isEnglish ? !!approvedReport?.isStale : false // localized report implicitly not stale if served, but we lack full status
@@ -136,11 +145,14 @@ export function ReportViewer({ analysisId, printMode = false, locale = "en" }: R
     )
   }
 
+  if (reportGenerationPending && !hasReport) return <ReportGenerationState state="pending" />
+  if (reportGenerationFailed) return <ReportGenerationFailure analysisId={analysisId} printMode={printMode} />
+
   if (error || !hasReport) {
     const isFinalizedWithoutApprovedReport = analysis?.status === "COMPLETED"
     return (
       <div role="alert" className="m-8 flex flex-col items-center justify-center rounded-xl border border-border/60 bg-surface px-8 py-12 text-muted-foreground">
-        <AlertCircle className="w-8 h-8 text-destructive mb-3" />
+        <AlertCircle aria-hidden="true" className="w-8 h-8 text-destructive mb-3" />
         <p className="font-medium text-foreground">
           {error ? t("failedToLoadApprovedReport") : isFinalizedWithoutApprovedReport ? t("approvedSnapshotMissing") : t("approvedReportUnavailable")}
         </p>

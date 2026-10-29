@@ -24,6 +24,10 @@
     "./scanner": {
       "types": "./dist/scanner/index.d.ts",
       "default": "./dist/scanner/index.js"
+    },
+    "./worker": {
+      "types": "./dist/worker/index.d.ts",
+      "default": "./dist/worker/index.js"
     }
   },
   "scripts": {

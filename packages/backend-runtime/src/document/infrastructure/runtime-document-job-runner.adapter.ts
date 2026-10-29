@@ -16,6 +16,7 @@ import { GetImpactDiffUseCase } from '../../impact-analysis/infrastructure/get-i
 import { DocumentRepository } from './document.repository';
 import { ReviewedSnapshotReportContextAdapter } from '../application/render/reviewed-snapshot-report-context.adapter';
 import { AppError } from '@ba-helper/shared';
+import { classifyWorkerError } from '@ba-helper/application/worker';
 
 @Injectable()
 export class RuntimeDocumentJobRunnerAdapter extends DocumentJobRunnerPort {
@@ -28,7 +29,11 @@ export class RuntimeDocumentJobRunnerAdapter extends DocumentJobRunnerPort {
     super();
   }
 
-  async run(params: { documentJobId: string }): Promise<DocumentJobRunResult> {
+  async run(params: {
+    documentJobId: string;
+    attemptNumber?: number;
+    maxAttempts?: number;
+  }): Promise<DocumentJobRunResult> {
     const docJob = await this.markRunning(params.documentJobId);
 
     try {
@@ -78,14 +83,19 @@ export class RuntimeDocumentJobRunnerAdapter extends DocumentJobRunnerPort {
 
       return { success: true, generatedDocumentId: persistedReport.id };
     } catch (error) {
-      await this.prisma.documentJob.update({
-        where: { id: docJob.id },
-        data: {
-          status: DocumentJobStatus.FAILED,
-          error: this.toErrorJson(error),
-          failedAt: new Date(),
-        },
-      });
+      const attemptNumber = params.attemptNumber ?? 1;
+      const maxAttempts = params.maxAttempts ?? attemptNumber;
+      const retryable = classifyWorkerError(error) === 'RETRYABLE';
+      if (!retryable || attemptNumber >= maxAttempts) {
+        await this.prisma.documentJob.update({
+          where: { id: docJob.id },
+          data: {
+            status: DocumentJobStatus.FAILED,
+            error: this.toErrorJson(error),
+            failedAt: new Date(),
+          },
+        });
+      }
       throw error;
     }
   }

@@ -6,5 +6,7 @@ export type DocumentJobRunResult = {
 export abstract class DocumentJobRunnerPort {
   abstract run(params: {
     documentJobId: string;
+    attemptNumber?: number;
+    maxAttempts?: number;
   }): Promise<DocumentJobRunResult>;
 }

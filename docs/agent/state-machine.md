@@ -285,6 +285,13 @@ A `DocumentJob` takes a single `ReviewedReportSnapshot` as its deterministic inp
 Retry reuses the same `DocumentJob` identity and increments `attemptCount`.
 Retry must not create a second job for same `snapshotId` + `documentType`.
 
+BullMQ attempts for one queued job are execution retries, not product-level
+retries. A retryable failure before the configured final attempt leaves the
+product row `RUNNING`, allowing the same deterministic queue job to resume. An
+unrecoverable failure or exhausted final attempt transitions it to `FAILED`.
+An explicit retry after `FAILED` resets the same row to `QUEUED` and enqueues it
+again; an already `FAILED` row cannot be reopened by an automatic delivery.
+
 A FAILED job never mutates the `ReviewedReportSnapshot`. Re-enqueueing a job for the same snapshot and document type simply returns the existing job, unless explicitly requested as a retry.
 
 At worker startup, persisted `QUEUED` scan, impact-analysis, and document jobs

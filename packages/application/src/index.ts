@@ -4,3 +4,4 @@ export * from './impact-analysis';
 export * from './scanner';
 export * from './event-log';
 export * from './queue';
+export * from './worker';

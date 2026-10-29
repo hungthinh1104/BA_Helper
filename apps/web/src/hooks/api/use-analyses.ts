@@ -58,7 +58,7 @@ export function useAnalysisDetail(analysisId: string) {
   })
 }
 
-export function useAnalysisWorkspace(analysisId: string) {
+export function useAnalysisWorkspace(analysisId: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.analyses.workspace(analysisId),
     queryFn: async () => {
@@ -67,7 +67,7 @@ export function useAnalysisWorkspace(analysisId: string) {
         analysisWorkspaceResponseSchema,
       )
     },
-    enabled: Boolean(analysisId),
+    enabled: Boolean(analysisId) && (options?.enabled ?? true),
     refetchOnWindowFocus: true,
   })
 }

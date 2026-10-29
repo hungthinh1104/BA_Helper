@@ -225,6 +225,22 @@ describe("AnalysisReviewWorkbench decision loop", () => {
     expect(screen.getByText(labels.reviewWorkbench.reviewComplete)).toBeInTheDocument()
   })
 
+  it("does not announce completion while a review change is still saving", () => {
+    pending = true
+    const complete = {
+      ...workspace,
+      reviewQueue: workspace.reviewQueue.map((item) => ({
+        ...item,
+        currentDecision: "accepted" as const,
+        blockingFinalize: false,
+      })),
+    } as AnalysisWorkspaceResponse
+
+    renderWorkbench(complete)
+
+    expect(document.querySelector("[data-review-complete]")).toBeNull()
+  })
+
   it("drives the mobile single-pane flow: queue -> detail -> back with the full action set", () => {
     renderWorkbench()
     // The queue is the default mobile pane; the detail action bar (state-gated,

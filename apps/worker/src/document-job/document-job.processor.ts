@@ -22,7 +22,11 @@ export class DocumentJobWorker extends WorkerHost {
       event: 'DOCUMENT_JOB',
       context: { documentJobId: job.data.documentJobId },
       run: () =>
-        this.runDocumentJob.execute({ documentJobId: job.data.documentJobId }),
+        this.runDocumentJob.execute({
+          documentJobId: job.data.documentJobId,
+          attemptNumber: job.attemptsMade + 1,
+          maxAttempts: job.opts.attempts ?? 1,
+        }),
     });
   }
 }

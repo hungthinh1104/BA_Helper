@@ -49,6 +49,74 @@ describe('QueueService', () => {
     );
   });
 
+  it('retries a retained failed document job instead of re-adding its deterministic queue id', async () => {
+    const impactQueue = makeQueue();
+    const embeddingQueue = makeQueue();
+    const scanJobQueue = makeQueue();
+    const documentJobQueue = makeQueue();
+    const job = {
+      getState: jest.fn().mockResolvedValue('failed'),
+      retry: jest.fn().mockResolvedValue(undefined),
+    };
+    documentJobQueue.getJob.mockResolvedValue(job);
+    const service = new QueueService(
+      impactQueue as never,
+      embeddingQueue as never,
+      scanJobQueue as never,
+      documentJobQueue as never,
+    );
+
+    await service.enqueueDocumentJob('document-job-1');
+
+    expect(documentJobQueue.getJob).toHaveBeenCalledWith('doc-document-job-1');
+    expect(job.retry).toHaveBeenCalledWith('failed');
+    expect(documentJobQueue.add).not.toHaveBeenCalled();
+  });
+
+  it('adds a document job when its deterministic queue id is not retained', async () => {
+    const impactQueue = makeQueue();
+    const embeddingQueue = makeQueue();
+    const scanJobQueue = makeQueue();
+    const documentJobQueue = makeQueue();
+    const service = new QueueService(
+      impactQueue as never,
+      embeddingQueue as never,
+      scanJobQueue as never,
+      documentJobQueue as never,
+    );
+
+    await service.enqueueDocumentJob('document-job-1');
+
+    expect(documentJobQueue.add).toHaveBeenCalledWith(
+      'generate',
+      { documentJobId: 'document-job-1' },
+      expect.objectContaining({ jobId: 'doc-document-job-1', attempts: 3 }),
+    );
+  });
+
+  it('treats a concurrent document retry already moved to active as delivered', async () => {
+    const impactQueue = makeQueue();
+    const embeddingQueue = makeQueue();
+    const scanJobQueue = makeQueue();
+    const documentJobQueue = makeQueue();
+    const job = {
+      getState: jest.fn().mockResolvedValueOnce('failed').mockResolvedValueOnce('active'),
+      retry: jest.fn().mockRejectedValue(new Error('job already moved to active')),
+    };
+    documentJobQueue.getJob.mockResolvedValue(job);
+    const service = new QueueService(
+      impactQueue as never,
+      embeddingQueue as never,
+      scanJobQueue as never,
+      documentJobQueue as never,
+    );
+
+    await expect(service.enqueueDocumentJob('document-job-1')).resolves.toBeUndefined();
+
+    expect(job.retry).toHaveBeenCalledWith('failed');
+    expect(documentJobQueue.add).not.toHaveBeenCalled();
+  });
+
   it('retries only jobs retained in the failed dead-letter set', async () => {
     const impactQueue = makeQueue();
     const embeddingQueue = makeQueue();

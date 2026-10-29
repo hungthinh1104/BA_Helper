@@ -26,6 +26,8 @@ describe('classifyWorkerError', () => {
   it('treats known terminal AppError codes as unrecoverable', () => {
     for (const code of [
       'AI_PROVIDER_AUTH_FAILED',
+      'DOCUMENT_JOB_NOT_FOUND',
+      'DOCUMENT_JOB_NOT_READY',
       'IMPACT_ANALYSIS_NOT_FOUND',
       'SCAN_JOB_NOT_FOUND',
       'SNAPSHOT_NOT_FOUND',

@@ -10,6 +10,7 @@
       "@ba-helper/analyzer": ["packages/analyzer/src/index.ts"],
       "@ba-helper/application": ["packages/application/src/index.ts"],
       "@ba-helper/application/document": ["packages/application/src/document/index.ts"],
+      "@ba-helper/application/worker": ["packages/application/src/worker/index.ts"],
       "@ba-helper/application/embedding": ["packages/application/src/embedding/index.ts"],
       "@ba-helper/application/impact-analysis": ["packages/application/src/impact-analysis/index.ts"],
       "@ba-helper/application/scanner": ["packages/application/src/scanner/index.ts"],

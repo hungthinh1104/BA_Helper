@@ -1,33 +1,89 @@
-import { describe, expect, it } from "@jest/globals"
+import React from "react"
+import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query"
+import { act, renderHook, waitFor, cleanup } from "@testing-library/react"
+import { describe, expect, it, jest, beforeEach, afterEach } from "@jest/globals"
+import { queryKeys } from "@/lib/api/query-keys"
 import type { AnalysisWorkspaceResponse } from "@ba-helper/contracts"
-import { applyOptimisticDecision } from "./use-review-item-decision"
 
-function workspace(
-  items: Array<{ itemId: string; currentDecision: string }>,
-): AnalysisWorkspaceResponse {
-  return { reviewQueue: items } as unknown as AnalysisWorkspaceResponse
+const mockApiPut = jest.fn()
+jest.mock("@/lib/api-client", () => ({ apiPut: (...args: unknown[]) => mockApiPut(...args) }))
+jest.mock("@/lib/project-context", () => ({ useOptionalProjectId: () => undefined }))
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { useReviewItemDecision } = require("./use-review-item-decision") as typeof import("./use-review-item-decision")
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((done) => { resolve = done })
+  return { promise, resolve }
 }
 
-describe("applyOptimisticDecision", () => {
-  it("updates only the decided item and does not mutate the input", () => {
-    const before = workspace([
-      { itemId: "a", currentDecision: "needs_review" },
-      { itemId: "b", currentDecision: "needs_review" },
-    ])
-    const after = applyOptimisticDecision(before, "a", "accept")
+function workspace(): AnalysisWorkspaceResponse {
+  return {
+    reviewQueue: [{ itemId: "link-1", currentDecision: "needs_review" }],
+    reviewSummary: { total: 1, pending: 1, blocking: 1, conflicting: 0, needsMoreEvidence: 0, reviewed: 0, accepted: 0, rejected: 0 },
+    reportStatus: { canFinalize: false },
+  } as unknown as AnalysisWorkspaceResponse
+}
 
-    expect(after.reviewQueue[0].currentDecision).toBe("accepted")
-    expect(after.reviewQueue[1].currentDecision).toBe("needs_review")
-    // The snapshot used for rollback must stay intact.
-    expect(before.reviewQueue[0].currentDecision).toBe("needs_review")
+function acceptedWorkspace(): AnalysisWorkspaceResponse {
+  const before = workspace()
+  return {
+    ...before,
+    reviewQueue: [{ ...before.reviewQueue[0], currentDecision: "accepted" }],
+    reviewSummary: { ...before.reviewSummary, pending: 0, blocking: 0, reviewed: 1, accepted: 1 },
+    reportStatus: { ...before.reportStatus, canFinalize: true },
+  } as AnalysisWorkspaceResponse
+}
+
+describe("useReviewItemDecision", () => {
+  let queryClient: QueryClient
+  let mockWorkspaceRead: jest.Mock
+
+  beforeEach(() => {
+    mockApiPut.mockReset()
+    mockWorkspaceRead = jest.fn()
+    queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   })
 
-  it("maps every action to its resulting decision, including undo", () => {
-    const before = workspace([{ itemId: "a", currentDecision: "accepted" }])
-    expect(applyOptimisticDecision(before, "a", "reject").reviewQueue[0].currentDecision).toBe("rejected")
-    expect(applyOptimisticDecision(before, "a", "needs_more_evidence").reviewQueue[0].currentDecision).toBe(
-      "needs_more_evidence",
-    )
-    expect(applyOptimisticDecision(before, "a", "undo").reviewQueue[0].currentDecision).toBe("needs_review")
+  afterEach(() => {
+    cleanup()
+    queryClient.clear()
+  })
+
+  it("keeps the review queue backend-confirmed until the decision request succeeds", async () => {
+    const key = queryKeys.analyses.workspace("analysis-1")
+    queryClient.setQueryData(key, workspace())
+    const request = deferred<{ itemId: string; target: "impact"; currentDecision: "accepted"; reviewNote: null; idempotent: false }>()
+    const refreshedRead = deferred<AnalysisWorkspaceResponse>()
+    mockApiPut.mockReturnValue(request.promise)
+    mockWorkspaceRead.mockReturnValue(refreshedRead.promise)
+    const wrapper = ({ children }: { children: React.ReactNode }) =>
+      React.createElement(QueryClientProvider, { client: queryClient }, children)
+    renderHook(() => useQuery({ queryKey: key, queryFn: () => mockWorkspaceRead(), staleTime: Infinity }), { wrapper })
+    const { result } = renderHook(() => useReviewItemDecision("analysis-1"), { wrapper })
+
+    act(() => result.current.decide({
+      item: { itemId: "link-1", itemType: "impact" },
+      action: "accept",
+    }))
+    await waitFor(() => expect(mockApiPut).toHaveBeenCalledTimes(1))
+
+    expect(queryClient.getQueryData<AnalysisWorkspaceResponse>(key)?.reviewQueue[0].currentDecision)
+      .toBe("needs_review")
+    expect(queryClient.getQueryData<AnalysisWorkspaceResponse>(key)?.reviewSummary.reviewed).toBe(0)
+    expect(queryClient.getQueryData<AnalysisWorkspaceResponse>(key)?.reportStatus.canFinalize).toBe(false)
+
+    await act(async () => request.resolve({
+      itemId: "link-1", target: "impact", currentDecision: "accepted", reviewNote: null, idempotent: false,
+    }))
+    await waitFor(() => expect(mockWorkspaceRead).toHaveBeenCalledTimes(1))
+    expect(result.current.isPending).toBe(true)
+
+    await act(async () => refreshedRead.resolve(acceptedWorkspace()))
+    await waitFor(() => expect(result.current.isPending).toBe(false))
+    expect(queryClient.getQueryData<AnalysisWorkspaceResponse>(key)?.reviewQueue[0].currentDecision).toBe("accepted")
+    expect(queryClient.getQueryData<AnalysisWorkspaceResponse>(key)?.reviewSummary.reviewed).toBe(1)
+    expect(queryClient.getQueryData<AnalysisWorkspaceResponse>(key)?.reportStatus.canFinalize).toBe(true)
   })
 })

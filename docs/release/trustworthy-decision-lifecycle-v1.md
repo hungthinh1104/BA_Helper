@@ -2,6 +2,7 @@
 
 Status: **in progress; not a release certification**
 Baseline inspected: `18471a9b8bbcb6a878a6415e35dc9e33ad19fd9d` on `codex/integration-product-integrity-v1`
+Current iteration base: `a07b910469960160b149be0a607175ad58c2d997`
 Evidence updated: 2026-10-29
 
 This register tracks the lifecycle integrity objective from the user-provided
@@ -354,29 +355,30 @@ run continues through the existing staleness guard and returns
   create responses through shared Zod schemas and verifies same-key UI retries
   for scan and single-analysis commands. Full mapper parity and route-state
   coverage remain open in the linked route and consumer inventories.
-- **Browser and CI artifacts:** the full web component suite passes on this
-  worktree. A full Playwright run against the local test PostgreSQL and an
-  isolated Redis DB exits 1: 8 passed, 2 failed during `seedDemo()` with Prisma
-  `P1017` (`Server has closed the connection`), and 1 existing real-provider
-  test was skipped. The standard server-managed runner also remains affected by
-  Windows web-server teardown; the prestarted-server run printed the full
-  summary and exited rather than hanging at shutdown. Full CI on a committed
-  candidate SHA remains open.
+- **Browser and CI artifacts:** the last full Playwright run on the prior
+  integration worktree had 8 passes, 2 `seedDemo()` failures from Prisma
+  `P1017`, and 1 existing real-provider skip. A subsequent focused
+  `decision-to-report` run failed while loading the report after the worker's
+  Prisma connection closed, but the latest full run passed that journey and
+  the responsive and route sweeps. The full run still had one keyboard-route
+  failure from a PostgreSQL connection timeout and the Windows runner stalled
+  during teardown.
 
 Current local verification on this uncommitted worktree:
 
 | Check | Result |
 | --- | --- |
-| CI Jest (`pnpm test:ci`) | 235 suites / 1,378 tests passed |
-| Web component Jest | 43 suites / 180 tests passed |
-| API E2E | 28 suites / 163 tests passed on this worktree |
+| CI Jest (`pnpm test:ci`) | 237 suites / 1,383 tests passed |
+| Focused web regression tests | 5 suites / 25 tests passed |
+| API E2E | 28 suites / 163 tests passed |
 | Golden path demos | Single-repository 1/1 and multi-repository 1/1 passed in their CI-equivalent isolated commands |
 | Full root Jest (extra local aggregate) | Two runs each had one 5-second initialization-hook timeout: first in vector-gap benchmark, second in golden-path demo. The vector-gap test and golden-path demo each pass alone; the CI test command and isolated demo commands pass. |
-| TypeScript: backend, web, scripts | Passed after the legacy-plan change |
+| TypeScript: backend, web, scripts | Passed on this iteration's source |
 | Workspace lint (`pnpm -r lint`) | Passed; 44 existing API warnings and 5 backend-runtime warnings, no errors |
 | Migration upgrade / legacy data-survival verifier | Passed against isolated throwaway PostgreSQL DB |
-| Full Playwright | 8 passed / 2 failed on seed `P1017` / 1 skipped |
-| Full CI on exact release-candidate commit | Not run; worktree changes are uncommitted |
+| Focused Playwright report journey | Earlier focused run failed after worker Prisma `Server has closed the connection`; it passed in the subsequent full run |
+| Full Playwright on this iteration | 9 passed / 1 failed / 1 skipped; only keyboard route failed on workspace API 500 during PostgreSQL pool timeout |
+| Full CI on exact release-candidate commit | Not run; the current changes are uncommitted |
 
 ## Browser And Runtime Gate Results
 
@@ -401,8 +403,26 @@ The configured worker startup did succeed with the correct test database and
 isolated Redis DB. The previously recorded worker startup `P2028` did not recur
 in that run. A first attempt using the shared Redis DB failed with a PostgreSQL
 pool timeout; changing only the test Redis DB allowed all three servers to
-start. Keep the configured full browser/release gate open until `P1017` is
-explained and the full suite passes on one candidate commit.
+start. In the latest report journey, `/final-reviewed-report` first returned
+`DOCUMENT_JOB_NOT_READY` with status `RUNNING`, then returned status `FAILED`;
+the persisted worker error was `PrismaClientKnownRequestError: Server has
+closed the connection` during `impactAnalysis.findUnique()`. The later worker
+`DOCUMENT_JOB_NOT_READY` log was a duplicate delivery after the product job had
+already failed. Container/database logs could not be inspected because Docker's
+local engine socket is inaccessible in this sandbox. Keep the full
+browser/release gate open until the connection close is deterministically
+explained and the report journey passes on one candidate commit.
+
+The subsequent full Playwright run passed the review-to-report journey,
+responsive sweep (90 route/theme/viewport combinations), all three route-smoke
+cases, mobile review, Visual Test Trace and API documentation checks. The one
+failure was keyboard-only review: the workspace API returned HTTP 500
+`Internal server error`, then the next request failed to connect. The API log
+showed `pg-pool` `timeout exceeded when trying to connect`. The configured
+readiness endpoint returned 200 in the same trace. Playwright printed all 11
+case outcomes (9 passed, 1 failed, 1 skipped), then hung during Windows server
+teardown and was stopped; treat the test failure as real and the runner exit as
+unclean.
 
 ## Limitations And Residual Risks
 
@@ -418,14 +438,66 @@ explained and the full suite passes on one candidate commit.
    full API-to-browser failure/retry path has not been exercised.
 4. Recovery is worker-startup driven; there is no periodic reconciliation or
    transactional outbox for a queue outage while the worker stays up.
-5. Demo-seed Prisma `P1017` and standard Windows Playwright worker teardown
-   remain open. The prestarted-server browser run gets a clean runner exit but
-   still reports the two seed failures. Full CI on the committed candidate and
-   broader release gates remain open as documented in the linked inventory.
+5. PostgreSQL pool connection timeouts remain intermittent in browser runs,
+   and standard Windows Playwright server teardown remains unclean. The latest
+   full run's report journey passed, but the keyboard route failed on a 500
+   workspace response. Full CI on the committed candidate and broader release
+   gates remain open as documented in the linked inventory.
+
+## Iteration 8: Reviewed Report Retry And UI State
+
+### Invariant and reproduction
+
+After finalization, the report page must show the backend job state until the
+approved report is available. A transient worker failure must remain retryable
+through BullMQ, and a terminal failure must be distinguishable in the UI with
+a retry action only when the backend reports that retry is allowed.
+
+The browser journey showed the report viewer returned a generic unavailable
+error while generation was pending. Its report query did not poll. Review
+decision rows also appeared accepted before the server workspace summary and
+`canFinalize` capability had refreshed. Separately, `QueueService` re-added a
+failed document job using the same retained BullMQ ID; BullMQ deduplicates that
+ID, so the explicit retry endpoint could leave the job in its failed queue
+state.
+
+### Root cause and fix
+
+The review mutation optimistically changed server-authoritative queue data.
+The optimistic patch was removed; settlement now waits for affected review,
+workspace, report and list queries to refresh, and the completion banner stays
+hidden while a decision is pending.
+
+The report hook now polls only while the backend says the job is `QUEUED` or
+`RUNNING`. The viewer waits for the snapshot-backed report before requesting
+approved-document metadata. Worker attempts are passed into the document job
+use case; retryable non-final failures preserve product status `RUNNING`, and
+terminal/final failures set `FAILED`. When an explicit retry finds BullMQ's
+retained job in `failed`, queue delivery calls `job.retry('failed')` instead of
+adding a duplicate deterministic ID. The viewer distinguishes terminal report
+failure and exposes retry only when `canRetryReportGeneration` is true.
+
+### Regression and verification evidence
+
+| Check | Result |
+| --- | --- |
+| Review mutation cache regression | Red before fix; verifies review state and `canFinalize` remain server-authoritative until the response settles |
+| Report query pending poll | Red before fix; now observes the report become available after a `RUNNING` response |
+| Document worker lifecycle | Adapter regression was red before fix; retryable first attempt remains `RUNNING`, final/unrecoverable failures become `FAILED` |
+| BullMQ document retry | Queue regression was red before fix; failed retained job uses `retry('failed')`, new jobs still use the deterministic ID, concurrent delivery remains idempotent |
+| Report viewer failure/retry capability | Pending, failed, authorized retry, and no-retry capability component cases pass |
+| Focused web suite | 5 suites / 25 tests passed |
+| CI Jest (`pnpm test:ci`) | 237 suites / 1,383 tests passed |
+| API E2E (`pnpm test:e2e`) | 28 suites / 163 tests passed |
+| TypeScript: backend, web, scripts | Passed |
+| Workspace lint (`pnpm -r lint`) | Passed; 44 API and 5 backend-runtime type-import warnings, no errors |
+| Browser report journey | Still fails on Prisma connection closed in the worker; report provenance journey is not verified end to end |
 
 ## Next Highest-Priority Iteration
 
-Fault-inject partial fan-out with unchanged targets and simultaneous child
-creation. Then verify worker startup dependency wiring and UI state after
-close/refresh. Keep startup-only recovery visible while deciding whether
-evidence supports a periodic reconciler or outbox.
+Reproduce the intermittent PostgreSQL pool timeout with database-side logs and
+verify the worker and workspace route can recover without losing the job or
+review state. Then run the full Playwright route/responsive/report suite on the
+committed candidate. Keep the remaining authorization,
+accessibility-manual, mapper-parity, multi-repo fan-out and refresh-recovery
+gates open until each has direct evidence.
