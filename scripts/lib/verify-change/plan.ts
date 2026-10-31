@@ -30,7 +30,7 @@ export function createFullCommands(root: string, evidenceDirectory: string): Com
   commands.push(jest(root, 'scan-source-omission-analyzer', 'jest.analyzer.config.ts', ['packages/analyzer/tests/scanner/core/safe-file-enumerator.spec.ts'], evidenceDirectory, false, 'CI source omission regression.'));
   commands.push(jest(root, 'scan-source-omission-runtime', 'jest.unit.config.ts', ['packages/backend-runtime/src/scanner/application/scan-health-diagnostics.spec.ts'], evidenceDirectory, true, 'CI source omission regression.'));
   commands.push(jest(root, 'runtime-config-isolation', 'jest.ci.config.ts', ['apps/api/src/bootstrap/runtime-config.spec.ts'], evidenceDirectory, true, 'CI runtime configuration isolation regression.'));
-  add('analyzer-quality', ['verify:analyzer-quality'], 'Run analyzer quality scorecard.');
+  add('analyzer-quality', ['verify:analyzer-quality'], 'Run analyzer quality scorecard against the real PostgreSQL/Redis pipeline.', ['test-targets']);
   add('public-test-trace', ['verify:public-test-trace'], 'Run public NestJS trace corpus.');
   add('adversarial-evidence', ['verify:adversarial-evidence'], 'Run adversarial source/evidence validation.');
   add('application-test-trace', ['verify:application-test-trace'], 'Run application test trace evaluation.');
