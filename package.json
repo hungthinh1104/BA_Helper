@@ -22,7 +22,7 @@
     "test:unit": "jest --config jest.unit.config.ts",
     "test:integration": "jest --config jest.integration.config.ts",
     "test:web": "pnpm --dir apps/web test",
-    "test:e2e": "jest --config jest.e2e.config.ts --runInBand",
+    "test:e2e": "tsx scripts/run-e2e.ts",
     "test:e2e:watch": "jest --config jest.e2e.config.ts --watch",
     "test:pw": "playwright test",
     "test:pw:report": "playwright show-report e2e/.artifacts/report",
@@ -45,11 +45,12 @@
     "verify:controlled-beta-readiness": "tsx scripts/verify-controlled-beta-readiness.ts",
     "verify:release-drill": "tsx scripts/run-release-drill.ts",
     "verify:migration-upgrade": "tsx scripts/verify-migration-upgrade.ts",
+    "verify:change": "tsx scripts/verify-change.ts",
     "verify:saas-entry": "tsx scripts/verify-saas-entry.ts",
     "verify:architecture-boundaries": "tsx scripts/verify-architecture-boundaries.ts && pnpm verify:backend-runtime-boundary",
     "verify:backend-runtime-boundary": "tsx scripts/verify-backend-runtime-boundary.ts",
     "verify:backend-runtime-http-boundary": "ts-node --transpile-only scripts/verify-backend-runtime-http-boundary.ts",
-    "verify:stability": "pnpm verify:dependencies && pnpm infra:up && pnpm db:migrate && pnpm verify:migration-upgrade && pnpm verify:domain-packs && pnpm verify:analyzer-quality && pnpm verify:public-test-trace && pnpm verify:adversarial-evidence && pnpm verify:application-test-trace && pnpm verify:architecture-boundaries && pnpm verify:release-drill && pnpm verify:controlled-beta-readiness && pnpm typecheck && pnpm lint && pnpm test && pnpm test:web && pnpm test:e2e && pnpm demo:golden-path && pnpm demo:multi-repo-golden-path && pnpm test:pw"
+    "verify:stability": "pnpm verify:change --level full"
   },
   "devDependencies": {
     "@apidevtools/swagger-parser": "13.1.0",

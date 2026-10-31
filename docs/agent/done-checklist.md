@@ -80,17 +80,11 @@ applicable only when the task did not affect that area.
 
 ## Verification
 
-Verify document consistency and run the executable checks below when code is
-changed.
-
-Once workspace scripts exist, run relevant checks before finishing:
-
-```bash
-pnpm typecheck
-pnpm lint
-pnpm test
-pnpm test:e2e
-```
+Verify document consistency and use the verification level required by the
+change: FOCUSED during implementation, AFFECTED before handoff, and FULL for
+release or verification-infrastructure changes. See
+[testing-strategy.md](testing-strategy.md) for selector, prerequisites, and
+evidence requirements.
 
 - [ ] Typed/stable application error codes and safe structured logs were used
       for changed failure paths.

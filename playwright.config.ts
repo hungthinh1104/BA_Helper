@@ -1,11 +1,23 @@
-import { defineConfig, devices } from '@playwright/test'
+import { defineConfig, devices, type ReporterDescription } from '@playwright/test'
 import { randomUUID } from 'node:crypto'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import path from 'node:path'
 import { config } from 'dotenv'
+import {
+  assertPrestartedPlaywrightNamespace,
+  redisUrlIdentityOnly,
+  validateTestTargets,
+} from './apps/api/test/e2e/helpers/test-target-safety'
 
 config({ path: '.env.test', quiet: true })
 config({ path: '.env', quiet: true })
-if (process.env.DATABASE_URL_TEST) process.env.DATABASE_URL = process.env.DATABASE_URL_TEST
-if (process.env.REDIS_URL_TEST) process.env.REDIS_URL = process.env.REDIS_URL_TEST
+process.env.BA_HELPER_DEVELOPMENT_REDIS_URL = redisUrlIdentityOnly(
+  process.env.BA_HELPER_DEVELOPMENT_REDIS_URL ?? process.env.REDIS_URL ?? 'redis://localhost:6379/0',
+)
+const testTargets = validateTestTargets(process.env)
+assertPrestartedPlaywrightNamespace(process.env)
+process.env.DATABASE_URL = process.env.DATABASE_URL_TEST
+process.env.REDIS_URL = process.env.REDIS_URL_TEST
 const queuePrefixIsGenerated = process.env.PW_PRESTARTED_SERVERS !== '1'
 if (queuePrefixIsGenerated) {
   process.env.BULLMQ_PREFIX = `ba-helper-playwright-${randomUUID()}`
@@ -29,11 +41,21 @@ const WEB_PORT = process.env.PW_WEB_PORT ?? '3000'
 const API_PORT = process.env.PW_API_PORT ?? '3001'
 const BASE_URL = `http://localhost:${WEB_PORT}`
 const WEB_DIST_DIR = process.env.PW_WEB_DIST_DIR ?? '.next/g1-playwright'
+const BROWSER_TSCONFIG_PATH = '.next/verify-change/tsconfig.json'
 const NODE_COMMAND = `"${process.execPath}"`
 process.env.NEXTAUTH_URL = BASE_URL
-const browserRedisUrl = new URL(process.env.PW_REDIS_URL ?? process.env.REDIS_URL ?? 'redis://localhost:6379')
-if (!process.env.PW_REDIS_URL) browserRedisUrl.pathname = '/1'
+const browserRedisUrl = new URL(process.env.PW_REDIS_URL ?? process.env.REDIS_URL_TEST!)
+const browserRedisDb = browserRedisUrl.pathname.replace(/^\//, '') || '0'
+if (browserRedisUrl.hostname.toLowerCase() !== testTargets.redis.host || Number(browserRedisUrl.port || (browserRedisUrl.protocol === 'rediss:' ? 6380 : 6379)) !== testTargets.redis.port || Number(browserRedisDb) !== testTargets.redis.database) {
+  throw new Error('PW_REDIS_URL must match REDIS_URL_TEST for browser runs.')
+}
 process.env.REDIS_URL = browserRedisUrl.toString()
+
+if (queuePrefixIsGenerated) {
+  const browserTsConfigFile = path.resolve(process.cwd(), 'apps/web', BROWSER_TSCONFIG_PATH)
+  mkdirSync(path.dirname(browserTsConfigFile), { recursive: true })
+  writeFileSync(browserTsConfigFile, `${JSON.stringify({ extends: '../../tsconfig.json' }, null, 2)}\n`)
+}
 
 const webServers = [
   {
@@ -59,12 +81,24 @@ const webServers = [
   {
     command: `${NODE_COMMAND} node_modules/next/dist/bin/next dev --webpack -p ${WEB_PORT}`,
     cwd: 'apps/web',
-    env: { INTERNAL_API_URL: `http://localhost:${API_PORT}`, NEXT_BUILD_DIST_DIR: WEB_DIST_DIR } as Record<string, string>,
+    env: {
+      INTERNAL_API_URL: `http://localhost:${API_PORT}`,
+      NEXT_BUILD_DIST_DIR: WEB_DIST_DIR,
+      NEXT_TSCONFIG_PATH: BROWSER_TSCONFIG_PATH,
+    } as Record<string, string>,
     url: `${BASE_URL}/login`,
     timeout: 180_000,
     reuseExistingServer: !process.env.CI && !queuePrefixIsGenerated,
   },
 ]
+
+const reporters: ReporterDescription[] = [
+  ['list'],
+  ['html', { outputFolder: './e2e/.artifacts/report', open: 'never' }],
+]
+if (process.env.VERIFY_CHANGE_PLAYWRIGHT_REPORT) {
+  reporters.push(['json', { outputFile: process.env.VERIFY_CHANGE_PLAYWRIGHT_REPORT }])
+}
 
 export default defineConfig({
   testDir: './e2e',
@@ -75,7 +109,7 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: process.env.CI ? 1 : 0,
-  reporter: [['list'], ['html', { outputFolder: './e2e/.artifacts/report', open: 'never' }]],
+  reporter: reporters,
   use: {
     baseURL: BASE_URL,
     browserName: 'chromium',

@@ -1,10 +1,12 @@
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { config } from 'dotenv';
 import { resolvePinnedBrowserRunStatus } from './pinned-comprehension-browser-status';
 import { isIsolatedPinnedTestDatabaseUrl } from './pinned-proof-environment';
+import { redisUrlIdentityOnly } from '../apps/api/test/e2e/helpers/test-target-safety';
 
 const PROOF_PATH = path.resolve(process.env.PINNED_COMPREHENSION_PROOF_FILE ??
   'artifacts/evaluation/pinned-code-comprehension-proof.json');
@@ -102,6 +104,9 @@ async function main(): Promise<void> {
   if (!isIsolatedPinnedTestDatabaseUrl(databaseUrl)) {
     throw new Error('Pinned browser verification requires a local loopback ba_helper_test database.');
   }
+  process.env.BA_HELPER_DEVELOPMENT_REDIS_URL = redisUrlIdentityOnly(
+    process.env.BA_HELPER_DEVELOPMENT_REDIS_URL ?? process.env.REDIS_URL ?? 'redis://localhost:6379/0',
+  );
   process.env.DATABASE_URL = databaseUrl;
   process.env.REDIS_URL = process.env.REDIS_URL_TEST ?? 'redis://localhost:6379/1';
   process.env.PW_REDIS_URL = process.env.REDIS_URL;
@@ -112,6 +117,7 @@ async function main(): Promise<void> {
   process.env.REQUIRE_PINNED_COMPREHENSION_PROOF = '1';
   process.env.PINNED_BROWSER_PROOF_MODE = '1';
   process.env.PW_PRESTARTED_SERVERS = '1';
+  process.env.BULLMQ_PREFIX = `ba-helper-playwright-pinned-${process.pid}-${randomUUID()}`;
   process.env.NEXT_BUILD_DIST_DIR = `.next/g1-pinned-browser-${process.pid}-${Date.now()}`;
   process.env.NEXT_TSCONFIG_PATH = 'tsconfig.pinned-e2e.json';
 

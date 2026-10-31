@@ -2,6 +2,7 @@ import * as dotenv from 'dotenv';
 import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { Client } from 'pg';
+import { validateTestTargets } from './test-target-safety';
 
 let testInfraPrepared = false;
 
@@ -55,6 +56,11 @@ function ensureTestSchema(databaseUrl: string): void {
   );
 }
 
+export async function prepareTestDatabaseSchema(databaseUrl: string): Promise<void> {
+  await ensureTestDatabase(databaseUrl);
+  ensureTestSchema(databaseUrl);
+}
+
 function redisTarget(urlValue: string): string {
   let url: URL;
   try {
@@ -98,6 +104,7 @@ export async function prepareIsolatedTestEnv(): Promise<void> {
   if (!testRedisUrl) {
     throw new Error('REDIS_URL_TEST is required to isolate test queues.');
   }
+  validateTestTargets(process.env);
   assertTestRedisIsIsolated(testRedisUrl);
 
   process.env.DATABASE_URL = testDatabaseUrl;
@@ -107,8 +114,9 @@ export async function prepareIsolatedTestEnv(): Promise<void> {
   process.env.EMBEDDING_PROVIDER = 'fake';
 
   if (!testInfraPrepared) {
-    await ensureTestDatabase(testDatabaseUrl);
-    ensureTestSchema(testDatabaseUrl);
+    if (process.env.BA_HELPER_E2E_SCHEMA_PREPARED !== '1') {
+      await prepareTestDatabaseSchema(testDatabaseUrl);
+    }
     testInfraPrepared = true;
   }
 }

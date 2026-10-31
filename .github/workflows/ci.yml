@@ -79,6 +79,9 @@ jobs:
       - name: Apply Prisma migrations
         run: pnpm --dir apps/api exec prisma migrate deploy --config prisma.config.ts --schema prisma/schema.prisma
 
+      - name: Verify demo seed bootstrap
+        run: pnpm --dir apps/api seed:demo
+
       - name: Domain pack governance
         run: pnpm verify:domain-packs
 

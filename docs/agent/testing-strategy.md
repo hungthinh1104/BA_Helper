@@ -158,12 +158,17 @@ pnpm demo:golden-path
 pnpm demo:multi-repo-golden-path
 ```
 
-For a local release-candidate pass with Docker available, prefer the sequential
-wrapper. It starts Postgres/Redis, applies migrations, then runs the checks:
+For a local release-candidate pass, use the sequential FULL wrapper. It does
+not start development services or migrate the development database; provide
+explicit, isolated test targets first:
 
 ```bash
-pnpm verify:stability
+pnpm verify:change --level full
 ```
+
+`pnpm verify:stability` delegates to the same FULL definition for compatibility.
+The wrapper reuses configured test PostgreSQL/Redis instances and records
+unavailable services as blockers rather than starting containers.
 
 `pnpm typecheck` checks backend/test sources, browser E2E sources and the full
 web TypeScript project, including its tests. It builds the contracts/shared
@@ -173,6 +178,11 @@ the backend Jest match does not include `.test.tsx` files. CI and the stability
 wrapper run this suite and the desktop/mobile Playwright journeys explicitly.
 Install Chromium first with `pnpm exec playwright install chromium` (CI also
 installs OS dependencies).
+For a narrow browser investigation, the native Playwright entry point accepts
+its existing file, project, and grep selectors, for example
+`pnpm test:pw -- e2e/decision-to-report.pw.ts --project=desktop --grep="evidence"`.
+The verification wrapper keeps mapped journeys in AFFECTED and the complete
+configured browser suite in FULL.
 Web builds and Playwright server commands use the existing `dotenv -v` option
 for environment assignments so the same commands work on Windows and Linux.
 For local database/browser checks, copy `.env.test.example` to `.env.test` and
@@ -180,17 +190,22 @@ configure the running PostgreSQL/pgvector and Redis instances. Playwright reads
 the test URLs and passes the same database/queue configuration to its API,
 migration, seed and browser-fixture processes. CI does not reuse existing web
 or API servers. Database setup does not install PostgreSQL or Redis for you.
-Set `DATABASE_URL_TEST` explicitly to a dedicated test database. The API E2E
-preparation helper does not fall back to `DATABASE_URL`, because E2E reset
-helpers truncate application tables before each test.
-Set `REDIS_URL_TEST` to a dedicated test database or Redis instance; the API
-E2E preparation helper fails before database setup if it is missing or points
-at the configured development Redis database. The example uses logical DB 1,
-leaving the default development DB 0 isolated.
+Set `DATABASE_URL_TEST` explicitly to a dedicated PostgreSQL database whose
+name has a `test` or `e2e` segment and no `dev` or `production` segment. API
+E2E, Playwright, and `verify:change` reject missing or unsafe targets before
+database/browser mutation; none falls back to a development `DATABASE_URL`.
+Set `REDIS_URL_TEST` explicitly to a Redis database or instance distinct from
+the configured development Redis target. The example uses logical DB 1,
+leaving the default development DB 0 isolated. Prestarted Playwright servers
+must use the same test database, Redis target, and `ba-helper-playwright-*`
+queue prefix as the browser process.
 
 Database E2E preparation must run `prisma migrate deploy`, never `db push` or
-`--accept-data-loss`. It invokes the Prisma CLI through Node so Windows does
-not require a shell to launch a pnpm shim. `verify:migration-upgrade` applies
+`--accept-data-loss`. The `test:e2e` invocation prepares the database/schema
+once, then runs Jest in-band; each suite still performs its own reset and uses
+its own queue prefix/cleanup. Standalone demos retain their own initialization.
+It invokes the Prisma CLI through Node so Windows does not require a shell to
+launch a pnpm shim. `verify:migration-upgrade` applies
 the legacy chain before the email/index and three test-trace migrations, seeds
 legacy artifacts, a dependency and an approved report, then verifies content
 identity, nullable new fields, unchanged Markdown and confidence constraints.
@@ -199,6 +214,61 @@ tests only verify command selection and one-time preparation.
 The upgrade gate works on a scratch migration copy and a uniquely named
 throwaway database. It never moves repository migration folders, verifies a
 second deploy is idempotent and validates cleanup targets before deleting them.
+
+## Change Verification Workflow
+
+`pnpm verify:change` selects AFFECTED checks. Use `--level focused` while
+iterating and `--level full` for releases or verification-tooling changes. Use
+`--plan` to inspect native discovery, mapped checks, prerequisites, and reasons
+without running tests or preparing infrastructure. `--files` accepts an
+explicit scope; the report also lists dirty files outside it. `--base <ref>`
+adds committed paths since the merge base. Staged, unstaged, deleted, renamed,
+and non-ignored untracked paths are included by default.
+
+The selector calls Jest's `--findRelatedTests` and `--listTests` directly. An
+empty set selects a declared capability fallback or records a selector gap;
+it cannot pass as an empty test run. Shared contracts require backend, web,
+schema, and serial API E2E consumers. Prisma changes require validation,
+generation, migration-upgrade, and serial API E2E. Embedding/retrieval,
+worker/queue, analyzer/trace, and UI changes add their mapped evaluation or
+browser groups. CI, package, runner, verification-tool, unknown executable, and
+test-deletion changes escalate AFFECTED to FULL. The small path mapping is in
+`scripts/lib/verify-change/`; it intentionally does not infer a source graph.
+
+FULL runs dependency audit, Prisma and upgrade checks, analyzer quality/trace
+gates and benchmark, architecture boundaries, typecheck/lint, production
+builds, root/analyzer/web/API suites, golden paths, Chromium journeys, pinned
+repository proofs, release drill, and readiness. The root suite and analyzer
+runner together retain CI coverage; analyzer fixture suites omitted by root
+Jest remain in the analyzer runner. Database mutators, demos, API E2E, and
+browser journeys run sequentially. The analyzer-only verification command
+uses two Jest workers: three interleaved serial/two-worker trials measured a
+34.81% median improvement, with no failures and a 5.41% peak of host RAM.
+Other test groups retain their existing worker settings; database and browser
+checks remain serial. Recheck the threshold before expanding two-worker
+execution to another group.
+
+The verification report is written under the ignored
+`artifacts/evaluation/verify-change/run-*/` directory by default. It records
+HEAD, the complete diff fingerprint, selection scope, commands, durations,
+exit codes, skips, prerequisite blockers, native Jest/Playwright reports, and
+whether source changed during the run. Outputs outside the repository may be
+selected with `--output`; an in-repository destination must be Git-ignored.
+Commands use the current Node executable and argument arrays, and interruption
+cleanup targets only children owned by the invocation.
+
+The API package's `apps/api/package.json` `test` command continues to use its
+legacy `ts-jest` configuration for compatibility. The root workflow uses the
+shared SWC configuration; discovery, runner-specific roots, match rules, and
+transforms remain unchanged.
+
+### Verification instruction locations
+
+| Previous instruction location | Current location |
+| --- | --- |
+| `AGENTS.md` generic typecheck/test/lint block | FOCUSED/AFFECTED/FULL gates above and `verify-change` Skill |
+| `done-checklist.md` generic verification command list | Verification level requirement at the top of that checklist |
+| Previous `verify:stability` statement that it starts Postgres/Redis | Test-target safety and FULL wrapper sections above; the wrapper no longer bootstraps development services |
 
 ### Scanner fixture tests
 

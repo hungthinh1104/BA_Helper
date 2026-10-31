@@ -353,20 +353,9 @@ automatically.
 
 ## Verification
 
-Run the relevant checks before finishing a code change:
-
-```bash
-pnpm typecheck
-pnpm test
-pnpm lint
-```
-
-When applicable:
-
-```text
-Prisma change       generate client, add migration, update contracts/tests
-API contract change update Zod contract, mapper, consumer tests
-State change        update enum, policy, capabilities, tests, state docs
-AI schema change    update validation and fake-provider/golden tests
-Analyzer change     update fixture expected output and analyzer/retrieval tests
-```
+Use `FOCUSED` checks during implementation and `AFFECTED` checks before
+handoff. Use `FULL` for release verification or changes to verification
+infrastructure, test-runner configuration, or CI. The commands, selector rules,
+test-target safeguards, and evidence format live in
+[testing-strategy.md](docs/agent/testing-strategy.md) and the
+[verify-change Skill](.agents/skills/verify-change/SKILL.md).
