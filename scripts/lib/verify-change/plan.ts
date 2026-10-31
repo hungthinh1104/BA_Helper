@@ -232,7 +232,8 @@ function pnpm(id: string, args: string[], reason: string, requires?: CommandSpec
 
 function e2eCommand(id: string, jestArgs: string[], reason: string, output: string): CommandSpec {
   const jsonReport = path.join(output, `jest-${id}.json`);
-  const command = pnpm(id, ['test:e2e', '--', ...jestArgs], reason, ['test-targets'], {
+  const args = jestArgs.length > 0 ? ['test:e2e', '--', ...jestArgs] : ['test:e2e'];
+  const command = pnpm(id, args, reason, ['test-targets'], {
     VERIFY_CHANGE_REPORT_DIR: output,
     VERIFY_CHANGE_JEST_REPORT: jsonReport,
   });

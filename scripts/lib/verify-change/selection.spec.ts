@@ -138,6 +138,13 @@ describe('verify-change CLI and selector', () => {
     expect(commands.find((command) => command.id === 'analyzer-quality')?.requires).toContain('test-targets');
   });
 
+  it('omits the Jest argument separator when the full API E2E suite has no filter', () => {
+    const commands = createCommands(
+      process.cwd(), 'full', classifyChanges([]), [], path.join(os.tmpdir(), 'verify change reports'),
+    );
+    expect(commands.find((command) => command.id === 'api-e2e')?.args).toEqual(['test:e2e']);
+  });
+
   it('selects mandatory Prisma, contract, worker, analyzer, and browser fallbacks', () => {
     const root = process.cwd();
     const output = path.join(os.tmpdir(), 'verify change reports');
