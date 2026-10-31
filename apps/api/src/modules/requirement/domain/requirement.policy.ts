@@ -1,10 +1,4 @@
-import { AppError } from '@ba-helper/shared';
-
-const secretPatterns = [
-  /AKIA[0-9A-Z]{16}/,
-  /-----BEGIN\s+PRIVATE\s+KEY-----/,
-  /password\s*=/i,
-];
+import { AiPolicy, AppError } from '@ba-helper/shared';
 
 export const RequirementPolicy = {
   validateRevisionInput: (params: { title: string; rawText: string }) => {
@@ -22,7 +16,7 @@ export const RequirementPolicy = {
       );
     }
 
-    if (secretPatterns.some((pattern) => pattern.test(params.rawText))) {
+    if (AiPolicy.redactPayload(params.rawText).hasSecrets) {
       throw new AppError(
         'INVALID_REQUIREMENT_INPUT',
         'Requirement text contains potential secrets.',

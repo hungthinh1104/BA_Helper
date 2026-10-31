@@ -4,7 +4,6 @@ import { execFileSync } from 'node:child_process';
 import { Client } from 'pg';
 
 let testInfraPrepared = false;
-const developmentRedisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
 
 async function ensureTestDatabase(databaseUrl: string): Promise<void> {
   const targetUrl = new URL(databaseUrl);
@@ -79,6 +78,8 @@ function redisTarget(urlValue: string): string {
 }
 
 function assertTestRedisIsIsolated(testRedisUrl: string): void {
+  const developmentRedisUrl =
+    process.env.BA_HELPER_DEVELOPMENT_REDIS_URL || process.env.REDIS_URL || 'redis://localhost:6379';
   if (redisTarget(testRedisUrl) === redisTarget(developmentRedisUrl)) {
     throw new Error(
       'REDIS_URL_TEST must use a different Redis database or instance from REDIS_URL.',
@@ -89,9 +90,9 @@ function assertTestRedisIsIsolated(testRedisUrl: string): void {
 export async function prepareIsolatedTestEnv(): Promise<void> {
   dotenv.config({ path: path.resolve(process.cwd(), '.env.test') });
 
-  const testDatabaseUrl = process.env.DATABASE_URL_TEST || process.env.DATABASE_URL;
+  const testDatabaseUrl = process.env.DATABASE_URL_TEST;
   if (!testDatabaseUrl) {
-    throw new Error('DATABASE_URL_TEST or DATABASE_URL is required for tests.');
+    throw new Error('DATABASE_URL_TEST is required for tests.');
   }
   const testRedisUrl = process.env.REDIS_URL_TEST;
   if (!testRedisUrl) {

@@ -1,6 +1,68 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+import { act, fireEvent, render, screen } from "@testing-library/react"
 import type { CodeComprehensionResponse, ComprehensionScenario } from "@ba-helper/contracts"
 import { ScenarioList } from "./scenario-list"
+
+jest.mock("next-intl", () => ({
+  useTranslations: () => (key: string, values?: { count: number }) => {
+    const messages: Record<string, string> = {
+      scenarioListTitle: "Related Jest scenarios",
+      scenarioListDescription: "Declarations are shown with their exact static source claims. No execution or coverage is inferred.",
+      scenarioListEmpty: "No supported test-to-code reference was persisted. This does not prove that no tests exist; inspect the scan limitations above.",
+      scenarioListLoadMore: "Load more scenarios",
+      scenarioListLoadingMore: "Loading more scenarios…",
+      scenarioListPageError: "More scenarios could not be loaded. Retry to continue.",
+      scenarioListRetrying: "Retrying the next scenario page…",
+      scenarioListRetryingButton: "Retrying scenarios...",
+      scenarioListRetry: "Retry loading scenarios",
+      scenarioListLimitNotice: "The API retrieval limit was reached. More source-linked scenarios exist beyond the available pages.",
+      scenarioSetupLabel: "Declared setup",
+      scenarioInputsLabel: "Declared inputs",
+      scenarioInvocationsLabel: "Declared invocations",
+      scenarioAssertionsLabel: "Declared assertions",
+      scenarioMocksLabel: "Mock declarations",
+      scenarioExpectedOutcomesLabel: "Declared expected outcomes",
+      scenarioDirectReference: "Direct static test reference",
+      scenarioIndirectCallPath: "Indirect static call path",
+      scenarioNoTracePath: "No supported trace path recorded",
+      scenarioHideVisualTrace: "Hide visual trace",
+      scenarioShowVisualTrace: "Show visual trace",
+      scenarioLoadingVisualTrace: "Loading visual trace…",
+      scenarioAssociationsTitle: "Static invocation/assertion associations",
+      scenarioAssociationsDescription: "Source relationships only; they do not establish a passing result.",
+      scenarioInvocationUnresolved: "Invocation unresolved",
+      scenarioExpectedValueCount: "(1 declared expected value)",
+      scenarioUnresolvedEvidenceLabel: "Unresolved evidence",
+      scenarioSetupComparisonLabel: "Setup declarations",
+      scenarioInputsComparisonLabel: "Input declarations",
+      scenarioInvocationsComparisonLabel: "Invocation declarations",
+      scenarioAssertionsComparisonLabel: "Assertion declarations",
+      scenarioMocksComparisonLabel: "Mock declarations",
+      scenarioExpectedOutcomesComparisonLabel: "Expected outcome declarations",
+      scenarioComparisonLabel: "Scenario comparison",
+      scenarioComparisonTitle: "Compare extracted scenarios",
+      scenarioFirstSelectLabel: "First scenario",
+      scenarioSecondSelectLabel: "Second scenario",
+      scenarioComparisonCounts: "{label}: {leftCount} vs {rightCount} static declarations",
+      scenarioOnlyFirst: "Only first",
+      scenarioOnlySecond: "Only second",
+      scenarioRelationshipCounts: "Relationships: {leftCount} vs {rightCount} static edges",
+      scenarioComparisonDescription: "Differences compare exact extracted source claims and static relationships only; they do not compare runtime behavior or test outcomes.",
+      selectedStaticClaimEvidenceLabel: "Selected static claim evidence",
+      selectedStaticEvidenceTitle: "Selected static evidence",
+      scenarioSourceDeclarationCommit: "Source declaration · claim commit {commitSha}",
+      scenarioContextLabel: "Scenario: {title}",
+      scenarioSnapshotContext: "snapshot {snapshotId} · snapshot commit {commitSha}",
+    }
+    if (key === "scenarioListCount") {
+      const count = values?.count ?? 0
+      return `Showing ${count} currently loaded related scenario${count === 1 ? "" : "s"}.`
+    }
+    return messages[key] ?? key
+  },
+}))
+jest.mock("./code-comprehension-trace-flow", () => ({
+  CodeComprehensionTraceFlow: () => null,
+}))
 
 const scenario = {
   testArtifact: {
@@ -103,4 +165,24 @@ describe("ScenarioList pagination", () => {
     expect(screen.queryByRole("button", { name: "Load more scenarios" })).not.toBeInTheDocument()
     expect(screen.getByText(/API retrieval limit was reached/)).toHaveTextContent("More source-linked scenarios exist beyond the available pages")
   })
+
+  it("toggles the visual trace CTA only for a persisted trace", async () => {
+    const tracedScenario = {
+      ...scenario,
+      trace: { relation: "DIRECT_REFERENCE", artifacts: [], relationships: [] },
+    } as unknown as ComprehensionScenario
+
+    renderList({ scenarios: [tracedScenario] })
+    fireEvent.click(screen.getByText("refunds"))
+
+    const showButton = screen.getByRole("button", { name: "Show visual trace" })
+    expect(showButton).toHaveAttribute("aria-expanded", "false")
+    await act(async () => {
+      fireEvent.click(showButton)
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    })
+
+    expect(screen.getByRole("button", { name: "Hide visual trace" })).toHaveAttribute("aria-expanded", "true")
+  })
+
 })

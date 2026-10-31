@@ -10,6 +10,12 @@ const emptyEvidenceQualitySummary = {
   weakEvidence: 0,
 };
 
+const oneStrongEvidenceSummary = {
+  ...emptyEvidenceQualitySummary,
+  strongSourceEvidence: 1,
+  evidenced: 1,
+};
+
 const frozenEvaluationContext = {
   datasetVersion: 'test-v1',
   subsetId: 'test-subset',
@@ -25,50 +31,47 @@ const frozenEvaluationContext = {
 describe('GetFinalReviewedReportUseCase', () => {
   it('returns saved traces without rebuilding the current QA projection', async () => {
     const saved = { version: 1, coverage: staticTestTraceFixture() };
-    getReviewCompletionMock.execute.mockResolvedValue(createCompleteReviewCompletion());
-    getLatestSnapshotMock.execute.mockResolvedValue({ id: 'reviewed-id', analysisId: traceIds.analysis,
+    getReviewCompletionMock.execute.mockResolvedValue(createCompleteReviewCompletion({
+      analysisId: traceIds.analysis,
+      latestSnapshotId: 'reviewed-id',
+    }));
+    documentRepositoryMock.findReviewedReportSnapshotById.mockResolvedValue({ id: 'reviewed-id', analysisId: traceIds.analysis,
       approvedDocumentId: 'doc', createdAt: new Date(), reviewDecisionsSnapshot: [],
       evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary, evaluationContextSnapshot: null,
       testTraceSnapshot: saved });
-    prismaMock.generatedDocument.findUnique.mockResolvedValue({
+    documentRepositoryMock.findGeneratedDocumentById.mockResolvedValue({
       id: 'doc', impactAnalysisId: traceIds.analysis, type: 'IMPACT_REPORT', status: 'APPROVED', content: '# Frozen report',
     });
     const result = await useCase.execute(traceIds.analysis);
     expect(result.testTraceSnapshot).toEqual(saved);
-    expect(prismaMock.impactAnalysis.findUnique).not.toHaveBeenCalled();
+    expect(contextReaderMock.readContext).not.toHaveBeenCalled();
   });
   let useCase: GetFinalReviewedReportUseCase;
   let getReviewCompletionMock: any;
-  let getLatestSnapshotMock: any;
-  let prismaMock: any;
+  let documentRepositoryMock: any;
   let contextReaderMock: any;
 
   beforeEach(() => {
     getReviewCompletionMock = {
       execute: jest.fn(),
+      executeWithReviewDecisions: jest.fn().mockImplementation(async (...args: any[]) => ({
+        completion: await getReviewCompletionMock.execute(...args),
+        reviewDecisionsSnapshot: getReviewCompletionMock.reviewDecisionsSnapshot ?? [],
+      })),
     };
-    getLatestSnapshotMock = {
-      execute: jest.fn(),
-    };
-    prismaMock = {
-      generatedDocument: {
-        findUnique: jest.fn(),
-      },
-      documentJob: {
-        findFirst: jest.fn(),
-        findMany: jest.fn().mockResolvedValue([]),
-      },
-      impactAnalysis: {
-        findUnique: jest.fn(),
-      },
+    documentRepositoryMock = {
+      findReviewedReportSnapshotById: jest.fn(),
+      findGeneratedDocumentById: jest.fn(),
+      findCompletedJobsForApprovedReport: jest.fn().mockResolvedValue([]),
+      findLatestJobForSnapshot: jest.fn(),
+      findLocalizedReportArtifact: jest.fn(),
     };
     contextReaderMock = {
       readContext: jest.fn(),
     };
     useCase = new GetFinalReviewedReportUseCase(
       getReviewCompletionMock as any,
-      getLatestSnapshotMock as any,
-      prismaMock as any,
+      documentRepositoryMock as any,
       contextReaderMock as any,
     );
   });
@@ -85,15 +88,15 @@ describe('GetFinalReviewedReportUseCase', () => {
       })
     );
 
-    expect(getLatestSnapshotMock.execute).not.toHaveBeenCalled();
+    expect(documentRepositoryMock.findReviewedReportSnapshotById).not.toHaveBeenCalled();
   });
 
   it('rejects when snapshot missing despite isComplete being true (guard clause)', async () => {
-    getReviewCompletionMock.execute.mockResolvedValue({
+    getReviewCompletionMock.execute.mockResolvedValue(createCompleteReviewCompletion({
       isComplete: true,
+      latestSnapshotId: null,
       blockingReasons: [],
-    });
-    getLatestSnapshotMock.execute.mockResolvedValue(null);
+    }));
 
     await expect(useCase.execute('analysis-123')).rejects.toThrow(
       new AppError(
@@ -103,21 +106,19 @@ describe('GetFinalReviewedReportUseCase', () => {
     );
   });
 
-  it('rejects when live completion and the selected report snapshot disagree', async () => {
+  it('rejects when the captured reviewed snapshot no longer exists for this analysis', async () => {
     getReviewCompletionMock.execute.mockResolvedValue({
       isComplete: true,
       latestSnapshotId: 'reviewed-a',
       blockingReasons: [],
     });
-    getLatestSnapshotMock.execute.mockResolvedValue({
-      id: 'reviewed-b',
-      analysisId: 'analysis-123',
-    });
+    documentRepositoryMock.findReviewedReportSnapshotById.mockResolvedValue(null);
 
     await expect(useCase.execute('analysis-123')).rejects.toMatchObject({
       code: 'REPORT_PROVENANCE_MISMATCH',
     });
-    expect(prismaMock.generatedDocument.findUnique).not.toHaveBeenCalled();
+    expect(documentRepositoryMock.findReviewedReportSnapshotById).toHaveBeenCalledWith('analysis-123', 'reviewed-a');
+    expect(documentRepositoryMock.findGeneratedDocumentById).not.toHaveBeenCalled();
   });
 
   it('returns approved generated document markdown and snapshot JSON fields unchanged', async () => {
@@ -130,14 +131,15 @@ describe('GetFinalReviewedReportUseCase', () => {
       markdown: null,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       reviewDecisionsSnapshot: decisionsSnapshot,
-      evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary,
+      evidenceQualitySummarySnapshot: oneStrongEvidenceSummary,
       evaluationContextSnapshot: frozenEvaluationContext,
       createdByUserId: 'user-1',
     };
 
+    getReviewCompletionMock.reviewDecisionsSnapshot = decisionsSnapshot;
     getReviewCompletionMock.execute.mockResolvedValue(mockCompletion);
-    getLatestSnapshotMock.execute.mockResolvedValue(mockSnapshot);
-    prismaMock.generatedDocument.findUnique.mockResolvedValue({
+    documentRepositoryMock.findReviewedReportSnapshotById.mockResolvedValue(mockSnapshot);
+    documentRepositoryMock.findGeneratedDocumentById.mockResolvedValue({
       id: 'doc-1',
       impactAnalysisId: 'analysis-123',
       type: 'IMPACT_REPORT',
@@ -155,20 +157,20 @@ describe('GetFinalReviewedReportUseCase', () => {
       createdAt: '2026-01-01T00:00:00.000Z',
       reviewCompletion: mockCompletion,
       reviewDecisionsSnapshot: decisionsSnapshot,
-      evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary,
+      evidenceQualitySummarySnapshot: oneStrongEvidenceSummary,
       evaluationContextSnapshot: frozenEvaluationContext,
       createdByUserId: 'user-1',
     }));
     expect(result.reviewCoverageSummary).toEqual(expect.objectContaining({
       insights: expect.objectContaining({ total: 0, reviewed: 0 }),
       traceabilityLinks: expect.objectContaining({ total: 1, reviewed: 1, accepted: 1 }),
-      evidence: expect.objectContaining({ strong: 0, weak: 0, missing: 0 }),
+      evidence: expect.objectContaining({ strong: 1, weak: 0, missing: 0 }),
     }));
   });
 
   it('uses markdown frozen in the reviewed snapshot when the approved document has since changed', async () => {
-    getReviewCompletionMock.execute.mockResolvedValue(createCompleteReviewCompletion());
-    getLatestSnapshotMock.execute.mockResolvedValue({
+    getReviewCompletionMock.execute.mockResolvedValue(createCompleteReviewCompletion({ latestSnapshotId: 'snap-current' }));
+    documentRepositoryMock.findReviewedReportSnapshotById.mockResolvedValue({
       id: 'snap-current',
       analysisId: 'analysis-123',
       approvedDocumentId: 'doc-shared',
@@ -180,7 +182,7 @@ describe('GetFinalReviewedReportUseCase', () => {
       testTraceSnapshot: null,
       createdByUserId: null,
     });
-    prismaMock.generatedDocument.findUnique.mockResolvedValue({
+    documentRepositoryMock.findGeneratedDocumentById.mockResolvedValue({
       id: 'doc-shared',
       impactAnalysisId: 'analysis-123',
       type: 'IMPACT_REPORT',
@@ -192,12 +194,12 @@ describe('GetFinalReviewedReportUseCase', () => {
 
     expect(result.markdown).toBe('# Snapshot generation');
     expect(result.snapshotId).toBe('snap-current');
-    expect(prismaMock.generatedDocument.findUnique).not.toHaveBeenCalled();
+    expect(documentRepositoryMock.findGeneratedDocumentById).not.toHaveBeenCalled();
   });
 
   it('rejects an approved document linked to a different completed snapshot generation', async () => {
-    getReviewCompletionMock.execute.mockResolvedValue(createCompleteReviewCompletion());
-    getLatestSnapshotMock.execute.mockResolvedValue({
+    getReviewCompletionMock.execute.mockResolvedValue(createCompleteReviewCompletion({ latestSnapshotId: 'snap-current' }));
+    documentRepositoryMock.findReviewedReportSnapshotById.mockResolvedValue({
       id: 'snap-current',
       analysisId: 'analysis-123',
       approvedDocumentId: 'doc-shared',
@@ -209,17 +211,17 @@ describe('GetFinalReviewedReportUseCase', () => {
       testTraceSnapshot: null,
       createdByUserId: null,
     });
-    prismaMock.documentJob.findMany.mockResolvedValue([{ snapshotId: 'snap-older' }]);
+    documentRepositoryMock.findCompletedJobsForApprovedReport.mockResolvedValue([{ snapshotId: 'snap-older' }]);
 
     await expect(useCase.execute('analysis-123')).rejects.toMatchObject({
       code: 'REPORT_PROVENANCE_MISMATCH',
     });
-    expect(prismaMock.generatedDocument.findUnique).not.toHaveBeenCalled();
+    expect(documentRepositoryMock.findGeneratedDocumentById).not.toHaveBeenCalled();
   });
 
   it('returns document generated by a completed document job when snapshot is not linked yet', async () => {
     getReviewCompletionMock.execute.mockResolvedValue(createCompleteReviewCompletion());
-    getLatestSnapshotMock.execute.mockResolvedValue({
+    documentRepositoryMock.findReviewedReportSnapshotById.mockResolvedValue({
       id: 'snap-1',
       approvedDocumentId: null,
       markdown: null,
@@ -229,7 +231,7 @@ describe('GetFinalReviewedReportUseCase', () => {
       evaluationContextSnapshot: null,
       createdByUserId: null,
     });
-    prismaMock.documentJob.findFirst.mockResolvedValue({
+    documentRepositoryMock.findLatestJobForSnapshot.mockResolvedValue({
       id: 'job-1',
       status: 'COMPLETED',
       generatedDocument: { content: '# Job Document' },
@@ -243,7 +245,7 @@ describe('GetFinalReviewedReportUseCase', () => {
 
   it('throws LOCALIZED_REPORT_NOT_READY when localized artifact is missing', async () => {
     getReviewCompletionMock.execute.mockResolvedValue(createCompleteReviewCompletion());
-    getLatestSnapshotMock.execute.mockResolvedValue({
+    documentRepositoryMock.findReviewedReportSnapshotById.mockResolvedValue({
       id: 'snap-1',
       analysisId: 'analysis-123',
       approvedDocumentId: 'doc-1',
@@ -253,16 +255,14 @@ describe('GetFinalReviewedReportUseCase', () => {
       evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary,
       evaluationContextSnapshot: null,
     });
-    prismaMock.generatedDocument.findUnique.mockResolvedValue({
+    documentRepositoryMock.findGeneratedDocumentById.mockResolvedValue({
       id: 'doc-1',
       impactAnalysisId: 'analysis-123',
       type: 'IMPACT_REPORT',
       status: 'APPROVED',
       content: '# English',
     });
-    prismaMock.localizedReportArtifact = {
-      findUnique: jest.fn().mockResolvedValue(null),
-    };
+    documentRepositoryMock.findLocalizedReportArtifact.mockResolvedValue(null);
 
     await expect(useCase.execute('analysis-123', { locale: 'vi-VN' as any })).rejects.toMatchObject({
       code: 'LOCALIZED_REPORT_NOT_READY',
@@ -271,7 +271,7 @@ describe('GetFinalReviewedReportUseCase', () => {
 
   it('throws LOCALIZED_REPORT_FAILED when localization failed', async () => {
     getReviewCompletionMock.execute.mockResolvedValue(createCompleteReviewCompletion());
-    getLatestSnapshotMock.execute.mockResolvedValue({
+    documentRepositoryMock.findReviewedReportSnapshotById.mockResolvedValue({
       id: 'snap-1',
       analysisId: 'analysis-123',
       approvedDocumentId: 'doc-1',
@@ -281,12 +281,10 @@ describe('GetFinalReviewedReportUseCase', () => {
       evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary,
       evaluationContextSnapshot: null,
     });
-    prismaMock.generatedDocument.findUnique.mockResolvedValue({
+    documentRepositoryMock.findGeneratedDocumentById.mockResolvedValue({
       id: 'doc-1', impactAnalysisId: 'analysis-123', type: 'IMPACT_REPORT', status: 'APPROVED', content: '# English',
     });
-    prismaMock.localizedReportArtifact = {
-      findUnique: jest.fn().mockResolvedValue({ localizationStatus: 'FAILED' }),
-    };
+    documentRepositoryMock.findLocalizedReportArtifact.mockResolvedValue({ localizationStatus: 'FAILED' });
 
     await expect(useCase.execute('analysis-123', { locale: 'vi-VN' as any })).rejects.toMatchObject({
       code: 'LOCALIZED_REPORT_FAILED',
@@ -295,7 +293,7 @@ describe('GetFinalReviewedReportUseCase', () => {
 
   it('throws LOCALIZED_REPORT_OUT_OF_SYNC when hashes do not match', async () => {
     getReviewCompletionMock.execute.mockResolvedValue(createCompleteReviewCompletion());
-    getLatestSnapshotMock.execute.mockResolvedValue({
+    documentRepositoryMock.findReviewedReportSnapshotById.mockResolvedValue({
       id: 'snap-1',
       analysisId: 'analysis-123',
       approvedDocumentId: 'doc-1',
@@ -305,16 +303,14 @@ describe('GetFinalReviewedReportUseCase', () => {
       evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary,
       evaluationContextSnapshot: null,
     });
-    prismaMock.generatedDocument.findUnique.mockResolvedValue({
+    documentRepositoryMock.findGeneratedDocumentById.mockResolvedValue({
       id: 'doc-1', impactAnalysisId: 'analysis-123', type: 'IMPACT_REPORT', status: 'APPROVED', content: '# English',
     });
-    prismaMock.localizedReportArtifact = {
-      findUnique: jest.fn().mockResolvedValue({
+    documentRepositoryMock.findLocalizedReportArtifact.mockResolvedValue({
         localizationStatus: 'COMPLETED',
         contentMarkdown: '# Vietnamese',
         sourceContentHash: 'old-hash',
-      }),
-    };
+      });
     contextReaderMock.readContext.mockResolvedValue({
       sourceContentHash: 'new-hash',
     });
@@ -326,7 +322,7 @@ describe('GetFinalReviewedReportUseCase', () => {
 
   it('returns localized markdown when artifact is completed and hashes match', async () => {
     getReviewCompletionMock.execute.mockResolvedValue(createCompleteReviewCompletion());
-    getLatestSnapshotMock.execute.mockResolvedValue({
+    documentRepositoryMock.findReviewedReportSnapshotById.mockResolvedValue({
       id: 'snap-1',
       analysisId: 'analysis-123',
       approvedDocumentId: 'doc-1',
@@ -336,7 +332,7 @@ describe('GetFinalReviewedReportUseCase', () => {
       evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary,
       evaluationContextSnapshot: null,
     });
-    prismaMock.generatedDocument.findUnique.mockResolvedValue({
+    documentRepositoryMock.findGeneratedDocumentById.mockResolvedValue({
       id: 'doc-1', impactAnalysisId: 'analysis-123', type: 'IMPACT_REPORT', status: 'APPROVED', content: '# English',
     });
     
@@ -344,13 +340,11 @@ describe('GetFinalReviewedReportUseCase', () => {
       sourceContentHash: 'expected-hash',
     });
 
-    prismaMock.localizedReportArtifact = {
-      findUnique: jest.fn().mockResolvedValue({
+    documentRepositoryMock.findLocalizedReportArtifact.mockResolvedValue({
         localizationStatus: 'COMPLETED',
         contentMarkdown: '# Vietnamese Report',
         sourceContentHash: 'expected-hash',
-      }),
-    };
+      });
 
     const result = await useCase.execute('analysis-123', { locale: 'vi-VN' as any });
     expect(result.markdown).toBe('# Vietnamese Report');
@@ -372,7 +366,7 @@ function createCompleteReviewCompletion(overrides: Record<string, unknown> = {})
     unreviewed: 0,
     isComplete: true,
     hasReviewedSnapshot: true,
-    latestSnapshotId: null,
+    latestSnapshotId: 'snap-1',
     blockingReasons: [],
     ...overrides,
   };

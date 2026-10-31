@@ -57,6 +57,9 @@ export async function createReviewAuditFixture(
     data: {
       id: analysisId,
       requirementRevisionId: revisionId,
+      requirementId,
+      projectId,
+      repositoryId,
       snapshotId,
       sourceTargetId: targetId,
       requestKey: randomUUID(),
@@ -79,6 +82,7 @@ export async function createReviewAuditFixture(
     data: {
       id: traceabilityLinkId,
       impactAnalysisId: analysisId,
+      snapshotId,
       artifactId,
       linkType: 'AFFECTED',
       linkBasis: 'INFERRED',

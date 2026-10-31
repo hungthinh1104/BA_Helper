@@ -9,7 +9,11 @@ import {
   multiRepoImpactAnalysisCreateResponseSchema,
   matrixRowDetailResponseSchema,
 } from '@ba-helper/contracts';
-import { PrismaService } from "@ba-helper/backend-runtime";
+import {
+  InsightRepository,
+  PrismaService,
+  TraceabilityRepository,
+} from "@ba-helper/backend-runtime";
 
 describe('Matrix Drilldown (e2e)', () => {
   let app: INestApplication;
@@ -196,12 +200,26 @@ describe('Matrix Drilldown (e2e)', () => {
       data: {
         id: crypto.randomUUID(),
         impactAnalysisId: analysisId,
+        snapshotId: result.items[0].snapshotId,
         artifactId: artifact1.id,
         linkType: 'AFFECTED',
         linkBasis: 'EVIDENCED',
         reviewStatus: 'NEEDS_REVIEW',
         retrievalMetadata: {
-          diagnostics: { method: 'VECTOR' },
+          method: 'VECTOR',
+          signals: ['VECTOR'],
+          diagnostics: {
+            version: 'retrieval-diagnostics@0.1.0',
+            lexicalScoreNorm: 0,
+            vectorScoreNorm: 1,
+            graphBoostNorm: 0,
+            kindBoostNorm: 0,
+            domainBoostNorm: 0,
+            matchedIntentLabels: ['SERVICE'],
+            universalKind: 'DOMAIN_SERVICE',
+            repositoryProfile: null,
+            finalScore: 1,
+          },
         },
       }
     });
@@ -233,6 +251,57 @@ describe('Matrix Drilldown (e2e)', () => {
         insightId: insight1.id,
         evidenceId: evidence1.id,
       }
+    });
+
+    const foreignProject = await seedProjectWithReadyRequirement();
+    const foreignRepo = await seedRepository(foreignProject.projectId, 'foreign-repo');
+    const foreignArtifact = await prisma.codeArtifact.create({
+      data: {
+        id: crypto.randomUUID(),
+        snapshotId: foreignRepo.snapshotId,
+        artifactKey: 'foreign-artifact',
+        name: 'Foreign artifact',
+        artifactType: 'CLASS',
+        universalKind: 'DOMAIN_SERVICE',
+        filePath: 'src/foreign.ts',
+        startLine: 1,
+        endLine: 10,
+      },
+    });
+    const foreignEvidence = await prisma.evidence.create({
+      data: {
+        id: crypto.randomUUID(),
+        provenanceKey: crypto.randomUUID(),
+        sourceType: 'CODE',
+        snapshotId: foreignRepo.snapshotId,
+        artifactId: foreignArtifact.id,
+        sourcePath: 'src/foreign.ts',
+        startLine: 2,
+        endLine: 3,
+        excerpt: 'foreign-project-evidence-secret',
+        contentHash: 'foreign-hash',
+        isRedacted: false,
+        redactionMetadata: {},
+      },
+    });
+    const insightRepository = new InsightRepository(prisma);
+    const traceabilityRepository = new TraceabilityRepository(prisma);
+    await expect(insightRepository.linkEvidenceMany([{
+      insightId: insight1.id,
+      evidenceIds: [foreignEvidence.id],
+    }])).rejects.toMatchObject({ code: 'INVALID_EVIDENCE_ORIGIN' });
+    await expect(traceabilityRepository.linkEvidenceMany([{
+      linkId: tLink1.id,
+      evidenceIds: [foreignEvidence.id],
+    }])).rejects.toMatchObject({ code: 'INVALID_EVIDENCE_ORIGIN' });
+
+    // Model a bad legacy relation which the analysis-aware API reader must hide.
+    await prisma.insightEvidence.create({
+      data: {
+        id: crypto.randomUUID(),
+        insightId: insight1.id,
+        evidenceId: foreignEvidence.id,
+      },
     });
 
     const qaInsight = await prisma.baInsight.create({
@@ -272,12 +341,19 @@ describe('Matrix Drilldown (e2e)', () => {
     expect(details.impactedArtifacts[0].relatedQaScenarios).toContain(qaInsight.id);
     expect(details.impactedArtifacts[0].evidenceItems).toHaveLength(1);
     expect(details.impactedArtifacts[0].evidenceItems[0].evidenceId).toBe(evidence1.id);
-    expect(details.impactedArtifacts[0].retrievalDiagnostics).toEqual({ method: 'VECTOR' });
+    expect(details.impactedArtifacts[0].retrievalDiagnostics).toMatchObject({
+      version: 'retrieval-diagnostics@0.1.0',
+      vectorScoreNorm: 1,
+    });
+    expect(details.impactedArtifacts[0].evidenceItems[0].retrievalSignals).toEqual(['VECTOR']);
     expect(details.evidenceSummary.totalEvidenceItems).toBe(1);
     expect(details.evidenceSummary.coveredArtifacts).toBe(1);
     expect(details.evidenceSummary.uncoveredArtifacts).toBe(0);
     expect(details.risks).toHaveLength(1);
     expect(details.qaScenarios).toHaveLength(1);
+    expect(details.risks[0].relatedEvidenceIds).toEqual([evidence1.id]);
+    expect(JSON.stringify(details)).not.toContain(foreignEvidence.id);
+    expect(JSON.stringify(details)).not.toContain('foreign-project-evidence-secret');
   });
 
   it('blocks drilldown if runId does not match analysisId', async () => {

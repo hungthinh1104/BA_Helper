@@ -8,7 +8,12 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { generateLocalizedReportRequestSchema, supportedReportLocaleSchema } from '@ba-helper/contracts';
+import {
+  generateLocalizedReportRequestSchema,
+  localizedReportArtifactSchema,
+  localizationStatusResponseSchema,
+  supportedReportLocaleSchema,
+} from '@ba-helper/contracts';
 import type {
   LocalizedReportArtifact,
   LocalizationStatusResponse,
@@ -38,10 +43,16 @@ export class LocalizationController {
   ): Promise<LocalizedReportArtifact> {
     const input = parseApiInput(generateLocalizedReportRequestSchema, body);
 
-    const localizedArtifact = await this.generateLocalizedReportUseCase.execute({
-      analysisId,
-      actor,
-      locale: input.locale,
+    const localizationResult =
+      await this.generateLocalizedReportUseCase.execute({
+        analysisId,
+        actor,
+        locale: input.locale,
+      });
+    const localizedArtifact = localizedReportArtifactSchema.parse({
+      ...localizationResult,
+      createdAt: toIsoTimestamp(localizationResult.createdAt),
+      updatedAt: toIsoTimestamp(localizationResult.updatedAt),
     });
 
     if (localizedArtifact.localizationStatus === 'FAILED') {
@@ -61,6 +72,12 @@ export class LocalizationController {
     @CurrentUser() actor: RequestUser
   ): Promise<LocalizationStatusResponse> {
     const locale = parseApiInput(supportedReportLocaleSchema, localeInput);
-    return this.getLocalizationStatusUseCase.execute({ analysisId, locale, actor });
+    return localizationStatusResponseSchema.parse(
+      await this.getLocalizationStatusUseCase.execute({ analysisId, locale, actor }),
+    );
   }
+}
+
+function toIsoTimestamp(value: unknown): unknown {
+  return value instanceof Date ? value.toISOString() : value;
 }

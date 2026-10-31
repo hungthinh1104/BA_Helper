@@ -1,6 +1,7 @@
 import { parseApiInput } from '../../../shared/parse-api-input';
 import { Body, Controller, Get, Param, Post, Inject } from '@nestjs/common';
 import {
+  eventLogListResponseSchema,
   scanJobCreateRequestSchema,
   scanJobResponseSchema,
 } from '@ba-helper/contracts';
@@ -75,7 +76,7 @@ export class ScanJobController {
     }
 
     const events = await this.eventLogService.getScanJobEvents(scanJobId);
-    return { items: events };
+    return eventLogListResponseSchema.parse({ items: events });
   }
 
   @Post()

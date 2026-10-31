@@ -119,7 +119,7 @@ export class ImpactGraphReadModelBuilder {
           source: `analysis-${analysis.id}`,
           target: nodeId,
           type: 'AFFECTS',
-          confidence: link.confidence || undefined,
+          confidence: link.confidence ?? undefined,
           sourceKind: 'TRACEABILITY',
         });
       }

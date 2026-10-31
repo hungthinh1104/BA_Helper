@@ -9,7 +9,10 @@ import {
   readResolvedDomainPackSelection,
   sameResolvedDomainPackSelection,
 } from '@ba-helper/application';
-
+import {
+  ensureImpactAnalysisQueued,
+  reuseExistingImpactAnalysis,
+} from './impact-analysis-queue-delivery';
 
 @Injectable()
 export class CreateImpactAnalysisUseCase {
@@ -36,6 +39,7 @@ export class CreateImpactAnalysisUseCase {
     reviewClarificationRequestId?: string;
     domainPackId?: string | null;
     selectedDomainPack?: ResolvedDomainPackSelection;
+    actorUserId?: string;
   }) {
     const revision = await this.requirementRepo.findRevisionById(
       params.requirementRevisionId,
@@ -207,8 +211,7 @@ export class CreateImpactAnalysisUseCase {
 
     const existing = await this.impactRepo.findByComposite(params);
     if (existing) {
-      if (existing.status === 'QUEUED') await this.ensureQueued(existing);
-      return existing;
+      return reuseExistingImpactAnalysis(params, existing, this.queueDependencies());
     }
 
     const coverageWarning =
@@ -220,6 +223,9 @@ export class CreateImpactAnalysisUseCase {
     try {
       analysis = await this.impactRepo.createQueued({
         requirementRevisionId: params.requirementRevisionId,
+        requirementId: revision.requirementId,
+        projectId: requirement.projectId,
+        repositoryId: snapshot.repositoryId,
         snapshotId: params.snapshotId,
         sourceTargetId: params.sourceTargetId,
         multiRepoRunId: params.multiRepoRunId,
@@ -251,10 +257,7 @@ export class CreateImpactAnalysisUseCase {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         const existingAfterRace = await this.impactRepo.findByComposite(params)
         if (existingAfterRace) {
-          if (existingAfterRace.status === 'QUEUED') {
-            await this.ensureQueued(existingAfterRace);
-          }
-          return existingAfterRace
+          return reuseExistingImpactAnalysis(params, existingAfterRace, this.queueDependencies())
         }
       }
 
@@ -262,41 +265,17 @@ export class CreateImpactAnalysisUseCase {
       throw error
     }
 
-    await this.ensureQueued(analysis);
+    await ensureImpactAnalysisQueued(analysis, this.queueDependencies());
 
     return analysis;
   }
 
-  private async ensureQueued(analysis: {
-    id: string;
-    requirementRevisionId: string;
-    snapshotId: string;
-  }) {
-    await this.eventLog.recordEvent({
-      eventType: 'IMPACT_ANALYSIS_QUEUED',
-      idempotencyKey: `impact:${analysis.id}:queued`,
-      payload: {
-        impactAnalysisId: analysis.id,
-        requirementRevisionId: analysis.requirementRevisionId,
-        snapshotId: analysis.snapshotId,
-      },
-    });
-
-    try {
-      await this.queue.enqueueImpactAnalysis(analysis.id);
-    } catch (error) {
-      await this.impactRepo.updateStatus({
-        id: analysis.id,
-        status: 'FAILED',
-        stage: 'DONE',
-        progress: 0,
-        error: {
-          code: 'QUEUE_ENQUEUE_FAILED',
-          message: error instanceof Error ? error.message : 'Failed to enqueue impact analysis job.',
-        },
-      });
-      this.logger.error(`Failed to enqueue analysis ${analysis.id}: ${(error as Error)?.message ?? error}`)
-      throw error
-    }
+  private queueDependencies() {
+    return {
+      impactRepo: this.impactRepo,
+      eventLog: this.eventLog,
+      queue: this.queue,
+      logger: this.logger,
+    };
   }
 }

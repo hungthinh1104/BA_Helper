@@ -75,6 +75,7 @@ export class AppExceptionFilter implements ExceptionFilter {
         return HttpStatus.NOT_FOUND;
       case 'REQUEST_KEY_MISMATCH':
       case 'REPOSITORY_NOT_ANALYZABLE':
+      case 'DOCUMENT_JOB_NOT_READY':
       case 'MULTI_REPO_RUN_NOT_READY':
       case 'MERGED_MULTI_REPO_REPORT_STALE':
       case 'LAST_PROJECT_OWNER_REQUIRED':

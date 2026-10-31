@@ -98,6 +98,7 @@ export function renderQuestionsAndClarifications(context: MarkdownReportRenderCo
     const answered = clarifications.filter(c => c.status === 'ANSWERED' || c.status === 'CONVERTED_TO_REVISION');
     const open = clarifications.filter(c => c.status === 'OPEN');
     const dismissed = clarifications.filter(c => c.status === 'DISMISSED');
+    const cancelled = clarifications.filter(c => c.status === 'CANCELLED');
 
     if (answered.length > 0) {
       lines.push(`### ${labels.answered}`);
@@ -129,6 +130,17 @@ export function renderQuestionsAndClarifications(context: MarkdownReportRenderCo
       dismissed.forEach(c => {
         lines.push(`**${labels.question}:** ${c.question}  `);
         lines.push(`**${labels.disposition}:** ${labels.dismissedDuringReview} ${c.reason ? `${labels.reason}: ${c.reason}` : ''}`);
+        lines.push('');
+      });
+    }
+
+    if (cancelled.length > 0) {
+      lines.push(`### ${labels.cancelled}`);
+      lines.push('');
+      cancelled.forEach(c => {
+        lines.push(`**${labels.question}:** ${c.question}  `);
+        if (c.reason) lines.push(`**${labels.whyThisMatters}:** ${c.reason}  `);
+        lines.push(`**${labels.disposition}:** ${labels.cancelled}`);
         lines.push('');
       });
     }

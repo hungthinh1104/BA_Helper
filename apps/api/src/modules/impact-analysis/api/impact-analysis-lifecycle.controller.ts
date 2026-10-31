@@ -4,6 +4,7 @@ import {
   impactAnalysisCreateRequestSchema,
   impactAnalysisListResponseSchema,
   impactAnalysisResponseSchema,
+  eventLogListResponseSchema,
   multiRepoImpactAnalysisCreateRequestSchema,
   multiRepoImpactAnalysisCreateResponseSchema,
   multiRepoAnalysisRunDetailResponseSchema,
@@ -111,6 +112,7 @@ export class ImpactAnalysisLifecycleController {
       domainPackId: input.domainPackId,
       derivedFromAnalysisId: input.derivedFromAnalysisId,
       sourceClarificationId: input.sourceClarificationId,
+      actorUserId: actor.id,
     });
 
     const response = impactAnalysisResponseSchema.parse(
@@ -138,13 +140,8 @@ export class ImpactAnalysisLifecycleController {
     @CurrentUser() actor: RequestUser,
   ) {
     await this.permissions.assertCanReadAnalysis(actor, analysisId);
-    // ensure analysis exists is implicitly checked by permission assert if the analysis is missing it will throw 404
-    // Wait, assertCanReadAnalysis throws 404 if not found? No, usually project membership is checked. Let's make sure it exists by calling getAnalysis?
-    // Actually, assertCanReadAnalysis checks ProjectMembership and usually fetches the analysis to verify.
-    // If not, getting events for a non-existent analysis will just return [] which is fine.
-    
     const events = await this.eventLogService.getAnalysisEvents(analysisId);
-    return { items: events };
+    return eventLogListResponseSchema.parse({ items: events });
   }
 
   @Get('/projects/:projectId/analyses')

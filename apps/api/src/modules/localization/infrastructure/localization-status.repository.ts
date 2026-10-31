@@ -7,17 +7,19 @@ export class LocalizationStatusRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async findApprovedDocumentId(analysisId: string): Promise<string | null> {
-    const document = await this.prisma.generatedDocument.findUnique({
-      where: {
-        impactAnalysisId_type_status: {
-          impactAnalysisId: analysisId,
-          type: 'IMPACT_REPORT',
-          status: 'APPROVED',
-        },
-      },
+    const latestSnapshot = await this.prisma.reviewedReportSnapshot.findFirst({
+      where: { analysisId },
+      orderBy: { createdAt: 'desc' },
+      select: { approvedDocumentId: true },
+    });
+    if (latestSnapshot) return latestSnapshot.approvedDocumentId;
+
+    const legacyDocument = await this.prisma.generatedDocument.findFirst({
+      where: { impactAnalysisId: analysisId, type: 'IMPACT_REPORT', status: 'APPROVED' },
+      orderBy: { createdAt: 'desc' },
       select: { id: true },
     });
-    return document?.id ?? null;
+    return legacyDocument?.id ?? null;
   }
 
   async findArtifact(sourceDocumentId: string, locale: SupportedReportLocale) {

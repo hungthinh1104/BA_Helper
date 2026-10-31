@@ -1,8 +1,12 @@
-import { Prisma, PrismaClient } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import * as crypto from 'crypto';
-import { diagnosticItemSchema } from '@ba-helper/contracts';
+import {
+  diagnosticItemSchema,
+  reviewedReportQualitySnapshotSchema,
+} from '@ba-helper/contracts';
 import { buildEvidenceQualityProjection } from '../src/modules/document/application/evidence-quality.projection';
 
 const databaseUrl = process.env.DATABASE_URL?.trim();
@@ -328,6 +332,9 @@ async function main() {
   const analysisA = await prisma.impactAnalysis.create({
     data: {
       requirementRevisionId: revision.id,
+      requirementId: requirement.id,
+      projectId: project.id,
+      repositoryId: snapshot.repositoryId,
       snapshotId: snapshot.id,
       sourceTargetId: target.id,
       requestKey: 'demo-analysis-scenario-a',
@@ -376,6 +383,7 @@ async function main() {
       .create({
         data: {
           impactAnalysisId: analysisA.id,
+          snapshotId: analysisA.snapshotId,
           artifactId: bookingSvc.id,
           linkType: 'AFFECTED',
           linkBasis: 'EVIDENCED',
@@ -394,6 +402,7 @@ async function main() {
       .create({
         data: {
           impactAnalysisId: analysisA.id,
+          snapshotId: analysisA.snapshotId,
           artifactId: refundCtrl.id,
           linkType: 'AFFECTED',
           linkBasis: 'EVIDENCED',
@@ -412,6 +421,7 @@ async function main() {
       .create({
         data: {
           impactAnalysisId: analysisA.id,
+          snapshotId: analysisA.snapshotId,
           artifactId: inventorySvc.id,
           linkType: 'AFFECTED',
           linkBasis: 'INFERRED',
@@ -432,6 +442,9 @@ async function main() {
   const analysisB = await prisma.impactAnalysis.create({
     data: {
       requirementRevisionId: revision.id,
+      requirementId: requirement.id,
+      projectId: project.id,
+      repositoryId: snapshot.repositoryId,
       snapshotId: snapshot.id,
       sourceTargetId: target.id,
       requestKey: 'demo-analysis-scenario-b',
@@ -445,6 +458,7 @@ async function main() {
     prisma.traceabilityLink.create({
       data: {
         impactAnalysisId: analysisB.id,
+        snapshotId: analysisB.snapshotId,
         artifactId: bookingSvc.id,
         linkType: 'AFFECTED',
         linkBasis: 'EVIDENCED',
@@ -455,6 +469,7 @@ async function main() {
     prisma.traceabilityLink.create({
       data: {
         impactAnalysisId: analysisB.id,
+        snapshotId: analysisB.snapshotId,
         artifactId: refundCtrl.id,
         linkType: 'AFFECTED',
         linkBasis: 'EVIDENCED',
@@ -465,6 +480,7 @@ async function main() {
     prisma.traceabilityLink.create({
       data: {
         impactAnalysisId: analysisB.id,
+        snapshotId: analysisB.snapshotId,
         artifactId: inventorySvc.id,
         linkType: 'AFFECTED',
         linkBasis: 'EVIDENCED',
@@ -505,13 +521,17 @@ async function main() {
   const scenarioBQuality = buildEvidenceQualityProjection({
     traceabilityLinks: scenarioBQualityLinks,
   });
+  const scenarioBQualitySnapshot = reviewedReportQualitySnapshotSchema.parse({
+    reviewDecisionsSnapshot: scenarioBQuality.items,
+    evidenceQualitySummarySnapshot: scenarioBQuality.summary,
+  });
 
   await prisma.reviewedReportSnapshot.create({
     data: {
       analysisId: analysisB.id,
       markdown: '# BA Helper Final Report\n\nSynthetic deterministic export for Scenario B.',
-      reviewDecisionsSnapshot: scenarioBQuality.items as Prisma.InputJsonValue,
-      evidenceQualitySummarySnapshot: scenarioBQuality.summary as Prisma.InputJsonValue,
+      reviewDecisionsSnapshot: scenarioBQualitySnapshot.reviewDecisionsSnapshot as Prisma.InputJsonValue,
+      evidenceQualitySummarySnapshot: scenarioBQualitySnapshot.evidenceQualitySummarySnapshot as Prisma.InputJsonValue,
       createdByUserId: demoUser.id,
     },
   });

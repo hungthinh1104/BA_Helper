@@ -38,19 +38,23 @@ export class EmbedSnapshotArtifactsUseCase {
         return;
       }
 
-      // Idempotency guard: skip chunks already persisted for this snapshot
+      // Idempotency guard: skip only chunks produced from the same content and chunker version.
       const existingChunks = await this.chunkRepo.listBySnapshot(
         params.snapshotId,
-        this.embeddingProvider.providerName,
+        this.embeddingProvider.modelName,
       );
-      const existingByStableId = new Map<string, string>(
-        existingChunks.map((c) => [c.stableChunkId, c.contentHash]),
+      const existingByStableId = new Map<string, { contentHash: string; chunkerVersion: string | null }>(
+        existingChunks.map((chunk) => [chunk.stableChunkId, {
+          contentHash: chunk.contentHash,
+          chunkerVersion: chunk.chunkerVersion,
+        }]),
       );
 
       // Build all chunks from current artifacts
       const allItems: CurrentChunkItem[] = artifacts.map((artifact) => {
         const built = ArtifactChunkBuilder.build({ artifact, evidence: artifact.evidences });
-        const contentHash = createHash('sha256').update(built.content).digest('hex');
+        const content = AiPolicy.redactPayload(built.content).redactedPayload;
+        const contentHash = createHash('sha256').update(content).digest('hex');
         return {
           artifactKey: artifact.artifactKey,
           artifactId: artifact.id,
@@ -59,7 +63,7 @@ export class EmbedSnapshotArtifactsUseCase {
           artifactType: artifact.artifactType,
           chunkType: built.chunkType,
           stableChunkId: built.stableChunkId,
-          content: built.content,
+          content,
           contentHash,
           chunkerVersion: built.chunkerVersion,
         };
@@ -67,7 +71,12 @@ export class EmbedSnapshotArtifactsUseCase {
 
       // Remove already-persisted chunks (idempotent re-run)
       const needsProcessing = allItems.filter(
-        (i) => existingByStableId.get(i.stableChunkId) !== i.contentHash,
+        (item) => {
+          const existing = existingByStableId.get(item.stableChunkId);
+          if (!existing) return true;
+          return existing.contentHash !== item.contentHash
+            || existing.chunkerVersion !== item.chunkerVersion;
+        },
       );
       if (needsProcessing.length === 0) {
         await this.snapshotRepo.updateSnapshotIndexStatus(snapshot.id, 'VECTOR_READY');
@@ -105,7 +114,7 @@ export class EmbedSnapshotArtifactsUseCase {
         const copied = await this.chunkRepo.copyChunk({
           baseSnapshotId: reusePlan!.baseSnapshotId!,
           oldArtifactId: previousArtifactId,
-          embeddingModel: this.embeddingProvider.providerName,
+          embeddingModel: this.embeddingProvider.modelName,
           chunkerVersion: CHUNK_BUILDER_VERSION,
           contentHash: current.contentHash,
           tenantId: projectId,
@@ -128,16 +137,17 @@ export class EmbedSnapshotArtifactsUseCase {
       // ── 2. Generate embeddings for ineligible/new/blocked items ──────────
       let generatedCount = 0;
       if (toGenerate.length > 0) {
-        const redacted = toGenerate.map((item) => ({
-          ...item,
-          redactedContent: AiPolicy.redactPayload(item.content).redactedPayload,
-        }));
-
         const result = await this.embeddingProvider.embed({
-          texts: redacted.map((r) => r.redactedContent),
+          texts: toGenerate.map((item) => item.content),
         });
+        if (result.model !== this.embeddingProvider.modelName) {
+          throw new AppError(
+            'EMBEDDING_PROVIDER_FAILED',
+            'Embedding provider returned a model that does not match its configured model identity',
+          );
+        }
 
-        const chunksToInsert = redacted.map((item, idx) => ({
+        const chunksToInsert = toGenerate.map((item, idx) => ({
           tenantId: projectId,
           projectId,
           repositoryId,
@@ -148,9 +158,9 @@ export class EmbedSnapshotArtifactsUseCase {
           filePath: item.filePath,
           symbolName: item.symbolName,
           artifactType: item.chunkType,
-          content: item.redactedContent,
+          content: item.content,
           contentHash: item.contentHash,
-          tokenCount: Math.ceil(item.redactedContent.length / 4),
+          tokenCount: Math.ceil(item.content.length / 4),
           chunkerVersion: item.chunkerVersion,
           embeddingModel: result.model,
           embedding: result.embeddings[idx],
@@ -166,7 +176,7 @@ export class EmbedSnapshotArtifactsUseCase {
         mode: 'SNAPSHOT_SCOPED_COPY',
         baseSnapshotId,
         targetSnapshotId: params.snapshotId,
-        embeddingModel: this.embeddingProvider.providerName,
+        embeddingModel: this.embeddingProvider.modelName,
         chunkerVersion: CHUNK_BUILDER_VERSION,
         copiedChunkCount: copiedCount,
         generatedChunkCount: generatedCount,
@@ -261,7 +271,7 @@ export class EmbedSnapshotArtifactsUseCase {
     const previousChunks = await this.chunkRepo.listForReuseByArtifacts({
       snapshotId: baseSnapshotId,
       artifactIds: candidateArtifactIds,
-      embeddingModel: this.embeddingProvider.providerName,
+      embeddingModel: this.embeddingProvider.modelName,
       chunkerVersion: CHUNK_BUILDER_VERSION,
     });
 
@@ -278,7 +288,7 @@ export class EmbedSnapshotArtifactsUseCase {
       previousChunkByArtifactId,
       currentArtifactContentHashByKey,
       previousArtifactContentHashByKey,
-      targetEmbeddingModel: this.embeddingProvider.providerName,
+      targetEmbeddingModel: this.embeddingProvider.modelName,
       versionChangeBlocked: reusePlan.reuseSafety === 'VERSION_CHANGED_REVIEW_REQUIRED',
     });
   }

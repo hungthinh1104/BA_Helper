@@ -1,15 +1,28 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { approvedImpactReportResponseSchema } from '@ba-helper/contracts';
+import {
+  approvedImpactReportResponseSchema,
+  finalReviewedReportResponseSchema,
+  impactGraphResponseSchema,
+  localizedReportArtifactSchema,
+  localizationStatusResponseSchema,
+  reviewedReportSnapshotSchema,
+} from '@ba-helper/contracts';
 import { createTestApp } from './helpers/test-app';
 import { resetDatabase } from './helpers/reset-db';
 import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { grantProjectMembership } from './helpers/grant-project-membership';
-import { EventLogService, PrismaService } from '@ba-helper/backend-runtime';
-import type { ReviewNoteRepository } from '@ba-helper/backend-runtime';
+import {
+  EventLogService,
+  PrismaService,
+  QueueService,
+  ReviewedSnapshotReportContextAdapter,
+} from '@ba-helper/backend-runtime';
+import type { ReviewNoteRepository, TraceabilityRepository } from '@ba-helper/backend-runtime';
 import { RunDocumentJobUseCase } from '@ba-helper/application';
 import { ApprovedReportContextReader } from '../../src/modules/document/application/queries/approved-report-context.reader';
+import { GetReviewCompletionUseCase } from '../../src/modules/traceability/application/get-review-completion.usecase';
 import { CreateReviewedReportSnapshotUseCase } from '../../src/modules/document/application/commands/create-reviewed-report-snapshot.usecase';
 import { FinalizeImpactAnalysisUseCase } from '../../src/modules/impact-analysis/application/lifecycle/finalize-impact-analysis.usecase';
 import { SaveReviewNoteUseCase } from '../../src/modules/impact-analysis/application/review/save-review-note.usecase';
@@ -64,6 +77,23 @@ async function waitForReviewNoteAnalysisLock(prisma: PrismaService): Promise<voi
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
   throw new Error('Timed out waiting for the review note transaction to block on the finalization lock.');
+}
+
+async function waitForClarificationAnalysisLock(prisma: PrismaService): Promise<void> {
+  const deadline = Date.now() + 5_000;
+  while (Date.now() < deadline) {
+    const waiting = await prisma.$queryRaw<Array<{ count: number }>>`
+      SELECT count(*)::int AS count
+      FROM pg_stat_activity
+      WHERE pid <> pg_backend_pid()
+        AND wait_event_type = 'Lock'
+        AND query ILIKE '%FROM "ImpactAnalysis"%'
+        AND query ILIKE '%FOR UPDATE%'
+    `;
+    if ((waiting[0]?.count ?? 0) > 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error('Timed out waiting for the clarification mutation to serialize with finalization.');
 }
 
 describe('Final Reviewed Report Audit Flow (e2e)', () => {
@@ -150,6 +180,9 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       data: {
         id: analysisId,
         requirementRevisionId: revId,
+        requirementId: reqId,
+        projectId,
+        repositoryId,
         snapshotId,
         sourceTargetId: targetId,
         requestKey: crypto.randomUUID(),
@@ -188,6 +221,7 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
         {
           id: link1Id,
           impactAnalysisId: analysisId,
+          snapshotId,
           artifactId: artifact1Id,
           linkType: 'AFFECTED',
           linkBasis: 'EVIDENCED',
@@ -197,6 +231,7 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
         {
           id: link2Id,
           impactAnalysisId: analysisId,
+          snapshotId,
           artifactId: artifact2Id,
           linkType: 'AFFECTED',
           linkBasis: 'EVIDENCED',
@@ -254,6 +289,341 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
     });
   }
 
+  it('enforces the confidence range for persisted insights and traceability links', async () => {
+    const { analysisId, link1Id } = await setupBasicAnalysisWithLinks();
+    const insight = await prisma.baInsight.create({
+      data: {
+        impactAnalysisId: analysisId,
+        insightKey: 'confidence-range-check',
+        insightType: 'CLAIM',
+        certainty: 'INFERRED',
+        reviewStatus: 'NEEDS_REVIEW',
+        confidence: 0.5,
+        title: 'Confidence range fixture',
+        description: 'Persisted confidence must remain within the public contract range.',
+      },
+    });
+
+    await expect(prisma.baInsight.update({
+      where: { id: insight.id },
+      data: { confidence: 1.01 },
+    })).rejects.toMatchObject({ code: 'P2039' });
+    await expect(prisma.traceabilityLink.update({
+      where: { id: link1Id },
+      data: { confidence: -0.01 },
+    })).rejects.toMatchObject({ code: 'P2039' });
+
+    const persistedInsight = await prisma.baInsight.findUniqueOrThrow({ where: { id: insight.id } });
+    const persistedLink = await prisma.traceabilityLink.findUniqueOrThrow({ where: { id: link1Id } });
+    expect(persistedInsight.confidence).toBe(0.5);
+    expect(persistedLink.confidence).toBe(0.9);
+
+    for (const confidence of [0, 1, null]) {
+      await prisma.baInsight.update({ where: { id: insight.id }, data: { confidence } });
+      await prisma.traceabilityLink.update({ where: { id: link1Id }, data: { confidence } });
+    }
+  });
+
+  it('preserves zero traceability confidence in the impact graph API response', async () => {
+    const { analysisId, link1Id } = await setupBasicAnalysisWithLinks();
+    await prisma.traceabilityLink.update({
+      where: { id: link1Id },
+      data: { confidence: 0 },
+    });
+
+    const response = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/graph`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    const graph = impactGraphResponseSchema.parse(response.body);
+
+    expect(graph.edges.find((edge) => edge.id === `edge-trace-${link1Id}`)?.confidence).toBe(0);
+  });
+
+  it('serves the reviewed snapshot captured with completion when a newer snapshot is published concurrently', async () => {
+    const { analysisId, link1Id, link2Id, docId } = await setupBasicAnalysisWithLinks();
+    for (const linkId of [link1Id, link2Id]) {
+      await request(app.getHttpServer())
+        .put(`/api/v1/traceability-links/${linkId}/review-decision`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ decision: 'ACCEPTED', note: 'Approved for report' })
+        .expect(200);
+    }
+    await markAnalysisCompleted(analysisId);
+    const firstSnapshotResponse = await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${analysisId}/reviewed-report-snapshot`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send()
+      .expect(201);
+    const firstSnapshotId = firstSnapshotResponse.body.id as string;
+    await prisma.reviewedReportSnapshot.update({
+      where: { id: firstSnapshotId },
+      data: { approvedDocumentId: docId, approvedDocumentAnalysisId: analysisId },
+    });
+
+    const completion = app.get(GetReviewCompletionUseCase);
+    const readCompletion = completion.executeWithReviewDecisions.bind(completion);
+    const completionCaptured = createDeferred();
+    const releaseCompletion = createDeferred();
+    let pauseFirstRead = true;
+    const completionSpy = jest.spyOn(completion, 'executeWithReviewDecisions')
+      .mockImplementation(async (id) => {
+        const result = await readCompletion(id);
+        if (pauseFirstRead) {
+          pauseFirstRead = false;
+          completionCaptured.resolve();
+          await releaseCompletion.promise;
+        }
+        return result;
+      });
+
+    try {
+      const pendingReport = request(app.getHttpServer())
+        .get(`/api/v1/impact-analyses/${analysisId}/final-reviewed-report`)
+        .set('Authorization', `Bearer ${adminToken}`);
+      const reportResponsePromise = pendingReport.then((response) => response);
+      await withDeadline(completionCaptured.promise, 'captured review completion');
+
+      await prisma.$transaction([
+        prisma.traceabilityReviewDecision.updateMany({
+          where: { traceabilityLinkId: link1Id },
+          data: { decision: 'REJECTED' },
+        }),
+        prisma.traceabilityReviewDecision.updateMany({
+          where: { traceabilityLinkId: link2Id },
+          data: { decision: 'ACCEPTED' },
+        }),
+      ]);
+      const newSnapshotResponse = await request(app.getHttpServer())
+        .post(`/api/v1/impact-analyses/${analysisId}/reviewed-report-snapshot`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send()
+        .expect(201);
+      const latestSnapshot = await prisma.reviewedReportSnapshot.findFirstOrThrow({
+        where: { analysisId },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, reviewDecisionsSnapshot: true },
+      });
+      expect(latestSnapshot.id).not.toBe(firstSnapshotId);
+      expect(latestSnapshot.id).toBe(newSnapshotResponse.body.id);
+      expect(latestSnapshot.reviewDecisionsSnapshot)
+        .not.toEqual(firstSnapshotResponse.body.reviewDecisionsSnapshot);
+
+      releaseCompletion.resolve();
+      const reportResponse = await withDeadline(reportResponsePromise, 'final reviewed report response');
+      expect(reportResponse.status).toBe(200);
+      expect(reportResponse.body.snapshotId).toBe(firstSnapshotId);
+      expect(reportResponse.body.reviewCompletion).toMatchObject({
+        latestSnapshotId: firstSnapshotId,
+        accepted: 2,
+        rejected: 0,
+        unreviewed: 0,
+      });
+      expect(reportResponse.body.reviewDecisionsSnapshot)
+        .toEqual(firstSnapshotResponse.body.reviewDecisionsSnapshot);
+    } finally {
+      releaseCompletion.resolve();
+      completionSpy.mockRestore();
+    }
+  }, 30_000);
+
+  it('scopes the completion snapshot lookup to its analysis', async () => {
+    const source = await setupBasicAnalysisWithLinks();
+    const foreign = await setupBasicAnalysisWithLinks();
+    for (const linkId of [source.link1Id, source.link2Id]) {
+      await request(app.getHttpServer())
+        .put(`/api/v1/traceability-links/${linkId}/review-decision`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ decision: 'ACCEPTED', note: 'Approved for report' })
+        .expect(200);
+    }
+    await markAnalysisCompleted(source.analysisId);
+    const sourceSnapshot = await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${source.analysisId}/reviewed-report-snapshot`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send()
+      .expect(201);
+    await prisma.reviewedReportSnapshot.update({
+      where: { id: sourceSnapshot.body.id },
+      data: { approvedDocumentId: source.docId, approvedDocumentAnalysisId: source.analysisId },
+    });
+    const foreignSnapshot = await prisma.reviewedReportSnapshot.create({
+      data: {
+        analysisId: foreign.analysisId,
+        reviewDecisionsSnapshot: [],
+        evidenceQualitySummarySnapshot: {
+          missingEvidence: 0,
+          reviewRequired: 0,
+          evidenced: 0,
+          inferred: 0,
+          weakEvidence: 0,
+        },
+      },
+    });
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${source.analysisId}/final-reviewed-report`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200)
+      .expect(({ body }) => expect(body.snapshotId).toBe(sourceSnapshot.body.id));
+
+    const completion = app.get(GetReviewCompletionUseCase);
+    const readCompletion = completion.executeWithReviewDecisions.bind(completion);
+    const completionSpy = jest.spyOn(completion, 'executeWithReviewDecisions')
+      .mockImplementationOnce(async (analysisId) => {
+        const result = await readCompletion(analysisId);
+        return {
+          ...result,
+          completion: { ...result.completion, latestSnapshotId: foreignSnapshot.id },
+        };
+      });
+    try {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/impact-analyses/${source.analysisId}/final-reviewed-report`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(409);
+      expect(response.body.code).toBe('REPORT_PROVENANCE_MISMATCH');
+      expect(response.body).not.toHaveProperty('markdown');
+    } finally {
+      completionSpy.mockRestore();
+    }
+  });
+
+  it('rejects a document job whose analysis does not own its reviewed snapshot', async () => {
+    const { analysisId } = await setupBasicAnalysisWithLinks();
+    const sourceAnalysis = await prisma.impactAnalysis.findUniqueOrThrow({
+      where: { id: analysisId },
+    });
+    const otherAnalysisId = crypto.randomUUID();
+    await prisma.impactAnalysis.create({
+      data: {
+        id: otherAnalysisId,
+        requirementRevisionId: sourceAnalysis.requirementRevisionId,
+        requirementId: sourceAnalysis.requirementId,
+        projectId: sourceAnalysis.projectId,
+        repositoryId: sourceAnalysis.repositoryId,
+        snapshotId: sourceAnalysis.snapshotId,
+        sourceTargetId: sourceAnalysis.sourceTargetId,
+        requestKey: crypto.randomUUID(),
+        status: 'COMPLETED',
+        stage: 'DONE',
+      },
+    });
+    const foreignSnapshot = await prisma.reviewedReportSnapshot.create({
+      data: {
+        analysisId: otherAnalysisId,
+        reviewDecisionsSnapshot: [],
+        evidenceQualitySummarySnapshot: {
+          missingEvidence: 0,
+          reviewRequired: 0,
+          evidenced: 0,
+          inferred: 0,
+          weakEvidence: 0,
+        },
+      },
+    });
+
+    await expect(prisma.documentJob.create({
+      data: {
+        analysisId,
+        snapshotId: foreignSnapshot.id,
+        documentType: 'IMPACT_REPORT',
+        status: 'QUEUED',
+      },
+    })).rejects.toMatchObject({ code: 'P2003' });
+  });
+
+  it('rejects a review decision whose analysis does not own its traceability link', async () => {
+    const source = await setupBasicAnalysisWithLinks();
+    const foreign = await setupBasicAnalysisWithLinks();
+
+    await expect(prisma.traceabilityReviewDecision.create({
+      data: {
+        analysisId: foreign.analysisId,
+        traceabilityLinkId: source.link1Id,
+        decision: 'ACCEPTED',
+      },
+    })).rejects.toMatchObject({ code: 'P2003' });
+  });
+
+  it.each(['insight', 'traceability link'] as const)(
+    'rejects a review note whose analysis does not own its %s',
+    async (targetKind) => {
+      const source = await setupBasicAnalysisWithLinks();
+      const foreign = await setupBasicAnalysisWithLinks();
+      const insight = targetKind === 'insight'
+        ? await prisma.baInsight.create({
+            data: {
+              impactAnalysisId: source.analysisId,
+              insightKey: `scope-check-${crypto.randomUUID()}`,
+              insightType: 'UNKNOWN',
+              certainty: 'UNKNOWN',
+              reviewStatus: 'NEEDS_REVIEW',
+              title: 'Scope check',
+              description: 'Review note ownership fixture.',
+            },
+          })
+        : null;
+
+      let failure: unknown;
+      let createdNoteId: string | undefined;
+      try {
+        const created = await prisma.reviewNote.create({
+          data: {
+            impactAnalysisId: foreign.analysisId,
+            insightId: insight?.id,
+            traceabilityLinkId: targetKind === 'traceability link' ? source.link1Id : undefined,
+            body: 'This note must not cross analysis boundaries.',
+          },
+        });
+        createdNoteId = created.id;
+      } catch (error) {
+        failure = error;
+      } finally {
+        if (createdNoteId) await prisma.reviewNote.delete({ where: { id: createdNoteId } });
+      }
+      expect(failure).toMatchObject({ code: 'P2003' });
+    },
+  );
+
+  it.each(['no target', 'both targets'] as const)(
+    'rejects a review note with %s',
+    async (targetShape) => {
+      const fixture = await setupBasicAnalysisWithLinks();
+      const insight = targetShape === 'both targets'
+        ? await prisma.baInsight.create({
+            data: {
+              impactAnalysisId: fixture.analysisId,
+              insightKey: `exactly-one-${crypto.randomUUID()}`,
+              insightType: 'UNKNOWN',
+              certainty: 'UNKNOWN',
+              reviewStatus: 'NEEDS_REVIEW',
+              title: 'Exactly one target',
+              description: 'Review note target cardinality fixture.',
+            },
+          })
+        : null;
+      let failure: unknown;
+      let createdNoteId: string | undefined;
+      try {
+        const created = await prisma.reviewNote.create({
+          data: {
+            impactAnalysisId: fixture.analysisId,
+            insightId: insight?.id,
+            traceabilityLinkId: targetShape === 'both targets' ? fixture.link1Id : undefined,
+            body: 'Review notes require exactly one target.',
+          },
+        });
+        createdNoteId = created.id;
+      } catch (error) {
+        failure = error;
+      } finally {
+        if (createdNoteId) await prisma.reviewNote.delete({ where: { id: createdNoteId } });
+      }
+      expect(failure).toMatchObject({ code: 'P2039' });
+    },
+  );
+
   it('complete reviewed flow returns final report', async () => {
     const { analysisId, link1Id, link2Id, docId } = await setupBasicAnalysisWithLinks();
 
@@ -284,9 +654,31 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       
 
     expect(snapRes.status).toBe(201);
+    const createdSnapshot = reviewedReportSnapshotSchema.parse(snapRes.body);
+    expect(createdSnapshot.analysisId).toBe(analysisId);
     await prisma.reviewedReportSnapshot.update({
-      where: { id: snapRes.body.id },
-      data: { approvedDocumentId: docId },
+      where: { id: createdSnapshot.id },
+      data: { approvedDocumentId: docId, approvedDocumentAnalysisId: analysisId },
+    });
+    const legacySnapshot = await prisma.reviewedReportSnapshot.findUniqueOrThrow({
+      where: { id: createdSnapshot.id },
+    });
+    const legacyDocument = await prisma.generatedDocument.findUniqueOrThrow({
+      where: { id: docId },
+    });
+    expect(legacySnapshot).toMatchObject({ markdown: null, approvedDocumentId: docId });
+    expect(legacyDocument.reviewedReportSnapshotId).toBeNull();
+    expect(await prisma.documentJob.count({ where: { snapshotId: createdSnapshot.id } })).toBe(0);
+
+    const latestSnapshotRes = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/reviewed-report-snapshot/latest`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    const latestSnapshot = reviewedReportSnapshotSchema.parse(latestSnapshotRes.body);
+    expect(latestSnapshot).toMatchObject({
+      id: createdSnapshot.id,
+      analysisId,
+      approvedDocumentId: docId,
     });
 
     // 3. Review completion gate
@@ -306,10 +698,11 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
 
-    expect(finalRes.body.markdown).toBe('# Live Generated Report');
-    expect(finalRes.body.locale).toBe('en');
-    expect(finalRes.body.snapshotId).toBeDefined();
-    expect(finalRes.body.reviewCompletion.isComplete).toBe(true);
+    const finalReport = finalReviewedReportResponseSchema.parse(finalRes.body);
+    expect(finalReport.markdown).toBe('# Live Generated Report');
+    expect(finalReport.locale).toBe('en');
+    expect(finalReport.snapshotId).toBe(createdSnapshot.id);
+    expect(finalReport.reviewCompletion.isComplete).toBe(true);
 
     const approvedRes = await request(app.getHttpServer())
       .get(`/api/v1/impact-analyses/${analysisId}/approved-report`)
@@ -319,7 +712,7 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       where: { id: analysisId },
       select: { snapshotId: true },
     })).snapshotId;
-    expect(finalRes.body.snapshotId).toBe(snapRes.body.id);
+    expect(finalReport.snapshotId).toBe(createdSnapshot.id);
     expect(approvedImpactReportResponseSchema.parse(approvedRes.body)).toMatchObject({
       id: docId,
       impactAnalysisId: analysisId,
@@ -328,6 +721,11 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       status: 'APPROVED',
       provenance: { snapshotId: repositorySnapshotId },
     });
+    const legacyExport = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/approved-report/export.md`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(legacyExport.text).toBe('# Live Generated Report');
 
     const contextReader = app.get(ApprovedReportContextReader);
     const context = await contextReader.readContext(analysisId);
@@ -356,6 +754,151 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       markdown: '# Báo cáo đã duyệt\n\n## Phụ lục bằng chứng',
     });
     expect(vietnameseRes.body.snapshotId).toBe(finalRes.body.snapshotId);
+    await prisma.localizedReportArtifact.delete({
+      where: {
+        sourceDocumentId_locale: { sourceDocumentId: docId, locale: 'vi-VN' },
+      },
+    });
+
+    const localizationResponse = await request(app.getHttpServer())
+      .post(`/api/v1/analyses/${analysisId}/localization`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ locale: 'vi-VN' });
+    if (localizationResponse.status !== 201) {
+      throw new Error(
+        `Expected localization to succeed, received ${localizationResponse.status}: ${JSON.stringify(localizationResponse.body)}`,
+      );
+    }
+    const localizedArtifact = localizedReportArtifactSchema.parse(
+      localizationResponse.body,
+    );
+    expect(localizedArtifact).toMatchObject({
+      sourceDocumentId: docId,
+      locale: 'vi-VN',
+      sourceLocale: 'en',
+      localizationStatus: 'COMPLETED',
+      provider: 'FakeTranslationProvider',
+    });
+    expect(localizedArtifact.contentMarkdown).toBeTruthy();
+
+    const persistedArtifact = await prisma.localizedReportArtifact.findUniqueOrThrow({
+      where: {
+        sourceDocumentId_locale: { sourceDocumentId: docId, locale: 'vi-VN' },
+      },
+    });
+    expect(persistedArtifact).toMatchObject({
+      id: localizedArtifact.id,
+      sourceContentHash: localizedArtifact.sourceContentHash,
+      contentMarkdown: localizedArtifact.contentMarkdown,
+      localizationStatus: 'COMPLETED',
+    });
+
+    const localizationStatus = await request(app.getHttpServer())
+      .get(`/api/v1/analyses/${analysisId}/localization/vi-VN/status`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(localizationStatusResponseSchema.parse(localizationStatus.body)).toMatchObject({
+      status: 'READY',
+      locale: 'vi-VN',
+      sourceDocumentId: docId,
+    });
+
+    const localizedReportResponse = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/final-reviewed-report?locale=vi-VN`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    const localizedReport = finalReviewedReportResponseSchema.parse(
+      localizedReportResponse.body,
+    );
+    expect(localizedReport).toMatchObject({
+      analysisId,
+      locale: 'vi-VN',
+      markdown: localizedArtifact.contentMarkdown,
+      snapshotId: createdSnapshot.id,
+    });
+    await expect(prisma.reviewedReportSnapshot.findUniqueOrThrow({
+      where: { id: createdSnapshot.id },
+      select: { markdown: true },
+    })).resolves.toEqual({ markdown: null });
+  });
+
+  it('hides approved report reads and mutations from users outside the project', async () => {
+    const { analysisId, link1Id, link2Id, docId } = await setupBasicAnalysisWithLinks();
+    for (const linkId of [link1Id, link2Id]) {
+      await request(app.getHttpServer())
+        .put(`/api/v1/traceability-links/${linkId}/review-decision`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ decision: 'ACCEPTED' })
+        .expect(200);
+    }
+    await markAnalysisCompleted(analysisId);
+
+    const snapshotResponse = await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${analysisId}/reviewed-report-snapshot`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send()
+      .expect(201);
+    const snapshot = reviewedReportSnapshotSchema.parse(snapshotResponse.body);
+    await prisma.reviewedReportSnapshot.update({
+      where: { id: snapshot.id },
+      data: { approvedDocumentId: docId, approvedDocumentAnalysisId: analysisId },
+    });
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/approved-report`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/final-reviewed-report`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const outsider = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        email: `report-outsider-${crypto.randomUUID()}@ba-helper.local`,
+        role: 'REVIEWER',
+      },
+    });
+    const outsiderToken = jwtService.sign({
+      sub: outsider.id,
+      email: outsider.email,
+      role: outsider.role,
+    });
+    const domainEventsBefore = await prisma.domainEvent.count();
+    const documentJobsBefore = await prisma.documentJob.count({ where: { analysisId } });
+    const reportPaths = [
+      `/api/v1/impact-analyses/${analysisId}/documents`,
+      `/api/v1/impact-analyses/${analysisId}/reviewed-report-snapshot/latest`,
+      `/api/v1/impact-analyses/${analysisId}/review-completion`,
+      `/api/v1/impact-analyses/${analysisId}/final-reviewed-report`,
+      `/api/v1/impact-analyses/${analysisId}/approved-report`,
+      `/api/v1/impact-analyses/${analysisId}/approved-report/export.md`,
+      `/api/v1/impact-analyses/${analysisId}/approved-report/export.pdf`,
+    ];
+
+    for (const path of reportPaths) {
+      const response = await request(app.getHttpServer())
+        .get(path)
+        .set('Authorization', `Bearer ${outsiderToken}`)
+        .expect(404);
+      expect(`${response.text}${JSON.stringify(response.body)}`)
+        .not.toContain('# Live Generated Report');
+    }
+    await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${analysisId}/reviewed-report-snapshot`)
+      .set('Authorization', `Bearer ${outsiderToken}`)
+      .send()
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${analysisId}/document-jobs`)
+      .set('Authorization', `Bearer ${outsiderToken}`)
+      .send({ requestKey: crypto.randomUUID() })
+      .expect(404);
+
+    expect(await prisma.reviewedReportSnapshot.count({ where: { analysisId } })).toBe(1);
+    expect(await prisma.documentJob.count({ where: { analysisId } })).toBe(documentJobsBefore);
+    expect(await prisma.domainEvent.count()).toBe(domainEventsBefore);
   });
 
   it('scopes approved-report context to its repository snapshot and requirement revision', async () => {
@@ -374,14 +917,12 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       .send()
       .expect(201);
     await prisma.reviewedReportSnapshot.update({
-      where: { id: snapshot.body.id }, data: { approvedDocumentId: docId },
+      where: { id: snapshot.body.id },
+      data: { approvedDocumentId: docId, approvedDocumentAnalysisId: analysisId },
     });
 
     const analysis = await prisma.impactAnalysis.findUniqueOrThrow({
       where: { id: analysisId }, select: { snapshotId: true, requirementRevisionId: true },
-    });
-    const localLink = await prisma.traceabilityLink.findUniqueOrThrow({
-      where: { id: link1Id }, select: { artifactId: true },
     });
     const foreignProject = await prisma.project.create({ data: { name: 'Foreign report-context project' } });
     const foreignRepository = await prisma.repository.create({
@@ -397,7 +938,7 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
     });
     const foreignEvidence = await prisma.evidence.create({
       data: { provenanceKey: 'foreign-report-context-evidence', sourceType: 'CODE',
-        snapshotId: foreignSnapshot.id, artifactId: localLink.artifactId,
+        snapshotId: foreignSnapshot.id, artifactId: foreignArtifact.id,
         requirementRevisionId: analysis.requirementRevisionId, sourcePath: 'src/private/report-refund.ts',
         excerpt: 'FOREIGN REPORT CONTEXT SOURCE', contentHash: 'foreign-report-context-hash' },
     });
@@ -408,10 +949,10 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
         description: 'Scoped report evidence check.' },
     });
     await prisma.insightEvidence.create({ data: { insightId: insight.id, evidenceId: foreignEvidence.id } });
-    await prisma.traceabilityLink.create({
-      data: { impactAnalysisId: analysisId, artifactId: foreignArtifact.id,
+    await expect(prisma.traceabilityLink.create({
+      data: { impactAnalysisId: analysisId, snapshotId: analysis.snapshotId, artifactId: foreignArtifact.id,
         linkType: 'AFFECTED', linkBasis: 'INFERRED', reviewStatus: 'NEEDS_REVIEW' },
-    });
+    })).rejects.toMatchObject({ code: 'P2003' });
 
     const context = await app.get(ApprovedReportContextReader).readContext(analysisId, snapshot.body.id);
     const serializedContext = JSON.stringify(context.canonicalContext);
@@ -451,7 +992,7 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
   });
 
   it('missing snapshot blocks final report', async () => {
-    const { analysisId, link1Id, link2Id } = await setupBasicAnalysisWithLinks();
+    const { analysisId, link1Id, link2Id, docId } = await setupBasicAnalysisWithLinks();
 
     // Assign decisions to ALL links
     await request(app.getHttpServer())
@@ -505,7 +1046,7 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       .expect(201);
     await prisma.reviewedReportSnapshot.update({
       where: { id: snapshotRes.body.id },
-      data: { approvedDocumentId: docId },
+      data: { approvedDocumentId: docId, approvedDocumentAnalysisId: analysisId },
     });
 
     // 3. Mutate one link to REJECTED after snapshot.
@@ -531,6 +1072,137 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
     expect(decisionsArray.every(d => d.reviewDecision?.decision === 'ACCEPTED')).toBe(true);
   });
 
+  it('rejects a final report when live decisions change identity but preserve the frozen totals', async () => {
+    const { analysisId, link1Id, link2Id, docId } = await setupBasicAnalysisWithLinks();
+    await request(app.getHttpServer())
+      .put(`/api/v1/traceability-links/${link1Id}/review-decision`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ decision: 'ACCEPTED' })
+      .expect(200);
+    await request(app.getHttpServer())
+      .put(`/api/v1/traceability-links/${link2Id}/review-decision`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ decision: 'REJECTED' })
+      .expect(200);
+
+    await markAnalysisCompleted(analysisId);
+    const snapshotRes = await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${analysisId}/reviewed-report-snapshot`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send()
+      .expect(201);
+    await prisma.reviewedReportSnapshot.update({
+      where: { id: snapshotRes.body.id },
+      data: { approvedDocumentId: docId, approvedDocumentAnalysisId: analysisId },
+    });
+
+    await prisma.traceabilityReviewDecision.updateMany({
+      where: { traceabilityLinkId: link1Id },
+      data: { decision: 'REJECTED' },
+    });
+    await prisma.traceabilityReviewDecision.updateMany({
+      where: { traceabilityLinkId: link2Id },
+      data: { decision: 'ACCEPTED' },
+    });
+
+    const finalRes = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/final-reviewed-report`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(finalRes.status).toBe(409);
+    expect(finalRes.body.code).toBe('REPORT_PROVENANCE_MISMATCH');
+  });
+
+  it('fails closed when review decisions are swapped after the report read captures them but before it selects the snapshot', async () => {
+    const { analysisId, link1Id, link2Id, docId } = await setupBasicAnalysisWithLinks();
+    await request(app.getHttpServer())
+      .put(`/api/v1/traceability-links/${link1Id}/review-decision`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ decision: 'ACCEPTED' })
+      .expect(200);
+    await request(app.getHttpServer())
+      .put(`/api/v1/traceability-links/${link2Id}/review-decision`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ decision: 'REJECTED' })
+      .expect(200);
+    await markAnalysisCompleted(analysisId);
+    const firstSnapshot = await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${analysisId}/reviewed-report-snapshot`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send()
+      .expect(201);
+    await prisma.reviewedReportSnapshot.update({
+      where: { id: firstSnapshot.body.id },
+      data: { approvedDocumentId: docId, approvedDocumentAnalysisId: analysisId },
+    });
+
+    const completionUseCase = app.get(GetReviewCompletionUseCase);
+    const traceabilityRepository = (completionUseCase as unknown as {
+      repository: TraceabilityRepository;
+    }).repository;
+    const listLinks = traceabilityRepository.listByAnalysis.bind(traceabilityRepository);
+    const linksCaptured = createDeferred();
+    const releaseLinks = createDeferred();
+    let pauseFirstQuery = true;
+    const listSpy = jest.spyOn(traceabilityRepository, 'listByAnalysis').mockImplementation(async (id) => {
+      const links = await listLinks(id);
+      if (pauseFirstQuery) {
+        pauseFirstQuery = false;
+        linksCaptured.resolve();
+        await releaseLinks.promise;
+      }
+      return links;
+    });
+
+    try {
+      const reportResponsePromise = request(app.getHttpServer())
+        .get(`/api/v1/impact-analyses/${analysisId}/final-reviewed-report`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .then((response) => response);
+      await withDeadline(Promise.race([
+        linksCaptured.promise,
+        reportResponsePromise.then((response) => {
+          throw new Error(`Final report returned ${response.status} before the review query was captured: ${JSON.stringify(response.body)}`);
+        }),
+      ]), 'the first PostgreSQL review-decision query');
+
+      // The review API rejects changes after finalization. Write directly to
+      // PostgreSQL to model concurrent or legacy drift while the report read is
+      // between its live-review and latest-snapshot queries; totals stay equal.
+      await prisma.$transaction([
+        prisma.traceabilityReviewDecision.updateMany({
+          where: { traceabilityLinkId: link1Id },
+          data: { decision: 'REJECTED' },
+        }),
+        prisma.traceabilityReviewDecision.updateMany({
+          where: { traceabilityLinkId: link2Id },
+          data: { decision: 'ACCEPTED' },
+        }),
+      ]);
+      const replacementSnapshot = await request(app.getHttpServer())
+        .post(`/api/v1/impact-analyses/${analysisId}/reviewed-report-snapshot`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send()
+        .expect(201);
+      expect(replacementSnapshot.body.id).not.toBe(firstSnapshot.body.id);
+      await prisma.reviewedReportSnapshot.update({
+        where: { id: replacementSnapshot.body.id },
+        data: { approvedDocumentId: docId, approvedDocumentAnalysisId: analysisId },
+      });
+
+      releaseLinks.resolve();
+      const reportResponse = await withDeadline(reportResponsePromise, 'the final reviewed report response');
+      expect({ status: reportResponse.status, code: reportResponse.body.code }).toEqual({
+        status: 409,
+        code: 'REPORT_PROVENANCE_MISMATCH',
+      });
+      expect(reportResponse.body).not.toHaveProperty('markdown');
+    } finally {
+      releaseLinks.resolve();
+      listSpy.mockRestore();
+    }
+  }, 30_000);
+
   it('rejects malformed frozen review data on snapshot and final report APIs', async () => {
     const { analysisId, link1Id, link2Id } = await setupBasicAnalysisWithLinks();
     for (const linkId of [link1Id, link2Id]) {
@@ -549,7 +1221,7 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
 
     await prisma.reviewedReportSnapshot.update({
       where: { id: snapshotResponse.body.id },
-      data: { reviewDecisionsSnapshot: { silentlyOmitted: true } },
+      data: { reviewDecisionsSnapshot: [] },
     });
 
     const latestSnapshotResponse = await request(app.getHttpServer())
@@ -587,6 +1259,9 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       data: {
         id: otherAnalysisId,
         requirementRevisionId: sourceAnalysis.requirementRevisionId,
+        requirementId: sourceAnalysis.requirementId,
+        projectId: sourceAnalysis.projectId,
+        repositoryId: sourceAnalysis.repositoryId,
         snapshotId: sourceAnalysis.snapshotId,
         sourceTargetId: sourceAnalysis.sourceTargetId,
         requestKey: crypto.randomUUID(),
@@ -602,21 +1277,29 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
         content: '# Report from a different analysis',
       },
     });
-    await prisma.reviewedReportSnapshot.update({
+    await expect(prisma.reviewedReportSnapshot.update({
       where: { id: snapshotResponse.body.id },
-      data: { approvedDocumentId: otherDocument.id },
+      data: {
+        approvedDocumentId: otherDocument.id,
+        approvedDocumentAnalysisId: analysisId,
+      },
+    })).rejects.toMatchObject({ code: 'P2003' });
+
+    const persistedSnapshot = await prisma.reviewedReportSnapshot.findUniqueOrThrow({
+      where: { id: snapshotResponse.body.id },
+      select: { approvedDocumentId: true },
     });
+    expect(persistedSnapshot.approvedDocumentId).toBeNull();
 
     const reportResponse = await request(app.getHttpServer())
       .get(`/api/v1/impact-analyses/${analysisId}/final-reviewed-report`)
       .set('Authorization', `Bearer ${adminToken}`);
 
     expect(reportResponse.status).toBe(409);
-    expect(reportResponse.body.code).toBe('REPORT_PROVENANCE_MISMATCH');
+    expect(JSON.stringify(reportResponse.body)).not.toContain('Report from a different analysis');
     const contextReader = app.get(ApprovedReportContextReader);
-    await expect(contextReader.readContext(analysisId, snapshotResponse.body.id)).rejects.toMatchObject({
-      code: 'REPORT_PROVENANCE_MISMATCH',
-    });
+    await expect(contextReader.readContext(analysisId, snapshotResponse.body.id))
+      .rejects.toThrow('Approved impact report not found');
   });
 
   it('snapshot remains immutable after review decision changes', async () => {
@@ -637,7 +1320,7 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
       .expect(201);
     await prisma.reviewedReportSnapshot.update({
       where: { id: snapshotResponse.body.id },
-      data: { approvedDocumentId: docId },
+      data: { approvedDocumentId: docId, approvedDocumentAnalysisId: analysisId },
     });
 
     await prisma.traceabilityReviewDecision.updateMany({
@@ -721,6 +1404,604 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
     expect(markdown).not.toContain('Actually no'); // Should not reflect the live mutated note
   });
 
+  it('serializes concurrent clarification answers with the reviewed report snapshot', async () => {
+    const { analysisId, link1Id, link2Id } = await setupBasicAnalysisWithLinks();
+    const runDocumentJob = app.get(RunDocumentJobUseCase);
+    const createSnapshot = app.get(CreateReviewedReportSnapshotUseCase);
+    const enqueue = jest.spyOn(app.get(QueueService), 'enqueueDocumentJob')
+      .mockResolvedValue(undefined);
+    const reviewDecision = await prisma.analysisReviewDecision.create({
+      data: {
+        id: crypto.randomUUID(),
+        analysisId,
+        decision: 'NEEDS_MORE_CLARIFICATION',
+        reviewedByUserId: adminUserId,
+      },
+    });
+    const question = 'Does refund processing wait for settlement reversal?';
+    const answer = 'Refunds start only after settlement reversal succeeds.';
+    const snapshotBuildStarted = createDeferred();
+    const releaseSnapshotBuild = createDeferred();
+    const originalBuild = createSnapshot.buildSnapshotCreateData.bind(createSnapshot);
+    const snapshotBuild = jest.spyOn(createSnapshot, 'buildSnapshotCreateData')
+      .mockImplementation(async params => {
+        const data = await originalBuild(params);
+        snapshotBuildStarted.resolve();
+        await releaseSnapshotBuild.promise;
+        return data;
+      });
+    let finalizePromise: Promise<any> | undefined;
+    let answerPromise: Promise<any> | undefined;
+    let answerSettledBeforeFinalize = false;
+
+    try {
+      for (const linkId of [link1Id, link2Id]) {
+        await request(app.getHttpServer())
+          .put(`/api/v1/traceability-links/${linkId}/review-decision`)
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({ decision: 'ACCEPTED', note: 'Reviewed' })
+          .expect(200);
+      }
+
+      const created = await request(app.getHttpServer())
+        .post(`/api/v1/impact-analyses/${analysisId}/review-clarifications`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ reviewDecisionId: reviewDecision.id, question })
+        .expect(201);
+
+      finalizePromise = request(app.getHttpServer())
+        .post(`/api/v1/impact-analyses/${analysisId}/finalize`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ acknowledgeUnreviewed: false })
+        .expect(201)
+        .then(response => response);
+
+      await withDeadline(snapshotBuildStarted.promise, 'finalization snapshot content read');
+      answerPromise = request(app.getHttpServer())
+        .post(`/api/v1/review-clarifications/${created.body.id}/answer`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ answer })
+        .expect(201)
+        .then(response => {
+          answerSettledBeforeFinalize = true;
+          return response;
+        });
+      await waitForClarificationAnalysisLock(prisma);
+      expect(answerSettledBeforeFinalize).toBe(false);
+
+      releaseSnapshotBuild.resolve();
+      const [finalized, answered] = await Promise.all([finalizePromise, answerPromise]);
+      expect(finalized.body.status).toBe('COMPLETED');
+      expect(answered.body).toMatchObject({ id: created.body.id, answer, status: 'ANSWERED' });
+
+      const snapshotResponse = await request(app.getHttpServer())
+        .get(`/api/v1/impact-analyses/${analysisId}/reviewed-report-snapshot/latest`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+      const frozenSnapshot = reviewedReportSnapshotSchema.parse(snapshotResponse.body);
+      expect(frozenSnapshot.clarificationsSnapshot).toEqual([
+        expect.objectContaining({ id: created.body.id, question, answer: null, status: 'OPEN' }),
+      ]);
+
+      const documentJob = await prisma.documentJob.findFirstOrThrow({
+        where: { analysisId, documentType: 'IMPACT_REPORT' },
+      });
+      await runDocumentJob.execute({ documentJobId: documentJob.id });
+
+      const exportRes = await request(app.getHttpServer())
+        .get(`/api/v1/impact-analyses/${analysisId}/approved-report/export.md`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(exportRes.text).toContain(question);
+      expect(exportRes.text).not.toContain(answer);
+      expect(exportRes.text).toContain('Still Open');
+
+      const finalReportResponse = await request(app.getHttpServer())
+        .get(`/api/v1/impact-analyses/${analysisId}/final-reviewed-report`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+      const finalReport = finalReviewedReportResponseSchema.parse(finalReportResponse.body);
+      expect(finalReport.clarificationsSnapshot).toEqual([
+        expect.objectContaining({ id: created.body.id, question, answer: null, status: 'OPEN' }),
+      ]);
+
+      const clarificationAfterAnswer = await request(app.getHttpServer())
+        .get(`/api/v1/impact-analyses/${analysisId}/review-clarifications`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+      expect(clarificationAfterAnswer.body.items).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: created.body.id, answer, status: 'ANSWERED' }),
+        ]),
+      );
+    } finally {
+      releaseSnapshotBuild.resolve();
+      enqueue.mockRestore();
+      snapshotBuild.mockRestore();
+      await Promise.allSettled([finalizePromise, answerPromise].filter(Boolean) as Promise<any>[]);
+    }
+  });
+
+  it('preserves the previous report and localization when a newer snapshot is retried', async () => {
+    const { analysisId, link1Id, link2Id, docId } = await setupBasicAnalysisWithLinks();
+    const runDocumentJob = app.get(RunDocumentJobUseCase);
+    const enqueue = jest.spyOn(app.get(QueueService), 'enqueueDocumentJob')
+      .mockResolvedValue(undefined);
+    const triggerName = 'fail_test_reviewed_report_snapshot_publish';
+    const functionName = 'fail_test_reviewed_report_snapshot_publish';
+
+    try {
+      for (const linkId of [link1Id, link2Id]) {
+        await request(app.getHttpServer())
+          .put(`/api/v1/traceability-links/${linkId}/review-decision`)
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({ decision: 'ACCEPTED', note: 'Approved for the first report' })
+          .expect(200);
+      }
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/impact-analyses/${analysisId}/finalize`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ acknowledgeUnreviewed: false })
+        .expect(201);
+
+      const firstJob = await prisma.documentJob.findFirstOrThrow({
+        where: { analysisId, documentType: 'IMPACT_REPORT' },
+      });
+      await runDocumentJob.execute({ documentJobId: firstJob.id });
+      const firstSnapshot = await prisma.reviewedReportSnapshot.findUniqueOrThrow({
+        where: { id: firstJob.snapshotId },
+      });
+      const previousMarkdown = firstSnapshot.markdown;
+      const firstDocumentId = firstSnapshot.approvedDocumentId;
+      expect(previousMarkdown).toContain('Confirmed');
+      expect(firstDocumentId).toBeTruthy();
+      await prisma.localizedReportArtifact.create({
+        data: {
+          sourceDocumentId: firstDocumentId!,
+          locale: 'vi-VN',
+          sourceLocale: 'en',
+          localizationStatus: 'COMPLETED',
+          contentMarkdown: '# Bản dịch của báo cáo S1',
+          sourceContentHash: 's1-source-hash',
+          updatedAt: new Date(),
+        },
+      });
+
+      await prisma.traceabilityReviewDecision.updateMany({
+        where: { traceabilityLinkId: link2Id },
+        data: { decision: 'REJECTED', note: 'Changed before the next report' },
+      });
+
+      const snapshotResponse = await request(app.getHttpServer())
+        .post(`/api/v1/impact-analyses/${analysisId}/reviewed-report-snapshot`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send()
+        .expect(201);
+      const secondSnapshotId = snapshotResponse.body.id as string;
+      await request(app.getHttpServer())
+        .post(`/api/v1/impact-analyses/${analysisId}/document-jobs`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ requestKey: crypto.randomUUID() })
+        .expect(201);
+      const secondJob = await prisma.documentJob.findUniqueOrThrow({
+        where: {
+          snapshotId_documentType: {
+            snapshotId: secondSnapshotId,
+            documentType: 'IMPACT_REPORT',
+          },
+        },
+      });
+
+      await prisma.$executeRawUnsafe(`
+        CREATE OR REPLACE FUNCTION ${functionName}() RETURNS trigger
+        LANGUAGE plpgsql AS $test$
+        BEGIN
+          RAISE EXCEPTION 'injected reviewed report snapshot publish failure';
+        END;
+        $test$;
+      `);
+      await prisma.$executeRawUnsafe(`
+        CREATE TRIGGER ${triggerName}
+        BEFORE UPDATE ON reviewed_report_snapshot
+        FOR EACH ROW EXECUTE FUNCTION ${functionName}();
+      `);
+
+      try {
+        await expect(runDocumentJob.execute({ documentJobId: secondJob.id }))
+          .rejects.toThrow('injected reviewed report snapshot publish failure');
+      } finally {
+        await prisma.$executeRawUnsafe(`DROP TRIGGER IF EXISTS ${triggerName} ON reviewed_report_snapshot;`);
+        await prisma.$executeRawUnsafe(`DROP FUNCTION IF EXISTS ${functionName}();`);
+      }
+
+      const documentAfterFailure = await prisma.generatedDocument.findUniqueOrThrow({ where: { id: firstDocumentId! } });
+      const snapshotAfterFailure = await prisma.reviewedReportSnapshot.findUniqueOrThrow({
+        where: { id: secondSnapshotId },
+      });
+      const failedJob = await prisma.documentJob.findUniqueOrThrow({ where: { id: secondJob.id } });
+      expect(documentAfterFailure.content).toBe(previousMarkdown);
+      expect(snapshotAfterFailure.markdown).toBeNull();
+      expect(failedJob.status).toBe('FAILED');
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/impact-analyses/${analysisId}/document-jobs`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ retry: true, requestKey: crypto.randomUUID() })
+        .expect(201);
+      await runDocumentJob.execute({ documentJobId: secondJob.id });
+
+      const publishedSnapshot = await prisma.reviewedReportSnapshot.findUniqueOrThrow({
+        where: { id: secondSnapshotId },
+      });
+      const publishedDocumentId = publishedSnapshot.approvedDocumentId;
+      expect(publishedDocumentId).toBeTruthy();
+      expect(publishedDocumentId).not.toBe(firstDocumentId);
+      const firstDocument = await prisma.generatedDocument.findUniqueOrThrow({ where: { id: firstDocumentId! } });
+      const publishedDocument = await prisma.generatedDocument.findUniqueOrThrow({
+        where: { id: publishedDocumentId! },
+      });
+      const secondGenerationCount = await prisma.generatedDocument.count({
+        where: {
+          reviewedReportSnapshotId: secondSnapshotId,
+          type: 'IMPACT_REPORT',
+          status: 'APPROVED',
+        },
+      });
+      const preservedLocalization = await prisma.localizedReportArtifact.findUniqueOrThrow({
+        where: { sourceDocumentId_locale: { sourceDocumentId: firstDocumentId!, locale: 'vi-VN' } },
+      });
+      const preservedSnapshot = await prisma.reviewedReportSnapshot.findUniqueOrThrow({
+        where: { id: firstSnapshot.id },
+      });
+      expect(publishedSnapshot.markdown).not.toBe(previousMarkdown);
+      expect(publishedSnapshot.markdown).toContain('Rejected');
+      expect(firstDocument.reviewedReportSnapshotId).toBe(firstSnapshot.id);
+      expect(publishedDocument.content).toBe(publishedSnapshot.markdown);
+      expect(publishedDocument.reviewedReportSnapshotId).toBe(secondSnapshotId);
+      expect(secondGenerationCount).toBe(1);
+      expect(firstDocument.content).toBe(previousMarkdown);
+      expect(preservedLocalization.contentMarkdown).toBe('# Bản dịch của báo cáo S1');
+      expect(preservedSnapshot.markdown).toBe(previousMarkdown);
+
+      const finalReport = await request(app.getHttpServer())
+        .get(`/api/v1/impact-analyses/${analysisId}/final-reviewed-report`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+      expect(finalReport.body.markdown).toBe(publishedSnapshot.markdown);
+
+      const approvedReportExport = await request(app.getHttpServer())
+        .get(`/api/v1/impact-analyses/${analysisId}/approved-report/export.md`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+      expect(approvedReportExport.text).toBe(publishedSnapshot.markdown);
+
+      const latestLocalizationStatus = await request(app.getHttpServer())
+        .get(`/api/v1/analyses/${analysisId}/localization/vi-VN/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+      expect(latestLocalizationStatus.body).toMatchObject({
+        status: 'NOT_TRANSLATED',
+        sourceDocumentId: publishedDocumentId,
+      });
+    } finally {
+      enqueue.mockRestore();
+      await prisma.$executeRawUnsafe(`DROP TRIGGER IF EXISTS ${triggerName} ON reviewed_report_snapshot;`);
+      await prisma.$executeRawUnsafe(`DROP FUNCTION IF EXISTS ${functionName}();`);
+    }
+  });
+
+  it('does not let a late failed worker overwrite a completed document job', async () => {
+    const { analysisId, link1Id, link2Id } = await setupBasicAnalysisWithLinks();
+    const runDocumentJob = app.get(RunDocumentJobUseCase);
+    const contextAdapter = app.get(ReviewedSnapshotReportContextAdapter);
+    const enqueue = jest.spyOn(app.get(QueueService), 'enqueueDocumentJob')
+      .mockResolvedValue(undefined);
+    const firstWorkerEnteredContext = createDeferred();
+    const releaseFirstWorker = createDeferred();
+    const contextSpy = jest.spyOn(contextAdapter, 'buildContext').mockImplementationOnce(async () => {
+      firstWorkerEnteredContext.resolve();
+      await releaseFirstWorker.promise;
+      throw new Error('injected late worker failure');
+    });
+
+    try {
+      for (const linkId of [link1Id, link2Id]) {
+        await request(app.getHttpServer())
+          .put(`/api/v1/traceability-links/${linkId}/review-decision`)
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({ decision: 'ACCEPTED', note: 'Approved for report generation' })
+          .expect(200);
+      }
+      await request(app.getHttpServer())
+        .post(`/api/v1/impact-analyses/${analysisId}/finalize`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ acknowledgeUnreviewed: false })
+        .expect(201);
+
+      const documentJob = await prisma.documentJob.findFirstOrThrow({
+        where: { analysisId, documentType: 'IMPACT_REPORT' },
+      });
+      const delayedWorker = runDocumentJob.execute({
+        documentJobId: documentJob.id,
+        attemptNumber: 1,
+        maxAttempts: 1,
+      }).then(
+        () => ({ error: null as unknown }),
+        (error: unknown) => ({ error }),
+      );
+      await withDeadline(firstWorkerEnteredContext.promise, 'first document worker context');
+
+      await expect(runDocumentJob.execute({
+        documentJobId: documentJob.id,
+        attemptNumber: 2,
+        maxAttempts: 3,
+      })).resolves.toMatchObject({ success: true });
+      releaseFirstWorker.resolve();
+      const delayedOutcome = await withDeadline(delayedWorker, 'delayed document worker failure');
+      expect(delayedOutcome.error).toBeInstanceOf(Error);
+
+      const persisted = await prisma.documentJob.findUniqueOrThrow({ where: { id: documentJob.id } });
+      const snapshot = await prisma.reviewedReportSnapshot.findUniqueOrThrow({
+        where: { id: documentJob.snapshotId },
+      });
+      expect(persisted.status).toBe('COMPLETED');
+      expect(persisted.generatedDocumentId).toBe(snapshot.approvedDocumentId);
+      expect(snapshot.markdown).toContain('Confirmed');
+      expect(await prisma.generatedDocument.count({
+        where: { reviewedReportSnapshotId: snapshot.id, status: 'APPROVED' },
+      })).toBe(1);
+    } finally {
+      releaseFirstWorker.resolve();
+      contextSpy.mockRestore();
+      enqueue.mockRestore();
+    }
+  }, 30_000);
+
+  it('does not reopen a completed job when a stale startup read resumes', async () => {
+    const { analysisId, link1Id, link2Id } = await setupBasicAnalysisWithLinks();
+    const runDocumentJob = app.get(RunDocumentJobUseCase);
+    const contextAdapter = app.get(ReviewedSnapshotReportContextAdapter);
+    const enqueue = jest.spyOn(app.get(QueueService), 'enqueueDocumentJob')
+      .mockResolvedValue(undefined);
+    let resumeStaleRead: ReturnType<typeof createDeferred> | undefined;
+    let restoreDatabaseSpies: (() => void) | undefined;
+    let staleWorker: Promise<unknown> | undefined;
+
+    try {
+      for (const linkId of [link1Id, link2Id]) {
+        await request(app.getHttpServer())
+          .put(`/api/v1/traceability-links/${linkId}/review-decision`)
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({ decision: 'ACCEPTED', note: 'Approved for report generation' })
+          .expect(200);
+      }
+      await request(app.getHttpServer())
+        .post(`/api/v1/impact-analyses/${analysisId}/finalize`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ acknowledgeUnreviewed: false })
+        .expect(201);
+
+      const documentJob = await prisma.documentJob.findFirstOrThrow({
+        where: { analysisId, documentType: 'IMPACT_REPORT' },
+      });
+      const readReturnedStaleState = createDeferred();
+      const resumeStaleReadGate = createDeferred();
+      resumeStaleRead = resumeStaleReadGate;
+      const documentJobDelegate = prisma.documentJob as unknown as {
+        findUnique: (args: { where: { id: string } }) => Promise<unknown>;
+      };
+      const findUnique = documentJobDelegate.findUnique.bind(documentJobDelegate);
+      let pauseFirstRead = true;
+      const findUniqueSpy = jest.spyOn(documentJobDelegate, 'findUnique')
+        .mockImplementation(async (args) => {
+          const result = await findUnique(args);
+          if (args.where.id === documentJob.id && pauseFirstRead) {
+            pauseFirstRead = false;
+            readReturnedStaleState.resolve();
+            await resumeStaleReadGate.promise;
+          }
+          return result;
+        });
+
+      let failTheStaleWorker = false;
+      const buildContext = contextAdapter.buildContext.bind(contextAdapter);
+      const contextSpy = jest.spyOn(contextAdapter, 'buildContext')
+        .mockImplementation(async (...args) => {
+          if (failTheStaleWorker) throw new Error('stale worker must not run after publication');
+          return buildContext(...args);
+        });
+      restoreDatabaseSpies = () => {
+        findUniqueSpy.mockRestore();
+        contextSpy.mockRestore();
+      };
+
+      staleWorker = runDocumentJob.execute({
+        documentJobId: documentJob.id,
+        attemptNumber: 1,
+        maxAttempts: 1,
+      });
+      await withDeadline(readReturnedStaleState.promise, 'stale document-job startup read');
+
+      const published = await runDocumentJob.execute({
+        documentJobId: documentJob.id,
+        attemptNumber: 2,
+        maxAttempts: 3,
+      });
+      failTheStaleWorker = true;
+      resumeStaleReadGate.resolve();
+
+      await expect(staleWorker).resolves.toMatchObject({
+        success: true,
+        generatedDocumentId: published.generatedDocumentId,
+      });
+      const finalJob = await prisma.documentJob.findUniqueOrThrow({ where: { id: documentJob.id } });
+      expect(finalJob.status).toBe('COMPLETED');
+      expect(finalJob.generatedDocumentId).toBe(published.generatedDocumentId);
+      expect(contextSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      resumeStaleRead?.resolve();
+      restoreDatabaseSpies?.();
+      await staleWorker?.catch(() => undefined);
+      enqueue.mockRestore();
+    }
+  }, 30_000);
+
+  it('does not let an older successful worker replace a published report snapshot', async () => {
+    const { analysisId, link1Id, link2Id } = await setupBasicAnalysisWithLinks();
+    const runDocumentJob = app.get(RunDocumentJobUseCase);
+    const contextAdapter = app.get(ReviewedSnapshotReportContextAdapter);
+    const enqueue = jest.spyOn(app.get(QueueService), 'enqueueDocumentJob')
+      .mockResolvedValue(undefined);
+    const firstWorkerEnteredContext = createDeferred();
+    const releaseFirstWorker = createDeferred();
+    const buildContext = contextAdapter.buildContext.bind(contextAdapter);
+    const contextSpy = jest.spyOn(contextAdapter, 'buildContext').mockImplementationOnce(async (snapshot, analysis, locale) => {
+      const staleContext = await buildContext(snapshot, analysis, locale);
+      if (!staleContext.metadata) {
+        throw new Error('Expected report context provenance metadata.');
+      }
+      staleContext.metadata.generatedAt = '2000-01-02T00:00:00.000Z';
+      firstWorkerEnteredContext.resolve();
+      await releaseFirstWorker.promise;
+      return staleContext;
+    });
+
+    try {
+      for (const linkId of [link1Id, link2Id]) {
+        await request(app.getHttpServer())
+          .put(`/api/v1/traceability-links/${linkId}/review-decision`)
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({ decision: 'ACCEPTED', note: 'Approved for report generation' })
+          .expect(200);
+      }
+      await request(app.getHttpServer())
+        .post(`/api/v1/impact-analyses/${analysisId}/finalize`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ acknowledgeUnreviewed: false })
+        .expect(201);
+
+      const documentJob = await prisma.documentJob.findFirstOrThrow({
+        where: { analysisId, documentType: 'IMPACT_REPORT' },
+      });
+      const olderWorker = runDocumentJob.execute({ documentJobId: documentJob.id }).then(
+        (result) => ({ result, error: null as unknown }),
+        (error: unknown) => ({ result: null, error }),
+      );
+      await withDeadline(firstWorkerEnteredContext.promise, 'older document worker report context');
+
+      await expect(runDocumentJob.execute({ documentJobId: documentJob.id }))
+        .resolves.toMatchObject({ success: true });
+      const firstPublishedSnapshot = await prisma.reviewedReportSnapshot.findUniqueOrThrow({
+        where: { id: documentJob.snapshotId },
+      });
+      const firstPublishedMarkdown = firstPublishedSnapshot.markdown;
+      expect(firstPublishedMarkdown).not.toContain('2000-01-02');
+
+      releaseFirstWorker.resolve();
+      const olderOutcome = await withDeadline(olderWorker, 'older document worker completion');
+      expect(olderOutcome.error).toBeNull();
+
+      const finalSnapshot = await prisma.reviewedReportSnapshot.findUniqueOrThrow({
+        where: { id: documentJob.snapshotId },
+      });
+      const finalJob = await prisma.documentJob.findUniqueOrThrow({ where: { id: documentJob.id } });
+      const finalDocument = await prisma.generatedDocument.findUniqueOrThrow({
+        where: { id: firstPublishedSnapshot.approvedDocumentId! },
+      });
+      expect(finalJob.status).toBe('COMPLETED');
+      expect(finalSnapshot.markdown).toBe(firstPublishedMarkdown);
+      expect(finalDocument.content).toBe(firstPublishedMarkdown);
+    } finally {
+      releaseFirstWorker.resolve();
+      contextSpy.mockRestore();
+      enqueue.mockRestore();
+    }
+  }, 30_000);
+
+  it('does not expose Redis enqueue details after finalization commits', async () => {
+    const { analysisId, link1Id, link2Id } = await setupBasicAnalysisWithLinks();
+    await request(app.getHttpServer())
+      .put(`/api/v1/traceability-links/${link1Id}/review-decision`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ decision: 'ACCEPTED', note: 'Looks good' })
+      .expect(200);
+    await request(app.getHttpServer())
+      .put(`/api/v1/traceability-links/${link2Id}/review-decision`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ decision: 'ACCEPTED', note: 'Looks good' })
+      .expect(200);
+
+    const secretMarker = 'redis://queue-user:queue-password@redis.invalid:6379';
+    const enqueue = jest.spyOn(app.get(QueueService), 'enqueueDocumentJob')
+      .mockRejectedValueOnce(new Error(secretMarker));
+    try {
+      await request(app.getHttpServer())
+        .post(`/api/v1/impact-analyses/${analysisId}/finalize`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ acknowledgeUnreviewed: false })
+        .expect(201);
+
+      const job = await prisma.documentJob.findFirst({ where: { analysisId } });
+      expect(job).toMatchObject({ status: 'QUEUED', error: null });
+
+      const pendingReport = await request(app.getHttpServer())
+        .get(`/api/v1/impact-analyses/${analysisId}/final-reviewed-report`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(409);
+      expect(pendingReport.body.code).toBe('DOCUMENT_JOB_NOT_READY');
+      expect(JSON.stringify(pendingReport.body)).not.toContain('queue-password');
+    } finally {
+      enqueue.mockRestore();
+    }
+  });
+
+  it('does not expose raw errors persisted by a failed document worker', async () => {
+    const { analysisId, link1Id, link2Id } = await setupBasicAnalysisWithLinks();
+    for (const linkId of [link1Id, link2Id]) {
+      await request(app.getHttpServer())
+        .put(`/api/v1/traceability-links/${linkId}/review-decision`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ decision: 'ACCEPTED', note: 'Looks good' })
+        .expect(200);
+    }
+    await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${analysisId}/finalize`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ acknowledgeUnreviewed: false })
+      .expect(201);
+
+    const job = await prisma.documentJob.findFirst({ where: { analysisId } });
+    expect(job).not.toBeNull();
+    const secretMarker = 'redis://document-user:document-password@redis.invalid:6379';
+    await prisma.documentJob.update({
+      where: { id: job!.id },
+      data: {
+        status: 'FAILED',
+        error: { message: secretMarker, stack: `connect ${secretMarker}` },
+        failedAt: new Date(),
+      },
+    });
+
+    const reportResponse = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/final-reviewed-report`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(409);
+    expect(reportResponse.body.code).toBe('DOCUMENT_JOB_NOT_READY');
+    expect(reportResponse.body.details.error).toEqual({ code: 'DOCUMENT_GENERATION_FAILED' });
+    expect(JSON.stringify(reportResponse.body)).not.toContain('document-password');
+
+    const jobResponse = await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${analysisId}/document-jobs`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({})
+      .expect(201);
+    expect(jobResponse.body.status).toBe('FAILED');
+    expect(jobResponse.body.error).toEqual({ code: 'DOCUMENT_GENERATION_FAILED' });
+    expect(JSON.stringify(jobResponse.body)).not.toContain('document-password');
+  });
+
   it('rejects mixed-generation report reads and exports when a mutable document is shared across snapshots', async () => {
     const { analysisId, link1Id, link2Id, docId } = await setupBasicAnalysisWithLinks();
     for (const linkId of [link1Id, link2Id]) {
@@ -744,6 +2025,7 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
           id,
           analysisId,
           approvedDocumentId: docId,
+          approvedDocumentAnalysisId: analysisId,
           markdown: null,
           reviewDecisionsSnapshot: [],
           evidenceQualitySummarySnapshot: {
@@ -765,6 +2047,7 @@ describe('Final Reviewed Report Audit Flow (e2e)', () => {
           progress: 100,
           attemptCount: 1,
           generatedDocumentId: docId,
+          generatedDocumentAnalysisId: analysisId,
           completedAt: createdAt,
         },
       });

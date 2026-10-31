@@ -62,7 +62,8 @@ pagination and forbidden access remain open for this route.
 - Fix: `PrismaService.onModuleInit()` now checks out and releases one pool client after Prisma connects, so worker startup waits for PostgreSQL readiness before stale-job recovery runs. Pool connection establishment has a 10-second timeout. Lifecycle tests cover connection acquisition/release and failure propagation; focused Jest suite passed 2/2.
 - Two regular Playwright runs completed migrations, started the configured worker, and reported the repository-identity route regression passed 1/1 (26.9s and 27.7s). Neither parent process returned a clean exit after the assertion; both were interrupted after more than two minutes, so neither counts as a completed Playwright pass. A `PW_PRESTARTED_SERVERS=1` control completed the same test cleanly (1 passed, exit 0).
 - `DEBUG=pw:webserver` confirmed teardown begins after the worker is started, but waits at worker-process termination on Windows. That debug run also failed during `seedDemo()` with Prisma `P1017` (`Server has closed the connection`) before reaching the route assertion. A subsequent read-only migration-status check against `ba_helper_test` succeeded and reported the schema up to date; the transient connection close still needs reproduction.
-- The original startup `P2028` did not recur in either run that reached the assertion. Treat that startup fix as locally verified, while keeping the configured Playwright lifecycle gate open until the worker process shuts down cleanly and the test exits 0.
+- Revalidation after the Playwright seed-helper update: the standard managed-server `pnpm test:pw` run completed with exit code 0 (13 passed, one opt-in test skipped). It started the configured API, worker, and Next servers; no worker-startup `P2028` occurred, and the managed processes shut down when the run exited. This closes the observed startup/teardown failure on the current dirty worktree; the earlier seed timeout and report-navigation timeout from the first full run are tracked in `quality-integrity-closure.md` and did not recur in the passing full rerun.
+- This is local verification only. The old `P1017` connection-close failure remains unexplained, and hosted exact-commit CI plus production runtime verification remain open.
 
 ## Frontend API Consumer Inventory
 
@@ -72,34 +73,35 @@ A repeat source scan on 2026-10-29 found browser `fetch()` only in the shared AP
 
 | Consumer | Endpoint family | Current contract status |
 | --- | --- | --- |
-| `use-analyses.ts` | analysis list/detail/create, workspace, lineage, drift, graph, review queue, diff | Schema passed at every JSON callsite; endpoint-by-endpoint backend parity audit pending |
+| `use-analyses.ts` | analysis list/detail/create, workspace, lineage, drift, graph, review queue, diff | Response-contract parity verified for these endpoints: FE and controllers parse the same shared Zod schemas. API+PostgreSQL E2E parses actual create/list/detail/workspace/lineage/drift/graph/review-queue/finalize responses; `impact-diff.e2e-spec.ts` parses diff. |
+| `use-qa-coverage.ts` | QA coverage | Response-contract parity verified: FE `apiGet` and the controller use the same `qaCoverageResponseSchema`; API+PostgreSQL `analysis-flow.e2e-spec.ts` parses the actual endpoint response. |
 | `use-approved-report.ts` | approved and final-reviewed report | Backend controller parses the same shared schemas consumed by FE; successful final-report and approved-report GETs plus provenance rejection are E2E-covered. Approved `snapshotId` is the source `RepositorySnapshot.id`; final-reviewed `snapshotId` is the immutable `ReviewedReportSnapshot.id`, and FE does not compare them. |
-| `use-clarifications.ts` | clarification CRUD/revision and review clarification lifecycle | Runtime schemas passed at transport boundary; backend parity audit pending. `reviewClarificationRequestSchema` is named like a request but is the full response DTO used by the controller. |
+| `use-clarifications.ts` | clarification CRUD/revision and review clarification lifecycle | Response-contract parity verified: FE and controllers parse the same shared schemas. API+PostgreSQL E2E parses successful classic clarification create/list/answer/dismiss/convert and review-clarification create/list/answer responses; derived-analysis response is parsed in the role-permission E2E. `reviewClarificationRequestSchema` is named like a request but is the full response DTO used by the controller. |
 | `use-code-comprehension.ts` | snapshot artifact list and artifact comprehension | Runtime schema and backend parity confirmed: list maps fields through `mapArtifactResponse` with bounded pagination, and comprehension authorizes by snapshot then returns persisted `snapshot.repositoryId`; both controller paths parse the shared contracts |
-| `use-documents.ts` | final-reviewed report and latest reviewed snapshot | Latest snapshot now validates with `reviewedReportSnapshotSchema`; parity audit pending |
-| `use-domain-packs.ts` | domain-pack registry | Schema passed; backend parity audit pending |
-| `use-event-logs.ts` | scan-job and analysis event lists | Both now validate with `eventLogListResponseSchema`; parity audit pending |
-| `use-impact-matrix.ts` | multi-repo matrix and row detail | Schema passed; backend parity audit pending |
+| `use-documents.ts` | final-reviewed report and latest reviewed snapshot | Response-contract parity verified: FE and document controller parse `reviewedReportSnapshotSchema` and `finalReviewedReportResponseSchema`. API+PostgreSQL E2E parses snapshot create/latest and final-report success responses, and checks the final report references the frozen snapshot identity. |
+| `use-domain-packs.ts` | domain-pack registry | FE and controller use `domainPackRegistryResponseSchema`; workspace PostgreSQL E2E parses the actual registry and confirms the booking pack is available. |
+| `use-event-logs.ts` | scan-job and analysis event lists | FE hooks and both API controllers parse the same `eventLogListResponseSchema`. PostgreSQL E2E parses valid scan and analysis responses and rejects malformed service DTOs at the controller boundary. |
+| `use-impact-matrix.ts` | multi-repo matrix and row detail | Matrix and row-detail controller responses validate the shared contracts consumed by FE. PostgreSQL drilldown E2E parses the actual row-detail response and checks run/analysis identity. |
 | `use-insights.ts` | insights, traceability, insight review, traceability review | Lists use response schemas; review mutations now validate `{ ok: true }` |
-| `use-localization.ts` | localized report generation and status | Both now use `localizedReportArtifactSchema` / `localizationStatusResponseSchema`; parity audit pending |
-| `use-multi-repo-runs.ts` | multi-repo create/detail/list | Schema passed; backend parity audit pending |
+| `use-localization.ts` | localized report generation and status | FE hooks and API controller validate the same `localizedReportArtifactSchema` / `localizationStatusResponseSchema`; the controller serializes persisted `Date` timestamps to ISO strings before validation. The accessible, localized CTA is reachable from the mounted English `ReportViewer`, gated by backend `canExport` and the endpoint's global role, distinguishes status-fetch errors from `SOURCE_NOT_READY`, offers retry, and awaits status-query invalidation after generation. API+PostgreSQL E2E verifies authorized `vi-VN` generation, persistence, `READY` status, and retrieval against the same reviewed snapshot. |
+| `use-multi-repo-runs.ts` | multi-repo create/detail/list | FE and controllers use the same create/detail/list schemas; PostgreSQL E2E parses persisted create, detail and list responses. Merged review-decision responses are also schema-parsed in the multi-repo E2E. |
 | `use-projects.ts` | workspace/project/member reads and writes | All use response schemas; member removal now validates `{ removed: true }` |
-| `use-qa-coverage.ts` | QA coverage | Schema passed; backend parity audit pending |
+| `use-qa-coverage.ts` | QA coverage | Response-contract parity and actual API response parsing confirmed in the analysis response-contract slice above. |
 | `use-reports.ts` | merged draft/approval and analysis finalize | Analysis finalize now validates `impactAnalysisResponseSchema`; multi-repo calls use schemas |
-| `use-repositories.ts` | repository list/detail/create and drift | Schema passed; backend parity audit pending |
-| `use-repository-snapshots.ts` | snapshot list | Schema passed; backend parity audit pending |
+| `use-repositories.ts` | repository list/detail/create and drift | FE and controllers use the same list/detail/create/drift schemas; PostgreSQL E2E parses repository create/list/detail and a persisted same-snapshot drift response. |
+| `use-repository-snapshots.ts` | snapshot list | FE and controller use `repositorySnapshotListResponseSchema`; PostgreSQL lifecycle E2E parses a list containing the persisted snapshot. |
 | `use-requirements.ts` | requirement list/create/detail | Create, revision, qualify, list and detail responses verified against shared contracts; project scoping E2E covered below |
-| `use-review-coverage.ts` | review coverage | Schema passed; backend parity audit pending |
-| `use-review-decisions.ts` | single- and multi-repo review decisions | Schema passed; backend parity audit pending |
+| `use-review-coverage.ts` | review coverage | FE hook and API controller parse the same `reviewCoverageResponseSchema`; PostgreSQL E2E parses an actual response from persisted analysis/review data and verifies foreign snapshot edges do not inflate impacted-artifact counts. |
+| `use-review-decisions.ts` | single- and multi-repo review decisions | FE and controllers parse the same single/multi-repo schemas; PostgreSQL E2E parses persisted create/list responses for single-analysis decisions and create/list/latest for merged reports. |
 | `use-review-item-decision.ts` | target-aware review decision | Now validates `submitReviewItemDecisionResponseSchema`; backend parity confirmed in this iteration |
 | `use-review-notes.ts` | review-note list/create | Now validates list and item schemas; backend parity confirmed in this iteration |
-| `use-review-completion.ts` | review completion | Schema passed; backend parity audit pending |
-| `use-scan-jobs.ts` | scan-job creation | Schema passed; backend parity audit pending |
-| `use-snapshot-drift.ts` | snapshot drift | Schema passed; backend parity audit pending |
-| `use-system.ts` | readiness and operations | Schema passed; backend parity audit pending |
-| `use-test-trace-evidence.ts` | QA test-trace evidence | Shared schema is parsed by both the backend controller and the FE client; PostgreSQL E2E verifies valid static evidence for all five project roles and cross-project 404 for the same persisted evidence ID |
+| `use-review-completion.ts` | review completion | FE hook and API controller parse the same `reviewCompletionResponseSchema`; PostgreSQL E2E parses an actual persisted analysis response and checks its identity and review counts. |
+| `use-scan-jobs.ts` | scan-job creation | FE hook and controller use `scanJobResponseSchema`; PostgreSQL/Redis E2E parses created and recovered job responses. |
+| `use-snapshot-drift.ts` | snapshot drift | FE hook and repository snapshot controller use `repositorySnapshotDriftResponseSchema`; PostgreSQL lifecycle E2E parses persisted drift and checks project/repository/base/target identity. |
+| `use-system.ts` | readiness and operations | FE hooks and system controller use the same readiness/operations schemas; system-health E2E parses liveness, readiness and authenticated operations responses. |
+| `use-test-trace-evidence.ts` | QA test-trace evidence | Shared schema is parsed by both the backend controller and FE client; PostgreSQL E2E parses the response and verifies valid static evidence for project roles plus cross-project 404 for the same persisted evidence ID. |
 | `use-traceability.ts` | traceability review-decision update/delete | Now validates `{ ok: true }` / `{ success: true }`; backend parity confirmed in this iteration |
-| `project-context.tsx` | current workspace, project list, project switch | Schema passed; backend parity audit pending |
+| `project-context.tsx` | current workspace, project list, project switch | FE and controllers use the same workspace/project-list schemas; PostgreSQL E2E parses current workspace, project list before/after switching, and selection response, with membership filtering asserted. |
 | `auth-options.ts` | credentials login | Validates `loginResponseSchema` |
 | `apiGetFile` callsites | Markdown/PDF downloads | Binary exception; expected MIME type, CORS-exposed attachment disposition, safe basename, and matching `.md`/`.pdf` extension are runtime-validated |
 
@@ -146,6 +148,7 @@ The schema requirement is now enforced at the shared consumer boundary. It preve
 - The role suite now verifies OWNER success across all 11 permissions. It also checks viewer denials for scan, requirement, base-analysis, and finalization, plus MAINTAINER denials for review and clarification; each denied mutation preserves database state. The OWNER scan assertion confirms PostgreSQL and Redis job identity match, and test-created queue jobs are removed in teardown. Per-route cross-project role combinations remain open.
 - `project-permission.service.spec.ts` now locks the complete 5-role × 11-permission policy matrix; the focused suite passed 1 suite / 13 tests. The central role matrix is verified, while method/path cross-project coverage for every scoped endpoint remains open.
 - Current cross-project route pass closes that method/path scope gap for the existing project-scoped API surface. The final instrumented `auth-rbac.e2e-spec.ts` run passes 45/45 on PostgreSQL after adding outsider-owner probes for repository list/connect/scan, all insight and traceability mutation methods, analysis review/finalize, clarification create/answer/dismiss/convert, multi-repo create, foreign requirement revision creation, and a real foreign analysis ID under an authorized run drilldown. Denied writes preserve repository, scan, analysis, decision, clarification, and multi-repo state. One earlier 44/45 run had an unexplained workspace 500; the focused test and instrumented full rerun passed. This closes API cross-project scope coverage for the inventoried routes, not all role/resource combinations or the remaining response-mapper, browser-state, accessibility, and CI gates.
+- Follow-up on 2026-10-30: extended the requirement resource E2E to verify a foreign `POST /requirement-revisions/:revisionId/qualify` returns 404 and leaves both revision readiness and the PostgreSQL audit-event count unchanged. The focused API + PostgreSQL suite passed 2/2 on an isolated scratch database; the database was dropped after confirming no active connections. This strengthens the requirement-family persistence assertion and does not close the full role/resource matrix.
 
 ### Requirement API Runtime and Project-Scope Verification (2026-10-28)
 
@@ -264,7 +267,9 @@ Before the fix, a successful JSON response without a schema returned its unvalid
 - Summary parity: snapshot summary parsing now falls back to legacy `reviewStatus` when a review-decision row is absent and treats legacy `CONFIRMED` as accepted, matching `GetReviewCompletionUseCase`. The summary regression also locks `NEEDS_REVIEW` classification to the current completion policy.
 - Red/green verification: the PostgreSQL E2E reproduced the old 200 false-success, then verified 409 after the fix and confirmed the persisted snapshot still contains both original `ACCEPTED` decisions. The full affected audit-flow E2E passed 8/8; report use-case unit tests passed 13/13; review-coverage summary tests passed 3/3.
 - Wider checks after this iteration: root typecheck passed; full root Jest passed 237 suites / 1,371 tests / 1 snapshot; full monorepo lint completed with 0 errors and 58 existing `consistent-type-imports` warnings. pnpm reported the local-store/no-TTY modules-directory warning, so these results use the current workspace install rather than a clean install.
-- This covers sequential post-snapshot review-data mutation. API-mediated mutations after completion are already rejected; barrier-controlled concurrent report-read/review-write ordering and report regeneration under changed source review data remain open.
+- Concurrent API/PostgreSQL coverage now exercises both report-read windows. When a decision changes after the completion read and a new snapshot is published, the response stays on the captured snapshot and its completion counters and decision rows match that snapshot. When the change lands after the first live-review query but before snapshot selection, the endpoint returns 409 `REPORT_PROVENANCE_MISMATCH` without Markdown. The first fixture attempt only created a new analysis-review decision and left traceability review rows unchanged; the corrected race commits a changed persisted traceability decision before publishing the second snapshot.
+- Verification on the guarded local `.env.test` PostgreSQL/Redis setup: the complete report audit-flow E2E passed 34/34, final-report use-case unit tests passed 13/13, backend typecheck passed, focused ESLint passed, and `git diff --check` passed. The concurrency barrier is in one API test process and direct PostgreSQL writes model post-finalization drift; this does not exercise multiple API processes or an authorized post-finalization review mutation. Report regeneration under changed review source data remains separately covered by the existing snapshot/document publication tests.
+- Revalidated the selected race seam directly with Jest `--runTestsByPath` and a test-name filter: the HTTP/PostgreSQL case that swaps persisted traceability decisions between the live-review read and snapshot selection passed 1/1. It returns 409 `REPORT_PROVENANCE_MISMATCH` with no Markdown. The test controls one API process and does not model multiple API instances.
 
 ### Cross-Analysis Approved Document Identity
 
@@ -307,18 +312,36 @@ Before the fix, a successful JSON response without a schema returned its unvalid
 - Expected result: after finalization commits, the waiting note transaction observes terminal status, returns 409 `INVALID_STATE_TRANSITION`, leaves the pre-finalization note unchanged, and exactly one reviewed snapshot exists.
 - Mutation reproduction: temporarily removing the review-note repository's lock guard made the note return 200 before PostgreSQL reported a row-lock wait; the new test failed with that evidence. Restoring the guard made the focused test pass.
 - Green verification after restoring the guard: `final-reviewed-report.audit-flow.e2e-spec.ts` passed 16/16, including the PostgreSQL barrier case; monorepo `pnpm typecheck` passed through the workspace-local pnpm/Node toolchain; targeted ESLint passed with no warnings; `git diff --check` exited 0 (Git emitted existing line-ending normalization notices).
+- Revalidated 2026-10-30: the PostgreSQL lock-observation case passed 1/1, then the full affected audit-flow E2E passed 30/30 on an isolated scratch database and Redis DB 2. The scratch DB was dropped after confirming zero active connections; no source fix was needed in this pass.
 - State-machine and testing-strategy docs now explicitly require review-note writes and clears to share the finalization row lock. Release-wide route, responsive/a11y, cross-module and exact-CI gates remain open.
 
 ## Release Gates Still Open
 
-- Expand route smoke coverage into route-state cases for loading/empty/partial/stale/error/forbidden/not-found/success where applicable.
-- Exercise deep links, refresh, browser back/forward, query/locale preservation, active navigation and recovery.
+- Static route inventory recheck on 2026-10-30 found 18 `page.tsx` entrypoints;
+  `/login` has a separate smoke and the other 17 are in the direct-route suite.
+  The suite covers query state, back/forward, refresh, active navigation,
+  missing resources and repository-mismatch deep links. After the managed
+  Playwright CORS allowlist fix, the full desktop/mobile matrix exited 0 with
+  13 passed tests, one intentional opt-in skip and zero failures. The prior
+  intermittent browser `SyntaxError` has not recurred in three later
+  route/full-matrix runs; its original cause remains unconfirmed.
+- Expand route smoke coverage into loading/empty/partial/stale/error/forbidden/
+  not-found/success cases where applicable, and extend auth/locale preservation
+  and error recovery checks across supported routes.
 - Audit every consumer schema against its exact backend response mapper/controller, including authorization and project/snapshot scoping.
 - Expand responsive and axe coverage from the nine critical screens to remaining routes and route states; add assertions for clipped controls, dialogs and form usability.
 - Complete manual keyboard, focus-return, screen-reader and visual contrast checks on the audited screens.
 - Cover all designated critical journeys: scan, requirement revision, analysis, QA evidence, review, finalization, reports, multi-repo, settings; include negative/retry/duplicate/stale/concurrent paths.
 - Run authorization matrix for cross-project access, full affected suites, full CI on the exact release candidate commit, and document residual P2/P3 issues.
-- Complete the configured Windows Playwright lifecycle: investigate why the worker web-server teardown does not return, reproduce or explain the `P1017` during the debug seed, and obtain a clean exit-0 run with API/worker/web startup enabled.
+- Browser verification on the current dirty worktree now passes with API,
+  worker and web startup enabled. Managed Playwright now adds its dynamic web
+  `BASE_URL` to the test API CORS allowlist; before the fix, the ephemeral web
+  port was rejected and both review journeys failed before their Reviewed
+  counter advanced. The isolated rerun exercised responsive/a11y automation,
+  route smoke, keyboard review, report finalization and mobile review. The
+  earlier one-off route `SyntaxError` remains unclassified, and the historical
+  `P1017` startup incident did not recur on the fresh-database matrix. Manual
+  accessibility and exact-commit hosted CI remain release gates.
 
 ## External State To Refresh Before Release
 
@@ -336,6 +359,14 @@ At initial repository/PR/CI audit, no open PR was returned for the inspected bra
 - Verification after the correction: the focused study-condition suite passed 7/7; the full web Jest suite passed 42/42 suites and 177/177 tests; focused ESLint exited 0 with only the existing App Router no-`pages/` diagnostic. A follow-up commit and exact-commit remote CI rerun are pending.
 - Browser review/report journey did not run in the failed workflow because CI stops at Web unit tests. Route smoke, responsive/browser suite, report journey, clean-install behavior, authorization matrix, remaining route states, and manual accessibility checks remain release gates. This integration milestone does not declare Product Integrity v1 complete.
 
+## Hosted and local Jest recheck (2026-10-30)
+
+- Re-read workflow run `40878312242` for integration HEAD `762759cb2623ff51ee2fcb785352a826125b7131`. Migration upgrade/data survival, lint, typecheck, all listed builds, and analyzer tests passed. `App tests` failed in `create-impact-analysis.usecase.spec.ts` and `get-impact-graph.usecase.spec.ts`; browser, API E2E, and later journey steps were skipped.
+- The failures came from unit-test setup/fixture drift: the create-analysis mocks lacked newly required lineage query models and expected nullable request lineage fields; graph fixtures lacked snapshot/revision provenance used by the read model. The integration worktree contains corresponding updates in those two specs. A fresh local `pnpm test:ci` then passed 244/244 suites and 1,428/1,428 tests.
+- These test updates are not on a new hosted CI run for the exact current worktree. The local all-suite result therefore does not close the hosted CI, browser, or full journey gates; overall verdict remains **PARTIAL**.
+- Refreshed remote branch refs through GitHub after local `git fetch origin` was denied while writing `.git/FETCH_HEAD`. The remote integration tip is `762759cb2623ff51ee2fcb785352a826125b7131`; the backend-runtime source branch is 48 commits behind it, and the scan-source branch is 25 commits behind it. Integration is 63 commits ahead of `main` and 0 behind, confirming both source histories are included on the integration branch. No direct merge to `main` was made.
+- The worktree has existing staged, unstaged, and untracked changes. No files were staged or committed during this recheck, so none of the local fixes have triggered a new hosted run.
+
 ## Responsive Accessibility Regression (2026-10-29)
 
 - The second full CI run on `5127e69e089642c6ca908ecf88c8f5f510cc3a72` passed migration, lint, typecheck, all builds, analyzer/app/web tests, API E2E and both golden-path demos. The browser step ran 9 tests successfully but failed `responsive-sweep.pw.ts`; the pinned proof was skipped after that failure.
@@ -346,3 +377,64 @@ At initial repository/PR/CI audit, no open PR was returned for the inspected bra
 - Root cause: the review queue supplied an `aria-label` override even though its visible title, type, decision, evidence count, artifact count, blocker state and impact basis are already rendered as button text. Axe found that custom name did not satisfy the visible-label inclusion rule for the selected item and impact-link items. Removed the override and the now-unused localized template; the accessible name is derived from the visible button content.
 - Red/green regression: the new component assertion that the visible queue name is not overridden by `aria-label` failed before the fix and passed after it. Focused ReviewQueue tests passed 2/2; full web Jest passed 42/42 suites and 177/177 tests; web typecheck, changed-file ESLint and `git diff --check` passed. Full browser sweep and exact-commit CI rerun are pending.
 - The integration branch remains short of release acceptance: route-state inventory, cross-module negative/retry journeys, remaining responsive/a11y routes and states, manual keyboard/screen-reader checks, Windows worker teardown/P1017, and final exact-commit CI are open. Current project-role policy and cross-project route-scope matrices are verified; full response-mapper parity remains open.
+
+### Frozen Reviewed-Report Snapshot Contracts (2026-10-29)
+
+- Confirmed defect: reviewed snapshot responses accepted arbitrary decision, summary, and evaluation-context JSON. The coverage projection filters malformed decision items, which could let a malformed frozen snapshot appear as a successful report with missing review rows.
+- Fix: shared reviewed-snapshot and final-report contracts validate those persisted fields and require summary counters to agree with the frozen item rows. The final-report use case validates before deriving coverage. The latest-snapshot API returns 409 `REPORT_PROVENANCE_MISMATCH` for invalid persisted JSON instead of a Zod 500 or an empty filtered result.
+- Red API+PostgreSQL regression: replacing two frozen review rows with a shape-valid empty array while leaving nonzero summary counters returned 200 before the fix. Both report endpoints now reject the mismatch with the typed 409 response.
+- The demo's finalized Scenario B now persists its traceability evidence and reviewer decisions and builds the snapshot through the production evidence-quality projection.
+- Verification: contract/backend unit tests 7 suites / 40 tests; report UI tests 3 suites / 10 tests; API+PostgreSQL report audit-flow plus API documentation passed 22/22; demo seed completed against `.env.test`; root typecheck passed. Changed-file ESLint exited 0.
+- Scoped compatibility inventory: a read-only query against the configured `.env.test` database found 2 persisted snapshots; both passed `reviewedReportQualitySnapshotSchema`, with no `{ artifactKey, decision }` rows, legacy `EVIDENCED` summary keys, or noncanonical top-level shapes. The query emitted counts only and changed no data. Release target databases remain unverified; any legacy row continues to fail closed with `REPORT_PROVENANCE_MISMATCH` until a repair or explicit compatibility path is approved.
+
+## Snapshot provenance and project authorization revalidation (2026-10-30)
+
+- `TraceabilityLink` previously allowed an analysis and artifact from different
+  snapshots to be persisted. The regression failed before the fix. It now
+  stores `snapshotId`, and PostgreSQL composite foreign keys bind it to both
+  the analysis and artifact. The migration rehearsal preserved valid history,
+  rejected invalid future writes, and failed closed on invalid legacy history.
+- Focused API E2E verification passed 49/49 tests in `auth-rbac` and 75/75
+  across analysis, report, impact-diff, matrix, project-role, review-item, and
+  comprehension suites. Traceability/evidence-quality unit tests passed 11/11;
+  migration workspace passed 6/6; backend and scripts typechecks passed.
+- The selected API+PostgreSQL project-resource seam passed 2/2: a member of
+  project A receives 404 for a project B requirement and cannot create a
+  revision or qualify its revision; PostgreSQL revision and audit-event state
+  remained unchanged.
+- Checks used disposable local PostgreSQL databases and isolated Redis DBs.
+  No production database or external AI provider was accessed. Current local
+  integration HEAD is `762759c` with a dirty worktree; full exact-commit CI,
+  the full cross-project endpoint matrix, remaining route-state/browser gates,
+  and manual accessibility checks remain open. Overall status stays
+  **PARTIAL**.
+
+- Additional relational boundary: a red API/PostgreSQL test confirmed the DB
+  accepted an analysis whose snapshot and source target came from different
+  repositories. `ImpactAnalysis.repositoryId` now comes from the snapshot and
+  composite FKs bind both references to it. The upgrade verifier backfilled
+  valid history and failed closed on a deliberately mismatched legacy row.
+  Focused verification passed the regression, 11 affected API E2E suites / 160
+  tests, 24 use-case unit tests, migration workspace 6/6, and scripts/backend
+  typechecks. Local full test:ci passed 244 suites / 1,442 tests / 1 snapshot;
+  root typecheck, lint, and workspace build also passed. Exact-candidate hosted
+  CI remains open because the worktree is dirty.
+
+### Impact analysis project provenance revalidation (2026-10-30)
+
+- Closed a persisted project-boundary gap: analysis records now bind the
+  immutable requirement revision, requirement project, repository, snapshot,
+  and source target through validated PostgreSQL foreign keys. The use case
+  provides those identities from persisted requirement and snapshot records.
+- Red/green API+PostgreSQL regression and migration-upgrade rehearsal verified
+  direct-write rejection, valid-history backfill, and fail-closed handling of
+  invalid legacy rows. The regression passed 2/2; the affected API E2E group
+  passed 160/160 and the creation use case passed 24/24.
+- Revalidated the current worktree: `pnpm test:ci` passed 244 suites / 1,442
+  tests / 1 snapshot; typecheck, lint, build, migration-upgrade verification,
+  and `git diff --check` passed. Lint reports 45 `consistent-type-imports`
+  warnings and no errors.
+- This is local verification on a dirty integration worktree. Exact-commit
+  hosted CI, full cross-project endpoint/role coverage, remaining browser,
+  responsive and accessibility gates, and production historical-data
+  validation remain open. Product Integrity v1 remains **PARTIAL**.

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { EvidencePackFormatter, renderPrompt } from '@ba-helper/application';
 import { FakeLlmProvider } from './fake-ai.provider';
 
 describe('FakeLlmProvider', () => {
@@ -93,5 +94,71 @@ describe('FakeLlmProvider', () => {
       'api:user.controller.register service-method:user.service.registerUser service-method:user.repository.findByEmail' }, schema);
     expect(result.data.insights.filter(item => item.certainty === 'EVIDENCED').flatMap(item => item.evidenceKeys).sort())
       .toEqual(['service-method:user.repository.findByEmail', 'service-method:user.service.registerUser']);
+  });
+
+  it('binds claims to JSON-escaped evidence from the current impact prompt', async () => {
+    const evidence = EvidencePackFormatter.format([
+      {
+        artifactKey: 'api:booking.controller.cancel',
+        symbolName: 'BookingController.cancel',
+        filePath: 'src/booking/booking.controller.ts',
+        artifactType: 'API_ROUTE',
+        excerpt: '@Post("cancel")',
+        retrievalMethod: 'LEXICAL',
+      },
+      {
+        artifactKey: 'service-method:payment.service.refund',
+        symbolName: 'PaymentService.refund',
+        filePath: 'src/payment/payment.service.ts',
+        artifactType: 'SERVICE_METHOD',
+        excerpt: 'return payment.refund();',
+        retrievalMethod: 'LEXICAL',
+      },
+    ]);
+    const { userPrompt } = renderPrompt('IMPACT_ANALYSIS', {
+      changeRequest: 'Cancel a booking and issue a refund.',
+      domainContext: 'BOOKING',
+      snapshotId: 'snapshot-1',
+      analyzerVersion: 'analyzer@1.0.0',
+      evidenceExcerpts: evidence,
+    });
+
+    const result = await provider.generateStructured({ systemPrompt: '', userPrompt }, schema);
+    const claim = result.data.insights.find(item => item.insightKey === 'claim:cancel-refund');
+
+    expect(claim?.certainty).toBe('EVIDENCED');
+    expect(claim?.evidenceKeys).toEqual(['service-method:payment.service.refund']);
+  });
+
+  it('does not emit a refund claim when escaped prompt evidence lacks a refund artifact', async () => {
+    const evidence = EvidencePackFormatter.format([
+      {
+        artifactKey: 'api:booking.controller.cancel',
+        symbolName: 'BookingController.cancel',
+        filePath: 'src/booking/booking.controller.ts',
+        artifactType: 'API_ROUTE',
+        excerpt: '@Post("cancel")',
+        retrievalMethod: 'LEXICAL',
+      },
+      {
+        artifactKey: 'service-method:booking.service.cancelBooking',
+        symbolName: 'BookingService.cancelBooking',
+        filePath: 'src/booking/booking.service.ts',
+        artifactType: 'SERVICE_METHOD',
+        excerpt: 'cancelBooking(id: string) {}',
+        retrievalMethod: 'LEXICAL',
+      },
+    ]);
+    const { userPrompt } = renderPrompt('IMPACT_ANALYSIS', {
+      changeRequest: 'Cancel a booking and issue a refund.',
+      domainContext: 'BOOKING',
+      snapshotId: 'snapshot-1',
+      analyzerVersion: 'analyzer@1.0.0',
+      evidenceExcerpts: evidence,
+    });
+
+    const result = await provider.generateStructured({ systemPrompt: '', userPrompt }, schema);
+
+    expect(result.data.insights.some(item => item.insightKey === 'claim:cancel-refund')).toBe(false);
   });
 });

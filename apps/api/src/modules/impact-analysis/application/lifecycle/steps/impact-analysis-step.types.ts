@@ -36,7 +36,8 @@ export type ImpactEvidenceCollectionResult = {
   evidenceByKey: Map<string, EvidenceRecord>;
   traceabilityLinks: any[];
   retrievalMetadata: {
-    strategy: string;
+    strategy: 'hybrid' | 'lexical_fallback';
+    vectorStatus: 'USED' | 'NO_COMPATIBLE_CHUNKS' | 'MODEL_MISMATCH' | 'FAILED' | 'NOT_READY';
     maxArtifacts: number;
     artifactCount: number;
     vectorSignalCount: number;

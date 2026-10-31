@@ -54,7 +54,7 @@ DependencyEdge    owns relationships between artifacts in one snapshot
 Evidence          owns immutable support tied to a source origin and provenance
 Requirement       owns the editable change request identity
 RequirementRevision owns immutable title/raw/normalized input and readiness result
-ImpactAnalysis    owns one requirement revision evaluation against one snapshot
+ImpactAnalysis    owns one requirement revision evaluation against one snapshot and its repository target
 BaInsight         owns BA-facing claims, unknowns, questions, ACs, QA scenarios
 TraceabilityLink  owns requirement-to-artifact impact relation for an analysis
 Generated*        owns outputs tied to the analysis commit
@@ -81,7 +81,10 @@ ingestion resolves both endpoint IDs from that snapshot's persisted artifact
 set. Graph projections must also filter by the edge snapshot and both endpoint
 artifact snapshots, so malformed or legacy cross-snapshot rows cannot enter
 graph, comprehension, retrieval, QA, workspace, diff, multi-repo review, or
-reviewed-report output.
+reviewed-report output. PostgreSQL now enforces this at write time through
+composite foreign keys from `(fromArtifactId, snapshotId)` and
+`(toArtifactId, snapshotId)` to `CodeArtifact(id, snapshotId)`. The migration
+fails without rewriting data if historical edges violate the invariant.
 
 `ReviewedReportSnapshot.testTraceSnapshot` is nullable JSON with the versioned
 `reportTestTraceSnapshotSchema` payload: `{ version: 1, coverage }`. It freezes
@@ -105,27 +108,99 @@ before rendering a test trace section.
 RepositoryTarget   -> Repository, targetKey/ref type, latest observed commit
 RepositorySnapshot -> Repository, commitSha, analyzerVersion, published coverage status
 RepositoryProfile  -> RepositorySnapshot, domain/language/framework/architecture and bounded roots
-ScanJob            -> Repository + requested ref, optional resolved RepositoryTarget, and eventual published snapshot
+ScanJob            -> Repository + requested ref, optional same-repository RepositoryTarget, and eventual same-repository published snapshot
 CodeArtifact       -> RepositorySnapshot
 DependencyEdge     -> RepositorySnapshot + fromArtifact + toArtifact
 Evidence           -> source origin: snapshot/artifact and/or requirement revision
 RequirementRevision -> Requirement and immutable submitted title/raw/normalized text
-ImpactAnalysis     -> RequirementRevision + RepositorySnapshot + selected RepositoryTarget
+ImpactAnalysis     -> Requirement + RequirementRevision + Repository + RepositorySnapshot + selected RepositoryTarget with matching project/repository lineage
 BaInsight          -> ImpactAnalysis
+ClarificationItem  -> ImpactAnalysis + BaInsight from the same analysis
+ReviewClarificationRequest -> AnalysisReviewDecision from the same analysis
 InsightEvidence    -> BaInsight + Evidence
 TraceabilityLink   -> ImpactAnalysis + CodeArtifact
 TraceabilityEvidence -> TraceabilityLink + Evidence
-GeneratedDocument -> ImpactAnalysis + commitSha
+TraceabilityReviewDecision -> ImpactAnalysis + TraceabilityLink in the same analysis
+ReviewNote         -> ImpactAnalysis + Insight or TraceabilityLink in the same analysis
+GeneratedDocument -> ImpactAnalysis + ReviewedReportSnapshot
+ReviewedReportSnapshot.approvedDocument -> GeneratedDocument from the same ImpactAnalysis
 DocumentJob        -> ImpactAnalysis + ReviewedReportSnapshot + GeneratedDocument (optional)
+MultiRepoAnalysisRun -> Project + RequirementRevision owned by that Project
+ImpactAnalysis      -> optional MultiRepoAnalysisRun with matching project,
+                       requirement, and immutable revision lineage
+EmbeddingChunk     -> Repository + RepositorySnapshot + optional CodeArtifact with matching identity
 ```
 
-`TraceabilityLink` must be scoped to `ImpactAnalysis`; its requirement revision
-is determined by that analysis. A requirement can be analyzed repeatedly across
-revisions and snapshots.
+When an `ImpactAnalysis` belongs to a `MultiRepoAnalysisRun`, PostgreSQL binds
+the run ID together with the analysis project, requirement, and requirement
+revision. Deleting a run with child analyses is restricted so persisted lineage
+cannot be silently detached.
 
-The linked `CodeArtifact` must belong to the analysis's `RepositorySnapshot`.
-Traceability, workspace, diff, multi-repo review, and graph projections exclude
-links whose artifact snapshot does not match the analysis snapshot.
+`ClarificationItem.impactAnalysisId` and its source insight must identify the
+same analysis. PostgreSQL enforces this with a composite foreign key to
+`BaInsight(id, impactAnalysisId)`. The migration refuses mismatched historical
+clarifications without rewriting or deleting them.
+
+`ReviewClarificationRequest.analysisId` and its review decision must also
+identify the same analysis. PostgreSQL enforces this with a composite foreign
+key to `AnalysisReviewDecision(id, analysisId)`. Its migration refuses
+mismatched historical requests without rewriting or deleting them.
+
+Each `DependencyEdge` endpoint must belong to the edge's `snapshotId`.
+PostgreSQL enforces both `(fromArtifactId, snapshotId)` and
+`(toArtifactId, snapshotId)` against `CodeArtifact(id, snapshotId)`. Graph reads
+also scope the edge and both endpoint relations to one snapshot.
+
+An optional `ScanJob.sourceTargetId` and `ScanJob.snapshotId` must each belong
+to the job's `repositoryId`. PostgreSQL enforces these pairs with composite
+foreign keys. The migration refuses historical cross-repository links without
+clearing or rewriting them. Deleting a referenced target or snapshot is
+restricted so the scan job retains its recorded provenance.
+
+`TraceabilityLink` stores the analysis snapshot and its linked `CodeArtifact`
+must belong to that same `RepositorySnapshot`. PostgreSQL enforces both
+`(impactAnalysisId, snapshotId)` and `(artifactId, snapshotId)` with composite
+foreign keys. The migration backfills the analysis snapshot for valid legacy
+links and fails without rewriting data if an existing link points to an
+artifact from another snapshot. Read projections remain scoped to the analysis
+snapshot as defense in depth.
+
+A requirement can be analyzed repeatedly across revisions and snapshots.
+
+`ImpactAnalysis.repositoryId` is backfilled from its immutable snapshot and is
+enforced against both the snapshot and selected source target with composite
+foreign keys. The migration fails before changing schema if legacy analysis
+rows pair a snapshot and target from different repositories; it does not
+rewrite or delete those rows. Deleting a referenced snapshot or target is
+restricted so analysis provenance remains intact.
+
+`ImpactAnalysis.projectId` and `requirementId` are backfilled from its
+repository and immutable requirement revision. Composite foreign keys require
+that its repository belongs to the same project as the requirement and that
+the revision belongs to that requirement. The migration refuses historical
+cross-project analyses before schema changes and preserves those rows for
+explicit repair.
+
+A `TraceabilityReviewDecision` must reference the same `ImpactAnalysis` as its
+`TraceabilityLink`. PostgreSQL enforces the pair with a composite foreign key
+on `(traceabilityLinkId, analysisId)`.
+
+A `ReviewNote` must reference exactly one review target, and that `Insight` or
+`TraceabilityLink` must belong to the note's `ImpactAnalysis`. PostgreSQL
+enforces target cardinality with a check constraint and ownership with
+composite foreign keys.
+
+An `EmbeddingChunk` must match its repository project, the repository and
+commit of its snapshot, and the snapshot of its optional artifact. PostgreSQL
+enforces these pairs with composite foreign keys. The MVP also requires
+`tenantId = projectId` through a check constraint. When tenant identity changes
+to `organizationId`, replace that check as part of the tenant migration.
+
+An `Evidence` row linked to a `CodeArtifact` must also name a snapshot, and the
+artifact and evidence snapshot must match. PostgreSQL enforces the pair with a
+composite foreign key and a check constraint; the check is required because a
+composite foreign key with PostgreSQL's default `MATCH SIMPLE` accepts a NULL
+snapshot component.
 
 For an analysis explicitly accepted from a `PARTIAL` snapshot, persist its
 known limitation:
@@ -169,6 +244,20 @@ when the hash matches. Retries use the saved plan, so a newer branch observation
 cannot silently mix another snapshot into a partially created run. `NULL` values
 are reserved for pre-migration runs; those retain the legacy child-set and
 domain-pack comparison and legacy planning behavior.
+
+Each `MultiRepoAnalysisRun` persists the owning `requirementId` alongside its
+project and revision IDs. Composite foreign keys require that the revision
+belongs to that requirement and that the requirement belongs to the run's
+project. The migration backfills valid legacy runs and fails before changing
+the schema if historical project/revision lineage is inconsistent; it never
+reassigns or deletes such rows.
+
+An `ImpactAnalysis` attached to a multi-repo run must carry the same project,
+requirement, and immutable requirement revision as that run. A composite
+foreign key enforces the full identity; the migration preserves matching
+legacy children and refuses mismatched history before replacing the old
+run-ID-only foreign key. Deleting a run with attached analyses is restricted
+so the child provenance cannot be silently detached.
 
 `domainPackManifestDigest` and `domainPackRegistryVersion` are nullable until
 the canonical manifest source is fully versioned. Do not synthesize fake digest
@@ -242,6 +331,27 @@ Embedding enqueue for a published snapshot must use a deterministic queue key
 derived from `snapshotId`. Retrying the same scan/snapshot must not create
 multiple independent vector-index jobs for identical extraction output.
 
+Embedding reuse identity is the configured/persisted model name returned by
+the provider; `providerName` identifies the vendor and must not be used as the
+model key. Indexing, retry checks, cross-snapshot copies, and reuse diagnostics
+must use the same model identity. Vector search must filter by the model that
+produced its query vector in addition to tenant, project, repository, and
+snapshot scope. Equal vector dimensions alone do not make different models'
+vectors comparable.
+
+Retrieval returns run-level `strategy` and `vectorStatus` diagnostics. A result
+with no compatible model chunks, a provider-model mismatch, a vector failure,
+or a snapshot that is not vector-ready must be recorded as
+`strategy: lexical_fallback` with the corresponding `vectorStatus`; it must not
+be recorded as a successful hybrid vector run. These values are persisted in
+the completed analysis `metadata.retrieval` alongside the vector signal count.
+
+Within one snapshot, an existing embedding chunk is an idempotency hit only
+when its `stableChunkId`, redacted-content `contentHash`, and `chunkerVersion`
+match the chunk built by the current worker. A missing or older chunker version
+must be regenerated, even when the stable ID and content hash match. The
+persisted model is already scoped by the snapshot cache lookup.
+
 Repository profiling follows the same publication rule:
 
 ```text
@@ -277,10 +387,10 @@ text/source locator/content hash/provenance metadata
 Rules:
 
 ```text
-CODE/TEST/STATIC_ANALYSIS evidence must identify its snapshot and may identify an artifact.
+CODE/TEST/STATIC_ANALYSIS evidence must identify its snapshot and may identify an artifact. PostgreSQL rejects a missing snapshot for these source types.
 REQUIREMENT_INPUT evidence must identify its immutable RequirementRevision.
-COVERAGE evidence must identify the snapshot whose gaps it describes.
-When `artifactId` is present, its artifact must belong to the evidence `snapshotId`; when repository evidence is read for an analysis, its snapshot and any referenced requirement revision must match that analysis. Requirement-only evidence with no snapshot is scoped to the exact immutable revision.
+COVERAGE evidence must identify the snapshot whose gaps it describes. PostgreSQL rejects a missing requirement revision or coverage snapshot.
+When both `artifactId` and `snapshotId` are present, the artifact must belong to that snapshot. PostgreSQL enforces this pair through a composite foreign key. When repository evidence is read for an analysis, its snapshot and any referenced requirement revision must match that analysis. Requirement-only evidence with no snapshot is scoped to the exact immutable revision.
 Evidence linked to an EVIDENCED code-impact fact must come from the same snapshot as its ImpactAnalysis.
 Evidence linked to a requirement interpretation must come from its referenced revision.
 Persisted evidence text must not contain detected secret literals; redact the
@@ -385,9 +495,19 @@ Evidence            (provenanceKey)
 BaInsight           (impactAnalysisId, insightKey)
 InsightEvidence     (insightId, evidenceId)
 TraceabilityEvidence (traceabilityLinkId, evidenceId)
-GeneratedDocument   (impactAnalysisId, type, status)
+ReviewedReportSnapshot (id, analysisId) for generated-document scope
+GeneratedDocument   (reviewedReportSnapshotId, type, status) for snapshot-bound reports
+GeneratedDocument   partial (impactAnalysisId, type, status) where reviewedReportSnapshotId IS NULL
 DocumentJob         (snapshotId, documentType)
 DomainEvent         (idempotencyKey) for retryable command/job events
+```
+
+Composite foreign-key targets also require these unique reference keys:
+
+```text
+Repository         (id, projectId)
+RepositorySnapshot (id, repositoryId, commitSha)
+CodeArtifact       (id, snapshotId)
 ```
 
 Worker DB writes use transactions for compact persisted result sets and
@@ -513,6 +633,15 @@ HIGH_RISK_INSIGHT_UNREVIEWED
 
 ## Generated Output Semantics
 
+`ReviewedReportSnapshot` freezes review decisions, evidence quality, QA trace,
+and review clarification state. `clarificationsSnapshot` stores each
+clarification's identity, question, answer, status, and creation time as they
+were when the snapshot was made. Report workers render that frozen state and
+must not substitute later live answers. Clarification creation and answer
+mutations lock the parent analysis row so they serialize with snapshot creation.
+Legacy snapshots without this field reconstruct clarification state from the
+persisted creation/answer/cancellation timestamps at the snapshot time.
+
 Persist output projection status independently from analysis freshness against
 its selected source target:
 
@@ -529,13 +658,44 @@ Rules for Document Jobs:
 
 ```text
 - A DocumentJob may only reference a ReviewedReportSnapshot.
+- `DocumentJob.analysisId` must identify the same analysis as its snapshot;
+  PostgreSQL enforces this with a composite foreign key on
+  `(snapshotId, analysisId)`.
+- If a job links a `GeneratedDocument`, it must belong to the same analysis;
+  PostgreSQL enforces the paired nullable document ID and analysis ID with a
+  composite foreign key plus a check against `DocumentJob.analysisId`.
+- Deleting a linked `GeneratedDocument` clears both optional job identity
+  fields, preserving the existing `ON DELETE SET NULL` behavior.
 - A final report job cannot be created if review completion gate fails.
 - A final report job cannot be created if source repository snapshot is stale.
 - For one ReviewedReportSnapshot + DocumentType, there is at most one DocumentJob.
 - Re-enqueue returns existing job unless explicit retry is requested.
 - FAILED job never mutates ReviewedReportSnapshot.
 - COMPLETED job points to immutable GeneratedDocument.
+- Completion is conditionally claimed inside the publication transaction. A
+  concurrent delivery that observes another worker's completed result returns
+  that persisted document without rewriting it.
 ```
+
+Each generated approved report is scoped to one `ReviewedReportSnapshot`.
+Retries for that snapshot reuse its document; a later snapshot creates a new
+document so earlier Markdown and localization artifacts remain unchanged. The
+existing document content is immutable for that snapshot; a retry does not
+replace it with a newly rendered body. The snapshot's Markdown is copied from
+the persisted document content. The generated document's snapshot identity is
+paired with its analysis ID. The reverse `approvedDocumentId` link also pairs
+the document ID with the snapshot analysis ID through a composite foreign key.
+Legacy snapshot links are backfilled only with their existing analysis ID;
+shared documents remain readable when all linked snapshots belong to that
+analysis. Migration preflight fails without rewriting data if a historical
+link crosses analyses.
+
+Legacy generated documents that cannot be assigned unambiguously to one
+reviewed snapshot retain a null `reviewedReportSnapshotId`. Their partial
+unique index on `(impactAnalysisId, type, status)` preserves the historical
+idempotency key for those rows. Snapshot-bound documents use the composite
+snapshot identity; the ordinary nullable composite index alone does not protect
+the null-snapshot legacy rows in PostgreSQL.
 
 Recommended provenance fields include:
 

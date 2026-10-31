@@ -1,6 +1,7 @@
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { AppError } from '@ba-helper/shared';
+import { enqueueRetryableJob } from './enqueue-retryable-job';
 
 // BullMQ job ids embed the product entity id behind a per-queue prefix. Admins
 // operate on product entities, so we surface the bare entity id in responses.
@@ -9,6 +10,13 @@ const JOB_ID_PREFIX: Record<RecoverableQueueName, string> = {
   embedding: 'embed-',
   'impact-analysis': 'impact-',
   'document-job': '',
+};
+
+const QUEUE_JOB_ID_PREFIX: Record<RecoverableQueueName, string> = {
+  'scan-job': 'scan-',
+  embedding: 'embed-',
+  'impact-analysis': 'impact-',
+  'document-job': 'doc-',
 };
 
 function toProductEntityId(queueName: RecoverableQueueName, jobId: string): string {
@@ -42,15 +50,6 @@ export type RecoverableQueueName =
   | 'impact-analysis'
   | 'document-job';
 
-const RETRYABLE_JOB_OPTIONS = {
-  attempts: 3,
-  backoff: { type: 'exponential' as const, delay: 2000 },
-  removeOnComplete: { count: 1000 },
-  // Bounded failed-job retention: keep failures long enough for an admin to
-  // inspect/retry, but cap growth so the dead-letter set cannot grow unbounded.
-  removeOnFail: { age: 14 * 24 * 60 * 60, count: 5000 },
-};
-
 export class QueueService {
   constructor(
     @InjectQueue('impact-analysis')
@@ -64,58 +63,50 @@ export class QueueService {
   ) {}
 
   async enqueueImpactAnalysis(analysisId: string) {
-    await this.impactQueue.add(
+    return enqueueRetryableJob(
+      this.impactQueue,
       'run',
       { analysisId },
-      { 
-        jobId: `impact-${analysisId}`,
-        ...RETRYABLE_JOB_OPTIONS,
-      },
+      `impact-${analysisId}`,
     );
   }
 
   async enqueueSnapshotEmbedding(snapshotId: string) {
-    await this.embeddingQueue.add(
+    return enqueueRetryableJob(
+      this.embeddingQueue,
       'embed_snapshot',
       { snapshotId },
-      { jobId: `embed-${snapshotId}`, ...RETRYABLE_JOB_OPTIONS },
+      `embed-${snapshotId}`,
     );
   }
 
   async enqueueScanJob(jobId: string) {
-    await this.scanJobQueue.add(
+    return enqueueRetryableJob(
+      this.scanJobQueue,
       'scan',
       { jobId },
-      { jobId: `scan-${jobId}`, ...RETRYABLE_JOB_OPTIONS },
+      `scan-${jobId}`,
     );
   }
 
   async enqueueDocumentJob(documentJobId: string) {
-    // We use a deterministic BullMQ jobId so BullMQ can deduplicate if needed,
-    // though Prisma DocumentJob is the true idempotency source of truth.
-    const uniqueJobId = `doc-${documentJobId}`;
-    const existingJob = await this.documentJobQueue.getJob(uniqueJobId);
-    if (existingJob) {
-      if ((await existingJob.getState()) === 'failed') {
-        try {
-          await existingJob.retry('failed');
-        } catch (error) {
-          // Concurrent delivery may have already moved the failed job back to
-          // an active queue state. Treat that as successful idempotent enqueue.
-          if ((await existingJob.getState()) === 'failed') throw error;
-        }
-      }
-      return;
-    }
-
-    await this.documentJobQueue.add(
+    return enqueueRetryableJob(
+      this.documentJobQueue,
       'generate',
       { documentJobId },
-      { 
-        jobId: uniqueJobId,
-        ...RETRYABLE_JOB_OPTIONS,
-      },
+      `doc-${documentJobId}`,
     );
+  }
+
+  async hasUnfinishedJob(
+    queueName: RecoverableQueueName,
+    productEntityId: string,
+  ): Promise<boolean> {
+    const jobId = `${QUEUE_JOB_ID_PREFIX[queueName]}${productEntityId}`;
+    const job = await this.getQueue(queueName).getJob(jobId);
+    if (!job) return false;
+    const state = await job.getState();
+    return state !== 'completed' && state !== 'failed';
   }
 
   async retryFailedJob(

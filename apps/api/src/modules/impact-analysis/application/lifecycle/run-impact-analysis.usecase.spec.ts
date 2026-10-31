@@ -152,9 +152,12 @@ describe('RunImpactAnalysisUseCase', () => {
     artifactRepo.listBySnapshot.mockResolvedValue([
       { id: 'art1', artifactKey: 'api:booking.controller', artifactType: 'CODE', filePath: 'booking.ts', name: 'BookingController', startLine: 1, endLine: 10 } as any
     ]);
-    retrievalService.retrieve.mockResolvedValue([
-      { artifactKey: 'api:booking.controller', retrievalMethod: 'KEYWORD', score: 0.9, retrievalSignals: ['VECTOR'], suggestion: 'Check cancel' } as any
-    ]);
+    retrievalService.retrieve.mockResolvedValue({
+      artifacts: [
+        { artifactKey: 'api:booking.controller', retrievalMethod: 'KEYWORD', score: 0.9, retrievalSignals: ['VECTOR'], suggestion: 'Check cancel' } as any,
+      ],
+      diagnostics: { strategy: 'hybrid', vectorStatus: 'USED' },
+    });
     evidenceRepo.listByArtifactIds.mockResolvedValue([
       { id: 'ev1', artifactId: 'art1', excerpt: 'code' } as any
     ]);
@@ -196,7 +199,11 @@ describe('RunImpactAnalysisUseCase', () => {
       stage: 'DONE',
       progress: 100,
       metadata: expect.objectContaining({
-        retrieval: expect.objectContaining({ strategy: 'hybrid', maxArtifacts: 20 }),
+        retrieval: expect.objectContaining({
+          strategy: 'hybrid',
+          vectorStatus: 'USED',
+          maxArtifacts: 20,
+        }),
         llm: expect.objectContaining({ provider: 'fake-provider', model: 'fake-model', inputTokens: 100 }),
         domainPack: expect.objectContaining({ id: 'test-pack' })
       })
@@ -394,9 +401,10 @@ describe('RunImpactAnalysisUseCase', () => {
     artifactRepo.listBySnapshot.mockResolvedValue([
       { id: 'art1', artifactKey: 'file1', artifactType: 'CODE', filePath: 'file1.ts', name: 'File1' } as any,
     ]);
-    retrievalService.retrieve.mockResolvedValue([
-      { artifactKey: 'file1', retrievalMethod: 'KEYWORD', score: 0.9 } as any,
-    ]);
+    retrievalService.retrieve.mockResolvedValue({
+      artifacts: [{ artifactKey: 'file1', retrievalMethod: 'KEYWORD', score: 0.9 } as any],
+      diagnostics: { strategy: 'hybrid', vectorStatus: 'USED' },
+    });
     evidenceRepo.listByArtifactIds.mockResolvedValue([
       { id: 'ev1', artifactId: 'art1', excerpt: 'code' } as any,
     ]);

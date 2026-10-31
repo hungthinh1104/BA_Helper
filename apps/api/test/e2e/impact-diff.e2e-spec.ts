@@ -100,6 +100,9 @@ describe('Impact Diff Endpoint (e2e)', () => {
       data: {
         id: baseAnalysisId,
         requirementRevisionId: rev1Id,
+        requirementId: reqId,
+        projectId,
+        repositoryId,
         snapshotId,
         sourceTargetId: targetId,
         requestKey: crypto.randomUUID(),
@@ -114,7 +117,7 @@ describe('Impact Diff Endpoint (e2e)', () => {
     });
 
     await prisma.traceabilityLink.create({
-      data: { impactAnalysisId: baseAnalysisId, artifactId: art1Id, linkType: 'AFFECTED', linkBasis: 'INFERRED', reviewStatus: 'CONFIRMED' },
+      data: { impactAnalysisId: baseAnalysisId, snapshotId, artifactId: art1Id, linkType: 'AFFECTED', linkBasis: 'INFERRED', reviewStatus: 'CONFIRMED' },
     });
 
     const u1Id = crypto.randomUUID();
@@ -140,6 +143,9 @@ describe('Impact Diff Endpoint (e2e)', () => {
       data: {
         id: currentAnalysisId,
         requirementRevisionId: rev2Id,
+        requirementId: reqId,
+        projectId,
+        repositoryId,
         snapshotId,
         sourceTargetId: targetId,
         requestKey: crypto.randomUUID(),
@@ -156,7 +162,7 @@ describe('Impact Diff Endpoint (e2e)', () => {
     });
 
     await prisma.traceabilityLink.create({
-      data: { impactAnalysisId: currentAnalysisId, artifactId: art2Id, linkType: 'AFFECTED', linkBasis: 'INFERRED', reviewStatus: 'CONFIRMED' },
+      data: { impactAnalysisId: currentAnalysisId, snapshotId, artifactId: art2Id, linkType: 'AFFECTED', linkBasis: 'INFERRED', reviewStatus: 'CONFIRMED' },
     });
 
     const res = await request(app.getHttpServer())

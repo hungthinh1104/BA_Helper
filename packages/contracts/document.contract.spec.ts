@@ -1,5 +1,6 @@
 import {
   approvedImpactReportResponseSchema,
+  documentJobSchema,
   finalReviewedReportResponseSchema,
   multiRepoApprovedReportResponseSchema,
   reviewedReportSnapshotSchema,
@@ -26,15 +27,19 @@ const reportSnapshot = {
     reviewStatus: 'CONFIRMED',
     reviewDecision: null,
   }],
-  evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary,
+  evidenceQualitySummarySnapshot: {
+    ...emptyEvidenceQualitySummary,
+    strongSourceEvidence: 1,
+    evidenced: 1,
+  },
   evaluationContextSnapshot: null,
   createdAt: '2026-10-29T12:00:00.000Z',
 };
 
 const reviewCompletion = {
   analysisId: reportSnapshot.analysisId,
-  totalLinks: 0,
-  accepted: 0,
+  totalLinks: 1,
+  accepted: 1,
   rejected: 0,
   needsReview: 0,
   needsMoreEvidence: 0,
@@ -122,6 +127,31 @@ describe('report domain pack provenance contracts', () => {
   });
 });
 
+describe('document job response contract', () => {
+  const baseJob = {
+    id: '00000000-0000-4000-8000-000000000031',
+    analysisId: '00000000-0000-4000-8000-000000000032',
+    snapshotId: '00000000-0000-4000-8000-000000000033',
+    documentType: 'IMPACT_REPORT' as const,
+    status: 'FAILED' as const,
+    progress: 0,
+    attemptCount: 1,
+    createdAt: '2026-10-29T12:00:00.000Z',
+    updatedAt: '2026-10-29T12:00:00.000Z',
+  };
+
+  it('accepts only the stable public failure code and rejects persisted exception text', () => {
+    expect(documentJobSchema.safeParse({
+      ...baseJob,
+      error: { code: 'DOCUMENT_GENERATION_FAILED' },
+    }).success).toBe(true);
+    expect(documentJobSchema.safeParse({
+      ...baseJob,
+      error: { message: 'redis://user:password@redis.invalid' },
+    }).success).toBe(false);
+  });
+});
+
 describe('reviewed report snapshot response contracts', () => {
   it('accepts the persisted evidence-quality snapshot shape', () => {
     expect(reviewedReportSnapshotSchema.parse(reportSnapshot)).toEqual(reportSnapshot);
@@ -133,7 +163,7 @@ describe('reviewed report snapshot response contracts', () => {
       createdAt: reportSnapshot.createdAt,
       reviewCompletion,
       reviewDecisionsSnapshot: reportSnapshot.reviewDecisionsSnapshot,
-      evidenceQualitySummarySnapshot: emptyEvidenceQualitySummary,
+      evidenceQualitySummarySnapshot: reportSnapshot.evidenceQualitySummarySnapshot,
       evaluationContextSnapshot: null,
       createdByUserId: null,
     }).success).toBe(true);
@@ -162,5 +192,45 @@ describe('reviewed report snapshot response contracts', () => {
       createdByUserId: null,
     });
     expect(malformedFinalReport.success).toBe(false);
+  });
+
+  it('validates the frozen clarification state and rejects unsupported statuses', () => {
+    const clarification = {
+      id: '00000000-0000-4000-8000-000000000024',
+      question: 'When does the refund begin?',
+      answer: null,
+      status: 'OPEN',
+      createdAt: '2026-10-29T12:00:00.000Z',
+    };
+    expect(reviewedReportSnapshotSchema.safeParse({
+      ...reportSnapshot,
+      clarificationsSnapshot: [clarification],
+    }).success).toBe(true);
+    expect(reviewedReportSnapshotSchema.safeParse({
+      ...reportSnapshot,
+      clarificationsSnapshot: [{ ...clarification, status: 'PENDING' }],
+    }).success).toBe(false);
+  });
+
+  it('rejects a shape-valid decision array that contradicts the frozen quality counts', () => {
+    const inconsistentSnapshot = reviewedReportSnapshotSchema.safeParse({
+      ...reportSnapshot,
+      reviewDecisionsSnapshot: [],
+    });
+    expect(inconsistentSnapshot.success).toBe(false);
+
+    const inconsistentFinalReport = finalReviewedReportResponseSchema.safeParse({
+      analysisId: reportSnapshot.analysisId,
+      snapshotId: reportSnapshot.id,
+      locale: 'en',
+      markdown: '# Frozen report',
+      createdAt: reportSnapshot.createdAt,
+      reviewCompletion,
+      reviewDecisionsSnapshot: [],
+      evidenceQualitySummarySnapshot: reportSnapshot.evidenceQualitySummarySnapshot,
+      evaluationContextSnapshot: null,
+      createdByUserId: null,
+    });
+    expect(inconsistentFinalReport.success).toBe(false);
   });
 });

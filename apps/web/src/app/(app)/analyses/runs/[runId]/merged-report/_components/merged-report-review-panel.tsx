@@ -14,7 +14,7 @@ interface MergedReportReviewPanelProps {
   reviewDecisionsLoading: boolean
   canReview: boolean
   isSubmitting: boolean
-  onSubmitReview: (data: { decision: "ACCEPTED" | "REJECTED" | "NEEDS_MORE_CLARIFICATION"; note: string }) => void
+  onSubmitReview: (data: { decision: "ACCEPTED" | "REJECTED" | "NEEDS_MORE_CLARIFICATION"; note: string }) => Promise<void>
 }
 
 export function MergedReportReviewPanel({
@@ -31,14 +31,14 @@ export function MergedReportReviewPanel({
   const [decision, setDecision] = useState<"ACCEPTED" | "REJECTED" | "NEEDS_MORE_CLARIFICATION" | null>(null)
   const [note, setNote] = useState("")
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     if (!decision) return
-    onSubmitReview({ decision, note })
-    // The parent controls the mutation. We could clear the form here, but usually it's better to clear it when the parent mutation succeeds. 
-    // For simplicity, since the parent handles toast on success, we can just let parent clear it if we passed a callback or just clear it optimistically.
-    // The user requested: "Page giữ mutation handlers, panel chỉ render form và gọi callback."
-    // Let's assume parent doesn't reset form state inside panel directly, so we reset on submit.
+    try {
+      await onSubmitReview({ decision, note })
+    } catch {
+      return
+    }
     setDecision(null)
     setNote("")
   }
@@ -97,7 +97,7 @@ export function MergedReportReviewPanel({
         ))}
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={(event) => void handleSubmit(event)} className="space-y-3">
         <div className="flex flex-wrap gap-2">
           {[
             { value: "ACCEPTED", label: t("accept"), icon: ShieldCheck },

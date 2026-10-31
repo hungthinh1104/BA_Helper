@@ -10,6 +10,7 @@ import { createHash } from 'node:crypto';
 
 const TENANT_A = { tenantId: 'tenant-a', projectId: 'proj-a', repositoryId: 'repo-a', snapshotId: 'snap-a' };
 const TENANT_B = { tenantId: 'tenant-b', projectId: 'proj-b', repositoryId: 'repo-b', snapshotId: 'snap-b' };
+const EMBEDDING_MODEL = 'text-embedding-3-small';
 
 const ARTIFACT = {
   id: 'art-1',
@@ -54,6 +55,7 @@ describe('EmbeddingChunkRepository — multi-tenant isolation', () => {
         projectId: TENANT_A.projectId,
         repositoryId: TENANT_A.repositoryId,
         snapshotId: TENANT_A.snapshotId,
+        embeddingModel: EMBEDDING_MODEL,
         queryEmbedding: new Array(1536).fill(0.1),
       });
 
@@ -84,6 +86,7 @@ describe('EmbeddingChunkRepository — multi-tenant isolation', () => {
         projectId: TENANT_A.projectId,
         repositoryId: TENANT_A.repositoryId,
         snapshotId: TENANT_A.snapshotId,
+        embeddingModel: EMBEDDING_MODEL,
         queryEmbedding: new Array(1536).fill(0.1),
       });
 
@@ -102,6 +105,7 @@ describe('EmbeddingChunkRepository — multi-tenant isolation', () => {
         projectId: TENANT_A.projectId,
         repositoryId: TENANT_A.repositoryId,
         snapshotId: 'new-snapshot-id',
+        embeddingModel: EMBEDDING_MODEL,
         queryEmbedding: new Array(1536).fill(0.1),
       });
 
@@ -114,6 +118,7 @@ describe('EmbeddingChunkRepository — multi-tenant isolation', () => {
       
       // Ensure new snapshot id is passed to the query.
       expect(valuesPassedToPrisma).toContain('new-snapshot-id');
+      expect(valuesPassedToPrisma).toContain(EMBEDDING_MODEL);
       // Ensure old snapshot chunks are not returned by ensuring old-snapshot-id is not in the query parameters.
       expect(valuesPassedToPrisma).not.toContain('old-snapshot-id');
     });
@@ -181,7 +186,7 @@ describe('EmbedSnapshotArtifactsUseCase — stableChunkId cache semantics', () =
     useCase = new EmbedSnapshotArtifactsUseCase(chunkRepoMock, provider, snapshotRepoMock);
   });
 
-  it('skips re-embed when same snapshotId + stableChunkId + contentHash already exists', async () => {
+  it('skips re-embed when the same snapshot has a matching chunk identity, hash, and chunker version', async () => {
     const builtChunk = ArtifactChunkBuilder.build({
       artifact: ARTIFACT as any,
       evidence: ARTIFACT.evidences as any,
@@ -191,7 +196,11 @@ describe('EmbedSnapshotArtifactsUseCase — stableChunkId cache semantics', () =
     const stableChunkId = builtChunk.stableChunkId;
 
     // Exact same chunk already in DB for this snapshot
-    chunkRepoMock.listBySnapshot.mockResolvedValue([{ stableChunkId, contentHash }]);
+    chunkRepoMock.listBySnapshot.mockResolvedValue([{
+      stableChunkId,
+      contentHash,
+      chunkerVersion: builtChunk.chunkerVersion,
+    }]);
 
     await useCase.execute({ snapshotId: 'snap-1' });
 
@@ -209,7 +218,11 @@ describe('EmbedSnapshotArtifactsUseCase — stableChunkId cache semantics', () =
 
     // DB has this stableChunkId but with an OLD content hash → content changed → must re-embed
     chunkRepoMock.listBySnapshot.mockResolvedValue([
-      { stableChunkId, contentHash: 'old-hash-from-previous-commit' },
+      {
+        stableChunkId,
+        contentHash: 'old-hash-from-previous-commit',
+        chunkerVersion: builtChunk.chunkerVersion,
+      },
     ]);
 
     await useCase.execute({ snapshotId: 'snap-1' });

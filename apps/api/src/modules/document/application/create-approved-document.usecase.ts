@@ -1,9 +1,13 @@
-import { DocumentRepository } from "@ba-helper/backend-runtime";
+import type { DocumentRepository } from "@ba-helper/backend-runtime";
 
 export class CreateApprovedDocumentUseCase {
   constructor(private readonly repository: DocumentRepository) {}
 
-  async execute(params: { impactAnalysisId: string; content: string }) {
+  async execute(params: {
+    impactAnalysisId: string;
+    reviewedReportSnapshotId: string;
+    content: string;
+  }) {
     return this.repository.upsertApproved(params);
   }
 }

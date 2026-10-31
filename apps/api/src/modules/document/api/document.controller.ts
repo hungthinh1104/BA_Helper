@@ -14,6 +14,7 @@ import {
   reviewedReportSnapshotSchema, 
   finalReviewedReportResponseSchema,
   documentJobSchema,
+  documentJobFailureCode,
   localeAwareReportQuerySchema,
   RequestUser 
 } from '@ba-helper/contracts';
@@ -193,7 +194,7 @@ export class DocumentController {
       progress: job.progress,
       requestKey: job.requestKey,
       attemptCount: job.attemptCount,
-      error: job.error,
+      error: job.error == null ? null : { code: documentJobFailureCode },
       generatedDocumentId: job.generatedDocumentId,
       lastStartedAt: job.lastStartedAt?.toISOString(),
       completedAt: job.completedAt?.toISOString(),

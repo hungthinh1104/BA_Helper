@@ -11,10 +11,20 @@ import {
 import {
   projectCreateResponseSchema,
   repositoryCreateResponseSchema,
+  repositoryListResponseSchema,
+  repositorySnapshotListResponseSchema,
+  repositorySnapshotDriftResponseSchema,
   scanJobResponseSchema,
   requirementCreateResponseSchema,
   requirementRevisionCreateResponseSchema,
   impactAnalysisResponseSchema,
+  analysisWorkspaceResponseSchema,
+  impactAnalysisListResponseSchema,
+  lineageTimelineResponseSchema,
+  driftFreshnessRecommendationSchema,
+  impactGraphResponseSchema,
+  qaCoverageResponseSchema,
+  reviewQueueResponseSchema,
   approvedImpactReportResponseSchema,
 } from '@ba-helper/contracts';
 import { PrismaService } from "@ba-helper/backend-runtime";
@@ -92,6 +102,33 @@ describe('Analysis Flow (E2E)', () => {
 
     // Step 4: Test helper publishes READY snapshot
     const { snapshot, target } = await seedScanJobCompletion(prisma, scanJobId);
+
+    const repositoryListResponse = await request(app.getHttpServer())
+      .get(`/api/v1/projects/${projectId}/repositories`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    const repositoryList = repositoryListResponseSchema.parse(repositoryListResponse.body);
+    expect(repositoryList.items.map((item) => item.id)).toContain(repositoryId);
+
+    const snapshotsResponse = await request(app.getHttpServer())
+      .get(`/api/v1/projects/${projectId}/repositories/${repositoryId}/snapshots`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    const snapshots = repositorySnapshotListResponseSchema.parse(snapshotsResponse.body);
+    expect(snapshots.items.map((item) => item.id)).toContain(snapshot.id);
+
+    const driftResponse = await request(app.getHttpServer())
+      .get(`/api/v1/projects/${projectId}/repositories/${repositoryId}/snapshots/${snapshot.id}/drift`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    const drift = repositorySnapshotDriftResponseSchema.parse(driftResponse.body);
+    expect(drift).toMatchObject({
+      projectId,
+      repositoryId,
+      baseSnapshotId: snapshot.id,
+      targetSnapshotId: snapshot.id,
+      status: 'NO_DRIFT',
+    });
 
     // Step 5: POST /api/v1/projects/:projectId/requirements
     const createReqRes = await request(app.getHttpServer())
@@ -175,6 +212,62 @@ describe('Analysis Flow (E2E)', () => {
     // Step 8: Test helper completes analysis to WAITING_FOR_REVIEW
     const { insightId } = await seedImpactAnalysisCompletion(prisma, analysisId);
 
+    // Verify the successful API responses consumed by the analysis workspace hooks.
+    const detailRes = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(impactAnalysisResponseSchema.parse(detailRes.body)).toMatchObject({
+      id: analysisId,
+      status: 'WAITING_FOR_REVIEW',
+    });
+
+    const listRes = await request(app.getHttpServer())
+      .get(`/api/v1/projects/${projectId}/analyses?limit=10&offset=0`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(impactAnalysisListResponseSchema.parse(listRes.body).items)
+      .toEqual(expect.arrayContaining([expect.objectContaining({ id: analysisId })]));
+
+    const workspaceRes = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/workspace`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    analysisWorkspaceResponseSchema.parse(workspaceRes.body);
+
+    const lineageRes = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/lineage`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(lineageTimelineResponseSchema.parse(lineageRes.body).currentAnalysisId)
+      .toBe(analysisId);
+
+    const driftFreshnessRes = await request(app.getHttpServer())
+      .get(`/api/v1/projects/${projectId}/analyses/${analysisId}/drift-freshness`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(driftFreshnessRecommendationSchema.parse(driftFreshnessRes.body).status)
+      .toBe('CURRENT');
+
+    const graphRes = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/graph`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    impactGraphResponseSchema.parse(graphRes.body);
+
+    const qaCoverageRes = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/qa-coverage`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    qaCoverageResponseSchema.parse(qaCoverageRes.body);
+
+    const reviewQueueRes = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/review-queue`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(reviewQueueResponseSchema.parse(reviewQueueRes.body).analysisId)
+      .toBe(analysisId);
+
     // Step 9: POST /api/v1/insights/:insightId/review
     const reviewRes = await request(app.getHttpServer())
       .post(`/api/v1/insights/${insightId}/confirm`)
@@ -196,7 +289,7 @@ describe('Analysis Flow (E2E)', () => {
     
     expect(finalizeRes.status).toBe(201);
 
-    expect(finalizeRes.body.status).toBe('COMPLETED');
+    expect(impactAnalysisResponseSchema.parse(finalizeRes.body).status).toBe('COMPLETED');
 
     // Step 10.5: Run async document generation worker
     const documentJob = await prisma.documentJob.findFirst({

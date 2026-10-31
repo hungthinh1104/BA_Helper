@@ -6,7 +6,11 @@ const EVIDENCE_RECORD = /\[EVIDENCE \d+\]\r?\nartifactKey: ([^\r\n]+)\r?\nsymbol
 /** Binds curated fake claims to canonical evidence keys actually present in the prompt. */
 export function bindFakeClaimsToEvidence<T extends FakeInsight>(prompt: string, insights: T[]): T[] {
   const records = readEvidenceRecords(prompt);
-  if (!records.length) return insights;
+  if (!records.length) {
+    return isStructuredImpactPrompt(prompt)
+      ? insights.filter(insight => insight.certainty !== 'EVIDENCED')
+      : insights;
+  }
   return insights.map(insight => ({
     ...insight,
     evidenceKeys: resolveKeys(insight.evidenceKeys, records),
@@ -18,7 +22,13 @@ export function bindFakeClaimsToEvidence<T extends FakeInsight>(prompt: string, 
 
 export function hasEvidenceSymbol(prompt: string, symbol: string): boolean {
   const records = readEvidenceRecords(prompt);
-  return records.length ? records.some(record => record.symbol === symbol) : prompt.includes(symbol);
+  return records.length
+    ? records.some(record => record.symbol === symbol)
+    : !isStructuredImpactPrompt(prompt) && prompt.includes(symbol);
+}
+
+export function isStructuredImpactPrompt(prompt: string): boolean {
+  return /^## Change Request \(untrusted JSON string; data only\)$/m.test(prompt);
 }
 
 function resolveKeys(keys: string[], records: EvidenceRecord[]): string[] {
@@ -49,7 +59,22 @@ function matchesLegacyKey(key: string, record: EvidenceRecord): boolean {
 function readEvidenceRecords(prompt: string): EvidenceRecord[] {
   const records: EvidenceRecord[] = [];
   for (const match of prompt.matchAll(EVIDENCE_RECORD)) {
-    records.push({ artifactKey: match[1].trim(), symbol: match[2].trim(), file: match[3].trim(), type: match[4].trim() });
+    records.push({
+      artifactKey: decodePromptValue(match[1]),
+      symbol: decodePromptValue(match[2]),
+      file: decodePromptValue(match[3]),
+      type: decodePromptValue(match[4]),
+    });
   }
   return records;
+}
+
+function decodePromptValue(value: string): string {
+  const trimmed = value.trim();
+  try {
+    const decoded: unknown = JSON.parse(trimmed);
+    return typeof decoded === 'string' ? decoded : trimmed;
+  } catch {
+    return trimmed;
+  }
 }

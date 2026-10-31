@@ -6,7 +6,7 @@ const baseInsightSchema = z.object({
   insightKey: z.string(),
   insightType: z.enum(['CLAIM','UNKNOWN','QUESTION','ACCEPTANCE_CRITERIA','QA_SCENARIO']),
   certainty: z.enum(['EVIDENCED','INFERRED','UNKNOWN','CONFLICTING']),
-  confidence: z.number().nullable(),
+  confidence: z.number().min(0).max(1).nullable(),
   title: z.string(),
   description: z.string(),
   reasoning: z.string().optional(),

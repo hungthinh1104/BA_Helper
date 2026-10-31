@@ -206,10 +206,20 @@ AI_PROVIDER=google EMBEDDING_PROVIDER=fake pnpm --dir apps/api smoke:public-gith
 AI_PROVIDER=google EMBEDDING_PROVIDER=google pnpm --dir apps/api smoke:public-github:real-path
 ```
 
-When running the containerized stack, use the dedicated migration owner first:
+When applying a schema change that replaces a key or constraint used by the
+running API or worker (including the reviewed-report snapshot identity and
+document-job report-scope cutovers), drain all API and worker writers before
+migration. This release requires a maintenance window: older writers still use
+the analysis-wide generated-document key and do not write the document-job
+analysis provenance required by the new schema. Stop any API or worker
+instances outside this Compose project as well. Then run the migration owner
+and start the updated services only after migration succeeds. Pass the same
+Compose file and project arguments to each command when using overrides.
 
 ```bash
-docker compose up -d --build migrate api worker web
+docker compose stop api worker
+docker compose up --build migrate
+docker compose up -d --build api worker web
 ```
 
 The compose services are split by responsibility:

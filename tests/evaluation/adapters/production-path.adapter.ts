@@ -27,7 +27,7 @@ export class ProductionPathEvaluationAdapter implements EvaluationAdapter {
   private readonly fixtureRoot = path.join(process.cwd(), 'tests/fixtures');
   private readonly scanCache = new Map<
     string,
-    { projectId: string; snapshotId: string; sourceTargetId: string }
+    { projectId: string; repositoryId: string; snapshotId: string; sourceTargetId: string }
   >();
 
   constructor(
@@ -55,6 +55,9 @@ export class ProductionPathEvaluationAdapter implements EvaluationAdapter {
     const analysis = await this.prisma.impactAnalysis.create({
       data: {
         requirementRevisionId: revision.id,
+        requirementId: requirement.id,
+        projectId: scan.projectId,
+        repositoryId: scan.repositoryId,
         snapshotId: scan.snapshotId,
         sourceTargetId: scan.sourceTargetId,
         status: 'QUEUED',
@@ -74,6 +77,7 @@ export class ProductionPathEvaluationAdapter implements EvaluationAdapter {
 
   private async ensureScan(targetFixture: string): Promise<{
     projectId: string;
+    repositoryId: string;
     snapshotId: string;
     sourceTargetId: string;
   }> {
@@ -111,6 +115,7 @@ export class ProductionPathEvaluationAdapter implements EvaluationAdapter {
 
     const value = {
       projectId: project.id,
+      repositoryId: repository.id,
       snapshotId: completed.snapshotId,
       sourceTargetId: completed.sourceTargetId,
     };

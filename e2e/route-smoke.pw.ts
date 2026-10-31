@@ -24,9 +24,12 @@ test('direct navigation resolves all inventoried user-facing routes', async ({ p
   test.setTimeout(600_000)
   const seed = seedDemo()
   const pageErrors: string[] = []
+  let routeUnderTest = 'authentication setup'
   const translationErrors: string[] = []
   const apiServerErrors: string[] = []
-  page.on('pageerror', error => pageErrors.push(error.message))
+  page.on('pageerror', error => {
+    pageErrors.push(`${routeUnderTest} (${new URL(page.url()).pathname}): ${error.message}`)
+  })
   page.on('console', message => {
     if (message.type() === 'error' && message.text().includes('MISSING_MESSAGE')) {
       translationErrors.push(message.text())
@@ -67,6 +70,7 @@ test('direct navigation resolves all inventoried user-facing routes', async ({ p
   ]
 
   for (const route of routes) {
+    routeUnderTest = route.name
     await test.step(route.name, async () => {
       const response = await page.goto(route.path, { waitUntil: 'domcontentloaded' })
       expect(response?.status(), `${route.path} returned a server error`).toBeLessThan(500)
@@ -81,6 +85,7 @@ test('direct navigation resolves all inventoried user-facing routes', async ({ p
     })
   }
 
+  routeUnderTest = 'query-state history and refresh'
   await page.goto(`/analyses/${seed.analysisId}?view=review&locale=en-US`)
   await expect(page).toHaveURL(new RegExp(`view=review.*locale=en-US|locale=en-US.*view=review`))
   await page.goto(`/requirements/${seed.requirementId}`)

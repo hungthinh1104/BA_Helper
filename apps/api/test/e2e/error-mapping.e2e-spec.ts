@@ -82,6 +82,9 @@ describe('Error Mapping (E2E)', () => {
     const analysis = await prisma.impactAnalysis.create({
       data: {
         requirementRevisionId: revision.id,
+        requirementId: requirement.id,
+        projectId: project.id,
+        repositoryId: repository.id,
         snapshotId: snapshot.id,
         sourceTargetId: target.id,
         requestKey: crypto.randomUUID(),
@@ -211,6 +214,9 @@ describe('Error Mapping (E2E)', () => {
     const analysis = await prisma.impactAnalysis.create({
       data: {
         requirementRevisionId: revision.id,
+        requirementId: requirement.id,
+        projectId: project.id,
+        repositoryId: repository.id,
         snapshotId: snapshot.id,
         sourceTargetId: target.id,
         requestKey: 'req-1',

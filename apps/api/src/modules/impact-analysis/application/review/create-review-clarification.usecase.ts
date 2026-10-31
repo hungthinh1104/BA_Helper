@@ -39,11 +39,15 @@ export class CreateReviewClarificationRequestUseCase {
       );
     }
 
-    return this.clarificationRepo.create({
+    const clarification = await this.clarificationRepo.create({
       analysisId,
       reviewDecisionId: decision.id,
       question: payload.question,
       createdByUserId: actor.id,
     });
+    if (!clarification) {
+      throw new AppError('IMPACT_ANALYSIS_NOT_FOUND', 'Impact analysis not found.');
+    }
+    return clarification;
   }
 }

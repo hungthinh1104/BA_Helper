@@ -30,6 +30,23 @@ export type RetrievedArtifact = {
   suggestion?: unknown;
 };
 
+export type RetrievalVectorStatus =
+  | 'USED'
+  | 'NO_COMPATIBLE_CHUNKS'
+  | 'MODEL_MISMATCH'
+  | 'FAILED'
+  | 'NOT_READY';
+
+export type RetrievalRunDiagnostics = {
+  strategy: 'hybrid' | 'lexical_fallback';
+  vectorStatus: RetrievalVectorStatus;
+};
+
+export type RetrievalResult = {
+  artifacts: RetrievedArtifact[];
+  diagnostics: RetrievalRunDiagnostics;
+};
+
 export interface RetrievalPort {
-  retrieve(request: RetrievalRequest): Promise<RetrievedArtifact[]>;
+  retrieve(request: RetrievalRequest): Promise<RetrievalResult>;
 }

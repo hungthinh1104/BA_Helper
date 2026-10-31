@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { Prisma, ReviewClarificationStatus } from '@prisma/client';;
+import { Prisma, ReviewClarificationStatus } from '@prisma/client';
+import { lockReviewAnalysisForMutation } from './review-analysis-lock';
 
 const reviewClarificationInclude = {
   createdByUser: true,
@@ -20,16 +21,19 @@ export class ReviewClarificationRepository {
     question: string;
     createdByUserId: string;
   }) {
-    return this.prisma.reviewClarificationRequest.create({
-      data: {
-        analysisId: data.analysisId,
-        reviewDecisionId: data.reviewDecisionId,
-        question: data.question,
-        createdByUserId: data.createdByUserId,
-        status: 'OPEN',
-      },
-      include: reviewClarificationInclude,
-    });
+    return this.prisma.$transaction(async (tx) => {
+      if (!(await lockReviewAnalysisForMutation(tx, data.analysisId))) return null;
+      return tx.reviewClarificationRequest.create({
+        data: {
+          analysisId: data.analysisId,
+          reviewDecisionId: data.reviewDecisionId,
+          question: data.question,
+          createdByUserId: data.createdByUserId,
+          status: 'OPEN',
+        },
+        include: reviewClarificationInclude,
+      });
+    }, { maxWait: 25_000, timeout: 30_000 });
   }
 
   async findById(id: string) {
@@ -60,15 +64,27 @@ export class ReviewClarificationRepository {
   }
 
   async answer(id: string, answer: string, answeredByUserId: string) {
-    return this.prisma.reviewClarificationRequest.update({
-      where: { id },
-      data: {
-        answer,
-        answeredByUserId,
-        answeredAt: new Date(),
-        status: 'ANSWERED',
-      },
-      include: reviewClarificationInclude,
-    });
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.reviewClarificationRequest.findUnique({
+        where: { id },
+        select: { analysisId: true },
+      });
+      if (!existing || !(await lockReviewAnalysisForMutation(tx, existing.analysisId))) return null;
+
+      const updated = await tx.reviewClarificationRequest.updateMany({
+        where: { id, status: ReviewClarificationStatus.OPEN },
+        data: {
+          answer,
+          answeredByUserId,
+          answeredAt: new Date(),
+          status: ReviewClarificationStatus.ANSWERED,
+        },
+      });
+      const clarification = await tx.reviewClarificationRequest.findUnique({
+        where: { id },
+        include: reviewClarificationInclude,
+      });
+      return clarification ? { clarification, changed: updated.count === 1 } : null;
+    }, { maxWait: 25_000, timeout: 30_000 });
   }
 }

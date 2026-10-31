@@ -198,10 +198,18 @@ describe('public GitHub smoke helpers', () => {
       workspace,
       scanDurationMs: 1000,
       analysisDurationMs: 1000,
+      vectorInfo: {
+        indexStatus: 'VECTOR_READY',
+        embeddingChunkCount: 1,
+        embeddingModels: ['gemini-embedding-001'],
+        vectorSignalCount: 1,
+        hybridSignalCount: 1,
+      },
     });
 
     expect(summary.scan.snapshotId).toBe(scanJob.result.snapshotId);
     expect(summary.diagnostics.blockerSecurityCount).toBe(0);
+    expect(summary.vector?.embeddingModel).toBe('gemini-embedding-001');
     expect(() => assertTempWorkspaceCleanup(summary)).not.toThrow();
   });
 

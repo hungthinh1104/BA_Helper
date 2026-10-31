@@ -11,6 +11,8 @@ export const ImpactAnalysisPolicy = {
   canFinalize: (params: { status: 'WAITING_FOR_REVIEW' | string; isStale: boolean }) => {
     return params.status === 'WAITING_FOR_REVIEW' && !params.isStale;
   },
+  canRetryQueueEnqueueFailure: (params: { status: string; errorCode: string | null }) =>
+    params.status === 'FAILED' && params.errorCode === 'QUEUE_ENQUEUE_FAILED',
   validateLifecycleState: (currentState: string, event: 'REVIEW' | 'FINALIZE' | 'CANCEL') => {
     switch (event) {
       case 'REVIEW':

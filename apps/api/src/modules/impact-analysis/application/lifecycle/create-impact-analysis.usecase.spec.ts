@@ -3,7 +3,13 @@ import { Injectable } from "@nestjs/common";
 import { CreateImpactAnalysisUseCase } from './create-impact-analysis.usecase';
 import type { RequirementRepository } from '../../../requirement/infrastructure/requirement.repository';
 import { Prisma } from '@prisma/client';
-import { DomainPackRegistry, PrismaService, ImpactAnalysisRepository, QueueService, EventLogService } from '@ba-helper/backend-runtime';
+import { DomainPackRegistry } from '@ba-helper/backend-runtime';
+import type {
+  PrismaService,
+  ImpactAnalysisRepository,
+  QueueService,
+  EventLogService,
+} from '@ba-helper/backend-runtime';
 
 describe('CreateImpactAnalysisUseCase', () => {
   let useCase: CreateImpactAnalysisUseCase;
@@ -17,6 +23,7 @@ describe('CreateImpactAnalysisUseCase', () => {
     impactRepo = {
       findByRequestKey: jest.fn(),
       findByComposite: jest.fn(),
+      requeueQueueEnqueueFailure: jest.fn(),
       createQueued: jest.fn(),
       updateStatus: jest.fn(),
     } as unknown as jest.Mocked<ImpactAnalysisRepository>;
@@ -29,7 +36,9 @@ describe('CreateImpactAnalysisUseCase', () => {
       requirement: { findUnique: jest.fn() },
       repositorySnapshot: { findUnique: jest.fn() },
       repositoryTarget: { findUnique: jest.fn() },
+      impactAnalysis: { findUnique: jest.fn() },
       clarificationItem: { findUnique: jest.fn() },
+      reviewClarificationRequest: { findUnique: jest.fn() },
     } as unknown as jest.Mocked<PrismaService>;
     
     eventLog = {
@@ -92,7 +101,13 @@ describe('CreateImpactAnalysisUseCase', () => {
     const result = await useCase.execute(validParams);
 
     expect(result.id).toBe('analysis-1');
-    expect(impactRepo.createQueued).toHaveBeenCalled();
+    expect(impactRepo.createQueued).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requirementId: 'req-1',
+        projectId: 'proj-1',
+        repositoryId: 'repo-1',
+      }),
+    );
     expect(eventLog.recordEvent).toHaveBeenCalledWith(
       expect.objectContaining({ eventType: 'IMPACT_ANALYSIS_QUEUED' }),
     );
@@ -181,6 +196,54 @@ describe('CreateImpactAnalysisUseCase', () => {
     const result = await useCase.execute(validParams);
 
     expect(result.id).toBe('analysis-race');
+    expect(queue.enqueueImpactAnalysis).not.toHaveBeenCalled();
+  });
+
+  it('requeues the same analysis after an explicit retry of a queue enqueue failure', async () => {
+    mockValidState();
+    const failed = {
+      id: 'analysis-queue-failed',
+      status: 'FAILED',
+      error: { code: 'QUEUE_ENQUEUE_FAILED', message: 'queue offline' },
+      updatedAt: new Date('2026-10-31T10:00:00.000Z'),
+      requirementRevisionId: 'rev-1',
+      snapshotId: 'snap-1',
+    };
+    const queued = { ...failed, status: 'QUEUED', error: null };
+    impactRepo.findByComposite
+      .mockResolvedValueOnce(failed as any)
+      .mockResolvedValueOnce(queued as any);
+    impactRepo.requeueQueueEnqueueFailure.mockResolvedValue({ count: 1 } as any);
+
+    const result = await useCase.execute({ ...validParams, actorUserId: 'user-1' });
+
+    expect(result).toMatchObject({ id: failed.id, status: 'QUEUED' });
+    expect(impactRepo.requeueQueueEnqueueFailure).toHaveBeenCalledWith(failed.id);
+    expect(eventLog.recordEvent).toHaveBeenCalledWith(expect.objectContaining({
+      eventType: 'IMPACT_ANALYSIS_QUEUE_RETRY_REQUESTED',
+      actorUserId: 'user-1',
+      payload: expect.objectContaining({
+        impactAnalysisId: failed.id,
+        previousStatus: 'FAILED',
+        nextStatus: 'QUEUED',
+      }),
+    }));
+    expect(queue.enqueueImpactAnalysis).toHaveBeenCalledWith(failed.id);
+  });
+
+  it('does not reopen an analysis failed for a reason other than queue enqueue', async () => {
+    mockValidState();
+    const failed = {
+      id: 'analysis-failed',
+      status: 'FAILED',
+      error: { code: 'ANALYSIS_EXECUTION_FAILED' },
+    };
+    impactRepo.findByComposite.mockResolvedValue(failed as any);
+
+    const result = await useCase.execute(validParams);
+
+    expect(result).toBe(failed);
+    expect(impactRepo.requeueQueueEnqueueFailure).not.toHaveBeenCalled();
     expect(queue.enqueueImpactAnalysis).not.toHaveBeenCalled();
   });
 
@@ -368,6 +431,10 @@ describe('CreateImpactAnalysisUseCase', () => {
       snapshotId: 'snap-1',
       sourceTargetId: 'target-1',
       requestKey: 'req-key',
+      multiRepoRunId: null,
+      derivedFromAnalysisId: null,
+      sourceClarificationId: null,
+      reviewClarificationRequestId: null,
       requestedDomainPackId: 'healthcare',
       resolvedDomainPackId: 'healthcare',
       resolvedDomainPackVersion: '0.1.0',
@@ -398,6 +465,10 @@ describe('CreateImpactAnalysisUseCase', () => {
       snapshotId: 'snap-1',
       sourceTargetId: 'target-1',
       requestKey: 'req-key',
+      multiRepoRunId: null,
+      derivedFromAnalysisId: null,
+      sourceClarificationId: null,
+      reviewClarificationRequestId: null,
       metadata: {
         selectedDomainPack: {
           requestedDomainPackId: 'HEALTHCARE@0.1.0',
@@ -432,6 +503,9 @@ describe('CreateImpactAnalysisUseCase', () => {
 
     const mockValidClarification = () => {
       mockValidState();
+      (prisma.impactAnalysis.findUnique as jest.Mock).mockResolvedValue({
+        requirementRevision: { requirement: { projectId: 'proj-1' } },
+      });
       (prisma.clarificationItem.findUnique as jest.Mock).mockResolvedValue({
         id: 'clarification-1',
         impactAnalysisId: 'old-analysis-1',

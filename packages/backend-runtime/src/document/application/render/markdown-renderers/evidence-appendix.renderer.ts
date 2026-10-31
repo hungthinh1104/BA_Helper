@@ -7,7 +7,16 @@ export function renderEvidenceAppendix(context: MarkdownReportRenderContext): st
   const lines: string[] = [];
 
   const approvedInsights = insights.filter((i) => i.reviewStatus !== 'REJECTED');
-  const allEvidence = approvedInsights.flatMap(i => i.evidenceLinks.map(el => ({ insightTitle: i.title, evidence: el.evidence })));
+  const insightEvidence = approvedInsights.flatMap(i =>
+    i.evidenceLinks.map(el => ({ insightTitle: i.title, evidence: el.evidence })),
+  );
+  const traceabilityEvidence = context.traceabilityLinks
+    .filter(link => link.reviewStatus !== 'REJECTED')
+    .flatMap(link => (link.evidenceLinks ?? []).map(linkEvidence => ({
+      insightTitle: link.artifact?.name ?? labels.unknown,
+      evidence: linkEvidence.evidence,
+    })));
+  const allEvidence = [...insightEvidence, ...traceabilityEvidence];
   
   if (allEvidence.length > 0) {
     lines.push(`## ${labels.evidenceAppendix}`);

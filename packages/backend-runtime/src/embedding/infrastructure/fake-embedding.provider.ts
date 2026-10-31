@@ -9,6 +9,7 @@ import { EmbeddingProviderPort, EmbeddingRequest, EmbeddingResult } from '@ba-he
 @Injectable()
 export class FakeEmbeddingProvider extends EmbeddingProviderPort {
   readonly providerName = 'fake';
+  readonly modelName = 'fake-embedding';
 
   async embed(request: EmbeddingRequest): Promise<EmbeddingResult> {
     const dimensions = 1536;
@@ -25,7 +26,7 @@ export class FakeEmbeddingProvider extends EmbeddingProviderPort {
 
     return {
       embeddings,
-      model: 'fake-embedding',
+      model: this.modelName,
       dimensions,
       tokenUsage: request.texts.reduce((sum: number, t: string) => sum + Math.ceil(t.length / 4), 0),
     };

@@ -13,17 +13,20 @@ export class EvidencePackFormatter {
     const formatted = candidates
       .map((candidate, index) => {
         return `[EVIDENCE ${index + 1}]
-artifactKey: ${candidate.artifactKey}
-symbol: ${candidate.symbolName}
-file: ${candidate.filePath}
-type: ${candidate.artifactType}
-retrievalMethod: ${candidate.retrievalMethod}
-retrievalReason: ${candidate.retrievalReason || 'Direct match'}
-excerpt:
-${candidate.excerpt}`;
+artifactKey: ${encodePromptValue(candidate.artifactKey)}
+symbol: ${encodePromptValue(candidate.symbolName)}
+file: ${encodePromptValue(candidate.filePath)}
+type: ${encodePromptValue(candidate.artifactType)}
+retrievalMethod: ${encodePromptValue(candidate.retrievalMethod)}
+retrievalReason: ${encodePromptValue(candidate.retrievalReason || 'Direct match')}
+excerpt: ${encodePromptValue(candidate.excerpt)}`;
       })
       .join('\n\n');
 
     return `UNTRUSTED_REPOSITORY_CONTENT_START\n${formatted}\nUNTRUSTED_REPOSITORY_CONTENT_END`;
   }
+}
+
+function encodePromptValue(value: string): string {
+  return JSON.stringify(value);
 }

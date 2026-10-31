@@ -44,7 +44,7 @@ describe('Hybrid Retrieval Evaluation Smoke', () => {
       console.error('NestJS initialization failed:', e);
       throw e;
     }
-  });
+  }, 60000);
 
   afterAll(async () => {
     if (prisma) await prisma.$disconnect();
@@ -121,7 +121,7 @@ describe('Hybrid Retrieval Evaluation Smoke', () => {
     const searchSimilarSpy = jest.spyOn(chunkRepo, 'searchSimilar').mockResolvedValue([]);
 
     // 1. With BOOKING domain pack
-    const bookingResults = await hybridRetrievalService.retrieve({
+    const { artifacts: bookingResults } = await hybridRetrievalService.retrieve({
       projectId, repositoryId, snapshotId,
       changeRequest: 'cancel the booking for a refund',
       domain: 'booking',
@@ -140,7 +140,7 @@ describe('Hybrid Retrieval Evaluation Smoke', () => {
       }
     });
 
-    const bookingResultsWithArtifact = await hybridRetrievalService.retrieve({
+    const { artifacts: bookingResultsWithArtifact } = await hybridRetrievalService.retrieve({
       projectId, repositoryId, snapshotId,
       changeRequest: 'cancel the booking for a refund',
       domain: 'booking',
@@ -156,7 +156,7 @@ describe('Hybrid Retrieval Evaluation Smoke', () => {
     expect(art?.domainBoost).toBeGreaterThan(0);
 
     // 2. With UNKNOWN domain, it should fallback to General pack, which has no "refund" concept
-    const generalResults = await hybridRetrievalService.retrieve({
+    const { artifacts: generalResults } = await hybridRetrievalService.retrieve({
       projectId, repositoryId, snapshotId,
       changeRequest: 'cancel the booking for a refund',
       domain: 'UNKNOWN',

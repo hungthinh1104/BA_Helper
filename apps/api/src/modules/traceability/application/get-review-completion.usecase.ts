@@ -18,6 +18,14 @@ export class GetReviewCompletionUseCase {
   ) {}
 
   async execute(analysisId: string): Promise<ReviewCompletionResponse> {
+    const result = await this.executeWithReviewDecisions(analysisId);
+    return result.completion;
+  }
+
+  async executeWithReviewDecisions(analysisId: string): Promise<{
+    completion: ReviewCompletionResponse;
+    reviewDecisionsSnapshot: ReturnType<typeof buildEvidenceQualityProjection>['items'];
+  }> {
     const analysis = await this.prisma.impactAnalysis.findUnique({
       where: { id: analysisId },
     });
@@ -93,17 +101,20 @@ export class GetReviewCompletionUseCase {
     }
 
     return {
-      analysisId,
-      totalLinks,
-      accepted,
-      rejected,
-      needsReview,
-      needsMoreEvidence,
-      unreviewed,
-      isComplete,
-      hasReviewedSnapshot,
-      latestSnapshotId: latestSnapshot?.id || null,
-      blockingReasons: Array.from(new Set(blockingReasons)),
+      completion: {
+        analysisId,
+        totalLinks,
+        accepted,
+        rejected,
+        needsReview,
+        needsMoreEvidence,
+        unreviewed,
+        isComplete,
+        hasReviewedSnapshot,
+        latestSnapshotId: latestSnapshot?.id || null,
+        blockingReasons: Array.from(new Set(blockingReasons)),
+      },
+      reviewDecisionsSnapshot: qualityProjection.items,
     };
   }
 }

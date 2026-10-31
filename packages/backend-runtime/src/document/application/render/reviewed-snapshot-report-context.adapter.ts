@@ -12,6 +12,7 @@ import { DEFAULT_REPORT_LOCALE, ReportLocale } from './report-localization';
 import type { ApprovedReportMetadata } from '../../domain/approved-report-metadata';
 import { buildReportReviewCoverageSummaryFromSnapshot } from '../report-review-coverage.summary';
 import { readReportTestTrace } from '../../domain/report-test-trace.snapshot';
+import { reportClarificationsSnapshotSchema } from '@ba-helper/contracts';
 
 @Injectable()
 export class ReviewedSnapshotReportContextAdapter {
@@ -38,11 +39,16 @@ export class ReviewedSnapshotReportContextAdapter {
     let traceabilityLinks = await this.traceabilityRepo.listByAnalysis(analysisId);
     let reviewNotes = await this.reviewNoteRepo.findByAnalysisId(analysisId);
     const dependencyEdges = await this.graphRepo.listBySnapshot(analysis.snapshot.id);
-    const clarifications = await this.clarificationRepo.listByAnalysisId(analysisId);
     let reviewDecisions = await this.decisionRepo.listByAnalysisId(analysisId);
 
     // 2. Snapshot overrides and point-in-time filtering
     const snapshotDate = new Date(snapshot.createdAt);
+    const clarifications = snapshot.clarificationsSnapshot == null
+      ? projectLegacyClarificationsAtSnapshot(
+          await this.clarificationRepo.listByAnalysisId(analysisId),
+          snapshotDate,
+        )
+      : reportClarificationsSnapshotSchema.parse(snapshot.clarificationsSnapshot);
 
     // Filter global review decisions and notes to only those that existed AT snapshot time
     reviewDecisions = reviewDecisions.filter(d => new Date(d.createdAt) <= snapshotDate);
@@ -95,7 +101,7 @@ export class ReviewedSnapshotReportContextAdapter {
       reviewNotes,
       hasUnreviewedItems: !!hasUnreviewed,
       dependencyEdges: dependencyEdges as any[],
-      clarifications: clarifications as any[],
+      clarifications,
       reviewDecisions,
       reviewDecisionsSnapshot,
       evidenceQualitySummarySnapshot,
@@ -120,6 +126,37 @@ export class ReviewedSnapshotReportContextAdapter {
       },
     };
   }
+}
+
+function projectLegacyClarificationsAtSnapshot(
+  clarifications: Array<{
+    id: string;
+    question: string;
+    answer: string | null;
+    createdAt: Date;
+    answeredAt: Date | null;
+    cancelledAt: Date | null;
+  }>,
+  snapshotDate: Date,
+) {
+  return clarifications
+    .filter(clarification => clarification.createdAt <= snapshotDate)
+    .map(clarification => {
+      const wasAnswered = clarification.answeredAt !== null && clarification.answeredAt <= snapshotDate;
+      const wasCancelled = clarification.cancelledAt !== null && clarification.cancelledAt <= snapshotDate;
+      const status: 'OPEN' | 'ANSWERED' | 'CANCELLED' = wasAnswered
+        ? 'ANSWERED'
+        : wasCancelled
+          ? 'CANCELLED'
+          : 'OPEN';
+      return {
+        id: clarification.id,
+        question: clarification.question,
+        answer: wasAnswered ? clarification.answer : null,
+        status,
+        createdAt: clarification.createdAt.toISOString(),
+      };
+    });
 }
 
 function readDomainPackProvenance(analysis: {

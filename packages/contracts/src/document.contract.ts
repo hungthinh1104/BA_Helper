@@ -1,7 +1,25 @@
 import { z } from 'zod';
 import { reportTestTraceSnapshotSchema } from './report-test-trace.contract';
 import { traceabilityReviewDecisionSchema } from './traceability.contract';
+import { validateEvidenceQualitySnapshotConsistency } from './reviewed-report-quality.consistency';
 import { domainPackSelectedBySchema, domainProfileCapabilityStatusSchema } from './domain-pack.contract';
+import { reviewClarificationStatusSchema } from './review-clarification.contract';
+
+export const reportClarificationSnapshotItemSchema = z.object({
+	id: z.string().uuid(),
+	question: z.string().min(1),
+	answer: z.string().nullable(),
+	status: z.union([
+		reviewClarificationStatusSchema,
+		z.enum(['DISMISSED', 'CONVERTED_TO_REVISION']),
+	]),
+	reason: z.string().nullable().optional(),
+	convertedRequirementRevisionId: z.string().uuid().nullable().optional(),
+	createdAt: z.string().datetime(),
+});
+
+export const reportClarificationsSnapshotSchema = z.array(reportClarificationSnapshotItemSchema);
+export type ReportClarificationSnapshotItem = z.infer<typeof reportClarificationSnapshotItemSchema>;
 
 export const documentSchema = z.object({
 	id: z.string().uuid(),
@@ -27,6 +45,12 @@ export const documentJobCreateRequestSchema = z.object({
 	retry: z.boolean().optional(),
 });
 
+export const documentJobFailureCode = 'DOCUMENT_GENERATION_FAILED' as const;
+
+export const documentJobErrorSchema = z.object({
+	code: z.literal(documentJobFailureCode),
+});
+
 export const documentJobSchema = z.object({
 	id: z.string().uuid(),
 	analysisId: z.string().uuid(),
@@ -36,7 +60,7 @@ export const documentJobSchema = z.object({
 	progress: z.number().int().min(0).max(100),
 	requestKey: z.string().nullable().optional(),
 	attemptCount: z.number().int().min(0),
-	error: z.any().nullable().optional(),
+	error: documentJobErrorSchema.nullable().optional(),
 	generatedDocumentId: z.string().uuid().nullable().optional(),
 	lastStartedAt: z.string().nullable().optional(),
 	completedAt: z.string().nullable().optional(),
@@ -112,6 +136,11 @@ export const evidenceQualityItemSchema = z.object({
 export const reviewDecisionsSnapshotSchema = z.array(evidenceQualityItemSchema);
 export const evidenceQualitySummarySnapshotSchema = evidenceQualitySummarySchema;
 export const evaluationContextSnapshotSchema = evaluationContextSchema.nullable();
+
+export const reviewedReportQualitySnapshotSchema = z.object({
+	reviewDecisionsSnapshot: reviewDecisionsSnapshotSchema,
+	evidenceQualitySummarySnapshot: evidenceQualitySummarySnapshotSchema,
+}).superRefine(validateEvidenceQualitySnapshotConsistency);
 
 export const reportReviewCoverageSummarySchema = z.object({
 	insights: z.object({
@@ -196,6 +225,7 @@ export const approvedImpactReportResponseSchema = z.object({
 
 export const reviewedReportSnapshotSchema = z.object({
 	testTraceSnapshot: reportTestTraceSnapshotSchema.nullable().optional(),
+	clarificationsSnapshot: reportClarificationsSnapshotSchema.nullable().optional(),
 	id: z.string().uuid(),
 	analysisId: z.string().uuid(),
 	approvedDocumentId: z.string().uuid().nullable().optional(),
@@ -206,7 +236,7 @@ export const reviewedReportSnapshotSchema = z.object({
 	evaluationContextSnapshot: evaluationContextSnapshotSchema,
 	createdByUserId: z.string().uuid().nullable().optional(),
 	createdAt: z.string(),
-});
+}).superRefine(validateEvidenceQualitySnapshotConsistency);
 
 export type DocumentListResponse = z.infer<typeof documentListResponseSchema>;
 export type DocumentJobStatus = z.infer<typeof documentJobStatusSchema>;

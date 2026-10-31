@@ -7,6 +7,19 @@ export type ReviewAnalysisLockState =
   | 'STALE'
   | 'CURRENT';
 
+export async function lockReviewAnalysisForMutation(
+  tx: Prisma.TransactionClient,
+  analysisId: string,
+): Promise<boolean> {
+  const rows = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT id
+    FROM "ImpactAnalysis"
+    WHERE id = ${analysisId}
+    FOR UPDATE
+  `;
+  return rows.length > 0;
+}
+
 /**
  * Serializes review/finalization against both lifecycle changes and moving-ref
  * observations. Lock order is ImpactAnalysis, then RepositoryTarget; scanner

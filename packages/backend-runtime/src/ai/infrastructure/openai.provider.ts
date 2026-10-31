@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { LlmProvider, LlmRequest, LlmResult } from '../domain/llm-provider.interface';
 import { AiConfig, AI_CONFIG_TOKEN } from '../domain/ai-config';
 import { parseStructuredLlmOutput } from './structured-output';
-import { AiPolicy } from '@ba-helper/shared';
+import { redactLlmPrompts } from './redact-llm-prompts';
 
 @Injectable()
 export class OpenAiLlmProvider extends LlmProvider {
@@ -14,7 +14,7 @@ export class OpenAiLlmProvider extends LlmProvider {
 
   constructor(@Inject(AI_CONFIG_TOKEN) private config: AiConfig) {
     super();
-    this.client = new OpenAI({ apiKey: this.config.apiKey });
+    this.client = new OpenAI({ apiKey: this.config.apiKey, baseURL: this.config.baseUrl });
   }
 
   async generateStructured<T>(
@@ -24,9 +24,7 @@ export class OpenAiLlmProvider extends LlmProvider {
     const model = request.options?.model ?? this.config.defaultModel;
     const start = Date.now();
 
-    const safeUserPrompt = this.config.redactSecrets
-      ? AiPolicy.redactPayload(request.userPrompt).redactedPayload
-      : request.userPrompt;
+    const safePrompts = redactLlmPrompts(request);
 
     let response;
     try {
@@ -36,8 +34,8 @@ export class OpenAiLlmProvider extends LlmProvider {
         max_tokens: request.options?.maxTokens ?? this.config.maxTokens,
         response_format: { type: 'json_object' },
         messages: [
-          { role: 'system', content: request.systemPrompt },
-          { role: 'user', content: safeUserPrompt },
+          { role: 'system', content: safePrompts.systemPrompt },
+          { role: 'user', content: safePrompts.userPrompt },
         ],
       });
     } catch (error: any) {

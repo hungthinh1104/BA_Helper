@@ -28,6 +28,25 @@ export class AnswerReviewClarificationUseCase {
       );
     }
 
-    return this.clarificationRepo.answer(clarificationId, answer, actor.id);
+    const result = await this.clarificationRepo.answer(clarificationId, answer, actor.id);
+    if (!result) {
+      throw new AppError('CLARIFICATION_NOT_FOUND', 'Clarification request not found.');
+    }
+    if (!result.changed) {
+      if (result.clarification.status === 'ANSWERED') {
+        throw new AppError(
+          'CLARIFICATION_ALREADY_ANSWERED',
+          'This clarification request has already been answered.',
+        );
+      }
+      if (result.clarification.status === 'CANCELLED') {
+        throw new AppError(
+          'CLARIFICATION_CANCELLED',
+          'Cannot answer a cancelled clarification request.',
+        );
+      }
+      throw new AppError('INVALID_CLARIFICATION_STATE', 'This clarification request cannot be answered.');
+    }
+    return result.clarification;
   }
 }

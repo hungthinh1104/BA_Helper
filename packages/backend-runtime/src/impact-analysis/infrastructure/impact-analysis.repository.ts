@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { ImpactAnalysisMetadata } from '../domain/impact-analysis.types';
 import type { ResolvedDomainPackSelection } from '@ba-helper/contracts';
@@ -121,6 +122,9 @@ export class ImpactAnalysisRepository {
 
   async createQueued(params: {
     requirementRevisionId: string;
+    requirementId: string;
+    projectId: string;
+    repositoryId: string;
     snapshotId: string;
     sourceTargetId: string;
     multiRepoRunId?: string | null;
@@ -136,6 +140,9 @@ export class ImpactAnalysisRepository {
     return this.prisma.impactAnalysis.create({
       data: {
         requirementRevisionId: params.requirementRevisionId,
+        requirementId: params.requirementId,
+        projectId: params.projectId,
+        repositoryId: params.repositoryId,
         snapshotId: params.snapshotId,
         sourceTargetId: params.sourceTargetId,
         multiRepoRunId: params.multiRepoRunId ?? null,
@@ -192,6 +199,25 @@ export class ImpactAnalysisRepository {
         sourceTarget: true,
         requirementRevision: true,
         insights: true,
+      },
+    });
+  }
+
+  async requeueQueueEnqueueFailure(id: string) {
+    return this.prisma.impactAnalysis.updateMany({
+      where: {
+        id,
+        status: 'FAILED',
+        error: {
+          path: ['code'],
+          equals: 'QUEUE_ENQUEUE_FAILED',
+        },
+      },
+      data: {
+        status: 'QUEUED',
+        stage: 'WAITING',
+        progress: 0,
+        error: Prisma.DbNull,
       },
     });
   }

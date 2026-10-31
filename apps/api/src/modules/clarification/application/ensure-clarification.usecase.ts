@@ -41,7 +41,7 @@ export class EnsureClarificationUseCase {
     }
 
     // 4. Check for existing (idempotency)
-    const existing = await this.clarificationRepo.findBySourceInsightId(sourceInsightId);
+    const existing = await this.clarificationRepo.findBySourceInsightId(sourceInsightId, analysisId);
     if (existing) {
       return existing;
     }

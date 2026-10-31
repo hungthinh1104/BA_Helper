@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import { AppError } from '@ba-helper/shared';
 
 type AnalysisEvidenceIdentity = {
   snapshotId: string | null;
@@ -45,4 +46,35 @@ export function analysisEvidenceScopeWhere(
       },
     ],
   };
+}
+
+export async function assertEvidenceLinksScopedToAnalyses(
+  client: Pick<Prisma.TransactionClient, 'evidence'>,
+  scopesByOwnerId: Map<string, { snapshotId: string; requirementRevisionId: string }>,
+  links: Array<{ ownerId: string; evidenceId: string }>,
+): Promise<void> {
+  if (links.length === 0) return;
+
+  const evidenceRows = await client.evidence.findMany({
+    where: { id: { in: [...new Set(links.map((link) => link.evidenceId))] } },
+    select: {
+      id: true,
+      snapshotId: true,
+      artifactId: true,
+      requirementRevisionId: true,
+      artifact: { select: { snapshotId: true } },
+    },
+  });
+  const evidenceById = new Map(evidenceRows.map((evidence) => [evidence.id, evidence]));
+
+  for (const link of links) {
+    const analysis = scopesByOwnerId.get(link.ownerId);
+    const evidence = evidenceById.get(link.evidenceId);
+    if (analysis && evidence && !isEvidenceScopedToAnalysis(evidence, analysis)) {
+      throw new AppError(
+        'INVALID_EVIDENCE_ORIGIN',
+        'Evidence must belong to the owning analysis snapshot or requirement revision.',
+      );
+    }
+  }
 }

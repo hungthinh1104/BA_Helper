@@ -35,6 +35,7 @@ export interface EmbeddingChunkRepositoryPort {
     projectId: string;
     repositoryId: string;
     snapshotId: string;
+    embeddingModel: string;
     queryEmbedding: number[];
     limit?: number;
     artifactTypes?: string[];

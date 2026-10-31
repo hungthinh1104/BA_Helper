@@ -89,6 +89,10 @@ export interface SmokeSummary {
   };
 }
 
+type SmokeVectorInfo = Omit<NonNullable<SmokeSummary['vector']>, 'embeddingModel'> & {
+  embeddingModels: string[];
+};
+
 export type SmokeFailureStage =
   | 'AUTH_BOOTSTRAP'
   | 'SCAN'
@@ -234,7 +238,7 @@ export function buildSmokeSummary(input: {
   workspace: CurrentWorkspaceResponse;
   scanDurationMs: number;
   analysisDurationMs: number;
-  vectorInfo?: SmokeSummary['vector'];
+  vectorInfo?: SmokeVectorInfo;
   llmInfo?: SmokeSummary['llm'];
   reviewQueue?: ReviewQueueResponse;
   apiUrl?: string;
@@ -292,7 +296,13 @@ export function buildSmokeSummary(input: {
       mode: input.workspace.mode,
       projectId: input.workspace.projectId,
     },
-    vector: input.vectorInfo,
+    vector: input.vectorInfo ? {
+      indexStatus: input.vectorInfo.indexStatus,
+      embeddingChunkCount: input.vectorInfo.embeddingChunkCount,
+      embeddingModel: formatEmbeddingModelNames(input.vectorInfo.embeddingModels),
+      vectorSignalCount: input.vectorInfo.vectorSignalCount,
+      hybridSignalCount: input.vectorInfo.hybridSignalCount,
+    } : undefined,
     llm: input.llmInfo,
     reviewQueue: input.reviewQueue ? {
       total: input.reviewQueue.summary.total,
@@ -308,6 +318,11 @@ export function buildSmokeSummary(input: {
       reportUrl: `http://localhost:3000/reports?analysisId=${input.analysis.id}`,
     },
   };
+}
+
+function formatEmbeddingModelNames(models: string[]): string {
+  const uniqueModels = [...new Set(models.map((model) => model.trim()).filter(Boolean))].sort();
+  return uniqueModels.length > 0 ? uniqueModels.join(', ') : 'none';
 }
 
 export function assertTempWorkspaceCleanup(summary: SmokeSummary): void {

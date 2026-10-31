@@ -174,7 +174,7 @@ describe('Vector Gap Diagnostic Benchmark', () => {
     });
 
     for (const changeRequest of paraphraseCases) {
-      const results = await hybridRetrievalService.retrieve({
+      const { artifacts: results } = await hybridRetrievalService.retrieve({
         projectId: project.id,
         repositoryId: repository.id,
         snapshotId,

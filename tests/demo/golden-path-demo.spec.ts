@@ -50,7 +50,7 @@ describe('Golden Path Demo', () => {
     finalizeImpactAnalysis = app.get(FinalizeImpactAnalysisUseCase);
     getSnapshotDrift = app.get(GetRepositorySnapshotDriftUseCase);
     runDocumentJob = app.get(RunDocumentJobUseCase);
-  });
+  }, 30_000);
 
   afterAll(async () => {
     if (prisma) await prisma.$disconnect();
@@ -155,6 +155,9 @@ describe('Golden Path Demo', () => {
     const analysis = await prisma.impactAnalysis.create({
       data: {
         requirementRevisionId,
+        requirementId: requirement.id,
+        projectId,
+        repositoryId,
         snapshotId,
         sourceTargetId,
         status: 'QUEUED',

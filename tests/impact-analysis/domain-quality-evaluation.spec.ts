@@ -2,7 +2,8 @@ import { DomainPackRegistry, PrismaService } from '@ba-helper/backend-runtime';
 import { HybridRetrievalEvaluationAdapter } from '../evaluation/adapters/hybrid-retrieval.adapter';
 import { EvaluationRunner } from '../evaluation/evaluation-runner';
 import { HybridRetrievalService } from '@ba-helper/backend-runtime';
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+import type { TestingModule } from '@nestjs/testing';
 import { AppModule } from '../../apps/api/src/app.module';
 import { prepareIsolatedTestEnv } from '../../apps/api/test/e2e/helpers/prepare-test-env';
 import { resetDatabase } from '../../apps/api/test/e2e/helpers/reset-db';
@@ -23,6 +24,8 @@ describe('Domain Quality Evaluation Safety Guards', () => {
   let runner: EvaluationRunner;
   let domainPackRegistry: DomainPackRegistry;
 
+  // This suite prepares PostgreSQL and compiles the real AppModule, so it uses
+  // the same bounded startup budget as the API E2E suite.
   beforeAll(async () => {
     try {
       await prepareIsolatedTestEnv();
@@ -49,7 +52,7 @@ describe('Domain Quality Evaluation Safety Guards', () => {
       }
       throw e;
     }
-  });
+  }, 30_000);
 
   afterAll(async () => {
     if (prisma) await prisma.$disconnect();

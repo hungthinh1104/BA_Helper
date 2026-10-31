@@ -1,4 +1,5 @@
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
+import path from 'node:path'
 
 export interface DemoSeed {
   analysisId: string
@@ -22,10 +23,16 @@ export function seedDemo(): DemoSeed {
   // Use ts-node directly in the browser harness. The tsx wrapper may call
   // uv_os_get_passwd on constrained CI/Windows workers and fail before the
   // seed process starts; this executes the same seed module without changing
-  // production scripts or running target repository code.
-  const out = execSync(
-    'pnpm --dir apps/api exec ts-node -r tsconfig-paths/register --project tsconfig.json prisma/seed.demo.ts',
-    { encoding: 'utf8', timeout: 60_000 },
+  // production scripts or running target repository code. Avoid invoking
+  // pnpm here because its dependency verification can relink node_modules
+  // while Playwright servers are already running.
+  const repoRoot = path.resolve(__dirname, '../..')
+  const apiDirectory = path.join(repoRoot, 'apps/api')
+  const tsNodeCli = path.join(repoRoot, 'node_modules/ts-node/dist/bin.js')
+  const out = execFileSync(
+    process.execPath,
+    [tsNodeCli, '--transpile-only', '-r', 'tsconfig-paths/register', '--project', 'tsconfig.json', 'prisma/seed.demo.ts'],
+    { cwd: apiDirectory, encoding: 'utf8', timeout: 60_000 },
   )
   const match = /Scenario A \(open review\)\s*:\s*(\S+)/.exec(out)
   const completedAnalysisId = /Scenario B \(finalized\)\s*:\s*(\S+)/.exec(out)?.[1]

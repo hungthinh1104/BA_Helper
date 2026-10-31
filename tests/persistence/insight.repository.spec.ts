@@ -55,18 +55,32 @@ describe('InsightRepository', () => {
 
   it('uses createMany with skipDuplicates for linkEvidence', async () => {
     const calls: Array<{ data: unknown; skipDuplicates?: boolean }> = [];
-    const prisma = {
+    const transaction = {
       baInsight: {
-        createMany: async () => ({ count: 0 }),
-        findMany: async () => [],
+        findMany: async () => [{
+          id: 'ins-1',
+          impactAnalysis: { snapshotId: 'snapshot-1', requirementRevisionId: 'revision-1' },
+        }],
+      },
+      evidence: {
+        findMany: async () => [{
+          id: 'ev-1',
+          snapshotId: 'snapshot-1',
+          artifactId: null,
+          requirementRevisionId: null,
+          artifact: null,
+        }],
       },
       insightEvidence: {
         createMany: async (params: { data: unknown; skipDuplicates?: boolean }) => {
           calls.push(params);
           return { count: 1 };
         },
-        findMany: async () => [],
       },
+    };
+    const prisma = {
+      $transaction: async (work: (tx: typeof transaction) => Promise<unknown>) => work(transaction),
+      insightEvidence: { findMany: async () => [] },
     };
 
     const repo = new InsightRepository(prisma as any);
@@ -86,13 +100,26 @@ describe('InsightRepository', () => {
 
   it('bulk links insight evidence in one idempotent write', async () => {
     const createMany = jest.fn().mockResolvedValue({ count: 3 });
-    const findMany = jest.fn();
-    const prisma = {
+    const transaction = {
       baInsight: {
-        createMany: async () => ({ count: 0 }),
-        findMany: async () => [],
+        findMany: async ({ where }: { where: { id: { in: string[] } } }) => where.id.in.map((id) => ({
+          id,
+          impactAnalysis: { snapshotId: 'snapshot-1', requirementRevisionId: 'revision-1' },
+        })),
       },
-      insightEvidence: { createMany, findMany },
+      evidence: {
+        findMany: async ({ where }: { where: { id: { in: string[] } } }) => where.id.in.map((id) => ({
+          id,
+          snapshotId: 'snapshot-1',
+          artifactId: null,
+          requirementRevisionId: null,
+          artifact: null,
+        })),
+      },
+      insightEvidence: { createMany },
+    };
+    const prisma = {
+      $transaction: async (work: (tx: typeof transaction) => Promise<unknown>) => work(transaction),
     };
     const repo = new InsightRepository(prisma as any);
 
@@ -109,6 +136,5 @@ describe('InsightRepository', () => {
       ],
       skipDuplicates: true,
     });
-    expect(findMany).not.toHaveBeenCalled();
   });
 });

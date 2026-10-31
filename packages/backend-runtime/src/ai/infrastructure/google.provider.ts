@@ -3,10 +3,10 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { z } from 'zod';
 import { LlmProvider, LlmRequest, LlmResult } from '../domain/llm-provider.interface';
 import { AiConfig, AI_CONFIG_TOKEN } from '../domain/ai-config';
-import { AiPolicy } from '@ba-helper/shared';
 import { parseStructuredLlmOutput } from './structured-output';
 import { AppError } from '@ba-helper/shared';
 import { AiOutputError } from '../domain/ai.errors';
+import { redactLlmPrompts } from './redact-llm-prompts';
 
 @Injectable()
 export class GoogleLlmProvider extends LlmProvider {
@@ -35,18 +35,15 @@ export class GoogleLlmProvider extends LlmProvider {
     const promptVersion = request.options?.promptVersion ?? '';
     const start = Date.now();
 
-    // Invariant #11: Redact secrets from evidence before sending to real provider
-    const safeUserPrompt = this.config.redactSecrets
-      ? AiPolicy.redactPayload(request.userPrompt).redactedPayload
-      : request.userPrompt;
+    const safePrompts = redactLlmPrompts(request);
 
-    const genModel = this.client.getGenerativeModel({ model });
+    const genModel = this.client.getGenerativeModel({ model }, { baseUrl: this.config.baseUrl });
 
     let result;
     try {
       result = await genModel.generateContent({
-        systemInstruction: request.systemPrompt,
-        contents: [{ role: 'user', parts: [{ text: safeUserPrompt }] }],
+        systemInstruction: safePrompts.systemPrompt,
+        contents: [{ role: 'user', parts: [{ text: safePrompts.userPrompt }] }],
         generationConfig: {
           responseMimeType: 'application/json',
           temperature: request.options?.temperature ?? this.config.temperature,

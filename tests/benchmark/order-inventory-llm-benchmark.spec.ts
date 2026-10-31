@@ -68,7 +68,6 @@ describe('Order/Inventory LLM Output Benchmark', () => {
         defaultModel,
         temperature: 0,
         maxTokens: 4096,
-        redactSecrets: false,
       };
 
       if (providerName === 'deepseek') {

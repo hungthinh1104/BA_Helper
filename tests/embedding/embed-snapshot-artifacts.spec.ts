@@ -78,18 +78,47 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
     expect(chunkRepoMock.insertMany).not.toHaveBeenCalled();
   });
 
-  it('skips embedding when stableChunkId+contentHash cache hit (idempotent re-run)', async () => {
+  it('skips embedding when stable chunk identity, content hash, and chunker version match', async () => {
     snapshotRepoMock.findSnapshotById.mockResolvedValue(SNAPSHOT_NO_PLAN);
     snapshotRepoMock.findArtifactsWithEvidenceBySnapshot.mockResolvedValue([ARTIFACT]);
 
     const built = ArtifactChunkBuilder.build({ artifact: ARTIFACT as any, evidence: ARTIFACT.evidences as any });
     const contentHash = createHash('sha256').update(built.content).digest('hex');
-    chunkRepoMock.listBySnapshot.mockResolvedValue([{ stableChunkId: built.stableChunkId, contentHash }]);
+    chunkRepoMock.listBySnapshot.mockResolvedValue([{
+      stableChunkId: built.stableChunkId,
+      contentHash,
+      chunkerVersion: built.chunkerVersion,
+    }]);
 
     await useCase.execute({ snapshotId: 'snap-1' });
 
     expect(chunkRepoMock.insertMany).not.toHaveBeenCalled();
     expect(snapshotRepoMock.updateSnapshotIndexStatus).toHaveBeenCalledWith('snap-1', 'VECTOR_READY');
+  });
+
+  it('re-embeds when the persisted chunker version differs despite a matching content hash', async () => {
+    snapshotRepoMock.findSnapshotById.mockResolvedValue(SNAPSHOT_NO_PLAN);
+    snapshotRepoMock.findArtifactsWithEvidenceBySnapshot.mockResolvedValue([ARTIFACT]);
+
+    const built = ArtifactChunkBuilder.build({ artifact: ARTIFACT as any, evidence: ARTIFACT.evidences as any });
+    const contentHash = createHash('sha256').update(built.content).digest('hex');
+    chunkRepoMock.listBySnapshot.mockResolvedValue([{
+      stableChunkId: built.stableChunkId,
+      contentHash,
+      chunkerVersion: 'artifact-chunker@0.1.0',
+    }]);
+
+    await useCase.execute({ snapshotId: 'snap-1' });
+
+    expect(chunkRepoMock.insertMany).toHaveBeenCalledTimes(1);
+    const inserted = chunkRepoMock.insertMany.mock.calls[0][0] as Array<{
+      contentHash: string;
+      chunkerVersion: string | null;
+    }>;
+    expect(inserted[0]).toMatchObject({
+      contentHash,
+      chunkerVersion: CHUNK_BUILDER_VERSION,
+    });
   });
 
   it('re-embeds when contentHash differs (artifact changed)', async () => {
@@ -98,7 +127,11 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
 
     const built = ArtifactChunkBuilder.build({ artifact: ARTIFACT as any, evidence: ARTIFACT.evidences as any });
     chunkRepoMock.listBySnapshot.mockResolvedValue([
-      { stableChunkId: built.stableChunkId, contentHash: 'old-hash' },
+      {
+        stableChunkId: built.stableChunkId,
+        contentHash: 'old-hash',
+        chunkerVersion: CHUNK_BUILDER_VERSION,
+      },
     ]);
 
     await useCase.execute({ snapshotId: 'snap-1' });
@@ -174,7 +207,7 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
         artifactId: 'old-art-1',
         contentHash,
         chunkerVersion: CHUNK_BUILDER_VERSION,
-        embeddingModel: 'fake',
+        embeddingModel: provider.modelName,
       },
     ]);
     chunkRepoMock.copyChunk.mockResolvedValue(true);
@@ -205,7 +238,7 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
     snapshotRepoMock.findPreviousArtifactsBySnapshot.mockResolvedValue([{ id: 'old-art-1', artifactKey: ARTIFACT.artifactKey, contentHash: 'artifact-hash-1' }]);
     chunkRepoMock.listBySnapshot.mockResolvedValue([]);
     chunkRepoMock.listForReuseByArtifacts.mockResolvedValue([{
-      artifactId: 'old-art-1', contentHash, chunkerVersion: CHUNK_BUILDER_VERSION, embeddingModel: 'fake',
+      artifactId: 'old-art-1', contentHash, chunkerVersion: CHUNK_BUILDER_VERSION, embeddingModel: provider.modelName,
     }]);
 
     await useCase.execute({ snapshotId: 'snap-1' });
@@ -235,7 +268,7 @@ describe('EmbedSnapshotArtifactsUseCase', () => {
     snapshotRepoMock.findPreviousArtifactsBySnapshot.mockResolvedValue([{ id: 'old-art-1', artifactKey: ARTIFACT.artifactKey, contentHash: 'artifact-hash-1' }]);
     chunkRepoMock.listBySnapshot.mockResolvedValue([]);
     chunkRepoMock.listForReuseByArtifacts.mockResolvedValue([{
-      artifactId: 'old-art-1', contentHash, chunkerVersion: CHUNK_BUILDER_VERSION, embeddingModel: 'fake',
+      artifactId: 'old-art-1', contentHash, chunkerVersion: CHUNK_BUILDER_VERSION, embeddingModel: provider.modelName,
     }]);
     chunkRepoMock.copyChunk.mockResolvedValue(false); // source missing → fallback
 

@@ -22,6 +22,7 @@ describe('TraceabilityRepository', () => {
     await repo.upsertMany([
       {
         impactAnalysisId: 'analysis-1',
+        snapshotId: 'snapshot-1',
         artifactId: 'a-1',
         linkType: 'AFFECTED',
         linkBasis: 'EVIDENCED',
@@ -35,6 +36,7 @@ describe('TraceabilityRepository', () => {
         data: [
           {
             impactAnalysisId: 'analysis-1',
+            snapshotId: 'snapshot-1',
             artifactId: 'a-1',
             linkType: 'AFFECTED',
             linkBasis: 'EVIDENCED',
@@ -49,18 +51,32 @@ describe('TraceabilityRepository', () => {
 
   it('uses createMany with skipDuplicates for linkEvidence', async () => {
     const calls: Array<{ data: unknown; skipDuplicates?: boolean }> = [];
-    const prisma = {
+    const transaction = {
       traceabilityLink: {
-        createMany: async () => ({ count: 0 }),
-        findMany: async () => [],
+        findMany: async () => [{
+          id: 'link-1',
+          impactAnalysis: { snapshotId: 'snapshot-1', requirementRevisionId: 'revision-1' },
+        }],
+      },
+      evidence: {
+        findMany: async () => [{
+          id: 'ev-1',
+          snapshotId: 'snapshot-1',
+          artifactId: null,
+          requirementRevisionId: null,
+          artifact: null,
+        }],
       },
       traceabilityEvidence: {
         createMany: async (params: { data: unknown; skipDuplicates?: boolean }) => {
           calls.push(params);
           return { count: 1 };
         },
-        findMany: async () => [],
       },
+    };
+    const prisma = {
+      $transaction: async (work: (tx: typeof transaction) => Promise<unknown>) => work(transaction),
+      traceabilityEvidence: { findMany: async () => [] },
     };
 
     const repo = new TraceabilityRepository(prisma as any);
@@ -80,13 +96,26 @@ describe('TraceabilityRepository', () => {
 
   it('bulk links evidence for traceability records in one idempotent write', async () => {
     const createMany = jest.fn().mockResolvedValue({ count: 3 });
-    const findMany = jest.fn();
-    const prisma = {
+    const transaction = {
       traceabilityLink: {
-        createMany: async () => ({ count: 0 }),
-        findMany: async () => [],
+        findMany: async ({ where }: { where: { id: { in: string[] } } }) => where.id.in.map((id) => ({
+          id,
+          impactAnalysis: { snapshotId: 'snapshot-1', requirementRevisionId: 'revision-1' },
+        })),
       },
-      traceabilityEvidence: { createMany, findMany },
+      evidence: {
+        findMany: async ({ where }: { where: { id: { in: string[] } } }) => where.id.in.map((id) => ({
+          id,
+          snapshotId: 'snapshot-1',
+          artifactId: null,
+          requirementRevisionId: null,
+          artifact: null,
+        })),
+      },
+      traceabilityEvidence: { createMany },
+    };
+    const prisma = {
+      $transaction: async (work: (tx: typeof transaction) => Promise<unknown>) => work(transaction),
     };
     const repo = new TraceabilityRepository(prisma as any);
 
@@ -103,6 +132,5 @@ describe('TraceabilityRepository', () => {
       ],
       skipDuplicates: true,
     });
-    expect(findMany).not.toHaveBeenCalled();
   });
 });

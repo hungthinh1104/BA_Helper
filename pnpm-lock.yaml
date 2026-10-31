@@ -225,6 +225,9 @@ importers:
       '@types/passport-jwt':
         specifier: ^4.0.1
         version: 4.0.1
+      bullmq:
+        specifier: 5.81.5
+        version: 5.81.5(supports-color@8.1.1)
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2

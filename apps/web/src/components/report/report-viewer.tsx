@@ -2,6 +2,7 @@
 
 import { isReportGenerationFailed, isReportGenerationPending, useApprovedReport, useFinalReviewedReport } from "@/hooks/api/use-approved-report"
 import { useAnalysisDetail } from "@/hooks/api/use-analyses"
+import { useAuth } from "@/hooks/use-auth"
 import { evidenceQualityItemSchema, evidenceQualitySummarySchema, evaluationContextSchema } from "@ba-helper/contracts"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AlertCircle, FileWarning, Copy, Download, CheckCircle2, Loader2, Printer } from "lucide-react"
@@ -23,11 +24,19 @@ import { TestTraceView } from '@/components/workspace/analysis/qa/test-trace-vie
 import { testTraceLabels } from '@/lib/i18n/test-trace-labels'
 import { ReportGenerationFailure } from "./report-generation-failure"
 import { ReportGenerationState } from "./report-generation-state"
+import { AnalysisLocalizationTrigger } from "@/components/workspace/analysis/analysis-localization-trigger"
 
 interface ReportViewerProps {
   analysisId: string
   printMode?: boolean
   locale?: AppLocale | string
+}
+
+function ReportLocalizationAction({ analysisId }: { analysisId: string }) {
+  const { role } = useAuth()
+  if (role !== "ADMIN" && role !== "REVIEWER") return null
+
+  return <AnalysisLocalizationTrigger analysisId={analysisId} canExport />
 }
 
 export function ReportViewer({ analysisId, printMode = false, locale = "en" }: ReportViewerProps) {
@@ -267,6 +276,9 @@ export function ReportViewer({ analysisId, printMode = false, locale = "en" }: R
           <div className="p-4 bg-surface-muted/50 rounded-lg border border-border/50 text-[13px] leading-relaxed text-foreground/90 italic">
             &quot;{analysis.requirement.rawText}&quot;
           </div>
+        )}
+        {!printMode && isEnglish && analysis?.capabilities.canExport === true && (
+          <ReportLocalizationAction analysisId={analysisId} />
         )}
       </header>
 

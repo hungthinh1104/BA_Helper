@@ -5,6 +5,25 @@ import { server } from '@/test/msw/server';
 import { CodeEvidenceNavigator } from './code-evidence-navigator';
 
 jest.mock('@/i18n/navigation', () => ({ useLocalizedHref: () => (path: string) => path }));
+jest.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => ({
+    codeEvidenceTitle: 'Code evidence',
+    codeEvidenceDescription: 'Browse persisted source, static call paths, and related Jest declarations from the selected snapshot.',
+    codeEvidenceSnapshotRequired: 'A usable snapshot is required before code evidence can be opened.',
+    codeEvidenceOpenPrompt: 'Open this panel to load the bounded artifact index.',
+    codeEvidenceSearchLabel: 'Search method, artifact key, or file path',
+    codeEvidenceLoadingArtifacts: 'Loading production artifacts…',
+    codeEvidenceLoadError: 'The artifact index could not be loaded. Snapshot permissions or availability may have changed.',
+    codeEvidenceRetry: 'Retry',
+    codeEvidenceEmptySearch: 'No production artifacts match this search.',
+    codeEvidenceEmpty: 'No supported production artifacts were indexed.',
+    codeEvidenceLoadMore: 'Load more',
+    codeEvidenceLoadingMore: 'Loading more…',
+    codeEvidenceNextPageError: 'The next artifact page could not be loaded.',
+    codeEvidenceRetryLoadingMore: 'Retry loading more',
+    codeEvidenceLimitNotice: 'The browsing limit was reached. Search by method, artifact key, or file path to find more artifacts.',
+  })[key] ?? key,
+}));
 
 function artifact(index: number) {
   return {

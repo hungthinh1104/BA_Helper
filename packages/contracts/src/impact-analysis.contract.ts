@@ -3,6 +3,7 @@ import { snapshotIndexStatusSchema } from './repository.contract';
 import { diagnosticItemSchema, DiagnosticItem } from './diagnostic.contract';
 import { universalArtifactKindSchema } from './artifact.contract';
 import { domainPackSelectedBySchema, domainProfileCapabilityStatusSchema } from './domain-pack.contract';
+import { retrievalDiagnosticsSchema, retrievalSignalsSchema } from './retrieval.contract';
 
 export const impactAnalysisCreateRequestSchema = z.object({
 	snapshotId: z.string().uuid(),
@@ -479,7 +480,7 @@ export const matrixRowEvidenceItemSchema = z.object({
 	startLine: z.number().nullable(),
 	endLine: z.number().nullable(),
 	linkType: z.string(),
-	retrievalSignals: z.any().optional(),
+	retrievalSignals: retrievalSignalsSchema.optional(),
 });
 
 export const matrixRowInsightRefSchema = z.object({
@@ -505,7 +506,7 @@ export const matrixRowArtifactDetailSchema = z.object({
 	evidenceItems: z.array(matrixRowEvidenceItemSchema),
 	relatedRisks: z.array(z.string().uuid()),
 	relatedQaScenarios: z.array(z.string().uuid()),
-	retrievalDiagnostics: z.any().optional(),
+	retrievalDiagnostics: retrievalDiagnosticsSchema.optional(),
 });
 
 export const matrixRowDetailResponseSchema = z.object({

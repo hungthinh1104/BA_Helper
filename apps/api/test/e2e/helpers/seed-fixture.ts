@@ -87,6 +87,15 @@ export async function seedImpactAnalysisCompletion(
   prisma: PrismaService,
   analysisId: string,
 ) {
+  const analysis = await prisma.impactAnalysis.findUniqueOrThrow({
+    where: { id: analysisId },
+    select: { snapshotId: true, requirementRevisionId: true },
+  });
+  const sourceArtifact = await prisma.codeArtifact.findFirstOrThrow({
+    where: { snapshotId: analysis.snapshotId, filePath: 'src/mock.ts' },
+    select: { id: true },
+  });
+
   await prisma.impactAnalysis.update({
     where: { id: analysisId },
     data: {
@@ -116,6 +125,9 @@ export async function seedImpactAnalysisCompletion(
       id: evidenceId,
       provenanceKey: 'mock-evidence-provenance',
       sourceType: 'CODE',
+      snapshotId: analysis.snapshotId,
+      artifactId: sourceArtifact.id,
+      requirementRevisionId: analysis.requirementRevisionId,
       excerpt: 'mock code',
       contentHash: 'mock-hash-1234',
       sourcePath: 'src/mock.ts',

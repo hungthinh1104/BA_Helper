@@ -35,7 +35,7 @@ describe('HybridRetrievalService', () => {
 	      );
 
       const maliciousInput = `Update booking flow; DROP TABLE "CodeArtifact"; --`;
-      const result = await service.retrieve({
+      const { artifacts: result } = await service.retrieve({
         projectId: '11111111-1111-1111-1111-111111111111',
         repositoryId: '22222222-2222-2222-2222-222222222222',
         snapshotId: '33333333-3333-3333-3333-333333333333',
@@ -56,6 +56,92 @@ describe('HybridRetrievalService', () => {
       expect(JSON.stringify(rawQuery.strings ?? [])).toContain('ILIKE ANY');
       expect(result).toHaveLength(1);
       expect(result[0].artifactId).toBe('artifact-1');
+    });
+
+    it('does not search chunks when the query embedding model differs from the configured model', async () => {
+      const chunkRepo = { searchSimilar: jest.fn().mockResolvedValue([]) };
+      const embeddingProvider = {
+        modelName: 'configured-embedding-model',
+        embed: jest.fn().mockResolvedValue({
+          embeddings: [[0.1, 0.2]],
+          model: 'unexpected-embedding-model',
+          dimensions: 2,
+        }),
+      };
+      const prisma = {
+        repositorySnapshot: {
+          findUnique: jest.fn().mockResolvedValue({ indexStatus: 'VECTOR_READY' }),
+        },
+        $queryRaw: jest.fn().mockResolvedValue([]),
+        codeArtifact: { findMany: jest.fn() },
+      } as any;
+      const service = new HybridRetrievalService(
+        chunkRepo as any,
+        embeddingProvider as any,
+        { findById: jest.fn() } as any,
+        { expandFromSeeds: jest.fn() } as any,
+        prisma,
+        new DomainPackRegistry(),
+      );
+
+      const result = await service.retrieve({
+        projectId: '11111111-1111-1111-1111-111111111111',
+        repositoryId: '22222222-2222-2222-2222-222222222222',
+        snapshotId: '33333333-3333-3333-3333-333333333333',
+        changeRequest: 'cancel a paid booking',
+        maxResults: 5,
+      });
+
+      expect(chunkRepo.searchSimilar).not.toHaveBeenCalled();
+      expect(result.diagnostics).toEqual({
+        strategy: 'lexical_fallback',
+        vectorStatus: 'MODEL_MISMATCH',
+      });
+      expect(result.artifacts).toEqual([]);
+    });
+
+    it('reports lexical fallback when no chunks match the query model', async () => {
+      const chunkRepo = { searchSimilar: jest.fn().mockResolvedValue([]) };
+      const embeddingProvider = {
+        modelName: 'configured-embedding-model',
+        embed: jest.fn().mockResolvedValue({
+          embeddings: [[0.1, 0.2]],
+          model: 'configured-embedding-model',
+          dimensions: 2,
+        }),
+      };
+      const prisma = {
+        repositorySnapshot: {
+          findUnique: jest.fn().mockResolvedValue({ indexStatus: 'VECTOR_READY' }),
+        },
+        $queryRaw: jest.fn().mockResolvedValue([]),
+        codeArtifact: { findMany: jest.fn() },
+      } as any;
+      const service = new HybridRetrievalService(
+        chunkRepo as any,
+        embeddingProvider as any,
+        { findById: jest.fn() } as any,
+        { expandFromSeeds: jest.fn() } as any,
+        prisma,
+        new DomainPackRegistry(),
+      );
+
+      const result = await service.retrieve({
+        projectId: '11111111-1111-1111-1111-111111111111',
+        repositoryId: '22222222-2222-2222-2222-222222222222',
+        snapshotId: '33333333-3333-3333-3333-333333333333',
+        changeRequest: 'cancel a paid booking',
+        maxResults: 5,
+      });
+
+      expect(chunkRepo.searchSimilar).toHaveBeenCalledWith(expect.objectContaining({
+        embeddingModel: 'configured-embedding-model',
+      }));
+      expect(result.diagnostics).toEqual({
+        strategy: 'lexical_fallback',
+        vectorStatus: 'NO_COMPATIBLE_CHUNKS',
+      });
+      expect(result.artifacts).toEqual([]);
     });
   });
 
@@ -106,22 +192,24 @@ describe('HybridRetrievalService', () => {
     };
 
     it('drops a weak vector-only hit below the default floor', async () => {
-      const result = await buildService().retrieve(request);
+      const { artifacts: result } = await buildService().retrieve(request);
       expect(result.find((r) => r.artifactId === 'weak-1')).toBeUndefined();
     });
 
     it('keeps the weak vector-only hit when keepWeakVectorOnly is enabled', async () => {
-      const result = await buildService().retrieve({
+      const retrievalResult = await buildService().retrieve({
         ...request,
         tuning: { keepWeakVectorOnly: true },
       });
+      const result = retrievalResult.artifacts;
       const weak = result.find((r) => r.artifactId === 'weak-1');
       expect(weak).toBeDefined();
       expect(weak?.retrievalSignals).toContain('VECTOR');
+      expect(retrievalResult.diagnostics.vectorStatus).toBe('USED');
     });
 
     it('keeps the hit when the minVectorSimilarity floor is lowered', async () => {
-      const result = await buildService().retrieve({
+      const { artifacts: result } = await buildService().retrieve({
         ...request,
         tuning: { minVectorSimilarity: 0.5 },
       });
@@ -160,9 +248,9 @@ describe('HybridRetrievalService', () => {
         maxResults: 1,
       };
 
-      expect(await twoEqualHits().retrieve(req)).toHaveLength(1);
+      expect((await twoEqualHits().retrieve(req)).artifacts).toHaveLength(1);
       const adaptive = await twoEqualHits().retrieve({ ...req, tuning: { adaptiveTailGap: 0.1 } });
-      expect(adaptive.length).toBeGreaterThan(1);
+      expect(adaptive.artifacts.length).toBeGreaterThan(1);
     });
   });
 
@@ -220,7 +308,7 @@ describe('HybridRetrievalService', () => {
       // Contains 'API' (intent: API_ENDPOINT)
       // Contains 'logic' (intent: DOMAIN_SERVICE)
 
-      const results = await service.retrieve({
+      const { artifacts: results } = await service.retrieve({
         projectId: '11',
         repositoryId: '22',
         snapshotId: '33',

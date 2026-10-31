@@ -5,10 +5,13 @@ import { requireEnv } from '@ba-helper/shared';
 
 @Module({
   imports: [
-    BullModule.forRoot({
-      connection: {
-        url: requireEnv('REDIS_URL', 'redis://localhost:6379'),
-      },
+    BullModule.forRootAsync({
+      useFactory: () => ({
+        connection: {
+          url: requireEnv('REDIS_URL', 'redis://localhost:6379'),
+        },
+        ...(process.env.BULLMQ_PREFIX ? { prefix: process.env.BULLMQ_PREFIX } : {}),
+      }),
     }),
     BullModule.registerQueue({ name: 'impact-analysis' }),
     BullModule.registerQueue({ name: 'embedding' }),

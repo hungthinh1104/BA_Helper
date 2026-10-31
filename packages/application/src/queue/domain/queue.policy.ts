@@ -1,6 +1,15 @@
 import { AppError } from '@ba-helper/shared';
 
 export const QueuePolicy = {
+  shouldFailStaleJob: (params: {
+    status: string;
+    updatedAt: Date;
+    cutoff: Date;
+    hasUnfinishedQueueJob: boolean;
+  }) => params.status === 'RUNNING'
+    && params.updatedAt < params.cutoff
+    && !params.hasUnfinishedQueueJob,
+
   assertRetryableJob: (params: {
     jobType: string;
     idempotencyKey?: string | null;

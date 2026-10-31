@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "dotenv -e ../../.env -- next dev --webpack -p 3000",
-    "build": "dotenv -e ../../.env -v NODE_ENV=production -- next build",
+    "build": "dotenv -e ../../.env -v NODE_ENV=production -- next build --webpack",
     "start": "dotenv -e ../../.env -- next start -p 3000",
     "lint": "eslint",
     "test": "jest --config jest.config.ts --runInBand",

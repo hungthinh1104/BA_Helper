@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
 import { FileCode2, Loader2, SearchX } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { useLocalizedHref } from "@/i18n/navigation"
 import { MAX_ARTIFACT_OFFSET, useSnapshotArtifacts } from "@/hooks/api/use-code-comprehension"
 import { Button } from "@/components/ui/button"
@@ -27,22 +28,23 @@ function ArtifactResults(props: {
   onRetry: () => void
   onLoadMore: () => void
 }) {
+  const t = useTranslations("workspaceLists")
   const { repositoryId, snapshotId, href, artifacts, loading, error, loadMoreError, searchPending, search,
     hasNextPage, fetchingNextPage, reachedLimit, onRetry, onLoadMore } = props
 
   return (
     <>
       {snapshotId && (loading || searchPending) && (
-        <div className="mt-4 flex items-center gap-2 text-[12px] text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading production artifacts…</div>
+        <div className="mt-4 flex items-center gap-2 text-[12px] text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("codeEvidenceLoadingArtifacts")}</div>
       )}
       {snapshotId && error && !searchPending && (
         <div className="mt-4 flex items-center gap-2 text-[12px] text-danger">
-          <span>The artifact index could not be loaded. Snapshot permissions or availability may have changed.</span>
-          <Button type="button" size="sm" variant="outline" onClick={onRetry}>Retry</Button>
+          <span>{t("codeEvidenceLoadError")}</span>
+          <Button type="button" size="sm" variant="outline" onClick={onRetry}>{t("codeEvidenceRetry")}</Button>
         </div>
       )}
       {snapshotId && !loading && !error && !searchPending && artifacts.length === 0 && (
-        <div className="mt-4 flex items-center gap-2 text-[12px] text-muted-foreground"><SearchX className="h-3.5 w-3.5" /> {search ? "No production artifacts match this search." : "No supported production artifacts were indexed."}</div>
+        <div className="mt-4 flex items-center gap-2 text-[12px] text-muted-foreground"><SearchX className="h-3.5 w-3.5" /> {search ? t("codeEvidenceEmptySearch") : t("codeEvidenceEmpty")}</div>
       )}
       {snapshotId && !searchPending && artifacts.length > 0 && (
         <ul className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -63,25 +65,26 @@ function ArtifactResults(props: {
       )}
       {!error && !searchPending && hasNextPage && !loadMoreError && (
         <Button type="button" size="sm" variant="outline" className="mt-4" disabled={fetchingNextPage} onClick={onLoadMore}>
-          {fetchingNextPage ? "Loading more…" : "Load more"}
+          {fetchingNextPage ? t("codeEvidenceLoadingMore") : t("codeEvidenceLoadMore")}
         </Button>
       )}
       {!searchPending && loadMoreError && hasNextPage && (
         <div className="mt-4 flex items-center gap-2 text-[12px] text-danger">
-          <span>The next artifact page could not be loaded.</span>
+          <span>{t("codeEvidenceNextPageError")}</span>
           <Button type="button" size="sm" variant="outline" disabled={fetchingNextPage} onClick={onLoadMore}>
-            {fetchingNextPage ? "Loading more..." : "Retry loading more"}
+            {fetchingNextPage ? t("codeEvidenceLoadingMore") : t("codeEvidenceRetryLoadingMore")}
           </Button>
         </div>
       )}
       {!error && !searchPending && reachedLimit && (
-        <p className="mt-4 text-[12px] text-muted-foreground">The browsing limit was reached. Search by method, artifact key, or file path to find more artifacts.</p>
+        <p className="mt-4 text-[12px] text-muted-foreground">{t("codeEvidenceLimitNotice")}</p>
       )}
     </>
   )
 }
 
 export function CodeEvidenceNavigator({ repositoryId, snapshotId }: { repositoryId: string; snapshotId?: string }) {
+  const t = useTranslations("workspaceLists")
   const href = useLocalizedHref()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
@@ -101,26 +104,26 @@ export function CodeEvidenceNavigator({ repositoryId, snapshotId }: { repository
   const searchPending = search.trim() !== debouncedSearch
 
   return (
-    <section className="rounded-xl border border-border/40 bg-surface/50 p-5 shadow-sm" aria-label="Code evidence">
+    <section className="rounded-xl border border-border/40 bg-surface/50 p-5 shadow-sm" aria-label={t("codeEvidenceTitle")}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <button type="button" aria-expanded={open} aria-controls="code-evidence-content" onClick={() => setOpen(value => !value)} className="text-left text-[15px] font-semibold text-foreground hover:text-primary">Code evidence</button>
+          <button type="button" aria-expanded={open} aria-controls="code-evidence-content" onClick={() => setOpen(value => !value)} className="text-left text-[15px] font-semibold text-foreground hover:text-primary">{t("codeEvidenceTitle")}</button>
           <p className="mt-1 text-[12px] text-muted-foreground">
-            Browse persisted source, static call paths, and related Jest declarations from the selected snapshot.
+            {t("codeEvidenceDescription")}
           </p>
         </div>
         <FileCode2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
       </div>
       {!snapshotId && (
-        <p className="mt-4 text-[12px] text-muted-foreground">A usable snapshot is required before code evidence can be opened.</p>
+        <p className="mt-4 text-[12px] text-muted-foreground">{t("codeEvidenceSnapshotRequired")}</p>
       )}
       {snapshotId && !open && (
-        <p className="mt-4 text-[12px] text-muted-foreground">Open this panel to load the bounded artifact index.</p>
+        <p className="mt-4 text-[12px] text-muted-foreground">{t("codeEvidenceOpenPrompt")}</p>
       )}
       {open && <div id="code-evidence-content">
         {snapshotId && <Input
-          aria-label="Search method, artifact key, or file path"
-          placeholder="Search method, artifact key, or file path"
+          aria-label={t("codeEvidenceSearchLabel")}
+          placeholder={t("codeEvidenceSearchLabel")}
           maxLength={120}
           value={search}
           onChange={(event) => setSearch(event.target.value)}

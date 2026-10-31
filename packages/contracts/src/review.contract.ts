@@ -5,7 +5,9 @@ import {
   reportReviewCoverageSummarySchema,
   reviewDecisionsSnapshotSchema,
   evaluationContextSnapshotSchema,
+  reportClarificationsSnapshotSchema,
 } from './document.contract';
+import { validateEvidenceQualitySnapshotConsistency } from './reviewed-report-quality.consistency';
 import { supportedAppLocales } from './locale.contract';
 
 export const reportLocaleSchema = z.enum(supportedAppLocales);
@@ -42,6 +44,7 @@ export type LocaleAwareReportQuery = z.infer<typeof localeAwareReportQuerySchema
 
 export const finalReviewedReportResponseSchema = z.object({
   testTraceSnapshot: reportTestTraceSnapshotSchema.nullable().optional(),
+  clarificationsSnapshot: reportClarificationsSnapshotSchema.nullable().optional(),
   analysisId: z.string().min(1),
   // ReviewedReportSnapshot.id, not RepositorySnapshot.id.
   snapshotId: z.string().min(1),
@@ -54,6 +57,6 @@ export const finalReviewedReportResponseSchema = z.object({
   evidenceQualitySummarySnapshot: evidenceQualitySummarySnapshotSchema,
   evaluationContextSnapshot: evaluationContextSnapshotSchema,
   createdByUserId: z.string().min(1).nullable().optional(),
-});
+}).superRefine(validateEvidenceQualitySnapshotConsistency);
 
 export type FinalReviewedReportResponse = z.infer<typeof finalReviewedReportResponseSchema>;

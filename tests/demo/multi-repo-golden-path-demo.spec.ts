@@ -23,10 +23,10 @@ describe('Multi-repo Golden Path Demo', () => {
 
     app = await createTestApp();
     prisma = app.get(PrismaService);
-  });
+  }, 30_000);
 
   afterAll(async () => {
-    await app.close();
+    if (app) await app.close();
   });
 
   beforeEach(async () => {
@@ -108,10 +108,15 @@ describe('Multi-repo Golden Path Demo', () => {
   }
 
   async function acceptChildAnalysis(analysisId: string, marker: string) {
+    const analysis = await prisma.impactAnalysis.findUniqueOrThrow({
+      where: { id: analysisId },
+      select: { snapshotId: true },
+    });
     const evidence = await prisma.evidence.create({
       data: {
         provenanceKey: `demo:${analysisId}:${marker}`,
         sourceType: 'CODE',
+        snapshotId: analysis.snapshotId,
         sourcePath: `src/${marker}.ts`,
         startLine: 1,
         endLine: 8,

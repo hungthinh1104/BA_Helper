@@ -227,6 +227,9 @@ func getRefunds(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) }`
       const analysis = await prisma.impactAnalysis.create({
         data: {
           requirementRevisionId: revision.id,
+          requirementId: req.id,
+          projectId: project.id,
+          repositoryId: repo.id,
           snapshotId,
           sourceTargetId,
           status: 'QUEUED',

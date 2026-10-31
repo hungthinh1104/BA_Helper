@@ -2,7 +2,7 @@ import type { PersistedArtifact } from '../ports/artifact.repository.port';
 import type { EvidenceRecord } from '../ports/evidence.repository.port';
 import type { InsightRecord, InsightInputParams } from '../ports/insight.repository.port';
 import type { LlmCallMetadata } from '../ports/llm-provider.port';
-import type { RetrievedArtifact } from '../ports/retrieval.port';
+import type { RetrievedArtifact, RetrievalRunDiagnostics } from '../ports/retrieval.port';
 
 export type { PersistedArtifact, EvidenceRecord, InsightRecord, InsightInputParams, RetrievedArtifact };
 
@@ -21,8 +21,7 @@ export type ImpactEvidenceCollectionResult = {
   evidenceById: Map<string, EvidenceRecord>;
   evidenceByKey: Map<string, EvidenceRecord>;
   traceabilityLinks: Array<{ id: string; artifactId: string; linkBasis: 'EVIDENCED' | 'INFERRED'; confidence: number }>;
-  retrievalMetadata: {
-    strategy: string;
+  retrievalMetadata: RetrievalRunDiagnostics & {
     maxArtifacts: number;
     artifactCount: number;
     vectorSignalCount: number;

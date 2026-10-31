@@ -43,6 +43,23 @@ describe('GetMatrixRowDetailUseCase', () => {
                 startLine: 10,
                 endLine: 20,
               },
+              retrievalMetadata: {
+                method: 'HYBRID',
+                signals: ['VECTOR', 'KIND'],
+                score: { final: 0.84 },
+                diagnostics: {
+                  version: 'retrieval-diagnostics@0.1.0',
+                  lexicalScoreNorm: 0.62,
+                  vectorScoreNorm: 0.81,
+                  graphBoostNorm: 0.2,
+                  kindBoostNorm: 0.1,
+                  domainBoostNorm: 0.15,
+                  matchedIntentLabels: ['API', 'SERVICE'],
+                  universalKind: 'API_ENDPOINT',
+                  repositoryProfile: { domain: 'BOOKING' },
+                  finalScore: 0.84,
+                },
+              },
               evidenceLinks: [
                 evidenceLink('evidence-1'),
               ],
@@ -86,5 +103,10 @@ describe('GetMatrixRowDetailUseCase', () => {
     ]);
     expect(result.impactedArtifacts[0].relatedRisks).toEqual(['insight-risk-1']);
     expect(result.impactedArtifacts[0].relatedQaScenarios).toEqual(['insight-qa-1']);
+    expect(result.impactedArtifacts[0].retrievalDiagnostics).toMatchObject({
+      version: 'retrieval-diagnostics@0.1.0',
+      vectorScoreNorm: 0.81,
+    });
+    expect(result.impactedArtifacts[0].evidenceItems[0].retrievalSignals).toEqual(['VECTOR', 'KIND']);
   });
 });

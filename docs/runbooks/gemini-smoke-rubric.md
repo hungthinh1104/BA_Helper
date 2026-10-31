@@ -29,11 +29,15 @@ These are enforced by `smoke-e2e.ts` when `AI_PROVIDER=google`:
 
 Open `docs/runbooks/public-github-smoke-real-path-output.json` and verify:
 
+The checked-in JSON is a historical sample from prompt version `2.0.0`. Do not
+use it as evidence for the current prompt; capture a fresh real-path smoke
+output and verify its prompt version is `2.2.0`.
+
 ```json
 "llm": {
   "provider": "google",
   "model": "gemini-2.5-flash",
-  "promptVersion": "2.0.0",
+  "promptVersion": "2.2.0",
   "parseMode": "raw",
   "inputTokens": "> 0",
   "outputTokens": "> 0"
@@ -42,7 +46,7 @@ Open `docs/runbooks/public-github-smoke-real-path-output.json` and verify:
 
 - [ ] `provider` = `"google"`, not `"fake"`
 - [ ] `model` = `"gemini-2.5-flash"` (matches `GOOGLE_MODEL` env; `GEMINI_MODEL` is a supported fallback)
-- [ ] `promptVersion` = `"2.0.0"` (matches `PROMPTS.IMPACT_ANALYSIS.version`)
+- [ ] `promptVersion` = `"2.2.0"` (matches `PROMPTS.IMPACT_ANALYSIS.version`)
 - [ ] `parseMode` = `"raw"` — if `"extracted"`, flag as warning and investigate
 - [ ] `inputTokens` > 0
 - [ ] `outputTokens` > 0

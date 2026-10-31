@@ -10,6 +10,7 @@ const CONCURRENCY_LIMIT = 5;
 @Injectable()
 export class GoogleEmbeddingProvider extends EmbeddingProviderPort {
   readonly providerName = 'google';
+  readonly modelName = DEFAULT_MODEL;
   private readonly client: GoogleGenerativeAI;
   private readonly logger = new Logger(GoogleEmbeddingProvider.name);
 
@@ -26,7 +27,7 @@ export class GoogleEmbeddingProvider extends EmbeddingProviderPort {
   }
 
   async embed(request: EmbeddingRequest): Promise<EmbeddingResult> {
-    const modelName = request.model ?? DEFAULT_MODEL;
+    const modelName = request.model ?? this.modelName;
     const model = this.client.getGenerativeModel({ model: modelName });
 
     let embeddingsResult: number[][] = [];

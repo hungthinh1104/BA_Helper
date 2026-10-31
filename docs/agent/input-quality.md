@@ -102,7 +102,9 @@ instructions with no business change to evaluate
 ```
 
 Secret-like requirement input is not merely unready: it is rejected before
-revision persistence with `SENSITIVE_REQUIREMENT_INPUT`.
+revision persistence with `INVALID_REQUIREMENT_INPUT`. Detection uses the
+shared heuristic redaction policy; it cannot guarantee discovery of every
+unlabeled or unfamiliar secret format.
 
 Requirement lifecycle:
 

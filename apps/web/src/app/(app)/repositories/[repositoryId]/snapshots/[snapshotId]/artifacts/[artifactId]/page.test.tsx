@@ -3,6 +3,48 @@ import type { ComprehensionScenario, TestStaticBehaviorClaim } from "@ba-helper/
 import { mergeScenarioPages } from "@/hooks/api/use-code-comprehension"
 import { Scenario, ScenarioComparison } from "./_components/scenario-inspector"
 
+jest.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => ({
+    scenarioSetupLabel: "Declared setup",
+    scenarioInputsLabel: "Declared inputs",
+    scenarioInvocationsLabel: "Declared invocations",
+    scenarioAssertionsLabel: "Declared assertions",
+    scenarioMocksLabel: "Mock declarations",
+    scenarioExpectedOutcomesLabel: "Declared expected outcomes",
+    scenarioDirectReference: "Direct static test reference",
+    scenarioIndirectCallPath: "Indirect static call path",
+    scenarioNoTracePath: "No supported trace path recorded",
+    scenarioHideVisualTrace: "Hide visual trace",
+    scenarioShowVisualTrace: "Show visual trace",
+    scenarioLoadingVisualTrace: "Loading visual trace…",
+    scenarioAssociationsTitle: "Static invocation/assertion associations",
+    scenarioAssociationsDescription: "Source relationships only; they do not establish a passing result.",
+    scenarioInvocationUnresolved: "Invocation unresolved",
+    scenarioExpectedValueCount: "(1 declared expected value)",
+    scenarioUnresolvedEvidenceLabel: "Unresolved evidence",
+    scenarioSetupComparisonLabel: "Setup declarations",
+    scenarioInputsComparisonLabel: "Input declarations",
+    scenarioInvocationsComparisonLabel: "Invocation declarations",
+    scenarioAssertionsComparisonLabel: "Assertion declarations",
+    scenarioMocksComparisonLabel: "Mock declarations",
+    scenarioExpectedOutcomesComparisonLabel: "Expected outcome declarations",
+    scenarioComparisonLabel: "Scenario comparison",
+    scenarioComparisonTitle: "Compare extracted scenarios",
+    scenarioFirstSelectLabel: "First scenario",
+    scenarioSecondSelectLabel: "Second scenario",
+    scenarioComparisonCounts: "{label}: {leftCount} vs {rightCount} static declarations",
+    scenarioOnlyFirst: "Only first",
+    scenarioOnlySecond: "Only second",
+    scenarioRelationshipCounts: "Relationships: {leftCount} vs {rightCount} static edges",
+    scenarioComparisonDescription: "Differences compare exact extracted source claims and static relationships only; they do not compare runtime behavior or test outcomes.",
+    selectedStaticClaimEvidenceLabel: "Selected static claim evidence",
+    selectedStaticEvidenceTitle: "Selected static evidence",
+    scenarioSourceDeclarationCommit: "Source declaration · claim commit {commitSha}",
+    scenarioContextLabel: "Scenario: {title}",
+    scenarioSnapshotContext: "snapshot {snapshotId} · snapshot commit {commitSha}",
+  })[key] ?? key,
+}))
+
 const claim: TestStaticBehaviorClaim = {
   kind: "ACTION",
   evidenceKind: "STATIC_DECLARATION",

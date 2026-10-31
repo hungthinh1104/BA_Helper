@@ -3,7 +3,9 @@ import { ImpactAnalysisReadModelController } from './impact-analysis-read-model.
 import type { ProjectPermissionService } from '../../project/application/project-permission.service';
 import type { GetAnalysisDriftFreshnessUseCase } from '../application/queries/get-analysis-drift-freshness.usecase';
 import type { GetAnalysisWorkspaceUseCase } from '../application/queries/get-analysis-workspace.usecase';
+import type { GetMatrixRowDetailUseCase } from '../application/queries/get-matrix-row-detail.usecase';
 import type { GetQaCoverageUseCase } from '../application/qa/get-qa-coverage.usecase';
+import type { MatrixRowDetailResponse } from '@ba-helper/contracts';
 import { QaCoverageDeriver } from '../application/qa/qa-coverage.deriver';
 import { artifact, input } from '../application/qa/qa-trace.test-fixtures';
 import { UnauthorizedException, NotFoundException } from '@nestjs/common';
@@ -14,6 +16,7 @@ describe('ImpactAnalysisReadModelController - driftFreshness', () => {
   let permissions: jest.Mocked<ProjectPermissionService>;
   let getAnalysisDriftFreshness: jest.Mocked<GetAnalysisDriftFreshnessUseCase>;
   let getAnalysisWorkspace: jest.Mocked<GetAnalysisWorkspaceUseCase>;
+  let getMatrixRowDetail: jest.Mocked<GetMatrixRowDetailUseCase>;
   let getQaCoverage: jest.Mocked<GetQaCoverageUseCase>;
 
   const mockActor: RequestUser = { id: 'user-1', email: 'test@example.com', name: 'Test', role: 'VIEWER' };
@@ -21,8 +24,10 @@ describe('ImpactAnalysisReadModelController - driftFreshness', () => {
   beforeEach(async () => {
     permissions = {
       assertCanReadAnalysis: jest.fn(),
+      assertCanReadMultiRepoRun: jest.fn(),
     } as any;
 
+    getMatrixRowDetail = { execute: jest.fn() } as any;
     getAnalysisDriftFreshness = {
       execute: jest.fn(),
     } as any;
@@ -32,7 +37,7 @@ describe('ImpactAnalysisReadModelController - driftFreshness', () => {
     getQaCoverage = { execute: jest.fn() } as unknown as jest.Mocked<GetQaCoverageUseCase>;
 
     controller = new ImpactAnalysisReadModelController(
-      null as any, // getMatrixRowDetail
+      getMatrixRowDetail,
       null as any, // getImpactGraph
       getQaCoverage,
       null as any, // getReviewQueue
@@ -47,6 +52,14 @@ describe('ImpactAnalysisReadModelController - driftFreshness', () => {
   it('throws 401 if unauthorized', async () => {
     permissions.assertCanReadAnalysis.mockRejectedValueOnce(new UnauthorizedException());
     await expect(controller.driftFreshness('proj-1', 'analysis-1', mockActor)).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('rejects malformed matrix row detail before returning it to the API client', async () => {
+    getMatrixRowDetail.execute.mockResolvedValueOnce({ runId: 'run-1' } as MatrixRowDetailResponse);
+
+    await expect(
+      controller.getMatrixRowDetailEndpoint('run-1', 'analysis-1', mockActor),
+    ).rejects.toMatchObject({ name: 'ZodError' });
   });
 
   it('guards test trace reads before querying analysis data', async () => {

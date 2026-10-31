@@ -1,23 +1,22 @@
 import { Injectable } from '@nestjs/common';
 import { DocumentJobStatus } from '@prisma/client';
 import { AppError } from '@ba-helper/shared';
+import { documentJobFailureCode, reportClarificationsSnapshotSchema } from '@ba-helper/contracts';
 import { GetReviewCompletionUseCase } from '../../../traceability/application/get-review-completion.usecase';
-import { GetLatestReviewedReportSnapshotUseCase } from './get-latest-reviewed-report-snapshot.usecase';
-import {
-  FinalReviewedReportResponse,
-  evidenceQualitySummarySnapshotSchema,
-  evaluationContextSnapshotSchema,
-  reviewDecisionsSnapshotSchema,
-} from '@ba-helper/contracts';
+import { FinalReviewedReportResponse } from '@ba-helper/contracts';
 import { ApprovedReportContextReader } from './approved-report-context.reader';
-import { PrismaService, DEFAULT_REPORT_LOCALE, ReportLocale, buildReportReviewCoverageSummaryFromSnapshot, readReportTestTrace } from "@ba-helper/backend-runtime";
+import { DocumentRepository, DEFAULT_REPORT_LOCALE, ReportLocale, buildReportReviewCoverageSummaryFromSnapshot, readReportTestTrace } from "@ba-helper/backend-runtime";
+import {
+  findReviewCompletionMismatches,
+  parseFrozenReportContent,
+  reviewDecisionStatesMatch,
+} from './reviewed-report-provenance';
 
 @Injectable()
 export class GetFinalReviewedReportUseCase {
   constructor(
     private readonly getReviewCompletion: GetReviewCompletionUseCase,
-    private readonly getLatestSnapshot: GetLatestReviewedReportSnapshotUseCase,
-    private readonly prisma: PrismaService,
+    private readonly documentRepository: DocumentRepository,
     private readonly contextReader: ApprovedReportContextReader,
   ) {}
 
@@ -26,7 +25,8 @@ export class GetFinalReviewedReportUseCase {
     params: { locale?: ReportLocale } = {},
   ): Promise<FinalReviewedReportResponse> {
     const locale = params.locale ?? DEFAULT_REPORT_LOCALE;
-    const completion = await this.getReviewCompletion.execute(analysisId);
+    const { completion, reviewDecisionsSnapshot } =
+      await this.getReviewCompletion.executeWithReviewDecisions(analysisId);
 
     if (!completion.isComplete) {
       throw new AppError(
@@ -36,19 +36,22 @@ export class GetFinalReviewedReportUseCase {
       );
     }
 
-    const snapshot = await this.getLatestSnapshot.execute(analysisId);
-    if (!snapshot) {
+    if (!completion.latestSnapshotId) {
       throw new AppError(
         'REVIEWED_SNAPSHOT_MISSING' as any,
         'Reviewed report snapshot is missing despite review completion indicating otherwise',
       );
     }
 
-    if (completion.latestSnapshotId && completion.latestSnapshotId !== snapshot.id) {
+    const snapshot = await this.documentRepository.findReviewedReportSnapshotById(
+      analysisId,
+      completion.latestSnapshotId,
+    );
+    if (!snapshot) {
       throw new AppError(
         'REPORT_PROVENANCE_MISMATCH',
-        'Review completion and final report refer to different reviewed snapshots.',
-        { completionSnapshotId: completion.latestSnapshotId, reportSnapshotId: snapshot.id },
+        'Review completion refers to a missing reviewed report snapshot.',
+        { completionSnapshotId: completion.latestSnapshotId },
       );
     }
 
@@ -62,10 +65,13 @@ export class GetFinalReviewedReportUseCase {
       completion,
       reviewCoverageSummary.traceabilityLinks,
     );
+    if (!reviewDecisionStatesMatch(reviewDecisionsSnapshot, frozenContent.reviewDecisionsSnapshot)) {
+      mismatchedCompletionFields.push('reviewDecisionsSnapshot');
+    }
     if (mismatchedCompletionFields.length > 0) {
       throw new AppError(
         'REPORT_PROVENANCE_MISMATCH',
-        'Live review counts no longer match the frozen reviewed report snapshot.',
+        'Live review state no longer matches the frozen reviewed report snapshot.',
         { reportSnapshotId: snapshot.id, mismatchedCompletionFields },
       );
     }
@@ -76,6 +82,9 @@ export class GetFinalReviewedReportUseCase {
       analysisId,
       snapshotId: snapshot.id,
       testTraceSnapshot: readReportTestTrace(snapshot.testTraceSnapshot, { analysisId }),
+      clarificationsSnapshot: snapshot.clarificationsSnapshot == null
+        ? null
+        : reportClarificationsSnapshotSchema.parse(snapshot.clarificationsSnapshot),
       locale,
       markdown,
       createdAt: snapshot.createdAt.toISOString(),
@@ -105,14 +114,10 @@ export class GetFinalReviewedReportUseCase {
       throw new AppError('LOCALIZED_REPORT_NOT_READY', 'The canonical report has not been approved yet.');
     }
 
-    const localized = await this.prisma.localizedReportArtifact.findUnique({
-      where: {
-        sourceDocumentId_locale: {
-          sourceDocumentId: snapshot.approvedDocumentId,
-          locale,
-        }
-      }
-    });
+    const localized = await this.documentRepository.findLocalizedReportArtifact(
+      snapshot.approvedDocumentId,
+      locale,
+    );
 
     if (!localized) {
       throw new AppError('LOCALIZED_REPORT_NOT_READY', `Localized report for ${locale} is not ready yet.`);
@@ -145,14 +150,10 @@ export class GetFinalReviewedReportUseCase {
     }
 
     if (snapshot.approvedDocumentId) {
-      const completedJobs = await this.prisma.documentJob.findMany({
-        where: {
-          analysisId: snapshot.analysisId,
-          generatedDocumentId: snapshot.approvedDocumentId,
-          status: DocumentJobStatus.COMPLETED,
-        },
-        select: { snapshotId: true },
-      });
+      const completedJobs = await this.documentRepository.findCompletedJobsForApprovedReport(
+        snapshot.analysisId,
+        snapshot.approvedDocumentId,
+      );
       if (completedJobs.some((job: { snapshotId: string }) => job.snapshotId !== snapshot.id)) {
         throw new AppError(
           'REPORT_PROVENANCE_MISMATCH',
@@ -161,13 +162,11 @@ export class GetFinalReviewedReportUseCase {
         );
       }
 
-      const document = await this.prisma.generatedDocument.findUnique({
-        where: { id: snapshot.approvedDocumentId },
-        select: { id: true, impactAnalysisId: true, type: true, status: true, content: true },
-      });
+      const document = await this.documentRepository.findGeneratedDocumentById(snapshot.approvedDocumentId);
       if (document) {
         if (
           document.impactAnalysisId !== snapshot.analysisId ||
+          (document.reviewedReportSnapshotId != null && document.reviewedReportSnapshotId !== snapshot.id) ||
           document.type !== 'IMPACT_REPORT' ||
           document.status !== 'APPROVED'
         ) {
@@ -181,14 +180,7 @@ export class GetFinalReviewedReportUseCase {
       }
     }
 
-    const job = await this.prisma.documentJob.findFirst({
-      where: {
-        snapshotId: snapshot.id,
-        documentType: 'IMPACT_REPORT',
-      },
-      orderBy: { updatedAt: 'desc' },
-      include: { generatedDocument: true },
-    });
+    const job = await this.documentRepository.findLatestJobForSnapshot(snapshot.id);
 
     if (job?.status === DocumentJobStatus.COMPLETED && job.generatedDocument) {
       return job.generatedDocument.content;
@@ -202,7 +194,9 @@ export class GetFinalReviewedReportUseCase {
           documentJobId: job.id,
           status: job.status,
           failedAt: job.failedAt?.toISOString(),
-          error: job.error,
+          ...(job.error != null || job.status === DocumentJobStatus.FAILED
+            ? { error: { code: documentJobFailureCode } }
+            : {}),
         },
       );
     }
@@ -214,64 +208,4 @@ export class GetFinalReviewedReportUseCase {
     );
   }
 
-}
-
-function parseFrozenReportContent(snapshot: {
-  id: string;
-  reviewDecisionsSnapshot: unknown;
-  evidenceQualitySummarySnapshot: unknown;
-  evaluationContextSnapshot: unknown;
-}) {
-  const reviewDecisions = reviewDecisionsSnapshotSchema.safeParse(
-    snapshot.reviewDecisionsSnapshot,
-  );
-  const evidenceSummary = evidenceQualitySummarySnapshotSchema.safeParse(
-    snapshot.evidenceQualitySummarySnapshot,
-  );
-  const evaluationContext = evaluationContextSnapshotSchema.safeParse(
-    snapshot.evaluationContextSnapshot,
-  );
-  if (!reviewDecisions.success || !evidenceSummary.success || !evaluationContext.success) {
-    throw new AppError(
-      'REPORT_PROVENANCE_MISMATCH',
-      'The frozen report snapshot contains data outside its response contract.',
-      { reportSnapshotId: snapshot.id },
-    );
-  }
-  return {
-    reviewDecisionsSnapshot: reviewDecisions.data,
-    evidenceQualitySummarySnapshot: evidenceSummary.data,
-    evaluationContextSnapshot: evaluationContext.data,
-  };
-}
-
-function findReviewCompletionMismatches(
-  completion: {
-    totalLinks: number;
-    accepted: number;
-    rejected: number;
-    needsReview: number;
-    needsMoreEvidence: number;
-    unreviewed: number;
-  },
-  snapshot: {
-    total: number;
-    accepted: number;
-    rejected: number;
-    needsReview: number;
-    needsMoreEvidence: number;
-    unreviewed: number;
-  },
-): string[] {
-  const fields = [
-    ['totalLinks', completion.totalLinks, snapshot.total],
-    ['accepted', completion.accepted, snapshot.accepted],
-    ['rejected', completion.rejected, snapshot.rejected],
-    ['needsReview', completion.needsReview, snapshot.needsReview],
-    ['needsMoreEvidence', completion.needsMoreEvidence, snapshot.needsMoreEvidence],
-    ['unreviewed', completion.unreviewed, snapshot.unreviewed],
-  ] as const;
-  return fields
-    .filter(([, liveCount, snapshotCount]) => liveCount !== snapshotCount)
-    .map(([field]) => field);
 }

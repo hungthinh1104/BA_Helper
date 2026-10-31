@@ -90,6 +90,9 @@ describe('Unified review-item decision endpoint (e2e)', () => {
       data: {
         id: analysisId,
         requirementRevisionId: revId,
+        requirementId: reqId,
+        projectId,
+        repositoryId,
         snapshotId,
         sourceTargetId: targetId,
         requestKey: crypto.randomUUID(),
@@ -117,6 +120,7 @@ describe('Unified review-item decision endpoint (e2e)', () => {
       data: {
         id: linkId,
         impactAnalysisId: analysisId,
+        snapshotId,
         artifactId,
         linkType: 'AFFECTED',
         linkBasis: 'EVIDENCED',

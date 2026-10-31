@@ -1,13 +1,14 @@
 import { GetImpactGraphUseCase } from './get-impact-graph.usecase';
 import { ImpactGraphReadModelBuilder } from './impact-graph-read-model.builder';
 import { AppError } from '@ba-helper/shared';
-import { PrismaService } from "@ba-helper/backend-runtime";
+import type { PrismaService } from "@ba-helper/backend-runtime";
 import { impactGraphResponseSchema } from '@ba-helper/contracts';
 
 // ── Helper builders ──────────────────────────────────────────────────────────
 
 const makeArtifact = (id: string, overrides: Record<string, unknown> = {}) => ({
   id,
+  snapshotId: 'snapshot-1',
   name: `Symbol_${id}`,
   artifactKey: `key-${id}`,
   artifactType: 'SERVICE',
@@ -44,6 +45,7 @@ const makeAnalysis = (overrides: Record<string, unknown> = {}) => ({
   id: 'analysis-1',
   status: 'COMPLETED',
   snapshotId: 'snapshot-1',
+  requirementRevisionId: 'rev-1',
   snapshot: { commitSha: 'test-commit-sha' },
   requirementRevision: {
     id: 'rev-1',
@@ -178,7 +180,7 @@ describe('GetImpactGraphUseCase', () => {
   it('UC-GRAPH-06: carries retrievalMetadata into artifact node', async () => {
     const artifact = makeArtifact('art-1');
     const link = makeTraceabilityLink('link-1', artifact, {
-      retrievalMetadata: { method: 'HYBRID', signals: ['VECTOR', 'LEXICAL'], score: { final: 0.92 } },
+      retrievalMetadata: { method: 'HYBRID', signals: ['VECTOR', 'LEXICAL', 'KIND'], score: { final: 0.92 } },
     });
     const analysis = makeAnalysis({ traceabilityLinks: [link] });
     const useCase = new GetImpactGraphUseCase(new ImpactGraphReadModelBuilder(makePrisma(analysis) as any));
@@ -186,6 +188,7 @@ describe('GetImpactGraphUseCase', () => {
 
     const artNode = result.nodes.find(n => n.id === `artifact-${artifact.id}`);
     expect((artNode?.retrieval as Record<string, unknown>)?.method).toBe('HYBRID');
+    expect((artNode?.retrieval as Record<string, unknown>)?.signals).toEqual(['VECTOR', 'LEXICAL', 'KIND']);
   });
 
   it('UC-GRAPH-07: includes DEPENDENCY edges only when both endpoints are included nodes', async () => {
@@ -234,7 +237,14 @@ describe('GetImpactGraphUseCase', () => {
     const artifact = makeArtifact('art-1');
     const insight = makeInsight('ins-1', {
       evidenceLinks: [{
-        evidence: { id: 'ev-1', artifactId: 'art-1', excerpt: 'BookingService.cancel was called' },
+        evidence: {
+          id: 'ev-1',
+          snapshotId: 'snapshot-1',
+          requirementRevisionId: 'rev-1',
+          artifactId: 'art-1',
+          artifact: { snapshotId: 'snapshot-1' },
+          excerpt: 'BookingService.cancel was called',
+        },
       }],
     });
     const analysis = makeAnalysis({

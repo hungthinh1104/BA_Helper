@@ -28,7 +28,11 @@ export class ApprovedReportProjectionService {
       orderBy: { createdAt: 'desc' },
     });
 
-    if (reviewedSnapshot && reviewedSnapshot.approvedDocumentId !== report.id) {
+    if (
+      reviewedSnapshot &&
+      (reviewedSnapshot.approvedDocumentId !== report.id ||
+        (report.reviewedReportSnapshotId != null && report.reviewedReportSnapshotId !== reviewedSnapshot.id))
+    ) {
       throw new AppError(
         'REPORT_PROVENANCE_MISMATCH',
         'The approved document is not linked to the latest reviewed snapshot.',

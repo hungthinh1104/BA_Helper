@@ -1,5 +1,6 @@
 export type TraceabilityUpsertInput = {
   impactAnalysisId: string;
+  snapshotId: string;
   artifactId: string;
   linkType: 'AFFECTED' | 'RELATED';
   linkBasis: 'EVIDENCED' | 'INFERRED';

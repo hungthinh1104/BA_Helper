@@ -92,6 +92,7 @@ export class CreateMultiRepoImpactAnalysesUseCase {
       try {
         run = await this.runs.create({
           projectId: params.projectId,
+          requirementId: revision.requirementId,
           requirementRevisionId: params.requirementRevisionId,
           createdByUserId: params.actorId,
           requestKey: params.requestKey,
@@ -123,6 +124,7 @@ export class CreateMultiRepoImpactAnalysesUseCase {
           snapshotId: plan.snapshotId,
           sourceTargetId: plan.sourceTargetId,
           multiRepoRunId: run.id,
+          actorUserId: params.actorId,
           requestKey: deriveChildRequestKey(params.requestKey, plan.repositoryId),
           allowPartialSnapshot: params.allowPartialSnapshot,
           domainPackId: params.domainPackId,

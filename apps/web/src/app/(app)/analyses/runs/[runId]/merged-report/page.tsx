@@ -106,6 +106,7 @@ export default function ApprovedMultiRepoReportPage({
       toast.error(t("reviewSubmitFailed"), {
         description: error instanceof Error ? error.message : t("unknownError"),
       })
+      throw error
     }
   }
 

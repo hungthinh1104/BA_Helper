@@ -1,8 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { apiGet, apiPost } from "@/lib/api-client"
 import { queryKeys } from "@/lib/api/query-keys"
-import { ApprovedImpactReportResponse, approvedImpactReportResponseSchema, documentJobSchema, DocumentJob, finalReviewedReportResponseSchema, FinalReviewedReportResponse, normalizeAppLocale, type ReportLocale } from "@ba-helper/contracts"
-import { z } from "zod"
+import { ApprovedImpactReportResponse, approvedImpactReportResponseSchema, documentJobSchema, DocumentJob, finalReviewedReportResponseSchema, normalizeAppLocale, type ReportLocale } from "@ba-helper/contracts"
 import { ApiError } from "@/lib/api-error"
 
 export function isReportGenerationPending(error: unknown): boolean {
@@ -34,7 +33,7 @@ export function useFinalReviewedReport(analysisId: string, locale?: ReportLocale
     queryKey: queryKeys.documents.finalReviewedReport(analysisId, normalizedLocale),
     queryFn: async () => {
       const qs = normalizedLocale !== 'en' ? `?locale=${normalizedLocale}` : ''
-      return apiGet<FinalReviewedReportResponse>(`/api/v1/impact-analyses/${analysisId}/final-reviewed-report${qs}`, finalReviewedReportResponseSchema as unknown as z.ZodType<FinalReviewedReportResponse>)
+      return apiGet(`/api/v1/impact-analyses/${analysisId}/final-reviewed-report${qs}`, finalReviewedReportResponseSchema)
     },
     enabled: Boolean(analysisId),
     retry: false,

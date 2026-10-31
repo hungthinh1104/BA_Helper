@@ -96,7 +96,7 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
       },
     });
 
-    return { projectId, revisionId };
+    return { projectId, requirementId, revisionId };
   }
 
   async function seedRepository(projectId: string, name: string) {
@@ -163,12 +163,17 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
   }) {
     const evidenceId = crypto.randomUUID();
     const insightId = crypto.randomUUID();
+    const analysis = await prisma.impactAnalysis.findUniqueOrThrow({
+      where: { id: params.analysisId },
+      select: { snapshotId: true },
+    });
 
     await prisma.evidence.create({
       data: {
         id: evidenceId,
         provenanceKey: `prov:${params.analysisId}:${params.insightKey}`,
         sourceType: 'CODE',
+        snapshotId: analysis.snapshotId,
         sourcePath: `src/${params.insightKey}.ts`,
         startLine: 10,
         endLine: 14,
@@ -444,6 +449,84 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
 
     expect(await prisma.multiRepoAnalysisRun.count()).toBe(runCountBefore);
     expect(await prisma.impactAnalysis.count()).toBe(analysisCountBefore);
+  });
+
+  it('rejects a multi-repo run whose project differs from its requirement revision', async () => {
+    const { projectId } = await seedProjectWithReadyRequirement();
+    const foreignProjectId = crypto.randomUUID();
+    const foreignRequirementId = crypto.randomUUID();
+    const foreignRevisionId = crypto.randomUUID();
+
+    await prisma.project.create({
+      data: { id: foreignProjectId, name: 'Foreign Revision Project' },
+    });
+    await prisma.requirement.create({
+      data: { id: foreignRequirementId, projectId: foreignProjectId },
+    });
+    await prisma.requirementRevision.create({
+      data: {
+        id: foreignRevisionId,
+        requirementId: foreignRequirementId,
+        title: 'Foreign requirement',
+        rawText: 'Valid immutable requirement revision.',
+        normalizedText: 'Valid immutable requirement revision.',
+        readinessStatus: 'READY_FOR_ANALYSIS',
+      },
+    });
+
+    const runId = crypto.randomUUID();
+    try {
+      await expect(prisma.multiRepoAnalysisRun.create({
+        data: {
+          id: runId,
+          projectId,
+          requirementId: foreignRequirementId,
+          requirementRevisionId: foreignRevisionId,
+          createdByUserId: adminUserId,
+          requestKey: crypto.randomUUID(),
+        },
+      })).rejects.toMatchObject({ code: 'P2003' });
+    } finally {
+      await prisma.multiRepoAnalysisRun.deleteMany({ where: { id: runId } });
+    }
+  });
+
+  it('rejects attaching a child analysis to a run for another requirement revision', async () => {
+    const { projectId, requirementId, revisionId } = await seedProjectWithReadyRequirement();
+    const otherRevisionId = crypto.randomUUID();
+    await prisma.requirementRevision.create({
+      data: {
+        id: otherRevisionId,
+        requirementId,
+        title: 'Different multi-repo requirement revision',
+        rawText: 'A different immutable requirement revision.',
+        normalizedText: 'A different immutable requirement revision.',
+        readinessStatus: 'READY_FOR_ANALYSIS',
+      },
+    });
+    const booking = await seedRepository(projectId, 'booking-lineage');
+    const payment = await seedRepository(projectId, 'payment-lineage');
+    const createRun = async (requirementRevisionId: string) => {
+      const response = await request(app.getHttpServer())
+        .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          requirementRevisionId,
+          repositoryIds: [booking.repositoryId, payment.repositoryId],
+          allowPartialSnapshot: false,
+          requestKey: crypto.randomUUID(),
+        })
+        .expect(201);
+      return multiRepoImpactAnalysisCreateResponseSchema.parse(response.body);
+    };
+
+    const originalRun = await createRun(revisionId);
+    const differentRevisionRun = await createRun(otherRevisionId);
+
+    await expect(prisma.impactAnalysis.update({
+      where: { id: originalRun.items[0].analysisId },
+      data: { multiRepoRunId: differentRevisionRun.runId },
+    })).rejects.toMatchObject({ code: 'P2003' });
   });
 
   it('returns 409 when a repository has no analyzable observed snapshot', async () => {
@@ -1794,6 +1877,7 @@ describe('Multi-repo analysis fan-out (e2e)', () => {
       data: {
         id: crypto.randomUUID(),
         projectId: otherProjectId,
+        requirementId: otherRequirementId,
         requirementRevisionId: otherRevisionId,
         createdByUserId: adminUserId,
         requestKey: crypto.randomUUID(),

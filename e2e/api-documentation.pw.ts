@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-test('Scalar renders the live API reference without a CDN or browser errors', async ({ page }) => {
+test('Scalar renders the live API reference without a CDN or browser errors', async ({ page }, testInfo) => {
   const apiOrigin = `http://localhost:${process.env.PW_API_PORT ?? '3001'}`
   const errors: string[] = []
   const externalRequests: string[] = []
@@ -19,7 +19,7 @@ test('Scalar renders the live API reference without a CDN or browser errors', as
   await expect(page.getByRole('heading', { name: 'BA Helper API', exact: true })).toBeVisible({ timeout: 60_000 })
   await expect(page.getByText('Sign in with email and password', { exact: true }).first()).toBeVisible()
   await expect(page.getByRole('button', { name: 'Ask AI', exact: true })).toHaveCount(0)
-  await page.screenshot({ path: 'e2e/.artifacts/scalar-api-reference.png', fullPage: false })
+  await page.screenshot({ path: testInfo.outputPath('scalar-api-reference.png'), fullPage: false })
   expect(errors).toEqual([])
   expect(externalRequests).toEqual([])
 })

@@ -11,7 +11,6 @@ import { DataList, DataListCell, DataListHeader, DataListRow } from "@/component
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { useApprovedMultiRepoReport, useMultiRepoAnalysisRunDetail, useFinalizeMultiRepoReport } from "@/hooks/api/use-analyses"
-import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { MetricCard } from "@/components/workspace/shared/primitives"
 import {
@@ -60,7 +59,6 @@ export default function MultiRepoAnalysisRunDetailPage({
   const { data, isLoading, error } = useMultiRepoAnalysisRunDetail(runId)
   const { data: approvedReport, error: approvedReportError } = useApprovedMultiRepoReport(runId)
   const finalizeReport = useFinalizeMultiRepoReport(runId)
-  const router = useRouter()
   const [selectedAnalysisId, setSelectedAnalysisId] = React.useState<string | null>(null)
 
   if (error && (error as { status?: number }).status === 404) {
@@ -81,7 +79,7 @@ export default function MultiRepoAnalysisRunDetailPage({
     try {
       await finalizeReport.mutateAsync()
       toast.success(t("reportFinalized"))
-      router.push(href(`/analyses/runs/${runId}/merged-report`))
+      window.location.assign(href(`/analyses/runs/${runId}/merged-report`))
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("failedFinalize"))
     }

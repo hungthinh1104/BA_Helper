@@ -91,7 +91,7 @@ export class HybridRetrievalEvaluationAdapter implements EvaluationAdapter {
       manualPackId: evalCase.domain?.packId,
     });
 
-    const results = await this.hybridRetrievalService.retrieve({
+    const { artifacts: results } = await this.hybridRetrievalService.retrieve({
       projectId,
       repositoryId,
       snapshotId,

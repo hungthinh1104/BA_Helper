@@ -3,36 +3,16 @@ import { useTranslations } from "next-intl"
 import { Activity, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, FileCode, Layers, SearchX } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DenseCard } from "@/components/workspace/shared/dense-card"
+import {
+  scanHealthDiagnosticPayloadSchema,
+  type ScanHealthDiagnosticPayload,
+} from "@ba-helper/contracts"
 
-export interface ScanHealthPayload {
-  coverageStatus: 'FULL' | 'PARTIAL' | 'FAILED'
-  scannerVersion: string
-  analyzerVersion: string
-  scannedFileCount: number
-  skippedFileCount: number
-  artifactCount: number
-  skippedSummary: Record<string, number>
-  skippedFilesSample: Array<{ path: string; reason: string }>
-  limits: {
-    maxFiles: number
-    maxFileBytes: number
-    maxTotalBytes?: number
-  }
-  limitHits: {
-    fileLimitHit: boolean
-    repoSizeLimitHit: boolean
-  }
-}
+export type ScanHealthPayload = ScanHealthDiagnosticPayload
 
 export function parseScanHealthPayload(payload: unknown): ScanHealthPayload | null {
-  if (!payload || typeof payload !== 'object') return null
-  const p = payload as Record<string, unknown>
-  
-  if (typeof p.coverageStatus !== 'string') return null
-  if (typeof p.scannedFileCount !== 'number') return null
-  if (typeof p.skippedFileCount !== 'number') return null
-  
-  return p as unknown as ScanHealthPayload
+  const parsed = scanHealthDiagnosticPayloadSchema.safeParse(payload)
+  return parsed.success ? parsed.data : null
 }
 
 const SKIP_REASON_MESSAGE_KEYS: Record<string, string> = {

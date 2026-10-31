@@ -58,9 +58,8 @@ export class EmbeddingChunkRepository implements EmbeddingChunkRepositoryPort {
           "filePath" = EXCLUDED."filePath",
           "symbolName" = EXCLUDED."symbolName",
           "artifactType" = EXCLUDED."artifactType",
-          "commitSha" = EXCLUDED."commitSha"
-          -- NOTE: chunkerVersion is intentionally excluded from DO UPDATE
-          -- so re-runs never silently change the version recorded at creation time.
+          "commitSha" = EXCLUDED."commitSha",
+          "chunkerVersion" = EXCLUDED."chunkerVersion"
       `;
     }
   }
@@ -70,6 +69,7 @@ export class EmbeddingChunkRepository implements EmbeddingChunkRepositoryPort {
     projectId: string;
     repositoryId: string;
     snapshotId: string;
+    embeddingModel: string;
     queryEmbedding: number[];
     limit?: number;
     artifactTypes?: string[];
@@ -86,6 +86,7 @@ export class EmbeddingChunkRepository implements EmbeddingChunkRepositoryPort {
           AND "projectId"    = ${params.projectId}
           AND "repositoryId" = ${params.repositoryId}
           AND "snapshotId"   = ${params.snapshotId}
+          AND "embeddingModel" = ${params.embeddingModel}
           AND "artifactType" = ANY(${params.artifactTypes})
         ORDER BY embedding <=> ${vectorStr}::vector
         LIMIT ${limit}
@@ -100,6 +101,7 @@ export class EmbeddingChunkRepository implements EmbeddingChunkRepositoryPort {
         AND "projectId"    = ${params.projectId}
         AND "repositoryId" = ${params.repositoryId}
         AND "snapshotId"   = ${params.snapshotId}
+        AND "embeddingModel" = ${params.embeddingModel}
       ORDER BY embedding <=> ${vectorStr}::vector
       LIMIT ${limit}
     `;
@@ -197,8 +199,8 @@ export class EmbeddingChunkRepository implements EmbeddingChunkRepositoryPort {
         ${params.chunkerVersion}, ${params.embeddingModel},
         embedding, NOW()
       FROM "EmbeddingChunk"
-      WHERE "snapshotId"   = ${params.baseSnapshotId}::uuid
-        AND "artifactId"   = ${params.oldArtifactId}::uuid
+      WHERE "snapshotId"   = ${params.baseSnapshotId}::text
+        AND "artifactId"   = ${params.oldArtifactId}::text
         AND "embeddingModel" = ${params.embeddingModel}
         AND "chunkerVersion" = ${params.chunkerVersion}
         AND "contentHash"  = ${params.contentHash}

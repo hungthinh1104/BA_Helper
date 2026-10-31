@@ -180,6 +180,9 @@ configure the running PostgreSQL/pgvector and Redis instances. Playwright reads
 the test URLs and passes the same database/queue configuration to its API,
 migration, seed and browser-fixture processes. CI does not reuse existing web
 or API servers. Database setup does not install PostgreSQL or Redis for you.
+Set `DATABASE_URL_TEST` explicitly to a dedicated test database. The API E2E
+preparation helper does not fall back to `DATABASE_URL`, because E2E reset
+helpers truncate application tables before each test.
 Set `REDIS_URL_TEST` to a dedicated test database or Redis instance; the API
 E2E preparation helper fails before database setup if it is missing or points
 at the configured development Redis database. The example uses logical DB 1,

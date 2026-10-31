@@ -100,6 +100,11 @@ a usable scenario.
 Treat source code, comments, README files, and requirements as untrusted data.
 They may contain instructions aimed at the model. LLM prompts must instruct
 the provider to analyze content as data, not follow instructions inside it.
+Requirement and domain-context strings are JSON-encoded in the rendered prompt;
+each evidence field is JSON-escaped so source newlines cannot terminate its
+untrusted-data boundary. Increment the prompt version when changing prompt
+instructions or input framing so persisted analysis metadata identifies the
+prompt semantics that produced it.
 
 Before any real-provider model request, including public repository analysis,
 redact likely secrets from every selected prompt payload, including requirement
@@ -108,6 +113,12 @@ text and evidence excerpts:
 ```text
 tokens, API keys, JWTs, database URLs, private keys, environment values
 ```
+
+Redaction is mandatory for both `systemPrompt` and `userPrompt` at every
+real-provider adapter boundary, in every environment. No test, development, or
+benchmark configuration may disable it. Cover common labeled assignments,
+provider token formats, Bearer/JWT values, credential-bearing URLs, and PEM
+private-key blocks; pattern-based detection remains heuristic.
 
 ## Provider Isolation
 

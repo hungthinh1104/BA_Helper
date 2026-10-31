@@ -236,14 +236,14 @@ enum ProjectRole {
 }
 
 model User {
-  id                String   @id @default(uuid()) @db.Uuid
-  email             String   @unique
-  name              String?
-  passwordHash      String?  @map("password_hash")
-  credentialsVersion Int     @default(1) @map("credentials_version")
-  disabledAt        DateTime? @map("disabled_at")
-  role              UserRole @default(REVIEWER)
-  selectedProjectId String?  @map("selected_project_id")
+  id                 String    @id @default(uuid()) @db.Uuid
+  email              String    @unique
+  name               String?
+  passwordHash       String?   @map("password_hash")
+  credentialsVersion Int       @default(1) @map("credentials_version")
+  disabledAt         DateTime? @map("disabled_at")
+  role               UserRole  @default(REVIEWER)
+  selectedProjectId  String?   @map("selected_project_id")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -292,17 +292,20 @@ model ProjectMember {
 }
 
 model Repository {
-  id           String               @id @default(uuid())
-  projectId    String
-  canonicalUrl String
-  targets      RepositoryTarget[]
-  snapshots    RepositorySnapshot[]
-  scanJobs     ScanJob[]
-  project      Project              @relation(fields: [projectId], references: [id])
-  createdAt    DateTime             @default(now())
-  updatedAt    DateTime             @updatedAt
+  id              String               @id @default(uuid())
+  projectId       String
+  canonicalUrl    String
+  targets         RepositoryTarget[]
+  snapshots       RepositorySnapshot[]
+  scanJobs        ScanJob[]
+  analyses        ImpactAnalysis[]
+  embeddingChunks EmbeddingChunk[]     @relation("EmbeddingChunkRepository")
+  project         Project              @relation(fields: [projectId], references: [id])
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
 
   @@unique([projectId, canonicalUrl])
+  @@unique([id, projectId])
 }
 
 model RepositoryTarget {
@@ -320,6 +323,7 @@ model RepositoryTarget {
   updatedAt               DateTime         @updatedAt
 
   @@unique([repositoryId, targetKey])
+  @@unique([id, repositoryId])
 }
 
 model RepositorySnapshot {
@@ -336,12 +340,14 @@ model RepositorySnapshot {
   evidences       Evidence[]
   analyses        ImpactAnalysis[]
   scanJobs        ScanJob[]
-  embeddingChunks EmbeddingChunk[]
+  embeddingChunks EmbeddingChunk[]       @relation("EmbeddingChunkSnapshot")
   repository      Repository             @relation(fields: [repositoryId], references: [id])
   createdAt       DateTime               @default(now())
   updatedAt       DateTime               @updatedAt
 
   @@unique([repositoryId, commitSha, analyzerVersion])
+  @@unique([id, repositoryId])
+  @@unique([id, repositoryId, commitSha])
 }
 
 model RepositoryProfile {
@@ -376,8 +382,8 @@ model ScanJob {
   sourceTargetId String?
   snapshotId     String?
   repository     Repository          @relation(fields: [repositoryId], references: [id])
-  sourceTarget   RepositoryTarget?   @relation(fields: [sourceTargetId], references: [id])
-  snapshot       RepositorySnapshot? @relation(fields: [snapshotId], references: [id])
+  sourceTarget   RepositoryTarget?   @relation(fields: [sourceTargetId, repositoryId], references: [id, repositoryId], onDelete: Restrict, onUpdate: Cascade)
+  snapshot       RepositorySnapshot? @relation(fields: [snapshotId, repositoryId], references: [id, repositoryId], onDelete: Restrict, onUpdate: Cascade)
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
@@ -402,11 +408,12 @@ model CodeArtifact {
   incomingEdges     DependencyEdge[]   @relation("ToArtifact")
   evidences         Evidence[]
   traceabilityLinks TraceabilityLink[]
-  embeddingChunks   EmbeddingChunk[]
+  embeddingChunks   EmbeddingChunk[]   @relation("EmbeddingChunkArtifact")
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 
   @@unique([snapshotId, artifactKey])
+  @@unique([id, snapshotId])
   @@index([snapshotId, artifactType, artifactKey])
 }
 
@@ -419,8 +426,8 @@ model DependencyEdge {
   confidence     Float?
   metadata       Json?
   snapshot       RepositorySnapshot @relation(fields: [snapshotId], references: [id])
-  fromArtifact   CodeArtifact       @relation("FromArtifact", fields: [fromArtifactId], references: [id])
-  toArtifact     CodeArtifact       @relation("ToArtifact", fields: [toArtifactId], references: [id])
+  fromArtifact   CodeArtifact       @relation("FromArtifact", fields: [fromArtifactId, snapshotId], references: [id, snapshotId], onDelete: Restrict, onUpdate: Cascade)
+  toArtifact     CodeArtifact       @relation("ToArtifact", fields: [toArtifactId, snapshotId], references: [id, snapshotId], onDelete: Restrict, onUpdate: Cascade)
   createdAt      DateTime           @default(now())
 
   @@unique([snapshotId, fromArtifactId, toArtifactId, type])
@@ -443,7 +450,7 @@ model Evidence {
   isRedacted            Boolean                @default(false)
   redactionMetadata     Json?
   snapshot              RepositorySnapshot?    @relation(fields: [snapshotId], references: [id])
-  artifact              CodeArtifact?          @relation(fields: [artifactId], references: [id])
+  artifact              CodeArtifact?          @relation(fields: [artifactId, snapshotId], references: [id, snapshotId], onDelete: Restrict, onUpdate: Cascade)
   requirementRevision   RequirementRevision?   @relation(fields: [requirementRevisionId], references: [id])
   insightEvidence       InsightEvidence[]
   traceabilityEvidence  TraceabilityEvidence[]
@@ -454,15 +461,18 @@ model Evidence {
 }
 
 model Requirement {
-  id                 String                @id @default(uuid())
+  id                 String                 @id @default(uuid())
   projectId          String
-  requestKey         String                @default(uuid())
-  requestPayloadHash String                @default("")
+  requestKey         String                 @default(uuid())
+  requestPayloadHash String                 @default("")
   revisions          RequirementRevision[]
-  project            Project               @relation(fields: [projectId], references: [id])
-  createdAt          DateTime              @default(now())
-  updatedAt          DateTime              @updatedAt
+  analyses           ImpactAnalysis[]
+  multiRepoRuns      MultiRepoAnalysisRun[]
+  project            Project                @relation(fields: [projectId], references: [id])
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
 
+  @@unique([id, projectId])
   @@unique([projectId, requestKey])
   @@index([projectId, createdAt(sort: Desc), id(sort: Desc)])
 }
@@ -482,12 +492,14 @@ model RequirementRevision {
   convertedClarifications ClarificationItem[]        @relation("ConvertedClarifications")
   createdAt               DateTime                   @default(now())
 
+  @@unique([id, requirementId])
   @@index([requirementId, createdAt(sort: Desc), id(sort: Desc)])
 }
 
 model MultiRepoAnalysisRun {
   id                        String                     @id @default(uuid())
   projectId                 String
+  requirementId             String
   requirementRevisionId     String
   createdByUserId           String                     @db.Uuid
   requestKey                String
@@ -502,7 +514,8 @@ model MultiRepoAnalysisRun {
   domainPackManifestDigest  String?
   domainPackRegistryVersion String?
   project                   Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  requirementRevision       RequirementRevision        @relation(fields: [requirementRevisionId], references: [id], onDelete: Cascade)
+  requirement               Requirement                @relation(fields: [requirementId, projectId], references: [id, projectId], onDelete: Cascade, onUpdate: Cascade)
+  requirementRevision       RequirementRevision        @relation(fields: [requirementRevisionId, requirementId], references: [id, requirementId], onDelete: Cascade, onUpdate: Cascade)
   createdByUser             User                       @relation("CreatedMultiRepoRuns", fields: [createdByUserId], references: [id], onDelete: Cascade)
   analyses                  ImpactAnalysis[]
   approvedMergedReport      MergedMultiRepoReport?
@@ -510,10 +523,11 @@ model MultiRepoAnalysisRun {
   updatedAt                 DateTime                   @updatedAt
 
   @@unique([projectId, requestKey])
+  @@unique([id, projectId, requirementId, requirementRevisionId], map: "MultiRepoAnalysisRun_id_projectId_requirementId_requirementRevi")
   @@index([projectId])
   @@index([requirementRevisionId])
   @@index([createdByUserId])
-  @@index([resolvedDomainPackId, resolvedDomainPackVersion])
+  @@index([resolvedDomainPackId, resolvedDomainPackVersion], map: "MultiRepoAnalysisRun_resolvedDomainPackId_resolvedDomainPackVer")
 }
 
 model MergedMultiRepoReport {
@@ -546,6 +560,9 @@ model MergedMultiRepoReportReviewDecision {
 model ImpactAnalysis {
   id                          String                       @id @default(uuid())
   requirementRevisionId       String
+  requirementId               String
+  projectId                   String
+  repositoryId                String
   snapshotId                  String
   sourceTargetId              String
   multiRepoRunId              String?
@@ -563,10 +580,12 @@ model ImpactAnalysis {
   domainPackResolvedAt        DateTime                     @default(now())
   domainPackManifestDigest    String?
   domainPackRegistryVersion   String?
-  requirementRevision         RequirementRevision          @relation(fields: [requirementRevisionId], references: [id])
-  snapshot                    RepositorySnapshot           @relation(fields: [snapshotId], references: [id])
-  sourceTarget                RepositoryTarget             @relation(fields: [sourceTargetId], references: [id])
-  multiRepoRun                MultiRepoAnalysisRun?        @relation(fields: [multiRepoRunId], references: [id], onDelete: SetNull)
+  requirement                 Requirement                  @relation(fields: [requirementId, projectId], references: [id, projectId], onDelete: Restrict, onUpdate: Cascade)
+  requirementRevision         RequirementRevision          @relation(fields: [requirementRevisionId, requirementId], references: [id, requirementId], onDelete: Restrict, onUpdate: Cascade)
+  repository                  Repository                   @relation(fields: [repositoryId, projectId], references: [id, projectId], onDelete: Restrict, onUpdate: Cascade)
+  snapshot                    RepositorySnapshot           @relation(fields: [snapshotId, repositoryId], references: [id, repositoryId], onDelete: Restrict, onUpdate: Cascade)
+  sourceTarget                RepositoryTarget             @relation(fields: [sourceTargetId, repositoryId], references: [id, repositoryId], onDelete: Restrict, onUpdate: Cascade)
+  multiRepoRun                MultiRepoAnalysisRun?        @relation(fields: [multiRepoRunId, projectId, requirementId, requirementRevisionId], references: [id, projectId, requirementId, requirementRevisionId], onDelete: Restrict, onUpdate: Cascade, map: "ImpactAnalysis_multiRepoRunId_projectId_requirementId_requireme")
   insights                    BaInsight[]
   traceabilityLinks           TraceabilityLink[]
   documents                   GeneratedDocument[]
@@ -593,6 +612,7 @@ model ImpactAnalysis {
   clarificationRequests      ReviewClarificationRequest[] @relation("AnalysisToClarificationRequest")
 
   @@unique([requirementRevisionId, snapshotId, sourceTargetId, requestKey])
+  @@unique([id, snapshotId])
   @@index([status, createdAt])
   @@index([requirementRevisionId])
   @@index([snapshotId])
@@ -601,7 +621,7 @@ model ImpactAnalysis {
   @@index([derivedFromAnalysisId])
   @@index([sourceClarificationId])
   @@index([reviewClarificationRequestId])
-  @@index([resolvedDomainPackId, resolvedDomainPackVersion])
+  @@index([resolvedDomainPackId, resolvedDomainPackVersion], map: "ImpactAnalysis_resolvedDomainPackId_resolvedDomainPackVersion_i")
 }
 
 model BaInsight {
@@ -624,6 +644,7 @@ model BaInsight {
   clarification    ClarificationItem?
 
   @@unique([impactAnalysisId, insightKey])
+  @@unique([id, impactAnalysisId])
   @@index([impactAnalysisId])
   @@index([impactAnalysisId, reviewStatus])
   @@index([impactAnalysisId, certainty])
@@ -643,13 +664,14 @@ model InsightEvidence {
 model TraceabilityLink {
   id                String                      @id @default(uuid())
   impactAnalysisId  String
+  snapshotId        String
   artifactId        String
   linkType          TraceabilityLinkType
   linkBasis         TraceabilityLinkBasis
   reviewStatus      ReviewStatus
   confidence        Float?
-  impactAnalysis    ImpactAnalysis              @relation(fields: [impactAnalysisId], references: [id])
-  artifact          CodeArtifact                @relation(fields: [artifactId], references: [id])
+  impactAnalysis    ImpactAnalysis              @relation(fields: [impactAnalysisId, snapshotId], references: [id, snapshotId], onDelete: Restrict, onUpdate: Cascade)
+  artifact          CodeArtifact                @relation(fields: [artifactId, snapshotId], references: [id, snapshotId], onDelete: Restrict, onUpdate: Cascade)
   evidenceLinks     TraceabilityEvidence[]
   retrievalMetadata Json?                       @map("retrieval_metadata")
   createdAt         DateTime                    @default(now())
@@ -658,8 +680,10 @@ model TraceabilityLink {
   reviewDecision    TraceabilityReviewDecision?
 
   @@unique([impactAnalysisId, artifactId, linkType])
+  @@unique([id, impactAnalysisId])
   @@index([impactAnalysisId])
   @@index([impactAnalysisId, reviewStatus])
+  @@index([snapshotId])
   @@index([artifactId])
 }
 
@@ -675,9 +699,10 @@ model TraceabilityReviewDecision {
   updatedAt          DateTime                        @updatedAt @map("updated_at")
 
   analysis         ImpactAnalysis   @relation(fields: [analysisId], references: [id], onDelete: Cascade)
-  traceabilityLink TraceabilityLink @relation(fields: [traceabilityLinkId], references: [id], onDelete: Cascade)
+  traceabilityLink TraceabilityLink @relation(fields: [traceabilityLinkId, analysisId], references: [id, impactAnalysisId], onDelete: Cascade, onUpdate: Cascade, map: "traceability_review_decision_traceability_link_id_analysis_id_f")
   reviewedByUser   User?            @relation(fields: [reviewedByUserId], references: [id], onDelete: SetNull)
 
+  @@unique([traceabilityLinkId, analysisId], map: "traceability_review_decision_traceability_link_id_analysis_id_k")
   @@index([analysisId])
   @@index([reviewedByUserId])
   @@map("traceability_review_decision")
@@ -694,34 +719,37 @@ model TraceabilityEvidence {
 }
 
 model GeneratedDocument {
-  id                String                   @id @default(uuid())
-  impactAnalysisId  String
-  type              DocumentType
-  status            DocumentStatus
-  content           String
-  impactAnalysis    ImpactAnalysis           @relation(fields: [impactAnalysisId], references: [id])
-  createdAt         DateTime                 @default(now())
-  updatedAt         DateTime                 @updatedAt
-  reviewedSnapshots ReviewedReportSnapshot[]
-  documentJobs      DocumentJob[]
-  localizedArtifacts LocalizedReportArtifact[]
+  id                       String                    @id @default(uuid())
+  impactAnalysisId         String
+  reviewedReportSnapshotId String?                   @map("reviewed_report_snapshot_id")
+  type                     DocumentType
+  status                   DocumentStatus
+  content                  String
+  impactAnalysis           ImpactAnalysis            @relation(fields: [impactAnalysisId], references: [id])
+  reviewedReportSnapshot   ReviewedReportSnapshot?   @relation("GeneratedDocumentSnapshot", fields: [reviewedReportSnapshotId, impactAnalysisId], references: [id, analysisId], onDelete: Restrict, onUpdate: Cascade, map: "GeneratedDocument_reviewed_report_snapshot_id_impactAnalysisId_")
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  reviewedSnapshots        ReviewedReportSnapshot[]  @relation("SnapshotApprovedDocument")
+  documentJobs             DocumentJob[]
+  localizedArtifacts       LocalizedReportArtifact[]
 
-  @@unique([impactAnalysisId, type, status])
+  @@unique([id, impactAnalysisId])
+  @@unique([reviewedReportSnapshotId, type, status], map: "GeneratedDocument_reviewedReportSnapshotId_type_status_key")
   @@index([impactAnalysisId, status])
 }
 
 model LocalizedReportArtifact {
-  id                 String             @id @default(uuid())
-  sourceDocumentId   String
-  sourceDocument     GeneratedDocument  @relation(fields: [sourceDocumentId], references: [id], onDelete: Cascade)
+  id               String            @id @default(uuid())
+  sourceDocumentId String
+  sourceDocument   GeneratedDocument @relation(fields: [sourceDocumentId], references: [id], onDelete: Cascade)
 
-  locale             String   // BCP-47 locale tag, e.g. "vi-VN"
-  sourceLocale       String   @default("en")
+  locale             String // BCP-47 locale tag, e.g. "vi-VN"
+  sourceLocale       String             @default("en")
   localizationStatus LocalizationStatus
 
-  contentMarkdown    String?
-  sourceContentHash  String   // Computed from canonical JSON serialization
-  
+  contentMarkdown   String?
+  sourceContentHash String // Computed from canonical JSON serialization
+
   // Metadata for tracing and debugging
   glossaryVersion            String?
   provider                   String?
@@ -729,10 +757,10 @@ model LocalizedReportArtifact {
   translationPromptVersion   String?
   structuralValidatorVersion String?
   fieldPolicyVersion         String?
-  
-  errorCode          String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+
+  errorCode String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([sourceDocumentId, locale])
   @@index([sourceDocumentId])
@@ -751,11 +779,12 @@ model DocumentJob {
   attemptCount Int               @default(0) @map("attempt_count")
   error        Json?
 
-  generatedDocumentId String? @map("generated_document_id")
+  generatedDocumentId           String? @map("generated_document_id")
+  generatedDocumentAnalysisId   String? @map("generated_document_analysis_id")
 
   analysis          ImpactAnalysis         @relation(fields: [analysisId], references: [id], onDelete: Cascade)
-  snapshot          ReviewedReportSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
-  generatedDocument GeneratedDocument?     @relation(fields: [generatedDocumentId], references: [id], onDelete: SetNull)
+  snapshot          ReviewedReportSnapshot @relation(fields: [snapshotId, analysisId], references: [id, analysisId], onDelete: Cascade, onUpdate: Cascade)
+  generatedDocument GeneratedDocument?     @relation(fields: [generatedDocumentId, generatedDocumentAnalysisId], references: [id, impactAnalysisId], onDelete: SetNull, onUpdate: Cascade, map: "document_job_generated_document_analysis_scope_fkey")
 
   lastStartedAt DateTime? @map("last_started_at")
   completedAt   DateTime? @map("completed_at")
@@ -774,19 +803,23 @@ model ReviewedReportSnapshot {
   id                             String   @id @default(uuid())
   analysisId                     String   @map("analysis_id")
   approvedDocumentId             String?  @map("approved_document_id")
+  approvedDocumentAnalysisId     String?  @map("approved_document_analysis_id")
   markdown                       String?
   reviewDecisionsSnapshot        Json     @map("review_decisions_snapshot")
+  clarificationsSnapshot         Json?    @map("clarifications_snapshot")
   evidenceQualitySummarySnapshot Json     @map("evidence_quality_summary_snapshot")
   evaluationContextSnapshot      Json?    @map("evaluation_context_snapshot")
   testTraceSnapshot              Json?    @map("test_trace_snapshot")
   createdByUserId                String?  @map("created_by_user_id") @db.Uuid
   createdAt                      DateTime @default(now()) @map("created_at")
 
-  analysis         ImpactAnalysis     @relation(fields: [analysisId], references: [id], onDelete: Cascade)
-  approvedDocument GeneratedDocument? @relation(fields: [approvedDocumentId], references: [id], onDelete: SetNull)
-  createdByUser    User?              @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
-  documentJobs     DocumentJob[]
+  analysis           ImpactAnalysis      @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  approvedDocument   GeneratedDocument?  @relation("SnapshotApprovedDocument", fields: [approvedDocumentId, approvedDocumentAnalysisId], references: [id, impactAnalysisId], onDelete: SetNull, onUpdate: Cascade, map: "reviewed_report_snapshot_approved_document_id_analysis_id_fkey")
+  generatedDocuments GeneratedDocument[] @relation("GeneratedDocumentSnapshot")
+  createdByUser      User?               @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  documentJobs       DocumentJob[]
 
+  @@unique([id, analysisId])
   @@index([analysisId, createdAt])
   @@map("reviewed_report_snapshot")
 }
@@ -812,11 +845,13 @@ model ReviewNote {
   updatedAt          DateTime @updatedAt @map("updated_at")
 
   impactAnalysis   ImpactAnalysis    @relation(fields: [impactAnalysisId], references: [id], onDelete: Cascade)
-  insight          BaInsight?        @relation(fields: [insightId], references: [id], onDelete: Cascade)
-  traceabilityLink TraceabilityLink? @relation(fields: [traceabilityLinkId], references: [id], onDelete: Cascade)
+  insight          BaInsight?        @relation(fields: [insightId, impactAnalysisId], references: [id, impactAnalysisId], onDelete: Cascade, onUpdate: Cascade)
+  traceabilityLink TraceabilityLink? @relation(fields: [traceabilityLinkId, impactAnalysisId], references: [id, impactAnalysisId], onDelete: Cascade, onUpdate: Cascade)
 
   @@unique([impactAnalysisId, insightId])
   @@unique([impactAnalysisId, traceabilityLinkId])
+  @@unique([insightId, impactAnalysisId])
+  @@unique([traceabilityLinkId, impactAnalysisId])
   @@index([impactAnalysisId])
   @@index([insightId])
   @@index([traceabilityLinkId])
@@ -826,7 +861,7 @@ model ReviewNote {
 model ClarificationItem {
   id                             String              @id @default(uuid())
   impactAnalysisId               String              @map("impact_analysis_id")
-  sourceInsightId                String              @unique @map("source_insight_id")
+  sourceInsightId                String              @map("source_insight_id")
   question                       String
   reason                         String?
   status                         ClarificationStatus @default(OPEN)
@@ -836,12 +871,13 @@ model ClarificationItem {
   updatedAt                      DateTime            @updatedAt @map("updated_at")
 
   impactAnalysis    ImpactAnalysis       @relation(fields: [impactAnalysisId], references: [id], onDelete: Cascade)
-  sourceInsight     BaInsight            @relation(fields: [sourceInsightId], references: [id], onDelete: Cascade)
+  sourceInsight     BaInsight            @relation(fields: [sourceInsightId, impactAnalysisId], references: [id, impactAnalysisId], onDelete: Cascade, onUpdate: Cascade)
   convertedRevision RequirementRevision? @relation("ConvertedClarifications", fields: [convertedRequirementRevisionId], references: [id])
   derivedAnalyses   ImpactAnalysis[]     @relation("ImpactAnalysisSourceClarification")
 
   @@index([impactAnalysisId])
   @@index([status])
+  @@unique([sourceInsightId, impactAnalysisId])
   @@map("clarification_item")
 }
 
@@ -857,6 +893,7 @@ model AnalysisReviewDecision {
   reviewedByUser        User                         @relation(fields: [reviewedByUserId], references: [id])
   clarificationRequests ReviewClarificationRequest[]
 
+  @@unique([id, analysisId])
   @@index([analysisId, createdAt])
   @@map("analysis_review_decision")
 }
@@ -878,7 +915,7 @@ model ReviewClarificationRequest {
   cancelledAt      DateTime? @map("cancelled_at")
 
   analysis       ImpactAnalysis         @relation("AnalysisToClarificationRequest", fields: [analysisId], references: [id], onDelete: Cascade)
-  reviewDecision AnalysisReviewDecision @relation(fields: [reviewDecisionId], references: [id], onDelete: Cascade)
+  reviewDecision AnalysisReviewDecision @relation(fields: [reviewDecisionId, analysisId], references: [id, analysisId], onDelete: Cascade, onUpdate: Cascade, map: "review_clarification_request_review_decision_id_analysis_id_fke")
   createdByUser  User                   @relation("ClarificationCreatedBy", fields: [createdByUserId], references: [id])
   answeredByUser User?                  @relation("ClarificationAnsweredBy", fields: [answeredByUserId], references: [id])
 
@@ -918,9 +955,10 @@ model EmbeddingChunk {
   embeddingModel String
   embedding      Unsupported("vector(1536)")
 
-  snapshot  RepositorySnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
-  artifact  CodeArtifact?      @relation(fields: [artifactId], references: [id], onDelete: Cascade)
-  createdAt DateTime           @default(now())
+  repository Repository         @relation("EmbeddingChunkRepository", fields: [repositoryId, projectId], references: [id, projectId], onDelete: Restrict)
+  snapshot   RepositorySnapshot @relation("EmbeddingChunkSnapshot", fields: [snapshotId, repositoryId, commitSha], references: [id, repositoryId, commitSha], onDelete: Cascade)
+  artifact   CodeArtifact?      @relation("EmbeddingChunkArtifact", fields: [artifactId, snapshotId], references: [id, snapshotId], onDelete: Cascade)
+  createdAt  DateTime           @default(now())
 
   @@unique([snapshotId, stableChunkId, embeddingModel])
   @@index([tenantId])

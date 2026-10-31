@@ -117,7 +117,10 @@ describe('Diagnostic Risk Propagation', () => {
     };
 
     mockHybridRetrievalService = {
-      retrieve: jest.fn().mockResolvedValue([]),
+      retrieve: jest.fn().mockResolvedValue({
+        artifacts: [],
+        diagnostics: { strategy: 'lexical_fallback', vectorStatus: 'NOT_READY' },
+      }),
     };
 
     const evidenceStep = new ImpactEvidenceCollectionStep(
@@ -296,9 +299,10 @@ describe('Diagnostic Risk Propagation', () => {
 
   it('attaches METHOD_NOT_EXTRACTED only to existing artifact context', async () => {
     // We mock that 'src/refund.controller.ts' is a retrieved artifact
-    mockHybridRetrievalService.retrieve.mockResolvedValue([
-      { artifactKey: 'api:refund' }
-    ]);
+    mockHybridRetrievalService.retrieve.mockResolvedValue({
+      artifacts: [{ artifactKey: 'api:refund' }],
+      diagnostics: { strategy: 'lexical_fallback', vectorStatus: 'NOT_READY' },
+    });
     mockArtifactRepo.listBySnapshot.mockResolvedValue([
       { artifactKey: 'api:refund', filePath: 'src/refund.controller.ts' }
     ]);

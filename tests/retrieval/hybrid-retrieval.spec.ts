@@ -76,7 +76,7 @@ describe('HybridRetrievalService', () => {
       });
       graphRepoMock.expandFromSeeds.mockResolvedValue([]);
 
-      const results = await service.retrieve({ ...BASE_REQUEST, expandGraph: false });
+      const { artifacts: results } = await service.retrieve({ ...BASE_REQUEST, expandGraph: false });
 
       // art-1: lexical (0.4) + vector (0.95 * 0.2) = 0.4 + 0.19 = 0.59
       // it might also have domain boost if it matched domain rules, but 'cancel booking' should match domain
@@ -108,7 +108,7 @@ describe('HybridRetrievalService', () => {
         { id: 'art-3', artifactKey: 'file3.ts', filePath: 'src/file3.ts', name: 'func3', artifactType: 'FILE' },
       ]);
 
-      const results = await service.retrieve({ ...BASE_REQUEST, expandGraph: true });
+      const { artifacts: results } = await service.retrieve({ ...BASE_REQUEST, expandGraph: true });
 
       const art3 = results.find(r => r.artifactId === 'art-3');
       expect(art3?.retrievalMethod).toBe('GRAPH_EXPANSION');
@@ -126,7 +126,7 @@ describe('HybridRetrievalService', () => {
       });
       graphRepoMock.expandFromSeeds.mockResolvedValue([]);
 
-      const results = await service.retrieve(BASE_REQUEST);
+      const { artifacts: results } = await service.retrieve(BASE_REQUEST);
       expect(results.find(r => r.artifactId === 'art-low')).toBeUndefined();
     });
 
@@ -140,7 +140,7 @@ describe('HybridRetrievalService', () => {
       });
       graphRepoMock.expandFromSeeds.mockResolvedValue([]);
 
-      const results = await service.retrieve({ ...BASE_REQUEST, changeRequest: 'normal change' });
+      const { artifacts: results } = await service.retrieve({ ...BASE_REQUEST, changeRequest: 'normal change' });
       const artTest = results.find(r => r.artifactId === 'art-test');
       
       // score = vector(0.73 * 0.35 = 0.2555) - penalty(0.05) = 0.2055
@@ -160,7 +160,7 @@ describe('HybridRetrievalService', () => {
         { id: 'art-test', artifactKey: 'test.ts', filePath: 'src/file.spec.ts', name: 'test', artifactType: 'TEST' },
       ]);
 
-      const results = await service.retrieve({ ...BASE_REQUEST, expandGraph: true });
+      const { artifacts: results } = await service.retrieve({ ...BASE_REQUEST, expandGraph: true });
       const artTest = results.find(r => r.artifactId === 'art-test');
       
       // score = graph(0.7 * 0.15 = 0.105) - 0 penalty = 0.105
@@ -176,9 +176,14 @@ describe('HybridRetrievalService', () => {
       ]);
       graphRepoMock.expandFromSeeds.mockResolvedValue([]);
 
-      const results = await service.retrieve(BASE_REQUEST);
+      const retrievalResult = await service.retrieve(BASE_REQUEST);
+      const results = retrievalResult.artifacts;
 
       expect(chunkRepoMock.searchSimilar).not.toHaveBeenCalled();
+      expect(retrievalResult.diagnostics).toEqual({
+        strategy: 'lexical_fallback',
+        vectorStatus: 'NOT_READY',
+      });
       expect(results).toHaveLength(1);
       expect(results[0].retrievalMethod).toBe('LEXICAL');
     });
@@ -190,7 +195,7 @@ describe('HybridRetrievalService', () => {
       ]);
       graphRepoMock.expandFromSeeds.mockResolvedValue([]);
 
-      const results = await service.retrieve(BASE_REQUEST);
+      const { artifacts: results } = await service.retrieve(BASE_REQUEST);
 
       expect(chunkRepoMock.searchSimilar).not.toHaveBeenCalled();
       expect(results).toHaveLength(1);
@@ -204,8 +209,13 @@ describe('HybridRetrievalService', () => {
       chunkRepoMock.searchSimilar.mockRejectedValue(new Error('DB connection lost'));
       graphRepoMock.expandFromSeeds.mockResolvedValue([]);
 
-      const results = await service.retrieve({ ...BASE_REQUEST, expandGraph: false });
+      const retrievalResult = await service.retrieve({ ...BASE_REQUEST, expandGraph: false });
+      const results = retrievalResult.artifacts;
 
+      expect(retrievalResult.diagnostics).toEqual({
+        strategy: 'lexical_fallback',
+        vectorStatus: 'FAILED',
+      });
       expect(results).toHaveLength(1);
       expect(results[0].artifactId).toBe('art-1');
       expect(results[0].retrievalMethod).toBe('LEXICAL');

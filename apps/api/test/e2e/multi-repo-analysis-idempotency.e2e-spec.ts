@@ -2,7 +2,7 @@ import type { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
 import * as crypto from 'crypto';
-import { MultiRepoAnalysisRunRepository, PrismaService } from '@ba-helper/backend-runtime';
+import { MultiRepoAnalysisRunRepository, PrismaService, QueueService } from '@ba-helper/backend-runtime';
 import { multiRepoImpactAnalysisCreateResponseSchema } from '@ba-helper/contracts';
 import { createTestApp } from './helpers/test-app';
 import { resetDatabase } from './helpers/reset-db';
@@ -10,6 +10,7 @@ import { grantProjectMembership } from './helpers/grant-project-membership';
 import { CreateImpactAnalysisUseCase } from '../../src/modules/impact-analysis/application/lifecycle/create-impact-analysis.usecase';
 
 interface ImpactQueueJob {
+  data: unknown;
   remove(): Promise<void>;
 }
 
@@ -22,6 +23,7 @@ describe('Multi-repo analysis idempotency (E2E)', () => {
   let prisma: PrismaService;
   let jwtService: JwtService;
   let impactQueue: ImpactAnalysisQueue;
+  let queueService: QueueService;
   let adminUserId: string;
   let adminToken: string;
   const createdRunIds: string[] = [];
@@ -31,6 +33,7 @@ describe('Multi-repo analysis idempotency (E2E)', () => {
     prisma = app.get(PrismaService);
     jwtService = app.get(JwtService);
     impactQueue = app.get<ImpactAnalysisQueue>('BullQueue_impact-analysis');
+    queueService = app.get(QueueService);
   });
 
   afterAll(async () => {
@@ -67,7 +70,7 @@ describe('Multi-repo analysis idempotency (E2E)', () => {
   });
 
   it('returns the same run for concurrent identical requests', async () => {
-    const { projectId, revisionId, repositoryIds } = await seedAnalysisInputs();
+    const { projectId, requirementId, revisionId, repositoryIds } = await seedAnalysisInputs();
     const requestKey = crypto.randomUUID();
     const runRepository = app.get(MultiRepoAnalysisRunRepository);
     const findRun = runRepository.findByProjectRequestKey.bind(runRepository);
@@ -192,12 +195,85 @@ describe('Multi-repo analysis idempotency (E2E)', () => {
     expect(firstSnapshot.id).not.toBe(secondSnapshot.id);
   });
 
-  it('reconstructs a complete legacy run plan from persisted child provenance', async () => {
+  it('re-enqueues the failed child across concurrent same-key multi-repo retries', async () => {
     const { projectId, revisionId, repositoryIds } = await seedAnalysisInputs();
+    const requestKey = crypto.randomUUID();
+    const payload = {
+      requirementRevisionId: revisionId,
+      repositoryIds,
+      allowPartialSnapshot: false,
+      requestKey,
+    };
+    const enqueue = queueService.enqueueImpactAnalysis.bind(queueService);
+    let failFirstEnqueue = true;
+    jest.spyOn(queueService, 'enqueueImpactAnalysis').mockImplementation(async (analysisId) => {
+      if (failFirstEnqueue) {
+        failFirstEnqueue = false;
+        throw new Error('injected transient Redis enqueue failure');
+      }
+      return enqueue(analysisId);
+    });
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(payload)
+      .expect(500);
+
+    const run = await prisma.multiRepoAnalysisRun.findUniqueOrThrow({
+      where: { projectId_requestKey: { projectId, requestKey } },
+      select: { id: true },
+    });
+    createdRunIds.push(run.id);
+    await waitForChildQueueStates(run.id);
+
+    const beforeRetry = await prisma.impactAnalysis.findMany({
+      where: { multiRepoRunId: run.id },
+      select: { id: true, status: true, error: true },
+    });
+    expect(beforeRetry).toHaveLength(2);
+    const failedChild = beforeRetry.find(({ status }) => status === 'FAILED');
+    const queuedChild = beforeRetry.find(({ status }) => status === 'QUEUED');
+    expect(failedChild?.error).toMatchObject({ code: 'QUEUE_ENQUEUE_FAILED' });
+    expect(queuedChild).toBeDefined();
+    expect(await impactQueue.getJob(`impact-${failedChild!.id}`)).toBeUndefined();
+    expect(await impactQueue.getJob(`impact-${queuedChild!.id}`)).toBeDefined();
+
+    const sendRetry = () => request(app.getHttpServer())
+      .post(`/api/v1/projects/${projectId}/multi-repo-analyses`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(payload);
+    const retries = await Promise.all([sendRetry(), sendRetry()]);
+    expect(retries.map(({ status }) => status)).toEqual([201, 201]);
+    const responses = retries.map(({ body }) => multiRepoImpactAnalysisCreateResponseSchema.parse(body));
+
+    for (const response of responses) {
+      expect(response.runId).toBe(run.id);
+      expect(response.items.map(({ analysisId }) => analysisId).sort()).toEqual(
+        beforeRetry.map(({ id }) => id).sort(),
+      );
+      expect(response.items.find(({ analysisId }) => analysisId === failedChild!.id)?.status).toBe('QUEUED');
+    }
+    expect(await prisma.impactAnalysis.count({ where: { multiRepoRunId: run.id } })).toBe(2);
+    expect(await prisma.domainEvent.count({
+      where: {
+        eventType: 'IMPACT_ANALYSIS_QUEUE_RETRY_REQUESTED',
+        idempotencyKey: { startsWith: `impact:${failedChild!.id}:queue-retry:` },
+      },
+    })).toBe(1);
+    const recoveredJob = await impactQueue.getJob(`impact-${failedChild!.id}`);
+    expect(recoveredJob?.data).toEqual({ analysisId: failedChild!.id });
+    expect(await prisma.impactAnalysis.findUniqueOrThrow({ where: { id: failedChild!.id } }))
+      .toMatchObject({ status: 'QUEUED', error: null });
+  });
+
+  it('reconstructs a complete legacy run plan from persisted child provenance', async () => {
+    const { projectId, requirementId, revisionId, repositoryIds } = await seedAnalysisInputs();
     const requestKey = crypto.randomUUID();
     const run = await prisma.multiRepoAnalysisRun.create({
       data: {
         projectId,
+        requirementId,
         requirementRevisionId: revisionId,
         createdByUserId: adminUserId,
         requestKey,
@@ -216,6 +292,9 @@ describe('Multi-repo analysis idempotency (E2E)', () => {
       await prisma.impactAnalysis.create({
         data: {
           requirementRevisionId: revisionId,
+          requirementId,
+          projectId,
+          repositoryId: snapshot.repositoryId,
           snapshotId: snapshot.id,
           sourceTargetId: sourceTarget.id,
           multiRepoRunId: run.id,
@@ -319,6 +398,20 @@ describe('Multi-repo analysis idempotency (E2E)', () => {
         },
       });
     }
-    return { projectId, revisionId, repositoryIds };
+    return { projectId, requirementId, revisionId, repositoryIds };
+  }
+
+  async function waitForChildQueueStates(runId: string) {
+    const deadline = Date.now() + 5_000;
+    while (Date.now() < deadline) {
+      const children = await prisma.impactAnalysis.findMany({
+        where: { multiRepoRunId: runId },
+        select: { status: true },
+      });
+      if (children.length === 2 && children.some(({ status }) => status === 'FAILED') &&
+        children.some(({ status }) => status === 'QUEUED')) return;
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    throw new Error(`Multi-repo run ${runId} did not reach one FAILED and one QUEUED child.`);
   }
 });

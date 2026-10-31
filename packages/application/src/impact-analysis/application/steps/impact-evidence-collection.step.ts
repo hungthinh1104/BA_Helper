@@ -33,7 +33,7 @@ export class ImpactEvidenceCollectionStep {
 
     const artifacts = await this.artifactRepo.listBySnapshot(snapshotId);
 
-    const retrievedArtifacts: RetrievedArtifact[] = await this.retrievalService.retrieve({
+    const retrievalResult = await this.retrievalService.retrieve({
       projectId,
       repositoryId: analysis.snapshot.repositoryId,
       snapshotId,
@@ -42,6 +42,7 @@ export class ImpactEvidenceCollectionStep {
       expandGraph,
       maxResults: 20,
     });
+    const retrievedArtifacts: RetrievedArtifact[] = retrievalResult.artifacts;
 
     const artifactByKey = new Map<string, PersistedArtifact>(
       artifacts.map((artifact) => [artifact.artifactKey, artifact]),
@@ -89,6 +90,7 @@ export class ImpactEvidenceCollectionStep {
     const persistedLinks = await this.traceabilityRepo.upsertMany(
       affectedLinks.map(({ artifact, retrieved, linkBasis, confidence }) => ({
         impactAnalysisId: analysis.id,
+        snapshotId,
         artifactId: artifact.id,
         linkType: 'AFFECTED',
         linkBasis,
@@ -145,7 +147,7 @@ export class ImpactEvidenceCollectionStep {
       evidenceByKey,
       traceabilityLinks,
       retrievalMetadata: {
-        strategy: 'hybrid',
+        ...retrievalResult.diagnostics,
         maxArtifacts: 20,
         artifactCount: evidence.length,
         vectorSignalCount,

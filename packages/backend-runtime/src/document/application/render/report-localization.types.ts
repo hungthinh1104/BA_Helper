@@ -59,6 +59,7 @@ export type ReportLabels = {
   convertedToRequirementRevision: string;
   stillOpen: string;
   dismissed: string;
+  cancelled: string;
   dismissedDuringReview: string;
   evidenceAppendix: string;
   secretsRedacted: string;

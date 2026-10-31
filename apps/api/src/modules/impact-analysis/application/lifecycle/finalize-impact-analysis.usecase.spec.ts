@@ -230,15 +230,7 @@ describe('FinalizeImpactAnalysisUseCase', () => {
 
     await useCase.execute(validParams);
 
-    expect(prisma.documentJob.update).toHaveBeenCalledWith({
-      where: { id: 'document-job-1' },
-      data: {
-        error: {
-          stage: 'QUEUE_ENQUEUE',
-          message: 'Redis down',
-        },
-      },
-    });
+    expect(prisma.documentJob.update).not.toHaveBeenCalled();
   });
 
   it('creates reviewed snapshot and document job in the same transaction', async () => {

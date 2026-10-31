@@ -12,5 +12,6 @@ export interface EmbeddingResult {
 
 export abstract class EmbeddingProviderPort {
   abstract readonly providerName: string;
+  abstract readonly modelName: string;
   abstract embed(request: EmbeddingRequest): Promise<EmbeddingResult>;
 }

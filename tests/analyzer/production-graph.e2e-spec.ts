@@ -21,7 +21,7 @@ import { QaTraceRepository } from '../../apps/api/src/modules/impact-analysis/in
 import { GetTestTraceEvidenceUseCase } from '../../apps/api/src/modules/impact-analysis/application/qa/get-test-trace-evidence.usecase';
 import { ReviewedReportContentBuilder } from '../../apps/api/src/modules/document/application/commands/reviewed-report-content.builder';
 import { CreateReviewedReportSnapshotUseCase } from '../../apps/api/src/modules/document/application/commands/create-reviewed-report-snapshot.usecase';
-import { InsightRepository, TraceabilityRepository, EvaluationContextAdapter, readReportTestTrace } from '@ba-helper/backend-runtime';
+import { InsightRepository, TraceabilityRepository, ReviewClarificationRepository, EvaluationContextAdapter, readReportTestTrace } from '@ba-helper/backend-runtime';
 import { prepareIsolatedTestEnv } from '../../apps/api/test/e2e/helpers/prepare-test-env';
 import { resetDatabase } from '../../apps/api/test/e2e/helpers/reset-db';
 
@@ -102,10 +102,11 @@ describe('NestJS scan → persisted dependencies → API graph', () => {
       title: 'Cancel paid booking', rawText: 'Allow cancellation and refund.',
       normalizedText: 'Allow cancellation and refund.', readinessStatus: 'READY_FOR_ANALYSIS' } });
     const analysis = await prisma.impactAnalysis.create({ data: { requirementRevisionId: revision.id,
+      requirementId: requirement.id, projectId: project.id, repositoryId: completed.repositoryId,
       snapshotId, sourceTargetId: completed.sourceTargetId!, requestKey: 'graph-analysis',
       status: 'WAITING_FOR_REVIEW', stage: 'DONE' } });
     const service = edges.find(e => e.toArtifact.name === 'BookingService.cancelBooking')!.toArtifact;
-    const link = await prisma.traceabilityLink.create({ data: { impactAnalysisId: analysis.id, artifactId: service.id,
+    const link = await prisma.traceabilityLink.create({ data: { impactAnalysisId: analysis.id, snapshotId, artifactId: service.id,
       linkType: 'AFFECTED', linkBasis: 'EVIDENCED', reviewStatus: 'NEEDS_REVIEW' } });
     const serviceEvidence = await prisma.evidence.findFirstOrThrow({ where: { snapshotId, artifactId: service.id } });
     await prisma.traceabilityEvidence.create({ data: { traceabilityLinkId: link.id, evidenceId: serviceEvidence.id } });
@@ -119,7 +120,7 @@ describe('NestJS scan → persisted dependencies → API graph', () => {
       title: 'sets status to CANCELLED', modifier: 'NORMAL' });
 
     const refund = edges.find(e => e.toArtifact.name === 'PaymentService.refund')!.toArtifact;
-    await prisma.traceabilityLink.create({ data: { impactAnalysisId: analysis.id, artifactId: refund.id,
+    await prisma.traceabilityLink.create({ data: { impactAnalysisId: analysis.id, snapshotId, artifactId: refund.id,
       linkType: 'AFFECTED', linkBasis: 'INFERRED', reviewStatus: 'NEEDS_REVIEW' } });
     const qa = qaCoverageResponseSchema.parse(await new GetQaCoverageUseCase(
       new QaTraceRepository(prisma), new QaCoverageDeriver()).execute(analysis.id));
@@ -140,7 +141,7 @@ describe('NestJS scan → persisted dependencies → API graph', () => {
     await prisma.impactAnalysis.update({ where: { id: analysis.id }, data: { status: 'COMPLETED' } });
     const capture = new CreateReviewedReportSnapshotUseCase(prisma, new EventLogService(new EventLogRepository(prisma)),
       new ReviewedReportContentBuilder(new TraceabilityRepository(prisma), new InsightRepository(prisma),
-        new EvaluationContextAdapter(), coverageUseCase));
+        new EvaluationContextAdapter(), coverageUseCase, new ReviewClarificationRepository(prisma)));
     const reviewed = await capture.execute({ analysisId: analysis.id });
     const stored = await prisma.reviewedReportSnapshot.findUniqueOrThrow({ where: { id: reviewed.id } });
     const saved = readReportTestTrace(stored.testTraceSnapshot, { analysisId: analysis.id, snapshotId,

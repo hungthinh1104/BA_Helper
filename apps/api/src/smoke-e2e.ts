@@ -218,14 +218,21 @@ async function main() {
     await wait(500);
     const tempDirsAfter = await countTempScanWorkspaces();
     const snapshotDb = await prisma.repositorySnapshot.findUnique({ where: { id: scanResult.snapshotId } });
-    const chunkCount = await prisma.embeddingChunk.count({ where: { snapshotId: scanResult.snapshotId } });
+    const [chunkCount, embeddingModels] = await Promise.all([
+      prisma.embeddingChunk.count({ where: { snapshotId: scanResult.snapshotId } }),
+      prisma.embeddingChunk.findMany({
+        where: { snapshotId: scanResult.snapshotId },
+        distinct: ['embeddingModel'],
+        select: { embeddingModel: true },
+      }),
+    ]);
     const analysisDb = await prisma.impactAnalysis.findUnique({ where: { id: completedAnalysis.id } });
     const metadata = analysisDb?.metadata as any || {};
     
     const vectorInfo = {
       indexStatus: snapshotDb?.indexStatus ?? 'UNKNOWN',
       embeddingChunkCount: chunkCount,
-      embeddingModel: 'text-embedding-3-small', // hardcode for smoke or fetch if needed
+      embeddingModels: embeddingModels.map((chunk) => chunk.embeddingModel),
       vectorSignalCount: metadata?.retrieval?.vectorSignalCount ?? 0,
       hybridSignalCount: metadata?.retrieval?.artifactCount ?? 0,
     };

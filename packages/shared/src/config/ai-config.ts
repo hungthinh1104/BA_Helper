@@ -3,8 +3,6 @@ export interface AiConfig {
   defaultModel: string;
   temperature: number;
   maxTokens: number;
-  /** Có bật secret redaction không (always true in prod) */
-  redactSecrets: boolean;
   /** Configured API key if applicable */
   apiKey?: string;
   /** Configured base URL if applicable */
@@ -57,7 +55,6 @@ export function resolveAiConfig(env: NodeJS.ProcessEnv): AiConfig {
     defaultModel,
     temperature: Number(env.AI_TEMPERATURE ?? 0.2),
     maxTokens: Number(env.AI_MAX_TOKENS ?? 8192),
-    redactSecrets: env.NODE_ENV !== 'test',
     apiKey,
     baseUrl,
   };

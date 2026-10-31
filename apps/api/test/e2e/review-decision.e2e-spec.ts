@@ -6,6 +6,10 @@ import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { grantProjectMembership } from './helpers/grant-project-membership';
 import { PrismaService } from "@ba-helper/backend-runtime";
+import {
+  reviewDecisionCreateResponseSchema,
+  reviewDecisionListResponseSchema,
+} from '@ba-helper/contracts';
 
 describe('Review Decision Endpoints (e2e)', () => {
   let app: INestApplication;
@@ -91,6 +95,9 @@ describe('Review Decision Endpoints (e2e)', () => {
       data: {
         id: analysisId,
         requirementRevisionId: revId,
+        requirementId: reqId,
+        projectId,
+        repositoryId,
         snapshotId,
         sourceTargetId: targetId,
         requestKey: crypto.randomUUID(),
@@ -115,11 +122,11 @@ describe('Review Decision Endpoints (e2e)', () => {
       })
       .expect(201);
 
-    expect(res.body.decision).toBeDefined();
-    expect(res.body.decision.decision).toBe('ACCEPTED');
-    expect(res.body.decision.note).toBe('Everything is fine');
-    expect(res.body.decision.reviewedBy).toBe('John Doe');
-    expect(res.body.reportRegenerated).toBeDefined();
+    const response = reviewDecisionCreateResponseSchema.parse(res.body);
+    expect(response.decision.decision).toBe('ACCEPTED');
+    expect(response.decision.note).toBe('Everything is fine');
+    expect(response.decision.reviewedBy).toBe('John Doe');
+    expect(typeof response.reportRegenerated).toBe('boolean');
 
     // Verify database record
     const dbDecisions = await prisma.analysisReviewDecision.findMany({
@@ -161,7 +168,8 @@ describe('Review Decision Endpoints (e2e)', () => {
       .send({ decision: 'REJECTED' })
       .expect(201);
 
-    expect(res.body.decision.decision).toBe('REJECTED');
+    const response = reviewDecisionCreateResponseSchema.parse(res.body);
+    expect(response.decision.decision).toBe('REJECTED');
   });
 
   it('GET /api/v1/impact-analyses/:id/review-decisions returns decision history sorted newest-first', async () => {
@@ -202,8 +210,9 @@ describe('Review Decision Endpoints (e2e)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
 
-    expect(res.body.items).toHaveLength(2);
-    expect(res.body.items[0].reviewedBy).toBe('User Two'); // Newest first
-    expect(res.body.items[1].reviewedBy).toBe('User One');
+    const response = reviewDecisionListResponseSchema.parse(res.body);
+    expect(response.items).toHaveLength(2);
+    expect(response.items[0].reviewedBy).toBe('User Two'); // Newest first
+    expect(response.items[1].reviewedBy).toBe('User One');
   });
 });

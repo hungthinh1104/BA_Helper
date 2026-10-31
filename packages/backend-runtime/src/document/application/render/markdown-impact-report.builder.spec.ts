@@ -180,6 +180,49 @@ describe('MarkdownImpactReportBuilder', () => {
     expect(report).toContain('> Secrets were redacted');
   });
 
+  it('renders traceability-linked evidence in the appendix when no insight evidence is linked', () => {
+    const report = builder.build({
+      analysis: mockAnalysis,
+      insights: [],
+      traceabilityLinks: [
+        {
+          id: 'link-1',
+          linkType: 'AFFECTED',
+          linkBasis: 'EVIDENCED',
+          reviewStatus: 'CONFIRMED',
+          artifact: {
+            id: 'artifact-1',
+            artifactKey: 'service-method:payment.service.refund',
+            name: 'PaymentService.refund',
+            filePath: 'src/payment/payment.service.ts',
+            artifactType: 'SERVICE_METHOD',
+          },
+          evidenceLinks: [
+            {
+              evidence: {
+                id: 'ev-traceability-1',
+                sourceType: 'CODE',
+                snapshotId: mockAnalysis.snapshot.id,
+                artifactId: 'artifact-1',
+                sourcePath: 'src/payment/payment.service.ts',
+                startLine: 10,
+                endLine: 12,
+                excerpt: 'return payment.refund();',
+                contentHash: 'refund-evidence-hash',
+                isRedacted: true,
+              },
+            },
+          ],
+        },
+      ] as any[],
+      hasUnreviewedItems: false,
+    });
+
+    expect(report).toContain('## Evidence Appendix');
+    expect(report).toContain('### `payment.service.ts`');
+    expect(report).toContain('return payment.refund();');
+  });
+
   it('renders Vietnamese report chrome while preserving raw evidence and source text', () => {
     const viAnalysis = {
       ...mockAnalysis,

@@ -2,6 +2,7 @@
 
 import { lazy, Suspense, useState } from "react"
 import { ArrowRight } from "lucide-react"
+import { useTranslations } from "next-intl"
 import type { CodeComprehensionResponse, ComprehensionScenario, TestStaticBehaviorClaim } from "@ba-helper/contracts"
 
 const CodeComprehensionTraceFlow = lazy(() => import("./code-comprehension-trace-flow").then((module) => ({ default: module.CodeComprehensionTraceFlow })))
@@ -14,31 +15,147 @@ export function Scenario({ scenario, snapshotContext, tracePresentation = "NORMA
   snapshotContext?: SnapshotEvidenceContext
   tracePresentation?: TracePresentation
 }) {
+  const t = useTranslations("workspaceLists")
   const [showTrace, setShowTrace] = useState(false)
   const [selectedClaim, setSelectedClaim] = useState<TestStaticBehaviorClaim | null>(null)
   const groups: Array<[string, TestStaticBehaviorClaim[]]> = [
-    ["Declared setup", scenario.setup], ["Declared inputs", scenario.inputs], ["Declared invocations", scenario.invocations],
-    ["Declared assertions", scenario.assertions], ["Mock declarations", scenario.mockedBoundaries], ["Declared expected outcomes", scenario.expectedOutcomes],
+    [t("scenarioSetupLabel"), scenario.setup],
+    [t("scenarioInputsLabel"), scenario.inputs],
+    [t("scenarioInvocationsLabel"), scenario.invocations],
+    [t("scenarioAssertionsLabel"), scenario.assertions],
+    [t("scenarioMocksLabel"), scenario.mockedBoundaries],
+    [t("scenarioExpectedOutcomesLabel"), scenario.expectedOutcomes],
   ]
   const scenarioTitle = scenario.testCase?.title ?? scenario.testArtifact.name
   const relationLabel = scenario.trace?.relation === "DIRECT_REFERENCE"
-    ? "Direct static test reference"
-    : scenario.trace?.relation === "CALL_PATH" ? "Indirect static call path" : "No supported trace path recorded"
+    ? t("scenarioDirectReference")
+    : scenario.trace?.relation === "CALL_PATH" ? t("scenarioIndirectCallPath") : t("scenarioNoTracePath")
   const traceAvailable = tracePresentation !== "TEXTUAL_EVIDENCE" && Boolean(scenario.trace)
-  return <details className="rounded-lg border border-border/40 bg-background/30 px-3 py-2"><summary className="cursor-pointer list-none"><span className="text-[13px] font-medium">{scenarioTitle}</span><span className="ml-2 text-[10px] text-muted-foreground">{relationLabel}</span></summary><div className="mt-3 space-y-3"><div className="flex flex-wrap items-center gap-1 text-[11px] text-muted-foreground">{scenario.trace?.artifacts.map((artifact, index) => <span key={artifact.id} className="inline-flex items-center gap-1"><span className="rounded border border-border/50 px-1.5 py-0.5">{artifact.name}</span>{index < (scenario.trace?.artifacts.length ?? 0) - 1 && <ArrowRight className="h-3 w-3" />}</span>)}</div>{traceAvailable && <button type="button" className="rounded border border-border/50 px-2 py-1 text-left text-[11px] font-medium hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring/50" aria-expanded={showTrace} onClick={() => setShowTrace((value) => !value)}>{showTrace ? "Hide visual trace" : "Show visual trace"}</button>}{traceAvailable && showTrace && <Suspense fallback={<p role="status" className="text-[11px] text-muted-foreground">Loading visual trace…</p>}><CodeComprehensionTraceFlow scenario={scenario} snapshotContext={snapshotContext} /></Suspense>}{scenario.behaviorAssociations.length > 0 && <div className="rounded border border-border/30 bg-background/50 p-2"><h3 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Static invocation/assertion associations</h3><p className="mt-1 text-[10px] text-muted-foreground">Source relationships only; they do not establish a passing result.</p><ul className="mt-1 space-y-1">{scenario.behaviorAssociations.map((association) => <li key={association.associationId} className="text-[11px]"><button type="button" className="rounded px-1 text-left hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-ring/50" onClick={() => setSelectedClaim(association.assertion)}><span className={association.invocation ? "text-foreground" : "text-warning"}>{association.invocation?.sourceText ?? "Invocation unresolved"}</span><span className="mx-1 text-muted-foreground">→</span><span>{association.assertion.sourceText}</span></button>{association.expectedOutcomes.length > 0 && <span className="ml-1 text-muted-foreground">({association.expectedOutcomes.length} declared expected value(s))</span>}</li>)}</ul></div>}{groups.filter(([, claims]) => claims.length > 0).map(([label, claims]) => <ClaimGroup key={label} label={label} claims={claims} selectedClaim={selectedClaim} onSelect={setSelectedClaim} />)}{selectedClaim && <ClaimEvidenceInspector claim={selectedClaim} scenarioTitle={scenarioTitle} snapshotContext={snapshotContext} />}{scenario.unresolved.length > 0 && <p className="text-[11px] text-warning">Unresolved evidence: {scenario.unresolved.map((item) => `${item.code}: ${item.message}`).join(" ")}</p>}</div></details>
+
+  return (
+    <details className="rounded-lg border border-border/40 bg-background/30 px-3 py-2">
+      <summary className="cursor-pointer list-none">
+        <span className="text-[13px] font-medium">{scenarioTitle}</span>
+        <span className="ml-2 text-[10px] text-muted-foreground">{relationLabel}</span>
+      </summary>
+      <div className="mt-3 space-y-3">
+        <div className="flex flex-wrap items-center gap-1 text-[11px] text-muted-foreground">
+          {scenario.trace?.artifacts.map((artifact, index) => (
+            <span key={artifact.id} className="inline-flex items-center gap-1">
+              <span className="rounded border border-border/50 px-1.5 py-0.5">{artifact.name}</span>
+              {index < (scenario.trace?.artifacts.length ?? 0) - 1 && <ArrowRight className="h-3 w-3" />}
+            </span>
+          ))}
+        </div>
+        {traceAvailable && (
+          <button
+            type="button"
+            className="rounded border border-border/50 px-2 py-1 text-left text-[11px] font-medium hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring/50"
+            aria-expanded={showTrace}
+            onClick={() => setShowTrace((value) => !value)}
+          >
+            {showTrace ? t("scenarioHideVisualTrace") : t("scenarioShowVisualTrace")}
+          </button>
+        )}
+        {traceAvailable && showTrace && (
+          <Suspense fallback={<p role="status" className="text-[11px] text-muted-foreground">{t("scenarioLoadingVisualTrace")}</p>}>
+            <CodeComprehensionTraceFlow scenario={scenario} snapshotContext={snapshotContext} />
+          </Suspense>
+        )}
+        {scenario.behaviorAssociations.length > 0 && (
+          <div className="rounded border border-border/30 bg-background/50 p-2">
+            <h3 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{t("scenarioAssociationsTitle")}</h3>
+            <p className="mt-1 text-[10px] text-muted-foreground">{t("scenarioAssociationsDescription")}</p>
+            <ul className="mt-1 space-y-1">
+              {scenario.behaviorAssociations.map((association) => (
+                <li key={association.associationId} className="text-[11px]">
+                  <button
+                    type="button"
+                    className="rounded px-1 text-left hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-ring/50"
+                    onClick={() => setSelectedClaim(association.assertion)}
+                  >
+                    <span className={association.invocation ? "text-foreground" : "text-warning"}>
+                      {association.invocation?.sourceText ?? t("scenarioInvocationUnresolved")}
+                    </span>
+                    <span className="mx-1 text-muted-foreground">→</span>
+                    <span>{association.assertion.sourceText}</span>
+                  </button>
+                  {association.expectedOutcomes.length > 0 && (
+                    <span className="ml-1 text-muted-foreground">
+                      {t("scenarioExpectedValueCount", { count: association.expectedOutcomes.length })}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {groups.filter(([, claims]) => claims.length > 0).map(([label, claims]) => (
+          <ClaimGroup
+            key={label}
+            label={label}
+            claims={claims}
+            selectedClaim={selectedClaim}
+            onSelect={setSelectedClaim}
+          />
+        ))}
+        {selectedClaim && (
+          <ClaimEvidenceInspector claim={selectedClaim} scenarioTitle={scenarioTitle} snapshotContext={snapshotContext} />
+        )}
+        {scenario.unresolved.length > 0 && (
+          <p className="text-[11px] text-warning">
+            {t("scenarioUnresolvedEvidenceLabel")}: {scenario.unresolved.map((item) => `${item.code}: ${item.message}`).join(" ")}
+          </p>
+        )}
+      </div>
+    </details>
+  )
 }
 
 export function ScenarioComparison({ scenarios }: { scenarios: ComprehensionScenario[] }) {
+  const t = useTranslations("workspaceLists")
   const [leftId, setLeftId] = useState(scenarios[0]?.testArtifact.id ?? "")
   const [rightId, setRightId] = useState(scenarios[1]?.testArtifact.id ?? "")
   const left = scenarios.find((scenario) => scenario.testArtifact.id === leftId) ?? scenarios[0]
   const right = scenarios.find((scenario) => scenario.testArtifact.id === rightId) ?? scenarios[1]
   const groups: Array<[string, TestStaticBehaviorClaim[], TestStaticBehaviorClaim[]]> = [
-    ["Setup declarations", left.setup, right.setup], ["Input declarations", left.inputs, right.inputs],
-    ["Invocation declarations", left.invocations, right.invocations], ["Assertion declarations", left.assertions, right.assertions],
-    ["Mock declarations", left.mockedBoundaries, right.mockedBoundaries], ["Expected outcome declarations", left.expectedOutcomes, right.expectedOutcomes],
+    [t("scenarioSetupComparisonLabel"), left.setup, right.setup],
+    [t("scenarioInputsComparisonLabel"), left.inputs, right.inputs],
+    [t("scenarioInvocationsComparisonLabel"), left.invocations, right.invocations],
+    [t("scenarioAssertionsComparisonLabel"), left.assertions, right.assertions],
+    [t("scenarioMocksComparisonLabel"), left.mockedBoundaries, right.mockedBoundaries],
+    [t("scenarioExpectedOutcomesComparisonLabel"), left.expectedOutcomes, right.expectedOutcomes],
   ]
-  return <div className="mt-4 rounded-lg border border-border/40 bg-background/40 p-3" aria-label="Scenario comparison"><h3 className="text-[12px] font-semibold">Compare extracted scenarios</h3><div className="mt-2 grid gap-2 sm:grid-cols-2"><select aria-label="First scenario" value={leftId} onChange={(event) => setLeftId(event.target.value)} className="rounded border border-border/50 bg-background px-2 py-1 text-[11px]">{scenarios.map((scenario) => <option key={scenario.testArtifact.id} value={scenario.testArtifact.id}>{scenario.testCase?.title ?? scenario.testArtifact.name}</option>)}</select><select aria-label="Second scenario" value={rightId} onChange={(event) => setRightId(event.target.value)} className="rounded border border-border/50 bg-background px-2 py-1 text-[11px]">{scenarios.map((scenario) => <option key={scenario.testArtifact.id} value={scenario.testArtifact.id}>{scenario.testCase?.title ?? scenario.testArtifact.name}</option>)}</select></div><ul className="mt-3 grid gap-2 text-[11px] text-muted-foreground">{groups.map(([label, leftClaims, rightClaims]) => { const difference = compareClaims(leftClaims, rightClaims); return <li key={label} className={difference.onlyLeft.length || difference.onlyRight.length ? "text-warning" : ""}><span>{label}: {leftClaims.length} vs {rightClaims.length} static declaration(s)</span>{difference.onlyLeft.length > 0 && <span className="mt-1 block text-[10px]">Only first: {difference.onlyLeft.join(" · ")}</span>}{difference.onlyRight.length > 0 && <span className="mt-1 block text-[10px]">Only second: {difference.onlyRight.join(" · ")}</span>}</li> })}<li className={left.trace?.relationships.length === right.trace?.relationships.length ? "" : "text-warning"}>Relationships: {left.trace?.relationships.length ?? 0} vs {right.trace?.relationships.length ?? 0} static edge(s)</li></ul><p className="mt-2 text-[10px] text-muted-foreground">Differences compare exact extracted source claims and static relationships only; they do not compare runtime behavior or test outcomes.</p></div>
+
+  return (
+    <div className="mt-4 rounded-lg border border-border/40 bg-background/40 p-3" aria-label={t("scenarioComparisonLabel")}>
+      <h3 className="text-[12px] font-semibold">{t("scenarioComparisonTitle")}</h3>
+      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+        <select aria-label={t("scenarioFirstSelectLabel")} value={leftId} onChange={(event) => setLeftId(event.target.value)} className="rounded border border-border/50 bg-background px-2 py-1 text-[11px]">
+          {scenarios.map((scenario) => <option key={scenario.testArtifact.id} value={scenario.testArtifact.id}>{scenario.testCase?.title ?? scenario.testArtifact.name}</option>)}
+        </select>
+        <select aria-label={t("scenarioSecondSelectLabel")} value={rightId} onChange={(event) => setRightId(event.target.value)} className="rounded border border-border/50 bg-background px-2 py-1 text-[11px]">
+          {scenarios.map((scenario) => <option key={scenario.testArtifact.id} value={scenario.testArtifact.id}>{scenario.testCase?.title ?? scenario.testArtifact.name}</option>)}
+        </select>
+      </div>
+      <ul className="mt-3 grid gap-2 text-[11px] text-muted-foreground">
+        {groups.map(([label, leftClaims, rightClaims]) => {
+          const difference = compareClaims(leftClaims, rightClaims)
+          return (
+            <li key={label} className={difference.onlyLeft.length || difference.onlyRight.length ? "text-warning" : ""}>
+              <span>{t("scenarioComparisonCounts", { label, leftCount: leftClaims.length, rightCount: rightClaims.length })}</span>
+              {difference.onlyLeft.length > 0 && <span className="mt-1 block text-[10px]">{t("scenarioOnlyFirst")}: {difference.onlyLeft.join(" · ")}</span>}
+              {difference.onlyRight.length > 0 && <span className="mt-1 block text-[10px]">{t("scenarioOnlySecond")}: {difference.onlyRight.join(" · ")}</span>}
+            </li>
+          )
+        })}
+        <li className={left.trace?.relationships.length === right.trace?.relationships.length ? "" : "text-warning"}>
+          {t("scenarioRelationshipCounts", { leftCount: left.trace?.relationships.length ?? 0, rightCount: right.trace?.relationships.length ?? 0 })}
+        </li>
+      </ul>
+      <p className="mt-2 text-[10px] text-muted-foreground">{t("scenarioComparisonDescription")}</p>
+    </div>
+  )
 }
 
 function compareClaims(left: TestStaticBehaviorClaim[], right: TestStaticBehaviorClaim[]) {
@@ -51,11 +168,45 @@ function compareClaims(left: TestStaticBehaviorClaim[], right: TestStaticBehavio
   }
 }
 
-function ClaimGroup({ label, claims, selectedClaim, onSelect }: { label: string; claims: TestStaticBehaviorClaim[]; selectedClaim: TestStaticBehaviorClaim | null; onSelect: (claim: TestStaticBehaviorClaim) => void }) {
-  return <div><h3 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</h3><ul className="mt-1 space-y-1">{claims.map((claim) => <li key={`${claim.kind}-${claim.sourceLocation.startOffset}`} className={`rounded border border-border/30 ${selectedClaim?.sourceLocation.startOffset === claim.sourceLocation.startOffset ? "border-primary/60 bg-primary/5" : ""}`}><button type="button" className="w-full px-2 py-1.5 text-left hover:bg-primary/5 focus-visible:ring-2 focus-visible:ring-ring/50" onClick={() => onSelect(claim)}><code className="break-words text-[11px]">{claim.sourceText}</code><span className="mt-1 block font-mono text-[10px] text-muted-foreground">{claim.sourceLocation.relativePath}:{claim.sourceLocation.startLine}:{claim.sourceLocation.startColumn}</span></button></li>)}</ul></div>
+function ClaimGroup({ label, claims, selectedClaim, onSelect }: {
+  label: string
+  claims: TestStaticBehaviorClaim[]
+  selectedClaim: TestStaticBehaviorClaim | null
+  onSelect: (claim: TestStaticBehaviorClaim) => void
+}) {
+  return (
+    <div>
+      <h3 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</h3>
+      <ul className="mt-1 space-y-1">
+        {claims.map((claim) => (
+          <li key={`${claim.kind}-${claim.sourceLocation.startOffset}`} className={`rounded border border-border/30 ${selectedClaim?.sourceLocation.startOffset === claim.sourceLocation.startOffset ? "border-primary/60 bg-primary/5" : ""}`}>
+            <button type="button" className="w-full px-2 py-1.5 text-left hover:bg-primary/5 focus-visible:ring-2 focus-visible:ring-ring/50" onClick={() => onSelect(claim)}>
+              <code className="break-words text-[11px]">{claim.sourceText}</code>
+              <span className="mt-1 block font-mono text-[10px] text-muted-foreground">{claim.sourceLocation.relativePath}:{claim.sourceLocation.startLine}:{claim.sourceLocation.startColumn}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
 }
 
-function ClaimEvidenceInspector({ claim, scenarioTitle, snapshotContext }: { claim: TestStaticBehaviorClaim; scenarioTitle: string; snapshotContext?: SnapshotEvidenceContext }) {
-  return <section className="rounded border border-primary/30 bg-primary/5 p-2" aria-label="Selected static claim evidence"><h3 className="text-[11px] font-semibold uppercase tracking-wide text-primary">Selected static evidence</h3><code className="mt-1 block break-words text-[11px]">{claim.sourceText}</code><p className="mt-1 font-mono text-[10px] text-muted-foreground">{claim.sourceLocation.relativePath}:{claim.sourceLocation.startLine}:{claim.sourceLocation.startColumn}-{claim.sourceLocation.endLine}:{claim.sourceLocation.endColumn}</p><p className="mt-1 text-[10px] text-muted-foreground">Source declaration · claim commit {claim.commitSha}</p><p className="mt-1 text-[10px] text-muted-foreground">Scenario: {scenarioTitle}{snapshotContext ? ` · snapshot ${snapshotContext.snapshotId} · snapshot commit ${snapshotContext.commitSha}` : ""}</p></section>
+function ClaimEvidenceInspector({ claim, scenarioTitle, snapshotContext }: {
+  claim: TestStaticBehaviorClaim
+  scenarioTitle: string
+  snapshotContext?: SnapshotEvidenceContext
+}) {
+  const t = useTranslations("workspaceLists")
+  return (
+    <section className="rounded border border-primary/30 bg-primary/5 p-2" aria-label={t("selectedStaticClaimEvidenceLabel")}>
+      <h3 className="text-[11px] font-semibold uppercase tracking-wide text-primary">{t("selectedStaticEvidenceTitle")}</h3>
+      <code className="mt-1 block break-words text-[11px]">{claim.sourceText}</code>
+      <p className="mt-1 font-mono text-[10px] text-muted-foreground">{claim.sourceLocation.relativePath}:{claim.sourceLocation.startLine}:{claim.sourceLocation.startColumn}-{claim.sourceLocation.endLine}:{claim.sourceLocation.endColumn}</p>
+      <p className="mt-1 text-[10px] text-muted-foreground">{t("scenarioSourceDeclarationCommit", { commitSha: claim.commitSha })}</p>
+      <p className="mt-1 text-[10px] text-muted-foreground">
+        {t("scenarioContextLabel", { title: scenarioTitle })}
+        {snapshotContext ? ` · ${t("scenarioSnapshotContext", { snapshotId: snapshotContext.snapshotId, commitSha: snapshotContext.commitSha })}` : ""}
+      </p>
+    </section>
+  )
 }
-

@@ -1,8 +1,8 @@
 import { resolve } from 'node:path';
 import { scanFixture } from '../../packages/analyzer/src';
 
-describe('prompt injection handling', () => {
-  it('treats instruction-like comments as data only', () => {
+describe('prompt-injection fixture extraction boundary', () => {
+  it('does not infer an artifact from an instruction-like constant-only source file', () => {
     const fixturePath = resolve(
       __dirname,
       '../fixtures/nestjs-booking-with-payment',

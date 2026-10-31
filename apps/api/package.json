@@ -48,6 +48,7 @@
     "@types/jest": "30.0.0",
     "@types/passport": "^1.0.17",
     "@types/passport-jwt": "^4.0.1",
+    "bullmq": "5.81.5",
     "dotenv": "^17.4.2",
     "jest": "30.4.2",
     "prisma": "7.10.1",

@@ -55,30 +55,36 @@ export class GetMergedMultiRepoReportDraftUseCase {
     }
 
     const generatedAt = new Date().toISOString();
-    const children = await Promise.all(
-      run.analyses.map(async (analysis) => {
-        const repositoryDisplayName =
-          analysis.snapshot.repository.canonicalUrl.split('/').pop() ??
-          analysis.snapshot.repository.canonicalUrl;
+    const childReadBatchSize = 4;
+    const children = [];
+    for (let offset = 0; offset < run.analyses.length; offset += childReadBatchSize) {
+      const batch = run.analyses.slice(offset, offset + childReadBatchSize);
+      const batchChildren = await Promise.all(
+        batch.map(async (analysis) => {
+          const repositoryDisplayName =
+            analysis.snapshot.repository.canonicalUrl.split('/').pop() ??
+            analysis.snapshot.repository.canonicalUrl;
 
-        return {
-          analysisId: analysis.id,
-          repositoryId: analysis.snapshot.repositoryId,
-          repositoryDisplayName,
-          snapshotId: analysis.snapshot.id,
-          commitSha: analysis.snapshot.commitSha,
-          sourceTargetRef: analysis.sourceTarget.requestedRef,
-          latestReviewDecision: analysis.reviewDecisions?.[0]?.decision ?? null,
-          insights: await this.insights.listByAnalysis(analysis.id),
-          traceabilityLinks: await this.traceability.listByAnalysis(analysis.id),
-          scanHealth: parseScanHealthPayload(
-            ((analysis.snapshot.diagnostics as any[]) ?? []).find(
-              (d: any) => d?.code === 'SCAN_HEALTH',
-            )?.payload,
-          ),
-        };
-      }),
-    );
+          return {
+            analysisId: analysis.id,
+            repositoryId: analysis.snapshot.repositoryId,
+            repositoryDisplayName,
+            snapshotId: analysis.snapshot.id,
+            commitSha: analysis.snapshot.commitSha,
+            sourceTargetRef: analysis.sourceTarget.requestedRef,
+            latestReviewDecision: analysis.reviewDecisions?.[0]?.decision ?? null,
+            insights: await this.insights.listByAnalysis(analysis.id),
+            traceabilityLinks: await this.traceability.listByAnalysis(analysis.id),
+            scanHealth: parseScanHealthPayload(
+              ((analysis.snapshot.diagnostics as any[]) ?? []).find(
+                (d: any) => d?.code === 'SCAN_HEALTH',
+              )?.payload,
+            ),
+          };
+        }),
+      );
+      children.push(...batchChildren);
+    }
 
     const matrix = await this.matrixReadModel.execute(runId);
     const coverage = await this.reviewCoverage.execute(actor, runId);

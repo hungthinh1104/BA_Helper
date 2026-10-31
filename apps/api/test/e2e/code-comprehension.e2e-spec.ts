@@ -84,6 +84,10 @@ describe('Code comprehension projection (E2E)', () => {
     } });
   });
 
+  afterEach(async () => {
+    await resetDatabase(prisma);
+  });
+
   it('serves a snapshot-scoped projection with persisted source and semantic evidence', async () => {
     const response = await request(app.getHttpServer())
       .get(`/api/v1/snapshots/${snapshotId}/artifacts/${selectedArtifactId}/comprehension`)
@@ -105,7 +109,9 @@ describe('Code comprehension projection (E2E)', () => {
     expect(projection.snapshotContext).toMatchObject({ snapshotId, commitSha, runtimeObservations: 'NOT_IMPORTED' });
   });
 
-  it('excludes cross-snapshot edge endpoints from graph and comprehension projections', async () => {
+  it.each(['fromArtifactId', 'toArtifactId'] as const)(
+    'rejects a cross-snapshot %s and keeps graph and comprehension projections scoped',
+    async (foreignEndpoint) => {
     const foreignProject = await prisma.project.create({ data: { name: 'Foreign comprehension project' } });
     const foreignRepository = await prisma.repository.create({
       data: { projectId: foreignProject.id, canonicalUrl: 'https://github.com/mock/foreign-comprehension' },
@@ -121,10 +127,20 @@ describe('Code comprehension projection (E2E)', () => {
         name: 'PaymentSecrets.refundCustomer', artifactType: 'SERVICE_METHOD',
         universalKind: 'DOMAIN_SERVICE', filePath: 'src/payment-secrets.ts' },
     });
-    await prisma.dependencyEdge.createMany({ data: [
-      { snapshotId, fromArtifactId: foreignArtifactId, toArtifactId: selectedArtifactId, type: 'CALLS' },
-      { snapshotId, fromArtifactId: selectedArtifactId, toArtifactId: foreignArtifactId, type: 'REFERENCES' },
-    ] });
+    const edgeData = {
+      snapshotId,
+      fromArtifactId: selectedArtifactId,
+      toArtifactId: selectedArtifactId,
+      type: 'CALLS' as const,
+      [foreignEndpoint]: foreignArtifactId,
+    };
+    await expect(prisma.dependencyEdge.create({ data: edgeData })).rejects.toMatchObject({ code: 'P2003' });
+    await expect(prisma.dependencyEdge.count({
+      where: { snapshotId, OR: [
+        { fromArtifactId: foreignArtifactId },
+        { toArtifactId: foreignArtifactId },
+      ] },
+    })).resolves.toBe(0);
 
     const response = await request(app.getHttpServer())
       .get(`/api/v1/snapshots/${snapshotId}/artifacts/${selectedArtifactId}/comprehension`)
@@ -142,7 +158,8 @@ describe('Code comprehension projection (E2E)', () => {
     const graph = graphResponseSchema.parse(graphResponse.body);
     expect(graph.edges.some((edge) =>
       edge.fromArtifactId === foreignArtifactId || edge.toArtifactId === foreignArtifactId)).toBe(false);
-  });
+    },
+  );
 
   it('rejects a user without membership before reading the projection', async () => {
     const outsider = await prisma.user.create({

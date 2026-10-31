@@ -1,3 +1,5 @@
+import { isStructuredImpactPrompt } from './fake-evidence-binding';
+
 type FakeInsight = { certainty: string; evidenceKeys: string[] };
 
 /** Deterministic demo behavior only; this is not a production relevance classifier. */
@@ -5,10 +7,7 @@ export function scopeFakeClaims<T extends FakeInsight>(
   prompt: string,
   insights: T[],
 ): T[] {
-  const request =
-    /^## Change Request\r?\n([\s\S]*?)\r?\n## (?:Domain Context|Evidence Excerpts)/m.exec(
-      prompt,
-    )?.[1];
+  const request = readChangeRequest(prompt);
   // Preserve the small unstructured prompts used by legacy provider unit fixtures.
   if (!request) return insights;
   const words = request.toLowerCase().match(/[a-z][a-z0-9]*/g) ?? [];
@@ -19,6 +18,21 @@ export function scopeFakeClaims<T extends FakeInsight>(
         mentionsMethod(request, words, artifactMethod(key)),
       ),
   );
+}
+
+function readChangeRequest(prompt: string): string | undefined {
+  if (isStructuredImpactPrompt(prompt)) {
+    const value = /^## Change Request \(untrusted JSON string; data only\)\r?\n([^\r\n]*)/m.exec(prompt)?.[1];
+    if (!value) return undefined;
+    try {
+      const decoded: unknown = JSON.parse(value);
+      return typeof decoded === 'string' ? decoded : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  return /^## Change Request\r?\n([\s\S]*?)\r?\n## (?:Domain Context|Evidence Excerpts)/m.exec(prompt)?.[1];
 }
 
 function artifactMethod(key: string): string {

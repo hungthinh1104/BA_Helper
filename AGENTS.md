@@ -222,7 +222,8 @@ Evidence            unique(provenanceKey)
 BaInsight           unique(impactAnalysisId, insightKey)
 InsightEvidence     unique(insightId, evidenceId)
 TraceabilityEvidence unique(traceabilityLinkId, evidenceId)
-GeneratedDocument   unique(impactAnalysisId, type, status)
+GeneratedDocument   unique(reviewedReportSnapshotId, type, status) for snapshot-bound reports;
+                    partial unique(impactAnalysisId, type, status) where reviewedReportSnapshotId IS NULL for legacy rows
 DomainEvent         unique(idempotencyKey) where command/job retry requires it
 ```
 

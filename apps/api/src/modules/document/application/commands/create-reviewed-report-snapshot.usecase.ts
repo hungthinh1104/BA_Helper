@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { AppError } from '@ba-helper/shared';
-import { PrismaService, EventLogService } from '@ba-helper/backend-runtime';
+import { PrismaService, EventLogService, lockReviewAnalysisForMutation } from '@ba-helper/backend-runtime';
 import type { EventLogTransactionClient } from '@ba-helper/backend-runtime';
 import { ReviewedReportContentBuilder } from './reviewed-report-content.builder';
 
@@ -13,13 +13,17 @@ export class CreateReviewedReportSnapshotUseCase {
   ) {}
 
   async execute(params: { analysisId: string; createdByUserId?: string }) {
-    await this.assertSnapshotAllowed(params.analysisId);
-    const data = await this.buildSnapshotCreateData(params);
     return this.prisma.$transaction(async (tx) => {
+      const locked = await lockReviewAnalysisForMutation(tx, params.analysisId);
+      if (!locked) {
+        throw new AppError('IMPACT_ANALYSIS_NOT_FOUND', 'Impact analysis not found.');
+      }
+      await this.assertSnapshotAllowed(params.analysisId);
+      const data = await this.buildSnapshotCreateData(params);
       const snapshot = await tx.reviewedReportSnapshot.create({ data });
       await this.recordCreatedEvent(snapshot, tx);
       return snapshot;
-    });
+    }, { maxWait: 25_000, timeout: 30_000 });
   }
 
   private async assertSnapshotAllowed(analysisId: string) {

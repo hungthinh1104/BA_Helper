@@ -76,5 +76,17 @@ describe('EventLogPolicy', () => {
         });
       }).not.toThrow();
     });
+
+    it('accepts the document job recovery failure event', () => {
+      expect(() => {
+        EventLogPolicy.validateEventPayload({
+          eventType: 'DOCUMENT_JOB_FAILED',
+          actorUserId: 'system',
+          idempotencyKey: 'document-job:123:stale-recovery-failed',
+          isRetryable: false,
+          metadata: { previousStatus: 'RUNNING', nextStatus: 'FAILED' },
+        });
+      }).not.toThrow();
+    });
   });
 });

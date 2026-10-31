@@ -34,7 +34,7 @@ cached refs only; remote movement since their last fetch remains unverified.
 | A replay does not re-enqueue a `RUNNING` or terminal scan job. | Unit-covered | Existing-job unit case uses `RUNNING`; broader status matrix remains open. |
 | Frontend retries preserve the failed command's request key and payload. | Partially verified | Scan and single-analysis dialogs reuse a key for an identical retry and change it when the user changes the command or explicitly reruns a failed analysis. Refresh/close recovery and multi-repo component coverage remain open. |
 | Every PostgreSQL-to-Redis job type can recover from a partial failure. | Partially verified | Scan, impact-analysis and document commands recover through same-key replay or worker startup; multi-repo parent/fan-out queue failure still needs direct fault injection. |
-| Recovery survives a client disappearing before retry. | Partially verified | Worker startup repairs durable `QUEUED` rows; an outage after startup still has no periodic reconciliation or transactional outbox. |
+| Recovery survives a client disappearing before retry. | Partially verified | PostgreSQL/Redis E2Es cover scan recovery after a Redis server restart (controlled BullMQ handler), impact-analysis recovery after its Redis client is killed, and document re-delivery after an enqueue failure while the periodic reconciler remains online. The real worker-process test verifies report completion after restart. Production scanner execution through outage and multi-repo fan-out recovery remain open; there is no transactional outbox. |
 | Duplicate and concurrent command submission remains safe at every persistence/queue boundary. | Partially verified | Multi-repo concurrent create and event-log idempotency are verified; the full mutation and worker race matrix remains open. |
 | A legacy multi-repo retry cannot silently switch to newer repository snapshots. | Verified for complete legacy runs | Missing plans are reconstructed from persisted child provenance and conditionally backfilled; incomplete legacy runs fail closed. |
 
@@ -480,18 +480,22 @@ route initializes and the report journey exits cleanly after this auth change.
 
 ## Limitations And Residual Risks
 
-1. UI request keys are still held in component memory. Worker startup now
-   recovers durable `QUEUED` rows, but the user-visible command state after
-   close/refresh has not been tested. A Redis outage after worker startup still
-   requires a client replay or another worker restart.
+1. UI request keys are still held in component memory. Worker startup and
+   periodic reconciliation recover durable `QUEUED` rows. Scan, impact-analysis
+   and document recovery paths have PostgreSQL/Redis E2E coverage, but scan
+   outage recovery uses a controlled BullMQ handler rather than the production
+   scanner. The user-visible command state after close/refresh remains
+   untested.
 2. Multi-repo concurrent first-create and moving-target partial fan-out are
    covered. Partial fan-out retry with an unchanged target and injected child
    queue failure still need direct fault injection.
 3. An impact queue outage transitions the analysis to `FAILED`; the UI handles
    an idempotent failed response and enables an explicit new-key rerun, but the
    full API-to-browser failure/retry path has not been exercised.
-4. Recovery is worker-startup driven; there is no periodic reconciliation or
-   transactional outbox for a queue outage while the worker stays up.
+4. There is no transactional outbox. The worker periodically retries durable
+   queued rows after Redis inspection or enqueue failures. Current tests do not
+   cover multi-repo parent/fan-out queue failure or real scanner execution
+   through a Redis server restart.
 5. PostgreSQL pool connection timeouts remain intermittent in browser runs,
    and standard Windows Playwright server teardown remains unclean. The latest
    full run's report journey passed, but the keyboard route failed on a 500

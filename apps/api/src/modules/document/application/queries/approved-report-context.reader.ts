@@ -1,10 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { AppError } from '@ba-helper/shared';
-import { analysisEvidenceScopeWhere, MarkdownReportRenderContext, computeCanonicalReportHash, PrismaService } from '@ba-helper/backend-runtime';
-import { GeneratedDocument } from '@prisma/client';
+import { DocumentRepository, MarkdownReportRenderContext, computeCanonicalReportHash } from '@ba-helper/backend-runtime';
 
 export interface ApprovedReportContextResult {
-  sourceDocument: Pick<GeneratedDocument, 'id'>;
+  sourceDocument: { id: string };
   reviewedSnapshot: any;
   canonicalContext: MarkdownReportRenderContext;
   sourceContentHash: string;
@@ -12,54 +11,26 @@ export interface ApprovedReportContextResult {
 
 @Injectable()
 export class ApprovedReportContextReader {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly documentRepository: DocumentRepository) {}
 
   async readContext(analysisId: string, reviewedSnapshotId?: string): Promise<ApprovedReportContextResult> {
-    const analysis = await this.prisma.impactAnalysis.findUnique({
-      where: { id: analysisId },
-      include: {
-        snapshot: { include: { repository: true, profile: true } },
-        sourceTarget: true,
-        requirementRevision: true,
-      }
-    });
-
-    if (!analysis) {
+    const reportData = await this.documentRepository.loadApprovedReportContext(analysisId, reviewedSnapshotId);
+    if (!reportData) {
       throw new NotFoundException('Analysis not found');
     }
 
-    const requestedSnapshot = reviewedSnapshotId
-      ? await this.prisma.reviewedReportSnapshot.findFirst({
-          where: { id: reviewedSnapshotId, analysisId },
-        })
-      : null;
-    if (reviewedSnapshotId && !requestedSnapshot) {
+    if (reviewedSnapshotId && !reportData.requestedSnapshot) {
       throw new NotFoundException('Reviewed snapshot not found for localization context');
     }
 
-    const document = requestedSnapshot?.approvedDocumentId
-      ? await this.prisma.generatedDocument.findUnique({
-          where: { id: requestedSnapshot.approvedDocumentId },
-          select: { id: true, impactAnalysisId: true, type: true, status: true },
-        })
-      : reviewedSnapshotId
-        ? null
-        : await this.prisma.generatedDocument.findUnique({
-            where: {
-              impactAnalysisId_type_status: {
-                impactAnalysisId: analysisId,
-                type: 'IMPACT_REPORT',
-                status: 'APPROVED',
-              },
-            },
-            select: { id: true, impactAnalysisId: true, type: true, status: true },
-          });
+    const { analysis, reviewedSnapshot, document } = reportData;
 
     if (!document) {
       throw new NotFoundException('Approved impact report not found for localization context');
     }
     if (
       document.impactAnalysisId !== analysisId ||
+      (document.reviewedReportSnapshotId != null && document.reviewedReportSnapshotId !== reviewedSnapshot?.id) ||
       document.type !== 'IMPACT_REPORT' ||
       document.status !== 'APPROVED'
     ) {
@@ -70,48 +41,19 @@ export class ApprovedReportContextReader {
       );
     }
 
-    const reviewedSnapshot = requestedSnapshot ?? await this.prisma.reviewedReportSnapshot.findFirst({
-      where: { analysisId, approvedDocumentId: document.id },
-      orderBy: { createdAt: 'desc' },
-    });
-
     if (!reviewedSnapshot) {
       throw new NotFoundException('Reviewed snapshot missing for approved document');
     }
 
-    const insights = await this.prisma.baInsight.findMany({
-      where: { impactAnalysisId: analysisId },
-      include: { evidenceLinks: {
-        where: { evidence: analysisEvidenceScopeWhere(analysis.snapshotId, analysis.requirementRevisionId) },
-        include: { evidence: true },
-      } }
-    });
-
-    const traceabilityLinks = await this.prisma.traceabilityLink.findMany({
-      where: { impactAnalysisId: analysisId, artifact: { snapshotId: analysis.snapshotId } },
-      include: { artifact: true, evidenceLinks: {
-        where: { evidence: analysisEvidenceScopeWhere(analysis.snapshotId, analysis.requirementRevisionId) },
-        include: { evidence: true },
-      } }
-    });
-
-    const reviewNotes = await this.prisma.reviewNote.findMany({
-      where: { impactAnalysisId: analysisId }
-    });
-
-    const clarifications = await this.prisma.clarificationItem.findMany({
-      where: { impactAnalysisId: analysisId }
-    });
-
     const canonicalContext: MarkdownReportRenderContext = {
       analysis: analysis as any,
       locale: 'en',
-      insights: insights as any,
-      traceabilityLinks: traceabilityLinks as any,
-      reviewNotes,
+      insights: reportData.insights as any,
+      traceabilityLinks: reportData.traceabilityLinks as any,
+      reviewNotes: reportData.reviewNotes,
       hasUnreviewedItems: false,
       dependencyEdges: [],
-      clarifications: clarifications as any,
+      clarifications: reportData.clarifications as any,
       reviewDecisions: [],
       reviewDecisionsSnapshot: reviewedSnapshot.reviewDecisionsSnapshot as any,
       evidenceQualitySummarySnapshot: reviewedSnapshot.evidenceQualitySummarySnapshot as any,

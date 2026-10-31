@@ -9,6 +9,7 @@ const DIMENSIONS = 1536;
 @Injectable()
 export class OpenAiEmbeddingProvider extends EmbeddingProviderPort {
   readonly providerName = 'openai';
+  readonly modelName = DEFAULT_MODEL;
   private readonly client: OpenAI;
 
   constructor(private readonly config: EmbeddingConfig) {
@@ -17,7 +18,7 @@ export class OpenAiEmbeddingProvider extends EmbeddingProviderPort {
   }
 
   async embed(request: EmbeddingRequest): Promise<EmbeddingResult> {
-    const model = request.model ?? DEFAULT_MODEL;
+    const model = request.model ?? this.modelName;
 
     const response = await this.client.embeddings.create({
       model,
@@ -33,7 +34,7 @@ export class OpenAiEmbeddingProvider extends EmbeddingProviderPort {
 
     return {
       embeddings: response.data.map((d) => d.embedding),
-      model,
+      model: response.model,
       dimensions: DIMENSIONS,
       tokenUsage: response.usage?.total_tokens ?? undefined,
     };

@@ -1,5 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { MatrixRowDetailResponse } from '@ba-helper/contracts';
+import {
+  retrievalMetadataSchema,
+  type MatrixRowDetailResponse,
+} from '@ba-helper/contracts';
 import { isEvidenceScopedToAnalysis, PrismaService } from "@ba-helper/backend-runtime";
 
 @Injectable()
@@ -95,7 +98,7 @@ export class GetMatrixRowDetailUseCase {
     const qaScenarios: any[] = [];
     const processedInsightIds = new Set<string>();
 
-    for (const insight of analysis.insights) {
+    for (const insight of insights) {
       if (processedInsightIds.has(insight.id)) continue;
 
       const isConflicting = insight.certainty === 'CONFLICTING';
@@ -120,6 +123,9 @@ export class GetMatrixRowDetailUseCase {
 
     for (const link of traceabilityLinks) {
       const artifact = link.artifact;
+      const retrievalMetadata = link.retrievalMetadata == null
+        ? undefined
+        : retrievalMetadataSchema.parse(link.retrievalMetadata);
       if (!artifactMap.has(artifact.id)) {
         artifactMap.set(artifact.id, {
           artifactId: artifact.id,
@@ -135,7 +141,7 @@ export class GetMatrixRowDetailUseCase {
           evidenceItems: [],
           relatedRisks: new Set<string>(),
           relatedQaScenarios: new Set<string>(),
-          retrievalDiagnostics: (link as any).retrievalMetadata?.diagnostics ?? undefined,
+          retrievalDiagnostics: retrievalMetadata?.diagnostics,
         });
       }
 
@@ -151,7 +157,7 @@ export class GetMatrixRowDetailUseCase {
             startLine: evidence.startLine,
             endLine: evidence.endLine,
             linkType: link.linkType,
-            retrievalSignals: (evidence as any).retrievalMetadata?.diagnostics ?? undefined, // not strictly needed from evidence but maybe available
+            retrievalSignals: retrievalMetadata?.signals,
           });
         }
         
@@ -227,3 +233,4 @@ function hasRiskMetadata(insight: { metadata?: unknown }): boolean {
   const kind = (metadata as Record<string, unknown>).kind;
   return typeof kind === 'string' && kind.toLowerCase() === 'risk';
 }
+

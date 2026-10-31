@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { AppError } from '@ba-helper/shared';
 
 import { ReviewPolicy } from '../../../review/domain/review.policy';
@@ -19,6 +19,8 @@ import {
 
 @Injectable()
 export class FinalizeImpactAnalysisUseCase {
+  private readonly logger = new Logger(FinalizeImpactAnalysisUseCase.name);
+
   constructor(
     private readonly impactRepo: ImpactAnalysisRepository,
     private readonly traceabilityRepo: TraceabilityRepository,
@@ -116,16 +118,16 @@ export class FinalizeImpactAnalysisUseCase {
 
     try {
       await this.enqueueJob.enqueueExistingJob(documentJob.id);
-    } catch (error) {
-      await this.prisma.documentJob.update({
-        where: { id: documentJob.id },
-        data: {
-          error: {
-            stage: 'QUEUE_ENQUEUE',
-            message: error instanceof Error ? error.message : String(error),
-          },
-        },
-      });
+    } catch {
+      this.logger.warn(JSON.stringify({
+        event: 'DOCUMENT_JOB_ENQUEUE_PENDING',
+        analysisId: params.analysisId,
+        snapshotId: documentJob.snapshotId,
+        jobId: documentJob.id,
+        failureStage: 'REDIS_ENQUEUE',
+        retryable: true,
+        errorCode: 'QUEUE_ENQUEUE_FAILED',
+      }));
     }
 
     const finalizedAnalysis = await this.impactRepo.findById(params.analysisId);

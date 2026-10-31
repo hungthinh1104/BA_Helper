@@ -44,6 +44,7 @@ describe('Project role permissions (PostgreSQL API e2e)', () => {
   let analysisId: string;
   let completedAnalysisId: string;
   let requirementRevisionId: string;
+  let requirementId: string;
   let snapshotId: string;
   let sourceTargetId: string;
 
@@ -130,6 +131,7 @@ describe('Project role permissions (PostgreSQL API e2e)', () => {
     const requirement = await prisma.requirement.create({
       data: { id: crypto.randomUUID(), projectId },
     });
+    requirementId = requirement.id;
     const revision = await prisma.requirementRevision.create({
       data: {
         id: crypto.randomUUID(), requirementId: requirement.id, title: 'Role matrix',
@@ -140,14 +142,14 @@ describe('Project role permissions (PostgreSQL API e2e)', () => {
     requirementRevisionId = revision.id;
     const analysis = await prisma.impactAnalysis.create({
       data: {
-        id: crypto.randomUUID(), requirementRevisionId: revision.id, snapshotId: snapshot.id,
+        id: crypto.randomUUID(), requirementRevisionId: revision.id, requirementId, projectId, repositoryId, snapshotId: snapshot.id,
         sourceTargetId: target.id, requestKey: crypto.randomUUID(), status: 'WAITING_FOR_REVIEW', stage: 'DONE',
       },
     });
     analysisId = analysis.id;
     const completedAnalysis = await prisma.impactAnalysis.create({
       data: {
-        id: crypto.randomUUID(), requirementRevisionId: revision.id, snapshotId: snapshot.id,
+        id: crypto.randomUUID(), requirementRevisionId: revision.id, requirementId, projectId, repositoryId, snapshotId: snapshot.id,
         sourceTargetId: target.id, requestKey: crypto.randomUUID(), status: 'COMPLETED', stage: 'DONE',
       },
     });
@@ -342,6 +344,9 @@ describe('Project role permissions (PostgreSQL API e2e)', () => {
       data: {
         id: crypto.randomUUID(),
         requirementRevisionId,
+        requirementId,
+        projectId,
+        repositoryId,
         snapshotId,
         sourceTargetId,
         requestKey: crypto.randomUUID(),
@@ -491,6 +496,7 @@ describe('Project role permissions (PostgreSQL API e2e)', () => {
       data: {
         id: crypto.randomUUID(),
         impactAnalysisId: analysisId,
+        snapshotId,
         artifactId: artifact.id,
         linkType: 'AFFECTED',
         linkBasis: 'EVIDENCED',
@@ -543,6 +549,7 @@ describe('Project role permissions (PostgreSQL API e2e)', () => {
       data: {
         id: crypto.randomUUID(),
         impactAnalysisId: analysisId,
+        snapshotId,
         artifactId: ownerArtifact.id,
         linkType: 'AFFECTED',
         linkBasis: 'EVIDENCED',
@@ -764,7 +771,7 @@ describe('Project role permissions (PostgreSQL API e2e)', () => {
     })).toEqual({ status: 'OPEN', answer: null });
   });
 
-  it('lets every project role read evidence, review, and QA resources for its analysis', async () => {
+  it('lets every project role read evidence, review, and QA resources while hiding them from outsiders', async () => {
     const artifact = await prisma.codeArtifact.create({
       data: {
         id: crypto.randomUUID(),
@@ -863,6 +870,7 @@ describe('Project role permissions (PostgreSQL API e2e)', () => {
       data: {
         id: crypto.randomUUID(),
         impactAnalysisId: analysisId,
+        snapshotId,
         artifactId: artifact.id,
         linkType: 'AFFECTED',
         linkBasis: 'EVIDENCED',
@@ -936,10 +944,26 @@ describe('Project role permissions (PostgreSQL API e2e)', () => {
       );
     }
 
-    await request(app.getHttpServer())
-      .get(`/api/v1/impact-analyses/${analysisId}/qa-coverage/evidence/${testEvidenceId}`)
-      .set('Authorization', `Bearer ${outsiderToken}`)
-      .expect(404);
+    const scopedReadPaths = [
+      `/api/v1/impact-analyses/${analysisId}/evidence`,
+      `/api/v1/impact-analyses/${analysisId}/insights`,
+      `/api/v1/impact-analyses/${analysisId}/traceability`,
+      `/api/v1/impact-analyses/${analysisId}/qa-coverage`,
+      `/api/v1/impact-analyses/${analysisId}/qa-coverage/evidence/${testEvidenceId}`,
+      `/api/v1/impact-analyses/${analysisId}/review-queue`,
+    ];
+    for (const path of scopedReadPaths) {
+      const response = await request(app.getHttpServer())
+        .get(path)
+        .set('Authorization', `Bearer ${outsiderToken}`)
+        .expect(404);
+      expect(JSON.stringify(response.body)).not.toContain(
+        'The booking service calls the refund service.',
+      );
+      expect(JSON.stringify(response.body)).not.toContain(
+        'await refundService.refund(booking.paymentId);',
+      );
+    }
   });
 
   it('allows analyst and reviewer roles to reach the derived-analysis state gate', async () => {

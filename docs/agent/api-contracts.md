@@ -18,13 +18,20 @@ values; consumers must not repair malformed identity by defaulting it to
 
 Reviewed-report snapshot responses and final reviewed-report responses validate
 the frozen evidence-quality item array, summary counters, and nullable
-evaluation context against their shared schemas. A malformed persisted frozen
-payload fails with `REPORT_PROVENANCE_MISMATCH`; report readers must not replace
-malformed decision rows with an empty list or silently recalculate them from
-live review state.
+evaluation context against their shared schemas. Supplied summary-counter
+aliases must agree with the number of frozen items in each quality category.
+A malformed or internally inconsistent persisted payload fails with
+`REPORT_PROVENANCE_MISMATCH`; report readers must not replace malformed
+decision rows with an empty list or silently recalculate them from live review
+state.
 Existing acknowledgement shapes, report-job input, review-note lists and queue
 retry responses now have shared schemas as well. This documentation work adds
 no domain state or persisted fields and does not tighten endpoint validation.
+
+Document-job responses expose only the stable `DOCUMENT_GENERATION_FAILED`
+code when a job has an error. Raw worker exceptions and connection details are
+internal diagnostics and are never included in the API response; legacy stored
+error JSON is normalized at the response boundary.
 
 Impact graph dependency edges may expose `confidence` in [0, 1] and `provenance`
 validated by `dependencyEdgeProvenanceSchema`. Provenance describes a static
@@ -32,6 +39,27 @@ source relationship and identifies its resolver, source line locations and
 same-snapshot evidence provenance key. It is absent for legacy edges without
 provenance. Reversing `TESTS` for layout never reverses the evidence origin.
 No execution, assertion coverage or test-result claim follows from this field.
+
+Retrieval `signals` use the shared `LEXICAL | GRAPH | VECTOR | DOMAIN | KIND`
+enum. Per-artifact `diagnostics`, when present, must match the versioned
+`retrievalDiagnosticsSchema`; consumers must not treat diagnostic JSON as an
+untyped record. Multi-repo matrix-row evidence takes retrieval signals from its
+owning traceability link because the `Evidence` model does not persist a separate
+retrieval-metadata field. A non-null malformed matrix retrieval payload fails
+response mapping; graph nodes retain the documented legacy exception below.
+
+`SCAN_HEALTH` diagnostic payloads use `scanHealthDiagnosticPayloadSchema` at
+the workspace UI boundary. The schema validates coverage state, all displayed
+counts and versions, skipped-file samples, and scanner limits. Incomplete or
+malformed legacy payloads show the existing unavailable state instead of a
+success badge or partially blank metrics.
+
+The generic `diagnosticItemSchema.payload` remains a JSON record because
+diagnostic codes have different payloads. This is a validation exception at
+the generic envelope boundary: a UI that interprets a specific payload must
+parse it with that code's shared schema first. Current scan-health and scanner
+capability panels do so; other diagnostics render only their validated code,
+severity, category, count, and message fields.
 
 Artifact list items and impact graph artifact nodes optionally expose validated
 `testCase` metadata for `JEST_TEST_CASE`: `framework`, `suitePath`, `title`,
@@ -272,6 +300,12 @@ GET  /api/v1/impact-analyses/:analysisId/final-reviewed-report?locale=en|vi
 POST /api/v1/analyses/:analysisId/localization
 GET  /api/v1/analyses/:analysisId/localization/:locale/status
 ```
+
+Reviewed-report snapshot responses include optional nullable
+`clarificationsSnapshot`. New snapshots return the runtime-validated question,
+answer, status, identity, and creation time captured with the snapshot. Legacy
+snapshots may return `null`; report workers reconstruct their historical state
+from persisted clarification timestamps and never render a later live answer.
 
 `POST /api/v1/repositories/:repositoryId/scan-jobs` accepts `requestKey` and
 optional `ref`. This request schema rejects unknown fields: a misspelled branch
@@ -976,6 +1010,11 @@ different reviewed snapshot. Report generation freezes its Markdown on the
 reviewed snapshot; when a legacy document cannot be tied unambiguously to the
 latest reviewed snapshot, the API returns `REPORT_PROVENANCE_MISMATCH` (HTTP
 409) instead of serving mixed-generation content.
+Final reviewed report reads also compare the current per-item review identity,
+status, and decision metadata with the frozen review-decision snapshot. Matching
+aggregate counts alone are insufficient because decisions can change between
+items while preserving the same totals; such a mismatch returns
+`REPORT_PROVENANCE_MISMATCH` (HTTP 409).
 When a reviewed snapshot has no frozen Markdown and resolves its approved
 document by ID, that document must belong to the same impact analysis and be an
 approved impact report. A cross-analysis or wrong-type/status reference returns
@@ -998,7 +1037,10 @@ Impact graph nodes expose retrieval metadata only when it passes the shared
 retrieval schema. A null historical DB value or unsupported JSON shape is
 omitted from the optional field; it is never returned as null or replaced by
 invented retrieval information. Contract checks include real persisted graph
-rows, not only mocked JSON objects.
+rows, not only mocked JSON objects. This is a documented validation exception
+for legacy graph metadata: invalid optional retrieval metadata is omitted from
+the graph projection. New signals and diagnostics are validated by the shared
+versioned schema before they can reach consumers.
 
 Any API response change updates:
 

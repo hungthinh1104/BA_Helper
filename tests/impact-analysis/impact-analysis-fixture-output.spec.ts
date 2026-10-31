@@ -187,7 +187,8 @@ class StubTraceabilityRepo {
 class StubRetrievalService {
   retrieve = async (request: any) => {
     expect(request.domain).toBe('booking');
-    return [
+    return {
+      artifacts: [
       { id: 'a1', artifactKey: 'api:booking.controller.cancel', filePath: 'src/booking/booking.controller.ts', name: 'BookingController.cancel', artifactType: 'API_ROUTE', retrievalMethod: 'LEXICAL' as const },
       { id: 'a2', artifactKey: 'service-method:booking.service.cancelBooking', filePath: 'src/booking/booking.service.ts', name: 'BookingService.cancelBooking', artifactType: 'SERVICE_METHOD', retrievalMethod: 'LEXICAL' as const },
       { id: 'a3', artifactKey: 'service-method:payment.service.refund', filePath: 'src/payment/payment.service.ts', name: 'PaymentService.refund', artifactType: 'SERVICE_METHOD', retrievalMethod: 'LEXICAL' as const },
@@ -196,15 +197,17 @@ class StubRetrievalService {
       { id: 'a6', artifactKey: 'entity:booking', filePath: 'src/booking/booking.entity.ts', name: 'Booking', artifactType: 'ENTITY', retrievalMethod: 'GRAPH' as const },
       { id: 'a7', artifactKey: 'entity:paymentTransaction', filePath: 'src/payment/payment.entity.ts', name: 'PaymentTransaction', artifactType: 'ENTITY', retrievalMethod: 'GRAPH' as const },
       { id: 'a8', artifactKey: 'test:booking.cancel.spec', filePath: 'src/booking/booking-cancel.spec.ts', name: 'BookingService.cancelBooking.spec', artifactType: 'TEST', retrievalMethod: 'GRAPH' as const },
-    ].map(a => ({
-      artifactId: a.id,
-      artifactKey: a.artifactKey,
-      filePath: a.filePath,
-      symbolName: a.name,
-      artifactType: a.artifactType,
-      score: 1.0,
-      retrievalMethod: a.retrievalMethod,
-    }));
+      ].map(a => ({
+        artifactId: a.id,
+        artifactKey: a.artifactKey,
+        filePath: a.filePath,
+        symbolName: a.name,
+        artifactType: a.artifactType,
+        score: 1.0,
+        retrievalMethod: a.retrievalMethod,
+      })),
+      diagnostics: { strategy: 'hybrid', vectorStatus: 'USED' },
+    };
   };
 }
 

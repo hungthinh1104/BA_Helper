@@ -4,6 +4,7 @@ import { AppError } from '@ba-helper/shared';
 import { z } from 'zod';
 import { LlmProvider, LlmRequest, LlmResult } from '../domain/llm-provider.interface';
 import { AiConfig, AI_CONFIG_TOKEN } from '../domain/ai-config';
+import { redactLlmPrompts } from './redact-llm-prompts';
 import { parseStructuredLlmOutput } from './structured-output';
 
 @Injectable()
@@ -25,6 +26,7 @@ export class DeepseekLlmProvider extends LlmProvider {
   ): Promise<LlmResult<T>> {
     const model = request.options?.model ?? this.config.defaultModel;
     const start = Date.now();
+    const safePrompts = redactLlmPrompts(request);
 
     let response;
     try {
@@ -34,8 +36,8 @@ export class DeepseekLlmProvider extends LlmProvider {
         max_tokens: request.options?.maxTokens ?? this.config.maxTokens,
         response_format: { type: 'json_object' },
         messages: [
-          { role: 'system', content: request.systemPrompt },
-          { role: 'user', content: request.userPrompt },
+          { role: 'system', content: safePrompts.systemPrompt },
+          { role: 'user', content: safePrompts.userPrompt },
         ],
       });
     } catch (error: any) {

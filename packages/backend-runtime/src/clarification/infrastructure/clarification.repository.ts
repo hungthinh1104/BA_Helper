@@ -12,9 +12,11 @@ export class ClarificationRepository {
     });
   }
 
-  async findBySourceInsightId(sourceInsightId: string): Promise<ClarificationItem | null> {
+  async findBySourceInsightId(sourceInsightId: string, impactAnalysisId: string): Promise<ClarificationItem | null> {
     return this.prisma.clarificationItem.findUnique({
-      where: { sourceInsightId },
+      where: {
+        sourceInsightId_impactAnalysisId: { sourceInsightId, impactAnalysisId },
+      },
     });
   }
 

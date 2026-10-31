@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { Prisma } from '@prisma/client';
 import { lockReviewableAnalysisWhileCurrent } from '../../impact-analysis/infrastructure/review-analysis-lock';
-import { analysisEvidenceScopeWhere } from '../../evidence/infrastructure/analysis-evidence-scope';
+import {
+  analysisEvidenceScopeWhere,
+  assertEvidenceLinksScopedToAnalyses,
+} from '../../evidence/infrastructure/analysis-evidence-scope';
 
 @Injectable()
 export class InsightRepository {
@@ -177,13 +180,7 @@ export class InsightRepository {
       return [];
     }
 
-    await this.prisma.insightEvidence.createMany({
-      data: params.evidenceIds.map((evidenceId) => ({
-        insightId: params.insightId,
-        evidenceId,
-      })),
-      skipDuplicates: true,
-    });
+    await this.linkEvidenceMany([{ insightId: params.insightId, evidenceIds: params.evidenceIds }]);
 
     return this.prisma.insightEvidence.findMany({
       where: { insightId: params.insightId },
@@ -196,6 +193,24 @@ export class InsightRepository {
     );
     if (data.length === 0) return;
 
-    await this.prisma.insightEvidence.createMany({ data, skipDuplicates: true });
+    await this.prisma.$transaction(async (transaction) => {
+      const insights = await transaction.baInsight.findMany({
+        where: { id: { in: [...new Set(data.map((link) => link.insightId))] } },
+        select: {
+          id: true,
+          impactAnalysis: { select: { snapshotId: true, requirementRevisionId: true } },
+        },
+      });
+      const scopesByInsightId = new Map(insights.map((insight) => [
+        insight.id,
+        insight.impactAnalysis,
+      ]));
+      await assertEvidenceLinksScopedToAnalyses(
+        transaction,
+        scopesByInsightId,
+        data.map(({ insightId, evidenceId }) => ({ ownerId: insightId, evidenceId })),
+      );
+      await transaction.insightEvidence.createMany({ data, skipDuplicates: true });
+    });
   }
 }

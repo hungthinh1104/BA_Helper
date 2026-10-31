@@ -126,9 +126,10 @@ class StubRetrievalService {
 
   retrieve = async (request: any) => {
     expect(request.domain).toBe('booking');
-    return this.artifacts
-      .filter(a => a.id !== 'noise-1') // simulate RAG filtering out irrelevant artifacts
-      .map(a => ({
+    return {
+      artifacts: this.artifacts
+        .filter(a => a.id !== 'noise-1') // simulate RAG filtering out irrelevant artifacts
+        .map(a => ({
         artifactId: a.id,
         artifactKey: a.artifactKey,
         filePath: a.filePath,
@@ -137,7 +138,9 @@ class StubRetrievalService {
         score: 1.0,
         // For testing, let's just make the first 3 LEXICAL and the rest GRAPH so we get only 3 AFFECTED links
         retrievalMethod: ['a1', 'a2', 'a3'].includes(a.id) ? 'LEXICAL' : 'GRAPH',
-      }));
+        })),
+      diagnostics: { strategy: 'hybrid', vectorStatus: 'USED' },
+    };
   };
 }
 
@@ -440,8 +443,8 @@ describe('RunImpactAnalysisUseCase', () => {
     ];
 
     class NoiseRetrievalService {
-      retrieve = async () => [
-        {
+      retrieve = async () => ({
+        artifacts: [{
           artifactId: 'a1',
           artifactKey: 'service-method:payment.service.refund',
           filePath: 'src/payment/payment.service.ts',
@@ -451,8 +454,9 @@ describe('RunImpactAnalysisUseCase', () => {
           retrievalMethod: 'LEXICAL',
           retrievalSignals: ['LEXICAL'],
           retrievalReason: 'keyword match only',
-        },
-      ];
+        }],
+        diagnostics: { strategy: 'lexical_fallback', vectorStatus: 'NO_COMPATIBLE_CHUNKS' },
+      });
     }
 
     const evidenceRepo = new StubEvidenceRepo([]);
@@ -502,8 +506,8 @@ describe('RunImpactAnalysisUseCase', () => {
     ];
 
     class VectorRetrievalService {
-      retrieve = async () => [
-        {
+      retrieve = async () => ({
+        artifacts: [{
           artifactId: 'a1',
           artifactKey: 'service-method:payment.service.refund',
           filePath: 'src/payment/payment.service.ts',
@@ -513,8 +517,9 @@ describe('RunImpactAnalysisUseCase', () => {
           retrievalMethod: 'VECTOR',
           retrievalSignals: ['VECTOR'],
           retrievalReason: 'semantic match only',
-        },
-      ];
+        }],
+        diagnostics: { strategy: 'hybrid', vectorStatus: 'USED' },
+      });
     }
 
     const traceabilityRepo = new StubTraceabilityRepo();
@@ -584,7 +589,12 @@ describe('RunImpactAnalysisUseCase', () => {
       new StubArtifactRepo([]) as any,
       new StubEvidenceRepo() as any,
       new StubTraceabilityRepo() as any,
-      new class { retrieve = async () => [] }() as any
+      new class {
+        retrieve = async () => ({
+          artifacts: [],
+          diagnostics: { strategy: 'lexical_fallback', vectorStatus: 'NO_COMPATIBLE_CHUNKS' },
+        });
+      }() as any
     );
     const diagnosticStep = new ImpactDiagnosticPropagationStep();
     const aiReasoningStep = new ImpactAiReasoningStep(new FakeLlmProvider() as any);
@@ -638,7 +648,12 @@ describe('RunImpactAnalysisUseCase', () => {
       new StubArtifactRepo([]) as any,
       new StubEvidenceRepo() as any,
       new StubTraceabilityRepo() as any,
-      new class { retrieve = async () => [] }() as any
+      new class {
+        retrieve = async () => ({
+          artifacts: [],
+          diagnostics: { strategy: 'lexical_fallback', vectorStatus: 'NO_COMPATIBLE_CHUNKS' },
+        });
+      }() as any
     );
     const diagnosticStep = new ImpactDiagnosticPropagationStep();
     const aiReasoningStep = new ImpactAiReasoningStep(new FakeLlmProvider() as any);
@@ -700,7 +715,12 @@ describe('RunImpactAnalysisUseCase', () => {
       new StubArtifactRepo([]) as any,
       new StubEvidenceRepo() as any,
       new StubTraceabilityRepo() as any,
-      new class { retrieve = async () => [] }() as any
+      new class {
+        retrieve = async () => ({
+          artifacts: [],
+          diagnostics: { strategy: 'lexical_fallback', vectorStatus: 'NO_COMPATIBLE_CHUNKS' },
+        });
+      }() as any
     );
     const diagnosticStep = new ImpactDiagnosticPropagationStep();
     const aiReasoningStep = new ImpactAiReasoningStep(new FakeLlmProvider() as any);

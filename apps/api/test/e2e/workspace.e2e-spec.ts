@@ -4,7 +4,11 @@ import request from 'supertest';
 import * as crypto from 'crypto';
 import { createTestApp } from './helpers/test-app';
 import { resetDatabase } from './helpers/reset-db';
-import { currentWorkspaceResponseSchema } from '@ba-helper/contracts';
+import {
+  currentWorkspaceResponseSchema,
+  domainPackRegistryResponseSchema,
+  projectListResponseSchema,
+} from '@ba-helper/contracts';
 import { PrismaService } from "@ba-helper/backend-runtime";
 
 describe('Workspace Resolution (E2E)', () => {
@@ -61,6 +65,20 @@ describe('Workspace Resolution (E2E)', () => {
       mode: 'dev-single-user',
       membershipRole: 'OWNER',
     });
+
+    const projectResponse = await request(app.getHttpServer())
+      .get('/api/v1/projects')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    const projectList = projectListResponseSchema.parse(projectResponse.body);
+    expect(projectList.items.map((project) => project.projectId)).toContain(firstWorkspace.projectId);
+
+    const domainPackResponse = await request(app.getHttpServer())
+      .get('/api/v1/domain-packs')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    const domainPacks = domainPackRegistryResponseSchema.parse(domainPackResponse.body);
+    expect(domainPacks.items.map((pack) => pack.canonicalId)).toContain('booking@0.1.0');
 
     const projects = await prisma.project.findMany();
     expect(projects).toHaveLength(1);

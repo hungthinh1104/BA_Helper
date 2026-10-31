@@ -209,7 +209,8 @@ function evidenceResult(): ImpactEvidenceCollectionResult {
     ]),
     traceabilityLinks: [],
     retrievalMetadata: {
-      strategy: 'HYBRID',
+      strategy: 'hybrid',
+      vectorStatus: 'USED',
       maxArtifacts: 12,
       artifactCount: 0,
       vectorSignalCount: 0,

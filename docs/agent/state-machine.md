@@ -154,9 +154,16 @@ QUEUED             -> RUNNING | CANCELLED | FAILED
 RUNNING            -> WAITING_FOR_REVIEW | FAILED | CANCELLED
 WAITING_FOR_REVIEW -> COMPLETED
 COMPLETED          -> none
-FAILED             -> none
+FAILED             -> QUEUED // explicit same-request retry only for QUEUE_ENQUEUE_FAILED
 CANCELLED          -> none
 ```
+
+An analysis that failed before BullMQ accepted its deterministic job may be
+retried by repeating the same create request with the same request key and
+payload. PostgreSQL conditionally reopens only a `FAILED` row whose persisted
+error code is `QUEUE_ENQUEUE_FAILED`; other failed analyses remain terminal.
+The retry reuses the same analysis and job identities and records an
+`IMPACT_ANALYSIS_QUEUE_RETRY_REQUESTED` event.
 
 `WAITING_FOR_REVIEW` means machine output exists. `COMPLETED` means the
 user explicitly invoked finalization. Finalization may leave unreviewed
@@ -217,6 +224,11 @@ or status mutation and its `DomainEvent` must commit in the same database
 transaction. For an insight review action, its rationale `ReviewNote` is part
 of that transaction too. If event persistence fails, all related review writes
 roll back and the API must not report a successful mutation.
+
+Each `ReviewNote` is scoped to its `ImpactAnalysis`. Its optional insight or
+traceability-link target must belong to that same analysis; PostgreSQL enforces
+exactly one target and enforces these pairs so repository-level writes cannot
+attach another analysis's item.
 
 Review mutations require a UUID `requestKey` that remains stable for one user
 command. They lock the analysis and re-read the item inside the transaction
@@ -291,7 +303,20 @@ COMPLETED -> none
 ```
 
 A `DocumentJob` takes a single `ReviewedReportSnapshot` as its deterministic input.
+The job's `analysisId` must match the snapshot's `analysisId`; PostgreSQL
+enforces this lineage pair so a job cannot be read under one analysis while
+executing against another analysis's frozen review state.
+Clarification answers and creation serialize on the parent analysis row with
+finalization and explicit report snapshot creation. A worker renders the
+clarification values recorded on its snapshot, even when a later answer is
+available for a derived analysis.
 `COMPLETED` is terminal.
+Concurrent BullMQ deliveries may enter the runner while the row is `RUNNING`,
+but publication must first conditionally claim `RUNNING -> COMPLETED` inside
+the report transaction. Only one delivery can publish the document and
+snapshot. A later delivery returns the already-persisted document; a late
+terminal failure only transitions a row that is still `RUNNING` and cannot
+overwrite a `COMPLETED` result.
 `FAILED` can only return to `QUEUED` through explicit retry.
 Retry reuses the same `DocumentJob` identity and increments `attemptCount`.
 Retry must not create a second job for same `snapshotId` + `documentType`.
@@ -305,13 +330,32 @@ again; an already `FAILED` row cannot be reopened by an automatic delivery.
 
 A FAILED job never mutates the `ReviewedReportSnapshot`. Re-enqueueing a job for the same snapshot and document type simply returns the existing job, unless explicitly requested as a retry.
 
-At worker startup, persisted `QUEUED` scan, impact-analysis, and document jobs
-are re-enqueued in bounded keyset pages through the shared queue adapter.
-PostgreSQL remains the source of command identity; deterministic BullMQ job IDs
-make repeated startup reconciliation idempotent. A queue delivery error leaves
-the product row `QUEUED` and fails worker startup so the deployment can retry
-reconciliation. Stale `RUNNING` rows still transition to `FAILED` and require
-an explicit product retry.
+At worker startup and every 30 seconds by default, persisted `QUEUED` scan,
+impact-analysis, and document jobs are re-enqueued in bounded keyset pages
+through the shared queue adapter. The same periodic cycle checks stale
+`RUNNING` rows, so a row orphaned after worker startup does not wait for another
+restart. `QUEUED_JOB_RECOVERY_INTERVAL_MS` sets this shared cycle from 1 to 300
+seconds. PostgreSQL remains the source of command identity; deterministic
+BullMQ job IDs make reconciliation idempotent. A queue delivery error leaves
+the product row `QUEUED`, emits a safe retryable recovery diagnostic, and is
+retried by the next cycle. Stale `RUNNING` rows are checked against their
+deterministic BullMQ job before failure. Active, waiting, delayed, and other
+nonterminal queue jobs remain `RUNNING`; missing or terminal queue jobs allow
+the stale product row to transition to `FAILED`, which requires an explicit
+product retry. Redis inspection errors stop stale-row recovery before those
+rows are updated, emit a safe retryable diagnostic, and are retried by the
+next cycle. Queue inspection and PostgreSQL updates run outside a shared
+transaction. The decision to fail uses the queue policy and is rechecked with
+a conditional `RUNNING` + stale-lease update. The failure details and
+corresponding `DomainEvent` are committed in the same PostgreSQL transaction;
+if the audit write fails, the status change rolls back. Recovery failures use
+the stable `WORKER_JOB_ORPHANED` code, and document jobs also persist
+`failedAt`.
+
+If `queue.add` reports an error after Redis may have stored the deterministic
+job, `enqueueRetryableJob` re-reads that job ID. It treats delivery as
+successful only when the persisted job name and payload match the request;
+missing, mismatched, or unreadable jobs preserve the enqueue failure.
 
 
 ## Traceability Link Review
@@ -326,6 +370,8 @@ ReviewStatus: NEEDS_REVIEW, CONFIRMED, REJECTED
 Unknown behavior produces an insight/question, not a placeholder link to an
 artifact. Link reviews follow the same current `WAITING_FOR_REVIEW` restriction
 as insight reviews.
+Each persisted traceability review decision belongs to the analysis that owns
+its link; PostgreSQL enforces this provenance pair.
 
 ## Backend Capabilities
 

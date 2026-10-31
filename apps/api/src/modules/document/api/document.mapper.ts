@@ -69,6 +69,7 @@ export class DocumentMapper {
       markdown: snapshot.markdown,
       reviewDecisionsSnapshot: snapshot.reviewDecisionsSnapshot,
       testTraceSnapshot: readReportTestTrace(snapshot.testTraceSnapshot, { analysisId: snapshot.analysisId }),
+      clarificationsSnapshot: snapshot.clarificationsSnapshot ?? null,
       evidenceQualitySummarySnapshot: snapshot.evidenceQualitySummarySnapshot,
       reviewCoverageSummary: buildReportReviewCoverageSummaryFromSnapshot({
         reviewDecisionsSnapshot: snapshot.reviewDecisionsSnapshot,

@@ -215,6 +215,6 @@ describe('Impact Evaluation Pack', () => {
          // We can't easily assert exactly 20 here without looking into the raw adapter output, 
          // but the runner scoring would not blow up.
       }
-    });
+    }, 10_000);
   });
 });

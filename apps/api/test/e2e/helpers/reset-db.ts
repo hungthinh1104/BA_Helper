@@ -1,4 +1,4 @@
-import { PrismaService } from "@ba-helper/backend-runtime";
+import type { PrismaService } from "@ba-helper/backend-runtime";
 
 const MAX_RESET_ATTEMPTS = 3;
 const RESET_RETRY_DELAY_MS = 50;

@@ -1,6 +1,9 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useApprovedReport, useFinalReviewedReport, useRetryReportGeneration } from '@/hooks/api/use-approved-report';
-import { useAnalysisWorkspace } from '@/hooks/api/use-analyses';
+import { useAnalysisDetail, useAnalysisWorkspace } from '@/hooks/api/use-analyses';
+import { useGenerateLocalizedReport } from '@/hooks/api/use-localization';
+import { useAuth } from '@/hooks/use-auth';
 import { ReportViewer } from '../report-viewer';
 import { staticTestTraceFixture } from '../../../../../../tests/fixtures/static-test-trace.fixture';
 import { testTraceLabels } from '@/lib/i18n/test-trace-labels';
@@ -14,15 +17,28 @@ jest.mock('@/hooks/api/use-approved-report', () => ({
   useRetryReportGeneration: jest.fn(),
 }));
 jest.mock('@/hooks/api/use-analyses', () => ({
-  useAnalysisDetail: () => ({ isLoading: false, data: {
+  useAnalysisDetail: jest.fn(() => ({ isLoading: false, data: {
     status: 'COMPLETED', requirement: { revisionTitle: 'Reviewed change' }, snapshot: { commitSha: 'abc' },
-  } }),
+    capabilities: { canExport: false },
+  } })),
   useAnalysisWorkspace: jest.fn(),
+}));
+jest.mock('@/hooks/use-auth', () => ({ useAuth: jest.fn(() => ({ role: 'REVIEWER' })) }));
+jest.mock('@/hooks/api/use-localization', () => ({
+  useGenerateLocalizedReport: jest.fn(() => ({ mutateAsync: jest.fn().mockResolvedValue({}), isPending: false })),
+  useLocalizationStatus: jest.fn(() => ({
+    data: { status: 'NOT_TRANSLATED', locale: 'vi-VN', sourceDocumentId: 'document-1', errorCode: null, updatedAt: null },
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    refetch: jest.fn(),
+  })),
 }));
 jest.mock('../reviewed-snapshot-panel', () => ({ ReviewedSnapshotPanel: () => null }));
 jest.mock('../final-review-gate-panel', () => ({ FinalReviewGatePanel: () => null }));
 
 beforeEach(() => {
+  jest.mocked(useAuth).mockReturnValue({ role: 'REVIEWER' } as ReturnType<typeof useAuth>);
   jest.mocked(useApprovedReport).mockReturnValue({ isLoading: false, data: { markdown: '# Approved markdown',
     provenance: { commitSha: 'abc', generatedAt: '2026-10-20T00:00:00Z' }, isStale: false } } as ReturnType<typeof useApprovedReport>);
   jest.mocked(useAnalysisWorkspace).mockReturnValue({ data: undefined, isLoading: false } as ReturnType<typeof useAnalysisWorkspace>);
@@ -43,6 +59,93 @@ it('renders frozen test references in the English report route without live sour
   expect(screen.getByRole('heading', { name: 'refunds once' })).toBeInTheDocument();
   expect(screen.getByText('Saved test references')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Inspect source reference' })).not.toBeInTheDocument();
+});
+
+it('offers localization from the reachable report viewer to reviewers with export capability', () => {
+  jest.mocked(useFinalReviewedReport).mockReturnValue({ isLoading: false, data: {
+    markdown: '# Approved markdown',
+    testTraceSnapshot: null,
+  } } as ReturnType<typeof useFinalReviewedReport>);
+  jest.mocked(useAnalysisDetail).mockReturnValue({ isLoading: false, data: {
+    status: 'COMPLETED',
+    requirement: { revisionTitle: 'Reviewed change' },
+    snapshot: { commitSha: 'abc' },
+    capabilities: { canExport: true },
+  } } as ReturnType<typeof useAnalysisDetail>);
+  const queryClient = new QueryClient();
+
+  render(
+    <QueryClientProvider client={queryClient}>
+      <ReportViewer analysisId="analysis-1" />
+    </QueryClientProvider>,
+  );
+
+  expect(screen.getByText('localizationTitle')).toBeInTheDocument();
+  expect(screen.getByLabelText('localizationLanguage')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'localizationTranslate' })).toBeEnabled();
+});
+
+it('sends the selected locale to the localization API action', async () => {
+  jest.mocked(useFinalReviewedReport).mockReturnValue({ isLoading: false, data: {
+    markdown: '# Approved markdown',
+    testTraceSnapshot: null,
+  } } as ReturnType<typeof useFinalReviewedReport>);
+  jest.mocked(useAnalysisDetail).mockReturnValue({ isLoading: false, data: {
+    status: 'COMPLETED',
+    requirement: { revisionTitle: 'Reviewed change' },
+    snapshot: { commitSha: 'abc' },
+    capabilities: { canExport: true },
+  } } as ReturnType<typeof useAnalysisDetail>);
+  const mutateAsync = jest.fn().mockResolvedValue({});
+  jest.mocked(useGenerateLocalizedReport).mockReturnValue({
+    mutateAsync,
+    isPending: false,
+  } as unknown as ReturnType<typeof useGenerateLocalizedReport>);
+  const queryClient = new QueryClient();
+
+  render(
+    <QueryClientProvider client={queryClient}>
+      <ReportViewer analysisId="analysis-1" />
+    </QueryClientProvider>,
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'localizationTranslate' }));
+  await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith({ locale: 'vi-VN' }));
+});
+
+it('hides localization when the global user role is not allowed by the endpoint', () => {
+  jest.mocked(useFinalReviewedReport).mockReturnValue({ isLoading: false, data: {
+    markdown: '# Approved markdown',
+    testTraceSnapshot: null,
+  } } as ReturnType<typeof useFinalReviewedReport>);
+  jest.mocked(useAnalysisDetail).mockReturnValue({ isLoading: false, data: {
+    status: 'COMPLETED',
+    requirement: { revisionTitle: 'Reviewed change' },
+    snapshot: { commitSha: 'abc' },
+    capabilities: { canExport: true },
+  } } as ReturnType<typeof useAnalysisDetail>);
+  jest.mocked(useAuth).mockReturnValue({ role: 'VIEWER' } as ReturnType<typeof useAuth>);
+
+  render(<ReportViewer analysisId="analysis-1" />);
+
+  expect(screen.queryByText('localizationTitle')).not.toBeInTheDocument();
+});
+
+it('hides localization when the backend report capability is false', () => {
+  jest.mocked(useFinalReviewedReport).mockReturnValue({ isLoading: false, data: {
+    markdown: '# Approved markdown',
+    testTraceSnapshot: null,
+  } } as ReturnType<typeof useFinalReviewedReport>);
+  jest.mocked(useAnalysisDetail).mockReturnValue({ isLoading: false, data: {
+    status: 'COMPLETED',
+    requirement: { revisionTitle: 'Reviewed change' },
+    snapshot: { commitSha: 'abc' },
+    capabilities: { canExport: false },
+  } } as ReturnType<typeof useAnalysisDetail>);
+
+  render(<ReportViewer analysisId="analysis-1" />);
+
+  expect(screen.queryByText('localizationTitle')).not.toBeInTheDocument();
 });
 
 it('keeps legacy reports readable and explains absent frozen metadata', () => {
@@ -113,4 +216,17 @@ it('does not offer retry when backend report capability is false', () => {
 
   expect(screen.getByRole('alert')).toHaveTextContent('reportGenerationFailed');
   expect(screen.queryByRole('button', { name: 'retryReportGeneration' })).not.toBeInTheDocument();
+});
+
+it('renders print mode without a NextAuth SessionProvider', () => {
+  jest.mocked(useFinalReviewedReport).mockReturnValue({ isLoading: false, data: {
+    markdown: '# Printed approved report',
+    testTraceSnapshot: null,
+  } } as ReturnType<typeof useFinalReviewedReport>);
+  jest.mocked(useAuth).mockImplementation(() => {
+    throw new Error('print mode must not read the interactive auth session');
+  });
+
+  expect(() => render(<ReportViewer analysisId="analysis-1" printMode />)).not.toThrow();
+  expect(screen.getByText('# Printed approved report')).toBeInTheDocument();
 });

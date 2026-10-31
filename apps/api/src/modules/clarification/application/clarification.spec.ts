@@ -4,7 +4,7 @@ import { DismissClarificationUseCase } from './dismiss-clarification.usecase';
 import { ConvertClarificationToRevisionUseCase } from './convert-clarification-to-revision.usecase';
 import type { RequirementRepository } from '../../requirement/infrastructure/requirement.repository';
 import { AppError } from '@ba-helper/shared';
-import { InsightRepository, ImpactAnalysisRepository, ClarificationRepository } from "@ba-helper/backend-runtime";
+import type { InsightRepository, ImpactAnalysisRepository, ClarificationRepository } from "@ba-helper/backend-runtime";
 
 describe('Clarification Use Cases', () => {
   let clarificationRepo: jest.Mocked<ClarificationRepository>;
@@ -59,6 +59,7 @@ describe('Clarification Use Cases', () => {
 
       const result = await ensureUseCase.execute('analysis-1', 'insight-1');
       expect(result.id).toBe('clar-1');
+      expect(clarificationRepo.findBySourceInsightId).toHaveBeenCalledWith('insight-1', 'analysis-1');
       expect(clarificationRepo.create).toHaveBeenCalled();
     });
 

@@ -21,6 +21,31 @@ export const diagnosticItemSchema = z.object({
   payload: z.record(z.string(), z.unknown()).optional(),
 });
 
+export const scanHealthDiagnosticPayloadSchema = z.object({
+  coverageStatus: z.enum(['FULL', 'PARTIAL', 'FAILED']),
+  scannerVersion: z.string().min(1),
+  analyzerVersion: z.string().min(1),
+  scannedFileCount: z.number().int().nonnegative(),
+  skippedFileCount: z.number().int().nonnegative(),
+  artifactCount: z.number().int().nonnegative(),
+  skippedSummary: z.record(z.string(), z.number().int().nonnegative()),
+  skippedFilesSample: z.array(z.object({
+    path: z.string(),
+    reason: z.string().min(1),
+  })),
+  limits: z.object({
+    maxFiles: z.number().int().nonnegative(),
+    maxFileBytes: z.number().int().nonnegative(),
+    maxTotalBytes: z.number().int().nonnegative().optional(),
+  }),
+  limitHits: z.object({
+    fileLimitHit: z.boolean(),
+    repoSizeLimitHit: z.boolean(),
+  }),
+});
+
+export type ScanHealthDiagnosticPayload = z.infer<typeof scanHealthDiagnosticPayloadSchema>;
+
 export type DiagnosticSeverity = z.infer<typeof diagnosticSeveritySchema>;
 export type DiagnosticCategory = z.infer<typeof diagnosticCategorySchema>;
 export type DiagnosticItem = z.infer<typeof diagnosticItemSchema>;

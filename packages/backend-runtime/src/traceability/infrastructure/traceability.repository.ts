@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '@prisma/client';;
 import { lockReviewableAnalysisWhileCurrent } from '../../impact-analysis/infrastructure/review-analysis-lock';
-import { analysisEvidenceScopeWhere } from '../../evidence/infrastructure/analysis-evidence-scope';
+import {
+  analysisEvidenceScopeWhere,
+  assertEvidenceLinksScopedToAnalyses,
+} from '../../evidence/infrastructure/analysis-evidence-scope';
 
 export type TraceabilityLinkWithArtifactAndReviewDecision = Prisma.TraceabilityLinkGetPayload<{
   include: {
@@ -126,6 +129,7 @@ export class TraceabilityRepository {
   async upsertMany(
     items: Array<{
       impactAnalysisId: string;
+      snapshotId: string;
       artifactId: string;
       linkType: 'AFFECTED' | 'RELATED';
       linkBasis: 'EVIDENCED' | 'INFERRED';
@@ -141,6 +145,7 @@ export class TraceabilityRepository {
     await this.prisma.traceabilityLink.createMany({
       data: items.map((item) => ({
         impactAnalysisId: item.impactAnalysisId,
+        snapshotId: item.snapshotId,
         artifactId: item.artifactId,
         linkType: item.linkType,
         linkBasis: item.linkBasis,
@@ -154,6 +159,7 @@ export class TraceabilityRepository {
     return this.prisma.traceabilityLink.findMany({
       where: {
         impactAnalysisId: items[0].impactAnalysisId,
+        snapshotId: items[0].snapshotId,
         artifactId: { in: items.map((item) => item.artifactId) },
         linkType: { in: items.map((item) => item.linkType) },
       },
@@ -165,13 +171,7 @@ export class TraceabilityRepository {
       return [];
     }
 
-    await this.prisma.traceabilityEvidence.createMany({
-      data: params.evidenceIds.map((evidenceId) => ({
-        traceabilityLinkId: params.linkId,
-        evidenceId,
-      })),
-      skipDuplicates: true,
-    });
+    await this.linkEvidenceMany([{ linkId: params.linkId, evidenceIds: params.evidenceIds }]);
 
     return this.prisma.traceabilityEvidence.findMany({
       where: { traceabilityLinkId: params.linkId },
@@ -184,7 +184,28 @@ export class TraceabilityRepository {
     );
     if (data.length === 0) return;
 
-    await this.prisma.traceabilityEvidence.createMany({ data, skipDuplicates: true });
+    await this.prisma.$transaction(async (transaction) => {
+      const traceabilityLinks = await transaction.traceabilityLink.findMany({
+        where: { id: { in: [...new Set(data.map((link) => link.traceabilityLinkId))] } },
+        select: {
+          id: true,
+          impactAnalysis: { select: { snapshotId: true, requirementRevisionId: true } },
+        },
+      });
+      const scopesByLinkId = new Map(traceabilityLinks.map((link) => [
+        link.id,
+        link.impactAnalysis,
+      ]));
+      await assertEvidenceLinksScopedToAnalyses(
+        transaction,
+        scopesByLinkId,
+        data.map(({ traceabilityLinkId, evidenceId }) => ({
+          ownerId: traceabilityLinkId,
+          evidenceId,
+        })),
+      );
+      await transaction.traceabilityEvidence.createMany({ data, skipDuplicates: true });
+    });
   }
 
   async deleteReviewDecision(

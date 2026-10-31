@@ -8,6 +8,7 @@ import {
   multiRepoAnalysisRunDetailResponseSchema,
   multiRepoAnalysisRunListResponseSchema,
   multiRepoImpactMatrixResponseSchema,
+  matrixRowDetailResponseSchema,
   multiRepoMergedReportDraftResponseSchema,
   multiRepoApprovedReportResponseSchema,
   mergedMultiRepoReportReviewDecisionCreateResponseSchema,
@@ -91,7 +92,7 @@ export class ImpactAnalysisReadModelController {
     // Extra guard: analysis membership to project is naturally enforced because actor must have access to runId,
     // and the use case itself validates that analysisId belongs to runId.
     const result = await this.getMatrixRowDetail.execute(runId, analysisId);
-    return result; // result is already built to schema shape
+    return matrixRowDetailResponseSchema.parse(result);
   }
 
   @Get('/impact-analyses/:analysisId/lineage')

@@ -6,6 +6,10 @@ import { createTestApp } from './helpers/test-app';
 import { resetDatabase } from './helpers/reset-db';
 import { grantProjectMembership } from './helpers/grant-project-membership';
 import { PrismaService } from "@ba-helper/backend-runtime";
+import {
+  currentWorkspaceResponseSchema,
+  projectListResponseSchema,
+} from '@ba-helper/contracts';
 
 describe('Project switching and membership (e2e)', () => {
   let app: INestApplication;
@@ -215,8 +219,9 @@ describe('Project switching and membership (e2e)', () => {
       .get('/api/v1/projects')
       .set('Authorization', `Bearer ${reviewerToken}`)
       .expect(200);
+    const projectList = projectListResponseSchema.parse(response.body);
 
-    expect(response.body.items).toEqual(
+    expect(projectList.items).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           projectId: firstProjectId,
@@ -230,7 +235,7 @@ describe('Project switching and membership (e2e)', () => {
         }),
       ]),
     );
-    expect(response.body.items).not.toEqual(
+    expect(projectList.items).not.toEqual(
       expect.arrayContaining([
         expect.objectContaining({ projectId: hiddenProject.id }),
       ]),
@@ -246,7 +251,19 @@ describe('Project switching and membership (e2e)', () => {
       .send({ projectId: secondProjectId })
       .expect(201);
 
-    expect(switchResponse.body.projectId).toBe(secondProjectId);
+    const workspace = currentWorkspaceResponseSchema.parse(switchResponse.body);
+    expect(workspace.projectId).toBe(secondProjectId);
+
+    const projectListResponse = await request(app.getHttpServer())
+      .get('/api/v1/projects')
+      .set('Authorization', `Bearer ${reviewerToken}`)
+      .expect(200);
+    const projectList = projectListResponseSchema.parse(projectListResponse.body);
+    expect(projectList.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ projectId: secondProjectId, isSelected: true }),
+      ]),
+    );
 
     const outsiderProjectId = crypto.randomUUID();
     await prisma.project.create({

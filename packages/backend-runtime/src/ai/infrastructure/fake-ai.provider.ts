@@ -10,7 +10,7 @@ import { createFakeOrderAnalysis } from './fake-order-analysis';
 import { createFakeBookingAnalysis } from './fake-booking-analysis';
 import { createFakeOnboardingAnalysis } from './fake-onboarding-analysis';
 import { scopeFakeClaims } from './fake-claim-scope';
-import { bindFakeClaimsToEvidence, hasEvidenceSymbol } from './fake-evidence-binding';
+import { bindFakeClaimsToEvidence, hasEvidenceSymbol, isStructuredImpactPrompt } from './fake-evidence-binding';
 
 @Injectable()
 export class FakeLlmProvider extends LlmProvider {
@@ -21,12 +21,15 @@ export class FakeLlmProvider extends LlmProvider {
     schema: z.ZodSchema<T>,
   ): Promise<LlmResult<T>> {
     const start = Date.now();
+    const allowLegacyPromptMatching = !isStructuredImpactPrompt(request.userPrompt);
 
     const isOrderInventory =
       hasEvidenceSymbol(request.userPrompt, 'InventoryService.releaseReservation') ||
       hasEvidenceSymbol(request.userPrompt, 'OrderService.cancelOrder') ||
-      request.userPrompt.includes('order.controller.cancelOrder') ||
-      request.userPrompt.includes('order.service.cancelOrder');
+      (allowLegacyPromptMatching && (
+        request.userPrompt.includes('order.controller.cancelOrder') ||
+        request.userPrompt.includes('order.service.cancelOrder')
+      ));
 
     let mockData: any;
 
@@ -35,20 +38,22 @@ export class FakeLlmProvider extends LlmProvider {
       hasEvidenceSymbol(request.userPrompt, 'PaymentService.refund') ||
       hasEvidenceSymbol(request.userPrompt, 'SlotService.releaseSlot') ||
       hasEvidenceSymbol(request.userPrompt, 'NotificationService.notifyOwner') ||
-      request.userPrompt.includes('booking.controller.cancel') ||
-      request.userPrompt.includes('payment.service.refund') ||
-      request.userPrompt.includes('slot.service.releaseSlot') ||
-      request.userPrompt.includes('notification.service.notifyOwner');
+      (allowLegacyPromptMatching && (
+        request.userPrompt.includes('booking.controller.cancel') ||
+        request.userPrompt.includes('payment.service.refund') ||
+        request.userPrompt.includes('slot.service.releaseSlot') ||
+        request.userPrompt.includes('notification.service.notifyOwner')
+      ));
 
     const isUserOnboarding = [
       'UserController.register', 'UserController.verifyEmail', 'UserService.registerUser',
       'UserService.verifyEmail', 'UserRepository.findByEmail', 'EmailUniquenessValidator.validate',
       'WelcomeEmailService.sendWelcomeEmail', 'UserRegisteredHandler.handleUserRegistered',
     ].some(symbol => hasEvidenceSymbol(request.userPrompt, symbol)) ||
-      ['user.controller.register', 'user.controller.verifyEmail', 'user.service.registerUser',
+      (allowLegacyPromptMatching && ['user.controller.register', 'user.controller.verifyEmail', 'user.service.registerUser',
         'user.service.verifyEmail', 'user.repository.findByEmail', 'email-uniqueness.validator.validate',
         'welcome-email.service.sendWelcomeEmail', 'user-registered.handler.handleUserRegistered']
-        .some(key => request.userPrompt.includes(key));
+        .some(key => request.userPrompt.includes(key)));
 
     if (isOrderInventory) {
       mockData = createFakeOrderAnalysis(request.userPrompt);

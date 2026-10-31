@@ -7,6 +7,7 @@ describe('EvidenceQualityAnnotator', () => {
   ): TraceabilityLinkForAnnotation => ({
     id: 'link-1',
     impactAnalysisId: 'analysis-1',
+    snapshotId: 'snapshot-1',
     artifactId: 'artifact-1',
     linkType: 'AFFECTED',
     linkBasis: 'EVIDENCED',

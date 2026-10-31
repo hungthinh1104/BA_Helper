@@ -78,6 +78,7 @@ export class MultiRepoAnalysisRunRepository {
 
   async create(params: {
     projectId: string;
+    requirementId: string;
     requirementRevisionId: string;
     createdByUserId: string;
     requestKey: string;
@@ -88,6 +89,7 @@ export class MultiRepoAnalysisRunRepository {
     return this.prisma.multiRepoAnalysisRun.create({
       data: {
         projectId: params.projectId,
+        requirementId: params.requirementId,
         requirementRevisionId: params.requirementRevisionId,
         createdByUserId: params.createdByUserId,
         requestKey: params.requestKey,

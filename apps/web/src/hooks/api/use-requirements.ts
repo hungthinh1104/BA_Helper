@@ -1,11 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { z } from "zod"
 import { apiGet, apiPost } from "@/lib/api-client"
 import { queryKeys } from "@/lib/api/query-keys"
 import { 
   RequirementListResponse, 
   RequirementCreateRequest, 
-  RequirementCreateResponse, 
   RequirementDetailResponse,
   requirementListResponseSchema,
   requirementDetailResponseSchema,
@@ -37,7 +35,7 @@ export function useCreateRequirement(projectId?: string) {
       if (!effectiveProjectId) {
         throw new Error("Workspace project is not ready.")
       }
-      return apiPost<RequirementCreateResponse>(`/api/v1/projects/${effectiveProjectId}/requirements`, input, requirementCreateResponseSchema as unknown as z.ZodType<RequirementCreateResponse>)
+      return apiPost(`/api/v1/projects/${effectiveProjectId}/requirements`, input, requirementCreateResponseSchema)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({

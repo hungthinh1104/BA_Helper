@@ -1,6 +1,27 @@
 import { QueuePolicy } from './queue.policy';
 
 describe('QueuePolicy', () => {
+  describe('shouldFailStaleJob', () => {
+    const cutoff = new Date('2026-10-31T10:00:00.000Z');
+
+    it('allows only old RUNNING rows whose deterministic queue job is absent or terminal', () => {
+      expect(QueuePolicy.shouldFailStaleJob({
+        status: 'RUNNING',
+        updatedAt: new Date(cutoff.getTime() - 1),
+        cutoff,
+        hasUnfinishedQueueJob: false,
+      })).toBe(true);
+    });
+
+    it.each([
+      ['a non-running row', { status: 'COMPLETED', updatedAt: new Date(0), hasUnfinishedQueueJob: false }],
+      ['a fresh running row', { status: 'RUNNING', updatedAt: cutoff, hasUnfinishedQueueJob: false }],
+      ['a running row with live queue work', { status: 'RUNNING', updatedAt: new Date(0), hasUnfinishedQueueJob: true }],
+    ])('preserves %s', (_description, row) => {
+      expect(QueuePolicy.shouldFailStaleJob({ ...row, cutoff })).toBe(false);
+    });
+  });
+
   describe('assertRetryableJob', () => {
     it('throws if idempotency key is missing', () => {
       expect(() => {

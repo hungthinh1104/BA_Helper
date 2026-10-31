@@ -1,5 +1,6 @@
 import type { RetrievalSuggestion } from './retrieval-suggestion';
 import type { DomainPackSelectedBy } from '@ba-helper/contracts';
+import type { RetrievalRunDiagnostics, RetrievalVectorStatus } from '@ba-helper/application';
 
 export interface RetrievalDiagnostics {
   version: 'retrieval-diagnostics@0.1.0';
@@ -48,6 +49,13 @@ export interface RetrievedArtifact {
   suggestion?: RetrievalSuggestion;
   retrievalDiagnostics?: RetrievalDiagnostics;
 }
+
+export type { RetrievalRunDiagnostics, RetrievalVectorStatus };
+
+export type RetrievalResult = {
+  artifacts: RetrievedArtifact[];
+  diagnostics: RetrievalRunDiagnostics;
+};
 
 /**
  * Tunable retrieval knobs. The defaults preserve the shipped behaviour; callers

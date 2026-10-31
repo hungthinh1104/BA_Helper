@@ -7,6 +7,9 @@ import { resetDatabase } from './helpers/reset-db';
 import { grantProjectMembership } from './helpers/grant-project-membership';
 import {
   artifactListResponseSchema,
+  ClarificationItemDtoSchema,
+  ClarificationListResponseSchema,
+  ConvertClarificationResponseSchema,
   evidenceListResponseSchema,
   eventLogListResponseSchema,
   impactGraphResponseSchema,
@@ -15,6 +18,10 @@ import {
   requirementListResponseSchema,
   requirementRevisionCreateResponseSchema,
   requirementRevisionQualifyResponseSchema,
+  reviewCompletionResponseSchema,
+  reviewCoverageResponseSchema,
+  reviewClarificationListResponseSchema,
+  reviewClarificationRequestSchema,
 } from '@ba-helper/contracts';
 import { EventLogService, PrismaService } from "@ba-helper/backend-runtime";
 import { PasswordHashService } from '../../src/modules/auth/application/password-hash.service';
@@ -197,6 +204,9 @@ describe('Auth and RBAC (e2e)', () => {
       data: {
         id: analysisId,
         requirementRevisionId: revisionId,
+        requirementId,
+        projectId,
+        repositoryId,
         snapshotId,
         sourceTargetId: targetId,
         requestKey: crypto.randomUUID(),
@@ -757,6 +767,9 @@ describe('Auth and RBAC (e2e)', () => {
       data: {
         id: crypto.randomUUID(),
         requirementRevisionId: revision.id,
+        requirementId: requirement.id,
+        projectId: project.id,
+        repositoryId: snapshot.repositoryId,
         snapshotId: snapshot.id,
         sourceTargetId: target.id,
         requestKey: crypto.randomUUID(),
@@ -841,18 +854,63 @@ describe('Auth and RBAC (e2e)', () => {
       .set('Authorization', `Bearer ${reviewerToken}`)
       .send({ sourceInsightId: insightId })
       .expect(201);
+    const created = ClarificationItemDtoSchema.parse(createRes.body);
+    expect(created).toMatchObject({ impactAnalysisId: analysisId, sourceInsightId: insightId, status: 'OPEN' });
 
     await request(app.getHttpServer())
-      .patch(`/api/v1/clarifications/${createRes.body.id}/answer`)
+      .patch(`/api/v1/clarifications/${created.id}/answer`)
       .set('Authorization', `Bearer ${viewerToken}`)
       .send({ answer: 'Refund is handled by payment service.' })
       .expect(403);
 
-    await request(app.getHttpServer())
-      .patch(`/api/v1/clarifications/${createRes.body.id}/answer`)
+    const answerRes = await request(app.getHttpServer())
+      .patch(`/api/v1/clarifications/${created.id}/answer`)
       .set('Authorization', `Bearer ${reviewerToken}`)
       .send({ answer: 'Refund is handled by payment service.' })
       .expect(200);
+    expect(ClarificationItemDtoSchema.parse(answerRes.body)).toMatchObject({
+      id: created.id,
+      status: 'ANSWERED',
+      answer: 'Refund is handled by payment service.',
+    });
+
+    const dismissInsight = await prisma.baInsight.create({
+      data: {
+        impactAnalysisId: analysisId,
+        insightKey: 'unknown-refund-trigger',
+        insightType: 'UNKNOWN',
+        certainty: 'UNKNOWN',
+        reviewStatus: 'NEEDS_REVIEW',
+        title: 'What triggers the refund?',
+        description: 'The payment trigger is unknown.',
+      },
+    });
+    const dismissCreate = await request(app.getHttpServer())
+      .post(`/api/v1/impact-analyses/${analysisId}/clarifications`)
+      .set('Authorization', `Bearer ${reviewerToken}`)
+      .send({ sourceInsightId: dismissInsight.id })
+      .expect(201);
+    const dismissItem = ClarificationItemDtoSchema.parse(dismissCreate.body);
+    const dismissRes = await request(app.getHttpServer())
+      .patch(`/api/v1/clarifications/${dismissItem.id}/dismiss`)
+      .set('Authorization', `Bearer ${reviewerToken}`)
+      .send({ reason: 'Resolved by the payment owner.' })
+      .expect(200);
+    expect(ClarificationItemDtoSchema.parse(dismissRes.body)).toMatchObject({
+      id: dismissItem.id,
+      status: 'DISMISSED',
+    });
+
+    const listRes = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/clarifications`)
+      .set('Authorization', `Bearer ${reviewerToken}`)
+      .expect(200);
+    expect(ClarificationListResponseSchema.parse(listRes.body).items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: created.id, status: 'ANSWERED' }),
+        expect.objectContaining({ id: dismissItem.id, status: 'DISMISSED' }),
+      ]),
+    );
   });
 
   it('keeps convert-to-revision admin-only and review notes reviewer-capable', async () => {
@@ -874,11 +932,17 @@ describe('Auth and RBAC (e2e)', () => {
       .send({})
       .expect(403);
 
-    await request(app.getHttpServer())
+    const convertRes = await request(app.getHttpServer())
       .post(`/api/v1/clarifications/${clarification.id}/convert-to-revision`)
       .set('Authorization', `Bearer ${adminToken}`)
       .send({})
       .expect(201);
+    expect(ConvertClarificationResponseSchema.parse(convertRes.body)).toMatchObject({
+      clarificationId: clarification.id,
+      requirementId: expect.any(String),
+      revisionId: expect.any(String),
+      status: 'CONVERTED_TO_REVISION',
+    });
 
     await request(app.getHttpServer())
       .post(`/api/v1/impact-analyses/${analysisId}/review-notes`)
@@ -922,7 +986,32 @@ describe('Auth and RBAC (e2e)', () => {
       .send({ reviewDecisionId: reviewDecision.id, question: 'What triggers refund creation?' })
       .expect(201);
 
-    expect(createRes.body.question).toBe('What triggers refund creation?');
+    const created = reviewClarificationRequestSchema.parse(createRes.body);
+    expect(created).toMatchObject({
+      analysisId,
+      reviewDecisionId: reviewDecision.id,
+      question: 'What triggers refund creation?',
+      status: 'OPEN',
+    });
+
+    const listRes = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${analysisId}/review-clarifications`)
+      .set('Authorization', `Bearer ${reviewerToken}`)
+      .expect(200);
+    expect(reviewClarificationListResponseSchema.parse(listRes.body).items).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: created.id })]),
+    );
+
+    const answerRes = await request(app.getHttpServer())
+      .post(`/api/v1/review-clarifications/${created.id}/answer`)
+      .set('Authorization', `Bearer ${reviewerToken}`)
+      .send({ answer: 'The refund starts after payment reversal.' })
+      .expect(201);
+    expect(reviewClarificationRequestSchema.parse(answerRes.body)).toMatchObject({
+      id: created.id,
+      answer: 'The refund starts after payment reversal.',
+      status: 'ANSWERED',
+    });
   });
 
   it('keeps approved report endpoints authenticated and exportable for viewers', async () => {
@@ -1166,6 +1255,81 @@ describe('Auth and RBAC (e2e)', () => {
     ]);
   });
 
+  it('preserves system and user actors from the event writer through the API DTO', async () => {
+    const scoped = await seedAnalysisGraph();
+    const prefix = `impact:${scoped.analysisId}:actor-matrix`;
+    const eventLog = app.get(EventLogService);
+
+    await eventLog.recordEvent({
+      eventType: 'ANALYSIS_FINALIZED',
+      idempotencyKey: `${prefix}:writer-system`,
+      payload: { actorName: 'Background worker' },
+    });
+    await eventLog.recordEvent({
+      eventType: 'ANALYSIS_FINALIZED',
+      idempotencyKey: `${prefix}:writer-user`,
+      payload: { actorType: 'USER', actorName: 'Admin' },
+      actorUserId: adminUserId,
+    });
+    await prisma.domainEvent.createMany({
+      data: [
+        {
+          eventType: 'ANALYSIS_FINALIZED',
+          idempotencyKey: `${prefix}:legacy-lowercase-system`,
+          payload: { actorUserId: 'system' },
+        },
+        {
+          eventType: 'ANALYSIS_FINALIZED',
+          idempotencyKey: `${prefix}:legacy-missing-actor`,
+          payload: {},
+        },
+      ],
+    });
+
+    const response = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${scoped.analysisId}/events`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    const events = eventLogListResponseSchema.parse(response.body).items;
+    const actorsByKey = Object.fromEntries(
+      events.map((event) => [event.idempotencyKey, event.actorType]),
+    );
+
+    expect(actorsByKey).toMatchObject({
+      [`${prefix}:writer-system`]: 'SYSTEM',
+      [`${prefix}:writer-user`]: 'USER',
+      [`${prefix}:legacy-lowercase-system`]: 'SYSTEM',
+      [`${prefix}:legacy-missing-actor`]: 'SYSTEM',
+    });
+    expect(events.every((event) =>
+      !Object.prototype.hasOwnProperty.call(event, 'actorUserId'),
+    )).toBe(true);
+  });
+
+  it('rejects an analysis event payload outside the shared response contract', async () => {
+    const { analysisId } = await seedAnalysisGraph();
+    const invalidEvents = [{
+      id: crypto.randomUUID(),
+      eventType: 'ANALYSIS_FINALIZED',
+      idempotencyKey: `analysis:${analysisId}:invalid-contract`,
+      actorType: 'AUTOMATION',
+      metadata: {},
+      createdAt: new Date().toISOString(),
+    }] as unknown as Awaited<ReturnType<EventLogService['getAnalysisEvents']>>;
+    const eventSpy = jest.spyOn(EventLogService.prototype, 'getAnalysisEvents')
+      .mockResolvedValueOnce(invalidEvents);
+
+    try {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/impact-analyses/${analysisId}/events`)
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(eventSpy).toHaveBeenCalledTimes(1);
+      expect(response.status).toBe(500);
+    } finally {
+      eventSpy.mockRestore();
+    }
+  });
+
   it('reuses one requirement when the same create request is retried concurrently', async () => {
     const projectId = crypto.randomUUID();
     await prisma.project.create({ data: { id: projectId, name: 'Idempotent Requirements Project' } });
@@ -1298,6 +1462,9 @@ describe('Auth and RBAC (e2e)', () => {
       data: {
         id: analysisId,
         requirementRevisionId: revisionId,
+        requirementId,
+        projectId,
+        repositoryId,
         snapshotId,
         sourceTargetId: targetId,
         requestKey: crypto.randomUUID(),
@@ -1495,6 +1662,9 @@ describe('Auth and RBAC (e2e)', () => {
       data: {
         id: hiddenAnalysisId,
         requirementRevisionId: hiddenRevisionId,
+        requirementId: hiddenRequirementId,
+        projectId: hiddenProjectId,
+        repositoryId: hiddenRepositoryId,
         snapshotId: hiddenSnapshotId,
         sourceTargetId: hiddenTargetId,
         requestKey: crypto.randomUUID(),
@@ -1503,11 +1673,25 @@ describe('Auth and RBAC (e2e)', () => {
       },
     });
 
+    const hiddenDecisionCountBefore = await prisma.analysisReviewDecision.count({
+      where: { analysisId: hiddenAnalysisId },
+    });
+    const domainEventCountBefore = await prisma.domainEvent.count();
+
     await request(app.getHttpServer())
       .post(`/api/v1/impact-analyses/${hiddenAnalysisId}/review-decisions`)
       .set('Authorization', `Bearer ${reviewerToken}`)
       .send({ decision: 'REJECTED' })
       .expect(404);
+
+    await expect(prisma.analysisReviewDecision.count({
+      where: { analysisId: hiddenAnalysisId },
+    })).resolves.toBe(hiddenDecisionCountBefore);
+    await expect(prisma.domainEvent.count()).resolves.toBe(domainEventCountBefore);
+    await expect(prisma.impactAnalysis.findUniqueOrThrow({
+      where: { id: hiddenAnalysisId },
+      select: { status: true },
+    })).resolves.toEqual({ status: 'COMPLETED' });
   });
 
   it('denies cross-project insight and traceability reads and review mutations', async () => {
@@ -1819,6 +2003,7 @@ describe('Auth and RBAC (e2e)', () => {
       data: {
         id: crypto.randomUUID(),
         projectId: scoped.projectId,
+        requirementId: scoped.requirementId,
         requirementRevisionId: scoped.revisionId,
         createdByUserId: adminUserId,
         requestKey: crypto.randomUUID(),
@@ -1933,6 +2118,7 @@ describe('Auth and RBAC (e2e)', () => {
     const run = await prisma.multiRepoAnalysisRun.create({
       data: {
         projectId: scoped.projectId,
+        requirementId: scoped.requirementId,
         requirementRevisionId: scoped.revisionId,
         createdByUserId: adminUserId,
         requestKey: crypto.randomUUID(),
@@ -2023,6 +2209,9 @@ describe('Auth and RBAC (e2e)', () => {
       data: {
         id: analysisId,
         requirementRevisionId: revisionId,
+        requirementId,
+        projectId,
+        repositoryId,
         snapshotId,
         sourceTargetId: targetId,
         requestKey: crypto.randomUUID(),
@@ -2035,6 +2224,7 @@ describe('Auth and RBAC (e2e)', () => {
         id: evidenceId,
         provenanceKey: 'hidden-evidence',
         sourceType: 'CODE',
+        snapshotId,
         excerpt: 'hidden',
         contentHash: 'hidden-hash',
         sourcePath: 'src/hidden.ts',
@@ -2073,6 +2263,40 @@ describe('Auth and RBAC (e2e)', () => {
     await request(app.getHttpServer())
       .get(`/api/v1/impact-analyses/${analysisId}/evidence`)
       .set('Authorization', `Bearer ${viewerToken}`)
+      .expect(404);
+  });
+
+  it('returns 404 when an unrelated project owner reads artifact comprehension', async () => {
+    const scoped = await seedAnalysisGraph();
+    const outsider = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        email: 'comprehension-scope-outsider@ba-helper.local',
+        role: 'ADMIN',
+      },
+    });
+    const outsiderProjectId = crypto.randomUUID();
+    await prisma.project.create({
+      data: { id: outsiderProjectId, name: 'Comprehension Outsider Project' },
+    });
+    await grantProjectMembership(prisma, {
+      projectId: outsiderProjectId,
+      userId: outsider.id,
+      role: 'OWNER',
+    });
+    const link = await prisma.traceabilityLink.findUniqueOrThrow({
+      where: { id: scoped.linkId },
+      select: { artifactId: true },
+    });
+    const outsiderToken = jwtService.sign({
+      sub: outsider.id,
+      email: outsider.email,
+      role: outsider.role,
+    });
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/snapshots/${scoped.snapshotId}/artifacts/${link.artifactId}/comprehension`)
+      .set('Authorization', `Bearer ${outsiderToken}`)
       .expect(404);
   });
 
@@ -2431,6 +2655,9 @@ describe('Auth and RBAC (e2e)', () => {
     const competingParent = await prisma.impactAnalysis.create({
       data: {
         requirementRevisionId: scoped.revisionId,
+        requirementId: scoped.requirementId,
+        projectId: scoped.projectId,
+        repositoryId: scoped.repositoryId,
         snapshotId: scoped.snapshotId,
         sourceTargetId: scoped.targetId,
         requestKey: crypto.randomUUID(),
@@ -2570,22 +2797,22 @@ describe('Auth and RBAC (e2e)', () => {
     });
 
     // Simulate a corrupted persisted edge: its snapshot is project A's, but its source artifact is project B's.
-    await prisma.dependencyEdge.create({
+    await expect(prisma.dependencyEdge.create({
       data: {
         snapshotId: scoped.snapshotId,
         fromArtifactId: foreignArtifact.id,
         toArtifactId: selectedArtifact.artifactId,
         type: 'CALLS',
       },
-    });
-    await prisma.dependencyEdge.create({
+    })).rejects.toMatchObject({ code: 'P2003' });
+    await expect(prisma.dependencyEdge.create({
       data: {
         snapshotId: scoped.snapshotId,
         fromArtifactId: selectedArtifact.artifactId,
         toArtifactId: foreignArtifact.id,
         type: 'REFERENCES',
       },
-    });
+    })).rejects.toMatchObject({ code: 'P2003' });
 
     const response = await request(app.getHttpServer())
       .get(`/api/v1/impact-analyses/${scoped.analysisId}/graph`)
@@ -2627,8 +2854,8 @@ describe('Auth and RBAC (e2e)', () => {
         snapshotId: foreignSnapshot.id, artifactId: foreignArtifact.id, requirementRevisionId: scoped.revisionId,
         sourcePath: 'src/private/payment-refund.ts', excerpt: 'FOREIGN PAYMENT REFUND SOURCE',
         contentHash: 'foreign-evidence-hash' },
-      { provenanceKey: 'local-snapshot-for-foreign-artifact', sourceType: 'CODE',
-        snapshotId: scoped.snapshotId, artifactId: foreignArtifact.id,
+      { provenanceKey: 'foreign-snapshot-for-foreign-artifact', sourceType: 'CODE',
+        snapshotId: foreignSnapshot.id, artifactId: foreignArtifact.id,
         sourcePath: 'src/private/payment-refund.ts', excerpt: 'FOREIGN ARTIFACT EVIDENCE',
         contentHash: 'foreign-artifact-evidence-hash' },
     ] });
@@ -2644,6 +2871,30 @@ describe('Auth and RBAC (e2e)', () => {
     expect(evidence.items.some((item) => item.excerpt.includes('LOCAL SNAPSHOT EVIDENCE'))).toBe(true);
     expect(evidence.items.some((item) => item.excerpt.includes('LOCAL REQUIREMENT EVIDENCE'))).toBe(true);
     expect(JSON.stringify(evidence)).not.toContain('src/private/payment-refund.ts');
+  });
+
+  it('rejects a traceability link whose artifact belongs to another snapshot', async () => {
+    const scoped = await seedAnalysisGraph();
+    const foreignProject = await prisma.project.create({ data: { name: 'Foreign traceability project' } });
+    const foreignRepository = await prisma.repository.create({
+      data: { projectId: foreignProject.id, canonicalUrl: 'https://github.com/example/foreign-traceability' },
+    });
+    const foreignSnapshot = await prisma.repositorySnapshot.create({
+      data: { repositoryId: foreignRepository.id, commitSha: 'foreign-traceability-commit',
+        analyzerVersion: '1.0.0', coverageStatus: 'READY' },
+    });
+    const foreignArtifact = await prisma.codeArtifact.create({
+      data: { snapshotId: foreignSnapshot.id, artifactKey: 'private:foreign-traceability',
+        name: 'ForeignTraceability', artifactType: 'SERVICE', filePath: 'src/private/foreign-traceability.ts' },
+    });
+
+    await expect(prisma.traceabilityLink.create({
+      data: { impactAnalysisId: scoped.analysisId, snapshotId: scoped.snapshotId, artifactId: foreignArtifact.id,
+        linkType: 'AFFECTED', linkBasis: 'INFERRED', reviewStatus: 'NEEDS_REVIEW' },
+    })).rejects.toMatchObject({ code: 'P2003' });
+    await expect(prisma.traceabilityLink.count({
+      where: { impactAnalysisId: scoped.analysisId, artifactId: foreignArtifact.id },
+    })).resolves.toBe(0);
   });
 
   it('does not expose cross-snapshot artifacts or evidence in analysis projections', async () => {
@@ -2662,22 +2913,19 @@ describe('Auth and RBAC (e2e)', () => {
       data: { snapshotId: foreignSnapshot.id, artifactKey: 'private:foreign-refund',
         name: 'ForeignRefund', artifactType: 'SERVICE', filePath: 'src/private/foreign-refund.ts' },
     });
-    const localLink = await prisma.traceabilityLink.findUniqueOrThrow({
-      where: { id: scoped.linkId }, select: { artifactId: true },
-    });
-    await prisma.traceabilityLink.create({
-      data: { impactAnalysisId: scoped.analysisId, artifactId: foreignArtifact.id,
+    await expect(prisma.traceabilityLink.create({
+      data: { impactAnalysisId: scoped.analysisId, snapshotId: scoped.snapshotId, artifactId: foreignArtifact.id,
         linkType: 'AFFECTED', linkBasis: 'INFERRED', reviewStatus: 'NEEDS_REVIEW' },
-    });
+    })).rejects.toMatchObject({ code: 'P2003' });
     const foreignEvidence = await prisma.evidence.create({
-      data: { provenanceKey: 'foreign-snapshot-linked-to-local-artifact', sourceType: 'CODE',
-        snapshotId: foreignSnapshot.id, artifactId: localLink.artifactId,
+      data: { provenanceKey: 'foreign-snapshot-linked-evidence', sourceType: 'CODE',
+        snapshotId: foreignSnapshot.id, artifactId: foreignArtifact.id,
         requirementRevisionId: scoped.revisionId, sourcePath: 'src/private/payment-refund.ts',
         excerpt: 'FOREIGN SNAPSHOT LINKED EVIDENCE', contentHash: 'foreign-linked-evidence-hash' },
     });
     const foreignArtifactEvidence = await prisma.evidence.create({
-      data: { provenanceKey: 'local-snapshot-linked-to-foreign-artifact', sourceType: 'CODE',
-        snapshotId: scoped.snapshotId, artifactId: foreignArtifact.id,
+      data: { provenanceKey: 'foreign-snapshot-linked-artifact-evidence', sourceType: 'CODE',
+        snapshotId: foreignSnapshot.id, artifactId: foreignArtifact.id,
         sourcePath: 'src/private/foreign-refund.ts', excerpt: 'FOREIGN ARTIFACT LINKED EVIDENCE',
         contentHash: 'foreign-artifact-linked-evidence-hash' },
     });
@@ -2690,14 +2938,16 @@ describe('Auth and RBAC (e2e)', () => {
       { traceabilityLinkId: scoped.linkId, evidenceId: foreignArtifactEvidence.id },
     ] });
     const baseline = await prisma.impactAnalysis.create({
-      data: { requirementRevisionId: scoped.revisionId, snapshotId: scoped.snapshotId,
+      data: { requirementRevisionId: scoped.revisionId, requirementId: scoped.requirementId, projectId: scoped.projectId,
+        repositoryId: scoped.repositoryId, snapshotId: scoped.snapshotId,
         sourceTargetId: scoped.targetId, requestKey: crypto.randomUUID(), status: 'COMPLETED', stage: 'DONE' },
     });
     await prisma.impactAnalysis.update({
       where: { id: scoped.analysisId }, data: { derivedFromAnalysisId: baseline.id },
     });
     const run = await prisma.multiRepoAnalysisRun.create({
-      data: { projectId: scoped.projectId, requirementRevisionId: scoped.revisionId,
+      data: { projectId: scoped.projectId, requirementId: scoped.requirementId,
+        requirementRevisionId: scoped.revisionId,
         createdByUserId: adminUserId, requestKey: crypto.randomUUID() },
     });
     await prisma.impactAnalysis.update({
@@ -2737,6 +2987,16 @@ describe('Auth and RBAC (e2e)', () => {
       .get(`/api/v1/multi-repo-runs/${run.id}/review-coverage`)
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
-    expect(coverage.body.summary.impactedArtifacts).toBe(1);
+    expect(reviewCoverageResponseSchema.parse(coverage.body).summary.impactedArtifacts).toBe(1);
+
+    const completion = await request(app.getHttpServer())
+      .get(`/api/v1/impact-analyses/${scoped.analysisId}/review-completion`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(reviewCompletionResponseSchema.parse(completion.body)).toMatchObject({
+      analysisId: scoped.analysisId,
+      totalLinks: 1,
+      needsReview: 1,
+    });
   });
 });

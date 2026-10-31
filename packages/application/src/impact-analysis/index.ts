@@ -22,7 +22,14 @@ export type { ArtifactRepositoryPort, PersistedArtifact } from './ports/artifact
 export type { EvidenceRepositoryPort, EvidenceUpsertInput, EvidenceRecord } from './ports/evidence.repository.port';
 export type { InsightRepositoryPort, InsightInputParams, InsightRecord } from './ports/insight.repository.port';
 export type { TraceabilityRepositoryPort, TraceabilityUpsertInput, TraceabilityRecord } from './ports/traceability.repository.port';
-export type { RetrievalPort, RetrievalRequest, RetrievedArtifact } from './ports/retrieval.port';
+export type {
+  RetrievalPort,
+  RetrievalRequest,
+  RetrievedArtifact,
+  RetrievalResult,
+  RetrievalRunDiagnostics,
+  RetrievalVectorStatus,
+} from './ports/retrieval.port';
 export { LlmProviderPort } from './ports/llm-provider.port';
 export type { LlmRequest, LlmRequestOptions, LlmCallMetadata, LlmResult } from './ports/llm-provider.port';
 export type { EventLogPort } from './ports/event-log.port';
