@@ -12,6 +12,8 @@ import { resetDatabase } from './helpers/reset-db';
 
 const commitSha = 'e2e-comprehension-commit';
 
+jest.setTimeout(90_000);
+
 describe('Code comprehension projection (E2E)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
@@ -30,8 +32,8 @@ describe('Code comprehension projection (E2E)', () => {
   });
 
   afterAll(async () => {
-    await prisma.$disconnect();
-    await app.close();
+    if (prisma) await prisma.$disconnect();
+    if (app) await app.close();
   });
 
   beforeEach(async () => {
@@ -85,7 +87,7 @@ describe('Code comprehension projection (E2E)', () => {
   });
 
   afterEach(async () => {
-    await resetDatabase(prisma);
+    if (prisma) await resetDatabase(prisma);
   });
 
   it('serves a snapshot-scoped projection with persisted source and semantic evidence', async () => {

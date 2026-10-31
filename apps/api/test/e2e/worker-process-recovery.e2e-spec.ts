@@ -254,12 +254,22 @@ function startWorkerProcess() {
   let output = '';
   let readySettled = false;
   const ready = new Promise<void>((resolve, reject) => {
-    const timeout = setTimeout(() => finish(new Error('Worker process did not become ready.')), 60_000);
+    const diagnostics = () => output
+      .split(/\r?\n/)
+      .filter((line) => /WORKER_READY|Worker failed to start|PrismaClient(?:KnownRequestError|InitializationError)|P20\d{2}|ECONNREFUSED|ECONNRESET|ETIMEDOUT|Error:/.test(line))
+      .slice(-8)
+      .join(' | ')
+      .replace(/((?:postgres(?:ql)?|redis):\/\/)[^@\s]+@/gi, '$1[redacted]@') || 'no worker diagnostic output';
+    const timeout = setTimeout(() => finish(new Error(
+      `Worker process did not become ready (exitCode=${child.exitCode}, diagnostics=${diagnostics()}).`,
+    )), 60_000);
     const onOutput = (chunk: Buffer) => {
       output = `${output}${chunk.toString()}`.slice(-16_000);
       if (!readySettled && output.includes('WORKER_READY')) finish();
     };
-    const onExit = (code: number | null) => finish(new Error(`Worker process exited before readiness (code ${code}).`));
+    const onExit = (code: number | null) => finish(new Error(
+      `Worker process exited before readiness (code ${code}, diagnostics=${diagnostics()}).`,
+    ));
     const onError = (error: Error) => finish(error);
     const finish = (error?: Error) => {
       if (readySettled) return;

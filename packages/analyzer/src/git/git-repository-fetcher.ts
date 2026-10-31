@@ -12,6 +12,10 @@ export interface GitFetchResult {
   commitSha: string;
 }
 
+function isFullCommitSha(ref: string | undefined): ref is string {
+  return ref !== undefined && /^[0-9a-f]{40}$/i.test(ref);
+}
+
 export class GitRepositoryFetcher {
   /**
    * Securely fetches a repository into a target directory.
@@ -29,22 +33,28 @@ export class GitRepositoryFetcher {
       return { commitSha: 'mock-commit-sha' };
     }
 
-    // 1. Clone the repository
-    const cloneArgs = ['clone', '--no-local', '--depth', '1'];
-    
-    // For MVP, we assume `ref` is a branch or tag if provided.
-    // If it's an arbitrary commit hash, this shallow clone might fail if the server
-    // doesn't support fetching specific commits by hash, but it's acceptable for Phase 4 MVP.
-    if (options.ref) {
-      cloneArgs.push('--branch', options.ref, '--single-branch');
+    const pinnedCommit = isFullCommitSha(options.ref) ? options.ref : undefined;
+    if (pinnedCommit) {
+      await this.spawnGit(['init', options.targetDir], timeout);
+      await this.spawnGit(['remote', 'add', 'origin', options.url], timeout, options.targetDir);
+      await this.spawnGit(
+        ['fetch', '--no-tags', '--depth', '1', 'origin', pinnedCommit],
+        timeout,
+        options.targetDir,
+      );
+      await this.spawnGit(['checkout', '--detach', 'FETCH_HEAD'], timeout, options.targetDir);
+    } else {
+      const cloneArgs = ['clone', '--no-local', '--depth', '1'];
+      if (options.ref) cloneArgs.push('--branch', options.ref, '--single-branch');
+      cloneArgs.push(options.url, options.targetDir);
+      await this.spawnGit(cloneArgs, timeout, undefined);
     }
-    
-    cloneArgs.push(options.url, options.targetDir);
-
-    await this.spawnGit(cloneArgs, timeout, undefined);
 
     // 2. Resolve the commit SHA
     const sha = await this.resolveCommitSha(options.targetDir, timeout);
+    if (pinnedCommit && sha.toLowerCase() !== pinnedCommit.toLowerCase()) {
+      throw new Error('Pinned repository ref did not match resolved commit SHA.');
+    }
 
     return { commitSha: sha };
   }

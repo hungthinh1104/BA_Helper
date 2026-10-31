@@ -93,6 +93,57 @@ describe('GitRepositoryFetcher', () => {
     expect(cloneOpts.env.PATH).toBe(process.env.PATH);
   });
 
+  it('fetches a full commit SHA without treating it as a branch name', async () => {
+    const pinnedSha = '78547792178275bb76ba1550c41265f55f79350a';
+    mockSpawn.mockImplementation((command, args) => {
+      const child: any = new EventEmitter();
+      child.stdout = new EventEmitter();
+      child.stderr = new EventEmitter();
+      setTimeout(() => {
+        if (args.includes('rev-parse')) child.stdout.emit('data', Buffer.from(pinnedSha));
+        child.emit('close', 0);
+      }, 5);
+      return child;
+    });
+
+    const result = await GitRepositoryFetcher.fetch({
+      url: 'https://github.com/owner/repo',
+      targetDir: '/tmp/repo',
+      ref: pinnedSha,
+    });
+
+    expect(result.commitSha).toBe(pinnedSha);
+    expect(mockSpawn.mock.calls.map(([, args]) => args)).toEqual([
+      ['init', '/tmp/repo'],
+      ['remote', 'add', 'origin', 'https://github.com/owner/repo'],
+      ['fetch', '--no-tags', '--depth', '1', 'origin', pinnedSha],
+      ['checkout', '--detach', 'FETCH_HEAD'],
+      ['rev-parse', 'HEAD'],
+    ]);
+    expect(mockSpawn.mock.calls.every(([, , options]) => options.shell === false)).toBe(true);
+  });
+
+  it('fails closed if a pinned commit fetch resolves a different SHA', async () => {
+    const requestedSha = '78547792178275bb76ba1550c41265f55f79350a';
+    const resolvedSha = '6ec605c254a427ca4d67a95db200655e66ab7bbf';
+    mockSpawn.mockImplementation((command, args) => {
+      const child: any = new EventEmitter();
+      child.stdout = new EventEmitter();
+      child.stderr = new EventEmitter();
+      setTimeout(() => {
+        if (args.includes('rev-parse')) child.stdout.emit('data', Buffer.from(resolvedSha));
+        child.emit('close', 0);
+      }, 5);
+      return child;
+    });
+
+    await expect(GitRepositoryFetcher.fetch({
+      url: 'https://github.com/owner/repo',
+      targetDir: '/tmp/repo',
+      ref: requestedSha,
+    })).rejects.toThrow(/pinned repository ref did not match resolved commit sha/i);
+  });
+
   it('rejects non-hex 40-character revision strings', async () => {
     mockSpawn.mockImplementation((command, args) => {
       const child: any = new EventEmitter();

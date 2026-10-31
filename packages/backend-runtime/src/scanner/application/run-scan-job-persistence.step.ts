@@ -41,6 +41,10 @@ type ObserveTargetParams = {
   commitSha: string;
 };
 
+function observedRefType(ref: string | null): 'BRANCH' | 'COMMIT' {
+  return ref && /^[0-9a-f]{40}$/i.test(ref) ? 'COMMIT' : 'BRANCH';
+}
+
 export type PersistedScanOutput = {
   snapshotId: string;
   sourceTargetId: string;
@@ -214,6 +218,7 @@ export class RunScanJobPersistenceStep {
     params: ObserveTargetParams,
     client: PrismaService | Prisma.TransactionClient,
   ): Promise<{ id: string }> {
+    const refType = observedRefType(params.job.requestedRef);
     return client.repositoryTarget.upsert({
       where: {
         repositoryId_targetKey: {
@@ -225,11 +230,12 @@ export class RunScanJobPersistenceStep {
         repositoryId: params.job.repositoryId,
         targetKey: params.job.requestedRef ?? 'main',
         requestedRef: params.job.requestedRef ?? 'main',
-        resolvedRefType: 'BRANCH',
+        resolvedRefType: refType,
         latestObservedCommitSha: params.commitSha,
         lastObservedAt: new Date(),
       },
       update: {
+        ...(refType === 'COMMIT' ? { resolvedRefType: refType } : {}),
         latestObservedCommitSha: params.commitSha,
         lastObservedAt: new Date(),
       },

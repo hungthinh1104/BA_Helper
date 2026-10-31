@@ -31,6 +31,7 @@ export const studyTaskDefinitionSchema = z.object({
   taskId: z.string().trim().min(1).max(80),
   taskFamily: taskFamilySchema,
   caseId: z.string().trim().min(1).max(80),
+  evaluatedModule: z.string().trim().min(1).max(120).optional(),
   repositoryId: z.string().trim().min(1).max(80),
   repositoryCommitSha: shaSchema,
   target: z.object({
@@ -89,6 +90,14 @@ const studyObservationSchema = z.object({
   startedAt: z.string().datetime({ offset: true }),
   endedAt: z.string().datetime({ offset: true }),
   elapsedSeconds: z.number().finite().nonnegative(),
+  phaseTimes: z.object({
+    setupSeconds: z.number().finite().nonnegative(),
+    scanSeconds: z.number().finite().nonnegative(),
+    investigationSeconds: z.number().finite().nonnegative(),
+    verificationSeconds: z.number().finite().nonnegative(),
+    reworkSeconds: z.number().finite().nonnegative(),
+  }).strict().optional(),
+  criticalImpactRecall: z.number().finite().min(0).max(1).nullable().optional(),
   completionStatus: z.enum(['COMPLETED', 'ABANDONED']),
   submittedAnswer: z.string().max(12_000).nullable(),
   taskCorrect: z.boolean().nullable(),
@@ -112,6 +121,13 @@ const studyObservationSchema = z.object({
   if (value.unsupportedClaims.length > value.claimsReviewed) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ['unsupportedClaims'],
       message: 'unsupportedClaims cannot exceed claimsReviewed' });
+  }
+  if (value.phaseTimes) {
+    const phaseTotal = Object.values(value.phaseTimes).reduce((sum, seconds) => sum + seconds, 0);
+    if (phaseTotal > value.elapsedSeconds + 1) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ['phaseTimes'],
+        message: 'phase durations cannot exceed total elapsed time by more than one second' });
+    }
   }
   const scores = Object.values(value.correctnessRubric);
   if (value.completionStatus === 'COMPLETED') {
@@ -179,6 +195,7 @@ export const developerStudyDatasetSchema = z.object({
 
   const observationIds = new Set<string>();
   const participantTasks = new Set<string>();
+  const participantModules = new Set<string>();
   for (const observation of value.observations) {
     const task = tasksById.get(observation.taskId);
     const repository = repositoriesById.get(observation.repositoryId);
@@ -206,6 +223,18 @@ export const developerStudyDatasetSchema = z.object({
         message: 'A participant cannot receive the same task under multiple conditions.' });
     }
     participantTasks.add(participantTask);
+    if (task.evaluatedModule) {
+      const participantModule = observation.participantSessionCode + ':' + task.evaluatedModule;
+      if (participantModules.has(participantModule)) {
+        context.addIssue({ code: z.ZodIssueCode.custom, path: ['observations'],
+          message: 'A participant cannot receive the same evaluated module more than once.' });
+      }
+      participantModules.add(participantModule);
+    }
+    if (value.groundTruthReviewStatus !== 'APPROVED' && observation.criticalImpactRecall != null) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ['observations'],
+        message: 'critical impact recall requires independently approved ground truth.' });
+    }
   }
 
   const observationsExist = value.observations.length > 0;

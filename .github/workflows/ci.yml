@@ -191,7 +191,7 @@ jobs:
           REDIS_URL_TEST: redis://localhost:6379/1
 
       - name: Seed demo identity for pinned proof
-        run: pnpm --dir apps/api exec tsx prisma/seed.demo.ts
+        run: pnpm --dir apps/api seed:demo
 
       - name: Persist pinned real-repository comprehension proof
         run: pnpm prove:pinned-comprehension

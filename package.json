@@ -6,7 +6,7 @@
   "scripts": {
     "build": "dotenv -e .env -- pnpm -r build",
     "db:migrate": "dotenv -e .env -- pnpm --dir apps/api exec prisma migrate deploy",
-    "db:seed:demo": "dotenv -e .env -- pnpm --dir apps/api exec tsx prisma/seed.demo.ts",
+    "db:seed:demo": "dotenv -e .env -- pnpm --dir apps/api seed:demo",
     "demo:golden-path": "jest --config jest.config.ts --runInBand tests/demo/golden-path-demo.spec.ts",
     "demo:multi-repo-golden-path": "jest --config jest.config.ts --runInBand tests/demo/multi-repo-golden-path-demo.spec.ts",
     "dev:api": "dotenv -e .env -- pnpm --dir apps/api dev",

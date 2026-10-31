@@ -144,6 +144,51 @@ describe('developer comprehension study scorecard', () => {
     expect(scorecard.conditions.EXISTING_WORKFLOW.abandonedCount).toBe(1);
     expect(scorecard.conditions.EXISTING_WORKFLOW.completionRate).toBe(0);
     expect(scorecard.conditions.EXISTING_WORKFLOW.taskCorrectRate).toBeNull();
+    expect(scorecard.conditions.EXISTING_WORKFLOW.primaryTimeToCorrectSeconds).toBe(1_800);
+    expect(scorecard.practicalValueAssessment.status).toBe('NOT_EVALUABLE');
+  });
+
+  it('uses the 30-minute cap for wrong attempts and reports phase timings separately', () => {
+    const observation = makeObservation('session-capped', 'EXISTING_WORKFLOW', 'EXPLAIN_BEHAVIOR', 1);
+    const wrong: DeveloperStudyObservation = {
+      ...observation,
+      elapsedSeconds: 2_100,
+      taskCorrect: false,
+      phaseTimes: {
+        setupSeconds: 100,
+        scanSeconds: 0,
+        investigationSeconds: 1_200,
+        verificationSeconds: 400,
+        reworkSeconds: 400,
+      },
+    };
+    const scorecard = buildDeveloperStudyScorecard({
+      ...template,
+      studyStatus: 'IN_PROGRESS',
+      tool: { commitSha: toolCommitSha, appVersion: 'test-only' },
+      observations: [wrong],
+    });
+    expect(scorecard.conditions.EXISTING_WORKFLOW.primaryTimeToCorrectSeconds).toBe(1_800);
+    expect(scorecard.conditions.EXISTING_WORKFLOW.phaseTimesSeconds).toMatchObject({
+      setup: 100, scan: 0, investigation: 1_200, verification: 400, rework: 400,
+    });
+  });
+
+  it('requires independently approved labels for critical impact recall', () => {
+    const observation = makeObservation('session-pending-labels', 'EXISTING_WORKFLOW', 'EXPLAIN_BEHAVIOR', 1);
+    expect(() => developerStudyDatasetSchema.parse({
+      ...template,
+      studyStatus: 'IN_PROGRESS',
+      tool: { commitSha: toolCommitSha, appVersion: 'test-only' },
+      observations: [{ ...observation, criticalImpactRecall: 1 }],
+    })).toThrow(/requires independently approved ground truth/);
+  });
+
+  it('rejects a participant schedule that repeats an evaluated module', () => {
+    const dataset = completeDataset();
+    dataset.tasks[0] = { ...dataset.tasks[0], evaluatedModule: 'auth' };
+    dataset.tasks[1] = { ...dataset.tasks[1], evaluatedModule: 'auth' };
+    expect(() => developerStudyDatasetSchema.parse(dataset)).toThrow(/same evaluated module/);
   });
 
   it('rejects unpinned observations, repeated participant tasks, and identity fields', () => {

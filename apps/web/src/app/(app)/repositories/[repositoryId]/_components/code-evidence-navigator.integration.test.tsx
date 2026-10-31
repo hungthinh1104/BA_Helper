@@ -266,6 +266,7 @@ it('stops at the documented offset limit and points to search for remaining arti
     const loadMore = await screen.findByRole('button', { name: 'Load more' });
     await waitFor(() => expect(loadMore).toBeEnabled());
     fireEvent.click(loadMore);
+    await waitFor(() => expect(offsets).toContain(page * 50));
     expect(await screen.findByText(`Method${(page + 1) * 50}`)).toBeInTheDocument();
   }
   expect(offsets).toEqual([0, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500]);

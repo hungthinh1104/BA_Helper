@@ -18,7 +18,7 @@ type Policy = { groundTruthSha256: string; expectedClaims: number; unsupportedPa
 type Scorer = (expected: Iterable<string>, predicted: Iterable<string>) => ReturnType<typeof scoreReferenceSet>;
 
 const sha256 = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
-const normalizeText = (value: string) => value.replace(/\r\n/g, '\n');
+export const normalizeText = (value: string) => value.replace(/\r\n/g, '\n');
 const caseIdentity = (value: Pick<BehaviorCase, 'filePath' | 'suitePath' | 'title'>) =>
   JSON.stringify([value.filePath, value.suitePath, value.title]);
 const claimIdentity = (caseKey: string, claim: Pick<ScanStaticBehaviorClaim, 'kind' | 'assertionKind' | 'sourceText' | 'sourceLocation'>) =>
@@ -114,8 +114,9 @@ function prepareBehaviorEvaluation(root: string) {
   for (const file of labels.files) {
     const filePath = safeFixturePath(fixtureRoot, file.path);
     const bytes = readFileSync(filePath);
-    if (sha256(normalizeText(bytes.toString('utf8'))) !== file.sha256) throw new Error(`Held-out source pin mismatch: ${file.path}`);
-    sourceByPath.set(file.path, bytes.toString('utf8'));
+    const sourceText = normalizeText(bytes.toString('utf8'));
+    if (sha256(sourceText) !== file.sha256) throw new Error(`Held-out source pin mismatch: ${file.path}`);
+    sourceByPath.set(file.path, sourceText);
   }
   const snapshotId = createHash('sha1').update(labels.files.map(file => `${file.path}\0${file.sha256}`).sort().join('\n')).digest('hex');
   if (snapshotId !== labels.commitSha) throw new Error('Held-out fixture commit context does not match pinned source files.');

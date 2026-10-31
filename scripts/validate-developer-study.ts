@@ -1,17 +1,14 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, relative, resolve } from 'node:path';
 import { buildDeveloperStudyScorecard } from '../tests/evaluation/developer-comprehension/developer-study.scorecard';
+import { parseStudyValidationArguments } from './lib/study-validation-arguments';
 
 async function run(): Promise<void> {
-  const inputArgument = process.argv.slice(2).find((argument) => argument !== '--' && !argument.startsWith('-'));
-  if (!inputArgument) {
-    throw new Error('Usage: pnpm validate:developer-study -- <dataset-path>');
-  }
-
-  const inputPath = resolve(process.cwd(), inputArgument);
+  const arguments_ = parseStudyValidationArguments(process.argv.slice(2));
+  const inputPath = resolve(process.cwd(), arguments_.inputPath);
   const input = JSON.parse(await readFile(inputPath, 'utf8')) as unknown;
   const scorecard = buildDeveloperStudyScorecard(input);
-  const outputPath = resolve(process.cwd(), 'artifacts/evaluation/developer-comprehension-study-scorecard.json');
+  const outputPath = resolve(process.cwd(), arguments_.outputPath ?? 'artifacts/evaluation/developer-comprehension-study-scorecard.json');
   await mkdir(dirname(outputPath), { recursive: true });
   await writeFile(outputPath, JSON.stringify(scorecard, null, 2) + '\n', 'utf8');
   process.stdout.write(JSON.stringify({

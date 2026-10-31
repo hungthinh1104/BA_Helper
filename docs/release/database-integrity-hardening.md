@@ -758,3 +758,34 @@ worktree only; hosted CI on an exact candidate remains open.
   independently measured in this pass. Hosted CI on a clean candidate,
   production historical counts, and the broader release gates remain open.
   Verdict remains `PARTIAL`.
+
+## E2E queue cleanup and broad-suite revalidation (2026-10-31)
+
+- The new queue-prefix cleanup regression first failed as expected: a real
+  BullMQ job remained after its API test app closed. The harness now removes
+  only the four BA_Helper queue names under that app's unique E2E prefix. The
+  regression passed 1/1 and confirmed a job under a different prefix survives.
+- Re-ran `pnpm verify:migration-upgrade` using the PostgreSQL scratch-upgrade
+  harness selected for this iteration. It passed, including invalid historical
+  embedding commit/snapshot provenance rejection, preservation of the row, and
+  absence of partially applied constraints/indexes after failure.
+- The clean, sequential full `pnpm test:e2e` run reported 41/43 suites and
+  272/286 tests passing. `worker-process-recovery.e2e-spec.ts` failed because a
+  worker did not emit `WORKER_READY` within 60 seconds. In the same full run,
+  `code-comprehension.e2e-spec.ts` exceeded its default 30-second setup hook;
+  its subsequent cleanup also attempted to use an uninitialized Prisma client.
+  Jest printed that it retained an asynchronous handle after its summary; the
+  completed Jest PID was stopped, and no test process remains.
+- Isolated regressions passed after the harness changes: queue cleanup 1/1,
+  worker process recovery 2/2, and code-comprehension 13/13. The code-
+  comprehension suite now allows 90 seconds for setup and guards cleanup when
+  setup did not create the app/client. Worker startup failures now include a
+  short filtered diagnostic excerpt with credential URLs redacted. The worker
+  timeout seen in the full run did not recur in the isolated run; treat it as
+  load-sensitive and unresolved pending another full-suite pass.
+- Workspace `pnpm typecheck` passed. `pnpm lint` completed with 0 errors and 44
+  existing `consistent-type-imports` warnings across backend/API files. No
+  production database was used, and this iteration made no schema changes.
+  Hosted CI on the current dirty candidate, Redis-wide residual key counts,
+  and remaining Product Integrity release gates are still open. Verdict
+  remains `PARTIAL`.

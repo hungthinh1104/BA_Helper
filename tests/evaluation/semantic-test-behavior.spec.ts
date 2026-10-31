@@ -1,6 +1,10 @@
-import { evaluateSemanticTestBehavior } from './semantic-test-behavior.evaluator';
+import { evaluateSemanticTestBehavior, normalizeText } from './semantic-test-behavior.evaluator';
 
 describe('held-out static Jest behavior evaluation', () => {
+  it('normalizes CRLF input so pinned AST offsets match checked-out source', () => {
+    expect(normalizeText('first line\r\nsecond line')).toBe('first line\nsecond line');
+  });
+
   it('scores frozen source labels, exact provenance, and explicit unsupported patterns', () => {
     const result = evaluateSemanticTestBehavior();
 
