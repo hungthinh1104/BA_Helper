@@ -1,9 +1,11 @@
 import type { PrismaService } from "@ba-helper/backend-runtime";
+import { assertActiveTestDatabaseLease } from './test-database-lease';
 
 const MAX_RESET_ATTEMPTS = 3;
 const RESET_RETRY_DELAY_MS = 50;
 
 export async function resetDatabase(prisma: PrismaService) {
+  await assertActiveTestDatabaseLease(prisma);
   // Fetch all table names dynamically
   const tables = await prisma.$queryRaw<{ tablename: string }[]>`
     SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename != '_prisma_migrations';

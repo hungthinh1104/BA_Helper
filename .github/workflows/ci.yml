@@ -39,8 +39,8 @@ jobs:
           --health-timeout 3s
           --health-retries 5
     env:
-      DATABASE_URL: postgresql://ba_helper:ba_helper@localhost:5432/ba_helper_test
       DATABASE_URL_TEST: postgresql://ba_helper:ba_helper@localhost:5432/ba_helper_test
+      BA_HELPER_TEST_DATABASE_IDENTITY: localhost:5432/ba_helper_test
       REDIS_URL: redis://localhost:6379/0
       REDIS_URL_TEST: redis://localhost:6379/1
       WORKSPACE_MODE: dev-single-user
@@ -77,10 +77,10 @@ jobs:
         run: pnpm --dir apps/api exec prisma generate
 
       - name: Apply Prisma migrations
-        run: pnpm --dir apps/api exec prisma migrate deploy --config prisma.config.ts --schema prisma/schema.prisma
+        run: pnpm db:test:migrate
 
       - name: Verify demo seed bootstrap
-        run: pnpm --dir apps/api seed:demo
+        run: pnpm db:test:seed-demo
 
       - name: Domain pack governance
         run: pnpm verify:domain-packs

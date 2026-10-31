@@ -1,0 +1,682 @@
+{
+  "schemaVersion": 1,
+  "pilotVersion": "edukids-pilot-v1",
+  "status": "PENDING_INDEPENDENT_REVIEW",
+  "authoring": {
+    "preparedAt": "2026-10-31",
+    "sourceCommitSha": "78547792178275bb76ba1550c41265f55f79350a",
+    "predictionsExposedBeforeLabelFreeze": false,
+    "basis": "Pinned source and test declarations only; no EduKids dependencies or application code were executed.",
+    "authoritativeMetrics": {
+      "precision": null,
+      "recall": null,
+      "f1": null,
+      "criticalImpactRecall": null
+    },
+    "validationCandidateSha": "95080554277b327c3373e2eb3c1ff6318624f6d8",
+    "independentReviewerStatus": "PENDING_INDEPENDENT_REVIEW"
+  },
+  "labelTaxonomy": {
+    "POSITIVE": "Pinned source directly supports the stated behavior or relationship.",
+    "NEGATIVE": "Pinned source contradicts the stated claim or establishes an absent behavior.",
+    "MOCK_BOUND": "The test declaration supports only the behavior of mocked boundaries or the shown mock setup.",
+    "UNRESOLVED": "Static evidence leaves a material path, state, or runtime property undecided.",
+    "UNSUPPORTED": "The available source and tests do not support the proposed conclusion."
+  },
+  "labels": [
+    {
+      "labelId": "AUTH-01",
+      "module": "auth",
+      "labelClass": "POSITIVE",
+      "claim": "AuthService.register checks for an existing email and raises ConflictException before hashing or creating a user.",
+      "expectedRelationship": {
+        "kind": "DIRECT_TEST_REFERENCE",
+        "testTitle": "throws ConflictException when email already exists",
+        "targetSymbol": "AuthService.register"
+      },
+      "sourceLocations": [
+        {
+          "role": "PRODUCTION",
+          "filePath": "apps/backend/src/modules/auth/auth.service.ts",
+          "startLine": 42,
+          "endLine": 53
+        },
+        {
+          "role": "TEST",
+          "filePath": "apps/backend/src/modules/auth/auth.service.spec.ts",
+          "startLine": 73,
+          "endLine": 89
+        }
+      ],
+      "allowedConclusions": [
+        "The method checks an existing email before password hashing and user creation.",
+        "The test supplies an existing user and expects ConflictException."
+      ],
+      "prohibitedOverclaims": [
+        "The test asserts user.create was not called.",
+        "The test verifies database uniqueness or concurrent registration."
+      ],
+      "uncertainty": "The test mocks persistence and only asserts the exception plus absence of refresh-session creation."
+    },
+    {
+      "labelId": "AUTH-02",
+      "module": "auth",
+      "labelClass": "MOCK_BOUND",
+      "claim": "The successful registration unit test proves the service returns the mocked token values and requests a refresh session.",
+      "expectedRelationship": {
+        "kind": "DIRECT_TEST_REFERENCE",
+        "testTitle": "registers successfully and returns auth payload",
+        "targetSymbol": "AuthService.register"
+      },
+      "sourceLocations": [
+        {
+          "role": "PRODUCTION",
+          "filePath": "apps/backend/src/modules/auth/auth.service.ts",
+          "startLine": 55,
+          "endLine": 118
+        },
+        {
+          "role": "TEST",
+          "filePath": "apps/backend/src/modules/auth/auth.service.spec.ts",
+          "startLine": 91,
+          "endLine": 160
+        }
+      ],
+      "allowedConclusions": [
+        "The test calls register, receives the mock token strings, and asserts createRefreshSession receives the refresh token."
+      ],
+      "prohibitedOverclaims": [
+        "The test creates a signed JWT.",
+        "The test verifies a persisted user or refresh session."
+      ],
+      "uncertainty": "Prisma and AuthTokenService are mocks; only the method invocation and assertions are established."
+    },
+    {
+      "labelId": "AUTH-03",
+      "module": "auth",
+      "labelClass": "POSITIVE",
+      "claim": "Registration maps Prisma P2002 and PostgreSQL 23505 errors to ConflictException.",
+      "expectedRelationship": {
+        "kind": "SOURCE_BEHAVIOR",
+        "targetSymbol": "AuthService.register"
+      },
+      "sourceLocations": [
+        {
+          "role": "PRODUCTION",
+          "filePath": "apps/backend/src/modules/auth/auth.service.ts",
+          "startLine": 68,
+          "endLine": 77
+        }
+      ],
+      "allowedConclusions": [
+        "The catch block maps these two error codes to an email-conflict response."
+      ],
+      "prohibitedOverclaims": [
+        "A test exercises this race-error mapping.",
+        "All database error codes are mapped to conflicts."
+      ],
+      "uncertainty": "No source test in this packet injects either persistence error code."
+    },
+    {
+      "labelId": "AUTH-04",
+      "module": "auth",
+      "labelClass": "POSITIVE",
+      "claim": "Login records a failed attempt and returns the same UnauthorizedException message for a missing user and a password mismatch.",
+      "expectedRelationship": {
+        "kind": "SOURCE_BEHAVIOR",
+        "targetSymbol": "AuthService.login"
+      },
+      "sourceLocations": [
+        {
+          "role": "PRODUCTION",
+          "filePath": "apps/backend/src/modules/auth/auth.service.ts",
+          "startLine": 143,
+          "endLine": 157
+        }
+      ],
+      "allowedConclusions": [
+        "Both branches record a failed attempt and throw UnauthorizedException with the same message."
+      ],
+      "prohibitedOverclaims": [
+        "The behavior was exercised against Redis or a database.",
+        "The packet establishes rate-limit thresholds."
+      ],
+      "uncertainty": "This is a static source claim; no login service test was found in the supplied spec."
+    },
+    {
+      "labelId": "AUTH-05",
+      "module": "auth",
+      "labelClass": "NEGATIVE",
+      "claim": "The production password hash call uses ten bcrypt salt rounds.",
+      "expectedRelationship": {
+        "kind": "CLAIM_REFUTED_BY_SOURCE"
+      },
+      "sourceLocations": [
+        {
+          "role": "PRODUCTION",
+          "filePath": "apps/backend/src/modules/auth/auth.service.ts",
+          "startLine": 52,
+          "endLine": 54
+        }
+      ],
+      "allowedConclusions": [
+        "The comment says 10 while the actual bcrypt.hash call passes 12."
+      ],
+      "prohibitedOverclaims": [
+        "The running production configuration has been inspected.",
+        "The discrepancy proves a security vulnerability."
+      ],
+      "uncertainty": "The static source contains an internal comment/code mismatch; runtime configuration was not checked."
+    },
+    {
+      "labelId": "AUTH-06",
+      "module": "auth",
+      "labelClass": "MOCK_BOUND",
+      "claim": "The AuthController.login unit test proves the controller forwards its DTO to AuthService.login and returns the mock result.",
+      "expectedRelationship": {
+        "kind": "DIRECT_TEST_REFERENCE",
+        "testTitle": "login delegates to AuthService.login",
+        "targetSymbol": "AuthController.login"
+      },
+      "sourceLocations": [
+        {
+          "role": "PRODUCTION",
+          "filePath": "apps/backend/src/modules/auth/auth.controller.ts",
+          "startLine": 88,
+          "endLine": 93
+        },
+        {
+          "role": "TEST",
+          "filePath": "apps/backend/src/modules/auth/auth.controller.spec.ts",
+          "startLine": 11,
+          "endLine": 24
+        },
+        {
+          "role": "TEST",
+          "filePath": "apps/backend/src/modules/auth/auth.controller.spec.ts",
+          "startLine": 55,
+          "endLine": 79
+        }
+      ],
+      "allowedConclusions": [
+        "The unit test calls the controller method and verifies the mocked service receives the DTO."
+      ],
+      "prohibitedOverclaims": [
+        "The test verifies password comparison, rate limiting, persistence, or real token signing."
+      ],
+      "uncertainty": "AuthService is replaced by a Jest mock in the controller test module."
+    },
+    {
+      "labelId": "AUTH-07",
+      "module": "auth",
+      "labelClass": "UNSUPPORTED",
+      "claim": "The supplied AuthService unit tests exercise AuthService.login for missing users and invalid passwords.",
+      "expectedRelationship": {
+        "kind": "NO_TEST_EVIDENCE",
+        "targetSymbol": "AuthService.login"
+      },
+      "sourceLocations": [
+        {
+          "role": "TEST",
+          "filePath": "apps/backend/src/modules/auth/auth.service.spec.ts",
+          "startLine": 1,
+          "endLine": 194
+        }
+      ],
+      "allowedConclusions": [
+        "The supplied file contains registration tests and a switchProfile delegation test, not a login service test."
+      ],
+      "prohibitedOverclaims": [
+        "No login tests exist anywhere in the repository.",
+        "The production login behavior is incorrect."
+      ],
+      "uncertainty": "This label is scoped to the pinned test file inspected for this pilot."
+    },
+    {
+      "labelId": "AUTH-08",
+      "module": "auth",
+      "labelClass": "UNSUPPORTED",
+      "claim": "The successful registration test proves a cryptographically signed JWT is returned.",
+      "expectedRelationship": {
+        "kind": "MOCKED_TOKEN_ONLY",
+        "testTitle": "registers successfully and returns auth payload"
+      },
+      "sourceLocations": [
+        {
+          "role": "TEST",
+          "filePath": "apps/backend/src/modules/auth/auth.service.spec.ts",
+          "startLine": 37,
+          "endLine": 41
+        },
+        {
+          "role": "TEST",
+          "filePath": "apps/backend/src/modules/auth/auth.service.spec.ts",
+          "startLine": 114,
+          "endLine": 117
+        }
+      ],
+      "allowedConclusions": [
+        "The test substitutes AuthTokenService and returns fixed strings."
+      ],
+      "prohibitedOverclaims": [
+        "The strings are JWTs or were verified by a signing key."
+      ],
+      "uncertainty": "The real AuthTokenService and JWT library are outside this test boundary."
+    },
+    {
+      "labelId": "QUIZ-01",
+      "module": "quiz",
+      "labelClass": "POSITIVE",
+      "claim": "submitAnswer checks session ownership and current-question order before acquiring the in-flight lock.",
+      "expectedRelationship": {
+        "kind": "SOURCE_BEHAVIOR",
+        "targetSymbol": "QuizService.submitAnswer"
+      },
+      "sourceLocations": [
+        {
+          "role": "PRODUCTION",
+          "filePath": "apps/backend/src/modules/quiz/quiz.service.ts",
+          "startLine": 441,
+          "endLine": 458
+        }
+      ],
+      "allowedConclusions": [
+        "Ownership and order guards precede lock acquisition in the shown method."
+      ],
+      "prohibitedOverclaims": [
+        "These checks provide distributed locking.",
+        "The guards have been verified against a running cache."
+      ],
+      "uncertainty": "This order is read statically; runtime behavior depends on the session implementation and callers."
+    },
+    {
+      "labelId": "QUIZ-02",
+      "module": "quiz",
+      "labelClass": "MOCK_BOUND",
+      "claim": "The in-flight answer test rejects when acquireAnswerLock returns false and does not release a lock it did not acquire.",
+      "expectedRelationship": {
+        "kind": "DIRECT_TEST_REFERENCE",
+        "testTitle": "rejects submit when the same question is already in-flight",
+        "targetSymbol": "QuizService.submitAnswer"
+      },
+      "sourceLocations": [
+        {
+          "role": "PRODUCTION",
+          "filePath": "apps/backend/src/modules/quiz/quiz.service.ts",
+          "startLine": 449,
+          "endLine": 458
+        },
+        {
+          "role": "TEST",
+          "filePath": "apps/backend/src/modules/quiz/quiz.service.spec.ts",
+          "startLine": 106,
+          "endLine": 148
+        }
+      ],
+      "allowedConclusions": [
+        "The mock returns false; the method rejects with BadRequestException; releaseAnswerLock is not called."
+      ],
+      "prohibitedOverclaims": [
+        "The test exercises concurrent cache requests or successful answer submission."
+      ],
+      "uncertainty": "The test substitutes QuizSessionService and checks only the lock-rejection path."
+    },
+    {
+      "labelId": "QUIZ-03",
+      "module": "quiz",
+      "labelClass": "UNRESOLVED",
+      "claim": "The existingAnswer branch guarantees a client retry after a successful answer receives the prior result.",
+      "expectedRelationship": {
+        "kind": "ORDERING_CONFLICT_REQUIRES_REVIEW",
+        "targetSymbol": "QuizService.submitAnswer"
+      },
+      "sourceLocations": [
+        {
+          "role": "PRODUCTION",
+          "filePath": "apps/backend/src/modules/quiz/quiz.service.ts",
+          "startLine": 445,
+          "endLine": 478
+        },
+        {
+          "role": "PRODUCTION",
+          "filePath": "apps/backend/src/modules/quiz/quiz.service.ts",
+          "startLine": 501,
+          "endLine": 511
+        },
+        {
+          "role": "PRODUCTION",
+          "filePath": "apps/backend/src/modules/quiz/services/quiz-session.service.ts",
+          "startLine": 111,
+          "endLine": 121
+        }
+      ],
+      "allowedConclusions": [
+        "The method checks current order before existingAnswer; a successful answer increments currentQuestionIndex; the existing-answer return path is present."
+      ],
+      "prohibitedOverclaims": [
+        "Sequential retries definitely succeed.",
+        "The branch is definitely unreachable under every runtime state."
+      ],
+      "uncertainty": "No test covers duplicate submission after a successful persisted session update; independent source and runtime review is required."
+    },
+    {
+      "labelId": "QUIZ-04",
+      "module": "quiz",
+      "labelClass": "UNSUPPORTED",
+      "claim": "The supplied QuizService unit tests prove successful answer scoring, progress persistence, and event publication.",
+      "expectedRelationship": {
+        "kind": "NO_SUCCESS_PATH_TEST_EVIDENCE",
+        "targetSymbol": "QuizService.submitAnswer"
+      },
+      "sourceLocations": [
+        {
+          "role": "TEST",
+          "filePath": "apps/backend/src/modules/quiz/quiz.service.spec.ts",
+          "startLine": 98,
+          "endLine": 148
+        }
+      ],
+      "allowedConclusions": [
+        "The shown tests cover a missing topic and an in-flight rejection path."
+      ],
+      "prohibitedOverclaims": [
+        "No other repository test covers these behaviors.",
+        "The production side effects fail at runtime."
+      ],
+      "uncertainty": "The conclusion is limited to this pinned spec file and its visible test declarations."
+    },
+    {
+      "labelId": "QUIZ-05",
+      "module": "quiz",
+      "labelClass": "UNRESOLVED",
+      "claim": "The in-flight answer lock prevents duplicate processing across worker processes.",
+      "expectedRelationship": {
+        "kind": "PROCESS_SCOPE_UNPROVEN"
+      },
+      "sourceLocations": [
+        {
+          "role": "PRODUCTION",
+          "filePath": "apps/backend/src/modules/quiz/services/quiz-session.service.ts",
+          "startLine": 75,
+          "endLine": 88
+        }
+      ],
+      "allowedConclusions": [
+        "The shown lock key is stored in an instance field-backed Set."
+      ],
+      "prohibitedOverclaims": [
+        "No database or cache-level duplicate protection exists elsewhere.",
+        "A cross-process duplicate was observed."
+      ],
+      "uncertainty": "Only this service implementation was inspected; deployment topology and persistence constraints require separate review."
+    },
+    {
+      "labelId": "QUIZ-06",
+      "module": "quiz",
+      "labelClass": "POSITIVE",
+      "claim": "submitAnswer updates the cached session and publishes a quiz-submitted event; database attempt/progress writes occur only for vocabulary-backed questions.",
+      "expectedRelationship": {
+        "kind": "SOURCE_BEHAVIOR",
+        "targetSymbol": "QuizService.submitAnswer"
+      },
+      "sourceLocations": [
+        {
+          "role": "PRODUCTION",
+          "filePath": "apps/backend/src/modules/quiz/quiz.service.ts",
+          "startLine": 534,
+          "endLine": 565
+        }
+      ],
+      "allowedConclusions": [
+        "The shown branch guards repository attempt/progress writes with currentQuestion.vocabularyId, then saves the session and publishes an event."
+      ],
+      "prohibitedOverclaims": [
+        "All quiz questions persist attempts in the same database tables.",
+        "Event delivery and cache persistence are transactionally atomic."
+      ],
+      "uncertainty": "No integration execution or transaction boundary is established by this source excerpt."
+    },
+    {
+      "labelId": "QUIZ-07",
+      "module": "quiz",
+      "labelClass": "POSITIVE",
+      "claim": "assertCurrentQuestionOrder accepts only questionId equal to currentQuestionIndex plus one.",
+      "expectedRelationship": {
+        "kind": "SOURCE_BEHAVIOR",
+        "targetSymbol": "QuizSessionService.assertCurrentQuestionOrder"
+      },
+      "sourceLocations": [
+        {
+          "role": "PRODUCTION",
+          "filePath": "apps/backend/src/modules/quiz/services/quiz-session.service.ts",
+          "startLine": 111,
+          "endLine": 121
+        }
+      ],
+      "allowedConclusions": [
+        "A mismatched ID throws BadRequestException with the current-question message."
+      ],
+      "prohibitedOverclaims": [
+        "All legitimate question IDs begin at one in every session."
+      ],
+      "uncertainty": "The method’s expected ID is derived from currentQuestionIndex; initialization is outside this location."
+    },
+    {
+      "labelId": "PRON-01",
+      "module": "pronunciation",
+      "labelClass": "MOCK_BOUND",
+      "claim": "When Azure is configured and its provider returns an assessment, the service returns that result without calling the custom provider.",
+      "expectedRelationship": {
+        "kind": "DIRECT_TEST_REFERENCE",
+        "testTitle": "uses Azure provider when configured and available",
+        "targetSymbol": "PronunciationAssessmentService.buildAssessment"
+      },
+      "sourceLocations": [
+        {
+          "role": "PRODUCTION",
+          "filePath": "apps/backend/src/modules/pronunciation/pronunciation-assessment.service.ts",
+          "startLine": 31,
+          "endLine": 45
+        },
+        {
+          "role": "TEST",
+          "filePath": "apps/backend/src/modules/pronunciation/pronunciation-assessment.service.spec.ts",
+          "startLine": 17,
+          "endLine": 50
+        }
+      ],
+      "allowedConclusions": [
+        "The test supplies an Azure result from a mock and asserts custom assessment is not called."
+      ],
+      "prohibitedOverclaims": [
+        "The test calls Azure Speech or verifies cloud credentials and scoring."
+      ],
+      "uncertainty": "Both providers and configuration registry are mocked in this unit test."
+    },
+    {
+      "labelId": "PRON-02",
+      "module": "pronunciation",
+      "labelClass": "NEGATIVE",
+      "claim": "If Azure is configured but returns no assessment, the service falls back to the custom provider.",
+      "expectedRelationship": {
+        "kind": "CLAIM_REFUTED_BY_SOURCE_AND_TEST",
+        "testTitle": "does not save a fabricated score when Azure is unavailable"
+      },
+      "sourceLocations": [
+        {
+          "role": "PRODUCTION",
+          "filePath": "apps/backend/src/modules/pronunciation/pronunciation-assessment.service.ts",
+          "startLine": 36,
+          "endLine": 51
+        },
+        {
+          "role": "TEST",
+          "filePath": "apps/backend/src/modules/pronunciation/pronunciation-assessment.service.spec.ts",
+          "startLine": 52,
+          "endLine": 86
+        }
+      ],
+      "allowedConclusions": [
+        "The Azure branch throws ServiceUnavailableException when the result is null; the test asserts the custom provider is not called."
+      ],
+      "prohibitedOverclaims": [
+        "Every pronunciation provider outage has identical HTTP behavior."
+      ],
+      "uncertainty": "The test uses a mocked null response; it does not simulate a real provider outage."
+    },
+    {
+      "labelId": "PRON-03",
+      "module": "pronunciation",
+      "labelClass": "POSITIVE",
+      "claim": "The custom provider path requires explicit CUSTOM configuration and an assessment input consisting of confidence or recognized text.",
+      "expectedRelationship": {
+        "kind": "SOURCE_BEHAVIOR_AND_TEST",
+        "testTitle": "uses custom assessment only when it is explicitly configured"
+      },
+      "sourceLocations": [
+        {
+          "role": "PRODUCTION",
+          "filePath": "apps/backend/src/modules/pronunciation/pronunciation-assessment.service.ts",
+          "startLine": 48,
+          "endLine": 64
+        },
+        {
+          "role": "TEST",
+          "filePath": "apps/backend/src/modules/pronunciation/pronunciation-assessment.service.spec.ts",
+          "startLine": 88,
+          "endLine": 125
+        }
+      ],
+      "allowedConclusions": [
+        "The custom path is selected only after provider resolution and checks for confidenceScore or non-empty recognizedText."
+      ],
+      "prohibitedOverclaims": [
+        "Audio alone is sufficient for a custom score."
+      ],
+      "uncertainty": "The provider result is a test fixture, not an independently calibrated score."
+    },
+    {
+      "labelId": "PRON-04",
+      "module": "pronunciation",
+      "labelClass": "POSITIVE",
+      "claim": "An audio-only custom assessment request without recognition text or confidence is rejected before calling the custom provider.",
+      "expectedRelationship": {
+        "kind": "DIRECT_TEST_REFERENCE",
+        "testTitle": "rejects custom scoring when an audio-only request has no recognition result",
+        "targetSymbol": "PronunciationAssessmentService.buildAssessment"
+      },
+      "sourceLocations": [
+        {
+          "role": "PRODUCTION",
+          "filePath": "apps/backend/src/modules/pronunciation/pronunciation-assessment.service.ts",
+          "startLine": 54,
+          "endLine": 61
+        },
+        {
+          "role": "TEST",
+          "filePath": "apps/backend/src/modules/pronunciation/pronunciation-assessment.service.spec.ts",
+          "startLine": 127,
+          "endLine": 145
+        }
+      ],
+      "allowedConclusions": [
+        "The test asserts ServiceUnavailableException and that customProvider.assess was not called."
+      ],
+      "prohibitedOverclaims": [
+        "All unsupported input combinations are rejected correctly."
+      ],
+      "uncertainty": "The test covers one audio-only input shape."
+    },
+    {
+      "labelId": "PRON-05",
+      "module": "pronunciation",
+      "labelClass": "MOCK_BOUND",
+      "claim": "When assessment fails, the pronunciation service test asserts no quota cache write, attempt creation, or progress update.",
+      "expectedRelationship": {
+        "kind": "DIRECT_TEST_REFERENCE",
+        "testTitle": "does not consume quota or save progress when provider assessment fails",
+        "targetSymbol": "PronunciationService.submitPronunciationAttempt"
+      },
+      "sourceLocations": [
+        {
+          "role": "PRODUCTION",
+          "filePath": "apps/backend/src/modules/pronunciation/pronunciation.service.ts",
+          "startLine": 58,
+          "endLine": 75
+        },
+        {
+          "role": "TEST",
+          "filePath": "apps/backend/src/modules/pronunciation/pronunciation.service.spec.ts",
+          "startLine": 5,
+          "endLine": 42
+        }
+      ],
+      "allowedConclusions": [
+        "The assessment mock rejects and the test checks cacheManager.set, repository.create, and updatePronunciationProgress were not called."
+      ],
+      "prohibitedOverclaims": [
+        "The test exercises a real speech provider or a database transaction."
+      ],
+      "uncertainty": "Repository, assessment, and cache boundaries are mocked."
+    },
+    {
+      "labelId": "PRON-06",
+      "module": "pronunciation",
+      "labelClass": "UNRESOLVED",
+      "claim": "The custom provider's null-result fallback communicates a real zero pronunciation score and recognized transcript.",
+      "expectedRelationship": {
+        "kind": "SEMANTIC_MEANING_REQUIRES_REVIEW"
+      },
+      "sourceLocations": [
+        {
+          "role": "PRODUCTION",
+          "filePath": "apps/backend/src/modules/pronunciation/pronunciation-assessment.service.ts",
+          "startLine": 54,
+          "endLine": 77
+        }
+      ],
+      "allowedConclusions": [
+        "The fallback returns zero score fields, passed=false, and uses recognizedText or referenceText in the response."
+      ],
+      "prohibitedOverclaims": [
+        "A listener actually produced the fallback transcript.",
+        "The fallback is persisted by the service."
+      ],
+      "uncertainty": "No supplied test covers a null custom-provider result or the downstream interpretation of this fallback."
+    },
+    {
+      "labelId": "PRON-07",
+      "module": "pronunciation",
+      "labelClass": "UNSUPPORTED",
+      "claim": "The supplied Azure provider unit test proves live Azure Speech integration works.",
+      "expectedRelationship": {
+        "kind": "MOCKED_PROVIDER_RESULT_ONLY"
+      },
+      "sourceLocations": [
+        {
+          "role": "TEST",
+          "filePath": "apps/backend/src/modules/pronunciation/pronunciation-assessment.service.spec.ts",
+          "startLine": 17,
+          "endLine": 50
+        }
+      ],
+      "allowedConclusions": [
+        "A mocked Azure provider returns a fixed DTO and the service selects it."
+      ],
+      "prohibitedOverclaims": [
+        "Network, credentials, API response mapping, latency, or deployed Azure configuration were tested."
+      ],
+      "uncertainty": "The provider boundary is mocked and the EduKids application is intentionally not executed."
+    }
+  ],
+  "provenance": {
+    "sourceShas": {
+      "baHelper": "95080554277b327c3373e2eb3c1ff6318624f6d8",
+      "eduKids": "78547792178275bb76ba1550c41265f55f79350a"
+    },
+    "evidence": [
+      "artifacts/evaluation/edukids-pilot/reviewer-packet.md",
+      "artifacts/evaluation/edukids-pilot/evidence/edukids-pinned-real-scan-final-candidate.log"
+    ]
+  }
+}

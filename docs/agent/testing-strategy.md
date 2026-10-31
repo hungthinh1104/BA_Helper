@@ -170,6 +170,47 @@ pnpm verify:change --level full
 The wrapper reuses configured test PostgreSQL/Redis instances and records
 unavailable services as blockers rather than starting containers.
 
+### Verification scope, isolation, and evidence
+
+`pnpm verify:change` defaults to AFFECTED. Use FOCUSED while iterating and
+FULL for release or verification-infrastructure changes. `--plan` performs
+native discovery and prints prerequisites without running tests or preparing
+services. `--files` is an explicit scope and the report lists dirty files left
+outside that scope; `--base` adds committed changes since the merge base.
+
+Destructive commands require `DATABASE_URL_TEST`, `REDIS_URL_TEST`, and
+`BA_HELPER_TEST_DATABASE_IDENTITY=host:port/database`. PostgreSQL must use a
+loopback host, a database name containing a `test` or `e2e` segment, and a
+port/database identity matching the URL. Remote services and development or
+production name segments are rejected. Redis must be separate from the
+configured development target. The verifier, database tests, demos, migration
+drill, API E2E, pinned proofs, and Playwright use a PostgreSQL advisory lease.
+Nested commands verify the live owner session; a copied environment flag does
+not replace that check. Resets and schema setup check the lease at their
+mutation boundaries. The lease is held for the complete destructive invocation
+and released after owned children finish.
+
+The tracked exact test inventory is
+[`tests/evaluation/test-inventory/baseline.json`](../../tests/evaluation/test-inventory/baseline.json).
+It records per-runner Jest paths, Playwright project/file/test identities, and
+known opt-in skips. Its current approval state is `PENDING_REVIEW`; discovery
+differences cannot qualify a run until a reviewer records explicit approval.
+Never regenerate this baseline to make a changed inventory pass. Native test
+reports must be valid, nonempty, failure-free, and reconciled against reviewed
+skip identities. Reports are written under ignored unique evaluation paths and
+include candidate HEAD and a staged/unstaged/untracked diff fingerprint. A
+source change during execution stops owned processes and invalidates the run.
+
+FOCUSED and AFFECTED results provide scoped feedback. They do not establish
+release eligibility. FULL results remain local evidence until the exact
+candidate SHA also has passing required GitHub Actions checks. Deployment state
+is recorded separately.
+
+The root [`AGENTS.md`](../../AGENTS.md) keeps product invariants and links here
+for detailed verification procedure. The
+[verify-change Skill](../../.agents/skills/verify-change/SKILL.md) covers scope
+inspection, level choice, execution, escalation, and evidence review.
+
 `pnpm typecheck` checks backend/test sources, browser E2E sources and the full
 web TypeScript project, including its tests. It builds the contracts/shared
 declarations before checking the web consumer. Do not substitute a production-

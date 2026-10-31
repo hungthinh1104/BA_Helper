@@ -61,6 +61,7 @@ import {
   seedCrossProjectImpactAnalysisHistory,
   verifyLegacyImpactAnalysisProjectScope,
 } from '../tests/release/impact-analysis-project-scope-migration.fixture';
+import { assertTestDatabaseLeaseClaim } from '../apps/api/test/e2e/helpers/test-database-lease';
 import { UPGRADE_MIGRATIONS } from './lib/migration-upgrade-plan';
 import { createMigrationWorkspace } from './lib/migration-upgrade-workspace';
 import { verifyCrossMultiRepoChildLineageHistoryFailsClosed } from './lib/verify-multi-repo-child-lineage-migration';
@@ -159,6 +160,7 @@ function verifyPrismaSchemaCatalogParity(databaseUrl: string): void {
 }
 
 async function main(): Promise<void> {
+  await assertTestDatabaseLeaseClaim(process.env);
   const tempUrl = tempConnectionString();
   const workspace = createMigrationWorkspace(root, UPGRADE_MIGRATIONS);
   let databaseCreated = false;

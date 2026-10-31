@@ -356,6 +356,9 @@ automatically.
 Use `FOCUSED` checks during implementation and `AFFECTED` checks before
 handoff. Use `FULL` for release verification or changes to verification
 infrastructure, test-runner configuration, or CI. The commands, selector rules,
-test-target safeguards, and evidence format live in
+local PostgreSQL advisory-lease safeguards, exact inventory approval, and
+evidence format live in
 [testing-strategy.md](docs/agent/testing-strategy.md) and the
 [verify-change Skill](.agents/skills/verify-change/SKILL.md).
+Product invariants and security boundaries remain in this file; detailed
+verification procedures are maintained in those linked references.

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sourceCommitSha": "78547792178275bb76ba1550c41265f55f79350a",
+  "files": [
+    {
+      "path": "change-tasks.json",
+      "sha256": "c583a345d434ba7b9bb0e35f0fb2e6633306ef952795d35a683454f04efa34de"
+    },
+    {
+      "path": "ground-truth.json",
+      "sha256": "9d085098c7a60250d27324e5e530546536a3e425fd6e4efe3b547c38efbb4f82"
+    }
+  ]
+}

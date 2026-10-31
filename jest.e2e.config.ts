@@ -5,6 +5,7 @@ const config: Config = {
   ...createBackendSharedOptions(),
   testMatch: ['**/*.e2e-spec.ts'],
   testEnvironment: 'node',
+  globalSetup: '<rootDir>/apps/api/test/e2e/helpers/test-database-lease.global-setup.ts',
   setupFiles: ['<rootDir>/apps/api/test/e2e/helpers/bootstrap-test-environment.ts'],
   // These tests exercise a real API plus PostgreSQL/Redis, so use a bounded
   // integration-test window instead of Jest's 5-second unit-test default.

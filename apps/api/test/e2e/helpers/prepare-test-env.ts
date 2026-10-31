@@ -3,6 +3,7 @@ import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { Client } from 'pg';
 import { validateTestTargets } from './test-target-safety';
+import { assertTestDatabaseLeaseClaim } from './test-database-lease';
 
 let testInfraPrepared = false;
 
@@ -34,6 +35,13 @@ async function ensureTestDatabase(databaseUrl: string): Promise<void> {
   const targetClient = new Client({ connectionString: targetUrl.toString() });
   await targetClient.connect();
   try {
+    const identity = await targetClient.query<{ database: string; port: number }>(
+      'SELECT current_database() AS database, inet_server_port() AS port',
+    );
+    const connected = identity.rows[0];
+    if (!connected || connected.database.toLowerCase() !== databaseName.toLowerCase() || Number(connected.port) !== Number(targetUrl.port || 5432)) {
+      throw new Error('Connected PostgreSQL database identity does not match the validated test target.');
+    }
     await targetClient.query('CREATE EXTENSION IF NOT EXISTS vector');
   } finally {
     await targetClient.end();
@@ -57,6 +65,11 @@ function ensureTestSchema(databaseUrl: string): void {
 }
 
 export async function prepareTestDatabaseSchema(databaseUrl: string): Promise<void> {
+  validateTestTargets(process.env);
+  if (databaseUrl !== process.env.DATABASE_URL_TEST) {
+    throw new Error('Test schema preparation must use the explicitly validated DATABASE_URL_TEST target.');
+  }
+  await assertTestDatabaseLeaseClaim(process.env);
   await ensureTestDatabase(databaseUrl);
   ensureTestSchema(databaseUrl);
 }
@@ -105,6 +118,7 @@ export async function prepareIsolatedTestEnv(): Promise<void> {
     throw new Error('REDIS_URL_TEST is required to isolate test queues.');
   }
   validateTestTargets(process.env);
+  await assertTestDatabaseLeaseClaim(process.env);
   assertTestRedisIsIsolated(testRedisUrl);
 
   process.env.DATABASE_URL = testDatabaseUrl;

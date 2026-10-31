@@ -1,9 +1,14 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { developerStudyDatasetSchema } from './developer-comprehension/developer-study.schema';
 
 const sourceSha = '78547792178275bb76ba1550c41265f55f79350a';
-const materialsDirectory = resolve(__dirname, '../../artifacts/evaluation/edukids-pilot');
+const materialsDirectory = resolve(__dirname, 'edukids-pilot');
+const manifest = JSON.parse(readFileSync(resolve(materialsDirectory, 'manifest.json'), 'utf8')) as {
+  sourceCommitSha: string;
+  files: Array<{ path: string; sha256: string }>;
+};
 const tasksMaterial = JSON.parse(readFileSync(resolve(materialsDirectory, 'change-tasks.json'), 'utf8')) as {
   repository: { repositoryId: string; url: string; commitSha: string; licenseId: string };
   tasks: Array<{
@@ -23,6 +28,15 @@ const labelsMaterial = JSON.parse(readFileSync(resolve(materialsDirectory, 'grou
 };
 
 describe('EduKids pilot preparation materials', () => {
+  it('loads frozen authored materials from the tracked fixture and verifies their digests', () => {
+    expect(manifest.sourceCommitSha).toBe(sourceSha);
+    expect(manifest.files).toHaveLength(2);
+    for (const file of manifest.files) {
+      const content = readFileSync(resolve(materialsDirectory, file.path));
+      expect(createHash('sha256').update(content).digest('hex')).toBe(file.sha256);
+    }
+  });
+
   it('keeps source labels pinned, pending review, and separate from analyzer metrics', () => {
     expect(labelsMaterial.status).toBe('PENDING_INDEPENDENT_REVIEW');
     expect(labelsMaterial.labels).toHaveLength(22);

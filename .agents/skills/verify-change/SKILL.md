@@ -15,12 +15,19 @@ description: Use in BA_Helper when inspecting changed files, choosing FOCUSED/AF
    tests or starting services. Use `--files <paths...>` only for an intentional
    scope; inspect the report's outside-scope list. Use `--base` when committed
    changes since a merge base belong in scope.
-4. Before database or browser mutation, require safe explicit test URLs. Never
-   start development services or allow an empty related-test result to count
-   as success. Follow mapped fallbacks or report the selector gap.
-5. Review the unique ignored evidence directory for source SHA, diff
-   fingerprint, commands, exit codes, skips, native reports, and blockers. A
-   source change during verification invalidates that run's evidence.
+4. Before database or browser mutation, require explicit local test URLs and a
+   matching `BA_HELPER_TEST_DATABASE_IDENTITY`. Use the advisory lease through
+   the repository entrypoints; nested commands must prove its live owner
+   session. Never start development services or treat failed/malformed
+   discovery as successful fallback selection.
+5. Check the exact Jest/Playwright inventory approval and native report
+   validity. A baseline marked `PENDING_REVIEW` or changed skip/test identity
+   blocks qualified readiness; never regenerate it as automatic approval.
+6. Review the unique ignored evidence directory for source SHA, full diff
+   fingerprint, commands, exit codes, fallback use, skips, native reports,
+   inventory differences, and blockers. A source change during verification
+   invalidates that run's evidence. FOCUSED/AFFECTED are scoped feedback; FULL
+   still requires exact-SHA hosted checks before release eligibility.
 
 Keep product invariants and security rules in the repository `AGENTS.md`.
 Workflow details and test-target requirements belong in

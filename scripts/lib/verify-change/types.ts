@@ -55,4 +55,6 @@ export interface CheckResult {
   signal?: string;
   evidence?: string;
   details?: string;
+  skips?: string[];
+  fallbackUsed?: boolean;
 }

@@ -1,0 +1,397 @@
+{
+  "schemaVersion": 1,
+  "pilotVersion": "edukids-pilot-v1",
+  "status": "PREPARED_PENDING_INDEPENDENT_DIFFICULTY_REVIEW",
+  "sourceCommitSha": "78547792178275bb76ba1550c41265f55f79350a",
+  "repository": {
+    "repositoryId": "hungthinh1104-edukids",
+    "url": "https://github.com/hungthinh1104/EduKids",
+    "commitSha": "78547792178275bb76ba1550c41265f55f79350a",
+    "licenseId": "MIT"
+  },
+  "conditions": {
+    "A": {
+      "id": "EXISTING_WORKFLOW",
+      "materials": "IDE, repository search, source, tests, and the same locked assistant/model/prompt policy; BA_Helper unavailable."
+    },
+    "B": {
+      "id": "TEXTUAL_EVIDENCE",
+      "materials": "A materials plus the BA_Helper evidence panel and textual test/source relationships; graph controls hidden."
+    },
+    "C": {
+      "id": "VISUAL_TEST_TRACE",
+      "materials": "The same evidence identity and text as B plus Visual Test Trace navigation."
+    }
+  },
+  "aiPolicy": {
+    "status": "ORGANIZER_MODEL_LOCK_REQUIRED_BEFORE_ENROLLMENT",
+    "sameAssistantModelPromptPolicyAcrossConditions": true,
+    "assistant": null,
+    "modelId": null,
+    "versionOrSnapshot": null,
+    "policy": "Before recruitment, name one assistant and exact model/version. Keep its system settings and initial task prompt identical in A/B/C; allow the same follow-up policy in each condition. Do not paste BA_Helper output into A. Record assistant/model/version and any model changes per session. A model change requires a new study version."
+  },
+  "taskLimitSeconds": 1800,
+  "timingPhases": [
+    "setup",
+    "scan",
+    "investigation",
+    "verification",
+    "rework"
+  ],
+  "taskFamilies": [
+    "EXPLAIN_BEHAVIOR",
+    "VERIFY_TEST_EVIDENCE",
+    "PREDICT_UNSEEN_CASE",
+    "PREPARE_SAFE_CHANGE",
+    "VERIFY_CLAIM"
+  ],
+  "tasks": [
+    {
+      "taskId": "AUTH-EXPLAIN",
+      "taskFamily": "EXPLAIN_BEHAVIOR",
+      "evaluatedModule": "auth",
+      "caseId": "auth-registration-flow",
+      "target": {
+        "filePath": "apps/backend/src/modules/auth/auth.service.ts",
+        "symbol": "AuthService.register"
+      },
+      "labelIds": [
+        "AUTH-01",
+        "AUTH-02",
+        "AUTH-03"
+      ],
+      "participantPrompt": "Explain the registration flow for an existing email, a new account, and a persistence uniqueness error. Identify when hashing, account creation, token issuance, refresh-session creation, and audit logging occur. Cite exact source locations and distinguish source behavior from what the unit tests establish."
+    },
+    {
+      "taskId": "AUTH-VERIFY-TEST",
+      "taskFamily": "VERIFY_TEST_EVIDENCE",
+      "evaluatedModule": "auth",
+      "caseId": "auth-registration-tests",
+      "target": {
+        "filePath": "apps/backend/src/modules/auth/auth.service.spec.ts",
+        "symbol": "AuthService.register"
+      },
+      "labelIds": [
+        "AUTH-01",
+        "AUTH-02",
+        "AUTH-08"
+      ],
+      "participantPrompt": "Inspect the duplicate-email and successful-registration tests. Identify setup, invocation, assertions, and mocked boundaries. State whether these declarations prove user creation, database conflict handling, refresh-session persistence, or a real signed JWT."
+    },
+    {
+      "taskId": "AUTH-PREDICT",
+      "taskFamily": "PREDICT_UNSEEN_CASE",
+      "evaluatedModule": "auth",
+      "caseId": "auth-login-invalid-credentials",
+      "target": {
+        "filePath": "apps/backend/src/modules/auth/auth.service.ts",
+        "symbol": "AuthService.login"
+      },
+      "labelIds": [
+        "AUTH-04",
+        "AUTH-07"
+      ],
+      "participantPrompt": "Predict the service response and rate-limit side effect for a missing email and for an existing email with a wrong password. Trace both branches, identify the test evidence available in the pinned auth service spec, and state what remains unverified."
+    },
+    {
+      "taskId": "AUTH-PREPARE",
+      "taskFamily": "PREPARE_SAFE_CHANGE",
+      "evaluatedModule": "auth",
+      "caseId": "auth-registration-uniqueness",
+      "target": {
+        "filePath": "apps/backend/src/modules/auth/auth.service.ts",
+        "symbol": "AuthService.register"
+      },
+      "labelIds": [
+        "AUTH-01",
+        "AUTH-03",
+        "AUTH-05"
+      ],
+      "participantPrompt": "Plan a narrow change that preserves duplicate-email rejection when two registrations race. Identify the existing pre-check and database-error mapping, the tests that cover each path, and the smallest regression tests needed. Do not implement the change or infer email case-normalization behavior."
+    },
+    {
+      "taskId": "AUTH-VERIFY-CLAIM",
+      "taskFamily": "VERIFY_CLAIM",
+      "evaluatedModule": "auth",
+      "caseId": "auth-token-and-hash-claims",
+      "target": {
+        "filePath": "apps/backend/src/modules/auth/auth.service.ts",
+        "symbol": "AuthService.register"
+      },
+      "labelIds": [
+        "AUTH-05",
+        "AUTH-08"
+      ],
+      "participantPrompt": "Verify both claims against pinned source: 'Registration hashes with ten bcrypt rounds' and 'the successful registration test proves a valid signed JWT is returned.' Cite exact lines and explain any comment/code conflict and mock boundary."
+    },
+    {
+      "taskId": "QUIZ-EXPLAIN",
+      "taskFamily": "EXPLAIN_BEHAVIOR",
+      "evaluatedModule": "quiz",
+      "caseId": "quiz-answer-submission",
+      "target": {
+        "filePath": "apps/backend/src/modules/quiz/quiz.service.ts",
+        "symbol": "QuizService.submitAnswer"
+      },
+      "labelIds": [
+        "QUIZ-01",
+        "QUIZ-06",
+        "QUIZ-07"
+      ],
+      "participantPrompt": "Explain the answer-submission path from session lookup through ownership/order checks, lock, scoring, session update, repository writes, and event publication. Identify which persistence calls depend on the question having a vocabularyId."
+    },
+    {
+      "taskId": "QUIZ-VERIFY-TEST",
+      "taskFamily": "VERIFY_TEST_EVIDENCE",
+      "evaluatedModule": "quiz",
+      "caseId": "quiz-answer-tests",
+      "target": {
+        "filePath": "apps/backend/src/modules/quiz/quiz.service.spec.ts",
+        "symbol": "QuizService.submitAnswer"
+      },
+      "labelIds": [
+        "QUIZ-02",
+        "QUIZ-04"
+      ],
+      "participantPrompt": "Inspect the supplied QuizService tests. Describe the in-flight rejection test's setup, mocked lock boundary, invocation, and assertions. List which successful-answer side effects are and are not supported by this spec file."
+    },
+    {
+      "taskId": "QUIZ-PREDICT",
+      "taskFamily": "PREDICT_UNSEEN_CASE",
+      "evaluatedModule": "quiz",
+      "caseId": "quiz-repeat-submission",
+      "target": {
+        "filePath": "apps/backend/src/modules/quiz/quiz.service.ts",
+        "symbol": "QuizService.submitAnswer"
+      },
+      "labelIds": [
+        "QUIZ-03",
+        "QUIZ-07"
+      ],
+      "participantPrompt": "A client retries the same question after a successful answer response is lost. Trace the order guard, currentQuestionIndex update, and existingAnswer branch. Predict the source-level path and name the evidence needed to confirm retry behavior at runtime."
+    },
+    {
+      "taskId": "QUIZ-PREPARE",
+      "taskFamily": "PREPARE_SAFE_CHANGE",
+      "evaluatedModule": "quiz",
+      "caseId": "quiz-answer-retry-safety",
+      "target": {
+        "filePath": "apps/backend/src/modules/quiz/quiz.service.ts",
+        "symbol": "QuizService.submitAnswer"
+      },
+      "labelIds": [
+        "QUIZ-02",
+        "QUIZ-03",
+        "QUIZ-05",
+        "QUIZ-06"
+      ],
+      "participantPrompt": "Plan a narrow regression suite for retrying an answer after a lost response and for concurrent duplicate submissions. Separate session-order, same-process lock, persistence, score-update, and event-publication assertions. Do not claim the in-memory lock protects multiple worker processes."
+    },
+    {
+      "taskId": "QUIZ-VERIFY-CLAIM",
+      "taskFamily": "VERIFY_CLAIM",
+      "evaluatedModule": "quiz",
+      "caseId": "quiz-success-evidence-claim",
+      "target": {
+        "filePath": "apps/backend/src/modules/quiz/quiz.service.spec.ts",
+        "symbol": "QuizService.submitAnswer"
+      },
+      "labelIds": [
+        "QUIZ-04",
+        "QUIZ-06"
+      ],
+      "participantPrompt": "Verify the claim: 'The supplied QuizService tests prove a successful answer records an attempt, updates progress, saves the session, and publishes an event.' Cite the exact test and production locations, then distinguish implementation source from test evidence."
+    },
+    {
+      "taskId": "PRON-EXPLAIN",
+      "taskFamily": "EXPLAIN_BEHAVIOR",
+      "evaluatedModule": "pronunciation",
+      "caseId": "pronunciation-provider-selection",
+      "target": {
+        "filePath": "apps/backend/src/modules/pronunciation/pronunciation-assessment.service.ts",
+        "symbol": "PronunciationAssessmentService.buildAssessment"
+      },
+      "labelIds": [
+        "PRON-01",
+        "PRON-02",
+        "PRON-03",
+        "PRON-06"
+      ],
+      "participantPrompt": "Explain the Azure and CUSTOM provider branches, the required custom assessment input, and the null-result fallback. State when the method returns a result and when it raises ServiceUnavailableException."
+    },
+    {
+      "taskId": "PRON-VERIFY-TEST",
+      "taskFamily": "VERIFY_TEST_EVIDENCE",
+      "evaluatedModule": "pronunciation",
+      "caseId": "pronunciation-provider-tests",
+      "target": {
+        "filePath": "apps/backend/src/modules/pronunciation/pronunciation-assessment.service.spec.ts",
+        "symbol": "PronunciationAssessmentService.buildAssessment"
+      },
+      "labelIds": [
+        "PRON-01",
+        "PRON-02",
+        "PRON-03",
+        "PRON-04",
+        "PRON-07"
+      ],
+      "participantPrompt": "Compare the Azure success, Azure unavailable, CUSTOM configured, and audio-only tests. Identify each provider mock and what the declarations support about provider selection, fallback, and real cloud integration."
+    },
+    {
+      "taskId": "PRON-PREDICT",
+      "taskFamily": "PREDICT_UNSEEN_CASE",
+      "evaluatedModule": "pronunciation",
+      "caseId": "pronunciation-azure-unavailable",
+      "target": {
+        "filePath": "apps/backend/src/modules/pronunciation/pronunciation-assessment.service.ts",
+        "symbol": "PronunciationAssessmentService.buildAssessment"
+      },
+      "labelIds": [
+        "PRON-02",
+        "PRON-04",
+        "PRON-06"
+      ],
+      "participantPrompt": "If Azure is selected and returns null while CUSTOM is also registered, predict the result. Trace whether custom scoring is called, cite the related test, and explain what the test does not establish about a live provider outage."
+    },
+    {
+      "taskId": "PRON-PREPARE",
+      "taskFamily": "PREPARE_SAFE_CHANGE",
+      "evaluatedModule": "pronunciation",
+      "caseId": "pronunciation-provider-failure-safety",
+      "target": {
+        "filePath": "apps/backend/src/modules/pronunciation/pronunciation.service.ts",
+        "symbol": "PronunciationService.submitPronunciationAttempt"
+      },
+      "labelIds": [
+        "PRON-02",
+        "PRON-05",
+        "PRON-06"
+      ],
+      "participantPrompt": "Plan a narrow test for provider failure so no unsupported pronunciation result is stored and quota/progress behavior remains correct. Identify the existing service test's mock boundaries and add one test idea for a CUSTOM provider returning null."
+    },
+    {
+      "taskId": "PRON-VERIFY-CLAIM",
+      "taskFamily": "VERIFY_CLAIM",
+      "evaluatedModule": "pronunciation",
+      "caseId": "pronunciation-cloud-claim",
+      "target": {
+        "filePath": "apps/backend/src/modules/pronunciation/pronunciation-assessment.service.spec.ts",
+        "symbol": "PronunciationAssessmentService.buildAssessment"
+      },
+      "labelIds": [
+        "PRON-01",
+        "PRON-07"
+      ],
+      "participantPrompt": "Verify the claim: 'The Azure assessment unit test proves live Azure Speech scoring is integrated and calibrated.' Cite the test setup and service branch, then enumerate what the static test actually verifies."
+    }
+  ],
+  "scheduleSlots": [
+    {
+      "slot": "S01",
+      "conditionOrder": [
+        "A",
+        "B",
+        "C"
+      ],
+      "tasks": {
+        "A": "AUTH-EXPLAIN",
+        "B": "QUIZ-VERIFY-CLAIM",
+        "C": "PRON-PREPARE"
+      }
+    },
+    {
+      "slot": "S02",
+      "conditionOrder": [
+        "B",
+        "C",
+        "A"
+      ],
+      "tasks": {
+        "B": "QUIZ-EXPLAIN",
+        "C": "PRON-VERIFY-CLAIM",
+        "A": "AUTH-VERIFY-TEST"
+      }
+    },
+    {
+      "slot": "S03",
+      "conditionOrder": [
+        "C",
+        "A",
+        "B"
+      ],
+      "tasks": {
+        "C": "AUTH-VERIFY-CLAIM",
+        "A": "QUIZ-PREDICT",
+        "B": "PRON-VERIFY-TEST"
+      }
+    },
+    {
+      "slot": "S04",
+      "conditionOrder": [
+        "C",
+        "B",
+        "A"
+      ],
+      "tasks": {
+        "C": "AUTH-EXPLAIN",
+        "B": "PRON-PREDICT",
+        "A": "QUIZ-PREPARE"
+      }
+    },
+    {
+      "slot": "S05",
+      "conditionOrder": [
+        "B",
+        "A",
+        "C"
+      ],
+      "tasks": {
+        "B": "AUTH-PREDICT",
+        "A": "PRON-VERIFY-CLAIM",
+        "C": "QUIZ-VERIFY-TEST"
+      }
+    },
+    {
+      "slot": "S06",
+      "conditionOrder": [
+        "A",
+        "C",
+        "B"
+      ],
+      "tasks": {
+        "A": "PRON-EXPLAIN",
+        "C": "QUIZ-PREDICT",
+        "B": "AUTH-PREPARE"
+      }
+    }
+  ],
+  "scheduleConstraints": {
+    "atLeastSixSlots": true,
+    "allConditionTaskFamilyCellsCovered": true,
+    "allSixConditionOrdersPresent": true,
+    "oneTaskPerConditionPerSlot": true,
+    "noRepeatedTaskWithinSlot": true,
+    "noRepeatedEvaluatedModuleWithinSlot": true,
+    "allThreeModulesAppearUnderEachCondition": true,
+    "allModuleTaskFamilyVariantsAppear": true,
+    "participantSlotsAreAssignedBeforeTheSession": true
+  },
+  "evidenceEquivalence": {
+    "BAndCUseSameComprehensionQueryAndSnapshot": true,
+    "BAndCUseSameSelectedArtifactAndCanonicalEvidenceDigest": true,
+    "CAddsOnlyVisualTraceNavigation": true,
+    "digestVerificationStatus": "BLOCKED_NO_EDUKIDS_SNAPSHOT"
+  },
+  "validationCandidateSha": "95080554277b327c3373e2eb3c1ff6318624f6d8",
+  "provenance": {
+    "sourceShas": {
+      "baHelper": "95080554277b327c3373e2eb3c1ff6318624f6d8",
+      "eduKids": "78547792178275bb76ba1550c41265f55f79350a"
+    },
+    "evidence": [
+      "artifacts/evaluation/edukids-pilot/study-operator-packet.md",
+      "artifacts/evaluation/edukids-pilot/evidence/edukids-pinned-real-scan-final-candidate.log"
+    ]
+  }
+}

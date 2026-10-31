@@ -38,6 +38,8 @@ export function parsePorcelain(output: string): ChangedPath[] {
 
 export function diffFingerprint(root: string, changed: ChangedPath[]): string {
   const hash = createHash('sha256');
+  hash.update(execGit(root, ['rev-parse', 'HEAD']).trim());
+  hash.update('\0');
   for (const args of [['diff', '--binary', 'HEAD'], ['diff', '--binary', '--cached', 'HEAD']] as const) {
     hash.update(execGit(root, [...args]));
   }

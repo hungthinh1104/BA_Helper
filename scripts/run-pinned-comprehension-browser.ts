@@ -7,6 +7,7 @@ import { config } from 'dotenv';
 import { resolvePinnedBrowserRunStatus } from './pinned-comprehension-browser-status';
 import { isIsolatedPinnedTestDatabaseUrl } from './pinned-proof-environment';
 import { redisUrlIdentityOnly } from '../apps/api/test/e2e/helpers/test-target-safety';
+import { assertTestDatabaseLeaseClaim } from '../apps/api/test/e2e/helpers/test-database-lease';
 
 const PROOF_PATH = path.resolve(process.env.PINNED_COMPREHENSION_PROOF_FILE ??
   'artifacts/evaluation/pinned-code-comprehension-proof.json');
@@ -100,6 +101,7 @@ function persistRunResult(exitCode: number, cleanupSucceeded: boolean): 'PASSED'
 async function main(): Promise<void> {
   config({ path: '.env.test', quiet: true });
   config({ path: '.env', quiet: true });
+  await assertTestDatabaseLeaseClaim(process.env);
   const databaseUrl = process.env.DATABASE_URL_TEST;
   if (!isIsolatedPinnedTestDatabaseUrl(databaseUrl)) {
     throw new Error('Pinned browser verification requires a local loopback ba_helper_test database.');

@@ -16,6 +16,7 @@ import { summarizePinnedScanDiagnostics } from './pinned-proof-diagnostics';
 import { scanPinnedRepository } from './pinned-proof-scan';
 import { measurePinnedProjections } from './pinned-proof-projections';
 import { evaluatePinnedTestTrace } from '../tests/evaluation/pinned-test-trace.evaluator';
+import { assertTestDatabaseLeaseClaim } from '../apps/api/test/e2e/helpers/test-database-lease';
 
 const PINNED_COMMIT = 'b49ae92a6c0b0db39b6542338a2ffea3eda15717';
 const CORPUS_URL = 'https://github.com/leosuncin/nest-api-example';
@@ -72,6 +73,7 @@ async function persistPinnedScan(prisma: PrismaService, userId: string,
 
 async function main(): Promise<void> {
   const root = requirePinnedInputs();
+  await assertTestDatabaseLeaseClaim(process.env);
   const toolCommitSha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
   const toolWorkingTreeDirty = Boolean(execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim());
   const prisma = new PrismaService();

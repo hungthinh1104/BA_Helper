@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { parseVerifyArguments } from './arguments';
 import { classifyChanges } from './classification';
-import { collectChangedPaths, parsePorcelain } from './git-changes';
+import { collectChangedPaths, diffFingerprint, parsePorcelain } from './git-changes';
 import { createCommands } from './plan';
 import { resolveRelatedCommands, type RunControl } from './runner';
 import { chooseRelatedTestPaths } from './selection';
@@ -92,6 +92,22 @@ describe('verify-change CLI and selector', () => {
     }
   });
 
+  it('changes the candidate fingerprint when a clean checkout advances to another commit', () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), 'verify change head '));
+    try {
+      git(root, ['init', '-q']);
+      git(root, ['config', 'user.email', 'verify-change@example.test']);
+      git(root, ['config', 'user.name', 'Verify Change Test']);
+      writeFileSync(path.join(root, 'source.ts'), 'source\n');
+      git(root, ['add', '.']); git(root, ['commit', '-qm', 'first']);
+      const first = diffFingerprint(root, []);
+      git(root, ['commit', '--allow-empty', '-qm', 'second']);
+      expect(diffFingerprint(root, [])).not.toBe(first);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it.each([
     ['backend service', 'apps/api/src/modules/review/decision.service.ts', 'backend'],
     ['shared contract', 'packages/contracts/src/analysis.contract.ts', 'contracts'],
@@ -124,6 +140,23 @@ describe('verify-change CLI and selector', () => {
     expect(planFor('apps/worker/src/queue/scan.processor.ts')).toContain('worker-recovery-e2e');
     expect(planFor('packages/analyzer/src/graph/test-trace.ts')).toContain('analyzer-suite');
     expect(planFor('apps/web/src/components/workspace/review-panel.tsx')).toContain('browser-journeys');
+  });
+
+  it('keeps critical trust integration suites mandatory beside related unit tests', () => {
+    const root = process.cwd();
+    const output = path.join(os.tmpdir(), 'verify change reports');
+    const files = [
+      'apps/api/src/modules/auth/application/roles.guard.ts',
+      'apps/api/src/modules/document/application/finalize-report.usecase.ts',
+      'packages/backend-runtime/src/scanner/application/scan-persistence.ts',
+    ];
+    const commands = createCommands(root, 'affected', classifyChanges(files.map((file) => ({ path: file, kind: 'modified' as const, source: 'explicit' as const }))), files.map((file) => ({ path: file, kind: 'modified' as const, source: 'explicit' as const })), output);
+    const integration = commands.find((command) => command.id === 'critical-trust-e2e');
+    expect(integration?.args).toEqual(expect.arrayContaining([
+      'apps/api/test/e2e/auth-rbac.e2e-spec.ts',
+      'apps/api/test/e2e/final-reviewed-report.audit-flow.e2e-spec.ts',
+      'apps/api/test/e2e/scan-job-repository-scope.e2e-spec.ts',
+    ]));
   });
 
   it('maps the code-evidence navigator to the comprehension browser journey', () => {

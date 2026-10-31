@@ -94,6 +94,11 @@ evidence requirements.
 - [ ] Separate web/API deploy changes keep `NEXT_PUBLIC_API_URL`,
       `CORS_ALLOWED_ORIGINS`, and workspace bootstrap behavior explicit and
       documented.
+- [ ] Verification report records candidate HEAD, complete working-tree
+      fingerprint, native report validity, exact inventory approval, skip
+      differences, and release eligibility separately from scoped success.
+- [ ] Database/browser mutations used explicit local test targets and a live
+      advisory lease; rejected operations performed no mutation.
 
 When applicable:
 

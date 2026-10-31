@@ -23,8 +23,8 @@ export function createFullCommands(root: string, evidenceDirectory: string): Com
   add('dependency-audit', ['verify:dependencies'], 'Production dependency vulnerability gate.');
   add('prisma-validate', ['--dir', 'apps/api', 'exec', 'prisma', 'validate', '--config', 'prisma.config.ts', '--schema', 'prisma/schema.prisma'], 'Validate the candidate schema.', ['test-targets']);
   add('prisma-generate', ['--dir', 'apps/api', 'exec', 'prisma', 'generate', '--config', 'prisma.config.ts', '--schema', 'prisma/schema.prisma'], 'Generate the client from the candidate schema.', ['test-targets']);
-  add('migrate-test-target', ['--dir', 'apps/api', 'exec', 'prisma', 'migrate', 'deploy', '--config', 'prisma.config.ts', '--schema', 'prisma/schema.prisma'], 'Apply migrations only to the validated test database.', ['test-targets']);
-  add('early-seed-check', ['--dir', 'apps/api', 'seed:demo'], 'Surface seed transform/configuration defects immediately after migrations.', ['test-targets']);
+  add('migrate-test-target', ['db:test:migrate'], 'Apply migrations only to the validated test database under the advisory lease.', ['test-targets']);
+  add('early-seed-check', ['db:test:seed-demo'], 'Surface seed transform/configuration defects immediately after migrations.', ['test-targets']);
   add('migration-upgrade', ['verify:migration-upgrade'], 'Verify migration upgrade and historical data survival.', ['test-targets', 'migration-target']);
   add('domain-packs', ['verify:domain-packs'], 'Verify governed domain-pack inputs.');
   commands.push(jest(root, 'scan-source-omission-analyzer', 'jest.analyzer.config.ts', ['packages/analyzer/tests/scanner/core/safe-file-enumerator.spec.ts'], evidenceDirectory, false, 'CI source omission regression.'));
@@ -61,7 +61,7 @@ export function createFullCommands(root: string, evidenceDirectory: string): Com
     requires: ['test-targets', 'browser'], reportPath: path.join(evidenceDirectory, 'browser-journeys.json'),
     env: { VERIFY_CHANGE_PLAYWRIGHT_REPORT: path.join(evidenceDirectory, 'browser-journeys.json') },
   });
-  add('final-demo-seed', ['--dir', 'apps/api', 'seed:demo'], 'Restore demo identity after tests reset the test database, before pinned proofs.', ['test-targets']);
+  add('final-demo-seed', ['db:test:seed-demo'], 'Restore demo identity after tests reset the test database, before pinned proofs.', ['test-targets']);
   add('pinned-comprehension', ['prove:pinned-comprehension'], 'Verify the immutable pinned repository proof.', ['test-targets', 'pinned-corpus']);
   add('pinned-comprehension-browser', ['verify:pinned-comprehension-browser'], 'Verify the pinned proof through the browser journey.', ['test-targets', 'pinned-corpus', 'browser']);
   return commands;
@@ -123,7 +123,50 @@ function createAffectedCommands(root: string, level: VerificationLevel, classifi
     commands.push(e2eCommand('api-e2e', [], 'API E2E changes run the serial E2E suite.', evidenceDirectory));
   }
   if (areas.has('frontend')) commands.push(...frontendCommands(root, changes, evidenceDirectory, false));
+  const criticalSuites = criticalTrustSuites(changes);
+  if (criticalSuites.length > 0) {
+    commands.push(e2eCommand('critical-trust-e2e', ['--runTestsByPath', ...criticalSuites],
+      'Authorization, review/report, and repository/evidence changes require their mapped integration suites even when related unit tests exist.', evidenceDirectory));
+  }
   return commands;
+}
+
+const CRITICAL_TRUST_E2E: Record<string, string[]> = {
+  auth: [
+    'apps/api/test/e2e/auth-rbac.e2e-spec.ts',
+    'apps/api/test/e2e/project-resource-authorization.e2e-spec.ts',
+    'apps/api/test/e2e/project-role-permissions.e2e-spec.ts',
+  ],
+  review: [
+    'apps/api/test/e2e/review-decision.e2e-spec.ts',
+    'apps/api/test/e2e/review-item-decision.e2e-spec.ts',
+    'apps/api/test/e2e/review-audit-atomicity.e2e-spec.ts',
+  ],
+  report: [
+    'apps/api/test/e2e/final-reviewed-report.audit-flow.e2e-spec.ts',
+    'apps/api/test/e2e/review-audit-atomicity.e2e-spec.ts',
+  ],
+  provenance: [
+    'apps/api/test/e2e/evidence-artifact-snapshot-scope.e2e-spec.ts',
+    'apps/api/test/e2e/scan-job-repository-scope.e2e-spec.ts',
+    'apps/api/test/e2e/code-comprehension.e2e-spec.ts',
+  ],
+};
+
+function criticalTrustSuites(changes: ChangedPath[]): string[] {
+  const selected = new Set<string>();
+  for (const change of changes) {
+    const file = change.path.toLowerCase();
+    if (!/^apps\/api\/src\/|^packages\/(?:backend-runtime|application)\//.test(file)) continue;
+    const segments = file.split('/');
+    if (segments.some((segment) => /auth|permission|authorization/.test(segment))) CRITICAL_TRUST_E2E.auth.forEach((path) => selected.add(path));
+    if (segments.some((segment) => /review|finaliz/.test(segment))) CRITICAL_TRUST_E2E.review.forEach((path) => selected.add(path));
+    if (segments.some((segment) => /document|report|export/.test(segment))) CRITICAL_TRUST_E2E.report.forEach((path) => selected.add(path));
+    if (segments.some((segment) => /repository|snapshot|evidence|traceability|artifact|scanner|scan/.test(segment))) {
+      CRITICAL_TRUST_E2E.provenance.forEach((path) => selected.add(path));
+    }
+  }
+  return [...selected].sort();
 }
 
 function analyzerCommands(root: string, output: string): CommandSpec[] {
@@ -160,6 +203,7 @@ function frontendCommands(root: string, changes: ChangedPath[], output: string, 
     id: 'browser-journeys', executable: 'playwright', args,
     reason: all ? 'No specific UI journey mapping exists; run the complete serial browser suite.' : `Mapped browser groups: ${[...groups].sort().join(', ') || 'explicit UI test paths'}.`,
     requires: ['test-targets', 'browser'], reportPath: path.join(output, 'browser-journeys.json'),
+    env: { VERIFY_CHANGE_PLAYWRIGHT_REPORT: path.join(output, 'browser-journeys.json') },
   }];
 }
 

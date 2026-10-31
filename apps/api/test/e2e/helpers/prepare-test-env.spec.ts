@@ -5,13 +5,18 @@ import { configureIsolatedE2EEnvironment } from './test-environment';
 jest.mock('dotenv', () => ({ config: jest.fn() }));
 jest.mock('node:child_process', () => ({ execFileSync: jest.fn() }));
 jest.mock('pg', () => ({ Client: jest.fn() }));
+jest.mock('./test-database-lease', () => ({
+  assertTestDatabaseLeaseClaim: jest.fn().mockResolvedValue(undefined),
+}));
 
 describe('E2E database preparation', () => {
   const initialEnv = { ...process.env };
   const databaseUrl = 'postgresql://test:test@localhost:5432/ba_helper_test';
   const client = {
     connect: jest.fn().mockResolvedValue(undefined),
-    query: jest.fn().mockResolvedValue({ rowCount: 1 }),
+    query: jest.fn().mockImplementation(async (sql: string) => sql.includes('current_database')
+      ? { rowCount: 1, rows: [{ database: 'ba_helper_test', port: 5432 }] }
+      : { rowCount: 1, rows: [] }),
     end: jest.fn().mockResolvedValue(undefined),
   };
 
@@ -24,6 +29,10 @@ describe('E2E database preparation', () => {
     delete process.env.REDIS_URL;
     delete process.env.REDIS_URL_TEST;
     delete process.env.BA_HELPER_DEVELOPMENT_REDIS_URL;
+    process.env.BA_HELPER_TEST_DATABASE_IDENTITY = 'localhost:5432/ba_helper_test';
+    process.env.BA_HELPER_TEST_LEASE_ID = '12345678-1234-4234-8234-123456789abc';
+    process.env.BA_HELPER_TEST_LEASE_PID = '4321';
+    process.env.BA_HELPER_TEST_LEASE_APP_NAME = 'ba-helper-test-lease-12345678-1234-4234-8234-123456789abc';
     const pg = await import('pg');
     jest.mocked(pg.Client).mockImplementation(() => client as unknown as Client);
   });
@@ -35,6 +44,7 @@ describe('E2E database preparation', () => {
       REDIS_URL: 'redis://localhost:6379/0',
       REDIS_URL_TEST: 'redis://localhost:6379/1',
       DATABASE_URL_TEST: databaseUrl,
+      BA_HELPER_TEST_DATABASE_IDENTITY: 'localhost:5432/ba_helper_test',
       AI_PROVIDER: 'openai',
       EMBEDDING_PROVIDER: 'google',
     };

@@ -11,13 +11,14 @@ import { createCommands } from './lib/verify-change/plan';
 import { collectNativeDiscoveryInventory, resolveRelatedCommands, runCommands, type DiscoveryInventory, type RunControl, type RunPrerequisites } from './lib/verify-change/runner';
 import type { CheckResult, CommandSpec, VerifyArguments } from './lib/verify-change/types';
 import { validateTestTargets } from '../apps/api/test/e2e/helpers/test-target-safety';
+import { acquireTestDatabaseLease, type TestDatabaseLease } from '../apps/api/test/e2e/helpers/test-database-lease';
 import { chromium } from '@playwright/test';
 
 const EXPECTED_NODE = 'v22.23.3';
 const EXPECTED_PNPM = '11.28.6';
 
 interface VerificationReport {
-  schemaVersion: 1;
+  schemaVersion: 2;
   status: 'PLANNED' | 'RUNNING' | 'READY' | 'PARTIAL' | 'BLOCKED';
   phase: 'preflight' | 'discovery' | 'selection' | 'execution' | 'finished';
   pendingCommands: string[];
@@ -39,6 +40,8 @@ interface VerificationReport {
   ownedChildren: number[];
   sourceChangedDuringRun?: boolean;
   gaps: string[];
+  releaseEligibility: 'SCOPED_ONLY' | 'NOT_ESTABLISHED';
+  evidenceValidation: { nativeReportsValidated: number; invalidNativeReports: string[]; skipDifferences: string[]; fallbackSuites: string[] };
 }
 
 async function main(): Promise<number> {
@@ -56,6 +59,8 @@ async function main(): Promise<number> {
   const checks: CheckResult[] = [];
   const abortController = new AbortController();
   const ownedChildren = new Set<number>();
+  let expectedFingerprint = '';
+  let sourceInvalidated = false;
   let reportWriteQueue = Promise.resolve();
   let interrupted = false;
   const onSigint = () => { interrupted = true; abortController.abort(); };
@@ -65,6 +70,8 @@ async function main(): Promise<number> {
   let discovery: DiscoveryInventory | undefined;
   const gaps: string[] = [];
   let report!: VerificationReport;
+  let lease: TestDatabaseLease | undefined;
+  let leaseMonitor: NodeJS.Timeout | undefined;
   const persistReport = async (): Promise<void> => {
     if (!report) return;
     report.ownedChildren = [...ownedChildren];
@@ -75,6 +82,20 @@ async function main(): Promise<number> {
   const control: RunControl = {
     signal: abortController.signal, checks, reportPath,
     ownedChildren,
+    isSourceStable: () => {
+      if (!expectedFingerprint) return true;
+      try { return diffFingerprint(root, collectChangedPaths(root, undefined, args.base)) === expectedFingerprint; }
+      catch { return false; }
+    },
+    invalidateSource: () => {
+      if (sourceInvalidated) return;
+      sourceInvalidated = true;
+      if (report) report.sourceChangedDuringRun = true;
+      if (!gaps.includes('Candidate source changed while verification was active; remaining child processes were stopped and run evidence is invalid.')) {
+        gaps.push('Candidate source changed while verification was active; remaining child processes were stopped and run evidence is invalid.');
+      }
+      abortController.abort();
+    },
     onChange: async () => {
       const interruptedCheck = checks.some((item) => item.status === 'INTERRUPTED' || item.exitCode === 130 || item.exitCode === 143);
       if (interruptedCheck) {
@@ -92,6 +113,7 @@ async function main(): Promise<number> {
     const head = execGit(root, ['rev-parse', 'HEAD']).trim();
     const branch = execGit(root, ['branch', '--show-current']).trim();
     const fingerprint = diffFingerprint(root, allChanges);
+    expectedFingerprint = fingerprint;
     const pnpmCli = process.env.npm_execpath;
     const pnpmVersion = pnpmCli && existsSync(pnpmCli) ? runVersion(process.execPath, [pnpmCli, '--version']) : null;
     const toolchainReady = process.version === EXPECTED_NODE && pnpmVersion === EXPECTED_PNPM;
@@ -105,6 +127,7 @@ async function main(): Promise<number> {
     const testEnvironment = testTargets ? {
       DATABASE_URL: process.env.DATABASE_URL_TEST!,
       DATABASE_URL_TEST: process.env.DATABASE_URL_TEST!,
+      BA_HELPER_TEST_DATABASE_IDENTITY: process.env.BA_HELPER_TEST_DATABASE_IDENTITY!,
       REDIS_URL: process.env.REDIS_URL_TEST!,
       REDIS_URL_TEST: process.env.REDIS_URL_TEST!,
       BA_HELPER_DEVELOPMENT_REDIS_URL: process.env.BA_HELPER_DEVELOPMENT_REDIS_URL || process.env.REDIS_URL || 'redis://localhost:6379/0',
@@ -112,12 +135,12 @@ async function main(): Promise<number> {
     } : undefined;
     const prerequisites: RunPrerequisites = {
       testTargetsReady: Boolean(testTargets),
-      migrationTargetReady: Boolean(testTargets && ['localhost', '127.0.0.1', '::1'].includes(testTargets.database.host) && testTargets.database.name === 'ba_helper_test'),
+      migrationTargetReady: Boolean(testTargets && testTargets.database.host === 'localhost' && testTargets.database.port === 5432 && testTargets.database.name === 'ba_helper_test'),
       dockerReady, browserReady, pinnedCorpusReady: existsSync(corpusPath),
       toolchainReady, testEnvironment, pnpmCli,
     };
     report = {
-      schemaVersion: 1, status: args.plan ? 'PLANNED' : 'RUNNING', phase: 'preflight', pendingCommands: [], startedAt: new Date().toISOString(),
+      schemaVersion: 2, status: args.plan ? 'PLANNED' : 'RUNNING', phase: 'preflight', pendingCommands: [], startedAt: new Date().toISOString(),
       source: { head, branch, diffFingerprint: fingerprint, baseline: args.base },
       toolchain: { node: process.version, pnpm: pnpmVersion, expectedNode: EXPECTED_NODE, expectedPnpm: EXPECTED_PNPM, ready: toolchainReady },
       level: effectiveLevel, explicitScope: Boolean(args.files),
@@ -126,11 +149,13 @@ async function main(): Promise<number> {
       prerequisites: {
         testTargets: testTargets ? { status: 'READY', database: testTargets.database, redis: testTargets.redis } : { status: 'BLOCKED', detail: testTargetError },
         docker: dockerReady ? 'READY' : 'BLOCKED', pinnedCorpus: { path: corpusPath, status: existsSync(corpusPath) ? 'READY' : 'BLOCKED' },
-        migrationTarget: testTargets && ['localhost', '127.0.0.1', '::1'].includes(testTargets.database.host) && testTargets.database.name === 'ba_helper_test' ? 'READY' : 'BLOCKED',
+        migrationTarget: testTargets && testTargets.database.host === 'localhost' && testTargets.database.port === 5432 && testTargets.database.name === 'ba_helper_test' ? 'READY' : 'BLOCKED',
         browser: { status: browserReady ? 'READY' : 'BLOCKED', executable: browserExecutable },
         toolchain: toolchainReady ? 'READY' : 'BLOCKED',
       },
       plannedCommands: [], checks, interrupted: false, ownedChildren: [], gaps,
+      releaseEligibility: effectiveLevel === 'full' ? 'NOT_ESTABLISHED' : 'SCOPED_ONLY',
+      evidenceValidation: { nativeReportsValidated: 0, invalidNativeReports: [], skipDifferences: [], fallbackSuites: [] },
     };
     await persistReport();
 
@@ -147,12 +172,22 @@ async function main(): Promise<number> {
     if (args.plan || effectiveLevel === 'full') {
       discovery = await collectNativeDiscoveryInventory(root, control, prerequisites.testTargetsReady);
       report.discovery = discovery;
-      if (discovery.parity !== 'PASS') gaps.push(`Native test discovery parity: ${discovery.parity}.`);
+      if (discovery.parity !== 'PASS') {
+        checks.push({
+          id: 'test-inventory-parity', command: 'native Jest and Playwright inventory comparison',
+          reason: 'Exact test membership must match the explicitly approved baseline.',
+          status: discovery.parity === 'BLOCKED' ? 'BLOCKED' : 'FAIL', startedAt: new Date().toISOString(),
+          durationMs: 0, exitCode: discovery.parity === 'BLOCKED' ? null : 1,
+          evidence: path.join(evidenceDirectory, 'discovery-inventory.json'),
+          details: `Inventory approval is ${discovery.approvalStatus}; parity is ${discovery.parity}. Review the recorded exact-path differences.`,
+        });
+        await control.onChange();
+      }
     }
     report.phase = 'selection';
     report.pendingCommands = ['related-test selection'];
     await persistReport();
-    const selection = await resolveRelatedCommands(commands, root, control);
+    const selection = await resolveRelatedCommands(commands, root, control, prerequisites.testTargetsReady);
     commands = selection.commands;
     gaps.push(...selection.gaps);
     if (gaps.length > 0) {
@@ -171,11 +206,43 @@ async function main(): Promise<number> {
 
     let exitCode = 0;
     if (!args.plan) {
-      exitCode = await runCommands(commands, root, prerequisites, control);
+      const needsLease = commands.some((command) => command.requires?.includes('test-targets'));
+      if (needsLease && prerequisites.testTargetsReady) {
+        try {
+          lease = await acquireTestDatabaseLease(process.env);
+          Object.assign(prerequisites.testEnvironment ?? {}, lease.environment);
+          await writeFile(path.join(evidenceDirectory, 'test-database-lease.json'), `${JSON.stringify({
+            status: 'ACQUIRED', target: testTargets ? `${testTargets.database.host}:${testTargets.database.port}/${testTargets.database.name}` : 'unknown',
+            ownerPid: lease.environment.BA_HELPER_TEST_LEASE_PID, ownerApplication: lease.environment.BA_HELPER_TEST_LEASE_APP_NAME,
+          }, null, 2)}\n`, 'utf8');
+          checks.push({ id: 'test-database-lease', command: 'PostgreSQL advisory lease', reason: 'Serialize all destructive local test database and browser invocations.', status: 'PASS', startedAt: new Date().toISOString(), durationMs: 0, exitCode: 0, evidence: path.join(evidenceDirectory, 'test-database-lease.json') });
+          leaseMonitor = setInterval(() => {
+            void lease?.assertHeld().catch(() => {
+              if (abortController.signal.aborted) return;
+              gaps.push('PostgreSQL advisory lease was lost; all owned child processes were stopped.');
+              checks.push({ id: 'test-database-lease', command: 'PostgreSQL advisory lease heartbeat', reason: 'Lease loss invalidates destructive verification.', status: 'FAIL', startedAt: new Date().toISOString(), durationMs: 0, exitCode: 1 });
+              abortController.abort();
+            });
+          }, 2000);
+          leaseMonitor.unref();
+        } catch (error) {
+          prerequisites.testTargetsReady = false;
+          checks.push({ id: 'test-database-lease', command: 'PostgreSQL advisory lease', reason: 'Acquire one exclusive lease before test database or browser mutation.', status: 'FAIL', startedAt: new Date().toISOString(), durationMs: 0, exitCode: 1, details: safeError(error) });
+          exitCode = 1;
+        }
+      }
+      // Keep the planned checks visible even when the exclusive database lease
+      // cannot be acquired. runCommands records target-dependent checks as
+      // BLOCKED while still allowing independent checks to complete.
+      const commandExitCode = await runCommands(commands, root, prerequisites, control);
+      if (exitCode === 0) exitCode = commandExitCode;
       if (gaps.length > 0 && exitCode === 0) exitCode = 1;
+      if (checks.some((item) => item.status === 'BLOCKED' || item.status === 'FAIL' || item.status === 'INTERRUPTED') && exitCode === 0) {
+        exitCode = 1;
+      }
     }
     const latestChanges = collectChangedPaths(root, undefined, args.base);
-    report.sourceChangedDuringRun = diffFingerprint(root, latestChanges) !== fingerprint;
+    report.sourceChangedDuringRun = sourceInvalidated || diffFingerprint(root, latestChanges) !== fingerprint;
     if (report.sourceChangedDuringRun) {
       gaps.push('Candidate diff changed while checks were running; affected results are not current.');
       if (exitCode === 0) exitCode = 2;
@@ -184,6 +251,7 @@ async function main(): Promise<number> {
     report.interrupted ||= interrupted;
     report.phase = 'finished';
     report.pendingCommands = [];
+    report.evidenceValidation = summarizeEvidence(checks);
     if (args.plan) report.status = 'PLANNED';
     else if (report.interrupted || report.sourceChangedDuringRun || checks.some((item) => item.status === 'BLOCKED')) report.status = 'BLOCKED';
     else if (checks.some((item) => item.status === 'FAIL' || item.status === 'INTERRUPTED')) report.status = 'PARTIAL';
@@ -200,7 +268,22 @@ async function main(): Promise<number> {
       if (!interrupted && report.phase !== 'finished') report.status = 'RUNNING';
       await persistReport();
     }
+    if (leaseMonitor) clearInterval(leaseMonitor);
+    await lease?.release().catch((error: unknown) => {
+      gaps.push(`PostgreSQL advisory lease release failed: ${safeError(error)}`);
+    });
   }
+}
+
+function summarizeEvidence(checks: CheckResult[]): VerificationReport['evidenceValidation'] {
+  const native = checks.filter((check) => check.evidence && /\.json$/i.test(check.evidence) &&
+    (check.id.includes('browser') || check.id.includes('tests') || check.id.includes('e2e') || check.id.includes('golden-path') || check.id.includes('retrieval')));
+  return {
+    nativeReportsValidated: native.filter((check) => check.status === 'PASS' && check.evidence).length,
+    invalidNativeReports: native.filter((check) => check.status === 'FAIL' && check.evidence).map((check) => check.id),
+    skipDifferences: native.filter((check) => check.details?.includes('skip')).map((check) => check.details!),
+    fallbackSuites: checks.filter((check) => check.fallbackUsed).map((check) => check.id),
+  };
 }
 
 async function createEvidenceDirectory(root: string, requested?: string): Promise<string> {
