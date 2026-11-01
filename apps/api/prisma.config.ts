@@ -32,9 +32,13 @@ function assertTestMigrationLease(): void {
 
   const root = path.resolve(__dirname, '..', '..');
   const check = spawnSync(process.execPath, [
-    path.join(root, 'node_modules/tsx/dist/cli.mjs'),
+    '-r', 'ts-node/register/transpile-only',
     path.join(root, 'scripts/assert-test-database-lease.ts'),
-  ], { cwd: root, env: process.env, stdio: 'ignore', shell: false, windowsHide: true, timeout: 10_000 });
+  ], { cwd: root, env: {
+    ...process.env,
+    TS_NODE_PROJECT: path.join(root, 'apps/api/tsconfig.json'),
+    TS_NODE_TRANSPILE_ONLY: 'true',
+  }, stdio: 'ignore', shell: false, windowsHide: true, timeout: 10_000 });
   if (check.status !== 0) throw new Error('A live local test database advisory lease is required before Prisma schema mutation.');
 }
 

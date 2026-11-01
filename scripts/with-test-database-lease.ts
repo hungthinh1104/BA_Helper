@@ -30,19 +30,27 @@ async function main(): Promise<number> {
   const command = resolveLeaseWrappedCommand(process.argv.slice(2), root, process.execPath, process.env.npm_execpath, process.cwd());
   let child: ChildProcess | undefined;
   let stopRequested = false;
+  let requestedSignal: NodeJS.Signals | undefined;
   let lostLease = false;
+  let terminatePromise: Promise<void> | undefined;
+  let heartbeatPromise = Promise.resolve();
   const stop = (signal: NodeJS.Signals) => {
     stopRequested = true;
-    if (child) terminateOwned(child, signal);
+    requestedSignal = signal;
+    if (child) terminatePromise ??= terminateOwned(child, signal);
   };
-  process.once('SIGINT', stop);
-  process.once('SIGTERM', stop);
+  const onSigint = () => stop('SIGINT');
+  const onSigterm = () => stop('SIGTERM');
+  process.once('SIGINT', onSigint);
+  process.once('SIGTERM', onSigterm);
   try {
     child = spawn(command.file, command.args, { cwd: command.cwd, env: childEnvironment, shell: false, windowsHide: true, detached: process.platform !== 'win32', stdio: 'inherit' });
+    if (stopRequested) terminatePromise ??= terminateOwned(child, 'SIGINT');
     const heartbeat = setInterval(() => {
-      void assertTestDatabaseLeaseClaim(childEnvironment).catch(() => {
+      heartbeatPromise = assertTestDatabaseLeaseClaim(childEnvironment).catch(async () => {
         lostLease = true;
-        if (child) terminateOwned(child, 'SIGTERM');
+        if (child) terminatePromise ??= terminateOwned(child, 'SIGTERM');
+        await terminatePromise;
       });
     }, 2000);
     heartbeat.unref();
@@ -50,24 +58,43 @@ async function main(): Promise<number> {
       child!.once('error', () => resolve({ code: 127, signal: null }));
       child!.once('close', (code, signal) => resolve({ code: code ?? (signal ? 128 : 1), signal }));
     }).finally(() => clearInterval(heartbeat));
+    await heartbeatPromise;
+    await terminatePromise;
     if (lostLease) throw new Error('Test database lease was lost; the owned child was stopped.');
-    if (stopRequested) return result.signal === 'SIGTERM' ? 143 : 130;
+    if (stopRequested) return requestedSignal === 'SIGTERM' ? 143 : 130;
     return result.code;
   } finally {
-    process.removeListener('SIGINT', stop);
-    process.removeListener('SIGTERM', stop);
+    process.removeListener('SIGINT', onSigint);
+    process.removeListener('SIGTERM', onSigterm);
+    await terminatePromise;
     await release?.();
   }
 }
 
-function terminateOwned(child: ChildProcess, signal: NodeJS.Signals): void {
-  if (!child.pid) return;
+function terminateOwned(child: ChildProcess, signal: NodeJS.Signals): Promise<void> {
+  if (!child.pid || child.exitCode !== null || child.signalCode !== null) return Promise.resolve();
   if (process.platform === 'win32') {
     const taskkill = spawn('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], { shell: false, windowsHide: true, stdio: 'ignore' });
-    taskkill.unref();
-  } else {
-    try { process.kill(-child.pid, signal); } catch { child.kill(signal); }
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = () => { if (!settled) { settled = true; resolve(); } };
+      taskkill.once('error', finish);
+      taskkill.once('close', finish);
+      child.kill();
+    });
   }
+  const closed = new Promise<void>((resolve) => {
+    if (child.exitCode !== null || child.signalCode !== null) return resolve();
+    child.once('close', () => resolve());
+  });
+  try { process.kill(-child.pid, signal); } catch { child.kill(signal); }
+  return Promise.race([closed, new Promise<void>((resolve) => setTimeout(resolve, 3000))])
+    .then(async () => {
+      if (child.exitCode === null && child.signalCode === null) {
+        try { process.kill(-child.pid!, 'SIGKILL'); } catch { child.kill('SIGKILL'); }
+        await closed;
+      }
+    });
 }
 
 main().then((code) => { process.exitCode = code; }).catch((error: unknown) => {

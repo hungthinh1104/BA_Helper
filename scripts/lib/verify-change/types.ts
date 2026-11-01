@@ -42,6 +42,13 @@ export interface CommandSpec {
   dependsOn?: string[];
   selection?: RelatedTestSelection;
   reportPath?: string;
+  logPath?: string;
+  nativeExpectation?: {
+    runner: 'jest' | 'playwright';
+    files: string[];
+    cases?: Array<{ file: string; title: string; project?: string }>;
+    discoveryError?: string;
+  };
 }
 
 export interface CheckResult {
@@ -57,4 +64,11 @@ export interface CheckResult {
   details?: string;
   skips?: string[];
   fallbackUsed?: boolean;
+  nativeEvidence?: {
+    expectedExecution: { runner: 'jest' | 'playwright'; files: string[]; cases: number | null };
+    observedExecution: { files: string[]; cases: number; executedCases: number; skippedCases: number };
+    skipExpectations: Array<{ identity: string; state: 'SKIP_REQUIRED' | 'EXECUTION_REQUIRED'; observed: 'SKIPPED' | 'EXECUTED' | 'MISSING' }>;
+    retryFailures: Array<{ identity: string; failedAttempts: number; finalStatus: string }>;
+    qualificationReasons: string[];
+  };
 }

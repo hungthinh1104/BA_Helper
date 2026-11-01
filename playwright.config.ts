@@ -59,7 +59,7 @@ if (queuePrefixIsGenerated) {
 
 const webServers = [
   {
-    command: `${NODE_COMMAND} ../../node_modules/tsx/dist/cli.mjs ../../scripts/assert-test-database-lease.ts && ${NODE_COMMAND} node_modules/prisma/build/index.js migrate deploy --config prisma.config.ts && ${NODE_COMMAND} -r ts-node/register -r tsconfig-paths/register src/main.ts`,
+    command: `${NODE_COMMAND} -r ts-node/register/transpile-only ../../scripts/assert-test-database-lease.ts && ${NODE_COMMAND} node_modules/prisma/build/index.js migrate deploy --config prisma.config.ts && ${NODE_COMMAND} -r ts-node/register -r tsconfig-paths/register src/main.ts`,
     cwd: 'apps/api',
     env: {
       PORT: API_PORT,
@@ -94,7 +94,7 @@ const webServers = [
 
 const reporters: ReporterDescription[] = [
   ['list'],
-  ['html', { outputFolder: './e2e/.artifacts/report', open: 'never' }],
+  ['html', { outputFolder: process.env.VERIFY_CHANGE_PLAYWRIGHT_HTML_DIR ?? './e2e/.artifacts/report', open: 'never' }],
 ]
 if (process.env.VERIFY_CHANGE_PLAYWRIGHT_REPORT) {
   reporters.push(['json', { outputFile: process.env.VERIFY_CHANGE_PLAYWRIGHT_REPORT }])
@@ -104,7 +104,7 @@ export default defineConfig({
   globalSetup: './scripts/playwright-test-db-lease-global-setup.ts',
   testDir: './e2e',
   testMatch: '**/*.pw.ts',
-  outputDir: './e2e/.artifacts/test-results',
+  outputDir: process.env.VERIFY_CHANGE_PLAYWRIGHT_OUTPUT_DIR ?? './e2e/.artifacts/test-results',
   timeout: 120_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,

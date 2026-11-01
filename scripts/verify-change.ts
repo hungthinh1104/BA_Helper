@@ -18,7 +18,7 @@ const EXPECTED_NODE = 'v22.23.3';
 const EXPECTED_PNPM = '11.28.6';
 
 interface VerificationReport {
-  schemaVersion: 2;
+  schemaVersion: 3;
   status: 'PLANNED' | 'RUNNING' | 'READY' | 'PARTIAL' | 'BLOCKED';
   phase: 'preflight' | 'discovery' | 'selection' | 'execution' | 'finished';
   pendingCommands: string[];
@@ -41,7 +41,17 @@ interface VerificationReport {
   sourceChangedDuringRun?: boolean;
   gaps: string[];
   releaseEligibility: 'SCOPED_ONLY' | 'NOT_ESTABLISHED';
-  evidenceValidation: { nativeReportsValidated: number; invalidNativeReports: string[]; skipDifferences: string[]; fallbackSuites: string[] };
+  evidenceValidation: {
+    nativeReportsValidated: number;
+    invalidNativeReports: string[];
+    skipDifferences: string[];
+    fallbackSuites: string[];
+    expectedExecution: Array<{ checkId: string; runner: 'jest' | 'playwright'; files: string[]; cases: number | null }>;
+    observedExecution: Array<{ checkId: string; files: string[]; cases: number; executedCases: number; skippedCases: number }>;
+    skipExpectations: Array<{ checkId: string; identity: string; state: 'SKIP_REQUIRED' | 'EXECUTION_REQUIRED'; observed: 'SKIPPED' | 'EXECUTED' | 'MISSING' }>;
+    retryFailures: Array<{ checkId: string; identity: string; failedAttempts: number; finalStatus: string }>;
+    qualificationReasons: Array<{ checkId: string; reason: string }>;
+  };
 }
 
 async function main(): Promise<number> {
@@ -140,7 +150,7 @@ async function main(): Promise<number> {
       toolchainReady, testEnvironment, pnpmCli,
     };
     report = {
-      schemaVersion: 2, status: args.plan ? 'PLANNED' : 'RUNNING', phase: 'preflight', pendingCommands: [], startedAt: new Date().toISOString(),
+      schemaVersion: 3, status: args.plan ? 'PLANNED' : 'RUNNING', phase: 'preflight', pendingCommands: [], startedAt: new Date().toISOString(),
       source: { head, branch, diffFingerprint: fingerprint, baseline: args.base },
       toolchain: { node: process.version, pnpm: pnpmVersion, expectedNode: EXPECTED_NODE, expectedPnpm: EXPECTED_PNPM, ready: toolchainReady },
       level: effectiveLevel, explicitScope: Boolean(args.files),
@@ -155,7 +165,8 @@ async function main(): Promise<number> {
       },
       plannedCommands: [], checks, interrupted: false, ownedChildren: [], gaps,
       releaseEligibility: effectiveLevel === 'full' ? 'NOT_ESTABLISHED' : 'SCOPED_ONLY',
-      evidenceValidation: { nativeReportsValidated: 0, invalidNativeReports: [], skipDifferences: [], fallbackSuites: [] },
+      evidenceValidation: { nativeReportsValidated: 0, invalidNativeReports: [], skipDifferences: [], fallbackSuites: [],
+        expectedExecution: [], observedExecution: [], skipExpectations: [], retryFailures: [], qualificationReasons: [] },
     };
     await persistReport();
 
@@ -283,6 +294,11 @@ function summarizeEvidence(checks: CheckResult[]): VerificationReport['evidenceV
     invalidNativeReports: native.filter((check) => check.status === 'FAIL' && check.evidence).map((check) => check.id),
     skipDifferences: native.filter((check) => check.details?.includes('skip')).map((check) => check.details!),
     fallbackSuites: checks.filter((check) => check.fallbackUsed).map((check) => check.id),
+    expectedExecution: checks.flatMap((check) => check.nativeEvidence ? [{ checkId: check.id, ...check.nativeEvidence.expectedExecution }] : []),
+    observedExecution: checks.flatMap((check) => check.nativeEvidence ? [{ checkId: check.id, ...check.nativeEvidence.observedExecution }] : []),
+    skipExpectations: checks.flatMap((check) => check.nativeEvidence?.skipExpectations.map((expectation) => ({ checkId: check.id, ...expectation })) ?? []),
+    retryFailures: checks.flatMap((check) => check.nativeEvidence?.retryFailures.map((failure) => ({ checkId: check.id, ...failure })) ?? []),
+    qualificationReasons: checks.flatMap((check) => check.nativeEvidence?.qualificationReasons.map((reason) => ({ checkId: check.id, reason })) ?? []),
   };
 }
 

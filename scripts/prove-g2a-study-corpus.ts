@@ -15,6 +15,8 @@ import { GetCodeComprehensionUseCase } from '../apps/api/src/modules/artifact/ap
 import { installQueryMeter } from './pinned-comprehension-query-meter';
 import { isIsolatedPinnedTestDatabaseUrl } from './pinned-proof-environment';
 import { verifyPersistedPinnedProjections } from './verify-pinned-comprehension-provenance';
+import { assertTestDatabaseLeaseClaim } from '../apps/api/test/e2e/helpers/test-database-lease';
+import { validateTestTargets } from '../apps/api/test/e2e/helpers/test-target-safety';
 import { scanPinnedRepository } from './pinned-proof-scan';
 import { CORPUS_SHA, CORPUS_URL, OUTPUT, sourceIdentities, summarizeValues, taskTestEvidence,
   verifyCorpus, type StudyTask } from './g2a-study-corpus-support';
@@ -49,6 +51,8 @@ async function persistScan(prisma: PrismaService, userId: string,
 
 async function main(): Promise<void> {
   config({ path: '.env.test', quiet: true });
+  validateTestTargets(process.env);
+  await assertTestDatabaseLeaseClaim(process.env);
   const databaseUrl = process.env.DATABASE_URL_TEST;
   if (!isIsolatedPinnedTestDatabaseUrl(databaseUrl)) {
     throw new Error('G2A persistence proof requires DATABASE_URL_TEST on loopback with database ba_helper_test.');

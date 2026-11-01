@@ -64,27 +64,53 @@ function runOwnedChild(command: string, args: string[], env: NodeJS.ProcessEnv, 
   return new Promise((resolve) => {
     const child = spawn(command, args, { cwd, env, shell: false, stdio: 'inherit', windowsHide: true, detached: process.platform !== 'win32' });
     let interrupted = false;
+    let requestedSignal: NodeJS.Signals | undefined;
     let spawnFailed = false;
+    let termination: Promise<void> | undefined;
     const stop = (signal: NodeJS.Signals) => {
       interrupted = true;
-      if (child.pid) {
-        if (process.platform === 'win32') {
-          const taskkill = spawn('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true, shell: false });
-          taskkill.unref();
-        } else {
-          try { process.kill(-child.pid, signal); } catch { child.kill(signal); }
-        }
-      }
+      requestedSignal = signal;
+      termination ??= terminateOwned(child, signal);
     };
-    process.once('SIGINT', stop);
-    process.once('SIGTERM', stop);
+    const onSigint = () => stop('SIGINT');
+    const onSigterm = () => stop('SIGTERM');
+    process.once('SIGINT', onSigint);
+    process.once('SIGTERM', onSigterm);
     child.once('error', () => { spawnFailed = true; });
-    child.once('exit', (code, signal) => {
-      process.removeListener('SIGINT', stop);
-      process.removeListener('SIGTERM', stop);
-      resolve(interrupted ? (signal === 'SIGTERM' ? 143 : 130) : spawnFailed ? 127 : code ?? 1);
+    child.once('close', (code, signal) => {
+      void Promise.resolve(termination).finally(() => {
+        process.removeListener('SIGINT', onSigint);
+        process.removeListener('SIGTERM', onSigterm);
+        resolve(interrupted ? (requestedSignal === 'SIGTERM' ? 143 : 130) : spawnFailed ? 127 : code ?? 1);
+      });
     });
   });
+}
+
+function terminateOwned(child: ReturnType<typeof spawn>, signal: NodeJS.Signals): Promise<void> {
+  if (!child.pid || child.exitCode !== null || child.signalCode !== null) return Promise.resolve();
+  if (process.platform === 'win32') {
+    const taskkill = spawn('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true, shell: false });
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = () => { if (!settled) { settled = true; resolve(); } };
+      taskkill.once('error', finish);
+      taskkill.once('close', finish);
+      child.kill();
+    });
+  }
+  const closed = new Promise<void>((resolve) => {
+    if (child.exitCode !== null || child.signalCode !== null) return resolve();
+    child.once('close', () => resolve());
+  });
+  try { process.kill(-child.pid, signal); } catch { child.kill(signal); }
+  return Promise.race([closed, new Promise<void>((resolve) => setTimeout(resolve, 3000))])
+    .then(async () => {
+      if (child.exitCode === null && child.signalCode === null) {
+        try { process.kill(-child.pid!, 'SIGKILL'); } catch { child.kill('SIGKILL'); }
+        await closed;
+      }
+    });
 }
 
 async function persist(file: string, evidence: E2ERunEvidence): Promise<void> {

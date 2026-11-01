@@ -10,6 +10,7 @@ export interface AdvisoryLeaseClient {
   connect(): Promise<void>;
   query<T extends Record<string, unknown> = Record<string, unknown>>(sql: string, values?: unknown[]): Promise<{ rows: T[] }>;
   end(): Promise<void>;
+  on?(event: 'error', listener: (error: Error) => void): void;
 }
 
 export type AdvisoryLeaseClientFactory = (connectionString: string) => AdvisoryLeaseClient;
@@ -31,10 +32,10 @@ export function testDatabaseLeaseClaim(env: NodeJS.ProcessEnv): { id: string; pi
 export async function acquireTestDatabaseLease(env: NodeJS.ProcessEnv, runId = randomUUID(), createClient: AdvisoryLeaseClientFactory = defaultClient): Promise<TestDatabaseLease> {
   const targets = validateTestTargets(env);
   const adminUrl = adminConnectionUrl(env.DATABASE_URL_TEST!);
-  const client = createClient(adminUrl);
-  await client.connect();
+  const client = guardLeaseClient(createClient(adminUrl));
   let released = false;
   try {
+    await client.connect();
     await assertLocalPostgresIdentity(client, targets.database.host, targets.database.port, 'postgres');
     const identity = `${targets.database.host}:${targets.database.port}/${targets.database.name.toLowerCase()}`;
     const lock = await client.query<{ acquired: boolean; pid: number }>(
@@ -54,7 +55,14 @@ export async function acquireTestDatabaseLease(env: NodeJS.ProcessEnv, runId = r
     const lease: TestDatabaseLease = {
       environment,
       assertHeld: async () => {
-        if (released || !(await ownsAdvisoryLease(client, pid, appName))) throw new Error('The local test database lease was lost.');
+        if (released) throw new Error('The local test database lease connection was lost.');
+        let held: boolean;
+        try {
+          held = await ownsAdvisoryLease(client, pid, appName, identity);
+        } catch {
+          throw new Error('The local test database lease connection was lost.');
+        }
+        if (!held) throw new Error('The local test database lease was lost.');
       },
       release: async () => {
         if (released) return;
@@ -67,6 +75,9 @@ export async function acquireTestDatabaseLease(env: NodeJS.ProcessEnv, runId = r
     return lease;
   } catch (error) {
     await client.end().catch(() => undefined);
+    if (error instanceof Error && error.message === 'The local test database lease connection was lost.') {
+      throw new Error('The local test database lease connection could not be established or was lost.');
+    }
     throw error;
   }
 }
@@ -75,18 +86,25 @@ export async function assertTestDatabaseLeaseClaim(env: NodeJS.ProcessEnv, creat
   const claim = testDatabaseLeaseClaim(env);
   if (!claim) throw new Error('A valid live BA_Helper test database lease is required before database setup.');
   const targets = validateTestTargets(env);
-  const client = createClient(adminConnectionUrl(env.DATABASE_URL_TEST!));
-  await client.connect();
+  const client = guardLeaseClient(createClient(adminConnectionUrl(env.DATABASE_URL_TEST!)));
   try {
+    await client.connect();
     await assertLocalPostgresIdentity(client, targets.database.host, targets.database.port, 'postgres');
-    if (!(await ownsAdvisoryLease(client, claim.pid, claim.appName))) throw new Error('The supplied test database lease is not active on this local PostgreSQL server.');
-  } finally { await client.end(); }
+    const identity = databaseLeaseIdentity(targets.database.host, targets.database.port, targets.database.name);
+    if (!(await ownsAdvisoryLease(client, claim.pid, claim.appName, identity))) throw new Error('The supplied test database lease is not active for this local PostgreSQL target.');
+  } catch (error) {
+    if (error instanceof Error && error.message === 'The local test database lease connection was lost.') {
+      throw new Error('The supplied test database lease connection was lost.');
+    }
+    throw error;
+  } finally { await client.end().catch(() => undefined); }
 }
 
 export async function assertActiveTestDatabaseLease(prisma: PrismaService, env = process.env): Promise<void> {
   const claim = testDatabaseLeaseClaim(env);
   if (!claim) throw new Error('A valid live BA_Helper test database lease is required before database reset.');
   const targets = validateTestTargets(env);
+  const identity = databaseLeaseIdentity(targets.database.host, targets.database.port, targets.database.name);
   const rows = await prisma.$queryRaw<Array<{ database: string; port: number; lease_held: boolean }>>`
     SELECT current_database() AS database,
       inet_server_port() AS port,
@@ -98,6 +116,9 @@ export async function assertActiveTestDatabaseLease(prisma: PrismaService, env =
           AND activity.application_name = ${claim.appName}
           AND activity.datname = 'postgres'
           AND lock.locktype = 'advisory'
+          AND lock.classid = ${LEASE_NAMESPACE}::oid
+          AND lock.objid = hashtext(${identity})::oid
+          AND lock.objsubid = 2
           AND lock.granted
       ) AS lease_held
   `;
@@ -124,15 +145,42 @@ async function assertLocalPostgresIdentity(client: AdvisoryLeaseClient, host: st
   }
 }
 
-async function ownsAdvisoryLease(client: AdvisoryLeaseClient, pid: number, appName: string): Promise<boolean> {
+function guardLeaseClient(client: AdvisoryLeaseClient): AdvisoryLeaseClient {
+  let connectionLost = false;
+  let rejectConnectionLost!: (error: Error) => void;
+  const lost = new Promise<never>((_resolve, reject) => { rejectConnectionLost = reject; });
+  void lost.catch(() => undefined);
+  client.on?.('error', () => {
+    if (connectionLost) return;
+    connectionLost = true;
+    rejectConnectionLost(new Error('The local test database lease connection was lost.'));
+  });
+  const raceConnection = <T>(operation: Promise<T>): Promise<T> => {
+    if (connectionLost) return Promise.reject(new Error('The local test database lease connection was lost.'));
+    return Promise.race([operation, lost]);
+  };
+  return {
+    connect: () => raceConnection(client.connect()),
+    query: (sql, values) => raceConnection(client.query(sql, values)),
+    end: () => client.end(),
+    on: (event, listener) => client.on?.(event, listener),
+  };
+}
+
+export function databaseLeaseIdentity(host: string, port: number, database: string): string {
+  return `${host}:${port}/${database.toLowerCase()}`;
+}
+
+async function ownsAdvisoryLease(client: AdvisoryLeaseClient, pid: number, appName: string, identity: string): Promise<boolean> {
   const result = await client.query<{ held: boolean }>(
     `SELECT EXISTS (
        SELECT 1 FROM pg_stat_activity activity
        JOIN pg_locks lock ON lock.pid = activity.pid
        WHERE activity.pid = $1 AND activity.application_name = $2
          AND activity.datname = 'postgres' AND lock.locktype = 'advisory' AND lock.granted
+         AND lock.classid = $3::oid AND lock.objid = hashtext($4)::oid AND lock.objsubid = 2
      ) AS held`,
-    [pid, appName],
+    [pid, appName, LEASE_NAMESPACE, identity],
   );
   return result.rows[0]?.held === true;
 }

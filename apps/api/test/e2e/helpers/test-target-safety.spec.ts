@@ -1,5 +1,5 @@
 import { assertPrestartedPlaywrightNamespace, redisUrlIdentityOnly, validateTestTargets } from './test-target-safety';
-import { acquireTestDatabaseLease, assertTestDatabaseLeaseClaim, type AdvisoryLeaseClient } from './test-database-lease';
+import { acquireTestDatabaseLease, assertTestDatabaseLeaseClaim, databaseLeaseIdentity, type AdvisoryLeaseClient } from './test-database-lease';
 
 const isolated = (): NodeJS.ProcessEnv => ({
   DATABASE_URL_TEST: 'postgresql://test:test@localhost:5432/ba_helper_test',
@@ -66,6 +66,10 @@ describe('test target safety', () => {
     }).database).toEqual({ host: 'localhost', port: 5432, name: 'ba_helper_test' });
   });
 
+  it('normalizes lease identity with the exact database endpoint', () => {
+    expect(databaseLeaseIdentity('localhost', 5544, 'BA_HELPER_TEST')).toBe('localhost:5544/ba_helper_test');
+  });
+
   it.each(['ba_helper', 'ba_helper_dev', 'ba_helper_production_test', 'postgres'])('rejects unsafe database name %s', (name) => {
     expect(() => validateTestTargets({ ...isolated(), DATABASE_URL_TEST: `postgresql://x:x@localhost:5432/${name}` }))
       .toThrow(/test\/e2e name segment|dedicated test database/);
@@ -108,6 +112,8 @@ describe('test target safety', () => {
     expect(lease.environment.BA_HELPER_TEST_LEASE_PID).toBe('4321');
     expect(pg.queries.some((query) => query.includes('pg_try_advisory_lock'))).toBe(true);
     await lease.assertHeld();
+    expect(pg.queries.some((query) => query.includes('lock.classid = $3::oid') &&
+      query.includes('lock.objid = hashtext($4)::oid') && query.includes('lock.objsubid = 2'))).toBe(true);
     await lease.release();
     expect(pg.queries.some((query) => query.includes('pg_advisory_unlock'))).toBe(true);
     expect(pg.ended).toBe(true);
@@ -136,6 +142,54 @@ describe('test target safety', () => {
     expect(pg.ended).toBe(true);
   });
 
+  it('rejects a live lease claim bound to a different PostgreSQL target', async () => {
+    const pg = fakeLeaseClient({ lockAcquired: false, leaseHeld: true, leaseIdentity: 'localhost:5432/ba_helper_test' });
+    const env = {
+      ...isolated(),
+      DATABASE_URL_TEST: 'postgresql://test:test@localhost:5432/other_test',
+      BA_HELPER_TEST_DATABASE_IDENTITY: 'localhost:5432/other_test',
+      BA_HELPER_TEST_LEASE_ID: '12345678-1234-4234-8234-123456789abc',
+      BA_HELPER_TEST_LEASE_PID: '4321',
+      BA_HELPER_TEST_LEASE_APP_NAME: 'ba-helper-test-lease-12345678-1234-4234-8234-123456789abc',
+    };
+
+    await expect(assertTestDatabaseLeaseClaim(env, () => pg.client)).rejects.toThrow(/not active for this local PostgreSQL target/);
+    expect(pg.queries.some((query) => query.includes('lock.classid = $3::oid') && query.includes('hashtext($4)::oid'))).toBe(true);
+  });
+
+  it('treats a lease owner connection error as terminal and keeps the error credential-free', async () => {
+    const pg = fakeLeaseClient({ lockAcquired: true, leaseHeld: true });
+    const lease = await acquireTestDatabaseLease(isolated(), '12345678-1234-4234-8234-123456789abc', () => pg.client);
+    pg.emitError(new Error('connection string contains a credential: secret-value'));
+
+    await expect(lease.assertHeld()).rejects.toThrow('The local test database lease connection was lost.');
+    await lease.release().catch(() => undefined);
+    expect(pg.ended).toBe(true);
+  });
+
+  it('stops waiting when a lease-check connection errors during a pending query', async () => {
+    let emitError: ((error: Error) => void) | undefined;
+    let ended = false;
+    const client: AdvisoryLeaseClient = {
+      connect: async () => undefined,
+      query: async () => new Promise(() => undefined),
+      end: async () => { ended = true; },
+      on: (_event, listener) => { emitError = listener; },
+    };
+    const env = {
+      ...isolated(),
+      BA_HELPER_TEST_LEASE_ID: '12345678-1234-4234-8234-123456789abc',
+      BA_HELPER_TEST_LEASE_PID: '4321',
+      BA_HELPER_TEST_LEASE_APP_NAME: 'ba-helper-test-lease-12345678-1234-4234-8234-123456789abc',
+    };
+    const assertion = assertTestDatabaseLeaseClaim(env, () => client);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    emitError?.(new Error('connection failed with secret-value'));
+
+    await expect(assertion).rejects.toThrow('The supplied test database lease connection was lost.');
+    expect(ended).toBe(true);
+  });
+
   it('requires the matching test queue namespace for prestarted browser servers', () => {
     expect(() => assertPrestartedPlaywrightNamespace({ PW_PRESTARTED_SERVERS: '1' }))
       .toThrow(/matching ba-helper-playwright/);
@@ -162,20 +216,26 @@ describe('test target safety', () => {
   });
 });
 
-function fakeLeaseClient(options: { lockAcquired: boolean; leaseHeld: boolean }) {
+function fakeLeaseClient(options: { lockAcquired: boolean; leaseHeld: boolean; leaseIdentity?: string }) {
   const queries: string[] = [];
   let ended = false;
-  const query = jest.fn(async (sql: string) => {
+  let lockedIdentity = options.leaseIdentity;
+  let onError: ((error: Error) => void) | undefined;
+  const query = jest.fn(async (sql: string, values?: unknown[]) => {
     queries.push(sql);
     if (sql.includes('current_database')) return { rows: [{ database: 'postgres', port: 5432 }] };
-    if (sql.includes('pg_try_advisory_lock')) return { rows: [{ acquired: options.lockAcquired, pid: 4321 }] };
-    if (sql.includes('SELECT EXISTS')) return { rows: [{ held: options.leaseHeld }] };
+    if (sql.includes('pg_try_advisory_lock')) {
+      lockedIdentity = String(values?.[1] ?? '');
+      return { rows: [{ acquired: options.lockAcquired, pid: 4321 }] };
+    }
+    if (sql.includes('SELECT EXISTS')) return { rows: [{ held: options.leaseHeld && String(values?.[3] ?? '') === lockedIdentity }] };
     return { rows: [{}] };
   }) as unknown as AdvisoryLeaseClient['query'];
   const client: AdvisoryLeaseClient = {
     connect: async () => undefined,
     query,
     end: async () => { ended = true; },
+    on: (_event, listener) => { onError = listener; },
   };
-  return { client, queries, get ended() { return ended; } };
+  return { client, queries, emitError: (error: Error) => onError?.(error), get ended() { return ended; } };
 }

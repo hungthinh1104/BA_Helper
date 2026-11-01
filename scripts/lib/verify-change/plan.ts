@@ -59,7 +59,8 @@ export function createFullCommands(root: string, evidenceDirectory: string): Com
     args: ['test', '--config=playwright.config.ts'],
     reason: 'Run all configured Chromium desktop/mobile journeys with one worker.',
     requires: ['test-targets', 'browser'], reportPath: path.join(evidenceDirectory, 'browser-journeys.json'),
-    env: { VERIFY_CHANGE_PLAYWRIGHT_REPORT: path.join(evidenceDirectory, 'browser-journeys.json') },
+    logPath: path.join(evidenceDirectory, 'browser-journeys.log'),
+    env: browserEnvironment(evidenceDirectory, 'browser-journeys.json'),
   });
   add('final-demo-seed', ['db:test:seed-demo'], 'Restore demo identity after tests reset the test database, before pinned proofs.', ['test-targets']);
   add('pinned-comprehension', ['prove:pinned-comprehension'], 'Verify the immutable pinned repository proof.', ['test-targets', 'pinned-corpus']);
@@ -203,8 +204,17 @@ function frontendCommands(root: string, changes: ChangedPath[], output: string, 
     id: 'browser-journeys', executable: 'playwright', args,
     reason: all ? 'No specific UI journey mapping exists; run the complete serial browser suite.' : `Mapped browser groups: ${[...groups].sort().join(', ') || 'explicit UI test paths'}.`,
     requires: ['test-targets', 'browser'], reportPath: path.join(output, 'browser-journeys.json'),
-    env: { VERIFY_CHANGE_PLAYWRIGHT_REPORT: path.join(output, 'browser-journeys.json') },
+    logPath: path.join(output, 'browser-journeys.log'),
+    env: browserEnvironment(output, 'browser-journeys.json'),
   }];
+}
+
+function browserEnvironment(output: string, jsonFile: string): Record<string, string> {
+  return {
+    VERIFY_CHANGE_PLAYWRIGHT_REPORT: path.join(output, jsonFile),
+    VERIFY_CHANGE_PLAYWRIGHT_OUTPUT_DIR: path.join(output, 'playwright-output'),
+    VERIFY_CHANGE_PLAYWRIGHT_HTML_DIR: path.join(output, 'playwright-html'),
+  };
 }
 
 function related(selection: RelatedTestSelection): CommandSpec {

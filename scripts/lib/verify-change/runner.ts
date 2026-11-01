@@ -4,7 +4,7 @@ import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { CheckResult, CommandSpec, RelatedTestSelection } from './types';
 import { chooseRelatedTestPaths } from './selection';
-import { validateNativeReport } from './native-report';
+import { canonicalPlaywrightFile, validateNativeReport, type NativeReportExpectation } from './native-report';
 import { redactNativeValue, redactText } from './safe-evidence';
 
 export interface RunPrerequisites {
@@ -40,6 +40,14 @@ export interface DiscoveryInventory {
   approvalStatus: 'APPROVED' | 'PENDING_REVIEW' | 'INVALID';
   differences: Array<{ runner: string; added: string[]; removed: string[] }>;
   parity: 'PASS' | 'FAIL' | 'BLOCKED';
+}
+
+export interface NativeEvidenceSummary {
+  expectedExecution: { runner: 'jest' | 'playwright'; files: string[]; cases: number | null };
+  observedExecution: { files: string[]; cases: number; executedCases: number; skippedCases: number };
+  skipExpectations: Array<{ identity: string; state: 'SKIP_REQUIRED' | 'EXECUTION_REQUIRED'; observed: 'SKIPPED' | 'EXECUTED' | 'MISSING' }>;
+  retryFailures: Array<{ identity: string; failedAttempts: number; finalStatus: string }>;
+  qualificationReasons: string[];
 }
 
 interface TestInventoryBaseline {
@@ -326,30 +334,78 @@ export async function runCommands(commands: CommandSpec[], root: string, prerequ
     }
     const environment = commandEnv(command, prerequisites);
     const execution = resolveExecutable(command, root, prerequisites.pnpmCli);
+    if (command.reportPath && !command.nativeExpectation) {
+      command.nativeExpectation = await discoverNativeExpectation(command, root, environment, control);
+    }
     process.stdout.write(`\n[verify-change] ${command.id}: ${formatCommand(execution.file, execution.args)}\n`);
     const startedAt = new Date().toISOString();
     const start = Date.now();
-    const result = await spawnOwned(execution.file, execution.args, command.cwd ?? root, environment, control, false);
+    const result = await spawnOwned(execution.file, execution.args, command.cwd ?? root, environment, control, Boolean(command.logPath), Boolean(command.logPath));
     const durationMs = Date.now() - start;
+    if (command.logPath) {
+      await writeFile(command.logPath, `${redactText(result.stdout)}\n--- stderr ---\n${redactText(result.stderr)}`, 'utf8');
+    }
     const status = result.code === 0 ? 'PASS' : result.interrupted ? 'INTERRUPTED' : 'FAIL';
-    const reportMissing = result.code === 0 && command.reportPath && !existsSync(command.reportPath);
-    const reportValidation = command.reportPath && existsSync(command.reportPath)
-      ? await validateNativeReport(command.reportPath, command.id, root)
+    const reportMissing = Boolean(command.reportPath && !existsSync(command.reportPath));
+    const reportValidation = command.reportPath && existsSync(command.reportPath) && command.nativeExpectation
+      ? await validateNativeReport(command.reportPath, command.id, root, command.nativeExpectation, environment)
       : undefined;
-    const reportInvalid = result.code === 0 && reportValidation && !reportValidation.valid;
-    const finalStatus = reportMissing || reportInvalid ? 'FAIL' : status;
-    const details = reportMissing ? 'Native report was not written.' : reportInvalid ? reportValidation?.details : result.error;
+    const reportInvalid = Boolean(reportValidation && !reportValidation.valid);
+    const finalStatus = status === 'PASS' && (reportMissing || reportInvalid) ? 'FAIL' : status;
+    const details = [result.error, reportMissing ? 'Native report was not written.' : undefined, reportValidation?.details]
+      .filter((item): item is string => Boolean(item)).join('; ') || undefined;
     const row = check(command.id, formatCommand(execution.file, execution.args), command.reason, finalStatus, startedAt, durationMs,
       reportMissing || reportInvalid ? 1 : result.code, command.reportPath, details);
     if (reportValidation) {
       row.skips = reportValidation.skips;
       row.fallbackUsed = command.reason.includes('mapped fallback:');
+      row.nativeEvidence = {
+        expectedExecution: reportValidation.expectedExecution,
+        observedExecution: reportValidation.observedExecution,
+        skipExpectations: reportValidation.skipExpectations,
+        retryFailures: reportValidation.retryFailures,
+        qualificationReasons: reportValidation.qualificationReasons,
+      };
     }
     control.checks.push(row); statuses.set(command.id, finalStatus); await control.onChange();
     if (finalStatus !== 'PASS' && !firstFailure) firstFailure = result.code && result.code > 0 ? result.code : finalStatus === 'INTERRUPTED' ? 130 : 1;
   }
   return firstFailure;
 }
+
+async function discoverNativeExpectation(command: CommandSpec, root: string, env: NodeJS.ProcessEnv, control: RunControl): Promise<NativeReportExpectation> {
+  const isPlaywright = command.executable === 'playwright' || command.id.toLowerCase().includes('browser');
+  const reportDirectory = path.dirname(control.reportPath);
+  if (isPlaywright) {
+    const args = [path.join(root, 'node_modules/@playwright/test/cli.js'), ...command.args, '--list'];
+    const result = await spawnOwned(process.execPath, args, command.cwd ?? root, env, control, true);
+    const cases = result.code === 0 ? parsePlaywrightTestList(result.stdout) : [];
+    const error = result.code !== 0
+      ? `Playwright native discovery failed with exit ${result.code}.`
+      : cases.length === 0 ? 'Playwright native discovery returned no selected cases.' : undefined;
+    const evidence = path.join(reportDirectory, `native-discovery-${command.id}.json`);
+    await writeFile(evidence, `${JSON.stringify(redactNativeValue({ command: formatCommand(process.execPath, args), exitCode: result.code, cases, stderr: result.stderr }), null, 2)}\n`, 'utf8');
+    return { runner: 'playwright', files: unique(cases.map((item) => canonicalPlaywrightFile(root, item.file))), cases, discoveryError: error };
+  }
+
+  const jestCli = path.join(root, 'node_modules/jest/bin/jest.js');
+  const configIndex = command.args.indexOf('--config');
+  const config = configIndex >= 0 ? command.args[configIndex + 1] : command.id.toLowerCase().includes('e2e') ? 'jest.e2e.config.ts' : 'jest.config.ts';
+  const files = explicitJestFiles(command.args);
+  const args = [jestCli, '--config', config ?? 'jest.config.ts', ...(files.length ? ['--runTestsByPath', ...files] : []), '--listTests', '--json', '--runInBand'];
+  const cwd = command.cwd ?? root;
+  const result = await spawnOwned(process.execPath, args, cwd, env, control, true);
+  const parsed = result.code === 0 ? parseNativeTestList(result.stdout) : { valid: false, tests: [] as string[] };
+  const error = result.code !== 0
+    ? `Jest native discovery failed with exit ${result.code}.`
+    : !parsed.valid ? 'Jest native discovery returned malformed output.'
+      : parsed.tests.length === 0 ? 'Jest native discovery returned no selected suites.' : undefined;
+  const evidence = path.join(reportDirectory, `native-discovery-${command.id}.json`);
+  await writeFile(evidence, `${JSON.stringify(redactNativeValue({ command: formatCommand(process.execPath, args), exitCode: result.code, files: parsed.tests, stderr: result.stderr }), null, 2)}\n`, 'utf8');
+  return { runner: 'jest', files: parsed.tests.map((item) => canonicalTestPath(root, item)), discoveryError: error };
+}
+
+function unique(items: string[]): string[] { return [...new Set(items)]; }
 
 export function discoverRelated(selection: RelatedTestSelection, root: string, control: RunControl): Promise<{ files: string[]; exitCode: number | null; valid: boolean; startedAt: string; durationMs: number; evidence?: string }> {
   const cwd = selection.cwd ?? root;
@@ -418,7 +474,7 @@ function resolveExecutable(command: CommandSpec, root: string, pnpmCli?: string)
   return { file: command.executable, args: command.args };
 }
 
-function spawnOwned(file: string, args: string[], cwd: string, env: NodeJS.ProcessEnv, control: RunControl, capture: boolean): Promise<{ code: number | null; stdout: string; stderr: string; interrupted: boolean; error?: string; startedAt: string; durationMs: number }> {
+function spawnOwned(file: string, args: string[], cwd: string, env: NodeJS.ProcessEnv, control: RunControl, capture: boolean, streamOutput = false): Promise<{ code: number | null; stdout: string; stderr: string; interrupted: boolean; error?: string; startedAt: string; durationMs: number }> {
   const startedAt = new Date().toISOString();
   const started = Date.now();
   if (control.signal.aborted) return Promise.resolve({ code: 130, stdout: '', stderr: '', interrupted: true, startedAt, durationMs: 0 });
@@ -436,10 +492,11 @@ function spawnOwned(file: string, args: string[], cwd: string, env: NodeJS.Proce
     let stderr = '';
     let spawnError: string | undefined;
     if (capture) {
-      child.stdout?.on('data', (chunk: Buffer) => { stdout += chunk.toString('utf8'); });
-      child.stderr?.on('data', (chunk: Buffer) => { stderr += chunk.toString('utf8'); });
+      child.stdout?.on('data', (chunk: Buffer) => { const text = chunk.toString('utf8'); stdout += text; if (streamOutput) process.stdout.write(text); });
+      child.stderr?.on('data', (chunk: Buffer) => { const text = chunk.toString('utf8'); stderr += text; if (streamOutput) process.stderr.write(text); });
     }
-    const onAbort = () => terminateOwned(child);
+    let termination: Promise<void> | undefined;
+    const onAbort = () => { termination ??= terminateOwned(child); };
     const sourceMonitor = control.isSourceStable
       ? setInterval(() => {
         if (!control.isSourceStable?.()) control.invalidateSource?.();
@@ -451,25 +508,41 @@ function spawnOwned(file: string, args: string[], cwd: string, env: NodeJS.Proce
     child.once('close', (code, signal) => {
       control.signal.removeEventListener('abort', onAbort);
       if (sourceMonitor) clearInterval(sourceMonitor);
-      if (child.pid) control.ownedChildren.delete(child.pid);
-      const interrupted = control.signal.aborted;
-      const exitCode = interrupted ? (signal === 'SIGTERM' ? 143 : 130) : code ?? 127;
-      void control.onChange().catch(() => undefined);
-      resolve({ code: exitCode, stdout, stderr, interrupted, error: spawnError, startedAt, durationMs: Date.now() - started });
+      void Promise.resolve(termination).then(() => {
+        if (child.pid) control.ownedChildren.delete(child.pid);
+        const interrupted = control.signal.aborted;
+        const exitCode = interrupted ? (process.platform !== 'win32' && signal === 'SIGTERM' ? 143 : 130) : code ?? 127;
+        void control.onChange().catch(() => undefined);
+        resolve({ code: exitCode, stdout, stderr, interrupted, error: spawnError, startedAt, durationMs: Date.now() - started });
+      });
     });
   });
 }
 
-function terminateOwned(child: ChildProcess): void {
-  if (!child.pid) return;
+function terminateOwned(child: ChildProcess): Promise<void> {
+  if (!child.pid || child.exitCode !== null || child.signalCode !== null) return Promise.resolve();
   if (process.platform === 'win32') {
     const taskkill = spawn('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], { shell: false, windowsHide: true, stdio: 'ignore' });
-    taskkill.unref();
-    return;
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = () => { if (!settled) { settled = true; resolve(); } };
+      taskkill.once('error', finish);
+      taskkill.once('close', finish);
+      child.kill();
+    });
   }
+  const closed = new Promise<void>((resolve) => {
+    if (child.exitCode !== null || child.signalCode !== null) return resolve();
+    child.once('close', () => resolve());
+  });
   try { process.kill(-child.pid, 'SIGTERM'); } catch { child.kill('SIGTERM'); }
-  const timeout = setTimeout(() => { try { process.kill(-child.pid!, 'SIGKILL'); } catch { /* process already exited */ } }, 3000);
-  timeout.unref();
+  return Promise.race([closed, new Promise<void>((resolve) => setTimeout(resolve, 3000))])
+    .then(async () => {
+      if (child.exitCode === null && child.signalCode === null) {
+        try { process.kill(-child.pid!, 'SIGKILL'); } catch { child.kill('SIGKILL'); }
+        await closed;
+      }
+    });
 }
 
 function check(id: string, command: string, reason: string, status: CheckResult['status'], startedAt: string, durationMs: number, exitCode: number | null, evidence?: string, details?: string): CheckResult {
