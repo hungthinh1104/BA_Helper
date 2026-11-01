@@ -301,13 +301,34 @@ describe('verification command runner', () => {
     }
   });
 
+  it.each([
+    ['SIGINT', 130],
+    ['SIGTERM', 143],
+  ] as const)('preserves an explicit %s interruption exit code', async (requestedSignal, expectedExitCode) => {
+    const abort = new AbortController();
+    const control = createControl(abort);
+    const command: CommandSpec = {
+      id: 'signal-control', executable: 'node',
+      args: ['-e', 'setTimeout(() => {}, 60000)'], reason: 'Verify requested signal exit-code preservation.',
+    };
+    const timer = setTimeout(() => abort.abort(requestedSignal), 250);
+
+    try {
+      await expect(runCommands([command], root, prerequisites, control)).resolves.toBe(expectedExitCode);
+      expect(control.checks[0]).toMatchObject({ status: 'INTERRUPTED', exitCode: expectedExitCode });
+      expect(control.ownedChildren.size).toBe(0);
+    } finally {
+      clearTimeout(timer);
+    }
+  });
+
   it('stops an owned child when the candidate changes during a long command', async () => {
     const control = createControl();
     const abort = new AbortController();
     control.signal = abort.signal;
     let stable = true;
     control.isSourceStable = () => stable;
-    control.invalidateSource = () => { stable = false; abort.abort(); };
+    control.invalidateSource = () => { stable = false; abort.abort('SOURCE_DRIFT'); };
     const command: CommandSpec = {
       id: 'source-change-control', executable: 'node',
       args: ['-e', 'setTimeout(() => {}, 60000)'], reason: 'Verify source drift cleanup.',

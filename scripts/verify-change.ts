@@ -73,8 +73,8 @@ async function main(): Promise<number> {
   let sourceInvalidated = false;
   let reportWriteQueue = Promise.resolve();
   let interrupted = false;
-  const onSigint = () => { interrupted = true; abortController.abort(); };
-  const onSigterm = () => { interrupted = true; abortController.abort(); };
+  const onSigint = () => { interrupted = true; abortController.abort('SIGINT'); };
+  const onSigterm = () => { interrupted = true; abortController.abort('SIGTERM'); };
   process.once('SIGINT', onSigint);
   process.once('SIGTERM', onSigterm);
   let discovery: DiscoveryInventory | undefined;
@@ -104,7 +104,7 @@ async function main(): Promise<number> {
       if (!gaps.includes('Candidate source changed while verification was active; remaining child processes were stopped and run evidence is invalid.')) {
         gaps.push('Candidate source changed while verification was active; remaining child processes were stopped and run evidence is invalid.');
       }
-      abortController.abort();
+      abortController.abort('SOURCE_DRIFT');
     },
     onChange: async () => {
       const interruptedCheck = checks.some((item) => item.status === 'INTERRUPTED' || item.exitCode === 130 || item.exitCode === 143);
@@ -232,7 +232,7 @@ async function main(): Promise<number> {
               if (abortController.signal.aborted) return;
               gaps.push('PostgreSQL advisory lease was lost; all owned child processes were stopped.');
               checks.push({ id: 'test-database-lease', command: 'PostgreSQL advisory lease heartbeat', reason: 'Lease loss invalidates destructive verification.', status: 'FAIL', startedAt: new Date().toISOString(), durationMs: 0, exitCode: 1 });
-              abortController.abort();
+              abortController.abort('LEASE_LOST');
             });
           }, 2000);
           leaseMonitor.unref();

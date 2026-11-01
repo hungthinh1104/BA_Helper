@@ -511,12 +511,19 @@ function spawnOwned(file: string, args: string[], cwd: string, env: NodeJS.Proce
       void Promise.resolve(termination).then(() => {
         if (child.pid) control.ownedChildren.delete(child.pid);
         const interrupted = control.signal.aborted;
-        const exitCode = interrupted ? (process.platform !== 'win32' && signal === 'SIGTERM' ? 143 : 130) : code ?? 127;
+        const exitCode = interrupted ? interruptedExitCode(control.signal.reason, signal) : code ?? 127;
         void control.onChange().catch(() => undefined);
         resolve({ code: exitCode, stdout, stderr, interrupted, error: spawnError, startedAt, durationMs: Date.now() - started });
       });
     });
   });
+}
+
+function interruptedExitCode(reason: unknown, childSignal: NodeJS.Signals | null): number {
+  if (reason === 'SIGINT' || reason === 'SOURCE_DRIFT') return 130;
+  if (reason === 'SIGTERM') return 143;
+  if (reason === 'LEASE_LOST') return 1;
+  return process.platform !== 'win32' && childSignal === 'SIGTERM' ? 143 : 130;
 }
 
 function terminateOwned(child: ChildProcess): Promise<void> {
