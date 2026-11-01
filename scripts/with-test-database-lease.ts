@@ -3,6 +3,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import path from 'node:path';
 import { assertTestDatabaseLeaseClaim, acquireTestDatabaseLease } from '../apps/api/test/e2e/helpers/test-database-lease';
 import { validateTestTargets } from '../apps/api/test/e2e/helpers/test-target-safety';
+import { resolveLeaseWrappedCommand } from './lib/verify-change/lease-command';
 
 async function main(): Promise<number> {
   const root = path.resolve(__dirname, '..');
@@ -26,7 +27,7 @@ async function main(): Promise<number> {
     release = lease.release;
     await lease.assertHeld();
   }
-  const command = commandFromArgs(process.argv.slice(2), root);
+  const command = resolveLeaseWrappedCommand(process.argv.slice(2), root, process.execPath, process.env.npm_execpath, process.cwd());
   let child: ChildProcess | undefined;
   let stopRequested = false;
   let lostLease = false;
@@ -57,24 +58,6 @@ async function main(): Promise<number> {
     process.removeListener('SIGTERM', stop);
     await release?.();
   }
-}
-
-function commandFromArgs(args: string[], root: string): { file: string; args: string[]; cwd: string } {
-  const separator = args.indexOf('--');
-  const command = separator >= 0 ? args.slice(separator + 1) : args;
-  if (command.length === 0) throw new Error('Pass a command after -- to run under the test database lease.');
-  if (command[0] === '--run') {
-    const scriptName = command[1];
-    const pnpmCli = process.env.npm_execpath;
-    if (!scriptName || !pnpmCli) throw new Error('A package script and pnpm invocation are required for --run.');
-    return { file: process.execPath, args: [pnpmCli, '--dir', root, 'run', scriptName, ...command.slice(2)], cwd: root };
-  }
-  if (['pnpm', 'pnpm.cmd'].includes(command[0]!.toLowerCase())) {
-    const pnpmCli = process.env.npm_execpath;
-    if (!pnpmCli) throw new Error('The active pnpm CLI path is not available in this process.');
-    return { file: process.execPath, args: [pnpmCli, ...command.slice(1)], cwd: process.cwd() };
-  }
-  return { file: command[0]!, args: command.slice(1), cwd: process.cwd() };
 }
 
 function terminateOwned(child: ChildProcess, signal: NodeJS.Signals): void {

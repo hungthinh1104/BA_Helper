@@ -1,7 +1,8 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { compareInventory, explicitJestFiles, parseNativeTestList, runCommands, type RunControl, type RunPrerequisites } from './runner';
+import { compareInventory, explicitJestFiles, parseNativeTestList, playwrightTestFileMatches, runCommands, type RunControl, type RunPrerequisites } from './runner';
+import { resolveLeaseWrappedCommand } from './lease-command';
 import type { CommandSpec } from './types';
 
 describe('verification command runner', () => {
@@ -24,6 +25,24 @@ describe('verification command runner', () => {
     expect(parseNativeTestList('[]')).toEqual({ valid: true, tests: [] });
     expect(parseNativeTestList('{"not":"a test list"}')).toEqual({ valid: false, tests: [] });
     expect(parseNativeTestList('["a.spec.ts", null]')).toEqual({ valid: false, tests: [] });
+  });
+
+  it('matches Playwright paths reported relative to the configured e2e test directory', () => {
+    expect(playwrightTestFileMatches(root, 'e2e/decision-to-report.pw.ts', 'decision-to-report.pw.ts')).toBe(true);
+    expect(playwrightTestFileMatches(root, 'e2e/decision-to-report.pw.ts', path.join(root, 'e2e', 'decision-to-report.pw.ts'))).toBe(true);
+    expect(playwrightTestFileMatches(root, 'e2e/decision-to-report.pw.ts', 'code-comprehension-trace.pw.ts')).toBe(false);
+  });
+
+  it('forwards filters after a lease-wrapped package script separator', () => {
+    expect(resolveLeaseWrappedCommand(
+      ['--run', 'test:pw:inner', '--', 'e2e/decision-to-report.pw.ts', '--project=desktop', '--grep=approved report'],
+      root, 'node.exe', 'pnpm.cjs', 'C:/caller',
+    )).toEqual({
+      file: 'node.exe', args: [
+        'pnpm.cjs', '--dir', root, 'run', 'test:pw:inner',
+        'e2e/decision-to-report.pw.ts', '--project=desktop', '--grep=approved report',
+      ], cwd: root,
+    });
   });
 
   it('detects same-count test replacement, runner membership loss, and Playwright identity drift', () => {
@@ -153,9 +172,18 @@ describe('verification command runner', () => {
     const control = createControl();
     const report = path.join(reportDirectory, 'browser-journeys.json');
     const payload = JSON.stringify({ suites: [{
-      title: 'pinned real comprehension', file: 'e2e/pinned-real-comprehension.pw.ts', projectName: 'desktop',
-      tests: [{ title: 'opens a persisted pinned-repository trace through the live API', results: [{ status: 'skipped' }] }],
-    }], stats: { unexpected: 0 } });
+      title: 'pinned-real-comprehension.pw.ts', file: 'pinned-real-comprehension.pw.ts',
+      suites: [{ title: 'pinned real comprehension', file: 'pinned-real-comprehension.pw.ts', specs: [
+        { title: 'opens pinned trace', file: 'pinned-real-comprehension.pw.ts', tests: [{
+          title: 'opens a persisted pinned-repository trace through the live API', projectName: 'desktop',
+          expectedStatus: 'passed', results: [{ status: 'skipped' }],
+        }] },
+        { title: 'review report', file: 'decision-to-report.pw.ts', tests: [{
+          title: 'accept review and reach report', projectName: 'desktop', expectedStatus: 'passed',
+          results: [{ status: 'passed' }],
+        }] },
+      ] }],
+    }], stats: { expected: 1, skipped: 1, unexpected: 0 } });
     const command: CommandSpec = {
       id: 'browser-journeys', executable: 'node',
       args: ['-e', `require('node:fs').writeFileSync(${JSON.stringify(report)}, ${JSON.stringify(payload)})`],

@@ -180,6 +180,16 @@ describe('verify-change CLI and selector', () => {
     const browser = commands.find((command) => command.id === 'browser-journeys');
     expect(browser?.args).toContain('e2e/code-comprehension-trace.pw.ts');
   });
+
+  it('maps an explicit Playwright spec to its browser journey without backend Jest discovery', () => {
+    const root = process.cwd();
+    const file = 'e2e/decision-to-report.pw.ts';
+    const changes = [{ path: file, kind: 'modified' as const, source: 'explicit' as const }];
+    const commands = createCommands(root, 'affected', classifyChanges(changes), changes, path.join(os.tmpdir(), 'verify change reports'));
+    expect(commands.map((command) => command.id)).toContain('browser-journeys');
+    expect(commands.find((command) => command.id === 'browser-journeys')?.args).toContain(file);
+    expect(commands.map((command) => command.id)).not.toContain('related-backend');
+  });
 });
 
 function git(cwd: string, args: string[]): string {

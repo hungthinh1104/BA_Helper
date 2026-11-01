@@ -72,6 +72,8 @@ export function chooseRelatedTestPaths(discovered: string[], fallback: string[])
   return discovered.length > 0 ? discovered : fallback;
 }
 
-function isE2e(file: string): boolean { return file.includes('/test/e2e/') || file.endsWith('.e2e-spec.ts'); }
+function isE2e(file: string): boolean {
+  return file.startsWith('e2e/') || file.includes('/test/e2e/') || file.endsWith('.e2e-spec.ts') || file.endsWith('.pw.ts');
+}
 function isWeb(file: string): boolean { return file.startsWith('apps/web/'); }
 function isAnalyzer(file: string): boolean { return file.startsWith('packages/analyzer/') || file.startsWith('tests/analyzer/'); }

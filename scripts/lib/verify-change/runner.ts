@@ -241,7 +241,7 @@ async function validateExplicitMappedSuites(command: CommandSpec, root: string, 
     const result = await spawnOwned(process.execPath, args, root, process.env, control, true);
     const tests = parsePlaywrightTestList(result.stdout);
     const selected = new Set(tests.map((test) => test.file.replace(/\\/g, '/')));
-    const missing = files.filter((file) => !existsSync(path.resolve(root, file)) || ![...selected].some((candidate) => candidate === file || candidate.endsWith(`/${file}`)));
+    const missing = files.filter((file) => !existsSync(path.resolve(root, file)) || ![...selected].some((candidate) => playwrightTestFileMatches(root, file, candidate)));
     const valid = result.code === 0 && tests.length > 0 && missing.length === 0;
     const details = valid ? `Native Playwright discovery found ${tests.length} mapped case(s).`
       : result.code !== 0 ? `Playwright discovery exited ${result.code}: ${redactText(result.stderr).slice(0, 300)}`
@@ -271,6 +271,24 @@ async function validateExplicitMappedSuites(command: CommandSpec, root: string, 
   const evidence = path.join(path.dirname(control.reportPath), `selection-${command.id}.json`);
   await writeFile(evidence, `${JSON.stringify(redactNativeValue({ command: formatCommand(process.execPath, args), exitCode: result.code, tests: parsed.tests, missing, stderr: result.stderr }), null, 2)}\n`, 'utf8');
   return selectionCheck(command, valid ? 'PASS' : 'FAIL', details, result.startedAt, result.durationMs, valid ? result.code : result.code || 1, evidence);
+}
+
+export function playwrightTestFileMatches(root: string, expectedFile: string, discoveredFile: string): boolean {
+  const identities = (file: string): Set<string> => {
+    const absolute = path.isAbsolute(file) ? path.resolve(file) : path.resolve(root, file);
+    const paths = [absolute];
+    if (!path.isAbsolute(file)) paths.push(path.resolve(root, 'e2e', file));
+    const keys = new Set<string>();
+    for (const candidate of paths) {
+      const relative = path.relative(root, candidate);
+      if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) continue;
+      const normalized = relative.split(path.sep).join('/');
+      keys.add(process.platform === 'win32' ? normalized.toLowerCase() : normalized);
+    }
+    return keys;
+  };
+  const discovered = identities(discoveredFile);
+  return [...identities(expectedFile)].some((identity) => discovered.has(identity));
 }
 
 export function explicitJestFiles(args: string[]): string[] {

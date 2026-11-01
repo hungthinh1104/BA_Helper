@@ -35,7 +35,7 @@ export async function validateNativeReport(file: string, commandId: string, root
   } catch { return { valid: false, details: 'Native test report is malformed JSON or has an unsupported structure.', skips: [] }; }
 
   const playwright = commandId.toLowerCase().includes('browser') || path.basename(file).toLowerCase().includes('browser');
-  const cases = playwright ? playwrightReportCases(report) : jestReportCases(report, root);
+  const cases = playwright ? playwrightReportCases(report, root) : jestReportCases(report, root);
   if (!cases.valid) return { valid: false, details: cases.error, skips: [] };
   if (cases.tests.length === 0) return { valid: false, details: 'Native test report contains zero executed or skipped test cases.', skips: [] };
   if (cases.failures > 0) return { valid: false, details: `Native report records ${cases.failures} failed test case(s) despite a zero process exit.`, skips: cases.skips.map(formatSkip) };
@@ -85,38 +85,57 @@ function jestReportCases(report: Record<string, unknown>, root: string): ParsedC
   return { valid: true, tests, skips, failures: Math.max(report.numFailedTests, countedFailures) };
 }
 
-function playwrightReportCases(report: Record<string, unknown>): ParsedCases {
+function playwrightReportCases(report: Record<string, unknown>, root: string): ParsedCases {
   if (!Array.isArray(report.suites)) return { valid: false, error: 'Playwright report is missing its suites array.', tests: [], skips: [], failures: 0 };
   const tests: ParsedCases['tests'] = [];
   const skips: SkipIdentity[] = [];
   let failures = 0;
-  const visit = (suites: unknown[], parentFile = '', parentTitles: string[] = [], project = '') => {
+  const addTests = (rawTests: unknown[], file: string, project: string) => {
+    for (const rawTest of rawTests) {
+      if (!rawTest || typeof rawTest !== 'object') continue;
+      const test = rawTest as Record<string, unknown>;
+      const title = String(test.title ?? '');
+      const results = Array.isArray(test.results) ? test.results as Array<Record<string, unknown>> : [];
+      const status = String(results.at(-1)?.status ?? test.expectedStatus ?? '');
+      if (results.length > 0 || status === 'skipped' || status === 'interrupted') {
+        tests.push({ file, title });
+      }
+      const testProject = typeof test.projectName === 'string' ? test.projectName : project;
+      if (status === 'skipped' || status === 'interrupted') skips.push({ runner: 'playwright', project: testProject, file, title });
+      if (status === 'failed' || status === 'timedOut') failures += 1;
+    }
+  };
+  const visit = (suites: unknown[], parentFile = '', project = '') => {
     for (const raw of suites) {
       if (!raw || typeof raw !== 'object') continue;
       const suite = raw as Record<string, unknown>;
-      const file = typeof suite.file === 'string' ? suite.file.replace(/\\/g, '/') : parentFile;
-      const titles = typeof suite.title === 'string' && suite.title ? [...parentTitles, suite.title] : parentTitles;
+      const file = typeof suite.file === 'string' ? canonicalPlaywrightFile(root, suite.file) : parentFile;
       const suiteProject = typeof suite.projectName === 'string' ? suite.projectName : project;
-      if (Array.isArray(suite.tests)) {
-        for (const rawTest of suite.tests) {
-          if (!rawTest || typeof rawTest !== 'object') continue;
-          const test = rawTest as Record<string, unknown>;
-          const title = String(test.title ?? '');
-          const fullTitle = [...titles, title].filter(Boolean).join(' > ');
-          tests.push({ file, title: fullTitle });
-          const results = Array.isArray(test.results) ? test.results as Array<Record<string, unknown>> : [];
-          const status = String(results.at(-1)?.status ?? test.expectedStatus ?? '');
-          if (status === 'skipped' || status === 'interrupted') skips.push({ runner: 'playwright', project: suiteProject, file, title });
-          if (status === 'failed' || status === 'timedOut') failures += 1;
+      if (Array.isArray(suite.tests)) addTests(suite.tests, file, suiteProject);
+      if (Array.isArray(suite.specs)) {
+        for (const rawSpec of suite.specs) {
+          if (!rawSpec || typeof rawSpec !== 'object') continue;
+          const spec = rawSpec as Record<string, unknown>;
+          if (!Array.isArray(spec.tests)) continue;
+          const specFile = typeof spec.file === 'string' ? canonicalPlaywrightFile(root, spec.file) : file;
+          addTests(spec.tests, specFile, suiteProject);
         }
       }
-      if (Array.isArray(suite.suites)) visit(suite.suites, file, titles, suiteProject);
+      if (Array.isArray(suite.suites)) visit(suite.suites, file, suiteProject);
     }
   };
   visit(report.suites as unknown[]);
   const stats = report.stats as Record<string, unknown> | undefined;
   if (stats && typeof stats.unexpected === 'number') failures = Math.max(failures, stats.unexpected);
   return { valid: true, tests, skips, failures };
+}
+
+function canonicalPlaywrightFile(root: string, file: string): string {
+  const normalized = file.replace(/\\/g, '/');
+  const absolute = path.isAbsolute(file)
+    ? path.resolve(file)
+    : path.resolve(root, normalized.startsWith('e2e/') ? normalized : path.join('e2e', normalized));
+  return path.relative(root, absolute).replace(/\\/g, '/');
 }
 
 function readSkipBaseline(root: string): SkipIdentity[] {
